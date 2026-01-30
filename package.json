@@ -14,7 +14,8 @@
 			"drizzle-kit": "^0.31.1",
 			"@sentry/bun": "10.25.0",
 			"@clickhouse/client": "1.11.2",
-			"@date-fns/utc": "2.1.0"
+			"@date-fns/utc": "2.1.0",
+			"@better-auth/dash": "0.1.6"
 		}
 	},
 	"overrides": {
@@ -44,7 +45,10 @@
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
 		"test:integration": "cd server && bun test:integration",
-		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9"
+		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
+		"knip": "knip",
+		"knip:fix": "knip --fix",
+		"knip:fix-all": "knip --fix --allow-remove-files"
 	},
 	"dependencies": {
 		"@aws-sdk/client-firehose": "^3.975.0",

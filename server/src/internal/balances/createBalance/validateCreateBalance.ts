@@ -43,7 +43,7 @@ export const validateCreateBalanceParams = async ({
 	}
 };
 
-export const validateBooleanEntitlementConflict = async ({
+const validateBooleanEntitlementConflict = async ({
 	ctx,
 	feature,
 	fullCustomer,

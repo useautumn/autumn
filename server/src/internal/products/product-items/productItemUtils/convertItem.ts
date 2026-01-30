@@ -1,12 +1,12 @@
 import {
-	Feature,
+	type Feature,
 	FeatureType,
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
 	UsageModel,
 } from "@autumn/shared";
 
-export const itemToFeature = ({
+const itemToFeature = ({
 	item,
 	features,
 }: {

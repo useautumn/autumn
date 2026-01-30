@@ -75,7 +75,7 @@ export const getStripeSubs = async ({
 	return subs as Stripe.Subscription[];
 };
 
-export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
+const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
 	switch (stripeSubStatus) {
 		case "trialing":
 			return CusProductStatus.Active;
@@ -91,7 +91,7 @@ export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
 	}
 };
 
-export const deleteScheduledIds = async ({
+const deleteScheduledIds = async ({
 	stripeCli,
 	scheduledIds,
 }: {
@@ -108,7 +108,7 @@ export const deleteScheduledIds = async ({
 };
 
 // Get in advance sub
-export const getUsageBasedSub = async ({
+const getUsageBasedSub = async ({
 	db,
 	stripeCli,
 	subIds,
@@ -173,7 +173,7 @@ export const getUsageBasedSub = async ({
 	return null;
 };
 
-export const getSubItemsForCusProduct = async ({
+const getSubItemsForCusProduct = async ({
 	stripeSub,
 	cusProduct,
 }: {
@@ -265,7 +265,7 @@ export const getStripeSchedules = async ({
 };
 
 // OTHERS
-export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
+const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
 	if (sub.cancel_at_period_end) {
 		return false;
 	}
@@ -275,7 +275,7 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
 	return differenceInSeconds(periodEnd * 1000, sub.cancel_at! * 1000) > 20;
 };
 
-export const autumnToStripeProrationBehavior = ({
+const autumnToStripeProrationBehavior = ({
 	prorationBehavior,
 }: {
 	prorationBehavior: ProrationBehavior;
@@ -290,7 +290,7 @@ export const autumnToStripeProrationBehavior = ({
 	}
 };
 
-export const getStripeProrationBehavior = ({
+const getStripeProrationBehavior = ({
 	org,
 	prorationBehavior,
 }: {

@@ -6,11 +6,7 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext";
 
-export const getAutumnCustomerId = async ({
-	ctx,
-}: {
-	ctx: StripeWebhookContext;
-}) => {
+const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	const { stripeEvent } = ctx;
 
 	// 1. Get stripe customer ID from stripe event

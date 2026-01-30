@@ -1,13 +1,13 @@
-import { generateId } from "@/utils/genUtils.js";
 import {
-	AppEnv,
-	MigrationError,
-	MigrationJob,
+	type AppEnv,
+	type MigrationError,
+	type MigrationJob,
 	MigrationJobStep,
-	Product,
+	type Product,
 } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils.js";
 
-export const constructMigrationError = ({
+const constructMigrationError = ({
 	migrationJobId,
 	internalCustomerId,
 	data,
@@ -20,7 +20,7 @@ export const constructMigrationError = ({
 	code: string;
 	message: string;
 }) => {
-	let migrationError: MigrationError = {
+	const migrationError: MigrationError = {
 		migration_job_id: migrationJobId,
 		internal_customer_id: internalCustomerId,
 		data,
@@ -40,7 +40,7 @@ export const constructMigrationJob = ({
 	fromProduct: Product;
 	toProduct: Product;
 }) => {
-	let migrationJob: MigrationJob = {
+	const migrationJob: MigrationJob = {
 		id: generateId("mig_job"),
 		created_at: Date.now(),
 		updated_at: Date.now(),

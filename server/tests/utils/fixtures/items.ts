@@ -2,6 +2,7 @@ import {
 	BillingInterval,
 	type LimitedItem,
 	type ProductItemConfig,
+	ProductItemInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -233,24 +234,85 @@ const oneOffMessages = ({
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * Generic consumable item - pay-per-use overage for any feature
+ * @param featureId - Feature ID
+ * @param includedUsage - Free units before overage kicks in (default: 0)
+ * @param price - Price per billing unit (default: 0.1)
+ * @param billingUnits - Units per price (default: 1)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param interval - Billing interval (default: month)
+ */
+const consumable = ({
+	featureId,
+	includedUsage = 0,
+	price = 0.1,
+	billingUnits = 1,
+	entityFeatureId,
+	interval = ProductItemInterval.Month,
+}: {
+	featureId: string;
+	includedUsage?: number;
+	price?: number;
+	billingUnits?: number;
+	entityFeatureId?: string;
+	interval?: ProductItemInterval;
+}): LimitedItem =>
+	constructArrearItem({
+		featureId,
+		includedUsage,
+		price,
+		billingUnits,
+		entityFeatureId,
+		interval,
+	}) as LimitedItem;
+
+/**
  * Consumable messages - pay-per-use overage ($0.10/unit)
  * @param includedUsage - Free units before overage kicks in (default: 0)
  * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param interval - Billing interval (default: month)
  */
 const consumableMessages = ({
 	includedUsage = 0,
 	entityFeatureId,
+	interval = ProductItemInterval.Month,
 }: {
 	includedUsage?: number;
 	entityFeatureId?: string;
+	interval?: ProductItemInterval;
 } = {}): LimitedItem =>
-	constructArrearItem({
+	consumable({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		price: 0.1,
 		billingUnits: 1,
 		entityFeatureId,
-	}) as LimitedItem;
+		interval,
+	});
+
+/**
+ * Consumable words - pay-per-use overage ($0.05/unit)
+ * @param includedUsage - Free units before overage kicks in (default: 0)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param interval - Billing interval (default: month)
+ */
+const consumableWords = ({
+	includedUsage = 0,
+	entityFeatureId,
+	interval = ProductItemInterval.Month,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+	interval?: ProductItemInterval;
+} = {}): LimitedItem =>
+	consumable({
+		featureId: TestFeature.Words,
+		includedUsage,
+		price: 0.05,
+		billingUnits: 1,
+		entityFeatureId,
+		interval,
+	});
 
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
@@ -267,6 +329,21 @@ const allocatedUsers = ({
 } = {}): LimitedItem =>
 	constructArrearProratedItem({
 		featureId: TestFeature.Users,
+		pricePerUnit: 10,
+		includedUsage,
+	}) as LimitedItem;
+
+/**
+ * Allocated workflows - prorated billing on change ($10/workflow)
+ * @param includedUsage - Free workflows included (default: 0)
+ */
+const allocatedWorkflows = ({
+	includedUsage = 0,
+}: {
+	includedUsage?: number;
+} = {}): LimitedItem =>
+	constructArrearProratedItem({
+		featureId: TestFeature.Workflows,
 		pricePerUnit: 10,
 		includedUsage,
 	}) as LimitedItem;
@@ -331,10 +408,13 @@ export const items = {
 	oneOffMessages,
 
 	// Consumable
+	consumable,
 	consumableMessages,
+	consumableWords,
 
 	// Allocated
 	allocatedUsers,
+	allocatedWorkflows,
 
 	// Base prices
 	monthlyPrice,

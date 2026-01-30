@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/a11y/noSvgWithoutTitle: needed */
 import { useId } from "react";
 
-export const FeatureArrowIcon = () => {
+const FeatureArrowIcon = () => {
 	return (
 		<svg
 			width="4"
@@ -60,7 +60,7 @@ export const IncludedUsageIcon = ({
 	);
 };
 
-export const PrepaidUsageIcon = () => {
+const PrepaidUsageIcon = () => {
 	return (
 		<svg
 			width="16"
@@ -329,7 +329,7 @@ export const DefaultIcon = ({
 	);
 };
 
-export const FreeTrialIcon = ({
+const FreeTrialIcon = ({
 	size = 15,
 	color = "#666666",
 	hideTitle = false,

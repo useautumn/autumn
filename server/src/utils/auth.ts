@@ -1,6 +1,7 @@
 import "dotenv/config";
 
-import { invitation, schemas } from "@autumn/shared";
+import { ALL_SCOPES, invitation, schemas } from "@autumn/shared";
+import { dash } from "@better-auth/dash";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -21,7 +22,6 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
-import { ALL_SCOPES } from "./scopeDefinitions.js";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -97,6 +97,7 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
+		dash(),
 		emailOTP({
 			async sendVerificationOTP({ email, otp, type }) {
 				// Implement the sendVerificationOTP method to send the OTP to the user's email address

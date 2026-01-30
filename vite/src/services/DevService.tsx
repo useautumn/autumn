@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 export class DevService {
 	static async createAPIKey(axiosInstance: AxiosInstance, data: any) {

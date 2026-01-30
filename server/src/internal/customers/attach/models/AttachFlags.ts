@@ -1,6 +1,6 @@
-import { AttachBranch } from "@autumn/shared";
+import type { AttachBranch } from "@autumn/shared";
 
-export enum ProrationBehavior {
+enum ProrationBehavior {
 	Immediately = "immediately",
 	NextBilling = "next_billing",
 	None = "none",
@@ -14,7 +14,7 @@ export interface AttachFlags {
 	isFree: boolean;
 }
 
-export interface AttachConfig {
+interface AttachConfig {
 	onlyCheckout: boolean;
 	carryUsage: boolean; // Whether to carry over existing usages
 	branch: AttachBranch;

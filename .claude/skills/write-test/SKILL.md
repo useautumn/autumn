@@ -13,6 +13,11 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 
 ## Before Writing Any Test
 
+**ALWAYS check for duplicate test scenarios FIRST:**
+1. Search the test directory for similar scenarios using `Grep` with relevant keywords (e.g., `new_billing_subscription`, `cancel.*addon`, feature names)
+2. If a duplicate or very similar scenario exists, **WARN the user and ask for confirmation** before proceeding
+3. Only proceed with writing the test after confirming it's not a duplicate
+
 **ALWAYS read these codebase files FIRST:**
 1. `server/tests/TEST_GUIDE.md` - Core patterns, fixtures, scenario builder
 2. For billing tests: `server/tests/integration/billing/update-subscription/BILLING_GUIDE.md`
@@ -20,19 +25,22 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 ## Critical Rules
 
 **DO:**
-- Use `test.concurrent()` for isolated, parallel tests
+- **ALWAYS use `test.concurrent()` for ALL tests** - never use plain `test()`. This enables parallel execution.
 - Use `initScenario` with `s.*` builders
 - Use `product.id` in `s.attach()` (never string literals)
 - Use `Decimal.js` for balance calculations in track tests
 - Unique `customerId` per test
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
+- **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
 
 **DON'T:**
+- Use plain `test()` - **ALWAYS use `test.concurrent()`**
 - Use `describe/beforeAll/test` (legacy pattern)
 - Use `Date.now()` with test clocks (use `advancedTo`)
 - Share state between tests
 - Use raw arithmetic for balance calculations (floating point errors)
 - Use `as unknown as Type` casting - use generic types instead
+- Write manual assertion loops when a utility function exists
 
 ## AutumnInt Response Types
 
@@ -79,6 +87,7 @@ Load these on-demand for detailed information:
 - [references/EXPECTATIONS.md](references/EXPECTATIONS.md) - All expectation utilities
 - [references/GOTCHAS.md](references/GOTCHAS.md) - Common pitfalls, debugging, billing edge cases
 - [references/WEBHOOKS.md](references/WEBHOOKS.md) - Outbound webhook testing with Svix Play
+- [references/STRIPE-BEHAVIORS.md](references/STRIPE-BEHAVIORS.md) - Stripe webhook behaviors for consumables, trials, cancellations
 
 ## File Location
 

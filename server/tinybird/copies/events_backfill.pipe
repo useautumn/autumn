@@ -4,7 +4,22 @@ DESCRIPTION >
 NODE migrate
 SQL >
     %
-    SELECT *
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        customer_id,
+        coalesce(properties::String, '{}')::JSON(max_dynamic_types=2, max_dynamic_paths=16) as properties
     FROM postgresql(
         'us-west-3.pg.psdb.cloud:5432',
         'postgres',

@@ -1,6 +1,4 @@
-import { Feature } from "@autumn/shared";
-
-import { Organization } from "@autumn/shared";
+import { type Feature, Organization } from "@autumn/shared";
 
 export const getFeatureName = ({
 	feature,
@@ -28,11 +26,7 @@ export const getFeatureName = ({
 	return featureName;
 };
 
-export const getFeatureNameWithCapital = ({
-	feature,
-}: {
-	feature: Feature;
-}) => {
+const getFeatureNameWithCapital = ({ feature }: { feature: Feature }) => {
 	if (feature.name.length > 0) {
 		return `${feature.name.charAt(0).toUpperCase()}${feature.name.slice(1)}`;
 	}

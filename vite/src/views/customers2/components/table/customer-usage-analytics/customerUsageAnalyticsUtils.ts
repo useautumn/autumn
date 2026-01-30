@@ -81,11 +81,7 @@ export function prepareTimeseriesChartData({
 /**
  * Extracts unique event names from events
  */
-export function getAvailableFeatures({
-	events,
-}: {
-	events: Event[];
-}): string[] {
+function getAvailableFeatures({ events }: { events: Event[] }): string[] {
 	if (!events || events.length === 0) return [];
 	return Array.from(new Set(events.map((e) => e.event_name)));
 }
@@ -93,7 +89,7 @@ export function getAvailableFeatures({
 /**
  * Filters events by time range and selected features
  */
-export function filterEventsByTimeAndFeatures({
+function filterEventsByTimeAndFeatures({
 	events,
 	selectedDays,
 	selectedFeatures,

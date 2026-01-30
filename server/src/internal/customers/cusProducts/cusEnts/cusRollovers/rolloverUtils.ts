@@ -14,7 +14,7 @@ export const getRolloverUpdates = ({
 	nextResetAt,
 }: {
 	cusEnt: FullCustomerEntitlement;
-	nextResetAt: number;
+	nextResetAt: number; // from when we add the rollover expiry duration to calculate the next expiry
 }) => {
 	const update: {
 		toDelete: string[];
@@ -67,10 +67,7 @@ export const getRolloverUpdates = ({
 	return update;
 };
 
-export const calculateNextExpiry = (
-	nextResetAt: number,
-	config: RolloverConfig,
-) => {
+const calculateNextExpiry = (nextResetAt: number, config: RolloverConfig) => {
 	if (nullish(config)) {
 		return null;
 	}

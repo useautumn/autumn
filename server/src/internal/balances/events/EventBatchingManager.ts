@@ -7,7 +7,7 @@ import { addTaskToQueue } from "@server/queue/queueUtils.js";
 class BatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
-	private readonly batchWindow = 100; // 100ms batching window
+	private readonly batchWindow = 350; // 100ms batching window
 	private readonly maxBatchSize = 200; // Max events per batch (~200kb per event, keep batches under 10MB for Tinybird)
 
 	/** Add an event to the batch */

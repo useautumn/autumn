@@ -1,7 +1,7 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createResendCli } from "@/external/resend/resendUtils.js";
-import OTPEmail from "@emails/OTPEmail.js";
 import { FROM_AUTUMN } from "./constants.js";
+import OTPEmail from "./OTPEmail.js";
 
 const sendOTPEmail = async ({ email, otp }: { email: string; otp: string }) => {
 	if (!process.env.RESEND_API_KEY || !process.env.RESEND_DOMAIN) {

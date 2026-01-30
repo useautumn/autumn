@@ -14,13 +14,13 @@ import {
 	isPrepaidPrice,
 	type Price,
 	type ProductItem,
+	sortProductItems,
 	toApiFeature,
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
-import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
@@ -82,7 +82,7 @@ export const getProductItemResponse = ({
 	});
 };
 
-export const getFreeTrialResponse = async ({
+const getFreeTrialResponse = async ({
 	db,
 	product,
 	fullCus,
@@ -127,7 +127,7 @@ export const getFreeTrialResponse = async ({
 	return null;
 };
 
-export const getProductProperties = ({
+const getProductProperties = ({
 	product,
 	freeTrial,
 }: {

@@ -13,6 +13,7 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	getStartingBalance,
+	type InsertCustomerEntitlement,
 	type Price,
 	type ProductOptions,
 } from "@autumn/shared";
@@ -21,7 +22,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
 
-export const initCusEntEntities = ({
+const initCusEntEntities = ({
 	entitlement,
 	entities,
 	existingCusEnt,
@@ -139,7 +140,7 @@ export const initCusEntitlement = ({
 	now?: number;
 	productOptions?: ProductOptions;
 	expires_at?: number | null;
-}) => {
+}): InsertCustomerEntitlement => {
 	now = now || Date.now();
 	let { newBalance, newEntities } = initCusEntBalance({
 		entitlement,

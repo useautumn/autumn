@@ -1,10 +1,11 @@
 import { format } from "date-fns";
+
 type TimeCase = "upper" | "lower";
 export const formatDateStr = (date: Date | string) => {
 	return format(new Date(date), "dd MMM yyyy");
 };
 
-export const formatTimestamp = (timestamp: number | null | undefined) => {
+const formatTimestamp = (timestamp: number | null | undefined) => {
 	if (!timestamp) return "";
 	return format(new Date(timestamp), "MM/dd/yyyy");
 };
@@ -38,7 +39,7 @@ export const formatUnixToDateTime = (
 	return { date, time };
 };
 
-export const formatUnixToDateTimeWithMs = (unix: number | null | undefined) => {
+const formatUnixToDateTimeWithMs = (unix: number | null | undefined) => {
 	if (!unix) return "";
 	const date = format(new Date(unix), "d MMM");
 	const time = format(new Date(unix), "HH:mm:ss.SSS");

@@ -124,7 +124,6 @@ export function createRoute<
 		middlewares.push(validator("json", opts.body));
 	}
 
-
 	// Same for query
 	if (opts.versionedQuery && opts.resource) {
 		middlewares.push(
@@ -142,7 +141,6 @@ export function createRoute<
 	if (opts.params) {
 		middlewares.push(validator("param", opts.params));
 	}
-
 
 	// Add expand middleware after query validation
 	if (opts.query || opts.versionedQuery) {

@@ -5,7 +5,7 @@ import { generateId } from "@/utils/genUtils.js";
 /**
  * Build a Customer object ready for insertion.
  */
-export const initCustomer = ({
+const initCustomer = ({
 	ctx,
 	customerId,
 	customerData,
@@ -33,6 +33,7 @@ export const initCustomer = ({
 					type: "stripe",
 				}
 			: null,
+		send_email_receipts: customerData?.send_email_receipts ?? false,
 	};
 };
 

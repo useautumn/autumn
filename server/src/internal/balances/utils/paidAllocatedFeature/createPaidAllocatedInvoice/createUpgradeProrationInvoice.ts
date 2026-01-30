@@ -20,7 +20,7 @@ import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/creat
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 
-export const getUpgradeProrationInvoiceItem = ({
+const getUpgradeProrationInvoiceItem = ({
 	prevPrice,
 	newPrice,
 	now,

@@ -25,11 +25,11 @@ import {
 // }
 
 // Region constants
-export const REGION_US_EAST_2 = "us-east-2";
-export const REGION_US_WEST_2 = "us-west-2";
+const REGION_US_EAST_2 = "us-east-2";
+const REGION_US_WEST_2 = "us-west-2";
 
 // All configured regions
-export const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
+const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
 
 // Current region this instance is running in
 export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
@@ -354,5 +354,8 @@ declare module "ioredis" {
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 	}
 }
+
+/** Get the primary Redis instance (us-west-2) to avoid replication lag issues */
+export const getPrimaryRedis = () => getRegionalRedis(REGION_US_WEST_2);
 
 export { redis };

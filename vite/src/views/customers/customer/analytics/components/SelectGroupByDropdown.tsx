@@ -171,4 +171,3 @@ export const SelectGroupByDropdown = ({
 		</DropdownMenu>
 	);
 };
-

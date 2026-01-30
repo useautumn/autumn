@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
-import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
+import {
+	authClient,
+	useListOrganizations,
+	useSession,
+} from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 
 export const LeaveOrgPopover = () => {

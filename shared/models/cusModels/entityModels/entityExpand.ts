@@ -1,6 +1,4 @@
-export enum EntityExpandV0 {
-	Invoices = "invoices",
-}
+export enum EntityExpandV0 {}
 
 export enum EntityExpand {
 	Invoices = "invoices",

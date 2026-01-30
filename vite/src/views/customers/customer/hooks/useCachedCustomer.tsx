@@ -1,5 +1,5 @@
+import type { FullCustomer } from "@autumn/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { FullCustomer } from "@autumn/shared";
 
 export const useCachedCustomer = (customerId: string | undefined) => {
 	const queryClient = useQueryClient();

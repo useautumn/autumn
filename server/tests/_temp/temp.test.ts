@@ -1,47 +1,71 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomer } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-test.concurrent(`${chalk.yellowBright("temp: concurrent entitled calls")}`, async () => {
-	const wordsItem = items.monthlyWords({ includedUsage: 200 });
-	const free = products.base({
-		id: "free",
-		items: [wordsItem],
-		isDefault: true,
+/**
+ * Test: Attach pro plan with prepaid allocated users, then track concurrently
+ */
+test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track concurrently")}`, async () => {
+	const prepaidUsersItem = items.prepaidUsers({
+		includedUsage: 0,
+		billingUnits: 1,
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "temp-entitled-concurrent",
-		setup: [s.customer({ withDefault: true }), s.products({ list: [free] })],
-		actions: [],
+	const pro = products.pro({
+		id: "pro",
+		items: [prepaidUsersItem],
 	});
 
-	// Call /entitled 5 times concurrently
-	const entitledPromises = Array.from({ length: 5 }, () =>
-		autumnV1.entitled({
-			customerId,
-			featureId: TestFeature.Words,
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "temp-prepaid-users-concurrent",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Users, quantity: 50 }],
+			}),
+		],
+	});
+
+	// Verify initial state: 50 prepaid users
+	const customerBefore = await autumnV2.customers.get<ApiCustomer>(customerId);
+	expect(customerBefore.balances[TestFeature.Users]).toMatchObject({
+		granted_balance: 0,
+		purchased_balance: 50,
+		current_balance: 50,
+		usage: 0,
+	});
+
+	// Track 10 times concurrently - each adding 1 user
+	const trackPromises = Array.from({ length: 10 }, (_, i) =>
+		autumnV2.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 1,
+			// idempotency_key: `concurrent-track-${i}`,
 		}),
 	);
 
-	const entitledResults = await Promise.all(entitledPromises);
+	const trackResults = await Promise.all(trackPromises);
 
-	// Verify all entitled calls succeeded
-	for (const result of entitledResults) {
-		expect(result.allowed).toBe(true);
+	// All track calls should succeed
+	for (const result of trackResults) {
+		expect(result.balance).toBeDefined();
 	}
 
-	// Call /events with value 25
-	await autumnV1.events.send({
-		customerId,
-		featureId: TestFeature.Words,
-		value: 25,
+	// Verify final state: 50 - 10 = 40 current_balance
+	const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
+	expect(customerAfter.balances[TestFeature.Users]).toMatchObject({
+		granted_balance: 0,
+		purchased_balance: 50,
+		current_balance: 40,
+		usage: 10,
 	});
-
-	// Verify balance is now 200 - 25 = 175
-	const customer = await autumnV1.customers.get(customerId);
-	expect(customer.features[TestFeature.Words].balance).toBe(175);
 });

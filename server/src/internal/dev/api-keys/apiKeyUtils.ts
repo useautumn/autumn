@@ -126,7 +126,9 @@ export const verifyKey = async ({
 }) => {
 	const hashedKey = hashApiKey(key);
 
-	const env = key.startsWith(ApiKeyPrefix.Sandbox) ? AppEnv.Sandbox : AppEnv.Live;
+	const env = key.startsWith(ApiKeyPrefix.Sandbox)
+		? AppEnv.Sandbox
+		: AppEnv.Live;
 
 	const data = await queryWithCache({
 		ttl: 3600,

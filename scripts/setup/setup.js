@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { randomBytes } from "crypto";
-import { writeFileSync, copyFileSync, readFileSync } from "fs";
-import inquirer from "inquirer";
-import { spawnSync } from "child_process";
 import chalk from "chalk";
+import { spawnSync } from "child_process";
+import { randomBytes } from "crypto";
+import { copyFileSync, readFileSync, writeFileSync } from "fs";
+import inquirer from "inquirer";
 
 const genUrlSafeBase64 = (bytes) => {
 	return randomBytes(bytes)
@@ -253,7 +253,7 @@ async function main() {
 	};
 
 	let databaseUrl = "";
-	let stripeWebhookVars = [];
+	const stripeWebhookVars = [];
 
 	databaseUrl = await handleDatabaseSetup();
 	// stripeWebhookVars = await handleLocalRunSetup();

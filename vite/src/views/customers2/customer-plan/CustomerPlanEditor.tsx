@@ -81,7 +81,7 @@ export default function CustomerProductView() {
 	);
 }
 
-export const CopyUrl = ({
+const CopyUrl = ({
 	url,
 	isInvoice = false,
 }: {

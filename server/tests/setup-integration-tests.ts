@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { loadLocalEnv } from "../src/utils/envUtils.js";
+import { loadLocalEnv } from "@/utils/envUtils";
 
 const isUnitTest = () => {
 	return process.argv.some((arg) => arg.includes("unit"));

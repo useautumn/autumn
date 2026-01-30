@@ -14,7 +14,7 @@ import {
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -167,7 +167,15 @@ export const handleUpgradeFlow = async ({
 			});
 		}
 
-		const schedule = await paramsToCurSubSchedule({ attachParams });
+		const schedule = await paramsToCurSubSchedule({
+			attachParams,
+			scheduleId:
+				typeof curSub?.schedule === "string"
+					? curSub.schedule
+					: typeof curSub?.schedule === "object"
+						? curSub.schedule?.id
+						: undefined,
+		});
 
 		if (schedule) {
 			let removeCusProducts: FullCusProduct[] | undefined;
@@ -185,6 +193,11 @@ export const handleUpgradeFlow = async ({
 					addNewProducts = false;
 				}
 			}
+
+			console.log(
+				`REMOVE CUS PRODUCTS: ${removeCusProducts?.map((cp) => cp.product.id).join(", ")}`,
+			);
+			console.log(`ADD NEW PRODUCTS: ${addNewProducts}`);
 
 			await handleUpgradeFlowSchedule({
 				ctx,
@@ -239,7 +252,7 @@ export const handleUpgradeFlow = async ({
 
 		let canceledAt: number | undefined;
 		let endedAt: number | undefined;
-		if (sub && isStripeSubscriptionCanceled(sub)) {
+		if (sub && isStripeSubscriptionCanceling(sub)) {
 			canceledAt = sub.canceled_at
 				? sub.canceled_at * 1000
 				: curCusProduct?.canceled_at || undefined;

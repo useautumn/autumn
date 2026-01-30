@@ -48,6 +48,13 @@ export const updateCustomerDetails = async ({
 			updates.email = customerData.email;
 		}
 	}
+	// Update send_email_receipts if explicitly provided
+	if (customerData?.send_email_receipts !== undefined) {
+		const fullCus = customer as FullCustomer;
+		if (fullCus.send_email_receipts !== customerData.send_email_receipts) {
+			updates.send_email_receipts = customerData.send_email_receipts;
+		}
+	}
 
 	if (Object.keys(updates).length > 0) {
 		logger.info(`Updating customer details:`, {
@@ -74,7 +81,7 @@ export const updateCustomerDetails = async ({
 	}
 };
 
-export const getCusInvoices = async ({
+const getCusInvoices = async ({
 	db,
 	internalCustomerId,
 	invoices,
@@ -109,7 +116,7 @@ export const getCusInvoices = async ({
 };
 
 // IMPORTANT FUNCTION
-export const getCusEntsInFeatures = async ({
+const getCusEntsInFeatures = async ({
 	customer,
 	internalFeatureIds,
 	logger,
@@ -154,7 +161,7 @@ export const getCusEntsInFeatures = async ({
 	return { cusEnts, cusPrices };
 };
 
-export const parseCusExpand = (expand?: string): CusExpand[] => {
+const parseCusExpand = (expand?: string): CusExpand[] => {
 	if (expand) {
 		const options = expand.split(",");
 		const result: CusExpand[] = [];

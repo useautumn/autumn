@@ -1,3 +1,4 @@
+import { type GroupedPermission, groupAndFormatScopes } from "@autumn/shared";
 import {
 	Check,
 	ChevronDown,
@@ -17,7 +18,6 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { groupAndFormatScopes, type GroupedPermission } from "@/utils/scopeDefinitions";
 
 interface ClientInfo {
 	client_id: string;
@@ -109,7 +109,9 @@ export const Consent = () => {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-	const [groupedPermissions, setGroupedPermissions] = useState<GroupedPermission[]>([]);
+	const [groupedPermissions, setGroupedPermissions] = useState<
+		GroupedPermission[]
+	>([]);
 	const [jokeScope] = useState(() => getRandomJokeScope());
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -284,9 +286,9 @@ export const Consent = () => {
 	}
 
 	return (
-		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
+		<div className="w-screen min-h-screen bg-background flex items-center justify-center py-8 px-4">
 			<CustomToaster />
-			<div className="w-full max-w-[420px] space-y-6">
+			<div className="w-full max-w-[420px] space-y-6 max-h-full overflow-y-auto">
 				{/* Logo */}
 				<div className="flex justify-center">
 					<img src="/logo_hd.png" alt="Autumn" className="w-12 h-12" />
@@ -472,10 +474,7 @@ export const Consent = () => {
 						<Clock className="w-3 h-3" />
 						<span>
 							You can revoke access at any time from your{" "}
-							<a
-								href="/settings"
-								className="text-primary hover:underline"
-							>
+							<a href="/settings" className="text-primary hover:underline">
 								organization settings
 							</a>
 							.

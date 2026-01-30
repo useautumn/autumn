@@ -50,7 +50,7 @@ export const cusProductToSub = async ({
 	return sub;
 };
 
-export const cusProductsToStripeSubs = ({
+const cusProductsToStripeSubs = ({
 	cusProducts,
 	stripeCli,
 }: {

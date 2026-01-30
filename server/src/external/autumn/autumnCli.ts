@@ -259,13 +259,26 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(params: AttachBodyV0, headers?: Record<string, string>) {
-		// const data = await this.post(`/attach`, {
-		//   customer_id: customerId,
-		//   product_id: productId,
-		//   options: toSnakeCase(options),
-		// });
-		const data = await this.post(`/attach`, params, headers);
+	async attach(
+		params: AttachBodyV0,
+		{
+			skipWebhooks,
+			idempotencyKey,
+		}: { skipWebhooks?: boolean; idempotencyKey?: string } = {},
+	) {
+		const headers: Record<string, string> = {};
+		if (skipWebhooks !== undefined) {
+			headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+		}
+		if (idempotencyKey !== undefined) {
+			headers["idempotency-key"] = idempotencyKey;
+		}
+
+		const data = await this.post(
+			`/attach`,
+			params,
+			Object.keys(headers).length > 0 ? headers : undefined,
+		);
 
 		return data;
 	}
@@ -452,6 +465,19 @@ export class AutumnInt {
 			const data = await this.delete(`/customers/${customerId}`, {
 				deleteInStripe,
 			});
+			return data;
+		},
+
+		update: async (
+			customerId: string,
+			updates: {
+				name?: string;
+				email?: string;
+				send_email_receipts?: boolean;
+				metadata?: Record<string, unknown>;
+			},
+		) => {
+			const data = await this.patch(`/customers/${customerId}`, updates);
 			return data;
 		},
 
@@ -671,14 +697,23 @@ export class AutumnInt {
 		{
 			skipCache = false,
 			timeout,
-		}: { skipCache?: boolean; timeout?: number } = {},
+			headers,
+		}: {
+			skipCache?: boolean;
+			timeout?: number;
+			headers?: Record<string, string>;
+		} = {},
 	) => {
 		const queryParams = new URLSearchParams();
 		if (skipCache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/track?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/track?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 
 		if (timeout) {
 			await new Promise((resolve) => setTimeout(resolve, timeout));
@@ -693,13 +728,18 @@ export class AutumnInt {
 
 	check = async <T = CheckResult>(
 		params: CheckParams & CheckQuery & { skip_event?: boolean },
+		{ headers }: { headers?: Record<string, string> } = {},
 	): Promise<T> => {
 		const queryParams = new URLSearchParams();
 		if (params.skip_cache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/check?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/check?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 		return data;
 	};
 

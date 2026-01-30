@@ -1,9 +1,9 @@
 import {
-	fullCustomerToCustomerEntitlements,
 	type EntityBalance,
 	type EntityRolloverBalance,
 	type FullCustomer,
 	findCustomerEntitlementById,
+	fullCustomerToCustomerEntitlements,
 	tryCatch,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -15,6 +15,7 @@ import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustome
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
 	EntityCountMismatch: "ENTITY_COUNT_MISMATCH",
+	CacheVersionMismatch: "CACHE_VERSION_MISMATCH",
 } as const;
 
 /**
@@ -32,16 +33,20 @@ const handleSyncPostgresError = async ({
 	const message = error.message || "";
 	const isConflict =
 		message.includes(SYNC_CONFLICT_CODES.ResetAtMismatch) ||
-		message.includes(SYNC_CONFLICT_CODES.EntityCountMismatch);
+		message.includes(SYNC_CONFLICT_CODES.EntityCountMismatch) ||
+		message.includes(SYNC_CONFLICT_CODES.CacheVersionMismatch);
 
 	if (!isConflict) {
 		throw error;
 	}
 
 	// Extract conflict code and cus_ent_id from error message
-	const code = message.includes(SYNC_CONFLICT_CODES.ResetAtMismatch)
-		? SYNC_CONFLICT_CODES.ResetAtMismatch
-		: SYNC_CONFLICT_CODES.EntityCountMismatch;
+	let code: string = SYNC_CONFLICT_CODES.EntityCountMismatch;
+	if (message.includes(SYNC_CONFLICT_CODES.ResetAtMismatch)) {
+		code = SYNC_CONFLICT_CODES.ResetAtMismatch;
+	} else if (message.includes(SYNC_CONFLICT_CODES.CacheVersionMismatch)) {
+		code = SYNC_CONFLICT_CODES.CacheVersionMismatch;
+	}
 	const cusEntMatch = message.match(/cus_ent_id:(\S+)/);
 	const cusEntId = cusEntMatch?.[1];
 
@@ -59,7 +64,7 @@ const handleSyncPostgresError = async ({
 	return true;
 };
 
-export interface SyncItemV3 {
+interface SyncItemV3 {
 	customerId: string;
 	orgId: string;
 	env: string;
@@ -77,6 +82,7 @@ interface SyncEntry {
 	entities: Record<string, EntityBalance> | null;
 	next_reset_at: number | null;
 	entity_count: number;
+	cache_version: number | null;
 }
 
 interface RolloverSyncEntry {
@@ -120,6 +126,7 @@ const buildSyncEntries = ({
 			entities: cusEnt.entities ?? null,
 			next_reset_at: cusEnt.next_reset_at ?? null,
 			entity_count: entityCount,
+			cache_version: cusEnt.cache_version ?? 0,
 		});
 	}
 

@@ -8,11 +8,13 @@ export const buildStripeSubscriptionCreateAction = ({
 	billingContext,
 	subItemsUpdate,
 	addInvoiceItems,
+	subscriptionCancelAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	addInvoiceItems: Stripe.SubscriptionCreateParams.AddInvoiceItem[];
+	subscriptionCancelAt?: number;
 }) => {
 	const { stripeCustomer, paymentMethod, trialContext } = billingContext;
 
@@ -39,6 +41,8 @@ export const buildStripeSubscriptionCreateAction = ({
 		add_invoice_items: addInvoiceItems,
 
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
+
+		cancel_at: subscriptionCancelAt,
 
 		...(isFreeTrialWithCardRequired && {
 			trial_settings: {

@@ -13,6 +13,8 @@ export type SheetType =
 	| "subscription-detail"
 	| "subscription-update"
 	| "subscription-update-v2"
+	| "subscription-cancel"
+	| "subscription-uncancel"
 	| "balance-selection"
 	| "balance-edit"
 	| null;
@@ -85,19 +87,18 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 // Convenience selectors for common patterns
 export const useIsSheetOpen = () => useSheetStore((s) => s.type !== null);
-export const useIsEditingPlan = () =>
-	useSheetStore((s) => s.type === "edit-plan");
-export const useIsEditingFeature = () =>
+const useIsEditingPlan = () => useSheetStore((s) => s.type === "edit-plan");
+const useIsEditingFeature = () =>
 	useSheetStore((s) => s.type === "edit-feature");
-export const useIsCreatingFeature = () =>
+const useIsCreatingFeature = () =>
 	useSheetStore((s) => s.type === "new-feature" || s.itemId === "new");
 export const useIsAttachingProduct = () =>
 	useSheetStore((s) => s.type === "attach-product");
-export const useIsEditingPlanPrice = () =>
+const useIsEditingPlanPrice = () =>
 	useSheetStore((s) => s.type === "edit-plan-price");
-export const useIsViewingSubscriptionDetail = () =>
+const useIsViewingSubscriptionDetail = () =>
 	useSheetStore((s) => s.type === "subscription-detail");
-export const useIsUpdatingSubscription = () =>
+const useIsUpdatingSubscription = () =>
 	useSheetStore((s) => s.type === "subscription-update");
 
 /**

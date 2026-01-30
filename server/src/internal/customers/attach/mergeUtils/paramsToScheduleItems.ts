@@ -22,7 +22,7 @@ import { getCusProductsToRemove } from "./paramsToSubItems.js";
 import { mergeAdjacentPhasesWithSameItems } from "./phaseUtils/mergeSimilarPhases.js";
 import { preparePhasesForBillingPeriod } from "./phaseUtils/upsertNewPhase.js";
 
-export const removeCusProductFromScheduleItems = async ({
+const removeCusProductFromScheduleItems = async ({
 	curScheduleItems,
 	updateScheduleItems,
 	allCusProducts,

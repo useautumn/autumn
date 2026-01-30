@@ -20,7 +20,7 @@ import {
 	getCustomerSub,
 } from "../attachUtils/convertAttachParams.js";
 
-export const isMultiProductSub = ({
+const isMultiProductSub = ({
 	sub,
 	cusProducts,
 }: {

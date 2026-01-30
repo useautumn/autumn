@@ -35,7 +35,7 @@ export interface ExtendedRequest extends ExpressRequest {
 	skipCache: boolean;
 }
 
-export interface ActionRequest {
+interface ActionRequest {
 	id: string;
 	authType: AuthType;
 	method: string;

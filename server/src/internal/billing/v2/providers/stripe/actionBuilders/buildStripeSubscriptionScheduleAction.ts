@@ -3,13 +3,38 @@ import {
 	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
-	msToSeconds,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type StripeSubscriptionScheduleResult = {
+	scheduleAction?: StripeSubscriptionScheduleAction;
+	subscriptionCancelAt?: number;
+};
+
+/**
+ * The 4 possible scenarios for subscription schedule actions:
+ * - no_phases: No phases with items, nothing to do
+ * - single_indefinite: 1 phase with no end_date (e.g., uncancel)
+ * - simple_cancel: 1 phase + trailing empty (cancel at end of cycle)
+ * - multi_phase: Multiple phases requiring a schedule
+ */
+type ScheduleScenario =
+	| "no_phases"
+	| "single_indefinite"
+	| "simple_cancel"
+	| "multi_phase";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const phaseHasItems = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
@@ -24,28 +49,120 @@ const phaseHasItems = (
 const filterEmptyPhases = (
 	phases: Stripe.SubscriptionScheduleUpdateParams.Phase[],
 ): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
-	// Find first non-empty phase
 	const firstNonEmptyIndex = phases.findIndex(phaseHasItems);
-	if (firstNonEmptyIndex === -1) {
-		return [];
-	}
+	if (firstNonEmptyIndex === -1) return [];
 
-	// Find last non-empty phase
 	let lastNonEmptyIndex = phases.length - 1;
 	while (lastNonEmptyIndex >= 0 && !phaseHasItems(phases[lastNonEmptyIndex])) {
 		lastNonEmptyIndex--;
 	}
 
-	// Slice to only include phases with items
-	const filtered = phases.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1);
-
-	return filtered;
+	return phases.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1);
 };
 
 /**
- * Builds the subscription schedule action based on add/remove customer products.
+ * Determines which scenario we're in based on phases.
+ */
+const getScheduleScenario = ({
+	scheduledPhases,
+	endsWithEmptyPhase,
+}: {
+	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
+	endsWithEmptyPhase: boolean;
+}): ScheduleScenario => {
+	if (scheduledPhases.length === 0) return "no_phases";
+
+	if (scheduledPhases.length === 1) {
+		if (endsWithEmptyPhase) return "simple_cancel";
+		if (!scheduledPhases[0].end_date) return "single_indefinite";
+	}
+
+	return "multi_phase";
+};
+
+/**
+ * Builds the appropriate action for each scenario.
+ */
+const buildActionForScenario = ({
+	scenario,
+	hasSchedule,
+	scheduleId,
+	scheduledPhases,
+	cancelAtSeconds,
+	endsWithEmptyPhase,
+}: {
+	scenario: ScheduleScenario;
+	hasSchedule: boolean;
+	scheduleId: string | undefined;
+	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
+	cancelAtSeconds: number | undefined;
+	endsWithEmptyPhase: boolean;
+}): StripeSubscriptionScheduleResult => {
+	switch (scenario) {
+		case "no_phases":
+			return {};
+
+		case "single_indefinite":
+			// Uncancel scenario: release schedule if exists, otherwise nothing
+			return hasSchedule
+				? {
+						scheduleAction: {
+							type: "release",
+							stripeSubscriptionScheduleId: scheduleId!,
+						},
+					}
+				: {};
+
+		case "simple_cancel":
+			// Cancel at end of cycle: use cancel_at on subscription, not schedule
+			return {
+				scheduleAction: hasSchedule
+					? {
+							type: "release",
+							stripeSubscriptionScheduleId: scheduleId!,
+						}
+					: undefined,
+				subscriptionCancelAt: cancelAtSeconds,
+			};
+
+		case "multi_phase": {
+			// Multiple transitions: need a schedule
+			const endBehavior = endsWithEmptyPhase ? "cancel" : "release";
+
+			return hasSchedule
+				? {
+						scheduleAction: {
+							type: "update",
+							stripeSubscriptionScheduleId: scheduleId!,
+							params: {
+								phases: scheduledPhases,
+								end_behavior: endBehavior,
+							},
+						},
+					}
+				: {
+						scheduleAction: {
+							type: "create",
+							params: {
+								phases: scheduledPhases,
+								end_behavior: endBehavior,
+							},
+						},
+					};
+		}
+	}
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN FUNCTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds the subscription schedule action based on customer products.
  *
- * Returns undefined if no schedule is needed (only 1 phase = no transitions).
+ * Returns:
+ * - scheduleAction: The schedule action to execute (create, update, or release)
+ * - subscriptionCancelAt: If set, the subscription should be canceled at this timestamp
  */
 export const buildStripeSubscriptionScheduleAction = ({
 	ctx,
@@ -57,11 +174,10 @@ export const buildStripeSubscriptionScheduleAction = ({
 	billingContext: BillingContext;
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
-}): StripeSubscriptionScheduleAction | undefined => {
+}): StripeSubscriptionScheduleResult => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
 
-	// 1. Filter customer products by stripe subscription id or stripe subscription schedule ID?
-
+	// 1. Filter to relevant customer products
 	const relatedCustomerProducts = finalCustomerProducts.filter(
 		(customerProduct) =>
 			(stripeSubscription &&
@@ -81,6 +197,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
 	);
 
+	// 2. Build phases
 	const phases = buildStripePhasesUpdate({
 		ctx,
 		billingContext,
@@ -88,42 +205,25 @@ export const buildStripeSubscriptionScheduleAction = ({
 		trialEndsAt,
 	});
 
-	// Filter out empty phases from both ends - Stripe requires items in every phase
 	const scheduledPhases = filterEmptyPhases(phases);
 
-	// No valid phases with items → no schedule needed
-	if (scheduledPhases.length === 0) {
-		return undefined;
-	}
+	// 3. Derive cancel info from trailing empty phase
+	const lastPhase = phases[phases.length - 1];
+	const endsWithEmptyPhase = !!lastPhase && !phaseHasItems(lastPhase);
+	const cancelAtSeconds =
+		endsWithEmptyPhase && typeof lastPhase.start_date === "number"
+			? lastPhase.start_date
+			: undefined;
 
-	const nowSeconds = msToSeconds(billingContext.currentEpochMs);
-	const firstPhaseStartDate = scheduledPhases[0].start_date as number;
-	const startsInFuture = firstPhaseStartDate > nowSeconds;
+	// 4. Determine scenario and build action
+	const scenario = getScheduleScenario({ scheduledPhases, endsWithEmptyPhase });
 
-	// Only 1 phase starting NOW → no schedule needed (direct subscription update instead)
-	// Only 1 phase starting in FUTURE → schedule needed to delay start
-	if (scheduledPhases.length === 1 && !startsInFuture) {
-		return undefined;
-	}
-
-	// Case 2: Has existing schedule → update it
-	if (stripeSubscriptionSchedule) {
-		return {
-			type: "update",
-			stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
-			params: {
-				phases: scheduledPhases,
-			},
-		};
-	}
-
-	return {
-		type: "create",
-		params: {
-			// customer: stripeCustomer.id,
-			// start_date: startDate,
-			phases: scheduledPhases,
-			end_behavior: "release",
-		},
-	};
+	return buildActionForScenario({
+		scenario,
+		hasSchedule: !!stripeSubscriptionSchedule,
+		scheduleId: stripeSubscriptionSchedule?.id,
+		scheduledPhases,
+		cancelAtSeconds,
+		endsWithEmptyPhase,
+	});
 };

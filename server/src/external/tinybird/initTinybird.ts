@@ -5,23 +5,21 @@ import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
 import { createListEventsPipe } from "./pipes/listEventsPipe.js";
 
-const TINYBIRD_URL = process.env.TINYBIRD_URL;
+const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
-
-// Debug: log config on startup
-if (TINYBIRD_URL && TINYBIRD_TOKEN) {
-	console.log(`[Tinybird] Configured with URL: ${TINYBIRD_URL}`);
-	console.log(`[Tinybird] Token prefix: ${TINYBIRD_TOKEN.substring(0, 10)}...`);
-}
 
 /** Tinybird REST API client singleton. Null if not configured. */
 const tinybirdClient: Tinybird | null =
-	TINYBIRD_URL && TINYBIRD_TOKEN
+	TINYBIRD_API_URL && TINYBIRD_TOKEN
 		? new Tinybird({
-				baseUrl: TINYBIRD_URL,
+				baseUrl: TINYBIRD_API_URL,
 				token: TINYBIRD_TOKEN,
 			})
 		: null;
+
+if (tinybirdClient) {
+	console.log(`[Tinybird] Configured with URL: ${TINYBIRD_API_URL}`);
+}
 
 /** Zod schema for TinybirdEvent (matches events.datasource) */
 const TinybirdEventSchema = z.object({

@@ -97,7 +97,10 @@ function UpdateCreditSystemSheet({
 
 			// Call onSuccess with old and new IDs
 			if (onSuccess) {
-				onSuccess(selectedCreditSystem.id, creditSystem.id || selectedCreditSystem.id);
+				onSuccess(
+					selectedCreditSystem.id,
+					creditSystem.id || selectedCreditSystem.id,
+				);
 			}
 
 			setOpen(false);

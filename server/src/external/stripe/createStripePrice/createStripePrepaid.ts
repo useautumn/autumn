@@ -15,7 +15,7 @@ import { getPriceEntitlement } from "@server/internal/products/prices/priceUtils
 import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
-export const prepaidToStripeTiers = ({
+const prepaidToStripeTiers = ({
 	price,
 	org,
 }: {

@@ -7,6 +7,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
+	isAllocatedPrice,
 	type MeteredConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -84,7 +85,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 	return newConfig;
 };
 
-export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
+const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {
 		return ApiFeatureType.Static;
 	} else if (feature.type === FeatureType.Metered) {
@@ -98,7 +99,7 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	}
 };
 
-export const isCreditSystem = ({ feature }: { feature: Feature }) => {
+const isCreditSystem = ({ feature }: { feature: Feature }) => {
 	return feature.type === FeatureType.CreditSystem;
 };
 
@@ -123,11 +124,11 @@ export const isPaidContinuousUse = ({
 
 	const hasPaid = cusPrices.some((cp) => {
 		const config = cp.price.config as UsagePriceConfig;
-		if (config.internal_feature_id === feature.internal_id) {
-			return true;
-		}
 
-		return false;
+		const featureIdMatches = config.internal_feature_id === feature.internal_id;
+		const allocatedPrice = isAllocatedPrice(cp.price);
+
+		return featureIdMatches && allocatedPrice;
 	});
 
 	return hasPaid;

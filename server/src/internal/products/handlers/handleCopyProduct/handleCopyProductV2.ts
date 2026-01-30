@@ -12,7 +12,7 @@ import { copyProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "../../../../utils/genUtils";
 
-export const initNewFeature = ({
+const initNewFeature = ({
 	data,
 	orgId,
 	env,

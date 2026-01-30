@@ -2,17 +2,18 @@ import {
 	AllowanceType,
 	BillingInterval,
 	BillWhen,
-	EntitlementWithFeature,
+	type EntitlementWithFeature,
+	FixedPriceConfig,
+	Price,
 	PriceType,
-	ProductItem,
+	type ProductItem,
 	ProductItemInterval,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
-import { intervalIsNone } from "./productItemUtils";
 import { isFeatureItem } from "./getItemType";
+import { intervalIsNone } from "./productItemUtils";
 
-export const getBillingUnits = (
+const getBillingUnits = (
 	config: UsagePriceConfig,
 	entitlements: EntitlementWithFeature[],
 ) => {
@@ -37,7 +38,7 @@ export const getBillingUnits = (
 	return `${entitlement.allowance} `;
 };
 
-export const getDefaultPriceConfig = (type: PriceType) => {
+const getDefaultPriceConfig = (type: PriceType) => {
 	if (type === PriceType.Fixed) {
 		return {
 			type: PriceType.Fixed,

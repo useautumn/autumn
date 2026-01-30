@@ -1,4 +1,4 @@
-import { ApiVersion, type ProductV2 } from "@autumn/shared";
+import { ApiVersion, type ProductItem, type ProductV2 } from "@autumn/shared";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -9,7 +9,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
-import ctx from "./createTestContext.js";
+import defaultCtx, { type TestContext } from "./createTestContext.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -54,15 +54,36 @@ type AdvanceClockAction = {
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
+	waitForSeconds?: number;
 };
 
 type AttachPaymentMethodAction = {
 	type: "attachPaymentMethod";
-	paymentMethodType: "success" | "fail" | "authenticate";
+	paymentMethodType: "success" | "fail" | "authenticate" | "alipay";
 };
 
 type RemovePaymentMethodAction = {
 	type: "removePaymentMethod";
+};
+
+type TrackAction = {
+	type: "track";
+	featureId: string;
+	value: number;
+	entityIndex?: number;
+};
+
+type UpdateSubscriptionAction = {
+	type: "updateSubscription";
+	productId: string;
+	entityIndex?: number;
+	cancelAction?: "cancel_end_of_cycle" | "cancel_immediately" | "uncancel";
+	items?: ProductItem[];
+};
+
+type AdvanceToNextInvoiceAction = {
+	type: "advanceToNextInvoice";
+	withPause?: boolean;
 };
 
 type ScenarioAction =
@@ -70,7 +91,10 @@ type ScenarioAction =
 	| CancelAction
 	| AdvanceClockAction
 	| AttachPaymentMethodAction
-	| RemovePaymentMethodAction;
+	| RemovePaymentMethodAction
+	| TrackAction
+	| UpdateSubscriptionAction
+	| AdvanceToNextInvoiceAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];
@@ -79,11 +103,12 @@ type CleanupConfig = {
 
 type ScenarioConfig = {
 	testClock: boolean;
-	attachPm?: "success" | "fail" | "authenticate";
+	attachPm?: "success" | "fail" | "authenticate" | "alipay";
 	customerData?: CustomerData;
 	withDefault: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
+	sendEmailReceipts?: boolean;
 	products: ProductV2[];
 	productPrefix?: string;
 	entityConfig?: EntityConfig;
@@ -122,10 +147,12 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
  * @param withDefault - Attach the default product on creation (default: false)
  * @param defaultGroup - The product group to use for default product selection
  * @param skipWebhooks - Skip sending webhooks for this customer creation (default: undefined, uses server default)
+ * @param send_email_receipts - Whether to send email receipts to the customer
  * @example s.customer({ paymentMethod: "success" })
  * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
  * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
  * @example s.customer({ withDefault: true, skipWebhooks: false }) // Enable webhooks for testing
+ * @example s.customer({ paymentMethod: "success", send_email_receipts: true })
  */
 const customer = ({
 	testClock = true,
@@ -134,13 +161,15 @@ const customer = ({
 	withDefault,
 	defaultGroup,
 	skipWebhooks,
+	send_email_receipts,
 }: {
 	testClock?: boolean;
-	paymentMethod?: "success" | "fail" | "authenticate";
+	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
 	data?: CustomerData;
 	withDefault?: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
+	send_email_receipts?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -150,6 +179,7 @@ const customer = ({
 		withDefault: withDefault ?? config.withDefault,
 		defaultGroup: defaultGroup ?? config.defaultGroup,
 		skipWebhooks: skipWebhooks ?? config.skipWebhooks,
+		sendEmailReceipts: send_email_receipts ?? config.sendEmailReceipts,
 	});
 };
 
@@ -275,9 +305,11 @@ const cancel = ({
  * @param hours - Number of hours to advance
  * @param months - Number of months to advance
  * @param toNextInvoice - Advance to next billing cycle + invoice finalization time
+ * @param waitForSeconds - Wait for Stripe webhooks to process after advancing
  * @example s.advanceTestClock({ days: 15 }) // advance 15 days
  * @example s.advanceTestClock({ months: 1 }) // advance 1 month
  * @example s.advanceTestClock({ toNextInvoice: true }) // advance to next invoice
+ * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 }) // advance 8 days, wait 30s for webhooks
  * @example
  * // Interleaved actions:
  * s.attach({ productId: "pro" }),
@@ -291,12 +323,14 @@ const advanceTestClock = ({
 	hours,
 	months,
 	toNextInvoice,
+	waitForSeconds,
 }: {
 	days?: number;
 	weeks?: number;
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
+	waitForSeconds?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -309,6 +343,7 @@ const advanceTestClock = ({
 				hours,
 				months,
 				toNextInvoice,
+				waitForSeconds,
 			},
 		],
 	});
@@ -324,7 +359,7 @@ const advanceTestClock = ({
 const attachPaymentMethod = ({
 	type,
 }: {
-	type: "success" | "fail" | "authenticate";
+	type: "success" | "fail" | "authenticate" | "alipay";
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -350,6 +385,96 @@ const removePaymentMethod = (): ConfigFn => {
 			...config.actions,
 			{
 				type: "removePaymentMethod" as const,
+			},
+		],
+	});
+};
+
+/**
+ * Track usage for a feature on the customer or a specific entity.
+ * @param featureId - The feature ID to track usage for
+ * @param value - The usage value to track
+ * @param entityIndex - Optional entity index (0-based) to track for (omit for customer-level)
+ * @example s.track({ featureId: TestFeature.Messages, value: 300 }) // customer-level
+ * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }) // entity-level
+ */
+const track = ({
+	featureId,
+	value,
+	entityIndex,
+}: {
+	featureId: string;
+	value: number;
+	entityIndex?: number;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "track" as const,
+				featureId,
+				value,
+				entityIndex,
+			},
+		],
+	});
+};
+
+/**
+ * Update a subscription (e.g., cancel end of cycle, add items).
+ * @param productId - The product ID (without prefix)
+ * @param entityIndex - Optional entity index (0-based) for entity-level subscription
+ * @param cancelAction - Cancel action: "cancel_end_of_cycle", "cancel_immediately", or "uncancel"
+ * @param items - Optional items to add/update on the subscription
+ * @example s.updateSubscription({ productId: "pro", cancelAction: "cancel_end_of_cycle" }) // customer-level
+ * @example s.updateSubscription({ productId: "pro", entityIndex: 0, cancelAction: "cancel_end_of_cycle" }) // entity-level
+ * @example s.updateSubscription({ productId: "pro", items: [consumableItem] }) // add items
+ */
+const updateSubscription = ({
+	productId,
+	entityIndex,
+	cancelAction,
+	items,
+}: {
+	productId: string;
+	entityIndex?: number;
+	cancelAction?: "cancel_end_of_cycle" | "cancel_immediately" | "uncancel";
+	items?: ProductItem[];
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "updateSubscription" as const,
+				productId,
+				entityIndex,
+				cancelAction,
+				items,
+			},
+		],
+	});
+};
+
+/**
+ * Advance the test clock to the next invoice cycle.
+ * @param withPause - If true, advances in two steps (to month boundary, then to finalize)
+ * @example s.advanceToNextInvoice()
+ * @example s.advanceToNextInvoice({ withPause: true })
+ */
+const advanceToNextInvoice = ({
+	withPause,
+}: {
+	withPause?: boolean;
+} = {}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "advanceToNextInvoice" as const,
+				withPause,
 			},
 		],
 	});
@@ -413,8 +538,11 @@ export const s = {
 	attach,
 	cancel,
 	advanceTestClock,
+	advanceToNextInvoice,
 	attachPaymentMethod,
 	removePaymentMethod,
+	track,
+	updateSubscription,
 	deleteCustomer,
 } as const;
 
@@ -486,13 +614,15 @@ export async function initScenario(params: {
 	customerId: string;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }): Promise<{
 	customerId: string;
 	autumnV1: AutumnInt;
+	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
 	testClockId: string | undefined;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
-	ctx: typeof ctx;
+	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
 }>;
@@ -502,13 +632,15 @@ export async function initScenario(params: {
 	customerId?: undefined;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }): Promise<{
 	customerId: undefined;
 	autumnV1: AutumnInt;
+	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
 	testClockId: undefined;
 	customer: null;
-	ctx: typeof ctx;
+	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
 }>;
@@ -518,11 +650,15 @@ export async function initScenario({
 	customerId,
 	setup,
 	actions,
+	ctx: ctxOverride,
 }: {
 	customerId?: string;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }) {
+	// Use provided context or fall back to default
+	const ctx = ctxOverride ?? defaultCtx;
 	// Build config from setup and actions
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 
@@ -583,10 +719,11 @@ export async function initScenario({
 			customerData: config.customerData,
 			attachPm: config.attachPm,
 			withTestClock: config.testClock,
-			withDefault: config.withDefault,
+			withDefault: config.withDefault ?? false, // RIP
 			// Default group matches the product prefix (customerId) used in initProductsV0
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
+			sendEmailReceipts: config.sendEmailReceipts,
 		});
 		testClockId = result.testClockId;
 		customer = result.customer;
@@ -595,6 +732,11 @@ export async function initScenario({
 	// 3. Create autumn clients
 	const autumnV1 = new AutumnInt({
 		version: ApiVersion.V1_2,
+		secretKey: ctx.orgSecretKey,
+	});
+
+	const autumnV1Beta = new AutumnInt({
+		version: ApiVersion.V1_Beta,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -705,6 +847,7 @@ export async function initScenario({
 					numberOfWeeks: action.weeks,
 					numberOfHours: action.hours,
 					numberOfMonths: action.months,
+					waitForSeconds: action.waitForSeconds,
 				});
 			}
 		} else if (action.type === "attachPaymentMethod") {
@@ -730,12 +873,95 @@ export async function initScenario({
 				stripeClient: ctx.stripeCli,
 				stripeCustomerId: stripeCusId,
 			});
+		} else if (action.type === "track") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot track usage: customerId is required when using s.track()",
+				);
+			}
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.track({
+				customer_id: customerId,
+				feature_id: action.featureId,
+				value: action.value,
+				entity_id: entityId,
+			});
+		} else if (action.type === "updateSubscription") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot update subscription: customerId is required when using s.updateSubscription()",
+				);
+			}
+			const prefixedProductId = `${action.productId}_${productPrefix}`;
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: prefixedProductId,
+				entity_id: entityId,
+				cancel_action: action.cancelAction,
+				items: action.items,
+			});
+		} else if (action.type === "advanceToNextInvoice") {
+			if (!testClockId) {
+				throw new Error(
+					"Cannot advance to next invoice: testClock not enabled in customer config",
+				);
+			}
+
+			const startingFrom = new Date(advancedTo);
+			if (action.withPause) {
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addMonths(startingFrom, 1).getTime(),
+					waitForSeconds: 15,
+				});
+				await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addHours(advancedTo, hoursToFinalizeInvoice).getTime(),
+					waitForSeconds: 15,
+				});
+			} else {
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addHours(
+						addMonths(startingFrom, 1),
+						hoursToFinalizeInvoice,
+					).getTime(),
+					waitForSeconds: 30,
+				});
+			}
 		}
 	}
 
 	return {
 		customerId,
 		autumnV1,
+		autumnV1Beta,
 		autumnV2,
 		testClockId,
 		customer,

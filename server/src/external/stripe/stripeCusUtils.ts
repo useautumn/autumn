@@ -14,7 +14,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
 
-export const getStripeCus = async ({
+const getStripeCus = async ({
 	stripeCli,
 	stripeId,
 }: {
@@ -111,6 +111,7 @@ export const getCusPaymentMethod = async ({
 		const paymentMethod = await stripeCli.paymentMethods.retrieve(
 			paymentMethodId as string,
 		);
+
 		return paymentMethod;
 	}
 };
@@ -244,7 +245,7 @@ export const attachAuthenticatePaymentMethod = async ({
 	});
 };
 
-export const deleteAllStripeCustomers = async ({
+const deleteAllStripeCustomers = async ({
 	org,
 	env,
 }: {

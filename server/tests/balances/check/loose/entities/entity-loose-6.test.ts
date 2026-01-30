@@ -86,7 +86,9 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 		expect(breakdown).toHaveLength(2);
 
 		// Both should be loose (plan_id null)
-		const balances = breakdown?.map((b) => b.granted_balance).sort((a, b) => a - b);
+		const balances = breakdown
+			?.map((b) => b.granted_balance)
+			.sort((a, b) => a - b);
 		expect(balances).toEqual([200, 300]);
 	});
 

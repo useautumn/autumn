@@ -9,7 +9,7 @@ import { Decimal } from "decimal.js";
 import { cusEntToStartingBalance } from "../../../../../../shared/utils/cusEntUtils/balanceUtils/cusEntToStartingBalance";
 import { calculateDeduction } from "./calculateDeduction";
 
-export type DeductFromMainBalanceParams = {
+type DeductFromMainBalanceParams = {
 	cusEnt: FullCusEntWithFullCusProduct;
 	amountToDeduct: number;
 	targetEntityId?: string;
@@ -18,7 +18,7 @@ export type DeductFromMainBalanceParams = {
 	maxBalance?: number;
 };
 
-export type DeductFromMainBalanceResult = {
+type DeductFromMainBalanceResult = {
 	deducted: number;
 	newBalance: number;
 	newEntities: Record<string, EntityBalance> | null;

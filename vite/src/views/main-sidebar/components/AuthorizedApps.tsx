@@ -1,3 +1,4 @@
+import { groupAndFormatScopes } from "@autumn/shared";
 import { Calendar, Key, Shield, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +13,6 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { getBackendErr } from "@/utils/genUtils";
-import { groupAndFormatScopes } from "@/utils/scopeDefinitions";
 
 interface OAuthConsent {
 	id: string;
@@ -37,9 +37,11 @@ interface ApiKeyPreview {
 // Helper to render scope badges
 function renderScopeBadges(scopes: string[]): JSX.Element {
 	const grouped = groupAndFormatScopes(scopes);
-	
+
 	if (grouped.length === 0) {
-		return <span className="text-sm text-muted-foreground">No permissions</span>;
+		return (
+			<span className="text-sm text-muted-foreground">No permissions</span>
+		);
 	}
 
 	return (

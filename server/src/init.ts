@@ -18,6 +18,7 @@ import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import { auth } from "./utils/auth.js";
@@ -97,6 +98,8 @@ const init = async () => {
 				"app_env",
 				"x-api-version",
 				"x-client-type",
+				"x-request-id",
+				"x-visitor-id",
 				"Authorization",
 				"Content-Type",
 				"Accept",
@@ -118,7 +121,7 @@ const init = async () => {
 	app.all("/api/auth/*", toNodeHandler(auth));
 
 	// Initialize managers in parallel for faster startup
-	await Promise.all([ClickHouseManager.getInstance()]);
+	await Promise.all([ClickHouseManager.getInstance(), warmupRegionalRedis()]);
 
 	app.use(async (req: any, res: any, next: any) => {
 		// Add Render region identifier headers for load balancer verification
@@ -232,6 +235,8 @@ if (process.env.NODE_ENV === "development") {
 			logger.error(`WORKER DIED: ${worker.process.pid}`);
 			cluster.fork();
 		});
+
+		registerShutdownHandlers();
 	} else {
 		init();
 		registerShutdownHandlers();
@@ -255,21 +260,3 @@ async function gracefulShutdown() {
 		process.exit(1);
 	}
 }
-
-// Close connections gracefully?
-const closeConnections = async () => {
-	console.log("Closing connections");
-	await client.end();
-};
-
-process.on("SIGTERM", async () => {
-	console.log("SIGTERM received, shutting down gracefully");
-	await closeConnections();
-	process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-	console.log("SIGINT received, shutting down gracefully");
-	await closeConnections();
-	process.exit(0);
-});

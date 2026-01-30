@@ -132,7 +132,7 @@ export const sendUsageAndReset = async ({
 	}
 };
 
-export const handleInvoiceCreated = async ({
+const handleInvoiceCreated = async ({
 	db,
 	org,
 	data,
@@ -173,51 +173,11 @@ export const handleInvoiceCreated = async ({
 			return;
 		}
 
-		const internalEntityId = activeProducts.find(
-			(p) => p.internal_entity_id,
-		)?.internal_entity_id;
-
 		await FeatureService.list({
 			db,
 			orgId: org.id,
 			env,
 		});
-
-		if (internalEntityId) {
-			// try {
-			//   let stripeCli = createStripeCli({ org, env });
-			//   let entity = await EntityService.getByInternalId({
-			//     db,
-			//     internalId: internalEntityId,
-			//   });
-			//   let feature = features.find(
-			//     (f) => f.internal_id == entity?.internal_feature_id
-			//   );
-			//   let entDetails = "";
-			//   if (entity.name) {
-			//     entDetails = `${entity.name}${
-			//       entity.id ? ` (ID: ${entity.id})` : ""
-			//     }`;
-			//   } else if (entity.id) {
-			//     entDetails = `${entity.id}`;
-			//   }
-			//   if (entDetails && feature) {
-			//     await stripeCli.invoices.update(invoice.id!, {
-			//       description: `${getFeatureName({
-			//         feature,
-			//         plural: false,
-			//         capitalize: true,
-			//       })}: ${entDetails}`,
-			//     });
-			//   }
-			// } catch (error: any) {
-			//   if (
-			//     error.message != "Finalized invoices can't be updated in this way"
-			//   ) {
-			//     logger.error(`Failed to add entity ID to invoice description`, error);
-			//   }
-			// }
-		}
 
 		const stripeSubs = await getStripeSubs({
 			stripeCli: createStripeCli({ org, env }),
@@ -245,7 +205,7 @@ export const handleInvoiceCreated = async ({
 	}
 };
 
-export const validateProductShouldReset = ({
+const validateProductShouldReset = ({
 	subscription,
 	_invoice,
 }: {

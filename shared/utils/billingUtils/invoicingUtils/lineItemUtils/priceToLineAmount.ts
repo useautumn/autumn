@@ -1,8 +1,8 @@
 import {
-  isFixedPrice,
-  nullish,
-  type Price,
-  tiersToLineAmount,
+	isFixedPrice,
+	nullish,
+	type Price,
+	tiersToLineAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 /**
@@ -14,30 +14,30 @@ import { Decimal } from "decimal.js";
  */
 
 export const priceToLineAmount = ({
-  price,
-  overage,
-  multiplier = 1,
+	price,
+	overage,
+	multiplier = 1,
 }: {
-  price: Price;
-  overage?: number;
-  multiplier?: number;
+	price: Price;
+	overage?: number;
+	multiplier?: number;
 }): number => {
-  // Fixed prices: flat amount × multiplier
-  if (isFixedPrice(price)) {
-    const config = price.config;
-    return new Decimal(config.amount).mul(multiplier).toNumber();
-  }
+	// Fixed prices: flat amount × multiplier
+	if (isFixedPrice(price)) {
+		const config = price.config;
+		return new Decimal(config.amount).mul(multiplier).toNumber();
+	}
 
-  // Usage-based prices: tiered calculation
-  if (nullish(overage)) {
-    throw new Error(
-      `[priceToLineAmount] overage required for usage-based prices`,
-    );
-  }
+	// Usage-based prices: tiered calculation
+	if (nullish(overage)) {
+		throw new Error(
+			`[priceToLineAmount] overage required for usage-based prices`,
+		);
+	}
 
-  return tiersToLineAmount({
-    price,
-    overage,
-    billingUnits: price.config.billing_units ?? 1,
-  });
+	return tiersToLineAmount({
+		price,
+		overage,
+		billingUnits: price.config.billing_units ?? 1,
+	});
 };

@@ -82,5 +82,3 @@ export function useCustomerListColumns({
 		};
 	}, [features]);
 }
-
-export type { CustomerWithProducts };

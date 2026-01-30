@@ -10,13 +10,13 @@ import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionU
  */
 export const releaseScheduleIfLastPhase = async ({
 	ctx,
-	subscriptionUpdatedContext,
+	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<boolean> => {
 	const { db, org, env, logger } = ctx;
-	const { stripeSubscription, nowMs } = subscriptionUpdatedContext;
+	const { stripeSubscription, nowMs } = eventContext;
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 	if (!stripeSubscriptionSchedule) return false;

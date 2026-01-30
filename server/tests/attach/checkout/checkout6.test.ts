@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
@@ -79,28 +78,16 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checko
 			product: pro,
 		});
 	});
-	return;
 
 	test("should have no URL returned if try to attach premium (with invoice true)", async () => {
-		await expectAutumnError({
-			func: async () => {
-				await autumn.attach({
-					customer_id: customerId,
-					product_id: premium.id,
-					invoice: true,
-				});
-			},
-		});
-
-		const res = await autumn.checkout({
+		const res = await autumn.attach({
 			customer_id: customerId,
 			product_id: premium.id,
 			invoice: true,
 		});
 
-		expect(res.url).toBeNull();
+		expect(res.url).toBeUndefined();
 	});
-	return;
 
 	test("should attach premium product via invoice enable immediately", async () => {
 		const res = await autumn.attach({

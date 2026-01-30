@@ -3,7 +3,7 @@
  * Separate from ApiCustomer cache to allow independent versioning
  */
 
-export const FULL_CUSTOMER_CACHE_VERSION = "1.0.0";
+const FULL_CUSTOMER_CACHE_VERSION = "1.0.0";
 
 /**
  * Cache time-to-live in seconds (3 days)

@@ -201,7 +201,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 
 		expect(finalEntityRes.features![TestFeature.Messages].balance).toBe(-100);
 		expect(finalEntityRes.features![TestFeature.Messages].usage).toBe(600);
-		expect(finalEntityRes.features![TestFeature.Messages].usage_limit).toBe(600);
+		expect(finalEntityRes.features![TestFeature.Messages].usage_limit).toBe(
+			600,
+		);
 
 		// Verify other seats still at 500 in database
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {

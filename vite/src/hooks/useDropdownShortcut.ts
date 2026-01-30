@@ -30,7 +30,7 @@ export function useDropdownShortcut({
 /**
  * Hook to trigger an action when a dropdown is open and a key is pressed
  */
-export function useMenuItemShortcut({
+function useMenuItemShortcut({
 	shortcut,
 	onTrigger,
 	isMenuOpen,
@@ -53,6 +53,3 @@ export function useMenuItemShortcut({
 		},
 	);
 }
-
-
-

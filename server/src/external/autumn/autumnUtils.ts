@@ -5,7 +5,6 @@ import RecaseError from "@/utils/errorUtils.js";
 
 export enum FeatureId {
 	Products = "products",
-	Features = "features",
 	Revenue = "revenue",
 }
 

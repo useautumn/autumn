@@ -21,7 +21,7 @@ import { newCusToFullCus } from "@/internal/customers/cusUtils/cusUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
-export const webhookToAttachParams = ({
+const webhookToAttachParams = ({
 	req,
 	stripeCli,
 	paymentMethod,

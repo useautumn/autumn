@@ -4,6 +4,8 @@ export type ClickHouseResult<T = Record<string, string | number>> = {
 	meta: Array<{ name: string; type?: string }>;
 	rows: number;
 	data: T[];
+	meta: { name: string }[];
+	rows: number;
 };
 
 export interface RawEventFromClickHouse {

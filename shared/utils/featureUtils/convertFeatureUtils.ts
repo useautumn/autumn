@@ -5,7 +5,7 @@ import {
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { ProductItemFeatureType } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { ApiFeatureType } from "../../api/models.js";
-import { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
+import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
 
 export const featureToItemFeatureType = ({ feature }: { feature: Feature }) => {
 	let featureType: ProductItemFeatureType;
@@ -60,12 +60,20 @@ export const isBooleanFeature = ({ feature }: { feature: Feature }) => {
 	return feature.type === FeatureType.Boolean;
 };
 
-export const featureToOptions = ({ feature, options }: { feature: Feature, options: FeatureOptions[] }) => {
+export const featureToOptions = ({
+	feature,
+	options,
+}: {
+	feature: Feature;
+	options: FeatureOptions[];
+}) => {
 	// Check if options has internal feature id
-	const option = options.find(o => o.internal_feature_id === feature.internal_id);
+	const option = options.find(
+		(o) => o.internal_feature_id === feature.internal_id,
+	);
 	if (option) return option;
 
-	const option2 = options.find(o => o.feature_id === feature.id);
+	const option2 = options.find((o) => o.feature_id === feature.id);
 	if (option2) return option2;
 
 	return;

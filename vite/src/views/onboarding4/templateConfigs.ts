@@ -7,7 +7,7 @@ export interface PricingTier {
 	highlighted?: boolean;
 }
 
-export interface TemplateConfig {
+interface TemplateConfig {
 	id: string;
 	name: string;
 	company: string;
@@ -17,7 +17,7 @@ export interface TemplateConfig {
 	websiteUrl: string;
 }
 
-export const TEMPLATE_CONFIGS: TemplateConfig[] = [
+const TEMPLATE_CONFIGS: TemplateConfig[] = [
 	{
 		id: "cursor",
 		name: "Cursor",

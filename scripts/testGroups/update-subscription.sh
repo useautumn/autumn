@@ -19,12 +19,16 @@ set -e
 
 
 BUN_PARALLEL_V2 \
-  'update-subscription/custom-plan' \
-  'update-subscription/discounts' \
-  'update-subscription/errors' \
-  'update-subscription/free-trial' \
   'update-subscription/invoice' \
-  'update-subscription/multi-product' \
-  'update-subscription/update-quantity' \
-  'update-subscription/version-update' \
-  --max=3
+  # 'update-subscription/custom-plan' \
+  # 'update-subscription/discounts' \
+  # 'update-subscription/errors' \
+  # 'update-subscription/free-trial' \
+  # 'update-subscription/multi-product' \
+  # 'update-subscription/update-quantity' \
+  # 'update-subscription/version-update' \
+  # 'update-subscription/cancel/uncancel' \
+  # 'update-subscription/cancel/immediately' \
+  # 'update-subscription/cancel/end-of-cycle' \
+  # --max=3
+

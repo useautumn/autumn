@@ -17,14 +17,18 @@ export const CreateBalanceParamsSchema = z
 		customer_id: z.string().describe(descriptions.customer_id),
 		entity_id: z.string().optional().describe(descriptions.entity_id),
 
-		granted_balance: z.number().optional().describe(descriptions.granted_balance),
+		granted_balance: z
+			.number()
+			.optional()
+			.describe(descriptions.granted_balance),
 		unlimited: z.boolean().optional().describe(descriptions.unlimited),
 		reset: z
 			.object({
 				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
 			})
-			.optional().describe(descriptions.reset),
+			.optional()
+			.describe(descriptions.reset),
 		expires_at: z.number().optional().describe(descriptions.expires_at), // Unix timestamp in milliseconds
 	})
 	.refine((data) => {

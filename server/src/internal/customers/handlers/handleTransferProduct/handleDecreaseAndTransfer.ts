@@ -90,7 +90,9 @@ export const handleDecreaseAndTransfer = async ({
 				replaceables: [],
 				entities: fullCus.entities,
 				features,
-				internalEntityId: toEntity?.internal_id ? toEntity.internal_id : undefined,
+				internalEntityId: toEntity?.internal_id
+					? toEntity.internal_id
+					: undefined,
 				entityId: toEntity?.id ? toEntity.id : undefined,
 			},
 			product,

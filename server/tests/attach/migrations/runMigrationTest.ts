@@ -1,20 +1,20 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { ProductV2, Organization } from "@autumn/shared";
-import { AppEnv } from "autumn-js";
+import { expect } from "bun:test";
+import type { Organization, ProductV2 } from "@autumn/shared";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectResetAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
+import { expectTrialEndsAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
 	expectSubItemsCorrect,
 	getSubsFromCusId,
 } from "@tests/utils/expectUtils/expectSubUtils.js";
-import Stripe from "stripe";
-import { expect } from "bun:test";
-import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { expectResetAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { expectTrialEndsAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
-import { timeout } from "@/utils/genUtils.js";
+import type { AppEnv } from "autumn-js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import { timeout } from "@/utils/genUtils.js";
 
 export const expectSubsSame = ({
 	subsBefore,
@@ -25,8 +25,8 @@ export const expectSubsSame = ({
 }) => {
 	// let invoicesBefore = subsBefore.map((sub) => sub.latest_invoice);
 	// let invoicesAfter = subsAfter.map((sub) => sub.latest_invoice);
-	let subIdsBefore = subsBefore.map((sub) => sub.id);
-	let subIdsAfter = subsAfter.map((sub) => sub.id);
+	const subIdsBefore = subsBefore.map((sub) => sub.id);
+	const subIdsAfter = subsAfter.map((sub) => sub.id);
 	const periodsBefore = subsBefore.map((sub) => subToPeriodStartEnd({ sub }));
 	const periodsAfter = subsAfter.map((sub) => subToPeriodStartEnd({ sub }));
 

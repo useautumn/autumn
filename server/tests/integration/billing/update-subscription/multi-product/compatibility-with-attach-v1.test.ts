@@ -52,14 +52,12 @@ test.concurrent(`${chalk.yellowBright("compat: downgrade creates schedule, v2 up
 			s.products({ list: [premium, pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: "premium", entityIndex: 0 })],
-	});
+		actions: [
+			s.attach({ productId: "premium", entityIndex: 0 }),
 
-	// Step 1: Downgrade from Premium to Pro via attach (creates schedule)
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entities[0].id,
+			// 1. Downgrade entity to Pro
+			s.attach({ productId: "pro", entityIndex: 0 }),
+		],
 	});
 
 	// Verify entity has Premium canceling (active but with canceled_at set) and Pro scheduled

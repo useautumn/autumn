@@ -20,7 +20,7 @@ import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 
-export const getDefaultProduct = async ({
+export const getFreeDefaultProductByGroup = async ({
 	ctx,
 	productGroup,
 }: {
@@ -31,12 +31,12 @@ export const getDefaultProduct = async ({
 	const defaultProducts = await ProductService.listDefault({
 		db,
 		orgId: org.id,
+		group: productGroup,
 		env,
 	});
 
 	const defaultProd = defaultProducts.find(
-		(p) =>
-			p.group === productGroup && !isDefaultTrialFullProduct({ product: p }),
+		(p) => !isDefaultTrialFullProduct({ product: p }),
 	);
 
 	return defaultProd;
@@ -112,14 +112,14 @@ export const activateDefaultProduct = async ({
 	return true;
 };
 
-export const activateFutureProduct = async ({
+const activateFutureProduct = async ({
 	ctx,
 	cusProduct,
 }: {
 	ctx: AutumnContext;
 	cusProduct: FullCusProduct;
 }) => {
-	const { db, org, env, logger } = ctx;
+	const { db, org, env } = ctx;
 
 	const cusProducts = await CusProductService.list({
 		db,
@@ -213,7 +213,7 @@ export const getMainCusProduct = async ({
 	return mainCusProduct as FullCusProduct;
 };
 
-export const getCusProductsWithStripeSubId = ({
+const getCusProductsWithStripeSubId = ({
 	cusProducts,
 	stripeSubId,
 	curCusProductId,

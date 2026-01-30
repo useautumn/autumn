@@ -26,17 +26,16 @@ export * from "./convertCusEntUtils/cusEntsToStartingBalance.js";
 export * from "./convertCusEntUtils/cusEntToCusPrice.js";
 export * from "./convertCusEntUtils/cusEntToKey.js";
 export * from "./convertCusEntUtils/cusEntToStripeIds.js";
-
+// Convert utils barrel
+export * from "./convertCusEntUtils/customerEntitlementToOptions.js";
 // Convert utils barrel
 export * from "./convertCusEntUtils.js";
-
 // Core utils
 export * from "./cusEntUtils.js";
 export * from "./filterCusEntUtils.js";
-
+export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature.js";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById.js";
-export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature.js";
 export * from "./findCustomerEntitlement/findPrepaidCustomerEntitlement.js";
 // Other utils
 export * from "./getRolloverFields.js";

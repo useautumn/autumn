@@ -10,7 +10,7 @@ import type {
 /**
  * Detects if a subscription.updated event represents a transition to past_due.
  */
-export const isStripeSubscriptionPastDueEvent = ({
+const isStripeSubscriptionPastDueEvent = ({
 	stripeSubscription,
 	previousAttributes,
 }: {

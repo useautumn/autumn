@@ -175,7 +175,7 @@ export const constructProduct = ({
 		is_add_on: isAddOn,
 		is_default: (type === "free" && isDefault) || forcePaidDefault,
 		version,
-		group: group || "",
+		group: group ?? null,
 		free_trial: freeTrialConfig as FreeTrial,
 		created_at: Date.now(),
 	};

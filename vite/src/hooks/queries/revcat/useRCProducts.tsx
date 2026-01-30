@@ -24,7 +24,12 @@ export const useRCProducts = () => {
 		}
 	};
 
-	const { data: products = [], isLoading, error, refetch } = useQuery({
+	const {
+		data: products = [],
+		isLoading,
+		error,
+		refetch,
+	} = useQuery({
 		queryKey: ["revenuecat-products"],
 		queryFn: fetcher,
 	});

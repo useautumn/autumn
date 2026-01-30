@@ -1,13 +1,13 @@
-import { AdminOnly } from "@/views/admin/components/AdminOnly";
+import { LogOut, Shield } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { authClient, useSession } from "@/lib/auth-client";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useState } from "react";
-import { LogOut, Shield } from "lucide-react";
+import { AdminOnly } from "@/views/admin/components/AdminOnly";
 
 export const AdminDropdownItems = () => {
 	const { data, isPending } = useSession();

@@ -35,7 +35,7 @@ import {
 	isPriceItem,
 } from "./getItemType.js";
 
-export const getResetUsage = ({
+const getResetUsage = ({
 	item,
 	feature,
 }: {
@@ -55,7 +55,7 @@ export const getResetUsage = ({
 	return item.reset_usage_when_enabled;
 };
 // ITEM TO PRICE AND ENTITLEMENT
-export const toPrice = ({
+const toPrice = ({
 	item,
 	orgId,
 	internalProductId,
@@ -161,7 +161,7 @@ export const toFeature = ({
 	return { price: null, ent };
 };
 
-export const toFeatureAndPrice = ({
+const toFeatureAndPrice = ({
 	item,
 	orgId,
 	internalFeatureId,
@@ -236,11 +236,11 @@ export const toFeatureAndPrice = ({
 		feature_id: item.feature_id!,
 		usage_tiers: notNullish(item.price)
 			? [
-				{
-					amount: item.price,
-					to: TierInfinite,
-				},
-			]
+					{
+						amount: item.price,
+						to: TierInfinite,
+					},
+				]
 			: (item.tiers as any),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
@@ -257,7 +257,7 @@ export const toFeatureAndPrice = ({
 		if (shouldProrate(onDecrease) || onDecrease === OnDecrease.Prorate) {
 			onDecrease =
 				onIncrease === OnIncrease.ProrateImmediately ||
-					onIncrease === OnIncrease.BillImmediately
+				onIncrease === OnIncrease.BillImmediately
 					? OnDecrease.ProrateImmediately
 					: OnDecrease.ProrateNextCycle;
 		}

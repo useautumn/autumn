@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
-export const APIKeyToolbarItems = ({
+const APIKeyToolbarItems = ({
 	setDeleteOpen,
 }: {
 	setDeleteOpen: (open: boolean) => void;

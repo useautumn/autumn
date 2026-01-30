@@ -12,12 +12,14 @@ import {
 	type FullCusEntWithProduct,
 	type FullCustomerEntitlement,
 	features,
+	type InsertCustomerEntitlement,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -72,7 +74,7 @@ export class CusEntService {
 		data,
 	}: {
 		db: DrizzleCli;
-		data: CustomerEntitlement[];
+		data: InsertCustomerEntitlement[] | FullCustomerEntitlement[];
 	}) {
 		if (Array.isArray(data) && data.length === 0) {
 			return;
@@ -167,15 +169,51 @@ export class CusEntService {
 	}: {
 		db: DrizzleCli;
 		id: string;
-		updates: Partial<CustomerEntitlement>;
+		updates: Partial<InsertCustomerEntitlement>;
 	}) {
 		const data = await db
 			.update(customerEntitlements)
-			.set(updates as any)
+			.set({
+				...updates,
+				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+			})
 			.where(eq(customerEntitlements.id, id))
 			.returning();
 
 		return data;
+	}
+
+	static async batchUpdate({
+		db,
+		data,
+	}: {
+		db: DrizzleCli;
+		data: UpdateCustomerEntitlement[];
+	}) {
+		if (Array.isArray(data) && data.length === 0) {
+			return;
+		}
+
+		const updatePromises = [];
+		for (const { customerEntitlement, updates } of data) {
+			if (Object.keys(updates ?? {}).length === 0) {
+				continue;
+			}
+
+			updatePromises.push(
+				CusEntService.update({
+					db,
+					id: customerEntitlement.id,
+					updates: updates as Partial<InsertCustomerEntitlement>,
+				}),
+			);
+		}
+		await Promise.all(updatePromises);
+
+		// await CusEntService.upsert({
+		// 	db,
+		// 	data: updatedCustomerEntitlements,
+		// });
 	}
 
 	static async getStrict({
@@ -237,7 +275,10 @@ export class CusEntService {
 	}) {
 		const data = await db
 			.update(customerEntitlements)
-			.set({ balance: sql`${customerEntitlements.balance} + ${amount}` })
+			.set({
+				balance: sql`${customerEntitlements.balance} + ${amount}`,
+				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+			})
 			.where(eq(customerEntitlements.id, id))
 			.returning();
 
@@ -255,7 +296,10 @@ export class CusEntService {
 	}) {
 		const data = await db
 			.update(customerEntitlements)
-			.set({ balance: sql`${customerEntitlements.balance} - ${amount}` })
+			.set({
+				balance: sql`${customerEntitlements.balance} - ${amount}`,
+				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+			})
 			.where(eq(customerEntitlements.id, id))
 			.returning();
 

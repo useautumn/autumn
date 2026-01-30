@@ -8,9 +8,9 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
+import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";
 
 export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -82,4 +82,3 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 		</>
 	);
 };
-

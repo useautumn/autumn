@@ -11,7 +11,10 @@ import {
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
-import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	LayoutGroup,
+	SheetHeader,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -38,52 +41,57 @@ function SheetContent() {
 	const { customerProduct } = formContext;
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
-			<SheetHeader
-				title="Update Subscription"
-				description={`Update ${customerProduct.product.name} for this customer`}
-				breadcrumbs={[
-					{ name: customerProduct.product.name, sheet: "subscription-detail" },
-				]}
-				itemId={customerProduct.id}
-			/>
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
+				<SheetHeader
+					title="Update Subscription"
+					description={`Update ${customerProduct.product.name} for this customer`}
+					breadcrumbs={[
+						{
+							name: customerProduct.product.name,
+							sheet: "subscription-detail",
+						},
+					]}
+					itemId={customerProduct.id}
+				/>
 
-			<div
-				className={cn(
-					"grid px-4 transition-[grid-template-rows] duration-200 ease-out",
-					!hasNoBillingChanges && "delay-75",
-				)}
-				style={{
-					gridTemplateRows: hasNoBillingChanges ? "1fr" : "0fr",
-				}}
-			>
-				<div className="overflow-hidden">
-					<div
-						className={cn(
-							"pt-4 transition-opacity duration-150",
-							hasNoBillingChanges ? "opacity-100 delay-75" : "opacity-0",
-						)}
-					>
-						<InfoBox variant="success" classNames={{ infoBox: "w-full" }}>
-							No changes to billing will be made
-						</InfoBox>
+				<div
+					className={cn(
+						"grid px-4 transition-[grid-template-rows] duration-200 ease-out",
+						!hasNoBillingChanges && "delay-75",
+					)}
+					style={{
+						gridTemplateRows: hasNoBillingChanges ? "1fr" : "0fr",
+					}}
+				>
+					<div className="overflow-hidden">
+						<div
+							className={cn(
+								"pt-4 transition-opacity duration-150",
+								hasNoBillingChanges ? "opacity-100 delay-75" : "opacity-0",
+							)}
+						>
+							<InfoBox variant="success" classNames={{ infoBox: "w-full" }}>
+								No changes to billing will be made
+							</InfoBox>
+						</div>
 					</div>
 				</div>
+
+				<EditPlanSection />
+				<UpdateSubscriptionPreviewSection />
+				<UpdateSubscriptionFooter />
+
+				{productWithFormItems && (
+					<InlinePlanEditor
+						product={productWithFormItems}
+						onSave={handlePlanEditorSave}
+						onCancel={handlePlanEditorCancel}
+						isOpen={showPlanEditor}
+					/>
+				)}
 			</div>
-
-			<EditPlanSection />
-			<UpdateSubscriptionPreviewSection />
-			<UpdateSubscriptionFooter />
-
-			{productWithFormItems && (
-				<InlinePlanEditor
-					product={productWithFormItems}
-					onSave={handlePlanEditorSave}
-					onCancel={handlePlanEditorCancel}
-					isOpen={showPlanEditor}
-				/>
-			)}
-		</div>
+		</LayoutGroup>
 	);
 }
 

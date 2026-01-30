@@ -62,6 +62,52 @@ await autumnV1.track({
 - **Entity Products**: `attach({ entity_id })` - product belongs to entity
 - **Per-Entity Features**: `entity_feature_id` in item config - balance distributed to entities
 
+### Per-Entity Features: Billing Implications
+
+For per-entity consumable features:
+
+1. **Base price is charged ONCE** (at customer level), not per entity
+2. **Overage is SUMMED across all entities FIRST, then rounded up** to billing units
+3. **Each entity has its own included usage** that resets independently
+
+```typescript
+// Per-entity consumable: 100 included per entity, $0.10/unit overage
+const perEntityConsumable = items.consumableMessages({
+  includedUsage: 100,
+  entityFeatureId: TestFeature.Users,  // Makes it per-entity
+});
+
+const pro = products.pro({  // $20/month base
+  items: [perEntityConsumable],
+});
+
+// Attach ONCE to customer (NOT to each entity)
+s.attach({ productId: pro.id })  // No entityIndex!
+
+// Track to specific entities
+s.track({ featureId: TestFeature.Messages, value: 150, entityIndex: 0 })  // 50 overage
+s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 1 })  // 150 overage
+
+// Invoice calculation:
+// - Base price: $20 (single, not per entity)
+// - Entity 1 overage: 50
+// - Entity 2 overage: 150
+// - Total overage: 50 + 150 = 200 → rounded to billing units → 200 * $0.10 = $20
+// - Total invoice: $20 + $20 = $40
+```
+
+**Billing Units Rounding**: For per-entity consumables with `billingUnits > 1`, ALL entity overages are **SUMMED FIRST**, then the **TOTAL** is rounded up to billing units:
+
+```typescript
+// billingUnits=10, $1/10 units
+// Entity 1: 55 overage
+// Entity 2: 23 overage
+// Total: 55 + 23 = 78 → ceil(78/10) = 8 → 8 * $1 = $8
+// NOT: ceil(55/10) + ceil(23/10) = 6 + 3 = $9 ❌
+```
+
+**Common Mistake**: Don't attach per-entity feature products to each entity separately - this creates multiple subscriptions with multiple base charges!
+
 ### What are Entities?
 
 Entities are sub-units of a customer that can have their own:

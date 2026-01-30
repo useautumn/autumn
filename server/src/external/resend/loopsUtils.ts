@@ -25,5 +25,3 @@ export const createLoopsContact = async (user: User) => {
 		logger.error("Error creating loops contact", { error });
 	}
 };
-
-export { createLoopsCli };

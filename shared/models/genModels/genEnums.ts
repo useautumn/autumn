@@ -3,15 +3,7 @@ export enum AppEnv {
 	Live = "live",
 }
 
-export enum Duration {
-	Minute = "minute",
-	Hour = "hour",
-	Day = "day",
-	Week = "week",
-	Month = "month",
-	Year = "year",
-	Lifetime = "lifetime",
-}
+export enum Duration {}
 
 export enum ProcessorType {
 	Stripe = "stripe",

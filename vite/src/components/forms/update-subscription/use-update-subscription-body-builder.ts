@@ -1,3 +1,4 @@
+import type { BillingBehavior } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
@@ -7,6 +8,10 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { useMemo } from "react";
+import type {
+	CancelActionValue,
+	RefundBehaviorValue,
+} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
@@ -27,6 +32,11 @@ interface UpdateSubscriptionBodyBuilderParams {
 	freeTrial?: CreateFreeTrial | null;
 	// Custom items for preview support (separate from isCustom logic)
 	items?: ProductItem[] | null;
+
+	// Cancel action fields
+	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
+	refundBehavior?: RefundBehaviorValue | null;
 }
 
 /**
@@ -65,7 +75,9 @@ export function useUpdateSubscriptionBodyBuilder(
 				hasChanges && !!storeProduct?.id && product === storeProduct
 					? true
 					: undefined;
-			const version = storeProduct?.id ? storeProduct.version : undefined;
+			const version =
+				mergedParams.version ??
+				(storeProduct?.id ? storeProduct.version : undefined);
 
 			// Convert prepaidOptions to options array
 			const options = mergedParams.prepaidOptions
@@ -110,6 +122,9 @@ export function useUpdateSubscriptionBodyBuilder(
 						: undefined,
 				freeTrial: mergedParams.freeTrial,
 				items: mergedParams.items,
+				cancelAction: mergedParams.cancelAction,
+				billingBehavior: mergedParams.billingBehavior,
+				refundBehavior: mergedParams.refundBehavior,
 			});
 		},
 		[products, hasChanges, storeProduct, params, env],

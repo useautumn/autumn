@@ -12,8 +12,8 @@ import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
-import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { Consent } from "./views/auth/Consent";
+import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
@@ -29,7 +29,7 @@ import PlanEditorView from "./views/products/plan/PlanEditorView";
 import { OrgSettingsView } from "./views/settings/OrgSettingsView";
 import { TerminalView } from "./views/TerminalView";
 
-export function SquircleProvider({ children }: { children: React.ReactNode }) {
+function SquircleProvider({ children }: { children: React.ReactNode }) {
 	React.useEffect(() => void init(), []);
 	return children;
 }
@@ -38,7 +38,7 @@ export default function App() {
 	const { data } = useSession();
 
 	useEffect(() => {
-		if (data) {
+		if (data?.user) {
 			identifyUser({
 				email: data.user.email,
 				name: data.user.name,

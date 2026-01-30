@@ -38,9 +38,7 @@ export const keyToTitle = (key: string) => {
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-export const notNullOrUndefined = <T>(
-	value: T | null | undefined,
-): value is T => {
+const notNullOrUndefined = <T>(value: T | null | undefined): value is T => {
 	return value !== null && value !== undefined;
 };
 
@@ -79,7 +77,7 @@ export const formatUnixToDateTime = (
 	);
 };
 
-export const formatUnixSecondsToDateTime = (unixSeconds?: number | null) => {
+const formatUnixSecondsToDateTime = (unixSeconds?: number | null) => {
 	if (!unixSeconds) {
 		return "undefined";
 	}
@@ -87,7 +85,7 @@ export const formatUnixSecondsToDateTime = (unixSeconds?: number | null) => {
 	return formatUnixToDateTime(unixSeconds * 1000);
 };
 
-export const formatUnixToUTCDateTime = (
+const formatUnixToUTCDateTime = (
 	unixDate?: number | null,
 	withTimezone?: boolean,
 ) => {
@@ -111,7 +109,7 @@ export const timeout = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-export const validateId = (type: string, id: string) => {
+const validateId = (type: string, id: string) => {
 	if (!id.match(/^[a-zA-Z0-9_-]+$/)) {
 		throw new RecaseError({
 			message: `${type} ID can only contain alphanumeric characters, underscores, and hyphens`,
@@ -156,7 +154,7 @@ export const getUnique = (vals: string[]) => {
 	return Array.from(new Set(vals));
 };
 
-export const sumValues = (vals: number[]) => {
+const sumValues = (vals: number[]) => {
 	const { Decimal } = require("decimal.js");
 	return vals
 		.reduce(
