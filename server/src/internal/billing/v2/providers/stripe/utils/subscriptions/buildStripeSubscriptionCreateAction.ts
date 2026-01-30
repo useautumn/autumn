@@ -20,7 +20,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
-	const isFreeTrialWithCardRequired = trialContext?.cardRequired;
+	const freeTrialNoCardRequired = trialContext?.cardRequired === false;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
@@ -44,7 +44,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		cancel_at: subscriptionCancelAt,
 
-		...(isFreeTrialWithCardRequired && {
+		...(freeTrialNoCardRequired && {
 			trial_settings: {
 				end_behavior: {
 					missing_payment_method: "cancel",
