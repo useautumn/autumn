@@ -84,7 +84,7 @@ export function CustomerListTable({
 
 			return {
 				...customer,
-				fullCustomerProducts: fullCustomer?.customer_products,
+				fullCustomer,
 				isFullDataLoading: !fullCustomer && isFullDataLoading,
 			} as CustomerWithProducts;
 		});
