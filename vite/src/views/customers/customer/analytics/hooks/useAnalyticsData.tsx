@@ -5,6 +5,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
+import { useEventNames } from "./useEventNames";
 import { useTopEventNames } from "./useTopEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
@@ -33,6 +34,7 @@ export const useAnalyticsData = ({
 	const binSize = searchParams.get("bin_size");
 
 	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
+	const { eventNames: cachedEventNames } = useEventNames();
 
 	// Get user's timezone - memoized since it won't change during session
 	const timezone = useMemo(() => getUserTimezone(), []);
@@ -53,13 +55,17 @@ export const useAnalyticsData = ({
 			: `properties.${groupBy}`
 		: undefined;
 
+	// Use selected event names, or fall back to top 3 cached event names
+	const selectedEventNames = eventNames || featureIds
+		? [...(eventNames || []), ...(featureIds || [])]
+		: cachedEventNames.slice(0, 3).map((e) => e.event_name);
+
 	// Create a simple queryKey with the actual values that change
 	const queryKey = [
 		customerId,
 		interval || "30d",
 		binSize || "day",
-		...(eventNames || []).sort(),
-		...(featureIds || []).sort(),
+		...selectedEventNames.sort(),
 		org?.slug,
 		groupBy,
 		timezone,
@@ -74,7 +80,7 @@ export const useAnalyticsData = ({
 		data: {
 			customer_id: customerId || undefined,
 			interval: interval || "30d",
-			event_names: [...(eventNames || []), ...(featureIds || [])],
+			event_names: selectedEventNames,
 			group_by: formattedGroupBy,
 			bin_size: binSize || undefined,
 			timezone,
