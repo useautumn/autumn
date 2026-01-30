@@ -3,6 +3,7 @@ import { z } from "zod"; // zod-bird requires zod v3, not zod/v4
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
+import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsPipe } from "./pipes/listEventsPipe.js";
 
 const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
@@ -47,6 +48,7 @@ export const tinybirdPipes = tinybirdClient
 			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
 			listEvents: createListEventsPipe(tinybirdClient),
+			listEventNames: createListEventNamesPipe(tinybirdClient),
 		}
 	: null;
 
@@ -90,6 +92,8 @@ export type {
 	AggregatePipeRow,
 	AggregateSimplePipeParams,
 	AggregateSimplePipeRow,
+	ListEventNamesPipeParams,
+	ListEventNamesPipeRow,
 	ListEventsPipeParams,
 	ListEventsPipeRow,
 } from "./pipes/index.js";
