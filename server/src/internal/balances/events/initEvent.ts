@@ -52,7 +52,7 @@ export const initEvent = (params: {
 		: new Date();
 
 	const newEvent: EventInsert = {
-		id: generateId("evt"),
+		id: ctx.testOptions?.eventId ?? generateId("evt"),
 		org_id: org.id,
 		org_slug: org.slug,
 		env: env,

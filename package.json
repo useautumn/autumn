@@ -9,7 +9,6 @@
 			"scripts"
 		],
 		"catalog": {
-			"better-auth": "catalog:",
 			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
@@ -36,9 +35,6 @@
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
 		"t": "infisical run --env=dev -- bun scripts/test.ts",
-		"knip": "knip",
-		"knip:fix": "knip --fix",
-		"knip:fix-all": "knip --fix --allow-remove-files",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
@@ -49,16 +45,31 @@
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
 		"test:integration": "cd server && bun test:integration",
-		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9"
+		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
+		"knip": "knip",
+		"knip:fix": "knip --fix",
+		"knip:fix-all": "knip --fix --allow-remove-files"
 	},
 	"dependencies": {
+		"@aws-sdk/client-firehose": "^3.975.0",
+		"@aws-sdk/client-s3": "^3.975.0",
+		"@aws-sdk/client-sts": "^3.975.0",
 		"@better-auth/core": "1.4.12",
 		"@better-auth/oauth-provider": "1.4.12",
+		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
-		"better-auth": "1.4.12"
+		"better-auth": "1.4.12",
+		"chalk": "^5.6.2",
+		"drizzle-orm": "catalog:",
+		"posthog-node": "^5.24.1",
+		"tailwind-scrollbar-hide": "^4.0.0"
 	},
 	"devDependencies": {
+		"@better-auth/cli": "^1.4.12",
+		"@biomejs/biome": "^2.2.7",
 		"@types/node": "^24.9.1",
-		"knip": "^5.82.1"
+		"concurrently": "^9.2.1",
+		"dotenv": "^16.6.1",
+		"inquirer": "^12.10.0"
 	}
 }

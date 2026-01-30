@@ -697,14 +697,23 @@ export class AutumnInt {
 		{
 			skipCache = false,
 			timeout,
-		}: { skipCache?: boolean; timeout?: number } = {},
+			headers,
+		}: {
+			skipCache?: boolean;
+			timeout?: number;
+			headers?: Record<string, string>;
+		} = {},
 	) => {
 		const queryParams = new URLSearchParams();
 		if (skipCache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/track?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/track?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 
 		if (timeout) {
 			await new Promise((resolve) => setTimeout(resolve, timeout));
@@ -719,13 +728,18 @@ export class AutumnInt {
 
 	check = async <T = CheckResult>(
 		params: CheckParams & CheckQuery & { skip_event?: boolean },
+		{ headers }: { headers?: Record<string, string> } = {},
 	): Promise<T> => {
 		const queryParams = new URLSearchParams();
 		if (params.skip_cache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/check?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/check?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 		return data;
 	};
 

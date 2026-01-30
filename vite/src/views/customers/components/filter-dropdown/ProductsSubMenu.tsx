@@ -215,20 +215,20 @@ export const ProductsSubMenu = () => {
 														toggleProduct(product);
 													}}
 												>
-												<Checkbox
-													checked={allProductVersionsSelected}
-													className="border-border"
-													ref={(ref: any) => {
-														if (
-															ref &&
-															someProductVersionsSelected &&
-															!allProductVersionsSelected
-														) {
-															ref.indeterminate = true;
-														}
-													}}
-												/>
-												<span className="truncate">{product.name}</span>
+													<Checkbox
+														checked={allProductVersionsSelected}
+														className="border-border"
+														ref={(ref: any) => {
+															if (
+																ref &&
+																someProductVersionsSelected &&
+																!allProductVersionsSelected
+															) {
+																ref.indeterminate = true;
+															}
+														}}
+													/>
+													<span className="truncate">{product.name}</span>
 												</DropdownMenuSubTrigger>
 												<DropdownMenuSubContent>
 													<DropdownMenuItem
