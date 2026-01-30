@@ -1,4 +1,3 @@
-import express from "express";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleAddCouponToCusV2 } from "./handlers/handleAddCouponToCusV2.js";
@@ -13,9 +12,6 @@ import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
 import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
 import { handleUpdateCustomerV2 } from "./handlers/handleUpdateCustomerV2.js";
-
-export const expressCusRouter = express.Router();
-// expressCusRouter.get("/:customer_id/billing_portal", handleGetBillingPortal);
 
 export const cusRouter = new Hono<HonoEnv>();
 
