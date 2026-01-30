@@ -45,7 +45,10 @@
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
 		"test:integration": "cd server && bun test:integration",
-		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9"
+		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
+		"knip": "knip",
+		"knip:fix": "knip --fix",
+		"knip:fix-all": "knip --fix --allow-remove-files"
 	},
 	"dependencies": {
 		"@aws-sdk/client-firehose": "^3.975.0",
