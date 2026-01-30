@@ -1,12 +1,14 @@
 import "dotenv/config";
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
-// Initialize OTLP trace exporter with the endpoint URL and headers
+/**
+ * Minimal OpenTelemetry configuration optimized for low memory footprint.
+ * Auto-instrumentations disabled to reduce overhead - only manual spans are traced.
+ */
 
 if (process.env.AXIOM_TOKEN) {
 	const traceExporter = new OTLPTraceExporter({
@@ -17,26 +19,22 @@ if (process.env.AXIOM_TOKEN) {
 		},
 	});
 
-	// Creating a resource to identify your service in traces
 	const resource = resourceFromAttributes({
 		[ATTR_SERVICE_NAME]: "express",
 	});
 
-	// Configuring the OpenTelemetry Node SDK
 	const sdk = new NodeSDK({
-		spanProcessor: new BatchSpanProcessor(traceExporter),
+		spanProcessor: new BatchSpanProcessor(traceExporter, {
+			maxQueueSize: 512, // Aggressive limit - drop spans early to save memory
+			maxExportBatchSize: 128, // Smaller batches = less memory per batch
+			scheduledDelayMillis: 2000, // Flush more frequently to reduce buildup
+			exportTimeoutMillis: 10000, // Fail fast if Axiom is slow
+		}),
 		resource: resource,
-		instrumentations: [
-			// Then add other auto-instrumentations
-			getNodeAutoInstrumentations({
-				"@opentelemetry/instrumentation-ioredis": {
-					enabled: false,
-				},
-			}),
-		],
+		// No auto-instrumentations - drastically reduces memory and CPU overhead
+		instrumentations: [],
 	});
 
-	// Starting the OpenTelemetry SDK to begin collecting telemetry data
-	console.log("Starting OpenTelemetry");
+	console.log("Starting OpenTelemetry (minimal mode)");
 	sdk.start();
 }

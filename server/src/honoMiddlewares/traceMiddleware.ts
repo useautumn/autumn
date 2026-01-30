@@ -1,45 +1,30 @@
 import { context, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
-import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
-const tracer = trace.getTracer("express");
+const tracer = trace.getTracer("hono");
 
 /**
- * Tracing middleware for OpenTelemetry spans
- * Handles request tracing and span management
+ * Lightweight tracing middleware for OpenTelemetry spans.
+ * Creates one span per request (removed redundant "response_closed" span).
  */
 export const traceMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
-	// Create span for tracing
-	const spanName = `${c.req.method} ${c.req.url} - ${ctx.id}`;
-	const span = tracer.startSpan(spanName);
+	const span = tracer.startSpan(`${c.req.method} ${c.req.path}`);
 	span.setAttributes({
 		req_id: ctx.id,
 		method: c.req.method,
-		url: c.req.url,
+		path: c.req.path,
 	});
 
-	// Run the request within the span's context
-	await context.with(trace.setSpan(context.active(), span), async () => {
-		await next();
-
-		// End span after response
-		try {
-			span.setAttributes({
-				"http.response.status_code": c.res.status,
-				"http.response.duration": Date.now() - ctx.timestamp!,
-			});
-			span.end();
-
-			const closeSpan = tracer.startSpan("response_closed");
-			closeSpan.setAttributes({
-				req_id: ctx.id,
-			});
-			closeSpan.end();
-		} catch (error) {
-			logger.error("Error ending span", { error });
-		}
-	});
+	try {
+		await context.with(trace.setSpan(context.active(), span), next);
+	} finally {
+		span.setAttributes({
+			"http.status_code": c.res.status,
+			"http.duration_ms": Date.now() - ctx.timestamp!,
+		});
+		span.end();
+	}
 };
