@@ -1,7 +1,15 @@
 import type { BillingPreviewResponse } from "@autumn/shared";
 import { format } from "date-fns";
-import { formatAmount } from "@/utils/formatUtils";
+import { AnimatePresence, motion } from "motion/react";
+import { AnimatedLayout } from "@/components/motion/animated-layout";
 import { Separator } from "@/components/ui/separator";
+import {
+	FAST_TRANSITION,
+	STANDARD_TRANSITION,
+	listContainerVariants,
+	listItemVariants,
+} from "@/lib/animations";
+import { formatAmount } from "@/utils/formatUtils";
 
 interface OrderSummaryProps {
 	planName: string;
@@ -18,64 +26,140 @@ export function OrderSummary({ planName, preview }: OrderSummaryProps) {
 	const subItems = line_items.filter((item) => !item.is_base);
 
 	return (
-		<div className="flex flex-col">
+		<AnimatedLayout
+			className="flex flex-col"
+			layoutId="order-summary"
+			variants={listContainerVariants}
+			initial="initial"
+			animate="animate"
+		>
 			{/* Plan name and billing period */}
-			<div className="flex items-center justify-between py-3">
+			<motion.div
+				className="flex items-center justify-between py-3"
+				variants={listItemVariants}
+			>
 				<span className="text-foreground">{planName}</span>
 				{hasBillingPeriod && (
-					<span className="text-sm text-muted-foreground">
+					<motion.span
+						className="text-sm text-muted-foreground"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
+					>
 						{format(period_start, "d MMM yyyy")}
-					</span>
+					</motion.span>
 				)}
-			</div>
-			<Separator />
+			</motion.div>
+
+			<motion.div
+				initial={{ scaleX: 0, originX: 0 }}
+				animate={{ scaleX: 1 }}
+				transition={STANDARD_TRANSITION}
+			>
+				<Separator />
+			</motion.div>
 
 			{/* Line items */}
 			<div className="flex flex-col">
 				{/* Base item */}
-				{baseItem && (
-					<>
-						<div className="flex items-center justify-between py-3">
-							<span className="text-sm text-muted-foreground">Base Price</span>
-							<span className="text-sm tabular-nums text-muted-foreground">
-								{formatAmount(baseItem.amount, currency)}
-							</span>
-						</div>
-						<Separator />
-					</>
-				)}
+				<AnimatePresence mode="popLayout">
+					{baseItem && (
+						<motion.div
+							key="base-item"
+							layout
+							variants={listItemVariants}
+							initial="initial"
+							animate="animate"
+							exit="exit"
+						>
+							<div className="flex items-center justify-between py-3">
+								<span className="text-sm text-muted-foreground">Base Price</span>
+								<motion.span
+									key={baseItem.amount}
+									className="text-sm tabular-nums text-muted-foreground"
+									initial={{ opacity: 0.5 }}
+									animate={{ opacity: 1 }}
+									transition={FAST_TRANSITION}
+								>
+									{formatAmount(baseItem.amount, currency)}
+								</motion.span>
+							</div>
+							<Separator />
+						</motion.div>
+					)}
+				</AnimatePresence>
 
 				{/* Sub-items */}
-				{subItems.map((item, index) => (
-					<div key={item.title}>
-						<div className="flex items-center justify-between py-3">
-							<div className="flex items-center gap-2">
-								<span className="text-sm text-muted-foreground">
-									{item.title}
-								</span>
-								{item.total_quantity && (
+				<AnimatePresence mode="popLayout">
+					{subItems.map((item, index) => (
+						<motion.div
+							key={item.title}
+							layout
+							variants={listItemVariants}
+							initial="initial"
+							animate="animate"
+							exit="exit"
+							transition={{ ...STANDARD_TRANSITION, delay: index * 0.03 }}
+						>
+							<div className="flex items-center justify-between py-3">
+								<div className="flex items-center gap-2">
 									<span className="text-sm text-muted-foreground">
-										x{item.total_quantity}
+										{item.title}
 									</span>
-								)}
+									{item.total_quantity && (
+										<motion.span
+											key={item.total_quantity}
+											className="text-sm text-muted-foreground"
+											initial={{ opacity: 0, scale: 0.9 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={FAST_TRANSITION}
+										>
+											x{item.total_quantity}
+										</motion.span>
+									)}
+								</div>
+								<motion.span
+									key={item.amount}
+									className="text-sm tabular-nums text-muted-foreground"
+									initial={{ opacity: 0.5 }}
+									animate={{ opacity: 1 }}
+									transition={FAST_TRANSITION}
+								>
+									{formatAmount(item.amount, currency)}
+								</motion.span>
 							</div>
-							<span className="text-sm tabular-nums text-muted-foreground">
-								{formatAmount(item.amount, currency)}
-							</span>
-						</div>
-						{index < subItems.length - 1 && <Separator />}
-					</div>
-				))}
+							{index < subItems.length - 1 && <Separator />}
+						</motion.div>
+					))}
+				</AnimatePresence>
 
 				{/* Total row */}
-				<Separator />
-				<div className="flex items-center justify-between py-3">
+				<motion.div
+					initial={{ scaleX: 0, originX: 0 }}
+					animate={{ scaleX: 1 }}
+					transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
+				>
+					<Separator />
+				</motion.div>
+				<motion.div
+					className="flex items-center justify-between py-3"
+					variants={listItemVariants}
+					initial="initial"
+					animate="animate"
+					transition={{ ...STANDARD_TRANSITION, delay: 0.15 }}
+				>
 					<span className="text-sm font-medium text-foreground">Total</span>
-					<span className="text-sm font-medium tabular-nums text-foreground">
+					<motion.span
+						key={total}
+						className="text-sm font-medium tabular-nums text-foreground"
+						initial={{ opacity: 0.5, scale: 0.95 }}
+						animate={{ opacity: 1, scale: 1 }}
+						transition={FAST_TRANSITION}
+					>
 						{formatAmount(total, currency)}
-					</span>
-				</div>
+					</motion.span>
+				</motion.div>
 			</div>
-		</div>
+		</AnimatedLayout>
 	);
 }

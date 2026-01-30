@@ -5,6 +5,7 @@ import {
 	type BillingPlan,
 	type CheckoutChange,
 	CusExpand,
+	CusProductStatus,
 	type FullCusProduct,
 	isPrepaidPrice,
 	type LineItem,
@@ -125,7 +126,12 @@ export const billingPlanToChanges = async ({
 	if (autumn.updateCustomerProduct) {
 		const { customerProduct, updates } = autumn.updateCustomerProduct;
 
-		if (updates.canceled || updates.ended_at) {
+		// Include in outgoing if: canceled, has an end date, or being expired (immediate upgrade)
+		if (
+			updates.canceled ||
+			updates.ended_at ||
+			updates.status === CusProductStatus.Expired
+		) {
 			const subscription = await getApiSubscriptionForCheckout({
 				ctx,
 				cusProduct: customerProduct,
