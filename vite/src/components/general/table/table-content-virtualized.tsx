@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Table } from "@/components/ui/table";
-import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
 import { TableContext, useTableContext } from "./table-context";

@@ -94,7 +94,8 @@ export const TableRowCells = memo(
 			prevProps.rowHref === nextProps.rowHref &&
 			prevProps.enableSelection === nextProps.enableSelection &&
 			prevProps.flexibleTableColumns === nextProps.flexibleTableColumns &&
-			prevProps.row.getVisibleCells().length === nextProps.row.getVisibleCells().length
+			prevProps.row.getVisibleCells().length ===
+				nextProps.row.getVisibleCells().length
 		);
 	},
 ) as typeof TableRowCellsInner;
