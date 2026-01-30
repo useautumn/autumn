@@ -1,5 +1,4 @@
 import type { CheckoutChange } from "@autumn/shared";
-import { CheckIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -84,23 +83,19 @@ export function PlanSelectionCard({
 			{/* Plan header */}
 			<div className="flex items-center justify-between px-4 py-4">
 				<div className="flex flex-col gap-0.5">
-					<span className="text-base font-semibold text--foreground">
+					<span className="text-base font-semibold text-foreground">
 						{plan.name}
 					</span>
 					{basePrice && (
 						<div className="flex items-center gap-1">
-						<span className="text-base text-foreground">
-							{formatAmount(basePrice.amount, currency)} 
-						</span>
+							<span className="text-base text-foreground">
+								{formatAmount(basePrice.amount, currency)}
+							</span>
 							<span className="text-base text-muted-foreground">
-								per{" "}{basePrice.interval}
+								per {basePrice.interval}
 							</span>
 						</div>
 					)}
-				</div>
-				<div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary">
-					<CheckIcon className="h-4 w-4" weight="bold" />
-					<span className="text-sm font-medium">Selected</span>
 				</div>
 			</div>
 

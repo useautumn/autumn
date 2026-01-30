@@ -2,6 +2,8 @@ import type { CheckoutChange, ConfirmCheckoutResponse } from "@autumn/shared";
 import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useDebouncedCallback } from "use-debounce";
+import autumnLogo from "@/assets/autumn.svg";
+import { CheckoutBackground } from "@/components/checkout/CheckoutBackground";
 import { CheckoutErrorState } from "@/components/checkout/CheckoutErrorState";
 import { CheckoutLoadingState } from "@/components/checkout/CheckoutLoadingState";
 import { CheckoutSuccessState } from "@/components/checkout/CheckoutSuccessState";
@@ -113,8 +115,8 @@ export function CheckoutPage() {
 	const isUpdating = previewMutation.isPending;
 
 	return (
-		<div className="min-h-screen bg-background px-6 py-12 flex items-center justify-center">
-			<div className="w-full max-w-lg flex flex-col gap-8">
+		<CheckoutBackground>
+			<div className="flex flex-col gap-8">
 				{/* Header */}
 				<h1 className="text-2xl font-semibold text-foreground">
 					Confirm your order
@@ -145,7 +147,7 @@ export function CheckoutPage() {
 					<span className="text-base font-medium text-foreground">
 						Amount due today
 					</span>
-					<span className="text-lg font-medium  text-foreground">
+					<span className="text-lg font-medium text-foreground">
 						{formatAmount(total, currency)}
 					</span>
 				</div>
@@ -171,7 +173,14 @@ export function CheckoutPage() {
 							: "Failed to confirm checkout"}
 					</p>
 				)}
+
+				{/* Footer */}
+				<div className="flex items-center justify-center gap-2">
+					<span className="text-base text-muted-foreground">Powered by</span>
+					<img src={autumnLogo} alt="Autumn" className="h-6 w-6" />
+					<span className="text-base font-medium text-foreground">Autumn</span>
+				</div>
 			</div>
-		</div>
+		</CheckoutBackground>
 	);
 }

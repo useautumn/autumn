@@ -1,10 +1,11 @@
+import { CheckoutBackground } from "@/components/checkout/CheckoutBackground";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function CheckoutLoadingState() {
 	return (
-		<div className="min-h-screen bg-background px-6 py-12 flex items-center justify-center">
-			<div className="w-full max-w-lg flex flex-col gap-8">
+		<CheckoutBackground>
+			<div className="flex flex-col gap-8">
 				{/* Header */}
 				<div className="flex flex-col gap-2">
 					<Skeleton className="h-8 w-32" />
@@ -45,6 +46,6 @@ export function CheckoutLoadingState() {
 					<Skeleton className="h-12 w-full rounded-xl" />
 				</div>
 			</div>
-		</div>
+		</CheckoutBackground>
 	);
 }
