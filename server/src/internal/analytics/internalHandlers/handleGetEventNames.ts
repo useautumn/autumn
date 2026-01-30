@@ -1,6 +1,6 @@
 import { type Feature, FeatureType } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
+import { eventActions } from "../actions/index.js";
 import { AnalyticsService } from "../AnalyticsService.js";
 
 /**
@@ -13,17 +13,8 @@ export const handleGetEventNames = createRoute({
 
 		AnalyticsService.handleEarlyExit();
 
-		const result = await queryWithCache({
-			ttl: 3600,
-			key: `top_events:${org.id}_${env}`,
-			fn: async () => {
-				const res = await AnalyticsService.getTopEventNames({
-					ctx,
-				});
-
-				return res?.eventNames;
-			},
-		});
+		const res = await eventActions.getTopEventNames({ ctx });
+		const result = res.eventNames;
 
 		const featureIds: string[] = [];
 		const eventNames: string[] = [];
