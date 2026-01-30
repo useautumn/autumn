@@ -9,9 +9,9 @@ import { CheckoutFooter } from "@/components/checkout/CheckoutFooter";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { CheckoutSuccessState } from "@/components/checkout/CheckoutSuccessState";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
+import { OrderSummarySkeleton } from "@/components/checkout/OrderSummarySkeleton";
 import { PlanSelectionCard } from "@/components/checkout/PlanSelectionCard";
 import { PlanSelectionCardSkeleton } from "@/components/checkout/PlanSelectionCardSkeleton";
-import { OrderSummarySkeleton } from "@/components/checkout/OrderSummarySkeleton";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -133,7 +133,7 @@ export function CheckoutPage() {
 	}
 
 	// Main checkout view - same structure for loading and loaded states
-	const { preview, incoming, org } = checkoutData ?? {};
+	const { preview, incoming, outgoing, org } = checkoutData ?? {};
 	const currency = preview?.currency ?? "usd";
 	const total = preview?.total ?? 0;
 	const isUpdating = previewMutation.isPending;
@@ -141,7 +141,7 @@ export function CheckoutPage() {
 	return (
 		<CheckoutBackground>
 			<motion.div
-				className="flex flex-col gap-8"
+				className="flex flex-col gap-8 w-full"
 				initial="initial"
 				animate="animate"
 				variants={listContainerVariants}
@@ -153,10 +153,10 @@ export function CheckoutPage() {
 
 				{/* Main content - two columns */}
 				<LayoutGroup>
-					<div className="flex flex-col lg:flex-row gap-8">
+					<div className="flex flex-col lg:flex-row gap-8 w-full">
 						{/* Left column - Plan selection */}
 						<motion.div
-							className="flex flex-col gap-4 lg:w-96"
+							className="flex flex-col gap-4 w-full lg:w-1/2"
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
 						>
@@ -171,6 +171,7 @@ export function CheckoutPage() {
 										quantities={quantities}
 										onQuantityChange={handleQuantityChange}
 										isUpdating={isUpdating}
+										outgoingPlanName={outgoing?.[0]?.plan.name}
 									/>
 								))
 							) : null}
@@ -178,7 +179,7 @@ export function CheckoutPage() {
 
 						{/* Right column - Order summary */}
 						<motion.div
-							className="flex flex-col gap-6 lg:w-96"
+							className="flex flex-col gap-6 w-full lg:w-1/2"
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
 						>

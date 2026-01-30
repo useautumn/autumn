@@ -73,6 +73,7 @@ interface PlanSelectionCardProps {
 		billingUnits: number,
 	) => void;
 	isUpdating?: boolean;
+	outgoingPlanName?: string;
 }
 
 export function PlanSelectionCard({
@@ -81,6 +82,7 @@ export function PlanSelectionCard({
 	quantities,
 	onQuantityChange,
 	isUpdating = false,
+	outgoingPlanName,
 }: PlanSelectionCardProps) {
 	const { plan, feature_quantities } = change;
 	const { prepaid, payPerUse } = getPricedFeatures(plan.features);
@@ -90,9 +92,28 @@ export function PlanSelectionCard({
 	return (
 		<AnimatedCard layoutId="plan-selection-card">
 			<Card className="py-0 gap-0">
+				{/* Plan change label */}
+				{outgoingPlanName && (
+					<motion.div
+						className="px-4 pt-3 pb-0"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={STANDARD_TRANSITION}
+					>
+						<span className="text-xs text-muted-foreground">
+							{plan.customer_eligibility?.scenario === "upgrade"
+								? "Upgrading"
+								: plan.customer_eligibility?.scenario === "downgrade"
+									? "Downgrading"
+									: "Changing"}{" "}
+							from {outgoingPlanName}
+						</span>
+					</motion.div>
+				)}
+
 				{/* Plan header */}
 				<motion.div
-					className="flex items-center justify-between px-4 py-4"
+					className={`flex items-center justify-between px-4 ${outgoingPlanName ? "pt-1 pb-4" : "py-4"}`}
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={STANDARD_TRANSITION}
