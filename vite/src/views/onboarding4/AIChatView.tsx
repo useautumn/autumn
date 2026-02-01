@@ -529,7 +529,7 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 														size="sm"
 														onClick={handleStartNewChat}
 													>
-														Clear chat
+														New chat
 													</Button>
 													<CopyPlansButton pricingConfig={pricingConfig} />
 												</>
