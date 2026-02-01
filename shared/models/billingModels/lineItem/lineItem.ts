@@ -21,6 +21,10 @@ export const LineItemSchema = z
 		stripePriceId: z.string().optional(),
 		stripeProductId: z.string().optional(),
 
+		// Quantity tracking
+		total_quantity: z.number().optional(), // Total usage (e.g., 500 messages used)
+		paid_quantity: z.number().optional(), // Quantity being charged (overage)
+
 		// Optional - for testing
 		chargeImmediately: z.boolean().default(true),
 	})

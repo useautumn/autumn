@@ -7,9 +7,10 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { attach } from "@/internal/billing/v2/actions/attach/attach";
-import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
+import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
+import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse.js";
 
 /**
  * GET /checkouts/:checkout_id
@@ -33,7 +34,7 @@ export const handleGetCheckout = createRoute({
 		const params = checkout.params as AttachParamsV0;
 
 		// Re-run attach in preview mode to get current billing plan
-		const { billingContext, billingPlan } = await attach({
+		const { billingContext, billingPlan } = await billingActions.attach({
 			ctx,
 			params,
 			preview: true,
@@ -47,12 +48,43 @@ export const handleGetCheckout = createRoute({
 			});
 		}
 
+		const { fullCustomer } = billingContext;
+
+		// Build preview with line items, total, currency, next_cycle
 		const preview = billingPlanToPreviewResponse({
 			ctx,
 			billingContext,
 			billingPlan,
 		});
 
-		return c.json({ preview } satisfies GetCheckoutResponse);
+		// Build changes array
+		const { incoming, outgoing } = await billingPlanToChanges({
+			ctx,
+			billingContext,
+			billingPlan,
+		});
+
+		const response: GetCheckoutResponse = {
+			preview,
+			org: {
+				name: ctx.org.name,
+				logo: ctx.org.logo || null,
+			},
+			customer: {
+				id: fullCustomer.id || fullCustomer.internal_id,
+				name: fullCustomer.name || null,
+				email: fullCustomer.email || null,
+			},
+			entity: fullCustomer.entity
+				? {
+						id: fullCustomer.entity.id,
+						name: fullCustomer.entity.name || null,
+					}
+				: null,
+			incoming,
+			outgoing,
+		};
+
+		return c.json(response);
 	},
 });

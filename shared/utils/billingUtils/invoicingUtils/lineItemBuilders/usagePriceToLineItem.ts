@@ -76,7 +76,6 @@ export const usagePriceToLineItem = ({
 	const description = usagePriceToLineDescription({
 		usage,
 		context: lineItemContext,
-		includePeriodDescription: options.includePeriodDescription,
 	});
 
 	// 4. Get amount
@@ -102,5 +101,8 @@ export const usagePriceToLineItem = ({
 
 		shouldProrate,
 		chargeImmediately: options.chargeImmediatelyOverride,
+
+		usage,
+		overage,
 	});
 };
