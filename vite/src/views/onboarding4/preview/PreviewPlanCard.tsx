@@ -21,7 +21,7 @@ export function PreviewPlanCard({
 	isSyncing,
 }: PreviewPlanCardProps) {
 	return (
-		<Card className="w-[280px] bg-card flex flex-col gap-0 rounded-xl">
+		<Card className="w-[280px] bg-background flex flex-col gap-0 rounded-xl">
 			<CardHeader className="">
 				<PreviewPlanHeader product={product} />
 			</CardHeader>
