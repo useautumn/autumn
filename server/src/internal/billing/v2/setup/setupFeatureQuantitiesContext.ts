@@ -19,11 +19,13 @@ export const setupFeatureQuantitiesContext = ({
 	featureQuantitiesParams,
 	fullProduct,
 	currentCustomerProduct,
+	initializeUndefinedQuantities = false,
 }: {
 	ctx: AutumnContext;
 	featureQuantitiesParams: UpdateSubscriptionV0Params;
 	fullProduct: FullProduct;
 	currentCustomerProduct?: FullCusProduct;
+	initializeUndefinedQuantities?: boolean;
 }): FeatureOptions[] => {
 	const options: FeatureOptions[] = [];
 
@@ -57,6 +59,15 @@ export const setupFeatureQuantitiesContext = ({
 
 		if (featureQuantity) {
 			options.push(featureQuantity);
+			continue;
+		}
+
+		if (initializeUndefinedQuantities) {
+			options.push({
+				feature_id: feature.id,
+				internal_feature_id: feature.internal_id,
+				quantity: 0,
+			});
 		}
 	}
 

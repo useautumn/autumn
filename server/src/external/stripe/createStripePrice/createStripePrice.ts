@@ -1,12 +1,10 @@
 import {
 	BillingType,
 	type EntitlementWithFeature,
-	type Organization,
 	type Price,
 	type Product,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import {
 	getBillingType,
@@ -14,6 +12,8 @@ import {
 	priceIsOneOffAndTiered,
 } from "@server/internal/products/prices/priceUtils";
 import Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
@@ -90,27 +90,32 @@ const checkCurStripePrice = async ({
 };
 
 export const createStripePriceIFNotExist = async ({
-	db,
-	stripeCli,
+	// db,
+	ctx,
+	// stripeCli,
 	price,
 	entitlements,
 	product,
-	org,
-	logger,
+	// org,
+	// logger,
 	internalEntityId,
 	useCheckout = false,
 }: {
-	db: DrizzleCli;
-	stripeCli: Stripe;
+	// db: DrizzleCli;
+	ctx: AutumnContext;
+	// stripeCli: Stripe;
 	price: Price;
 	entitlements: EntitlementWithFeature[];
 	product: Product;
-	org: Organization;
-	logger: any;
+	// org: Organization;
+	// logger: any;
 	internalEntityId?: string;
 	useCheckout?: boolean;
 }) => {
 	// Fetch latest price data...
+
+	const { org, logger, db, env } = ctx;
+	const stripeCli = createStripeCli({ org, env });
 
 	const billingType = getBillingType(price.config!);
 
@@ -168,6 +173,15 @@ export const createStripePriceIFNotExist = async ({
 				curStripeProd: stripeProd,
 			});
 		}
+
+		// if (!isOneOffAndTiered && !config.stripe_v2_prepaid_price_id) {
+		// 	logger.info(`Creating stripe v2 prepaid price`);
+		// 	await createStripeV2Prepaid({
+		// 		db,
+		// 		stripeCli,
+		// 		price,
+		// 	});
+		// }
 	}
 
 	if (billingType === BillingType.InArrearProrated) {

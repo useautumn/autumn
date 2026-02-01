@@ -33,6 +33,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Unique `customerId` per test
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
 - **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
+- **Set up all prerequisite state in `initScenario` actions** - the test body should only call the single action being tested
 
 **DON'T:**
 - Use plain `test()` - **ALWAYS use `test.concurrent()`**
@@ -43,6 +44,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Use `as unknown as Type` casting - use generic types instead
 - Write manual assertion loops when a utility function exists
 - Use `${product.id}_${customerId}` for productId - just use `product.id` (already prefixed)
+- **Call multiple setup actions in the test body** - put prerequisite attaches/tracks in `initScenario` actions, test body should only call the action being tested
 
 ## AutumnInt Response Types
 
@@ -76,6 +78,35 @@ test.concurrent(`${chalk.yellowBright("feature: description")}`, async () => {
   const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
   expectCustomerFeatureCorrect({ customer, featureId: TestFeature.Messages, balance: 100 });
 });
+```
+
+## Test Structure: Scenario vs Action
+
+**Key principle:** Set up all prerequisite state in `initScenario`, test body only calls the action being tested.
+
+```typescript
+// ✅ GOOD - Testing "attach one-time after pro"
+// Pre-existing pro product set up in initScenario actions
+const { autumnV1 } = await initScenario({
+  customerId,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+  actions: [s.attach({ productId: pro.id })],  // Prerequisite state
+});
+
+// Test body only tests the ONE action we care about
+const preview = await autumnV1.billing.previewAttach({ customer_id: customerId, product_id: oneOff.id });
+await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
+// ... verify results
+
+// ❌ BAD - Multiple attaches in test body
+const { autumnV1 } = await initScenario({
+  customerId,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+  actions: [],  // Empty!
+});
+
+await autumnV1.billing.attach({ customer_id: customerId, product_id: pro.id });  // Should be in initScenario
+await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
 ```
 
 ## References

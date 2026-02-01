@@ -1,7 +1,8 @@
 import type Stripe from "stripe";
+import { handleCheckoutSessionMetadataV2 } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/handleCheckoutSessionMetadataV2.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { handleCheckoutSessionCompletedLegacy } from "./legacy/handleCheckoutSessionCompletedLegacy.js";
 import { setupCheckoutSessionCompletedContext } from "./setupCheckoutSessionCompletedContext.js";
+import { handleLegacyCheckoutSessionMetadata } from "./tasks/handleLegacyCheckoutSessionMetadata.ts/handleCheckoutSessionCompletedLegacy.js";
 
 export const handleStripeCheckoutSessionCompleted = async ({
 	ctx,
@@ -16,20 +17,14 @@ export const handleStripeCheckoutSessionCompleted = async ({
 	});
 
 	// V2 flow
-	if (checkoutContext) {
-		ctx.logger.info(
-			"[checkout.session.completed] V2 checkout - not yet implemented",
-		);
-		return;
-	}
-
-	// Legacy flow - pass original params unchanged
-	const { db, org, env } = ctx;
-	await handleCheckoutSessionCompletedLegacy({
+	await handleCheckoutSessionMetadataV2({
 		ctx,
-		db,
-		org,
-		data: event.data.object,
-		env,
+		checkoutContext,
+	});
+
+	// Legacy flow
+	await handleLegacyCheckoutSessionMetadata({
+		ctx,
+		checkoutContext,
 	});
 };

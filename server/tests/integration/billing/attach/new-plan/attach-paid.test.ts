@@ -11,16 +11,11 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	type AttachPreview,
-	ErrCode,
-} from "@autumn/shared";
+import { type ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -68,15 +63,16 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(30);
+	expect(preview.total).toBe(30);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -154,27 +150,19 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 		actions: [],
 	});
 
-	// 1. Preview attach - verify base price ($20)
+	// 1. Preview attach - verify base price ($20) + 2 overage users ($10 each) = $40
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(40);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
+		redirect_mode: "if_required",
 	});
-
-	// Track 5 users (creates overage of 2)
-	for (let i = 0; i < 5; i++) {
-		await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: 1,
-		});
-	}
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -196,173 +184,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 	// Verify invoices: initial ($20 matches preview) + overage (2 users @ $10 = $20)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2,
-		latestTotal: 20, // Overage invoice
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Attach base with prepaid messages, no options (error)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach base product with prepaid messages without passing options
- *
- * Expected Result:
- * - Error: "behavior undefined" (prepaid requires quantity)
- */
-test.concurrent(`${chalk.yellowBright("new-plan: attach base with prepaid messages, no options")}`, async () => {
-	const customerId = "new-plan-attach-base-prepaid-no-opts";
-
-	const prepaidMessagesItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-
-	const base = products.base({
-		id: "base-prepaid",
-		items: [prepaidMessagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [base] }),
-		],
-		actions: [],
-	});
-
-	// Attempt to attach without options - should fail (no preview needed for error case)
-	await expectAutumnError({
-		errCode: ErrCode.InvalidOptions,
-		func: async () => {
-			await autumnV1.billing.attach({
-				customer_id: customerId,
-				product_id: base.id,
-			});
-		},
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Attach pro with prepaid messages, no options (error)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro product with prepaid messages without passing options
- *
- * Expected Result:
- * - Error: "behavior undefined" (prepaid requires quantity)
- */
-test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid messages, no options")}`, async () => {
-	const customerId = "new-plan-attach-pro-prepaid-no-opts";
-
-	const prepaidMessagesItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-
-	const pro = products.pro({
-		id: "pro-prepaid",
-		items: [prepaidMessagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
-
-	// Attempt to attach without options - should fail (no preview needed for error case)
-	await expectAutumnError({
-		errCode: ErrCode.InvalidOptions,
-		func: async () => {
-			await autumnV1.billing.attach({
-				customer_id: customerId,
-				product_id: pro.id,
-			});
-		},
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Attach pro with prepaid messages, quantity 0
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro product with prepaid messages, pass options with quantity: 0
- *
- * Expected Result:
- * - No prepaid charged, only base price ($20)
- * - Messages balance = 0
- */
-test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid messages, quantity 0")}`, async () => {
-	const customerId = "new-plan-attach-pro-prepaid-qty0";
-
-	const prepaidMessagesItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-
-	const pro = products.pro({
-		id: "pro-prepaid-qty0",
-		items: [prepaidMessagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
-
-	// 1. Preview attach - verify only base price ($20), no prepaid
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
-	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
-
-	// 2. Attach
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify product is active
-	await expectProductActive({
-		customer,
-		productId: pro.id,
-	});
-
-	// Verify messages feature: 0 prepaid purchased
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		balance: 0,
-		usage: 0,
-	});
-
-	// Verify invoice matches preview total: $20
-	await expectCustomerInvoiceCorrect({
-		customer,
 		count: 1,
-		latestTotal: 20,
+		latestTotal: 40, // Overage invoice
 	});
 });

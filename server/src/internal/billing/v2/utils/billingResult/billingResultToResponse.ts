@@ -45,7 +45,6 @@ export const billingResultToResponse = ({
 				}
 			: undefined,
 		payment_url: paymentUrl,
-		checkout_url: stripeCheckoutSession?.url ?? null,
 		required_action: billingResult.stripe.requiredAction,
 	} satisfies BillingResponse;
 };

@@ -20,7 +20,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	version: z.number().optional(),
 
 	// Checkout behavior
-	redirect_mode: RedirectModeSchema.optional(),
+	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),
@@ -41,5 +41,6 @@ export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 	},
 );
 
-export type ExtAttachParamsV0 = z.infer<typeof ExtAttachParamsV0Schema>;
+export type ExtAttachParamsV0 = z.input<typeof ExtAttachParamsV0Schema>;
 export type AttachParamsV0 = z.infer<typeof AttachParamsV0Schema>;
+export type AttachParamsV0Input = z.input<typeof AttachParamsV0Schema>;

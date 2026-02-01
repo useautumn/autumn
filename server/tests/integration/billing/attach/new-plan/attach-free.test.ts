@@ -11,7 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, AttachPreview } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -55,12 +55,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 		customer_id: customerId,
 		product_id: free.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(0);
+	expect(preview.total).toBe(0);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -124,12 +125,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 		customer_id: customerId,
 		product_id: free.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(0);
+	expect(preview.total).toBe(0);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

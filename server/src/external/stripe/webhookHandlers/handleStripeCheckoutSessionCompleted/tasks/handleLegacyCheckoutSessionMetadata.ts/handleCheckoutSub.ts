@@ -1,6 +1,8 @@
 import { ApiVersion, BillingType, type UsagePriceConfig } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getEmptyPriceItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	findPriceFromPlaceholderId,
@@ -8,8 +10,6 @@ import {
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { initSubscription } from "@/internal/subscriptions/utils/initSubscription.js";
-import { getEmptyPriceItem } from "../../../priceToStripeItem/priceToStripeItem.js";
-import { subToPeriodStartEnd } from "../../../stripeSubUtils/convertSubUtils.js";
 
 export const handleCheckoutSub = async ({
 	stripeCli,

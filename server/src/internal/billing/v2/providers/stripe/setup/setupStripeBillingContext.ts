@@ -1,4 +1,4 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import type { FullCusProduct, FullCustomer, Product } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
@@ -8,21 +8,21 @@ import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling
 export const setupStripeBillingContext = async ({
 	ctx,
 	fullCustomer,
+	product,
 	targetCustomerProduct,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
+	product?: Product;
 	targetCustomerProduct?: FullCusProduct;
 }) => {
 	// If no target customer product, skip subscription/schedule fetching
-	const stripeSubscription = targetCustomerProduct
-		? await fetchStripeSubscriptionForBilling({
-				ctx,
-				fullCus: fullCustomer,
-				products: [],
-				targetCusProductId: targetCustomerProduct.id,
-			})
-		: undefined;
+	const stripeSubscription = await fetchStripeSubscriptionForBilling({
+		ctx,
+		fullCus: fullCustomer,
+		product,
+		targetCusProductId: targetCustomerProduct?.id,
+	});
 
 	const stripeSubscriptionSchedule = targetCustomerProduct
 		? await fetchStripeSubscriptionScheduleForBilling({

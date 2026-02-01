@@ -1,11 +1,3 @@
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
-import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
-import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
-import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
-import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
-import { buildStripeInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceItemsAction";
-import { buildStripeSubscriptionAction } from "../../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
 import type {
 	AutumnBillingPlan,
 	BillingContext,
@@ -15,6 +7,14 @@ import type {
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
+import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
+import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
+import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
+import { buildStripeInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceItemsAction";
+import { buildStripeSubscriptionAction } from "../../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
 import { initStripeResourcesForBillingPlan } from "../utils/common/initStripeResourcesForProducts";
 
 export const evaluateStripeBillingPlan = async ({
@@ -63,6 +63,7 @@ export const evaluateStripeBillingPlan = async ({
 
 	const createManualInvoice = shouldCreateManualStripeInvoice({
 		billingContext,
+		autumnBillingPlan,
 		stripeSubscriptionAction,
 	});
 

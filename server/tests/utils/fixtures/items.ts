@@ -112,6 +112,20 @@ const monthlyUsers = ({
 	}) as LimitedItem;
 
 /**
+ * Free users - allocated seats with no price (free tier)
+ * @param includedUsage - Free seats included (default: 5)
+ */
+const freeUsers = ({
+	includedUsage = 5,
+}: {
+	includedUsage?: number;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Users,
+		includedUsage,
+	}) as LimitedItem;
+
+/**
  * Lifetime messages - never resets (interval: null)
  * @param includedUsage - One-time usage allowance (default: 100)
  */
@@ -396,6 +410,7 @@ export const items = {
 	monthlyWords,
 	monthlyCredits,
 	monthlyUsers,
+	freeUsers,
 	unlimitedMessages,
 	lifetimeMessages,
 

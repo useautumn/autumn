@@ -10,6 +10,7 @@ import {
 	type Organization,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils.js";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
@@ -254,5 +255,16 @@ export class InvoiceService {
 				}),
 			},
 		});
+	}
+
+	static async upsert({ db, invoice }: { db: DrizzleCli; invoice: Invoice }) {
+		const updateColumns = buildConflictUpdateColumns(invoices, ["id"]);
+		await db
+			.insert(invoices)
+			.values(invoice as any)
+			.onConflictDoUpdate({
+				target: invoices.stripe_id,
+				set: updateColumns,
+			});
 	}
 }

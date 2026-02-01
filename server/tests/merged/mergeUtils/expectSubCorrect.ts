@@ -6,6 +6,7 @@ import {
 	cusProductToPrices,
 	cusProductToProduct,
 	type FullCustomer,
+	isConsumablePrice,
 	type Organization,
 } from "@autumn/shared";
 import { notNullish } from "@shared/utils/utils.js";
@@ -52,20 +53,37 @@ const compareActualItems = async ({
 	db: DrizzleCli;
 }) => {
 	for (const expectedItem of expectedItems) {
-		const actualItem = actualItems.find(
-			(item: any) => item.price === (expectedItem as any).price,
+		let actualItem = actualItems.find(
+			(item) => item.price === expectedItem.price,
 		);
 
 		if (!actualItem) {
+			const autumnPrice = await PriceService.getByStripeId({
+				db,
+				stripePriceId: expectedItem.price,
+			});
+
+			if (autumnPrice && isConsumablePrice(autumnPrice)) {
+				const config = autumnPrice.config;
+				// Try the other price ID (if expected was empty_price, try stripe_price and vice versa)
+				const alternatePriceId =
+					expectedItem.price === config.stripe_price_id
+						? config.stripe_empty_price_id
+						: config.stripe_price_id;
+
+				if (alternatePriceId) {
+					actualItem = actualItems.find((i) => i.price === alternatePriceId);
+				}
+			}
+		}
+
+		if (!actualItem) {
 			// Search for price by stripe id
-			const price = await PriceService.getByStripeId({
+			await PriceService.getByStripeId({
 				db,
 				stripePriceId: expectedItem.price,
 			});
 			console.log(`(${type}) Missing item:`, expectedItem);
-			// if (price) {
-			//   console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
-			// }
 
 			// Actual items
 			console.log(`(${type}) Actual items (${actualItems.length}):`);
@@ -331,8 +349,6 @@ export const expectSubToBeCorrect = async ({
 				res.lineItem.quantity = 0;
 			}
 
-			// console.log("API VERSION:", apiVersion);
-			// console.log("LINE ITEM:", res?.lineItem);
 			if (options?.upcoming_quantity && res?.lineItem) {
 				res.lineItem.quantity = options.upcoming_quantity;
 			}

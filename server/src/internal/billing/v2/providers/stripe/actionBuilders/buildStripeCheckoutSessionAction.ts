@@ -1,3 +1,8 @@
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	StripeCheckoutSessionAction,
+} from "@autumn/shared";
 import {
 	type FullCusProduct,
 	msToSeconds,
@@ -7,11 +12,6 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
-import type {
-	AutumnBillingPlan,
-	BillingContext,
-	StripeCheckoutSessionAction,
-} from "@autumn/shared";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -51,6 +51,7 @@ export const buildStripeCheckoutSessionAction = ({
 	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
 		...subItemsUpdate
 			.filter((item) => item.price && !item.deleted)
+			.filter((item) => item.quantity !== 0)
 			.map((item) => ({
 				price: item.price!,
 				quantity: item.quantity,
@@ -88,7 +89,7 @@ export const buildStripeCheckoutSessionAction = ({
 		mode,
 		line_items: lineItems,
 		subscription_data: subscriptionData,
-		return_url: orgToReturnUrl({ org, env }),
+		success_url: orgToReturnUrl({ org, env }),
 	};
 
 	return { type: "create", params };
