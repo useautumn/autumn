@@ -1,221 +1,191 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
 :root {
-	font-family:
-		system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	line-height: 1.5;
-	font-weight: 400;
-
-	color-scheme: light;
-	color: #1a1a2e;
-	background-color: #f5f5f7;
-
-	font-synthesis: none;
-	text-rendering: optimizeLegibility;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+	--background: #f5f5f4;
+	--foreground: oklch(0.141 0.005 285.823);
+	--card: #fafaf9;
+	--card-foreground: oklch(0.141 0.005 285.823);
+	--popover: #fafaf9;
+	--popover-foreground: oklch(0.141 0.005 285.823);
+	--primary: #504af6;
+	--primary-foreground: #ffffff;
+	--secondary: #fafaf9;
+	--secondary-foreground: #444444;
+	--muted: #E9E9E9;
+	--muted-foreground: #666666;
+	--accent: #fafaf9;
+	--accent-foreground: oklch(0.21 0.006 285.885);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: #D1D1D1;
+	--input: #D1D1D1;
+	--ring: #504af6;
+	--chart-1: oklch(0.79 0.1 275);
+	--chart-2: oklch(0.68 0.16 277);
+	--chart-3: oklch(0.59 0.2 277);
+	--chart-4: #504af6;
+	--chart-5: oklch(0.46 0.21 277);
+	--radius: 0.625rem;
+	--sidebar: #fafaf9;
+	--sidebar-foreground: oklch(0.141 0.005 285.823);
+	--sidebar-primary: #504af6;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #fafaf9;
+	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+	--sidebar-border: oklch(0.92 0.004 286.32);
+	--sidebar-ring: #504af6;
 }
 
-* {
-	box-sizing: border-box;
-	margin: 0;
-	padding: 0;
+.dark {
+	--background: oklch(0.141 0.005 285.823);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.21 0.006 285.885);
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.21 0.006 285.885);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.59 0.2 277);
+	--primary-foreground: oklch(0.96 0.02 272);
+	--secondary: oklch(0.274 0.006 286.033);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.274 0.006 286.033);
+	--muted-foreground: oklch(0.705 0.015 286.067);
+	--accent: oklch(0.274 0.006 286.033);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.552 0.016 285.938);
+	--chart-1: oklch(0.79 0.1 275);
+	--chart-2: oklch(0.68 0.16 277);
+	--chart-3: oklch(0.59 0.2 277);
+	--chart-4: oklch(0.51 0.23 277);
+	--chart-5: oklch(0.46 0.21 277);
+	--sidebar: oklch(0.21 0.006 285.885);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.68 0.16 277);
+	--sidebar-primary-foreground: oklch(0.96 0.02 272);
+	--sidebar-accent: oklch(0.274 0.006 286.033);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.552 0.016 285.938);
 }
 
-body {
-	min-height: 100vh;
-	display: flex;
-	justify-content: center;
-	align-items: flex-start;
-	padding: 40px 20px;
+@theme inline {
+	--font-sans: "Inter", "Inter Fallback", sans-serif;
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
 }
 
-#root {
-	width: 100%;
-	max-width: 480px;
-}
-
-/* Checkout Container */
-.checkout-container {
-	width: 100%;
-}
-
-.checkout-container h1 {
-	font-size: 1.5rem;
-	font-weight: 600;
-	margin-bottom: 24px;
-	color: #1a1a2e;
-}
-
-/* Checkout Card */
-.checkout-card {
-	background: white;
-	border-radius: 12px;
-	padding: 24px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Line Items */
-.line-items {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
-.line-item {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.line-item .description {
-	color: #4a4a5a;
-	font-size: 0.95rem;
-}
-
-.line-item .amount {
-	font-weight: 500;
-	color: #1a1a2e;
-}
-
-/* Divider */
-.divider {
-	height: 1px;
-	background: #e5e5e7;
-	margin: 20px 0;
-}
-
-/* Total Row */
-.total-row {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 8px;
-}
-
-.total-label {
-	font-weight: 600;
-	color: #1a1a2e;
-}
-
-.total-amount {
-	font-size: 1.25rem;
-	font-weight: 700;
-	color: #1a1a2e;
-}
-
-/* Next Cycle */
-.next-cycle {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 12px;
-	background: #f5f5f7;
-	border-radius: 8px;
-	margin-top: 16px;
-	font-size: 0.875rem;
-}
-
-.next-cycle-label {
-	color: #6a6a7a;
-}
-
-.next-cycle-info {
-	color: #4a4a5a;
-	font-weight: 500;
-}
-
-/* Confirm Button */
-.confirm-button {
-	width: 100%;
-	margin-top: 24px;
-	padding: 14px 24px;
-	background: #0066ff;
-	color: white;
-	border: none;
-	border-radius: 8px;
-	font-size: 1rem;
-	font-weight: 600;
-	cursor: pointer;
-	transition: background 0.2s;
-}
-
-.confirm-button:hover:not(:disabled) {
-	background: #0052cc;
-}
-
-.confirm-button:disabled {
-	background: #99c2ff;
-	cursor: not-allowed;
-}
-
-/* Loading State */
-.loading-card {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 16px;
-	padding: 48px 24px;
-}
-
-.spinner {
-	width: 32px;
-	height: 32px;
-	border: 3px solid #e5e5e7;
-	border-top-color: #0066ff;
-	border-radius: 50%;
-	animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply font-sans bg-background text-foreground;
+	}
+	html {
+		@apply font-sans;
 	}
 }
 
-/* Error State */
-.error-card {
-	text-align: center;
-	padding: 48px 24px;
+/* ============================================
+   Shimmer Animation for Skeletons
+   ============================================ */
+
+@keyframes shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
 }
 
-.error-card h2 {
-	color: #dc3545;
-	margin-bottom: 8px;
+.skeleton-shimmer {
+	position: relative;
+	overflow: hidden;
 }
 
-.error-card p {
-	color: #6a6a7a;
+.skeleton-shimmer::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.08) 50%,
+		transparent 100%
+	);
+	animation: shimmer 1.5s infinite;
 }
 
-/* Success State */
-.success-card {
-	text-align: center;
-	padding: 48px 24px;
+/* Dark mode shimmer adjustment */
+.dark .skeleton-shimmer::after {
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.05) 50%,
+		transparent 100%
+	);
 }
 
-.success-icon {
-	width: 48px;
-	height: 48px;
-	background: #28a745;
-	color: white;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 1.5rem;
-	margin: 0 auto 16px;
-}
+/* ============================================
+   Reduced Motion Preferences
+   ============================================ */
 
-.success-card h2 {
-	color: #1a1a2e;
-	margin-bottom: 8px;
-}
+@media (prefers-reduced-motion: reduce) {
+	.skeleton-shimmer::after {
+		animation: none;
+	}
 
-.success-card p {
-	color: #6a6a7a;
-}
+	.animate-pulse {
+		animation: none;
+	}
 
-.invoice-info {
-	margin-top: 16px;
-	font-size: 0.875rem;
-	color: #8a8a9a;
+	/* Disable all motion library animations */
+	* {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }

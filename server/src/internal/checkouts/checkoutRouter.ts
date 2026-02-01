@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { handleConfirmCheckout } from "./handlers/handleConfirmCheckout";
 import { handleGetCheckout } from "./handlers/handleGetCheckout";
+import { handlePreviewCheckout } from "./handlers/handlePreviewCheckout";
 import {
 	checkoutMiddleware,
 	checkoutRateLimiter,
@@ -20,4 +21,5 @@ publicCheckoutRouter.use("/:checkout_id/*", checkoutMiddleware);
 
 // Routes
 publicCheckoutRouter.get("/:checkout_id", ...handleGetCheckout);
+publicCheckoutRouter.post("/:checkout_id/preview", ...handlePreviewCheckout);
 publicCheckoutRouter.post("/:checkout_id/confirm", ...handleConfirmCheckout);
