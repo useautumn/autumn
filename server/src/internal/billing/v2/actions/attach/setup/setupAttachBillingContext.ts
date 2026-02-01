@@ -1,10 +1,10 @@
+import type { AttachBillingContext } from "@autumn/shared";
 import { type AttachParamsV0, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
-import type { AttachBillingContext } from "@autumn/shared";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -47,6 +47,7 @@ export const setupAttachBillingContext = async ({
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
+		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
 	});
 
@@ -57,6 +58,7 @@ export const setupAttachBillingContext = async ({
 		featureQuantitiesParams: params,
 		fullProduct: attachProduct,
 		currentCustomerProduct: undefined,
+		initializeUndefinedQuantities: true,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });

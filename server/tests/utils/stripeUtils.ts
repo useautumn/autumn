@@ -26,7 +26,7 @@ export const completeCheckoutForm = async (
 	_isLocal?: boolean,
 ) => {
 	const browser = await puppeteer.launch({
-		headless: true,
+		headless: false,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
@@ -58,8 +58,14 @@ export const completeCheckoutForm = async (
 
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
-		await page.waitForSelector("#billingPostalCode");
-		await page.type("#billingPostalCode", "123456");
+
+		// Postal code may not be present for all countries (e.g., UK)
+		try {
+			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });
+			await page.type("#billingPostalCode", "123456");
+		} catch (_e) {
+			// Postal code field doesn't exist, continue without it
+		}
 
 		if (overrideQuantity) {
 			const quantityBtn = await page.$(".AdjustableQuantitySelector");

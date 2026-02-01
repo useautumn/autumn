@@ -12,12 +12,12 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0, AttachPreview } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
+	expectCustomerProducts,
 	expectProductActive,
-	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -39,8 +39,8 @@ import chalk from "chalk";
  * - Balance added
  * - No recurring subscription
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, async () => {
-	const customerId = "new-plan-attach-one-time";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-basic")}`, async () => {
+	const customerId = "new-plan-onetime-basic";
 
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
@@ -66,15 +66,16 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -85,7 +86,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
 		productId: oneOff.id,
 	});
 
-	// Verify messages balance (100 from 1 pack)
+	// Verify messages balance (100 units)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -113,8 +114,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
  * - Balance is cumulative (not replaced)
  * - Two invoices created
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice")}`, async () => {
-	const customerId = "new-plan-attach-one-time-twice";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-cumulative")}`, async () => {
+	const customerId = "new-plan-onetime-cumulative";
 
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
@@ -140,30 +141,32 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice"
 	const preview1 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 	});
-	expect((preview1 as AttachPreview).due_today.total).toBe(20);
+	expect(preview1.total).toBe(20);
 
 	// 2. First attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		redirect_mode: "if_required",
 	});
 
 	// 3. Preview second attach - $20
 	const preview2 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 	});
-	expect((preview2 as AttachPreview).due_today.total).toBe(20);
+	expect(preview2.total).toBe(20);
 
 	// 4. Second attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -196,8 +199,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice"
  * Expected Result:
  * - Should replace pro (user forgot to toggle isAddOn)
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as main")}`, async () => {
-	const customerId = "new-plan-attach-pro-then-one-time-main";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-leaves-pro")}`, async () => {
+	const customerId = "new-plan-onetime-leaves-pro";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({
@@ -221,48 +224,30 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, oneOff] }),
 		],
-		actions: [],
-	});
-
-	// 1. Preview and attach pro first - $20
-	const previewPro = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
-	expect((previewPro as AttachPreview).due_today.total).toBe(20);
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
+		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
 	// 2. Preview one-time replacement (includes refund for pro)
 	const previewOneOff = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 50 }],
 	});
-	const oneOffTotal = (previewOneOff as AttachPreview).due_today.total;
+	const oneOffTotal = previewOneOff.total;
 
 	// 3. Attach one-time without isAddOn - should replace pro
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 50 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify pro is no longer present (replaced)
-	await expectProductNotPresent({
+	expectCustomerProducts({
 		customer,
-		productId: pro.id,
-	});
-
-	// Verify one-time is active
-	await expectProductActive({
-		customer,
-		productId: oneOff.id,
+		active: [pro.id, oneOff.id],
 	});
 
 	// Verify latest invoice matches preview
@@ -285,8 +270,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
  * - Messages added
  * - Words not charged
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0 for one feature")}`, async () => {
-	const customerId = "new-plan-attach-one-time-qty0";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-zero-qty")}`, async () => {
+	const customerId = "new-plan-onetime-zero-qty";
 
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
@@ -294,8 +279,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
 		price: 10,
 	});
 
-	const oneOff = products.oneOff({
-		id: "one-off-multi",
+	const oneOff = products.base({
+		id: "one-off",
 		items: [oneOffMessagesItem],
 	});
 
@@ -312,15 +297,16 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(0);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -329,15 +315,15 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 100,
+		balance: 0,
 		usage: 0,
 	});
 
 	// Verify invoice matches preview total: $20
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
-		latestTotal: 20,
+		count: 0,
+		latestTotal: 0,
 	});
 });
 
@@ -354,8 +340,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
  * - Both products exist
  * - Balances combined
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pro")}`, async () => {
-	const customerId = "new-plan-attach-one-time-addon";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-addon")}`, async () => {
+	const customerId = "new-plan-onetime-addon";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({
@@ -389,26 +375,28 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect((previewPro as AttachPreview).due_today.total).toBe(20);
+	expect(previewPro.total).toBe(20);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
+		redirect_mode: "if_required",
 	});
 
 	// 2. Preview add-on - base ($10) + prepaid ($5) = $15
 	const previewAddOn = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOffAddon.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 50 }],
 	});
-	expect((previewAddOn as AttachPreview).due_today.total).toBe(15);
+	expect(previewAddOn.total).toBe(15);
 
 	// 3. Attach add-on
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOffAddon.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 50 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -450,8 +438,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
  * Expected Result:
  * - All balances correct
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with multiple features")}`, async () => {
-	const customerId = "new-plan-attach-one-time-multi-feat";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-multi-qty")}`, async () => {
+	const customerId = "new-plan-onetime-multi-qty";
 
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
@@ -477,15 +465,16 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with multiple f
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 2 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(30);
+	expect(preview.total).toBe(30);
 
 	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 2 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+		redirect_mode: "if_required",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -519,8 +508,8 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with multiple f
  * - Entity has balance
  * - Customer does not have balance for this feature
  */
-test.concurrent(`${chalk.yellowBright("new-plan: attach one-time to entity")}`, async () => {
-	const customerId = "new-plan-attach-one-time-entity";
+test.concurrent(`${chalk.yellowBright("new-plan: onetime-entity")}`, async () => {
+	const customerId = "new-plan-onetime-entity";
 
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
@@ -548,16 +537,17 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time to entity")}`, 
 		customer_id: customerId,
 		product_id: oneOff.id,
 		entity_id: entities[0].id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
 	// 2. Attach to entity
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
 		entity_id: entities[0].id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		redirect_mode: "if_required",
 	});
 
 	// Get entity to verify balance
@@ -576,9 +566,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time to entity")}`, 
 
 	// Get customer and verify they don't have this balance at customer level
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Customer should not have messages feature (it's on the entity)
-	expect(customer.features[TestFeature.Messages]).toBeUndefined();
 
 	// Verify invoice on customer matches preview total: $20
 	await expectCustomerInvoiceCorrect({

@@ -7,7 +7,9 @@ import {
 	FreeTrialSchema,
 	FullCusProductSchema,
 	FullCustomerEntitlementSchema,
+	InvoiceSchema,
 	PriceSchema,
+	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { BillingContext } from "../context/billingContext";
@@ -66,6 +68,10 @@ export const AutumnBillingPlanSchema = z.object({
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),
+
+	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
+	upsertSubscription: SubscriptionSchema.optional(),
+	upsertInvoice: InvoiceSchema.optional(),
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

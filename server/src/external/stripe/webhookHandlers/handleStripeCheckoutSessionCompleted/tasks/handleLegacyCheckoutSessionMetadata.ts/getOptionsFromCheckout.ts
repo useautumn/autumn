@@ -1,12 +1,12 @@
 import { BillingType, type UsagePriceConfig } from "@autumn/shared";
 import type Stripe from "stripe";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	getBillingType,
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import { findStripeItemForPrice } from "../../../stripeSubUtils/stripeSubItemUtils.js";
 
 export const getOptionsFromCheckoutSession = async ({
 	checkoutSession,

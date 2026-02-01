@@ -180,7 +180,6 @@ export const checkStripeConnections = async ({
 		attachParams,
 		useCheckout,
 		ctx,
-		logger,
 	});
 };
 
@@ -188,15 +187,12 @@ const createStripePrices = async ({
 	ctx,
 	attachParams,
 	useCheckout,
-	logger,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
 	useCheckout: boolean;
-	logger: any;
 }) => {
-	const { prices, entitlements, products, org, stripeCli } = attachParams;
-	const { db } = ctx;
+	const { prices, entitlements, products } = attachParams;
 
 	const batchPriceUpdates = [];
 
@@ -205,13 +201,10 @@ const createStripePrices = async ({
 
 		batchPriceUpdates.push(
 			createStripePriceIFNotExist({
-				db,
-				stripeCli,
+				ctx,
 				price,
 				entitlements,
 				product: product!,
-				org,
-				logger,
 				internalEntityId: attachParams.internalEntityId,
 				useCheckout,
 			}),

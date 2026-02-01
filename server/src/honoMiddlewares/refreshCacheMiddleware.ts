@@ -55,6 +55,10 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		method: "POST",
 		url: "/subscriptions/update",
 	},
+	{
+		method: "POST",
+		url: "/billing/attach",
+	},
 
 	{
 		method: "POST",

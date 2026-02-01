@@ -31,10 +31,13 @@
    ```
 
 5. **Prepaid items require `options` with `quantity` on attach**
+   - The `quantity` represents actual units (e.g., 100 messages), NOT number of packs
+   - If `billingUnits: 100` and you want 1 pack, pass `quantity: 100`
    ```typescript
+   // Product has: billingUnits: 100, price: 10 (100 messages for $10)
    s.attach({ 
      productId: pro.id, 
-     options: [{ feature_id: TestFeature.Messages, quantity: 200 }] 
+     options: [{ feature_id: TestFeature.Messages, quantity: 100 }]  // 100 units = 1 pack = $10
    })
    ```
 
@@ -65,7 +68,7 @@
 
 11. **ALWAYS call `billing.previewAttach` before `billing.attach` and verify**
     - Call preview BEFORE every attach to verify pricing
-    - Assert `preview.due_today.total` matches expected amount EXACTLY (not `toBeCloseTo`)
+    - Assert `preview.total` matches expected amount EXACTLY (not `toBeCloseTo`)
     - After attach, verify invoice total matches preview total
     ```typescript
     // 1. Preview first - verify expected charge
@@ -73,9 +76,9 @@
       customer_id: customerId,
       product_id: pro.id,
       entity_id: entityId,  // Optional for entity-level
-      options: [{ feature_id: TestFeature.Messages, quantity: 1 }],  // If prepaid
+      options: [{ feature_id: TestFeature.Messages, quantity: 100 }],  // If prepaid (units, not packs)
     });
-    expect(preview.due_today.total).toBe(30);  // EXACT match, not toBeCloseTo
+    expect(preview.total).toBe(30);  // EXACT match, not toBeCloseTo
     
     // 2. Attach
     await autumnV1.billing.attach({ ... });
@@ -85,7 +88,7 @@
     expectCustomerInvoiceCorrect({
       customer,
       count: 1,
-      latestTotal: 30,  // Must match preview.due_today.total
+      latestTotal: 30,  // Must match preview.total
     });
     ```
 
@@ -115,7 +118,48 @@
     expectProductActive({ customer, productId: `${pro.id}_${customerId}` });
     ```
 
-13. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
+14. **Always pass `redirect_mode: "if_required"` to attach calls**
+    - Prevents checkout redirect when customer already has a payment method
+    - Without this, the endpoint may redirect to Stripe Checkout even when payment method exists
+    ```typescript
+    await autumnV1.billing.attach({
+      customer_id: customerId,
+      product_id: pro.id,
+      redirect_mode: "if_required",  // Always include this in tests
+    });
+    ```
+
+16. **One-time products do NOT replace/expire other products**
+    - Attaching a one-time product will NOT cancel or replace existing main products
+    - One-time products are always treated as add-ons (they stack with existing products)
+    - Only recurring products can replace other recurring products
+
+17. **Set up scenario state in `initScenario`, test only the action being tested**
+    - All prerequisite state (existing products, entities, usage) should be set up in `initScenario` actions
+    - The test body should only call the single action being tested and verify results
+    ```typescript
+    // ✅ GOOD - scenario setup in initScenario, test only calls one attach
+    const { autumnV1 } = await initScenario({
+      customerId,
+      setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+      actions: [s.attach({ productId: pro.id })],  // Pre-existing state
+    });
+    
+    // Test body only calls the action being tested
+    await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
+    
+    // ❌ BAD - attaching multiple products in test body
+    const { autumnV1 } = await initScenario({
+      customerId,
+      setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+      actions: [],
+    });
+    
+    await autumnV1.billing.attach({ customer_id: customerId, product_id: pro.id });  // Should be in initScenario
+    await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
+    ```
+
+18. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
     - After scheduling a downgrade, advance the test clock to verify:
       - A. Next cycle invoice is correct
       - B. Products on customer are correct after cycle

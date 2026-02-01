@@ -15,6 +15,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { isAutumnCheckoutUrl } from "@tests/integration/billing/utils/isAutumnCheckoutUrl";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -73,10 +74,53 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: with PM + redirect_mode 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TEST 2: No payment method + free product + redirect_mode: "always" → autumn_checkout
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has NO payment method
+ * - Attach FREE product with redirect_mode: "always"
+ *
+ * Expected Result:
+ * - Returns autumn checkout URL (contains "/c/co")
+ * - No Stripe checkout needed since product is free
+ */
+test.concurrent(`${chalk.yellowBright("autumn-checkout: no PM + free product + redirect_mode always")}`, async () => {
+	const customerId = "autumn-checkout-no-pm-free";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({
+		id: "free-autumn-checkout",
+		items: [messagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({}), // NO payment method
+			s.products({ list: [free] }),
+		],
+		actions: [],
+	});
+
+	// Attach free product with redirect_mode: "always"
+	// Should return autumn checkout URL
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		redirect_mode: "always",
+	});
+
+	expect(result.checkout_url).toBeDefined();
+	expect(isAutumnCheckoutUrl(result.checkout_url!)).toBe(true);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Future tests to implement once autumn checkout is built:
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// TEST 2: autumn-checkout: complete flow and verify product attached
-// TEST 3: autumn-checkout: cancel flow (user doesn't confirm)
-// TEST 4: autumn-checkout: with prepaid options
-// TEST 5: autumn-checkout: entity-level attach
+// TEST 3: autumn-checkout: complete flow and verify product attached
+// TEST 4: autumn-checkout: cancel flow (user doesn't confirm)
+// TEST 5: autumn-checkout: with prepaid options
+// TEST 6: autumn-checkout: entity-level attach

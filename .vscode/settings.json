@@ -29,8 +29,6 @@
 		// "**/.claude": true,
 		"**/.cursor": true,
 		"**/.github": true,
-		"**/.opencode": true,
 		"**/.superset": true,
-		"**/.vscode": true
 	}
 }

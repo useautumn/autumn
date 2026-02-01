@@ -129,11 +129,8 @@ export const handleCreatePlan = createRoute({
 		};
 
 		await initProductInStripe({
-			db,
+			ctx,
 			product: newFullProduct,
-			org,
-			env,
-			logger,
 		});
 
 		await addTaskToQueue({

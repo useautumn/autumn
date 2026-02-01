@@ -1,6 +1,6 @@
+import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
-import type { AutumnBillingPlan } from "@autumn/shared";
 
 export const billingPlanToOneOffStripeItemSpecs = ({
 	ctx,

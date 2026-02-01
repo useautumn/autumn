@@ -1,13 +1,25 @@
-import { type Metadata, MetadataType } from "@autumn/shared";
+import type { Metadata } from "@autumn/shared";
 import type Stripe from "stripe";
+import {
+	type ExpandedStripeCheckoutSession,
+	getStripeCheckoutSession,
+} from "@/external/stripe/checkoutSessions/operations/getStripeCheckoutSession";
+import { stripeCheckoutSessionUtils } from "@/external/stripe/checkoutSessions/utils";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
+import {
+	type ExpandedStripeSubscription,
+	getExpandedStripeSubscription,
+} from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
+type CheckoutSessionExpansions = ["line_items"];
+
 export interface CheckoutSessionCompletedContext {
-	stripeCheckoutSession: Stripe.Checkout.Session;
-	stripeSubscription?: Stripe.Subscription;
+	stripeCheckoutSession: ExpandedStripeCheckoutSession<CheckoutSessionExpansions>;
+	stripeSubscription?: ExpandedStripeSubscription;
 	stripeInvoice?: Stripe.Invoice;
-	metadata: Metadata;
+	metadata?: Metadata;
 }
 
 export const setupCheckoutSessionCompletedContext = async ({
@@ -16,40 +28,45 @@ export const setupCheckoutSessionCompletedContext = async ({
 }: {
 	ctx: StripeWebhookContext;
 	event: Stripe.CheckoutSessionCompletedEvent;
-}): Promise<CheckoutSessionCompletedContext | null> => {
+}): Promise<CheckoutSessionCompletedContext> => {
 	const { db, stripeCli } = ctx;
-	const checkoutSessionData = event.data.object;
+
+	// Fetch checkout session fresh from Stripe with line_items expanded
+	const stripeCheckoutSession = await getStripeCheckoutSession({
+		ctx,
+		checkoutSessionId: event.data.object.id,
+		expand: ["line_items"],
+	});
 
 	// Get metadata from checkout session
 	const metadata = await getMetadataFromCheckoutSession(
-		checkoutSessionData,
+		stripeCheckoutSession,
 		db,
 	);
 
-	// Return null if no metadata or not V2 checkout session type
-	if (!metadata || metadata.type !== MetadataType.CheckoutSessionV2) {
-		return null;
-	}
+	// Extract subscription and invoice IDs
+	const subscriptionId =
+		await stripeCheckoutSessionUtils.convert.toSubscriptionId({
+			stripeCheckoutSession,
+		});
+	const invoiceId = await stripeCheckoutSessionUtils.convert.toInvoiceId({
+		stripeCheckoutSession,
+	});
 
-	// Expand checkout session to get subscription and invoice
-	const stripeCheckoutSession = await stripeCli.checkout.sessions.retrieve(
-		checkoutSessionData.id,
-		{
-			expand: ["subscription", "invoice"],
-		},
-	);
-
-	const stripeSubscription = stripeCheckoutSession.subscription as
-		| Stripe.Subscription
-		| undefined;
-	const stripeInvoice = stripeCheckoutSession.invoice as
-		| Stripe.Invoice
-		| undefined;
+	// Fetch expanded subscription and invoice in parallel
+	const [stripeSubscription, stripeInvoice] = await Promise.all([
+		subscriptionId
+			? getExpandedStripeSubscription({ ctx, subscriptionId })
+			: undefined,
+		invoiceId
+			? getStripeInvoice({ stripeClient: stripeCli, invoiceId, expand: [] })
+			: undefined,
+	]);
 
 	return {
 		stripeCheckoutSession,
-		stripeSubscription: stripeSubscription ?? undefined,
-		stripeInvoice: stripeInvoice ?? undefined,
-		metadata,
+		stripeSubscription,
+		stripeInvoice,
+		metadata: metadata ?? undefined,
 	};
 };

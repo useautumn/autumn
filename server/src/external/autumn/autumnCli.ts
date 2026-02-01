@@ -9,7 +9,7 @@ import {
 	type ApiCusProductV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
-	type AttachParamsV0,
+	type AttachParamsV0Input,
 	type BalancesUpdateParams,
 	type BillingPreviewResponse,
 	type BillingResponse,
@@ -800,7 +800,7 @@ export class AutumnInt {
 
 	billing = {
 		attach: async (
-			params: AttachParamsV0,
+			params: AttachParamsV0Input,
 			{
 				skipWebhooks,
 				idempotencyKey,
@@ -821,7 +821,7 @@ export class AutumnInt {
 
 			const data = await this.post(
 				`/billing/attach`,
-				params,
+				{ ...params, redirect_mode: "if_required" },
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 
@@ -832,9 +832,12 @@ export class AutumnInt {
 		},
 
 		previewAttach: async (
-			params: AttachParamsV0,
+			params: AttachParamsV0Input,
 		): Promise<BillingPreviewResponse> => {
-			const data = await this.post(`/billing/preview_attach`, params);
+			const data = await this.post(`/billing/preview_attach`, {
+				...params,
+				redirect_mode: "if_required",
+			});
 			return data;
 		},
 	};

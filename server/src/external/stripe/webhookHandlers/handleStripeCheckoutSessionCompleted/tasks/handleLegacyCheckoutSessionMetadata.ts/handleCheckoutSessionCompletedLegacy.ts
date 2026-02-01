@@ -1,55 +1,42 @@
 import {
-	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
+	MetadataType,
 	notNullish,
-	type Organization,
 } from "@autumn/shared";
-import type { Stripe } from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getEarliestPeriodEnd } from "../../../stripeSubUtils/convertSubUtils.js";
 import { getOptionsFromCheckoutSession } from "./getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleRemainingSets.js";
 import { handleSetupCheckout } from "./handleSetupCheckout.js";
 
-export const handleCheckoutSessionCompletedLegacy = async ({
+export const handleLegacyCheckoutSessionMetadata = async ({
 	ctx,
-	db,
-	org,
-	data,
-	env,
+	checkoutContext,
 }: {
 	ctx: AutumnContext;
-	db: DrizzleCli;
-	org: Organization;
-	data: Stripe.Checkout.Session;
-	env: AppEnv;
+	checkoutContext: CheckoutSessionCompletedContext;
 }) => {
-	const { logger } = ctx;
-	const metadata = await getMetadataFromCheckoutSession(data, db);
-	if (!metadata) {
-		logger.info("checkout.completed: metadata not found, skipping");
-		return;
-	}
+	const { logger, db, org, env } = ctx;
+
+	const { metadata, stripeCheckoutSession, stripeSubscription } =
+		checkoutContext;
+	if (metadata?.type !== MetadataType.CheckoutSessionCompleted) return;
 
 	// Get options
 	const stripeCli = createStripeCli({ org, env });
 	const attachParams: AttachParams = metadata.data as AttachParams;
-	const checkoutSession = await stripeCli.checkout.sessions.retrieve(data.id, {
-		expand: ["line_items", "subscription"],
-	});
 
 	attachParams.req = ctx as AutumnContext;
 	attachParams.stripeCli = stripeCli;
@@ -65,14 +52,11 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 	}
 
 	await getOptionsFromCheckoutSession({
-		checkoutSession,
+		checkoutSession: stripeCheckoutSession,
 		attachParams,
 	});
 
-	logger.info(
-		"Handling checkout.completed: autumn metadata:",
-		checkoutSession.metadata?.autumn_metadata_id,
-	);
+	logger.info("Handling checkout session metadata v1: ", metadata?.id);
 
 	if (attachParams.setupPayment) {
 		await handleSetupCheckout({
@@ -82,13 +66,12 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 		return;
 	}
 
-	const checkoutSub =
-		checkoutSession.subscription as Stripe.Subscription | null;
+	// const checkoutSub = stripeSubscription ?? null;
 
-	if (checkoutSub) {
+	if (stripeSubscription) {
 		const activeCusProducts = await CusProductService.getByStripeSubId({
-			db,
-			stripeSubId: checkoutSub.id,
+			db: ctx.db,
+			stripeSubId: stripeSubscription.id,
 			orgId: org.id,
 			env,
 			inStatuses: [CusProductStatus.Active],
@@ -103,7 +86,7 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 	await handleCheckoutSub({
 		stripeCli,
 		db,
-		subscription: checkoutSub,
+		subscription: stripeSubscription ?? null,
 		attachParams,
 	});
 
@@ -111,13 +94,13 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 	const { invoiceIds } = await handleRemainingSets({
 		stripeCli,
 		org,
-		checkoutSession,
+		checkoutSession: stripeCheckoutSession,
 		attachParams,
-		checkoutSub,
+		checkoutSub: stripeSubscription ?? null,
 	});
 
-	const anchorToUnix = checkoutSub
-		? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
+	const anchorToUnix = stripeSubscription
+		? getEarliestPeriodEnd({ sub: stripeSubscription }) * 1000
 		: undefined;
 	if (attachParams.productsList) {
 		logger.info("Inserting products list");
@@ -142,7 +125,9 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 					product,
 					productOptions.entity_id || undefined,
 				),
-				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
+				subscriptionIds: stripeSubscription
+					? [stripeSubscription.id]
+					: undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
 				productOptions,
@@ -155,7 +140,9 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 			await createFullCusProduct({
 				db,
 				attachParams: attachToInsertParams(attachParams, product),
-				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
+				subscriptionIds: stripeSubscription
+					? [stripeSubscription.id]
+					: undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
 				logger: ctx.logger,
@@ -192,7 +179,7 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 				// For triggerCheckoutReward
 				customer: attachParams.customer,
 				product,
-				subId: checkoutSub?.id as string,
+				subId: stripeSubscription?.id as string,
 			},
 		});
 	}
@@ -204,13 +191,13 @@ export const handleCheckoutSessionCompletedLegacy = async ({
 	const updates = {
 		name:
 			!attachParams.customer.name &&
-			notNullish(checkoutSession.customer_details?.name)
-				? checkoutSession.customer_details?.name
+			notNullish(stripeCheckoutSession.customer_details?.name)
+				? stripeCheckoutSession.customer_details?.name
 				: undefined,
 		email:
 			!attachParams.customer.email &&
-			notNullish(checkoutSession.customer_details?.email)
-				? checkoutSession.customer_details?.email
+			notNullish(stripeCheckoutSession.customer_details?.email)
+				? stripeCheckoutSession.customer_details?.email
 				: undefined,
 	};
 

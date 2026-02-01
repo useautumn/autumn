@@ -1,3 +1,4 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	cusPriceToCusEnt,
@@ -9,13 +10,11 @@ import {
 	InternalError,
 	isAllocatedCustomerEntitlement,
 	isOneOffPrice,
-	notNullish,
 	type StripeItemSpec,
 } from "@autumn/shared";
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
 
 /**
  * Convert a customer product to stripe item specs
@@ -77,7 +76,8 @@ export const customerProductToStripeItemSpecs = ({
 			isCheckout: false, // TODO: Add this back in?
 			relatedEnt: ent,
 			existingUsage,
-			withEntity: notNullish(customerProduct.internal_entity_id),
+			// withEntity: notNullish(customerProduct.internal_entity_id),
+			withEntity: false,
 			apiVersion: ctx.apiVersion.value,
 			fromVercel,
 		});

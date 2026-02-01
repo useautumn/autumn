@@ -1,7 +1,9 @@
 import {
 	type AttachParamsV0,
+	type AttachParamsV0Input,
 	type FeatureOptions,
 	type ProductItem,
+	ProductItemInterval,
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
@@ -73,9 +75,10 @@ export function useAttachRequestBody({
 			product,
 		});
 
-		const body: AttachParamsV0 = {
+		const body: AttachParamsV0Input = {
 			customer_id: customerId,
 			product_id: product.id,
+			redirect_mode: "if_required",
 		};
 
 		if (entityId) {
@@ -87,7 +90,10 @@ export function useAttachRequestBody({
 		}
 
 		if (items && items.length > 0) {
-			body.items = items;
+			body.items = items.map((item) => ({
+				...item,
+				interval: item.interval || ProductItemInterval.Month,
+			}));
 		}
 
 		if (version !== undefined) {

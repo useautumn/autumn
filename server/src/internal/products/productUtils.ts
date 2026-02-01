@@ -3,7 +3,6 @@ import {
 	BillingInterval,
 	BillingType,
 	type CreateProductV2Params,
-	EntInterval,
 	type Entitlement,
 	EntitlementSchema,
 	ErrCode,
@@ -32,7 +31,7 @@ import RecaseError from "@server/utils/errorUtils.js";
 import { generateId, notNullish } from "@server/utils/genUtils.js";
 import { Decimal } from "decimal.js";
 import { Stripe } from "stripe";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type {
 	AttachParams,
 	InsertCusProductParams,
@@ -483,21 +482,6 @@ export const copyProduct = async ({
 			},
 		});
 	}
-
-	// await initProductInStripe({
-	//   db,
-	//   org,
-	//   env: toEnv,
-	//   logger,
-	//   product: {
-	//     ...newProduct,
-	//     prices: newPrices,
-	//     entitlements: getEntsWithFeature({
-	//       ents: newEntitlements,
-	//       features: toFeatures,
-	//     }),
-	//   },
-	// });
 };
 
 export const isOneOff = (prices: Price[]) => {
@@ -515,28 +499,16 @@ export const isOneOff = (prices: Price[]) => {
 	);
 };
 
-const itemsAreOneOff = (items: Entitlement[]) => {
-	return items.every(
-		(item) =>
-			item.interval === null ||
-			item.interval === undefined ||
-			item.interval === EntInterval.Lifetime,
-	);
-};
-
 export const initProductInStripe = async ({
-	db,
-	org,
-	env,
-	logger,
+	ctx,
+
 	product,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
+	ctx: AutumnContext;
+
 	product: FullProduct;
 }): Promise<undefined> => {
+	const { org, env, logger, db } = ctx;
 	if (!isStripeConnected({ org, env })) return;
 
 	await checkStripeProductExists({
@@ -548,35 +520,19 @@ export const initProductInStripe = async ({
 	});
 
 	const batchPriceUpdate = [];
-	const stripeCli = createStripeCli({
-		org,
-		env,
-	});
+
 	for (const price of product.prices) {
 		batchPriceUpdate.push(
 			createStripePriceIFNotExist({
-				db,
-				org,
-				stripeCli,
+				ctx,
 				price,
 				entitlements: product.entitlements,
 				product: product,
-				logger,
 			}),
 		);
 	}
 
 	await Promise.all(batchPriceUpdate);
-};
-
-const searchProductsByStripeId = async ({
-	products,
-	stripeId,
-}: {
-	products: FullProduct[];
-	stripeId: string;
-}) => {
-	return products.find((p) => p.processor?.id === stripeId);
 };
 
 export const getGroupToDefaults = ({

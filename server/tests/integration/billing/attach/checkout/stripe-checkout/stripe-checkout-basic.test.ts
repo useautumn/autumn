@@ -2,17 +2,17 @@
  * Stripe Checkout Basic Tests (Attach V2)
  *
  * Tests for Stripe Checkout flow when customer has NO payment method.
- * When checkoutMode = "stripe_checkout", attach returns a checkout_url
+ * When checkoutMode = "stripe_checkout", attach returns a payment_url
  * that the customer uses to complete payment.
  *
  * Key behaviors:
  * - No payment method → triggers stripe_checkout mode
- * - Returns checkout_url instead of charging directly
+ * - Returns payment_url instead of charging directly
  * - Product is attached after checkout completion
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, AttachPreview } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -34,7 +34,7 @@ import chalk from "chalk";
  * - Attach pro product
  *
  * Expected Result:
- * - Returns checkout_url (Stripe Checkout session)
+ * - Returns payment_url (Stripe Checkout session)
  * - After completing checkout: product is attached, invoice paid
  */
 test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, async () => {
@@ -55,27 +55,25 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
 		actions: [],
 	});
 
-	return;
-
 	// 1. Preview attach - should show $20
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach - should return checkout_url (not charge directly)
+	// 2. Attempt attach - should return payment_url (not charge directly)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
-	// Verify checkout_url is returned
-	expect(result.checkout_url).toBeDefined();
-	expect(result.checkout_url).toContain("checkout.stripe.com");
+	// Verify payment_url is returned
+	expect(result.payment_url).toBeDefined();
+	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout form
-	await completeCheckoutForm(result.checkout_url);
+	await completeCheckoutForm(result.payment_url);
 	await timeout(12000); // Wait for webhook processing
 
 	// 4. Verify product is now attached
@@ -113,7 +111,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
  * - Attach pro product (upgrade)
  *
  * Expected Result:
- * - Returns checkout_url
+ * - Returns payment_url
  * - After checkout: pro replaces free
  */
 test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async () => {
@@ -158,18 +156,18 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async 
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
-	// 3. Attempt attach pro - should return checkout_url
+	// 3. Attempt attach pro - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
-	expect(result.checkout_url).toBeDefined();
+	expect(result.payment_url).toBeDefined();
 
 	// 4. Complete checkout
-	await completeCheckoutForm(result.checkout_url);
+	await completeCheckoutForm(result.payment_url);
 	await timeout(12000);
 
 	// 5. Verify pro replaced free
@@ -198,73 +196,73 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: One-off via checkout (mode: "payment")
+// TEST 3: Multi-interval product via checkout
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Customer with NO payment method
- * - Attach one-off product
+ * - Attach product with both monthly and annual price options
  *
  * Expected Result:
- * - Returns checkout_url with mode: "payment" (not subscription)
- * - Credits granted after checkout
+ * - Returns payment_url
+ * - Checkout handles multi-interval pricing
+ * - Product attached after completion
  */
-test.concurrent(`${chalk.yellowBright("stripe-checkout: one-off purchase")}`, async () => {
-	const customerId = "stripe-checkout-one-off";
+test.concurrent(`${chalk.yellowBright("stripe-checkout: multi-interval product")}`, async () => {
+	const customerId = "stripe-checkout-multi-interval";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
+	const annualPriceItem = items.annualPrice({ price: 200 });
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
-	const oneOff = products.oneOff({
-		id: "one-off-checkout",
-		items: [oneOffMessagesItem],
+	const multiInterval = products.base({
+		id: "multi-interval-checkout",
+		items: [monthlyPriceItem, annualPriceItem, messagesItem],
 	});
 
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true }), // No payment method!
-			s.products({ list: [oneOff] }),
+			s.products({ list: [multiInterval] }),
 		],
 		actions: [],
 	});
 
-	// 1. Preview attach - base ($10) + messages ($10) = $20
+	// 1. Preview attach - should show $20 (monthly is default)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		product_id: multiInterval.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach - should return checkout_url
+	// 2. Attempt attach - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		product_id: multiInterval.id,
 	});
 
-	expect(result.checkout_url).toBeDefined();
+	expect(result.payment_url).toBeDefined();
+	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.checkout_url);
+	await completeCheckoutForm(result.payment_url);
 	await timeout(12000);
 
-	// 4. Verify credits were granted
+	// 4. Verify product is attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
 		customer,
-		productId: oneOff.id,
+		productId: multiInterval.id,
 	});
 
+	// Verify messages feature
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
+		includedUsage: 100,
 		balance: 100,
 		usage: 0,
 	});
