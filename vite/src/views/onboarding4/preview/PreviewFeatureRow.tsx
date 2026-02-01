@@ -19,7 +19,7 @@ export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
 	const useColumnLayout = hasPricing && hasIncludedUsage;
 
 	return (
-		<div className="flex items-center w-full px-2 bg-card">
+		<div className="flex items-center w-full px-2">
 			<div
 				className={`flex gap-1 min-w-0 overflow-hidden ${useColumnLayout ? "flex-col" : "flex-row items-center"}`}
 			>

@@ -277,9 +277,10 @@ Products contain an array of items. There are THREE distinct item patterns:
    \`{ feature_id: "credits", included_usage: 10000, price: 0.01, usage_model: "pay_per_use", interval: "month" }\`
    → Customer can use 10,000 credits per month, and then pays $0.01 per credit used after that.
 
-4. **Prepaid Credit Purchase** (one-time purchase of usage):
-   \`{ feature_id: "credits", price: 10, usage_model: "prepaid", billing_units: 10000 }\`
-   → Customer pays $10 once to receive 10,000 credits
+4. **Prepaid Credit Purchase** (one-time or recurring):
+   \`{ feature_id: "credits", price: 10, usage_model: "prepaid", billing_units: 10000 } \`,
+   → Customer pays $10 for 10,000 credits. Add \`interval: "month" \` to make it a recurring subscription with selectable quantity.
+
 
 5. **Tiered Pricing**:
    \`{ feature_id: "api_calls", included_usage: 1000, tiers: [{ to: 5000, amount: 0.02 }, { to: "inf", amount: 0.01 }], usage_model: "pay_per_use", interval: "month" }\`
