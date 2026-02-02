@@ -7,7 +7,7 @@ export function OrderSummarySkeleton() {
 	return (
 		<AnimatedLayout className="flex flex-col" layoutId="order-summary">
 			{/* Plan name and billing period */}
-			<div className="flex items-center justify-between py-3">
+			<div className="flex items-center justify-between pb-3">
 				<Skeleton className="h-5 w-32" />
 				<Skeleton className="h-4 w-24" />
 			</div>

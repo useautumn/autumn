@@ -12,6 +12,7 @@ import {
 } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
 import { QuantityInput } from "./QuantityInput";
+import { PlanSelectionBackground } from "@/components/checkout/PlanSelectionBackground";
 
 function getPricedFeatures(features: ApiPlanFeature[]): {
 	prepaid: ApiPlanFeature[];
@@ -90,6 +91,8 @@ export function PlanSelectionCard({
 	return (
 		<AnimatedCard layoutId="plan-selection-card">
 			<Card className="py-0 gap-0">
+				<PlanSelectionBackground>
+
 				{/* Plan change label */}
 				{outgoingPlanName && (
 					<motion.div
@@ -273,6 +276,7 @@ export function PlanSelectionCard({
 						</AnimatePresence>
 					</motion.div>
 				)}
+				</PlanSelectionBackground>
 			</Card>
 		</AnimatedCard>
 	);

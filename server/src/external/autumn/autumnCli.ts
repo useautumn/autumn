@@ -836,7 +836,7 @@ export class AutumnInt {
 
 			const data = await this.post(
 				`/billing/attach`,
-				{ ...params, redirect_mode: "if_required" },
+				{ redirect_mode: "if_required", ...params },
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 
