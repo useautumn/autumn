@@ -1,8 +1,8 @@
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getCusPaymentMethod } from "../../../../stripeCusUtils.js";
 
 /**
  * Handles standalone setup checkout (setup mode without Autumn metadata).
