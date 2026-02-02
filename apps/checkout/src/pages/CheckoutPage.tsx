@@ -205,22 +205,35 @@ export function CheckoutPage() {
 						>
 							<Separator />
 
-							{/* Amount due today */}
-							<div className="flex items-center justify-between">
-								{isLoading ? (
-									<>
-										<Skeleton className="h-5 w-32" />
-										<Skeleton className="h-6 w-16" />
-									</>
-								) : (
-									<>
-										<span className="text-base font-medium text-foreground">
-											Amount due today
+							{/* Amount summary */}
+							<div className="flex flex-col gap-1">
+								{/* Amount due today */}
+								<div className="flex items-center justify-between">
+									{isLoading ? (
+										<>
+											<Skeleton className="h-5 w-32" />
+											<Skeleton className="h-6 w-16" />
+										</>
+									) : (
+										<>
+											<span className="text-base font-medium text-foreground">
+												Amount due today
+											</span>
+											<span className="text-lg font-medium text-foreground tabular-nums">
+												{formatAmount(total, currency)}
+											</span>
+										</>
+									)}
+								</div>
+
+								{/* Amount next cycle */}
+								{!isLoading && preview?.next_cycle && (
+									<div className="flex items-center justify-between text-sm text-muted-foreground">
+										<span>Total due next cycle</span>
+										<span className="tabular-nums">
+											{formatAmount(preview.next_cycle.total, currency)}
 										</span>
-										<span className="text-lg font-medium text-foreground tabular-nums">
-											{formatAmount(total, currency)}
-										</span>
-									</>
+									</div>
 								)}
 							</div>
 

@@ -1,4 +1,4 @@
-import type { BillingPreviewResponse } from "@autumn/shared";
+import type { BillingPreviewResponse, PreviewLineItem } from "@autumn/shared";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { AnimatedLayout } from "@/components/motion/animated-layout";
@@ -17,13 +17,22 @@ interface OrderSummaryProps {
 }
 
 export function OrderSummary({ planName, preview }: OrderSummaryProps) {
-	const { line_items, total, currency, period_start, period_end } = preview;
+	const { line_items, total, currency, period_start, period_end, next_cycle } =
+		preview;
 
 	const hasBillingPeriod = period_start && period_end;
+	const hasNoImmediateCharges = line_items.length === 0 && total === 0;
+	const showNextCycleBreakdown = hasNoImmediateCharges && next_cycle;
+
+	// Use next cycle line items when showing next cycle breakdown, otherwise use immediate line items
+	const displayLineItems: PreviewLineItem[] = showNextCycleBreakdown
+		? next_cycle.line_items
+		: line_items;
+	const displayTotal = showNextCycleBreakdown ? next_cycle.total : total;
 
 	// Separate base item from sub-items
-	const baseItem = line_items.find((item) => item.is_base);
-	const subItems = line_items.filter((item) => !item.is_base);
+	const baseItem = displayLineItems.find((item) => item.is_base);
+	const subItems = displayLineItems.filter((item) => !item.is_base);
 
 	return (
 		<AnimatedLayout
@@ -35,7 +44,7 @@ export function OrderSummary({ planName, preview }: OrderSummaryProps) {
 		>
 			{/* Plan name and billing period */}
 			<motion.div
-				className="flex items-center justify-between py-3"
+				className="flex items-center justify-between pb-3"
 				variants={listItemVariants}
 			>
 				<span className="text-foreground">{planName}</span>
@@ -106,7 +115,7 @@ export function OrderSummary({ planName, preview }: OrderSummaryProps) {
 									<span className="text-sm text-muted-foreground">
 										{item.title}
 									</span>
-									{item.total_quantity && (
+									{item.total_quantity > 1 && (
 										<motion.span
 											key={item.total_quantity}
 											className="text-sm text-muted-foreground"
@@ -150,15 +159,28 @@ export function OrderSummary({ planName, preview }: OrderSummaryProps) {
 				>
 					<span className="text-sm font-medium text-foreground">Total</span>
 					<motion.span
-						key={total}
+						key={displayTotal}
 						className="text-sm font-medium tabular-nums text-foreground"
 						initial={{ opacity: 0.5, scale: 0.95 }}
 						animate={{ opacity: 1, scale: 1 }}
 						transition={FAST_TRANSITION}
 					>
-						{formatAmount(total, currency)}
+						{formatAmount(displayTotal, currency)}
 					</motion.span>
 				</motion.div>
+
+				{/* Message explaining changes take effect next cycle */}
+				{showNextCycleBreakdown && (
+					<motion.p
+						className="text-xs text-muted-foreground"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ ...STANDARD_TRANSITION, delay: 0.2 }}
+					>
+						Changes take effect{" "}
+						{format(new Date(next_cycle.starts_at), "d MMM yyyy")}
+					</motion.p>
+				)}
 			</div>
 		</AnimatedLayout>
 	);

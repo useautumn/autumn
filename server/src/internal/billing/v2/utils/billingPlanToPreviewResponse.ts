@@ -1,3 +1,4 @@
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	orgToCurrency,
@@ -5,9 +6,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
-import type { BillingPlan } from "@autumn/shared";
 import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
+import { lineItemToPreviewLineItem } from "./lineItems/lineItemToPreviewLineItem";
 
 export const billingPlanToPreviewResponse = ({
 	ctx,
@@ -27,22 +27,9 @@ export const billingPlanToPreviewResponse = ({
 		(line) => line.chargeImmediately,
 	);
 
-	const previewImmediateLineItems = immediateLineItems.map((line) => {
-		const feature = line.context.feature;
-
-		// Use feature name if available, otherwise product name
-		const title = feature?.name || line.context.product.name || "Item";
-		const isBase = !feature;
-
-		return {
-			title,
-			description: line.description,
-			amount: line.finalAmount,
-			is_base: isBase,
-			total_quantity: line.total_quantity ?? 1,
-			paid_quantity: line.paid_quantity ?? 1,
-		};
-	});
+	const previewImmediateLineItems = immediateLineItems.map(
+		lineItemToPreviewLineItem,
+	);
 
 	const total = new Decimal(
 		sumValues(previewImmediateLineItems.map((line) => line.amount)),
