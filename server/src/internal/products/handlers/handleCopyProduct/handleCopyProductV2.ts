@@ -6,8 +6,8 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-
 import { ProductService } from "@/internal/products/ProductService.js";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "../../../../utils/genUtils";
@@ -133,6 +133,12 @@ export const handleCopyProductV2 = createRoute({
 			org,
 			logger,
 		});
+
+		// Invalidate cache for target environment (and source if same org)
+		await invalidateProductsCache({ orgId: org.id, env: toEnv });
+		if (fromEnv !== toEnv) {
+			await invalidateProductsCache({ orgId: org.id, env: fromEnv });
+		}
 
 		return c.json({ message: "Product copied" });
 	},

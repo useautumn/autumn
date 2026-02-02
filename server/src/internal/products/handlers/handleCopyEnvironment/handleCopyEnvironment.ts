@@ -1,6 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { invalidateProductsCache } from "../../productCacheUtils.js";
 import { handleCopyFeatures } from "./handleCopyFeatures.js";
 import { handleCopyProducts } from "./handleCopyProducts.js";
 
@@ -44,6 +45,8 @@ export const handleCopyEnvironment = createRoute({
 			fromEnv,
 			toEnv,
 		});
+
+		await invalidateProductsCache({ orgId: org.id, env: toEnv });
 
 		return c.json({
 			message: "Products copied to production",
