@@ -1,14 +1,42 @@
 # Attach V2 Test Guide
 
+> **IMPORTANT**: These tests are for the **NEW `billing.attach` endpoint** (V2 attach flow), NOT the legacy `attach` endpoint.
+> 
+> - In `initScenario` actions: use `s.billing.attach()` (NOT `s.attach()`)
+> - In test body: use `autumnV1.billing.attach()` (NOT `autumnV1.attach()`)
+>
+> The legacy `s.attach()` and `autumnV1.attach()` exist for backwards compatibility but should NOT be used in these tests.
+
+## Running Tests
+
+Run a single test file:
+```bash
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts
+```
+
+Run a specific test by name pattern:
+```bash
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts -t "test 3"
+```
+
+Run with longer timeout (for slow tests):
+```bash
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts --timeout 60000
+```
+
+**Note**: Only run one test at a time during development to avoid test clock conflicts.
+
+---
+
 ## Key Gotchas
 
 1. **Always use `product.id`, never string literals**
    ```typescript
    // ✅ GOOD
-   s.attach({ productId: pro.id })
+   s.billing.attach({ productId: pro.id })
    
    // ❌ BAD
-   s.attach({ productId: "pro" })
+   s.billing.attach({ productId: "pro" })
    ```
 
 2. **Multiple products need unique IDs**
@@ -35,10 +63,30 @@
    - If `billingUnits: 100` and you want 1 pack, pass `quantity: 100`
    ```typescript
    // Product has: billingUnits: 100, price: 10 (100 messages for $10)
-   s.attach({ 
+   s.billing.attach({ 
      productId: pro.id, 
      options: [{ feature_id: TestFeature.Messages, quantity: 100 }]  // 100 units = 1 pack = $10
    })
+   ```
+
+5b. **Prepaid `includedUsage` must be a multiple of `billingUnits` (or 0)**
+   - When Stripe tiered pricing is created, `up_to` = `includedUsage / billingUnits`
+   - Stripe requires `up_to` to be a positive integer or "inf"
+   - If this results in a decimal (e.g., 50/100=0.5), Stripe rejects it
+   ```typescript
+   // ❌ BAD - 50 / 100 = 0.5, invalid for Stripe
+   constructPrepaidItem({
+     featureId: TestFeature.Messages,
+     includedUsage: 50,
+     billingUnits: 100,
+   });
+   
+   // ✅ GOOD - multiples of billingUnits
+   constructPrepaidItem({
+     featureId: TestFeature.Messages,
+     includedUsage: 0,   // or 100, 200, 300, etc.
+     billingUnits: 100,
+   });
    ```
 
 6. **Use `products.base()` for free products** (no base price)
@@ -54,15 +102,27 @@
 9. **Server logs not visible in tests**
    - Console logs in server code don't appear in test output
 
-10. **Always verify subscription state when billing is involved**
-    - Anytime prices are involved (base price, prepaid, allocated, etc.), use `expectSubToBeCorrect` to verify subscription state
+10. **ALWAYS verify Stripe subscription state after billing calls**
+    - After EVERY `billing.attach()` call, verify the Stripe subscription state matches Autumn
+    - For paid products: use `expectSubToBeCorrect`
+    - For free products (no Stripe subscription): use `expectNoStripeSubscription`
     ```typescript
+    // For paid products (has base price, prepaid, allocated, etc.)
     await expectSubToBeCorrect({
       db: ctx.db,
       customerId,
       org: ctx.org,
       env: ctx.env,
       entityId?: string,  // For entity-level subscription
+    });
+    
+    // For free products OR after downgrading to free
+    import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+    await expectNoStripeSubscription({
+      db: ctx.db,
+      customerId,
+      org: ctx.org,
+      env: ctx.env,
     });
     ```
 
@@ -107,6 +167,108 @@
     s.billing.attach({ productId: pro.id, isAddOn: true });
     ```
 
+19. **Use `s.billing.attach()` and `autumnV1.billing.attach()` - NOT the legacy attach**
+    - These tests are for the NEW billing.attach endpoint (V2 attach flow)
+    - Never use `s.attach()` or `autumnV1.attach()` in these test files
+    ```typescript
+    // ✅ GOOD - new billing.attach endpoint
+    s.billing.attach({ productId: pro.id })
+    await autumnV1.billing.attach({ customer_id: customerId, product_id: pro.id })
+    
+    // ❌ BAD - legacy attach endpoint
+    s.attach({ productId: pro.id })
+    await autumnV1.attach({ customer_id: customerId, product_id: pro.id })
+    ```
+
+20. **For scheduled switches (downgrades), always call previewAttach first with exact `startsAt` verification**
+    - Preview should return `total: 0` since the change is scheduled, not immediate
+    - Use `expectPreviewNextCycleCorrect` to verify `next_cycle.starts_at` and `next_cycle.total`
+    - Pass the EXACT `startsAt` using `addMonths(advancedTo, 1).getTime()` - do NOT use approximates
+    ```typescript
+    import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+    import { addMonths } from "date-fns";
+    
+    const { autumnV1, ctx, advancedTo } = await initScenario({
+      customerId,
+      setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, basic] })],
+      actions: [s.billing.attach({ productId: pro.id })],  // Initial product only
+    });
+    
+    // Preview the downgrade - verify total and next_cycle
+    const preview = await autumnV1.billing.previewAttach({
+      customer_id: customerId,
+      product_id: basic.id,  // lower tier product
+      entity_id: entityId,   // if entity-level
+    });
+    expect(preview.total).toBe(0);  // Scheduled changes have no immediate charge
+    expectPreviewNextCycleCorrect({
+      preview,
+      total: 10,  // basic product's price
+      startsAt: addMonths(advancedTo, 1).getTime(),  // EXACT timestamp, not approximate
+    });
+    
+    // Then perform the attach
+    await autumnV1.billing.attach({
+      customer_id: customerId,
+      product_id: basic.id,
+      redirect_mode: "if_required",
+    });
+    ```
+
+21. **Do NOT create a new initScenario to advance the test clock**
+    - WRONG: Creating a second `initScenario` with the same customerId to advance time
+    - RIGHT: Keep downgrade attach OUT of initScenario, call it in test body, then use helpers to advance
+    ```typescript
+    // ❌ WRONG - Do NOT do this
+    const { autumnV1 } = await initScenario({
+      customerId,
+      actions: [s.billing.attach({ productId: pro.id })],
+    });
+    // ... do preview and attach ...
+    const { autumnV1: autumnV1After } = await initScenario({
+      customerId,
+      actions: [
+        s.billing.attach({ productId: pro.id }),
+        s.billing.attach({ productId: basic.id }),
+        s.advanceToNextInvoice(),
+      ],
+    });
+    
+    // ✅ RIGHT - Move downgrade out and use same scenario
+    const { autumnV1, ctx, advancedTo } = await initScenario({
+      customerId,
+      actions: [s.billing.attach({ productId: pro.id })],  // Only initial product
+    });
+    
+    // Preview and attach in test body
+    const preview = await autumnV1.billing.previewAttach({ ... });
+    await autumnV1.billing.attach({ ... });
+    
+    // For tests that need end-of-cycle verification, either:
+    // A. Split into separate test, OR
+    // B. Use advanceTestClock helper from the same ctx
+    ```
+
+22. **Prepaid next_cycle.total depends on quantity passed at attach time**
+    - If `options: [{ quantity: 100 }]` passed → `next_cycle.total` = price for 100 units
+    - If no options passed → inherits current product's quantity (if any), else 0
+    ```typescript
+    // With explicit quantity
+    const preview = await autumnV1.billing.previewAttach({
+      customer_id: customerId,
+      product_id: newPrepaidProduct.id,
+      options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+    });
+    // next_cycle.total = price for 100 units (e.g., $10 if price is $10/100 units)
+    
+    // Without options - inherits from current product
+    const preview = await autumnV1.billing.previewAttach({
+      customer_id: customerId,
+      product_id: newPrepaidProduct.id,
+      // no options - uses current product's quantity
+    });
+    ```
+
 13. **Product IDs in expectations - just use `product.id`**
     - `initScenario` already prefixes product IDs with `customerId`
     - Don't double-prefix in expectations
@@ -116,6 +278,23 @@
     
     // ❌ BAD - double prefix
     expectProductActive({ customer, productId: `${pro.id}_${customerId}` });
+    ```
+
+15. **Use `expectCustomerProducts` batch helper when checking multiple products**
+    - When verifying 2+ product states, use the batch helper instead of individual calls
+    - More concise and easier to read
+    ```typescript
+    // ✅ GOOD - batch check
+    await expectCustomerProducts({
+      customer,
+      active: [premium.id],
+      notPresent: [pro.id, free.id],
+    });
+    
+    // ❌ BAD - multiple individual calls
+    await expectProductActive({ customer, productId: premium.id });
+    await expectProductNotPresent({ customer, productId: pro.id });
+    await expectProductNotPresent({ customer, productId: free.id });
     ```
 
 14. **Always pass `redirect_mode: "if_required"` to attach calls**
@@ -142,7 +321,7 @@
     const { autumnV1 } = await initScenario({
       customerId,
       setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
-      actions: [s.attach({ productId: pro.id })],  // Pre-existing state
+      actions: [s.billing.attach({ productId: pro.id })],  // Pre-existing state
     });
     
     // Test body only calls the action being tested
@@ -165,7 +344,7 @@
       - B. Products on customer are correct after cycle
     ```typescript
     // Schedule the downgrade
-    await s.attach({ productId: basic.id });  // Schedules switch to basic at end of cycle
+    await s.billing.attach({ productId: basic.id });  // Schedules switch to basic at end of cycle
     
     // Advance to next billing cycle
     await advanceToNextInvoice({
@@ -227,6 +406,124 @@ Always use generic type parameters for proper type safety:
   - `new-billing-subscription/` — Force new Stripe subscription
   - `billing-behavior/` — Proration control
   - `plan-schedule/` — Override upgrade/downgrade timing
+
+---
+
+## Proration Utilities
+
+When testing mid-cycle upgrades/downgrades, use the proration utilities to calculate exact expected amounts.
+
+**Location:** `@tests/integration/billing/utils/proration/`
+
+### Import
+
+```typescript
+import { 
+  getBillingPeriod, 
+  calculateProration, 
+  calculateProratedDiff 
+} from "@tests/integration/billing/utils/proration";
+```
+
+### `calculateProratedDiff` (Most Common)
+
+Calculate net charge for upgrade/downgrade. Works for base prices, prepaid, and allocated features.
+
+```typescript
+const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+// Calculate prorated difference for base price upgrade
+const expectedCharge = calculateProratedDiff({
+  customer: customerBefore,
+  advancedTo,                // From initScenario
+  oldAmount: 20,             // Pro base price
+  newAmount: 50,             // Premium base price
+});
+
+expect(preview.total).toBeCloseTo(expectedCharge, 0);
+```
+
+### Options for Multi-Product/Multi-Interval/Entity
+
+```typescript
+// Filter by product ID
+calculateProratedDiff({
+  customer,
+  advancedTo,
+  oldAmount: 20,
+  newAmount: 50,
+  productId: "pro",          // Optional: specific product
+});
+
+// Filter by billing interval (for dual subscriptions)
+calculateProratedDiff({
+  customer,
+  advancedTo,
+  oldAmount: 20,
+  newAmount: 50,
+  interval: "month",         // "month" | "year"
+});
+
+// Entity-level product
+calculateProratedDiff({
+  customer,
+  advancedTo,
+  oldAmount: 20,
+  newAmount: 50,
+  entityId: "ent-1",         // Or use entityIndex: 0
+});
+```
+
+### Mixed Prorated + Non-Prorated (Consumable Arrear)
+
+Consumable/arrear charges are **NEVER prorated** - add them separately:
+
+```typescript
+// Base price is prorated
+const proratedBase = calculateProratedDiff({
+  customer: customerBefore,
+  advancedTo,
+  oldAmount: 20,
+  newAmount: 50,
+});
+
+// Consumable arrear is NOT prorated - full amount
+const arrearOverage = 5; // 100 overage × $0.05
+
+const expectedTotal = proratedBase + arrearOverage;
+expect(preview.total).toBeCloseTo(expectedTotal, 0);
+```
+
+### Key Behaviors
+
+| Feature Type | Prorated on Upgrade? |
+|--------------|---------------------|
+| Base price | ✅ Yes |
+| Prepaid | ✅ Yes |
+| Allocated | ✅ Yes |
+| Consumable (arrear) | ❌ No - full amount |
+
+### `getBillingPeriod`
+
+Get the raw billing period from customer's subscription (for custom calculations):
+
+```typescript
+const period = getBillingPeriod({ customer });
+// Returns: { start: number, end: number } in milliseconds
+```
+
+### `calculateProration`
+
+Calculate prorated amount for a single price (not the difference):
+
+```typescript
+const proratedCharge = calculateProration({
+  customer,
+  advancedTo,
+  amount: 50,  // Full price
+});
+// Returns prorated amount for remaining period
+```
 
 ---
 

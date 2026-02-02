@@ -216,6 +216,40 @@ const prepaidUsers = ({
 		includedUsage,
 	}) as LimitedItem;
 
+/**
+ * Tiered prepaid messages - volume pricing with tiers
+ * Default tiers:
+ * - 0-500 units: $10/pack (100 units/pack)
+ * - 501+ units: $5/pack
+ *
+ * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
+ *
+ * @param includedUsage - Free units (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param tiers - Volume tiers (default: standard volume discount). Last tier must have `to: "inf"`.
+ */
+const tieredPrepaidMessages = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	tiers = [
+		{ to: 500, amount: 10 },
+		{ to: "inf", amount: 5 },
+	],
+	config,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	tiers?: { to: number | "inf"; amount: number }[];
+	config?: ProductItemConfig;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		tiers: tiers as { to: number; amount: number }[],
+		billingUnits,
+		includedUsage,
+		config,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // ONE-OFF (interval: null, no recurring charges)
 // ═══════════════════════════════════════════════════════════════════
@@ -238,6 +272,38 @@ const oneOffMessages = ({
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		price,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
+/**
+ * Tiered one-off messages - volume pricing with tiers (no recurring charges)
+ * Default tiers:
+ * - 0-500 units: $10/pack (100 units/pack)
+ * - 501+ units: $5/pack
+ *
+ * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
+ *
+ * @param includedUsage - Free units (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param tiers - Volume tiers (default: standard volume discount). Last tier must have `to: "inf"`.
+ */
+const tieredOneOffMessages = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	tiers = [
+		{ to: 500, amount: 10 },
+		{ to: "inf", amount: 5 },
+	],
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	tiers?: { to: number | "inf"; amount: number }[];
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		tiers,
 		billingUnits,
 		includedUsage,
 		isOneOff: true,
@@ -362,6 +428,21 @@ const allocatedWorkflows = ({
 		includedUsage,
 	}) as LimitedItem;
 
+/**
+ * Allocated messages - prorated billing on change ($10/unit)
+ * @param includedUsage - Free messages included (default: 0)
+ */
+const allocatedMessages = ({
+	includedUsage = 0,
+}: {
+	includedUsage?: number;
+} = {}): LimitedItem =>
+	constructArrearProratedItem({
+		featureId: TestFeature.Messages,
+		pricePerUnit: 10,
+		includedUsage,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // BASE PRICES
 // ═══════════════════════════════════════════════════════════════════
@@ -418,9 +499,11 @@ export const items = {
 	prepaid,
 	prepaidMessages,
 	prepaidUsers,
+	tieredPrepaidMessages,
 
 	// One-off
 	oneOffMessages,
+	tieredOneOffMessages,
 
 	// Consumable
 	consumable,
@@ -430,6 +513,7 @@ export const items = {
 	// Allocated
 	allocatedUsers,
 	allocatedWorkflows,
+	allocatedMessages,
 
 	// Base prices
 	monthlyPrice,

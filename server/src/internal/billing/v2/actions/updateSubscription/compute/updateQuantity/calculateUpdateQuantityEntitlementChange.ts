@@ -2,6 +2,7 @@ import {
 	customerPriceToBillingUnits,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
+	priceToProrationConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
@@ -29,6 +30,21 @@ export const calculateUpdateQuantityEntitlementChange = ({
 	customerEntitlementId: string;
 	customerEntitlementBalanceChange: number;
 } => {
+	const isUpgrade = quantityDifferenceForEntitlements > 0;
+
+	const { shouldApplyProration } = priceToProrationConfig({
+		price: customerPrice.price,
+		isUpgrade,
+	});
+
+	// If downgrade and no proration, don't change entitlement balance THIS cycle
+	if (!isUpgrade && !shouldApplyProration) {
+		return {
+			customerEntitlementId: customerEntitlement?.id,
+			customerEntitlementBalanceChange: 0,
+		};
+	}
+
 	const billingUnits = customerPriceToBillingUnits({ customerPrice });
 	const customerEntitlementBalanceChange = new Decimal(
 		quantityDifferenceForEntitlements,

@@ -1,3 +1,4 @@
+import type { BillingVersion } from "@models/billingModels/context/billingContext";
 import type { FreeTrial } from "@models/productModels/freeTrialModels/freeTrialModels";
 import type { ApiVersion } from "../../../api/versionUtils/ApiVersion";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -24,6 +25,7 @@ export interface InitFullCustomerProductContext {
 	freeTrial: FreeTrial | null;
 	trialEndsAt?: number;
 	now: number; // milliseconds since epoch
+	billingVersion?: BillingVersion;
 }
 
 export interface InitFullCustomerProductOptions {

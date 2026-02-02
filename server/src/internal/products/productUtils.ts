@@ -501,11 +501,9 @@ export const isOneOff = (prices: Price[]) => {
 
 export const initProductInStripe = async ({
 	ctx,
-
 	product,
 }: {
 	ctx: AutumnContext;
-
 	product: FullProduct;
 }): Promise<undefined> => {
 	const { org, env, logger, db } = ctx;

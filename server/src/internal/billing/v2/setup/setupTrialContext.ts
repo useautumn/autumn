@@ -1,7 +1,8 @@
 import type {
+	FreeTrial,
 	FullCusProduct,
 	FullProduct,
-	UpdateSubscriptionV0Params,
+	TrialContext,
 } from "@autumn/shared";
 import {
 	addDuration,
@@ -11,7 +12,6 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { TrialContext } from "@autumn/shared";
 import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
 
 export const setupTrialContext = ({
@@ -22,9 +22,9 @@ export const setupTrialContext = ({
 	fullProduct,
 }: {
 	stripeSubscription?: Stripe.Subscription;
-	customerProduct: FullCusProduct;
+	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
-	params: UpdateSubscriptionV0Params;
+	params: { free_trial: FreeTrial | null };
 	fullProduct: FullProduct;
 }): TrialContext | undefined => {
 	const freeTrialParams = params.free_trial;
@@ -94,7 +94,10 @@ export const setupTrialContext = ({
 	}
 
 	// Case 4: Return free trial / trial ends at from current customer product
-	if (isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })) {
+	if (
+		customerProduct &&
+		isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })
+	) {
 		return {
 			freeTrial: customerProduct.free_trial, // can be undefined...
 			trialEndsAt: customerProduct.trial_ends_at ?? null,

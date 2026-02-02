@@ -1,4 +1,5 @@
 import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
+import { updateOptionsFromStripeCheckoutSession } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateOptionsFromStripeCheckoutSession";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { initInvoiceFromStripe } from "@/internal/invoices/utils/initInvoiceFromStripe";
@@ -63,8 +64,10 @@ export const updateBillingPlanFromCheckout = async ({
 	}
 
 	// 3. TODO: Capture prepaid quantities from checkout line items
-	// This would update insertCustomerProducts[].customer_entitlements[].balance
-	// for UsageInAdvance prices based on quantities selected in checkout
+	await updateOptionsFromStripeCheckoutSession({
+		checkoutContext,
+		deferredData,
+	});
 
 	// Return updated billing plan data (new copy)
 	return {

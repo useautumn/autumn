@@ -80,9 +80,9 @@ expectCustomerInvoiceCorrect({
 
 ## Product State Expectations
 
-### `expectCustomerProducts` (Batch Check - Preferred)
+### `expectCustomerProducts` (Batch Check - PREFERRED)
 
-Verify multiple product states in a single call. Use this when checking 2+ products.
+Verify multiple product states in a single call. **Always use this when checking 2+ products.**
 
 ```typescript
 await expectCustomerProducts({
@@ -96,9 +96,24 @@ await expectCustomerProducts({
 
 All arrays are optional - only include the states you need to verify.
 
+**Example - upgrade from pro to premium:**
+```typescript
+// ✅ GOOD - batch check
+await expectCustomerProducts({
+  customer,
+  active: [premium.id],
+  notPresent: [pro.id, free.id],
+});
+
+// ❌ BAD - multiple individual calls (don't do this)
+await expectProductActive({ customer, productId: premium.id });
+await expectProductNotPresent({ customer, productId: pro.id });
+await expectProductNotPresent({ customer, productId: free.id });
+```
+
 ### `expectProductActive`
 
-Verify a single product is active. For multiple products, prefer `expectProducts`.
+Verify a single product is active. **For multiple products, prefer `expectCustomerProducts`.**
 
 ```typescript
 await expectProductActive({
@@ -224,13 +239,19 @@ expectPreviewNextCycleCorrect({
 });
 ```
 
-## Subscription Verification
+## Subscription Verification (CRITICAL)
+
+**ALWAYS verify Stripe subscription state after EVERY `billing.attach()` call!**
+
+This ensures the Stripe subscription state matches Autumn's internal state.
 
 ### `expectSubToBeCorrect`
 
-Deep verification of subscription state in database.
+Deep verification of subscription state in database. **Use for paid products.**
 
 ```typescript
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+
 await expectSubToBeCorrect({
   db: ctx.db,
   customerId,
@@ -245,6 +266,31 @@ await expectSubToBeCorrect({
   },
 });
 ```
+
+### `expectNoStripeSubscription`
+
+Verify customer has no active Stripe subscriptions. **Use for free products OR after downgrading to free.**
+
+```typescript
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+
+await expectNoStripeSubscription({
+  db: ctx.db,
+  customerId,
+  org: ctx.org,
+  env: ctx.env,
+});
+```
+
+### When to Use Which
+
+| Scenario | Utility |
+|----------|---------|
+| Attached paid product | `expectSubToBeCorrect` |
+| Attached free product | `expectNoStripeSubscription` |
+| Upgraded free → paid | `expectSubToBeCorrect` |
+| Downgraded paid → free (after cycle) | `expectNoStripeSubscription` |
+| Scheduled downgrade (before cycle) | `expectSubToBeCorrect` (sub still exists until cycle end) |
 
 ## Complete Example
 

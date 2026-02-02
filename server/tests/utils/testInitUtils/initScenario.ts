@@ -71,6 +71,7 @@ type TrackAction = {
 	featureId: string;
 	value: number;
 	entityIndex?: number;
+	timeout?: number;
 };
 
 type UpdateSubscriptionAction = {
@@ -405,17 +406,21 @@ const removePaymentMethod = (): ConfigFn => {
  * @param featureId - The feature ID to track usage for
  * @param value - The usage value to track
  * @param entityIndex - Optional entity index (0-based) to track for (omit for customer-level)
+ * @param timeout - Optional timeout in milliseconds to wait after tracking (for sync)
  * @example s.track({ featureId: TestFeature.Messages, value: 300 }) // customer-level
  * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }) // entity-level
+ * @example s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }) // with timeout
  */
 const track = ({
 	featureId,
 	value,
 	entityIndex,
+	timeout,
 }: {
 	featureId: string;
 	value: number;
 	entityIndex?: number;
+	timeout?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -426,6 +431,7 @@ const track = ({
 				featureId,
 				value,
 				entityIndex,
+				timeout,
 			},
 		],
 	});
@@ -955,6 +961,9 @@ export async function initScenario({
 				value: action.value,
 				entity_id: entityId,
 			});
+			if (action.timeout) {
+				await new Promise((resolve) => setTimeout(resolve, action.timeout));
+			}
 		} else if (action.type === "updateSubscription") {
 			if (!customerId) {
 				throw new Error(

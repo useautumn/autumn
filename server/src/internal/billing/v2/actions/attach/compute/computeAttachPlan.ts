@@ -1,9 +1,6 @@
+import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import type {
-	AttachBillingContext,
-	AutumnBillingPlan,
-} from "@autumn/shared";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
@@ -42,15 +39,16 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 	});
 
-	const lineItems =
+	const { allLineItems: lineItems, updateCustomerEntitlements } =
 		planTiming === "immediate"
 			? buildAutumnLineItems({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],
 					deletedCustomerProduct: currentCustomerProduct,
 					billingContext: attachBillingContext,
+					includeArrearLineItems: true,
 				})
-			: [];
+			: { allLineItems: [], updateCustomerEntitlements: [] };
 
 	let plan: AutumnBillingPlan = {
 		insertCustomerProducts: [newCustomerProduct],
@@ -60,7 +58,7 @@ export const computeAttachPlan = ({
 		customEntitlements: customEnts,
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems,
-		updateCustomerEntitlements: undefined,
+		updateCustomerEntitlements,
 	};
 
 	plan = finalizeAttachPlan({

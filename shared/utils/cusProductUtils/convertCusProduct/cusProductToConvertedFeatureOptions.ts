@@ -2,7 +2,7 @@ import type {
 	FeatureOptions,
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels";
-import type { Feature } from "@models/featureModels/featureModels";
+import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
 import { findPrepaidCusPriceByFeature } from "@utils/cusPriceUtils/findCusPriceUtils/findPrepaidCusPriceByFeature";
@@ -15,13 +15,14 @@ import { cusProductToFeatureOptions } from "./cusProductToFeatureOptions";
  */
 export const cusProductToConvertedFeatureOptions = ({
 	cusProduct,
-	feature,
+	entitlement,
 	newPrice,
 }: {
 	cusProduct: FullCusProduct;
-	feature: Feature;
+	entitlement: EntitlementWithFeature;
 	newPrice: Price;
 }): FeatureOptions | undefined => {
+	const feature = entitlement.feature;
 	const currentOption = cusProductToFeatureOptions({ cusProduct, feature });
 
 	if (nullish(currentOption?.quantity)) return undefined;

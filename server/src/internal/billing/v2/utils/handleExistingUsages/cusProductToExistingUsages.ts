@@ -3,6 +3,7 @@ import {
 	cusEntsToUsage,
 	type ExistingUsages,
 	type FullCusProduct,
+	featureUtils,
 	isBooleanCusEnt,
 	isEntityScopedCusEnt,
 	isUnlimitedCusEnt,
@@ -12,9 +13,11 @@ import { Decimal } from "decimal.js";
 export const cusProductToExistingUsages = ({
 	cusProduct,
 	entityId,
+	featureIds,
 }: {
 	cusProduct?: FullCusProduct;
 	entityId?: string;
+	featureIds?: string[];
 }): ExistingUsages => {
 	if (!cusProduct) return {};
 
@@ -32,6 +35,15 @@ export const cusProductToExistingUsages = ({
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
 		if (cusEnts.some(isUnlimitedCusEnt)) continue;
+
+		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
+		const inFeatureIdsToCarry = featureIds
+			? featureIds.includes(cusEnt.entitlement.feature.id)
+			: true;
+
+		const shouldCarry = isAllocated || inFeatureIdsToCarry;
+
+		if (!shouldCarry) continue;
 
 		const internalFeatureId = cusEnt.entitlement.internal_feature_id;
 

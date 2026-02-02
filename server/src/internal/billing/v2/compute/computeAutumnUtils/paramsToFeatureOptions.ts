@@ -1,5 +1,5 @@
 import type {
-	Feature,
+	EntitlementWithFeature,
 	FeatureOptions,
 	Price,
 	UpdateSubscriptionV0Params,
@@ -10,12 +10,14 @@ import { Decimal } from "decimal.js";
 export const paramsToFeatureOptions = ({
 	params,
 	price,
-	feature,
+	entitlement,
 }: {
 	params: UpdateSubscriptionV0Params;
 	price: Price;
-	feature: Feature;
+	entitlement: EntitlementWithFeature;
 }): FeatureOptions | undefined => {
+	const feature = entitlement.feature;
+
 	const options = params.options?.find(
 		(option) => option.feature_id === feature.id,
 	);
@@ -23,9 +25,12 @@ export const paramsToFeatureOptions = ({
 	const billingUnits = price.config.billing_units ?? 1;
 
 	if (notNullish(options?.quantity)) {
-		// 1. Round options quantity to nearest billing units:
+		const quantityExcludingAllowance = new Decimal(options.quantity)
+			.sub(entitlement.allowance ?? 0)
+			.toNumber();
+
 		const roundedQuantity = roundUsageToNearestBillingUnit({
-			usage: options.quantity,
+			usage: quantityExcludingAllowance,
 			billingUnits,
 		});
 

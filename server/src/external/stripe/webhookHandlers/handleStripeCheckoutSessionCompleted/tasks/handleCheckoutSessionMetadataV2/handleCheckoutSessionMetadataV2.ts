@@ -1,5 +1,7 @@
 import {
+	type Customer,
 	type DeferredAutumnBillingPlanData,
+	type FullProduct,
 	MetadataType,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
@@ -11,16 +13,21 @@ import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumn
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
+export interface CheckoutSessionV2Result {
+	customer: Customer;
+	products: FullProduct[];
+}
+
 export const handleCheckoutSessionMetadataV2 = async ({
 	ctx,
 	checkoutContext,
 }: {
 	ctx: StripeWebhookContext;
 	checkoutContext: CheckoutSessionCompletedContext;
-}) => {
+}): Promise<CheckoutSessionV2Result | null> => {
 	const { metadata } = checkoutContext;
 
-	if (metadata?.type !== MetadataType.CheckoutSessionV2) return;
+	if (metadata?.type !== MetadataType.CheckoutSessionV2) return null;
 
 	ctx.logger.info(
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
@@ -28,18 +35,18 @@ export const handleCheckoutSessionMetadataV2 = async ({
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
-	// 1. Modify Stripe subscription
-	await modifyStripeSubscriptionFromCheckout({
+	// 1. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
+	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData,
 	});
 
-	// // 2. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
-	const updatedDeferredData = await updateBillingPlanFromCheckout({
+	// 2. Modify Stripe subscription to include other interval prices / 0 quantity prices
+	await modifyStripeSubscriptionFromCheckout({
 		ctx,
 		checkoutContext,
-		deferredData,
+		deferredData: updatedDeferredData,
 	});
 
 	addToExtraLogs({
@@ -70,4 +77,12 @@ export const handleCheckoutSessionMetadataV2 = async ({
 
 	// Delete metadata after successful execution
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
+
+	// Return data needed for reward and customer update tasks
+	return {
+		customer: updatedDeferredData.billingContext.fullCustomer,
+		products: updatedDeferredData.billingPlan.autumn.insertCustomerProducts.map(
+			(cp) => cp.product,
+		),
+	};
 };

@@ -46,6 +46,7 @@ export const evaluateStripeBillingPlan = async ({
 	} = buildStripeSubscriptionScheduleAction({
 		ctx,
 		billingContext,
+		autumnBillingPlan,
 		finalCustomerProducts: finalFullCustomer.customer_products,
 		trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
 	});

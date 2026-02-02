@@ -1,8 +1,5 @@
+import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type {
-	AutumnBillingPlan,
-	BillingContext,
-} from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -49,10 +46,13 @@ export const logAutumnBillingPlan = ({
 
 				updateCustomerEntitlements:
 					plan.updateCustomerEntitlements
-						?.map(
-							(update) =>
-								`${update.customerEntitlement.feature_id}: ${(update.balanceChange ?? 0) > 0 ? "+" : ""}${update.balanceChange}`,
-						)
+						?.map((update) => {
+							if (update.updates) {
+								return `${update.customerEntitlement.feature_id}: ${JSON.stringify(update.updates)}`;
+							}
+
+							return `${update.customerEntitlement.feature_id}: ${(update.balanceChange ?? 0) > 0 ? "+" : ""}${update.balanceChange}`;
+						})
 						.join(", ") || "none",
 
 				lineItems:

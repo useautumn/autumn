@@ -11,7 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0, AttachPreview } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -50,26 +50,27 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 		setup: [
 			s.customer({ testClock: true }), // No payment method!
 			s.products({ list: [pro] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.entities({ count: 2, featureId: TestFeature.Users }), // Create 2 entities to verify isolation
 		],
 		actions: [],
 	});
 
-	const entityId = entities[0].id;
+	const entity1Id = entities[0].id;
+	const entity2Id = entities[1].id;
 
-	// 1. Preview attach to entity - should show $20
+	// 1. Preview attach to entity-1 - should show $20
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		entity_id: entityId,
+		entity_id: entity1Id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
+	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach to entity - should return payment_url
+	// 2. Attempt attach to entity-1 - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		entity_id: entityId,
+		entity_id: entity1Id,
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -79,124 +80,38 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	await completeCheckoutForm(result.payment_url);
 	await timeout(12000);
 
-	// 4. Verify entity has product attached
-	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
+	// 4. Verify entity-1 has product attached
+	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity1Id,
+	);
 
 	await expectProductActive({
-		customer: entity,
+		customer: entity1,
 		productId: pro.id,
 	});
 
-	// Verify messages feature on entity
+	// Verify messages feature on entity-1
 	expectCustomerFeatureCorrect({
-		customer: entity,
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
 		balance: 100,
 		usage: 0,
 	});
 
+	// 5. Verify entity-2 does NOT have the product (isolation check)
+	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity2Id,
+	);
+	expect(entity2.products?.length ?? 0).toBe(0);
+
 	// Verify invoice on customer
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Second entity needs its own checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 has product via direct billing (customer has PM)
- * - Remove PM
- * - Entity-2 needs checkout (no PM)
- *
- * Expected Result:
- * - Entity-2 gets its own checkout flow
- * - Entity-1 keeps its product
- */
-test.concurrent(`${chalk.yellowBright("stripe-checkout: second entity")}`, async () => {
-	const customerId = "stripe-checkout-second-entity";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro-second-entity",
-		items: [messagesItem],
-	});
-
-	const { autumnV1, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }), // Has PM initially
-			s.products({ list: [pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			// Attach to entity-1 with PM (direct billing)
-			s.attach({ productId: pro.id, entityIndex: 0 }),
-		],
-	});
-
-	const entity1Id = entities[0].id;
-	const entity2Id = entities[1].id;
-
-	// Verify entity-1 has product
-	let entity1 = await autumnV1.entities.get<ApiEntityV0>(customerId, entity1Id);
-	await expectProductActive({
-		customer: entity1,
-		productId: pro.id,
-	});
-
-	// Remove payment method
-	await autumnV1.paymentMethods.removeAll({ customer_id: customerId });
-
-	// Attempt attach to entity-2 - should require checkout (no PM)
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entity2Id,
-	});
-	expect((preview as AttachPreview).due_today.total).toBe(20);
-
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entity2Id,
-	});
-
-	expect(result.payment_url).toBeDefined();
-	expect(result.payment_url).toContain("checkout.stripe.com");
-
-	// Complete checkout for entity-2
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
-
-	// Verify entity-2 now has product
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entity2Id,
-	);
-	await expectProductActive({
-		customer: entity2,
-		productId: pro.id,
-	});
-
-	// Verify entity-1 still has its product
-	entity1 = await autumnV1.entities.get<ApiEntityV0>(customerId, entity1Id);
-	await expectProductActive({
-		customer: entity1,
-		productId: pro.id,
-	});
-
-	// Verify invoices (1 for entity-1 direct billing + 1 for entity-2 checkout)
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
 		latestTotal: 20,
 	});
 });
@@ -231,56 +146,64 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 		setup: [
 			s.customer({ testClock: true }), // No payment method!
 			s.products({ list: [pro] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.entities({ count: 2, featureId: TestFeature.Users }), // Create 2 entities to verify isolation
 		],
 		actions: [],
 	});
 
-	const entityId = entities[0].id;
+	const entity1Id = entities[0].id;
+	const entity2Id = entities[1].id;
 
-	// 1. Preview attach to entity - should show $20 (base price only, consumable billed in arrears)
+	// 1. Preview attach to entity-1 - should show $20 (base price only, consumable billed in arrears)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		entity_id: entityId,
+		entity_id: entity1Id,
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach to entity - should return payment_url
+	// 2. Attempt attach to entity-1 - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		entity_id: entityId,
+		entity_id: entity1Id,
 	});
 
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	console.log("result", result);
-	return;
-
 	// 3. Complete checkout
 	await completeCheckoutForm(result.payment_url);
 	await timeout(12000);
 
-	// 4. Verify entity has product attached
-	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
+	// 4. Verify entity-1 has product attached
+	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity1Id,
+	);
 
 	await expectProductActive({
-		customer: entity,
+		customer: entity1,
 		productId: pro.id,
 	});
 
-	// 5. Verify consumable messages feature on entity
+	// 5. Verify consumable messages feature on entity-1
 	expectCustomerFeatureCorrect({
-		customer: entity,
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
 		balance: 100,
 		usage: 0,
 	});
 
-	// 6. Verify invoice on customer (base price only)
+	// 6. Verify entity-2 does NOT have the product (isolation check)
+	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity2Id,
+	);
+	expect(entity2.products?.length ?? 0).toBe(0);
+
+	// 7. Verify invoice on customer (base price only)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,

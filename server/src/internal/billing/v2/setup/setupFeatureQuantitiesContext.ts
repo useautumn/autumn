@@ -4,7 +4,7 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	isPrepaidPrice,
-	priceToFeature,
+	priceToEnt,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -32,9 +32,15 @@ export const setupFeatureQuantitiesContext = ({
 	for (const price of fullProduct.prices) {
 		if (!isPrepaidPrice(price)) continue;
 
-		const feature = priceToFeature({
+		// const feature = priceToFeature({
+		// 	price,
+		// 	features: ctx.features,
+		// 	errorOnNotFound: true,
+		// });
+
+		const entitlement = priceToEnt({
 			price,
-			features: ctx.features,
+			entitlements: fullProduct.entitlements,
 			errorOnNotFound: true,
 		});
 
@@ -42,14 +48,14 @@ export const setupFeatureQuantitiesContext = ({
 		const newFeatureQuantity = paramsToFeatureOptions({
 			params: featureQuantitiesParams,
 			price,
-			feature,
+			entitlement,
 		});
 
 		// Get current feature quantity from existing subscription
 		const currentFeatureQuantity = currentCustomerProduct
 			? cusProductToConvertedFeatureOptions({
 					cusProduct: currentCustomerProduct,
-					feature,
+					entitlement,
 					newPrice: price,
 				})
 			: undefined;
@@ -64,8 +70,8 @@ export const setupFeatureQuantitiesContext = ({
 
 		if (initializeUndefinedQuantities) {
 			options.push({
-				feature_id: feature.id,
-				internal_feature_id: feature.internal_id,
+				feature_id: entitlement.feature.id,
+				internal_feature_id: entitlement.feature.internal_id,
 				quantity: 0,
 			});
 		}

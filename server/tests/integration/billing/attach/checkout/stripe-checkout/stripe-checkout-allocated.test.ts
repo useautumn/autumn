@@ -125,175 +125,96 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout allocated: pro with alloc
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Free → pro (upgrade via checkout)
+// TEST 2: Pro with allocated users and pre-existing entities via checkout
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
- * - Customer on free product, NO payment method
- * - Attach pro product (upgrade)
+ * - Customer with NO payment method
+ * - Create 3 entities (users) BEFORE attaching
+ * - Attach pro product with allocated users (0 included, $10/seat)
  *
  * Expected Result:
  * - Returns payment_url
- * - After checkout: pro replaces free
+ * - Preview shows: $20 base + 3 × $10 = $50
+ * - After checkout: 3 users balance (from entities)
  */
-test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async () => {
-	const customerId = "stripe-checkout-free-to-pro";
+test.concurrent(`${chalk.yellowBright("stripe-checkout allocated: pro with pre-existing entities")}`, async () => {
+	const customerId = "stripe-checkout-allocated-entities";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free-checkout",
-		items: [messagesItem],
-	});
-
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 200 });
+	// Allocated users: 0 included, $10/seat
+	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 0 });
 	const pro = products.pro({
-		id: "pro-checkout-upgrade",
-		items: [proMessagesItem],
+		id: "pro-allocated-entities-checkout",
+		items: [allocatedUsersItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const entityCount = 3;
+	const pricePerSeat = 10;
+	const basePrice = 20;
+	const expectedTotal = basePrice + entityCount * pricePerSeat; // $50
+
+	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true }), // No payment method!
-			s.products({ list: [free, pro] }),
+			s.products({ list: [pro] }),
+			s.entities({ count: entityCount, featureId: TestFeature.Users }),
 		],
 		actions: [],
 	});
 
-	// 1. First attach free product (no checkout needed - it's free)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-	});
+	// Verify 3 entities were created
+	expect(entities.length).toBe(entityCount);
 
-	// Verify free is attached
-	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer,
-		productId: free.id,
-	});
-
-	// 2. Preview upgrade to pro - should show $20
+	// 1. Preview attach - should show $50 (base + 3 seats)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect(preview.total).toBe(20);
+	expect(preview.total).toBe(expectedTotal);
 
-	// 3. Attempt attach pro - should return payment_url
+	// 2. Attempt attach - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
 	expect(result.payment_url).toBeDefined();
+	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// 4. Complete checkout
+	// 3. Complete checkout form
 	await completeCheckoutForm(result.payment_url);
 	await timeout(12000);
 
-	// 5. Verify pro replaced free
-	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// 4. Verify product is now attached
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify messages feature from pro (200, not 50)
+	// Verify users feature - should have 3 balance (from entities)
 	expectCustomerFeatureCorrect({
 		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 200,
-		balance: 200,
-		usage: 0,
+		featureId: TestFeature.Users,
+		includedUsage: 0,
+		balance: -entityCount,
+		usage: entityCount,
 	});
 
-	// Verify invoice
+	// Verify invoice was paid (base + 3 seats = $50)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Multi-interval product via checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach product with both monthly and annual price options
- *
- * Expected Result:
- * - Returns payment_url
- * - Checkout handles multi-interval pricing
- * - Product attached after completion
- */
-test.concurrent(`${chalk.yellowBright("stripe-checkout: multi-interval product")}`, async () => {
-	const customerId = "stripe-checkout-multi-interval";
-
-	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
-	const annualPriceItem = items.annualPrice({ price: 200 });
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const multiInterval = products.base({
-		id: "multi-interval-checkout",
-		items: [monthlyPriceItem, annualPriceItem, messagesItem],
+		latestTotal: expectedTotal,
 	});
 
-	const { autumnV1 } = await initScenario({
+	await expectSubToBeCorrect({
+		db: ctx.db,
 		customerId,
-		setup: [
-			s.customer({ testClock: true }), // No payment method!
-			s.products({ list: [multiInterval] }),
-		],
-		actions: [],
-	});
-
-	// 1. Preview attach - should show $20 (monthly is default)
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: multiInterval.id,
-	});
-	expect(preview.total).toBe(20);
-
-	// 2. Attempt attach - should return payment_url
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: multiInterval.id,
-	});
-
-	expect(result.payment_url).toBeDefined();
-	expect(result.payment_url).toContain("checkout.stripe.com");
-
-	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
-
-	// 4. Verify product is attached
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer,
-		productId: multiInterval.id,
-	});
-
-	// Verify messages feature
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
-
-	// Verify invoice
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 1,
-		latestTotal: 20,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });

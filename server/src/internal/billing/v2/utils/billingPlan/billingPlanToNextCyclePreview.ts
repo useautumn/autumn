@@ -1,3 +1,4 @@
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	cp,
@@ -8,7 +9,6 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
 
@@ -39,7 +39,7 @@ export const billingPlanToNextCyclePreview = ({
 
 	let customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
-			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
+			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
 	);
 
 	const prices = cusProductsToPrices({

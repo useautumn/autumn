@@ -10,8 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
-import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
+import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -27,48 +26,33 @@ export const buildStripeCheckoutSessionAction = ({
 	const { org, env } = ctx;
 	const { trialContext, stripeCustomer } = billingContext;
 
-	// 1. Get subscription items filtered to largest interval (for Stripe Checkout)
-	const subItemsUpdate = buildStripeSubscriptionItemsUpdate({
-		ctx,
-		billingContext,
-		finalCustomerProducts,
-		filterByLargestInterval: true,
-	});
+	// 1. Get recurring and one-off items (recurring filtered to largest interval)
+	const { recurringLineItems, oneOffLineItems } =
+		buildStripeCheckoutSessionItems({
+			ctx,
+			billingContext,
+			newCustomerProducts: autumnBillingPlan.insertCustomerProducts,
+		});
 
-	// 2. Get one-off items
-	const oneOffItemSpecs = billingPlanToOneOffStripeItemSpecs({
-		ctx,
-		autumnBillingPlan,
-	});
-
-	// 3. Determine mode: "subscription" or "payment"
-	const isOneOffOnly = subItemsUpdate.length === 0;
+	// 2. Determine mode: "subscription" or "payment"
+	const isOneOffOnly = recurringLineItems.length === 0;
 	const mode: "subscription" | "payment" = isOneOffOnly
 		? "payment"
 		: "subscription";
 
-	// 4. Build line_items from sub items and one-off items
+	// 3. Build line_items from recurring items and one-off items
 	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-		...subItemsUpdate
-			.filter((item) => item.price && !item.deleted)
-			.filter((item) => item.quantity !== 0)
-			.map((item) => ({
-				price: item.price!,
-				quantity: item.quantity,
-			})),
-		...oneOffItemSpecs.map((item) => ({
-			price: item.stripePriceId,
-			quantity: item.quantity ?? 1,
-		})),
+		...recurringLineItems.filter((item) => item.quantity !== 0),
+		...oneOffLineItems,
 	];
 
-	// 5. Trial handling (only for subscription mode)
+	// 4. Trial handling (only for subscription mode)
 	const trialEnd =
 		mode === "subscription" && trialContext?.trialEndsAt
 			? msToSeconds(trialContext.trialEndsAt)
 			: undefined;
 
-	// 6. Build subscription_data (only for subscription mode)
+	// 5. Build subscription_data (only for subscription mode)
 	const subscriptionData:
 		| Stripe.Checkout.SessionCreateParams.SubscriptionData
 		| undefined =
@@ -83,7 +67,7 @@ export const buildStripeCheckoutSessionAction = ({
 				}
 			: undefined;
 
-	// 7. Build params (only variable params - static params added in execute)
+	// 6. Build params (only variable params - static params added in execute)
 	const params: Stripe.Checkout.SessionCreateParams = {
 		customer: stripeCustomer.id,
 		mode,

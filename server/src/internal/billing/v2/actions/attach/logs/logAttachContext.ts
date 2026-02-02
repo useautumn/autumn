@@ -1,6 +1,6 @@
+import type { AttachBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AttachBillingContext } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logAttachContext = ({
@@ -23,6 +23,8 @@ export const logAttachContext = ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		isCustom,
+		billingCycleAnchorMs,
+		resetCycleAnchorMs,
 	} = billingContext;
 
 	addToExtraLogs({
@@ -42,7 +44,7 @@ export const logAttachContext = ({
 				endOfCycleMs: endOfCycleMs ? formatMs(endOfCycleMs) : "n/a",
 				checkoutMode: checkoutMode ?? "direct billing",
 
-				timestamps: `Current: ${formatMs(currentEpochMs)}`,
+				timestamps: `Current: ${formatMs(currentEpochMs)} | Billing Anchor: ${billingCycleAnchorMs === "now" ? "now" : formatMs(billingCycleAnchorMs)} | Reset: ${formatMs(resetCycleAnchorMs)}`,
 
 				invoiceMode: invoiceMode
 					? `enable immediately: ${invoiceMode.enableProductImmediately} | finalize invoice: ${invoiceMode.finalizeInvoice}`

@@ -1,8 +1,8 @@
 import {
 	BillingType,
 	type EntitlementWithFeature,
+	type FullProduct,
 	type Price,
-	type Product,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -13,6 +13,8 @@ import {
 } from "@server/internal/products/prices/priceUtils";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/createStripePrepaidPriceV2.js";
+import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
@@ -83,32 +85,35 @@ const checkCurStripePrice = async ({
 		}
 	}
 
+	let stripePrepaidPriceV2: Stripe.Price | undefined;
+	if (config.stripe_prepaid_price_v2_id) {
+		stripePrepaidPriceV2 = undefined;
+	} else {
+		stripePrepaidPriceV2 = await getStripePrice({
+			stripeClient: stripeCli,
+			stripePriceId: config.stripe_prepaid_price_v2_id ?? undefined,
+		});
+	}
+
 	return {
 		stripePrice,
+		stripePrepaidPriceV2,
 		stripeProd,
 	};
 };
 
 export const createStripePriceIFNotExist = async ({
-	// db,
 	ctx,
-	// stripeCli,
 	price,
 	entitlements,
 	product,
-	// org,
-	// logger,
 	internalEntityId,
 	useCheckout = false,
 }: {
-	// db: DrizzleCli;
 	ctx: AutumnContext;
-	// stripeCli: Stripe;
 	price: Price;
 	entitlements: EntitlementWithFeature[];
-	product: Product;
-	// org: Organization;
-	// logger: any;
+	product: FullProduct;
 	internalEntityId?: string;
 	useCheckout?: boolean;
 }) => {
@@ -119,11 +124,12 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	const { stripePrice, stripeProd } = await checkCurStripePrice({
-		price,
-		stripeCli,
-		currency: org.default_currency || "usd",
-	});
+	const { stripePrice, stripePrepaidPriceV2, stripeProd } =
+		await checkCurStripePrice({
+			price,
+			stripeCli,
+			currency: org.default_currency || "usd",
+		});
 
 	const config = price.config! as UsagePriceConfig;
 	config.stripe_price_id = stripePrice?.id;
@@ -174,14 +180,15 @@ export const createStripePriceIFNotExist = async ({
 			});
 		}
 
-		// if (!isOneOffAndTiered && !config.stripe_v2_prepaid_price_id) {
-		// 	logger.info(`Creating stripe v2 prepaid price`);
-		// 	await createStripeV2Prepaid({
-		// 		db,
-		// 		stripeCli,
-		// 		price,
-		// 	});
-		// }
+		if (!isOneOffAndTiered && !stripePrepaidPriceV2) {
+			logger.info(`Creating stripe v2 prepaid price`);
+			await createStripePrepaidPriceV2({
+				ctx,
+				price,
+				product,
+				currentStripeProduct: stripePrepaidPriceV2,
+			});
+		}
 	}
 
 	if (billingType === BillingType.InArrearProrated) {

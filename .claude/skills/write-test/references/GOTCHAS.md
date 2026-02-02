@@ -152,6 +152,26 @@ const fromDb = await autumnV1.customers.get(customerId, { skip_cache: "true" });
 
 ## Prepaid Features
 
+### includedUsage Must Be Multiple of billingUnits
+```typescript
+// WRONG - 50 / 100 = 0.5, invalid for Stripe tiers
+const invalidItem = constructPrepaidItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 50,  // NOT a multiple of billingUnits!
+  billingUnits: 100,
+  price: 10,
+});
+
+// RIGHT - 0, 100, 200, etc. are valid
+const validItem = constructPrepaidItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 200,  // 200 / 100 = 2, valid integer
+  billingUnits: 100,
+  price: 10,
+});
+```
+When Stripe tiered pricing is created, `up_to` for the first tier = `includedUsage / billingUnits`. Stripe requires `up_to` to be a positive integer or "inf". If this results in a decimal (e.g., 50/100=0.5), Stripe rejects it with: `Invalid tiers[0][up_to]: must be one of inf`.
+
 ### Quantity Required on Attach
 ```typescript
 // WRONG
@@ -282,6 +302,66 @@ expect(balance).toBe(100 - 23.47);
 // RIGHT
 expect(balance).toBe(new Decimal(100).sub(23.47).toNumber());
 ```
+
+---
+
+## Preview & Next Cycle
+
+### Use `expectPreviewNextCycleCorrect` with Exact `startsAt`
+```typescript
+// WRONG - Approximate timing
+expectPreviewNextCycleCorrect({
+  preview,
+  total: 20,
+  startsAt: Date.now() + ms.months(1),  // Wrong base time!
+});
+
+// RIGHT - Use advancedTo from initScenario + addMonths
+const { advancedTo } = await initScenario({ ... });
+expectPreviewNextCycleCorrect({
+  preview,
+  total: 20,
+  startsAt: addMonths(advancedTo, 1).getTime(),  // Exact next cycle start
+});
+```
+`advancedTo` is the test clock time after initScenario completes. Use `addMonths(advancedTo, 1)` for next month's cycle start.
+
+### Do NOT Create New `initScenario` to Advance Test Clock
+```typescript
+// WRONG - Creating new initScenario loses test context
+const { autumnV1 } = await initScenario({ customerId, ... });
+// ... do some tests ...
+const { autumnV1: autumnV1After } = await initScenario({
+  customerId,
+  actions: [s.billing.attach(...), s.advanceToNextInvoice()],  // BAD!
+});
+
+// RIGHT - Use helpers on existing ctx, or include all actions in single initScenario
+const { autumnV1, ctx } = await initScenario({
+  customerId,
+  setup: [...],
+  actions: [
+    s.billing.attach({ productId: pro.id }),
+    s.billing.attach({ productId: free.id }),  // Schedule downgrade
+    s.advanceToNextInvoice(),
+  ],
+});
+```
+Creating a new `initScenario` with the same `customerId` may cause issues because it tries to recreate the customer/products.
+
+### Prepaid `next_cycle.total` Depends on Quantity
+```typescript
+// If prepaid billingUnits: 100, price: 10, quantity: 200
+// next_cycle.total = (200 / 100) * 10 = $20
+
+// WRONG - Assuming fixed price
+expectPreviewNextCycleCorrect({ preview, total: 10 });
+
+// RIGHT - Calculate based on quantity
+const expectedTotal = (quantity / billingUnits) * price;
+expectPreviewNextCycleCorrect({ preview, total: expectedTotal });
+```
+For prepaid features, `next_cycle.total` reflects the price for the quantity that will be purchased.
 
 ---
 

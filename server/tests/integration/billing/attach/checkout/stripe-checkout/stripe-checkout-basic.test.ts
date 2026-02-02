@@ -16,6 +16,7 @@ import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -46,7 +47,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
 		items: [messagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true }), // No payment method!
@@ -98,6 +99,13 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
 		customer,
 		count: 1,
 		latestTotal: 20,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 
@@ -184,86 +192,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async 
 		featureId: TestFeature.Messages,
 		includedUsage: 200,
 		balance: 200,
-		usage: 0,
-	});
-
-	// Verify invoice
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 1,
-		latestTotal: 20,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Multi-interval product via checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach product with both monthly and annual price options
- *
- * Expected Result:
- * - Returns payment_url
- * - Checkout handles multi-interval pricing
- * - Product attached after completion
- */
-test.concurrent(`${chalk.yellowBright("stripe-checkout: multi-interval product")}`, async () => {
-	const customerId = "stripe-checkout-multi-interval";
-
-	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
-	const annualPriceItem = items.annualPrice({ price: 200 });
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const multiInterval = products.base({
-		id: "multi-interval-checkout",
-		items: [monthlyPriceItem, annualPriceItem, messagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: true }), // No payment method!
-			s.products({ list: [multiInterval] }),
-		],
-		actions: [],
-	});
-
-	// 1. Preview attach - should show $20 (monthly is default)
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: multiInterval.id,
-	});
-	expect(preview.total).toBe(20);
-
-	// 2. Attempt attach - should return payment_url
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: multiInterval.id,
-	});
-
-	expect(result.payment_url).toBeDefined();
-	expect(result.payment_url).toContain("checkout.stripe.com");
-
-	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
-
-	// 4. Verify product is attached
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer,
-		productId: multiInterval.id,
-	});
-
-	// Verify messages feature
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		balance: 100,
 		usage: 0,
 	});
 

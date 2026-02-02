@@ -1,6 +1,8 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 
 export const computeUpdateQuantityPlan = ({
@@ -23,6 +25,9 @@ export const computeUpdateQuantityPlan = ({
 	);
 
 	const lineItems = quantityUpdateDetails.flatMap((detail) => detail.lineItems);
+	const updatedOptions = quantityUpdateDetails.map(
+		(detail) => detail.updatedOptions,
+	);
 
 	return {
 		insertCustomerProducts: [],
@@ -31,7 +36,7 @@ export const computeUpdateQuantityPlan = ({
 		updateCustomerProduct: {
 			customerProduct,
 			updates: {
-				options: newOptions,
+				options: updatedOptions,
 			},
 		},
 

@@ -1,17 +1,20 @@
-import { notNullish, type UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import {
+	BillingVersion,
+	notNullish,
+	type UpdateSubscriptionV0Params,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
+import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
-
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
-import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
-import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 
 /**
  * Fetch the context for updating a subscription
@@ -123,5 +126,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customEnts,
 		trialContext,
 		isCustom,
+
+		billingVersion: BillingVersion.V2,
 	};
 };

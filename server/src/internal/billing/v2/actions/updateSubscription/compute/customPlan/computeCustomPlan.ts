@@ -1,13 +1,15 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import {
 	CusProductStatus,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/computeDeleteCustomerProduct";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
+import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 
 export const computeCustomPlan = async ({
 	ctx,
@@ -36,7 +38,7 @@ export const computeCustomPlan = async ({
 		currentCustomerProduct: customerProduct,
 	});
 
-	const lineItems = buildAutumnLineItems({
+	const { allLineItems } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [newFullCustomerProduct],
 		deletedCustomerProduct: customerProduct,
@@ -61,6 +63,6 @@ export const computeCustomPlan = async ({
 		customPrices,
 		customEntitlements: customEnts,
 		customFreeTrial: trialContext?.customFreeTrial,
-		lineItems,
+		lineItems: allLineItems,
 	} satisfies AutumnBillingPlan;
 };
