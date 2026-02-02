@@ -10,9 +10,9 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { AnalyticsService } from "../AnalyticsService.js";
-import { eventActions } from "../actions/index.js";
+import { eventActions } from "../actions/eventActions.js";
 
-const QueryEventsSchema = z.object({
+const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),
 	event_names: z.array(z.string()),
 	customer_id: z.string().optional(),
@@ -24,8 +24,8 @@ const QueryEventsSchema = z.object({
 /**
  * Query events by customer ID
  */
-export const handleQueryEvents = createRoute({
-	body: QueryEventsSchema,
+export const handleInternalAggregateEvents = createRoute({
+	body: InternalAggregateEventsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env, features } = ctx;
