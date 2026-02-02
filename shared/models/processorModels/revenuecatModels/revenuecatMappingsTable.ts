@@ -1,8 +1,9 @@
 import type { AppEnv } from "@models/genModels/genEnums";
 import { organizations } from "@models/orgModels/orgTable.js";
+import type { Table } from "drizzle-orm";
 import { foreignKey, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 
-export const revenuecatMappings = pgTable(
+export const revenuecatMappings: Table = pgTable(
 	"revenuecat_mappings",
 	{
 		org_id: text("org_id").notNull(),
