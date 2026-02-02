@@ -42,9 +42,18 @@ export function CustomerUsageAnalyticsTable() {
 	const { events: rawEvents, isLoading: rawEventsLoading } =
 		useCusEventsQuery();
 
+	// Extract unique event names from raw events for the chart query
+	const customerEventNames = useMemo(() => {
+		if (!rawEvents?.length) return [];
+		return [...new Set(rawEvents.map((e: Event) => e.event_name))].slice(0, 5);
+	}, [rawEvents]);
+
 	// Fetch pre-aggregated timeseries data for the chart
 	const { timeseriesEvents, isLoading: timeseriesLoading } =
-		useCustomerTimeseriesEvents({ interval });
+		useCustomerTimeseriesEvents({
+			interval,
+			eventNames: customerEventNames,
+		});
 
 	const isLoading = rawEventsLoading || timeseriesLoading;
 

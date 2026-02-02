@@ -1,6 +1,6 @@
 DESCRIPTION >
     Materialized view of events sorted by timestamp for fast time-range queries.
-    Used by list_events.pipe for the raw logs viewer UI.
+    Used by list_events_paginated.pipe for the raw logs viewer UI and external API.
     Sorting key: (org_id, env, timestamp, customer_id, event_name)
 
 SCHEMA >

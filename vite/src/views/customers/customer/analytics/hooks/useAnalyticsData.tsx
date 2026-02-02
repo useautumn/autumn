@@ -6,7 +6,6 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { useEventNames } from "./useEventNames";
-import { useTopEventNames } from "./useTopEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
 const getUserTimezone = (): string => {
@@ -33,7 +32,6 @@ export const useAnalyticsData = ({
 	const groupBy = searchParams.get("group_by");
 	const binSize = searchParams.get("bin_size");
 
-	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 	const { eventNames: cachedEventNames } = useEventNames();
 
 	// Get user's timezone - memoized since it won't change during session
@@ -102,10 +100,8 @@ export const useAnalyticsData = ({
 		featuresLoading,
 		queryLoading,
 		events: data?.events,
-		topEvents: data?.topEvents,
 		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
-		topEventsLoading,
 		groupBy,
 		truncated: data?.truncated ?? false,
 	};
