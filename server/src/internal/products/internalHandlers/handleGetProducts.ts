@@ -3,6 +3,11 @@ import { ProductService } from "@/internal/products/ProductService";
 import { getGroupToDefaults } from "@/internal/products/productUtils";
 import { sortFullProducts } from "@/internal/products/productUtils/sortProductUtils";
 import { mapToProductV2 } from "@/internal/products/productV2Utils";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
+import {
+	buildProductsCacheKey,
+	PRODUCTS_CACHE_TTL,
+} from "../productCacheUtils";
 
 /**
  * GET /products/products
@@ -13,17 +18,20 @@ import { mapToProductV2 } from "@/internal/products/productV2Utils";
 export const handleGetProducts = createRoute({
 	handler: async (c) => {
 		const { db, org, env, features } = c.get("ctx");
-		const products = await ProductService.listFull({
-			db,
-			orgId: org.id,
-			env: env,
+
+		const products = await queryWithCache({
+			key: buildProductsCacheKey({ orgId: org.id, env, queryParams: {} }),
+			ttl: PRODUCTS_CACHE_TTL,
+			fn: async () => {
+				const prods = await ProductService.listFull({
+					db,
+					orgId: org.id,
+					env: env,
+				});
+				sortFullProducts({ products: prods });
+				return prods;
+			},
 		});
-
-		// if (process.env.NODE_ENV === "development") {
-		// 	products = products.slice(0, 10);
-		// }
-
-		sortFullProducts({ products });
 
 		const groupToDefaults = getGroupToDefaults({
 			defaultProds: products,
