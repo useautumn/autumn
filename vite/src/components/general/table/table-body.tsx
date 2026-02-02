@@ -19,6 +19,12 @@ export function TableBody() {
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 
+	// Compute visible column key on every render - table reference is stable so useMemo won't work
+	const visibleColumnKey = table
+		.getVisibleLeafColumns()
+		.map((col) => col.id)
+		.join(",");
+
 	if (!rows.length) {
 		return (
 			<TableEmptyState
@@ -52,6 +58,7 @@ export function TableBody() {
 							enableSelection={enableSelection}
 							flexibleTableColumns={flexibleTableColumns}
 							rowHref={rowHref}
+							visibleColumnKey={visibleColumnKey}
 						/>
 					</TableRow>
 				);

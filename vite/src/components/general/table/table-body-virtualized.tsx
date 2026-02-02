@@ -19,6 +19,7 @@ interface VirtualRowProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	onRowClick?: (row: T) => void;
+	visibleColumnKey?: string;
 }
 
 /** Memoized row component - only re-renders when row data changes */
@@ -31,6 +32,7 @@ const VirtualRowInner = <T,>({
 	enableSelection,
 	flexibleTableColumns,
 	onRowClick,
+	visibleColumnKey,
 }: VirtualRowProps<T>) => {
 	const handleClick = useCallback(() => {
 		if (!rowHref) onRowClick?.(row.original);
@@ -52,6 +54,7 @@ const VirtualRowInner = <T,>({
 				enableSelection={enableSelection}
 				flexibleTableColumns={flexibleTableColumns}
 				rowHref={rowHref}
+				visibleColumnKey={visibleColumnKey}
 			/>
 		</TableRow>
 	);
@@ -61,7 +64,7 @@ const VirtualRowInner = <T,>({
 const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 	// Only re-render if essential data changed
 	// Check row.original identity to handle data changes with keepPreviousData
-	// Check visible cells length to catch column additions/removals
+	// Check visibleColumnKey to handle column visibility changes (not just length)
 	return (
 		prevProps.row.id === nextProps.row.id &&
 		prevProps.row.original === nextProps.row.original &&
@@ -70,8 +73,7 @@ const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 		prevProps.rowHref === nextProps.rowHref &&
 		prevProps.virtualRow.index === nextProps.virtualRow.index &&
 		prevProps.rowClassName === nextProps.rowClassName &&
-		prevProps.row.getVisibleCells().length ===
-			nextProps.row.getVisibleCells().length
+		prevProps.visibleColumnKey === nextProps.visibleColumnKey
 	);
 }) as typeof VirtualRowInner;
 
@@ -126,6 +128,12 @@ export function TableBodyVirtualized() {
 		[onRowClick],
 	);
 
+	// Compute visible column key on every render - table reference is stable so useMemo won't work
+	const visibleColumnKey = table
+		.getVisibleLeafColumns()
+		.map((col) => col.id)
+		.join(",");
+
 	// Don't render until scroll container is available to prevent virtualization issues
 	if (!scrollContainer || !rows.length) {
 		return (
@@ -168,6 +176,7 @@ export function TableBodyVirtualized() {
 						enableSelection={enableSelection}
 						flexibleTableColumns={flexibleTableColumns}
 						onRowClick={memoizedOnRowClick}
+						visibleColumnKey={visibleColumnKey}
 					/>
 				);
 			})}
