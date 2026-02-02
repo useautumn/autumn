@@ -3,20 +3,18 @@ import {
 	type BillingCycleIntervalEnum,
 	type BillingCycleResult,
 	type ClickHouseResult,
-	ErrCode,
-	RecaseError,
 	type TimeseriesEventsParams,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { addDays, addHours, addMonths, format, sub } from "date-fns";
 import { Decimal } from "decimal.js";
-import { StatusCodes } from "http-status-codes";
 import {
 	type AggregateGroupablePipeRow,
 	type AggregateSimplePipeRow,
 	getTinybirdPipes,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
@@ -359,20 +357,7 @@ export const aggregate = async ({
 			propertyKey = params.group_by;
 		}
 
-		// Validate property path segments (matches old ClickHouse behavior)
-		if (groupColumn === "property" && propertyKey) {
-			const pathSegments = propertyKey.split(".");
-			for (const segment of pathSegments) {
-				if (!/^[a-zA-Z0-9_]+$/.test(segment)) {
-					throw new RecaseError({
-						message:
-							"Invalid property path. Should only contain alphanumeric and underscore characters.",
-						code: ErrCode.InvalidInputs,
-						statusCode: StatusCodes.BAD_REQUEST,
-					});
-				}
-			}
-		}
+		validatePropertyPathForJSON({ propertyKey });
 
 		const pipeParams = {
 			org_id: org.id,
