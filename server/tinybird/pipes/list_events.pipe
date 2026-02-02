@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Lists raw events with filtering by org, env, customer, and date range.
+    Optimized for the raw logs viewer UI. Supports pagination via cursor.
+    Queries events_by_timestamp_mv which is sorted by (org_id, env, timestamp) for fast time-range queries.
+
+TOKEN "list_events_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        timestamp,
+        value,
+        properties,
+        idempotency_key,
+        entity_id
+    FROM events_by_timestamp_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND timestamp >= toDateTime64({{ String(start_date, '2024-01-01 00:00:00') }}, 6)
+        AND timestamp <= toDateTime64({{ String(end_date, '2024-12-31 23:59:59') }}, 6)
+        {% if defined(customer_id) %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+        {% if defined(event_name) %}
+        AND event_name = {{ String(event_name) }}
+        {% end %}
+        {% if defined(cursor_timestamp) and defined(cursor_id) %}
+        AND (timestamp < toDateTime64({{ String(cursor_timestamp) }}, 6)
+             OR (timestamp = toDateTime64({{ String(cursor_timestamp) }}, 6) AND id < {{ String(cursor_id) }}))
+        {% end %}
+    ORDER BY timestamp DESC, id DESC
+    LIMIT {{ Int32(limit, 1000) }}

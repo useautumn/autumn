@@ -72,7 +72,13 @@ function HeaderContent<T>({
 	);
 }
 
-export function TableHeader({ className }: { className?: string }) {
+export function TableHeader({
+	className,
+	hideBorder,
+}: {
+	className?: string;
+	hideBorder?: boolean;
+}) {
 	const {
 		table,
 		enableSelection,
@@ -83,11 +89,12 @@ export function TableHeader({ className }: { className?: string }) {
 	const rows = table.getRowModel().rows;
 
 	return (
-		<ShadcnTableHeader className={className}>
+		<ShadcnTableHeader className={cn("sticky top-0 z-20 bg-card", className)}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"border-b bg-card text-t4 sticky top-0 z-20",
+						"bg-card text-t4",
+						!hideBorder && "border-b",
 						!rows.length && "border-dashed",
 					)}
 					key={headerGroup.id}
@@ -105,6 +112,13 @@ export function TableHeader({ className }: { className?: string }) {
 					)}
 					{headerGroup.headers.map((header, index, arr) => {
 						const isLast = index === arr.length - 1;
+						const headerStyle = flexibleTableColumns
+							? {
+									width: `${header.getSize()}px`,
+									maxWidth: `${header.getSize()}px`,
+									minWidth: `${header.getSize()}px`,
+								}
+							: { width: `${header.getSize()}px` };
 						return (
 							<TableHead
 								className={cn(
@@ -113,11 +127,7 @@ export function TableHeader({ className }: { className?: string }) {
 									isLast && enableColumnVisibility && "pr-8",
 								)}
 								key={header.id}
-								style={
-									flexibleTableColumns
-										? undefined
-										: { width: `${header.getSize()}px` }
-								}
+								style={headerStyle}
 							>
 								<div className="flex items-center justify-between w-full">
 									<HeaderContent header={header} />

@@ -16,6 +16,7 @@ import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+
 import { getOptionsFromCheckoutSession } from "./getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleRemainingSets.js";

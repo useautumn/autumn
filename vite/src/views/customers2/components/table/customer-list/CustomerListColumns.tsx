@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	type CustomerSchema,
 	type FullCusProduct,
+	type FullCustomer,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
@@ -26,8 +27,8 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		trial_ends_at?: number | null;
 		[key: string]: unknown;
 	}>;
-	/** Full customer products with entitlements - merged from full_customers query */
-	fullCustomerProducts?: FullCusProduct[];
+	/** Full customer data with entitlements - merged from full_customers query */
+	fullCustomer?: FullCustomer;
 	/** Whether the full customer data is still loading */
 	isFullDataLoading?: boolean;
 };
@@ -139,6 +140,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
+		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return <div className="font-medium text-t1">{row.original.name}</div>;
 		},
@@ -147,6 +149,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_id",
 		header: "ID",
 		accessorKey: "id",
+		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const customer = row.original;
 			return (
@@ -164,6 +167,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "email",
 		header: "Email",
 		accessorKey: "email",
+		size: 120,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return (
 				<div className="truncate">
@@ -176,6 +180,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_products",
 		header: "Products",
 		accessorKey: "customer_products",
+		size: 120,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return getCusProductsInfo({
 				customer: row.original,
@@ -233,7 +238,7 @@ export const createUsageColumn = ({
 		const customer = row.original;
 		return (
 			<FeatureUsageCell
-				customerProducts={customer.fullCustomerProducts}
+				fullCustomer={customer.fullCustomer}
 				featureId={featureId}
 				isLoading={customer.isFullDataLoading}
 			/>
