@@ -1,8 +1,12 @@
+import type { AgentPricingConfig } from "@autumn/shared";
 import type { ReactNode } from "react";
+import { GroupedPlanCards } from "./preview/GroupedPlanCards";
 import { PreviewCreditSchemaCard } from "./preview/PreviewCreditSchemaCard";
-import { PreviewPlanCard } from "./preview/PreviewPlanCard";
-import { transformToPreviewProducts } from "./preview/previewTypes";
-import type { AgentPricingConfig } from "./pricingAgentUtils";
+import {
+	getChangedFeatureIds,
+	getChangedProductIds,
+	transformToPreviewProducts,
+} from "./preview/previewTypes";
 
 interface PreviewOrg {
 	apiKey: string;
@@ -12,6 +16,7 @@ interface PreviewOrg {
 
 interface PricingPreviewProps {
 	config: AgentPricingConfig | null;
+	initialConfig?: AgentPricingConfig | null;
 	previewOrg: PreviewOrg | null;
 	isSyncing: boolean;
 	headerActions?: ReactNode;
@@ -19,6 +24,7 @@ interface PricingPreviewProps {
 
 export function PricingPreview({
 	config,
+	initialConfig,
 	previewOrg,
 	isSyncing,
 	headerActions,
@@ -31,6 +37,18 @@ export function PricingPreview({
 				features: config.features,
 			})
 		: [];
+
+	// Compute which products have changed from initial config
+	const changedProductIds = getChangedProductIds({
+		initialConfig: initialConfig ?? null,
+		currentConfig: config,
+	});
+
+	// Compute which features have changed from initial config
+	const changedFeatureIds = getChangedFeatureIds({
+		initialConfig: initialConfig ?? null,
+		currentConfig: config,
+	});
 
 	// Find credit system features to display their schemas
 	const creditSystemFeatures = hasProducts
@@ -65,7 +83,7 @@ export function PricingPreview({
 
 			{/* Content area with dotted grid background */}
 			<div
-				className="flex-1 flex flex-col p-4 overflow-auto gap-4 justify-center bg-card [--dot-color:rgba(0,0,0,0.15)] dark:[--dot-color:rgba(255,255,255,0.12)]"
+				className="flex-1 flex flex-col p-4 overflow-auto bg-card [--dot-color:rgba(0,0,0,0.15)] dark:[--dot-color:rgba(255,255,255,0.12)]"
 				style={{
 					backgroundImage:
 						"radial-gradient(circle, var(--dot-color) 1px, transparent 1px)",
@@ -73,17 +91,13 @@ export function PricingPreview({
 				}}
 			>
 				{hasProducts && (
-					<>
-						<div className="flex gap-3 flex-wrap justify-center">
-							{previewProducts.map((product) => (
-								<PreviewPlanCard
-									key={product.id}
-									product={product}
-									previewApiKey={previewOrg?.apiKey}
-									isSyncing={isSyncing}
-								/>
-							))}
-						</div>
+					<div className="flex flex-col gap-6 my-auto">
+						<GroupedPlanCards
+							products={previewProducts}
+							previewApiKey={previewOrg?.apiKey}
+							isSyncing={isSyncing}
+							changedProductIds={changedProductIds}
+						/>
 
 						{/* Credit system schema cards */}
 						{creditSystemFeatures.length > 0 && (
@@ -93,11 +107,12 @@ export function PricingPreview({
 										key={creditFeature.id}
 										creditFeature={creditFeature}
 										allFeatures={config.features}
+										isChanged={changedFeatureIds.has(creditFeature.id)}
 									/>
 								))}
 							</div>
 						)}
-					</>
+					</div>
 				)}
 			</div>
 		</div>
