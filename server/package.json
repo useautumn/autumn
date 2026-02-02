@@ -25,7 +25,8 @@
 		"parallel-tests:debug": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --debug",
 		"clear-master": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMasterOrg.ts",
 		"ts": "bunx tsgo --build --noEmit",
-		"test:integration": "ENV_FILE=.env infisical run --env=dev -- bun test --timeout 0 --preload ./tests/setup-integration-tests.ts"
+		"test:integration": "ENV_FILE=.env infisical run --env=dev -- bun test --timeout 0 --preload ./tests/setup-integration-tests.ts",
+		"cm": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMaster.ts"
 	},
 	"mocha": {
 		"node-option": [

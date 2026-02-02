@@ -855,6 +855,7 @@ export class AutumnInt {
 			});
 			return data;
 		},
+
 		setupPayment: async (params: SetupPaymentParams) => {
 			const data = await this.post(`/setup_payment`, params);
 			return data;
