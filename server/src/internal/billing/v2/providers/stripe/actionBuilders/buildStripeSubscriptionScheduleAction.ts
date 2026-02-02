@@ -1,4 +1,9 @@
-import type { FullCusProduct } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	FullCusProduct,
+	StripeSubscriptionScheduleAction,
+} from "@autumn/shared";
 import {
 	cp,
 	isCustomerProductOnStripeSubscription,
@@ -7,10 +12,6 @@ import {
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
-import type {
-	BillingContext,
-	StripeSubscriptionScheduleAction,
-} from "@autumn/shared";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -169,29 +170,50 @@ const buildActionForScenario = ({
 export const buildStripeSubscriptionScheduleAction = ({
 	ctx,
 	billingContext,
+	autumnBillingPlan,
 	finalCustomerProducts,
 	trialEndsAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
 }): StripeSubscriptionScheduleResult => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
+	const { insertCustomerProducts } = autumnBillingPlan;
 
 	// 1. Filter to relevant customer products
 	const relatedCustomerProducts = finalCustomerProducts.filter(
-		(customerProduct) =>
-			(stripeSubscription &&
+		(customerProduct) => {
+			const isNewCusProduct = insertCustomerProducts.some(
+				(cp) => cp.id === customerProduct.id,
+			);
+
+			if (isNewCusProduct) return true;
+
+			if (
+				stripeSubscription &&
 				isCustomerProductOnStripeSubscription({
 					customerProduct,
 					stripeSubscriptionId: stripeSubscription.id,
-				})) ||
-			(stripeSubscriptionSchedule &&
+				})
+			) {
+				return true;
+			}
+
+			if (
+				stripeSubscriptionSchedule &&
 				isCustomerProductOnStripeSubscriptionSchedule({
 					customerProduct,
 					stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
-				})),
+				})
+			) {
+				return true;
+			}
+
+			return false;
+		},
 	);
 
 	const customerProducts = relatedCustomerProducts.filter(

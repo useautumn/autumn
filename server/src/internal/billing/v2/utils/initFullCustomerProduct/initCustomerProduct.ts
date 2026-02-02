@@ -1,4 +1,5 @@
 import {
+	BillingVersion,
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
@@ -62,6 +63,8 @@ export const initCustomerProduct = ({
 		? [subscriptionScheduleId]
 		: undefined;
 
+	const billingVersion = initContext.billingVersion ?? BillingVersion.V1;
+
 	return {
 		id: customerProductId ?? generateId("cus_prod"),
 
@@ -99,6 +102,8 @@ export const initCustomerProduct = ({
 		is_custom: isCustom ?? false,
 
 		api_semver: apiSemver ?? null,
+
+		billing_version: billingVersion,
 	};
 };
 

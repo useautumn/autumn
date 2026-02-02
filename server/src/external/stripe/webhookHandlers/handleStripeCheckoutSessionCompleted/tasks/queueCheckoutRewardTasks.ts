@@ -1,33 +1,33 @@
-import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
+import type { Customer, FullProduct } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { JobName } from "@/queue/JobName";
 import { addTaskToQueue } from "@/queue/queueUtils";
-import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext";
+
+export interface CheckoutRewardData {
+	customer: Customer;
+	products: FullProduct[];
+	stripeSubscriptionId?: string;
+}
 
 /**
- * Queues reward jobs for each product in the billing plan.
- * Rewards are triggered after checkout completion to send webhooks, etc.
+ * Queues reward jobs for each product after checkout completion.
+ * Rewards trigger webhooks, referral rewards, etc.
  */
 export const queueCheckoutRewardTasks = async ({
 	ctx,
-	checkoutContext,
-	billingPlanData,
+	rewardData,
 }: {
 	ctx: StripeWebhookContext;
-	checkoutContext: CheckoutSessionCompletedContext;
-	billingPlanData: DeferredAutumnBillingPlanData;
+	rewardData: CheckoutRewardData;
 }) => {
 	const { org, env } = ctx;
-	const { stripeSubscription } = checkoutContext;
-	const { billingContext, billingPlan } = billingPlanData;
-	const { fullCustomer } = billingContext;
+	const { customer, products, stripeSubscriptionId } = rewardData;
 
-	const insertCustomerProducts = billingPlan.autumn?.insertCustomerProducts;
-	if (!insertCustomerProducts || insertCustomerProducts.length === 0) return;
+	if (!products || products.length === 0) return;
 
-	for (const customerProduct of insertCustomerProducts) {
+	for (const product of products) {
 		ctx.logger.info(
-			`[checkout.completed] Queueing checkout reward for product ${customerProduct.product.id}`,
+			`[checkout.completed] Queueing checkout reward for product ${product.id}`,
 		);
 
 		await addTaskToQueue({
@@ -36,12 +36,12 @@ export const queueCheckoutRewardTasks = async ({
 				// For createWorkerContext
 				orgId: org.id,
 				env,
-				customerId: fullCustomer.id,
+				customerId: customer.id,
 
 				// For triggerCheckoutReward
-				customer: fullCustomer,
-				product: customerProduct.product,
-				subId: stripeSubscription?.id,
+				customer,
+				product,
+				subId: stripeSubscriptionId,
 			},
 		});
 	}

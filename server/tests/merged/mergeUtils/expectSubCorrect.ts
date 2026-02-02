@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import {
 	type AppEnv,
+	BillingVersion,
 	CusProductStatus,
 	cusProductToEnts,
 	cusProductToPrices,
@@ -343,6 +344,7 @@ export const expectSubToBeCorrect = async ({
 				withEntity: Boolean(cusProduct.internal_entity_id),
 				isCheckout: false,
 				apiVersion,
+				isPrepaidPriceV2: cusProduct.billing_version === BillingVersion.V2,
 			});
 
 			if (res?.lineItem && nullish(res.lineItem.quantity)) {

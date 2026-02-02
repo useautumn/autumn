@@ -18,6 +18,12 @@ const InvoiceModeSchema = z.object({
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
+export enum BillingVersion {
+	V1 = "v1",
+	V2 = "v2",
+}
+
+export const LATEST_BILLING_VERSION = BillingVersion.V2;
 export interface TrialContext {
 	freeTrial?: FreeTrial | null;
 	trialEndsAt: number | null;
@@ -56,4 +62,6 @@ export interface BillingContext {
 
 	// Cancel action (used by update subscription for uncancel)
 	cancelAction?: CancelAction;
+
+	billingVersion: BillingVersion;
 }

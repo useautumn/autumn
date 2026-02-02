@@ -1,7 +1,7 @@
-import { type DeferredAutumnBillingPlanData, notNullish } from "@autumn/shared";
+import { type Customer, notNullish } from "@autumn/shared";
+import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext";
 
 /**
  * Syncs customer name/email from Stripe checkout session to Autumn.
@@ -9,16 +9,14 @@ import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCom
  */
 export const updateCustomerFromCheckout = async ({
 	ctx,
-	checkoutContext,
-	billingPlanData,
+	customer,
+	stripeCheckoutSession,
 }: {
 	ctx: StripeWebhookContext;
-	checkoutContext: CheckoutSessionCompletedContext;
-	billingPlanData: DeferredAutumnBillingPlanData;
+	customer: Customer;
+	stripeCheckoutSession: Stripe.Checkout.Session;
 }) => {
 	const { db, org, env } = ctx;
-	const { stripeCheckoutSession } = checkoutContext;
-	const { fullCustomer } = billingPlanData.billingContext;
 
 	const customerDetails = stripeCheckoutSession.customer_details;
 	if (!customerDetails) return;
@@ -26,11 +24,11 @@ export const updateCustomerFromCheckout = async ({
 	const updates: { name?: string; email?: string } = {};
 
 	// Only update if Autumn is missing the field and Stripe has it
-	if (!fullCustomer.name && notNullish(customerDetails.name)) {
+	if (!customer.name && notNullish(customerDetails.name)) {
 		updates.name = customerDetails.name;
 	}
 
-	if (!fullCustomer.email && notNullish(customerDetails.email)) {
+	if (!customer.email && notNullish(customerDetails.email)) {
 		updates.email = customerDetails.email;
 	}
 
@@ -39,13 +37,13 @@ export const updateCustomerFromCheckout = async ({
 
 	await CusService.update({
 		db,
-		idOrInternalId: fullCustomer.internal_id,
+		idOrInternalId: customer.internal_id,
 		orgId: org.id,
 		env,
 		update: updates,
 	});
 
 	ctx.logger.info(
-		`[checkout.completed] Updated customer ${fullCustomer.id} with name=${updates.name ?? "(unchanged)"}, email=${updates.email ?? "(unchanged)"}`,
+		`[checkout.completed] Updated customer ${customer.id} with name=${updates.name ?? "(unchanged)"}, email=${updates.email ?? "(unchanged)"}`,
 	);
 };

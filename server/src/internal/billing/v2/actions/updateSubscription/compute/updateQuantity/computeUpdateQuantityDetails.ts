@@ -1,3 +1,4 @@
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import {
 	customerPriceToCustomerEntitlement,
 	type FeatureOptions,
@@ -11,7 +12,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import { computeFeatureOptionsChange } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeFeatureOptionsChange";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
 import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";
@@ -43,6 +44,7 @@ export const computeUpdateQuantityDetails = ({
 	customerEntitlement: FullCustomerEntitlement;
 	customerEntitlementBalanceChange: number;
 	lineItems: LineItem[];
+	updatedOptions: FeatureOptions;
 } => {
 	const { customerProduct, currentEpochMs, billingCycleAnchorMs } =
 		updateSubscriptionContext;
@@ -99,6 +101,14 @@ export const computeUpdateQuantityDetails = ({
 			customerEntitlement,
 		});
 
+	updatedOptions = computeFeatureOptionsChange({
+		previousOptions,
+		updatedOptions,
+		quantityDifferenceForEntitlements:
+			quantityDifferences.quantityDifferenceForEntitlements,
+		customerPrice,
+	});
+
 	if (!billingCycleAnchorMs) {
 		throw new InternalError({
 			message: `[Quantity Update] billingCycleAnchorMs is required (no active subscription)`,
@@ -132,5 +142,6 @@ export const computeUpdateQuantityDetails = ({
 		customerEntitlement,
 		customerEntitlementBalanceChange,
 		lineItems,
+		updatedOptions,
 	};
 };

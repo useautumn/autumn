@@ -35,7 +35,7 @@ export const UsagePriceConfigSchema = z.object({
 	stripe_event_name: z.string().nullish(),
 
 	// V2 prepaid price
-	stripe_v2_prepaid_price_id: z.string().nullish(),
+	stripe_prepaid_price_v2_id: z.string().nullish(),
 
 	should_prorate: z.boolean().optional(),
 });

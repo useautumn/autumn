@@ -6,7 +6,7 @@ import {
 	findCusPriceByFeature,
 } from "@autumn/shared";
 import type { Stripe } from "stripe";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { stripeSubscriptionItemUtils } from "@/external/stripe/subscriptions/subscriptionItems/index.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
@@ -47,10 +47,12 @@ export const handleUpdateFeatureQuantity = async ({
 		});
 	}
 
-	const subItem = findStripeItemForPrice({
-		price: price!,
-		stripeItems: subToUpdate.items.data,
-	}) as Stripe.SubscriptionItem;
+	const subItem = stripeSubscriptionItemUtils.find.byAutumnPrice({
+		stripeSubscriptionItems: subToUpdate.items.data,
+		price,
+		product: cusProduct.product,
+		errorOnNotFound: true,
+	});
 
 	if (newOptions.quantity < oldOptions.quantity) {
 		return await handleQuantityDowngrade({

@@ -240,20 +240,28 @@ export const advanceTestClock = async ({
 		startingFrom = new Date();
 	}
 
-	if (numberOfDays) {
-		advanceTo = addDays(startingFrom, numberOfDays).getTime();
+	// Stack all time units - they accumulate from startingFrom
+	let targetDate = startingFrom;
+
+	if (numberOfMonths) {
+		targetDate = addMonths(targetDate, numberOfMonths);
 	}
 
 	if (numberOfWeeks) {
-		advanceTo = addWeeks(startingFrom, numberOfWeeks).getTime();
+		targetDate = addWeeks(targetDate, numberOfWeeks);
+	}
+
+	if (numberOfDays) {
+		targetDate = addDays(targetDate, numberOfDays);
 	}
 
 	if (numberOfHours) {
-		advanceTo = addHours(startingFrom, numberOfHours).getTime();
+		targetDate = addHours(targetDate, numberOfHours);
 	}
 
-	if (numberOfMonths) {
-		advanceTo = addMonths(startingFrom, numberOfMonths).getTime();
+	// Only use calculated targetDate if we actually had time params
+	if (numberOfMonths || numberOfWeeks || numberOfDays || numberOfHours) {
+		advanceTo = targetDate.getTime();
 	}
 
 	if (!advanceTo) {
@@ -293,7 +301,7 @@ export const advanceClockForInvoice = async ({
 	numberOfDays?: number;
 	startingFrom?: Date;
 }) => {
-	let advanceTo;
+	let advanceTo: number;
 
 	if (!startingFrom) {
 		startingFrom = new Date();

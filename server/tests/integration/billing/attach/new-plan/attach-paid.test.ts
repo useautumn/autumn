@@ -11,7 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";

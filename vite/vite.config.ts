@@ -54,6 +54,7 @@ export default defineConfig({
 			"drizzle-orm",
 			"@date-fns/utc",
 			"date-fns",
+			"@orpc/contract",
 		],
 	},
 

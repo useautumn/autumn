@@ -1,5 +1,5 @@
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
 /**
@@ -17,11 +17,20 @@ export const updateCustomerEntitlements = async ({
 	const { db, logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange = 0, customerEntitlement } = updateDetail;
+		const { balanceChange = 0, customerEntitlement, updates } = updateDetail;
 
 		logger.debug(
-			`updating customer entitlement ${customerEntitlement.id} by ${balanceChange}`,
+			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
 		);
+
+		if (updates) {
+			await CusEntService.update({
+				db,
+				id: customerEntitlement.id,
+				updates,
+			});
+			continue;
+		}
 
 		if (balanceChange > 0) {
 			await CusEntService.increment({

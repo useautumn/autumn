@@ -1,9 +1,4 @@
-import {
-	ProcessorType,
-	RecaseError,
-	type UpdateSubscriptionV0Params,
-} from "@autumn/shared";
-import { cusProductToProcessorType } from "@shared/utils/cusProductUtils/convertCusProduct";
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import type {
@@ -11,6 +6,7 @@ import type {
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
+import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
@@ -36,12 +32,11 @@ export const handleUpdateSubscriptionErrors = async ({
 }) => {
 	const { customerProduct } = billingContext;
 
-	// 1. RevenueCat error
-	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {
-		throw new RecaseError({
-			message: `Cannot update '${customerProduct.product.name}' because it is managed by RevenueCat.`,
-		});
-	}
+	// 1. External PSP errors (RevenueCat)
+	handleExternalPSPErrors({
+		customerProduct,
+		action: "update",
+	});
 
 	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });

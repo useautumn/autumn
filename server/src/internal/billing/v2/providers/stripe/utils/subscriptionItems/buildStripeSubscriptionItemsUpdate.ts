@@ -1,72 +1,15 @@
+import type { BillingContext, StripeItemSpec } from "@autumn/shared";
 import {
 	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByStripeSubscriptionId,
-	getLargestInterval,
 } from "@autumn/shared";
-import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
-import type { StripeItemSpec } from "@autumn/shared";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type Stripe from "stripe";
 import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils";
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
+import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
-
-/**
- * Convert customer products to recurring stripe item specs.
- * For metered prices (quantity undefined), we preserve undefined as Stripe requires.
- * @param ctx - The context
- * @param billingContext - The billing context
- * @param customerProducts - The customer products
- * @returns The recurring stripe item specs
- */
-const customerProductsToRecurringStripeItemSpecs = ({
-	ctx,
-	billingContext,
-	customerProducts,
-}: {
-	ctx: AutumnContext;
-	billingContext: BillingContext;
-	customerProducts: FullCusProduct[];
-}): StripeItemSpec[] => {
-	const stripeItemSpecsByPriceId = new Map<string, StripeItemSpec>();
-
-	for (const customerProduct of customerProducts) {
-		const { recurringItems } = customerProductToStripeItemSpecs({
-			ctx,
-			billingContext,
-			customerProduct,
-		});
-
-		for (const recurringItem of recurringItems) {
-			const existingItem = stripeItemSpecsByPriceId.get(
-				recurringItem.stripePriceId,
-			);
-
-			if (existingItem) {
-				// For metered prices, quantity is undefined and should stay undefined
-				if (
-					recurringItem.quantity === undefined &&
-					existingItem.quantity === undefined
-				) {
-					// Both metered - keep undefined
-				} else {
-					// Licensed prices - accumulate quantity
-					existingItem.quantity =
-						(existingItem.quantity ?? 0) + (recurringItem.quantity ?? 0);
-				}
-			} else {
-				stripeItemSpecsByPriceId.set(
-					recurringItem.stripePriceId,
-					recurringItem,
-				);
-			}
-		}
-	}
-
-	return Array.from(stripeItemSpecsByPriceId.values());
-};
 
 /**
  * Convert stripe item specs to stripe subscription update params items.
@@ -135,48 +78,14 @@ const stripeItemSpecsToSubItemsUpdate = ({
 	return subItemsUpdate;
 };
 
-/**
- * Filters stripe item specs to only include items from the largest billing interval.
- * Used for Stripe Checkout which doesn't support multi-interval subscriptions.
- */
-const filterStripeItemSpecsByLargestInterval = ({
-	stripeItemSpecs,
-}: {
-	stripeItemSpecs: StripeItemSpec[];
-}): StripeItemSpec[] => {
-	const prices = stripeItemSpecs
-		.map((spec) => spec.autumnPrice)
-		.filter((p): p is NonNullable<typeof p> => !!p);
-
-	if (prices.length === 0) return stripeItemSpecs;
-
-	const largestInterval = getLargestInterval({ prices, excludeOneOff: true });
-	if (!largestInterval) return stripeItemSpecs;
-
-	return stripeItemSpecs.filter((spec) => {
-		const price = spec.autumnPrice;
-		if (!price) return false;
-
-		const priceInterval = price.config.interval;
-		const priceIntervalCount = price.config.interval_count ?? 1;
-
-		return (
-			priceInterval === largestInterval.interval &&
-			priceIntervalCount === largestInterval.intervalCount
-		);
-	});
-};
-
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
 	finalCustomerProducts,
-	filterByLargestInterval = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	finalCustomerProducts: FullCusProduct[];
-	filterByLargestInterval?: boolean;
 }): Stripe.SubscriptionUpdateParams.Item[] => {
 	// 1. Filter customer products by stripe subscription id
 	const relatedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
@@ -190,18 +99,11 @@ export const buildStripeSubscriptionItemsUpdate = ({
 	});
 
 	// 3. Get recurring subscription item array (doesn't include one off items)
-	let recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
+	const recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
-
-	// 4. Optionally filter by largest interval (for Stripe Checkout)
-	if (filterByLargestInterval) {
-		recurringStripeItemSpecs = filterStripeItemSpecsByLargestInterval({
-			stripeItemSpecs: recurringStripeItemSpecs,
-		});
-	}
 
 	// 5. Diff it with the current subscription items
 	return stripeItemSpecsToSubItemsUpdate({

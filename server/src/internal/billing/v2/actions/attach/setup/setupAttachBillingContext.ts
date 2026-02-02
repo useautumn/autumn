@@ -1,10 +1,16 @@
 import type { AttachBillingContext } from "@autumn/shared";
-import { type AttachParamsV0, notNullish } from "@autumn/shared";
+import {
+	type AttachParamsV0,
+	BillingVersion,
+	notNullish,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -51,8 +57,6 @@ export const setupAttachBillingContext = async ({
 		targetCustomerProduct: currentCustomerProduct,
 	});
 
-	const currentEpochMs = testClockFrozenTime ?? Date.now();
-
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
 		featureQuantitiesParams: params,
@@ -63,6 +67,27 @@ export const setupAttachBillingContext = async ({
 
 	const invoiceMode = setupInvoiceModeContext({ params });
 	const isCustom = notNullish(params.items);
+
+	// Timestamp context
+	const currentEpochMs = testClockFrozenTime ?? Date.now();
+	const billingCycleAnchorMs = setupBillingCycleAnchor({
+		stripeSubscription,
+		customerProduct: currentCustomerProduct,
+		newFullProduct: attachProduct,
+		trialContext: undefined,
+		currentEpochMs,
+	});
+
+	// if (trialContext?.trialEndsAt) {
+	// 	// 4. Trial ends at overrides reset cycle anchor
+	// 	billingCycleAnchorMs = trialContext.trialEndsAt;
+	// }
+
+	const resetCycleAnchorMs = setupResetCycleAnchor({
+		billingCycleAnchorMs,
+		customerProduct: currentCustomerProduct,
+		newFullProduct: attachProduct,
+	});
 
 	const endOfCycleMs = setupAttachEndOfCycleMs({
 		planTiming,
@@ -97,8 +122,8 @@ export const setupAttachBillingContext = async ({
 		paymentMethod,
 
 		currentEpochMs,
-		billingCycleAnchorMs: "now",
-		resetCycleAnchorMs: "now",
+		billingCycleAnchorMs,
+		resetCycleAnchorMs,
 
 		invoiceMode,
 		featureQuantities,
@@ -106,5 +131,7 @@ export const setupAttachBillingContext = async ({
 		customPrices,
 		customEnts,
 		isCustom,
+
+		billingVersion: BillingVersion.V2,
 	};
 };

@@ -1,6 +1,10 @@
-import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { AttachBillingContext } from "@autumn/shared";
+import {
+	CusProductStatus,
+	deduplicateArray,
+	type FullCusProduct,
+} from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
@@ -31,12 +35,25 @@ export const computeAttachNewCustomerProduct = ({
 		featureQuantities,
 		trialContext,
 		isCustom,
+		billingVersion,
 	} = attachBillingContext;
+
+	const currentCustomerEntitlements =
+		currentCustomerProduct?.customer_entitlements ?? [];
+
+	const featuresToCarryUsagesFor = deduplicateArray(
+		currentCustomerEntitlements
+			.filter((ce) => {
+				return ce.entitlement.carry_from_previous;
+			})
+			.map((ce) => ce.entitlement.feature.id),
+	);
 
 	// Get existing usages/rollovers if transitioning from an existing product
 	const existingUsages = cusProductToExistingUsages({
 		cusProduct: currentCustomerProduct,
 		entityId: fullCustomer.entity?.id,
+		featureIds: featuresToCarryUsagesFor,
 	});
 
 	const existingRollovers = cusProductToExistingRollovers({
@@ -63,10 +80,12 @@ export const computeAttachNewCustomerProduct = ({
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
+			billingVersion: billingVersion,
 		},
 		initOptions: {
 			isCustom,
-			subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
+			// subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
+			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			status: isScheduled ? CusProductStatus.Scheduled : undefined,
 			startsAt: isScheduled ? endOfCycleMs : undefined,

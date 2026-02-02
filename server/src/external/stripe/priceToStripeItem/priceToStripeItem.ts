@@ -55,8 +55,8 @@ export const priceToStripeItem = ({
 	withEntity = false,
 	isCheckout = false,
 	apiVersion,
-	// productOptions,
 	fromVercel = false,
+	isPrepaidPriceV2 = false,
 }: {
 	price: Price;
 	relatedEnt?: EntitlementWithFeature;
@@ -69,6 +69,7 @@ export const priceToStripeItem = ({
 	apiVersion?: ApiVersion;
 	// productOptions?: ProductOptions | undefined;
 	fromVercel?: boolean;
+	isPrepaidPriceV2?: boolean;
 }) => {
 	// TODO: Implement this
 	const billingType = getBillingType(price.config!);
@@ -125,8 +126,10 @@ export const priceToStripeItem = ({
 	else if (billingType === BillingType.UsageInAdvance) {
 		lineItem = priceToUsageInAdvance({
 			price,
+			entitlement: relatedEnt,
 			options,
 			isCheckout,
+			isPrepaidPriceV2,
 		});
 	}
 

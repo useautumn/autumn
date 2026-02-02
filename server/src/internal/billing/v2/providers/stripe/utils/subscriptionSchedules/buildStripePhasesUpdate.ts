@@ -1,3 +1,4 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	msToSeconds,
@@ -8,7 +9,6 @@ import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStrip
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
-import type { BillingContext } from "@autumn/shared";
 import { buildTransitionPoints } from "./buildTransitionPoints";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
 

@@ -30,6 +30,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		featureQuantities,
 		trialContext,
 		cancelAction,
+		billingVersion,
 	} = updateSubscriptionContext;
 
 	const existingUsages = cusProductToExistingUsages({
@@ -66,6 +67,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
+			billingVersion: billingVersion,
 		},
 
 		initOptions: {
