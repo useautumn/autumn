@@ -7,11 +7,7 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import {
-	ArrowsClockwiseIcon,
-	BarcodeIcon,
-	CheckCircleIcon,
-} from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, CheckCircleIcon } from "@phosphor-icons/react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
@@ -23,6 +19,8 @@ import {
 	InputGroupAddon,
 	InputGroupInput,
 } from "@/components/v2/inputs/InputGroup";
+import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
+import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -106,95 +104,148 @@ export const BasePriceSection = ({
 
 	const disabled = nullish(basePrice);
 
+	// Determine if we're in "usage" (per unit only) mode or "base price" mode
+	const isPerUnitOnly = basePriceType === "usage";
+
+	// Get the billing type (recurring or one-off) - default to recurring
+	const billingType =
+		basePriceType === "usage"
+			? "recurring"
+			: basePriceType === "one-off"
+				? "one-off"
+				: "recurring";
+
+	const handleBillingTypeChange = (value: string) => {
+		// Only change billing type if we're in base price mode
+		if (isPerUnitOnly) return;
+
+		// Check if there's already a price item
+		const hasPriceItem = product.items.some((item) => isPriceItem(item));
+
+		if (!hasPriceItem) {
+			// Recreate the price item with default price of 0
+			const newPriceItem: ProductItem = {
+				price: "" as unknown as number,
+				interval: value === "one-off" ? null : ProductItemInterval.Month,
+				interval_count: 1,
+			};
+
+			setProduct({
+				...product,
+				basePriceType: value as "recurring" | "one-off",
+				items: [...product.items, newPriceItem],
+			});
+			return;
+		}
+
+		// Update existing price item
+		setProduct({
+			...product,
+			basePriceType: value as "recurring" | "one-off",
+			items: product.items.map((item) => {
+				if (isPriceItem(item)) {
+					return {
+						...item,
+						interval: value === "one-off" ? null : ProductItemInterval.Month,
+					};
+				}
+				return item;
+			}),
+		});
+	};
+
+	const handlePriceTypeChange = (value: string) => {
+		if (value === "usage") {
+			// Switch to per unit only - remove base price item
+			setProduct({
+				...product,
+				basePriceType: "usage",
+				items: product.items.filter((item) => !isPriceItem(item)),
+			});
+		} else {
+			// Switch to base price - restore price item with current billing type
+			const hasPriceItem = product.items.some((item) => isPriceItem(item));
+
+			if (!hasPriceItem) {
+				const newPriceItem: ProductItem = {
+					price: "" as unknown as number,
+					interval:
+						billingType === "one-off" ? null : ProductItemInterval.Month,
+					interval_count: 1,
+				};
+
+				setProduct({
+					...product,
+					basePriceType: billingType as "recurring" | "one-off",
+					items: [...product.items, newPriceItem],
+				});
+			} else {
+				setProduct({
+					...product,
+					basePriceType: billingType as "recurring" | "one-off",
+				});
+			}
+		}
+	};
+
 	return (
-		<SheetSection
-			title="Base Price"
-			withSeparator={withSeparator}
-			description={`Flat-rate cost to access this plan.${isCreatingNewPlan ? " You can add per-unit prices later." : ""}`}
-		>
-			<div className="space-y-3">
-				<div className="space-y-2">
-					<GroupedTabButton
-						value={basePriceType ?? "recurring"}
-						className="w-full"
-						onValueChange={(value) => {
-							//if usage based, remove the base price item
-							if (value === "usage") {
-								setProduct({
-									...product,
-									basePriceType: "usage",
-									items: product.items.filter((item) => !isPriceItem(item)),
-								});
-								return;
-							}
-
-							// Check if there's already a price item
-							const hasPriceItem = product.items.some((item) =>
-								isPriceItem(item),
-							);
-
-							if (!hasPriceItem) {
-								// Recreate the price item with default price of 0
-								const newPriceItem: ProductItem = {
-									price: "" as unknown as number,
-									interval:
-										value === "one-off" ? null : ProductItemInterval.Month,
-									interval_count: 1,
-								};
-
-								setProduct({
-									...product,
-									basePriceType: value as "recurring" | "one-off" | "usage",
-									items: [...product.items, newPriceItem],
-								});
-								return;
-							}
-
-							// Update existing price item
-							setProduct({
-								...product,
-								basePriceType: value as "recurring" | "one-off" | "usage",
-								items: product.items.map((item) => {
-									if (isPriceItem(item)) {
-										return {
-											...item,
-											interval:
-												value === "one-off" ? null : ProductItemInterval.Month,
-										};
-									}
-									return item;
-								}),
-							});
-						}}
-						options={[
-							{
-								value: "recurring",
-								label: "Recurring",
-								icon: (
-									<ArrowsClockwiseIcon
-										className="size-[14px]"
-										weight="regular"
-									/>
-								),
-							},
-							{
-								value: "one-off",
-								label: "One-off",
-								icon: (
-									<CheckCircleIcon className="size-[14px]" weight="regular" />
-								),
-							},
-							{
-								value: "usage",
-								label: "Per unit only",
-								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
-							},
-						]}
-					/>
-					{/* <p className="text-t4 text-sm">{priceDescription}</p> */}
+		<SheetSection title="Plan Price" withSeparator={withSeparator}>
+			<div className="space-y-4">
+				<div className="py-2">
+					<RadioGroup
+						value={isPerUnitOnly ? "usage" : "base"}
+						onValueChange={handlePriceTypeChange}
+						className="space-y-1"
+					>
+						<AreaRadioGroupItem
+							value="base"
+							label="Base price"
+							description={`This plan has a fixed price. ${isCreatingNewPlan ? "You can add per-unit prices later." : ""}`}
+						/>
+						<AreaRadioGroupItem
+							value="usage"
+							label="Per unit only"
+							description="Plan price is based entirely on usage or units purchased."
+						/>
+					</RadioGroup>
 				</div>
-				<div className="h-13">
-					{basePriceType !== "usage" ? (
+
+				{isPerUnitOnly ? (
+					<InfoBox variant="note">
+						This plan has no base price. You can add per unit prices, such as
+						per "seat" or "credit", when adding features.
+					</InfoBox>
+				) : (
+					<>
+						<div className="space-y-2">
+							<GroupedTabButton
+								value={billingType}
+								className="w-full"
+								onValueChange={handleBillingTypeChange}
+								options={[
+									{
+										value: "recurring",
+										label: "Recurring",
+										icon: (
+											<ArrowsClockwiseIcon
+												className="size-[14px]"
+												weight="regular"
+											/>
+										),
+									},
+									{
+										value: "one-off",
+										label: "One-off",
+										icon: (
+											<CheckCircleIcon
+												className="size-[14px]"
+												weight="regular"
+											/>
+										),
+									},
+								]}
+							/>
+						</div>
 						<div className="flex gap-2">
 							<div className="w-full">
 								<FormLabel disabled={disabled}>Price</FormLabel>
@@ -225,24 +276,19 @@ export const BasePriceSection = ({
 									</InputGroupAddon>
 								</InputGroup>
 							</div>
-							{basePriceType === "recurring" && (
+							{billingType === "recurring" && (
 								<div className="w-full">
 									<SelectBillingCycle
 										item={basePrice}
 										setItem={setItem}
 										disabled={disabled}
-										filterOneOff={basePriceType === "recurring"}
+										filterOneOff={billingType === "recurring"}
 									/>
 								</div>
 							)}
 						</div>
-					) : (
-						<InfoBox variant="note">
-							This plan has no base price. You can add per unit prices, such as
-							per "seat" or "credit", when adding features.
-						</InfoBox>
-					)}
-				</div>
+					</>
+				)}
 			</div>
 		</SheetSection>
 	);

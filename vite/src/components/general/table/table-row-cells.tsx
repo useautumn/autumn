@@ -121,7 +121,7 @@ export function TableEmptyState({
 							<SmallSpinner />
 						</div>
 					) : (
-						<div className="text-t4 text-center w-full h-full items-center justify-center flex">
+						<div className="text-t4 text-xs text-center w-full h-full items-center justify-center flex">
 							{emptyStateChildren || emptyStateText}
 						</div>
 					)}
