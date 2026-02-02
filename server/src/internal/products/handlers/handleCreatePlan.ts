@@ -25,7 +25,6 @@ import {
 } from "../free-trials/freeTrialUtils.js";
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
-import { invalidateProductsCache } from "../productCacheUtils.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
 import { constructProduct, initProductInStripe } from "../productUtils.js";
 import { validateDefaultFlag } from "./productActions/validateDefaultFlag.js";
@@ -169,8 +168,6 @@ export const handleCreatePlan = createRoute({
 				env,
 			},
 		});
-
-		await invalidateProductsCache({ orgId: org.id, env });
 
 		return c.json(versionedResponse);
 	},
