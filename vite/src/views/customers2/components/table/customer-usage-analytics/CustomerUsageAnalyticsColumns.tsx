@@ -43,7 +43,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 			const dateAsNumber = dateObj.getTime();
 
 			return (
-				<div className="text-tiny text-t3 font-mono min-w-fit">
+				<div className="text-tiny text-t3 font-mono truncate">
 					{format(new Date(dateAsNumber), "d MMM HH:mm:ss")}
 				</div>
 			);
