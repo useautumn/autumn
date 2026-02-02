@@ -1,0 +1,36 @@
+DESCRIPTION >
+    Lists raw events with offset-based pagination for external API.
+    Supports filtering by customer_id, event_names (array), and optional date range.
+
+TOKEN "list_events_paginated_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        id,
+        customer_id,
+        event_name,
+        timestamp,
+        value,
+        properties
+    FROM events_by_timestamp_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        {% if defined(start_date) and String(start_date, '') != '' %}
+        AND timestamp >= toDateTime64({{ String(start_date) }}, 6)
+        {% end %}
+        {% if defined(end_date) and String(end_date, '') != '' %}
+        AND timestamp <= toDateTime64({{ String(end_date) }}, 6)
+        {% end %}
+        {% if defined(customer_id) and String(customer_id, '') != '' %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+        {% if defined(event_names) %}
+        AND event_name IN {{ Array(event_names, 'String') }}
+        {% end %}
+    ORDER BY timestamp DESC, id DESC
+    LIMIT {{ Int32(limit, 101) }}
+    OFFSET {{ Int32(offset, 0) }}
