@@ -7,7 +7,6 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { invalidateProductsCache } from "../productCacheUtils.js";
 
 const DeleteProductParamsSchema = z.object({
 	product_id: z.string(),
@@ -75,8 +74,6 @@ export const handleDeleteProduct = createRoute({
 				env,
 			});
 		}
-
-		await invalidateProductsCache({ orgId: org.id, env });
 
 		return c.json({ success: true });
 	},

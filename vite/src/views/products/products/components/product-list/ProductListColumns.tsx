@@ -10,8 +10,10 @@ import { ProductListRowToolbar } from "./ProductListRowToolbar";
 
 export const createProductListColumns = ({
 	showGroup = false,
+	onDeleteClick,
 }: {
 	showGroup?: boolean;
+	onDeleteClick?: (product: ProductV2) => void;
 } = {}) => [
 	{
 		size: 300,
@@ -98,7 +100,10 @@ export const createProductListColumns = ({
 					className="flex justify-end w-full pr-2"
 					onClick={(e) => e.stopPropagation()}
 				>
-					<ProductListRowToolbar product={row.original} />
+					<ProductListRowToolbar
+						product={row.original}
+						onDeleteClick={onDeleteClick}
+					/>
 				</div>
 			);
 		},
