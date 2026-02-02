@@ -54,10 +54,12 @@ test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, asyn
 	// Get customer state after initial attach
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("customer before upgrade:", {
-		products: customerBefore.products?.map((p: { id: string; name: string }) => ({
-			id: p.id,
-			name: p.name,
-		})),
+		products: customerBefore.products?.map(
+			(p: { id: string; name: string | null }) => ({
+				id: p.id,
+				name: p.name,
+			}),
+		),
 	});
 
 	// Options for prepaid features in pro plan
@@ -68,6 +70,7 @@ test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, asyn
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
 		options: proOptions,
+		redirect_mode: "always",
 	});
 	console.log("upgrade preview:", upgradePreview);
 

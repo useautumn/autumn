@@ -1,4 +1,4 @@
-import { PlanSelectionBackground } from "@/components/checkout/PlanSelectionBackground";
+import { CardBackground } from "@/components/checkout/CardBackground";
 import { AnimatedCard } from "@/components/motion/animated-layout";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -9,7 +9,7 @@ export function PlanSelectionCardSkeleton() {
 	return (
 		<AnimatedCard layoutId="plan-selection-card">
 			<Card className="py-0 gap-0 flex-1">
-				<PlanSelectionBackground>
+				<CardBackground>
 					{/* Plan header - matches real component */}
 					<div className="flex items-center justify-between px-4 py-4">
 						<Skeleton className="h-5 w-32" />
@@ -46,7 +46,7 @@ export function PlanSelectionCardSkeleton() {
 							<Skeleton className="h-9 w-28 rounded-md" />
 						</div>
 					</div>
-				</PlanSelectionBackground>
+				</CardBackground>
 			</Card>
 		</AnimatedCard>
 	);

@@ -58,7 +58,7 @@ test(`${chalk.yellowBright("attach: downgrade - from pro to starter plan")}`, as
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("customer before downgrade:", {
 		products: customerBefore.products?.map(
-			(p: { id: string; name: string }) => ({
+			(p: { id: string; name: string | null }) => ({
 				id: p.id,
 				name: p.name,
 			}),
@@ -69,6 +69,7 @@ test(`${chalk.yellowBright("attach: downgrade - from pro to starter plan")}`, as
 	const downgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `starter_${customerId}`,
+		redirect_mode: "always",
 	});
 	console.log("downgrade preview:", downgradePreview);
 

@@ -60,6 +60,7 @@ test(`${chalk.yellowBright("attach: complex - product with many line items")}`, 
 		customer_id: customerId,
 		product_id: enterprise.id,
 		options,
+		redirect_mode: "always",
 	});
 	console.log("preview:", preview);
 

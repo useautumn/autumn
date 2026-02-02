@@ -1,5 +1,5 @@
 import type { ApiPlanFeature, CheckoutChange } from "@autumn/shared";
-import { Check } from "@phosphor-icons/react";
+import { Check, Package } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { AnimatedCard } from "@/components/motion/animated-layout";
 import { Card } from "@/components/ui/card";
@@ -12,17 +12,22 @@ import {
 } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
 import { QuantityInput } from "./QuantityInput";
-import { PlanSelectionBackground } from "@/components/checkout/PlanSelectionBackground";
+import { CardBackground } from "@/components/checkout/CardBackground";
 
-function getPricedFeatures(features: ApiPlanFeature[]): {
+function categorizeFeatures(features: ApiPlanFeature[]): {
 	prepaid: ApiPlanFeature[];
 	payPerUse: ApiPlanFeature[];
+	included: ApiPlanFeature[];
 } {
 	const prepaid: ApiPlanFeature[] = [];
 	const payPerUse: ApiPlanFeature[] = [];
+	const included: ApiPlanFeature[] = [];
 
 	for (const feature of features) {
-		if (!feature.price) continue;
+		if (!feature.price) {
+			included.push(feature);
+			continue;
+		}
 
 		if (feature.price.usage_model === "prepaid") {
 			prepaid.push(feature);
@@ -31,7 +36,7 @@ function getPricedFeatures(features: ApiPlanFeature[]): {
 		}
 	}
 
-	return { prepaid, payPerUse };
+	return { prepaid, payPerUse, included };
 }
 
 function formatInterval(interval: string): string {
@@ -73,7 +78,6 @@ interface PlanSelectionCardProps {
 		quantity: number,
 		billingUnits: number,
 	) => void;
-	outgoingPlanName?: string;
 }
 
 export function PlanSelectionCard({
@@ -81,57 +85,30 @@ export function PlanSelectionCard({
 	currency,
 	quantities,
 	onQuantityChange,
-	outgoingPlanName,
 }: PlanSelectionCardProps) {
 	const { plan, feature_quantities } = change;
-	const { prepaid, payPerUse } = getPricedFeatures(plan.features);
+	const { prepaid, payPerUse, included } = categorizeFeatures(plan.features);
 	const basePrice = plan.price;
 	const hasPricedFeatures = prepaid.length > 0 || payPerUse.length > 0;
+	const hasIncludedFeatures = included.length > 0;
+
+	// Show included features only when there are no priced features
+	const showIncludedFeatures = !hasPricedFeatures && hasIncludedFeatures;
 
 	return (
 		<AnimatedCard layoutId="plan-selection-card">
 			<Card className="py-0 gap-0">
-				<PlanSelectionBackground>
-
-				{/* Plan change label */}
-				{outgoingPlanName && (
-					<motion.div
-						className="px-4 pt-3 pb-0"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={STANDARD_TRANSITION}
-					>
-						<span className="text-xs text-muted-foreground">
-							{plan.customer_eligibility?.scenario === "upgrade"
-								? "Upgrading"
-								: plan.customer_eligibility?.scenario === "downgrade"
-									? "Downgrading"
-									: "Changing"}{" "}
-							from {outgoingPlanName}
-						</span>
-					</motion.div>
-				)}
-
+				<CardBackground>
 				{/* Plan header */}
 				<motion.div
-					className={`flex items-center justify-between px-4 ${outgoingPlanName ? "pt-1 pb-4" : "py-4"}`}
+					className="flex items-center px-3 py-2 border-b bg-background/50"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={STANDARD_TRANSITION}
 				>
-					<div className="flex justify-between items-center w-full gap-0.5">
-						<span className="text-base text-foreground">{plan.name}</span>
-						{basePrice && (
-							<motion.div
-								className="flex items-center gap-1 text-muted-foreground"
-								initial={{ opacity: 0, x: 10 }}
-								animate={{ opacity: 1, x: 0 }}
-								transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
-							>
-								{formatAmount(basePrice.amount, currency)} per{" "}
-								{basePrice.interval}
-							</motion.div>
-						)}
+					<div className="flex items-center gap-2">
+						<Package className="h-4 w-4 text-muted-foreground" weight="bold" />
+						<span className="text-sm font-medium text-foreground">{plan.name}</span>
 					</div>
 				</motion.div>
 
@@ -144,7 +121,7 @@ export function PlanSelectionCard({
 					>
 						{/* Prepaid features - show quantity selector */}
 						<AnimatePresence>
-							{prepaid.map((feature) => {
+							{prepaid.map((feature, index) => {
 								const price = feature.price;
 								if (!price) return null;
 
@@ -167,15 +144,17 @@ export function PlanSelectionCard({
 										layout
 										transition={STANDARD_TRANSITION}
 									>
-										<div className="px-4">
-											<Separator className="w-auto" />
-										</div>
-										<div className="flex items-center justify-between px-4 py-4">
+										{index > 0 && (
+											<div className="px-3">
+												<Separator />
+											</div>
+										)}
+										<div className="flex items-center justify-between px-3 py-2.5">
 											<div className="flex flex-col gap-0.5">
-												<span className="text-foreground">
+												<span className="text-sm text-foreground">
 													{getFeatureName(feature)}
 												</span>
-												<span className="text-sm text-muted-foreground">
+												<span className="text-xs text-muted-foreground">
 													{formatAmount(unitPrice, currency)} per{" "}
 													{billingUnits === 1
 														? getFeatureUnitDisplay(feature, false)
@@ -185,7 +164,7 @@ export function PlanSelectionCard({
 											<div className="flex items-center gap-4">
 												<motion.span
 													key={totalPrice}
-													className="text-[15px] text-muted-foreground leading-none tracking-tight tabular-nums"
+													className="text-sm text-muted-foreground tabular-nums"
 													initial={{ opacity: 0.5 }}
 													animate={{ opacity: 1 }}
 													transition={FAST_TRANSITION}
@@ -235,6 +214,9 @@ export function PlanSelectionCard({
 									priceDisplay = formatAmount(price.amount || 0, currency);
 								}
 
+								// Show separator if there are prepaid features before, or if not the first pay-per-use
+								const showSeparator = index > 0 || prepaid.length > 0;
+
 								return (
 									<motion.div
 										key={feature.feature_id}
@@ -242,11 +224,13 @@ export function PlanSelectionCard({
 										layout
 										transition={STANDARD_TRANSITION}
 									>
-										<div className="px-4">
-											<Separator className="w-auto" />
-										</div>
-										<div className="flex items-center justify-between px-4 py-3">
-											<div className="flex items-center gap-3">
+										{showSeparator && (
+											<div className="px-3">
+												<Separator />
+											</div>
+										)}
+										<div className="flex items-center justify-between px-3 py-2.5">
+											<div className="flex items-center gap-2">
 												<motion.div
 													initial={{ scale: 0, opacity: 0 }}
 													animate={{ scale: 1, opacity: 1 }}
@@ -259,7 +243,7 @@ export function PlanSelectionCard({
 												>
 													<Check className="h-4 w-4 text-muted-foreground shrink-0" />
 												</motion.div>
-												<span className="text-sm text-foreground">
+												<span className="text-sm text-muted-foreground">
 													{getFeatureName(feature)}
 												</span>
 											</div>
@@ -276,7 +260,58 @@ export function PlanSelectionCard({
 						</AnimatePresence>
 					</motion.div>
 				)}
-				</PlanSelectionBackground>
+
+				{/* Included features - shown only when there are no priced features */}
+				{showIncludedFeatures && (
+					<motion.div
+						className="flex flex-col"
+						variants={listContainerVariants}
+						initial="initial"
+						animate="animate"
+					>
+						{included.map((feature, index) => (
+							<motion.div
+								key={feature.feature_id}
+								variants={listItemVariants}
+								layout
+								transition={STANDARD_TRANSITION}
+							>
+								{index > 0 && (
+									<div className="px-3">
+										<Separator />
+									</div>
+								)}
+								<div className="flex items-center justify-between px-3 py-2.5">
+									<div className="flex items-center gap-2">
+										<motion.div
+											initial={{ scale: 0, opacity: 0 }}
+											animate={{ scale: 1, opacity: 1 }}
+											transition={{
+												type: "spring",
+												stiffness: 400,
+												damping: 20,
+												delay: 0.1 + index * 0.05,
+											}}
+										>
+											<Check className="h-4 w-4 text-muted-foreground shrink-0" />
+										</motion.div>
+										<span className="text-sm text-muted-foreground">
+											{getFeatureName(feature)}
+										</span>
+									</div>
+									{feature.included_usage !== undefined && feature.included_usage !== null && (
+										<span className="text-sm text-muted-foreground">
+											{feature.included_usage === -1
+												? "Unlimited"
+												: `${feature.included_usage} included`}
+										</span>
+									)}
+								</div>
+							</motion.div>
+						))}
+					</motion.div>
+				)}
+				</CardBackground>
 			</Card>
 		</AnimatedCard>
 	);

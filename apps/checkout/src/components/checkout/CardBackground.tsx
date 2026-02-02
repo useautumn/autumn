@@ -5,7 +5,7 @@ import { motion } from "motion/react";
  * Full-screen background wrapper with subtle diagonal gradients from primary color.
  * Includes entrance animation for the content container.
  */
-export function PlanSelectionBackground({ children }: { children: ReactNode }) {
+export function CardBackground({ children }: { children: ReactNode }) {
 	return (
 		<div className="bg-card relative overflow-hidden">
 			{/* Top-right diagonal gradient */}
