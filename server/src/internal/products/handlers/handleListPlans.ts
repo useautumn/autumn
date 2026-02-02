@@ -4,16 +4,10 @@ import {
 	applyResponseVersionChanges,
 	ListPlansQuerySchema,
 } from "@autumn/shared";
-import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../customers/CusService";
 import { ProductService } from "../ProductService";
-import {
-	buildProductsCacheKey,
-	PRODUCTS_CACHE_TTL,
-} from "../productCacheUtils";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse";
-import { sortFullProducts } from "../productUtils/sortProductUtils";
 
 export const handleListPlans = createRoute({
 	query: ListPlansQuerySchema,
@@ -26,50 +20,29 @@ export const handleListPlans = createRoute({
 
 		const startedAt = Date.now();
 
-		// Build cache key with query params that affect the product list
-		// Note: customer_id and entity_id don't affect the product list itself,
-		// only the response transformation, so they're not included in cache key
-		const productsCacheKey = buildProductsCacheKey({
-			orgId: org.id,
-			env,
-			queryParams: { include_archived },
-		});
-
 		const [products, customer] = await Promise.all([
-			queryWithCache({
-				key: productsCacheKey,
-				ttl: PRODUCTS_CACHE_TTL,
-				fn: async () => {
-					const prods = await ProductService.listFull({
+			ProductService.listFull({
+				db,
+				orgId: org.id,
+				env,
+				archived: include_archived ? undefined : false,
+			}),
+			customer_id
+				? CusService.getFull({
 						db,
+						idOrInternalId: customer_id,
 						orgId: org.id,
 						env,
-						archived: include_archived ? undefined : false,
-					});
-					sortFullProducts({ products: prods });
-					return prods;
-				},
-			}),
-			(async () => {
-				if (!customer_id) {
-					return undefined;
-				}
-
-				return await CusService.getFull({
-					db,
-					idOrInternalId: customer_id,
-					orgId: org.id,
-					env,
-					entityId: entity_id,
-					withEntities: true,
-					withSubs: true,
-					allowNotFound: true,
-				});
-			})(),
+						entityId: entity_id,
+						withEntities: true,
+						withSubs: true,
+						allowNotFound: true,
+					})
+				: undefined,
 		]);
 
 		const endedAt = Date.now();
-		ctx.logger.info(`[handleListPlans] query took ${endedAt - startedAt}ms`);
+		ctx.logger.debug(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
 		if (v1_schema) return c.json({ list: products });
 
