@@ -10,7 +10,9 @@ import {
  * Custom hook for customer tables with standardized configuration.
  * Provides consistent table setup across all customer-related tables.
  */
-export function useCustomerTable<TData>({
+export function useCustomerTable<
+	TData extends { id?: string; internal_id?: string },
+>({
 	data,
 	columns,
 	options = {},
@@ -27,6 +29,8 @@ export function useCustomerTable<TData>({
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		enableSorting,
+		// Use stable customer ID instead of array index for row identity
+		getRowId: (row) => row.id || row.internal_id || crypto.randomUUID(),
 		...options,
 	});
 }

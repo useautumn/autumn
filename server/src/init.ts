@@ -10,22 +10,17 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { AppEnv } from "@autumn/shared";
-import { context, trace } from "@opentelemetry/api";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express from "express";
-import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { redirectToHono } from "./initHono.js";
-import { apiRouter } from "./internal/api/apiRouter.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-
-const tracer = trace.getTracer("express");
 
 checkEnvVars();
 // subscribeToOrgUpdates({ db });
@@ -51,15 +46,6 @@ const init = async () => {
 		"https://www.alphalog.ai",
 		process.env.CLIENT_URL || "",
 	];
-
-	// Add dynamic port origins in development
-	if (process.env.NODE_ENV === "development") {
-		// Add ports 3000-3010 and 8080-8090 for multiple instances
-		for (let i = 0; i <= 10; i++) {
-			allowedOrigins.push(`http://localhost:${3000 + i}`);
-			allowedOrigins.push(`http://localhost:${8080 + i}`);
-		}
-	}
 
 	// Wildcard patterns for subdomains
 	const wildcardPatterns = [
@@ -142,68 +128,10 @@ const init = async () => {
 		req.expand = [];
 		req.skipCache = false;
 
-		// Create span
-		const spanName = `${req.method} ${req.originalUrl} - ${req.id}`;
-		const span = tracer.startSpan(spanName);
-		span.setAttributes({
-			req_id: req.id,
-			method: req.method,
-			url: req.originalUrl,
-		});
-
-		// Store span on request for potential use in other middleware/handlers
-		req.span = span;
-
-		const endSpan = () => {
-			try {
-				span.setAttributes({
-					"http.response.status_code": res.statusCode,
-					"http.response.body.size": res.get("content-length") || 0,
-					"http.response.duration": Date.now() - req.timestamp,
-				});
-				span.end();
-
-				const closeSpan = tracer.startSpan("response_closed");
-				closeSpan.setAttributes({
-					req_id: req.id,
-				});
-				closeSpan.end();
-			} catch (error) {
-				logger.error("Error ending span", { error });
-			}
-		};
-
-		res.on("close", endSpan);
-
-		// Run the rest of the request processing within the span's context
-		context.with(trace.setSpan(context.active(), span), () => {
-			next();
-		});
+		await next();
 	});
 
 	app.use(express.json());
-	app.use(async (req: any, _res: any, next: any) => {
-		req.logger = addRequestToLogs({
-			logger: logger,
-			requestContext: {
-				id: req.id,
-				method: req.method,
-				url: req.originalUrl,
-				timestamp: req.timestamp,
-				user_agent: req.headers["user-agent"],
-				ip_address: req.headers["x-forwarded-for"],
-				query: req.query,
-				body: req.body,
-
-				name: `${req.method} ${req.originalUrl}`,
-			},
-		});
-
-		req.logger.info(`${req.method} ${req.originalUrl}`);
-		next();
-	});
-
-	app.use("/v1", apiRouter);
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)

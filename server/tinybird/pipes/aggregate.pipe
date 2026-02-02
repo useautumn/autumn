@@ -1,0 +1,66 @@
+DESCRIPTION >
+    Aggregates events into time-bucketed timeseries data.
+    Returns unpivoted data: (period, event_name, group_value, total_value)
+    When group_by is provided, extracts that property from JSON and groups by it.
+
+TOKEN "aggregate_read" READ
+
+NODE filter_events
+DESCRIPTION >
+    Filter events by org, env, customer (optional), event names, and date range.
+
+SQL >
+    %
+    SELECT
+        timestamp,
+        event_name,
+        customer_id,
+        coalesce(value, 1) as value,
+        properties
+    FROM events
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND timestamp >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND timestamp <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        {% if defined(customer_id) %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+
+NODE aggregate_by_period
+TYPE endpoint
+DESCRIPTION >
+    Aggregate events by time period and event name.
+    Optionally groups by a property extracted from the properties JSON.
+    Gap-filling is handled in the application layer.
+
+SQL >
+    %
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        toStartOfHour(timestamp, {{ String(timezone, 'UTC') }}) as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}) as period,
+        {% else %}
+        toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}) as period,
+        {% end %}
+        event_name,
+        {% if defined(group_by) %}
+        coalesce(
+            nullIf(JSONExtractString(assumeNotNull(properties), {{ String(group_by) }}), ''),
+            'unknown'
+        ) as group_value,
+        {% else %}
+        '' as group_value,
+        {% end %}
+        sum(value) as total_value
+    FROM filter_events
+    {% if defined(group_by) %}
+    WHERE properties IS NOT NULL AND properties != ''
+    GROUP BY period, event_name, group_value
+    ORDER BY period, event_name, group_value
+    {% else %}
+    GROUP BY period, event_name, group_value
+    ORDER BY period, event_name
+    {% end %}

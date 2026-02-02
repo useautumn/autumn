@@ -1,7 +1,4 @@
-import type {
-	FullCusEntWithFullCusProduct,
-	FullCusProduct,
-} from "@autumn/shared";
+import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
 import { Table } from "@/components/general/table";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -11,13 +8,11 @@ import { CustomerBalanceTableColumns } from "./CustomerBalanceTableColumns";
 
 export function CustomerBalanceTable({
 	allEnts,
-	filteredCustomerProducts,
 	entityId,
 	aggregatedMap,
 	isLoading,
 }: {
 	allEnts: FullCusEntWithFullCusProduct[];
-	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	isLoading: boolean;
@@ -34,7 +29,7 @@ export function CustomerBalanceTable({
 	const selectedFeatureId = useCustomerBalanceSheetStore((s) => s.featureId);
 
 	const columns = CustomerBalanceTableColumns({
-		filteredCustomerProducts,
+		fullCustomer: customer,
 		entityId,
 		aggregatedMap,
 		entities: customer?.entities || [],

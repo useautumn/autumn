@@ -203,7 +203,7 @@ export const ProductsSubMenu = () => {
 													checked={selectedVersions.includes(`${product.id}:1`)}
 													className="border-border"
 												/>
-												{product.name}
+												<span className="truncate">{product.name}</span>
 											</DropdownMenuItem>
 										) : (
 											// Multiple versions - show product name with hover submenu for versions
@@ -228,7 +228,7 @@ export const ProductsSubMenu = () => {
 															}
 														}}
 													/>
-													{product.name}
+													<span className="truncate">{product.name}</span>
 												</DropdownMenuSubTrigger>
 												<DropdownMenuSubContent>
 													<DropdownMenuItem
