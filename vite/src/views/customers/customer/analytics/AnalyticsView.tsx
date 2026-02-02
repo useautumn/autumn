@@ -49,8 +49,6 @@ export const AnalyticsView = () => {
 		queryLoading,
 		error,
 		bcExclusionFlag,
-		topEventsLoading,
-		topEvents,
 		groupBy,
 		truncated,
 	} = useAnalyticsData({ hasCleared });
@@ -159,7 +157,6 @@ export const AnalyticsView = () => {
 	// Show empty state if no actual analytics events (check rawEvents and totalRows)
 	const hasNoData =
 		!rawQueryLoading &&
-		!topEventsLoading &&
 		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
 		totalRows === 0;
 
@@ -220,7 +217,6 @@ export const AnalyticsView = () => {
 				setTotalPages,
 				totalRows,
 				setTotalRows,
-				topEvents,
 				propertyKeys,
 				groupFilter,
 				setGroupFilter,
@@ -236,7 +232,7 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-					{(queryLoading || topEventsLoading) && (
+					{queryLoading && (
 						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
 								Loading chart {customerId ? `for ${customerId}` : ""}
