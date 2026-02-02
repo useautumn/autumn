@@ -26,7 +26,10 @@ import {
 	sql,
 } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
+import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
 import { getLatestProducts } from "./productUtils";
+import { sortFullProducts } from "./productUtils/sortProductUtils";
 
 const parseFreeTrials = ({
 	products,
@@ -214,7 +217,6 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
-		includeAll = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -224,10 +226,54 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
-		includeAll?: boolean;
-	}) {
+	}): Promise<FullProduct[]> {
+		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
+		const canCache = !inIds && !returnAll && !version && !excludeEnts;
+
+		if (canCache) {
+			return queryWithCache({
+				key: buildProductsCacheKey({
+					orgId,
+					env,
+					queryParams: { archived },
+				}),
+				ttl: PRODUCTS_CACHE_TTL,
+				fn: () => ProductService._listFullQuery({ db, orgId, env, archived }),
+			});
+		}
+
+		return ProductService._listFullQuery({
+			db,
+			orgId,
+			env,
+			inIds,
+			returnAll,
+			version,
+			excludeEnts,
+			archived,
+		});
+	}
+
+	private static async _listFullQuery({
+		db,
+		orgId,
+		env,
+		inIds,
+		returnAll = false,
+		version,
+		excludeEnts = false,
+		archived,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		inIds?: string[];
+		returnAll?: boolean;
+		version?: number;
+		excludeEnts?: boolean;
+		archived?: boolean;
+	}): Promise<FullProduct[]> {
 		// Optimization: Use a subquery to only fetch the latest version of each product
-		// This avoids fetching all versions and filtering in memory
 		const latestVersionsSubquery =
 			!returnAll && !version
 				? db
@@ -255,7 +301,6 @@ export class ProductService {
 				eq(products.env, env),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
-				// Only apply the version filter when we're not returning all versions
 				latestVersionsSubquery
 					? exists(
 							db
@@ -270,7 +315,6 @@ export class ProductService {
 						)
 					: undefined,
 			),
-
 			with: {
 				entitlements: excludeEnts
 					? undefined
@@ -305,11 +349,12 @@ export class ProductService {
 			return newProducts;
 		}
 
-		if (notNullish(archived)) {
-			return latestProducts.filter((p) => p.archived === archived);
-		}
+		const result = notNullish(archived)
+			? latestProducts.filter((p) => p.archived === archived)
+			: latestProducts;
 
-		return latestProducts as FullProduct[];
+		sortFullProducts({ products: result });
+		return result;
 	}
 
 	static async getFull({
