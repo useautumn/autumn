@@ -1,6 +1,6 @@
 import {
 	type FrontendProductItem,
-	type ProductV2,
+	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
 import type { AxiosError, AxiosInstance } from "axios";
@@ -18,7 +18,7 @@ export const updateProduct = async ({
 }: {
 	axiosInstance: AxiosInstance;
 	productId: string;
-	product: ProductV2;
+	product: UpdateProductV2Params;
 	onSuccess: () => Promise<void>;
 }) => {
 	const validated = validateItemsBeforeSave(

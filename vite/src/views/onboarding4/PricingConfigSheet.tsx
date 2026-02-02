@@ -1,3 +1,4 @@
+import type { AgentPricingConfig } from "@autumn/shared";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -11,7 +12,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/v2/sheets/Sheet";
-import type { AgentPricingConfig } from "./pricingAgentUtils";
 
 interface PricingConfigSheetProps {
 	open: boolean;

@@ -11,15 +11,13 @@ function DotIcon() {
 }
 
 export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
-	// Use column layout only if item has both pricing AND included usage
-	const hasPricing = item.price != null && item.price > 0;
-	const hasIncludedUsage =
-		item.includedUsage != null &&
-		(item.includedUsage === "inf" || item.includedUsage > 0);
-	const useColumnLayout = hasPricing && hasIncludedUsage;
+	// Use column layout when secondary text starts with "then" (indicates pricing with included usage)
+	// This handles both flat price and tiered pricing scenarios
+	const useColumnLayout =
+		item.display.secondaryText?.startsWith("then") ?? false;
 
 	return (
-		<div className="flex items-center w-full px-2">
+		<div className="flex items-center w-full">
 			<div
 				className={`flex gap-1 min-w-0 overflow-hidden ${useColumnLayout ? "flex-col" : "flex-row items-center"}`}
 			>
@@ -35,7 +33,7 @@ export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
 					</span>
 				</div>
 				{item.display.secondaryText && (
-					<span className="text-xs text-t3 truncate shrink-0">
+					<span className="text-xs text-t3 truncate min-w-0">
 						{item.display.secondaryText}
 					</span>
 				)}

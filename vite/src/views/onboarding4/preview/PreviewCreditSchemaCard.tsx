@@ -1,3 +1,4 @@
+import type { AgentFeature } from "@autumn/shared";
 import { Coins } from "lucide-react";
 import {
 	Card,
@@ -5,11 +6,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/v2/cards/Card";
-import type { AgentFeature } from "../pricingAgentUtils";
+import { cn } from "@/lib/utils";
 
 interface PreviewCreditSchemaCardProps {
 	creditFeature: AgentFeature;
 	allFeatures: AgentFeature[];
+	isChanged?: boolean;
 }
 
 /**
@@ -18,6 +20,7 @@ interface PreviewCreditSchemaCardProps {
 export function PreviewCreditSchemaCard({
 	creditFeature,
 	allFeatures,
+	isChanged = false,
 }: PreviewCreditSchemaCardProps) {
 	const creditSchema = creditFeature.credit_schema;
 
@@ -30,7 +33,13 @@ export function PreviewCreditSchemaCard({
 	const creditSingular = creditFeature.display?.singular ?? "credit";
 
 	return (
-		<Card className="w-[280px] bg-background flex flex-col gap-0 rounded-xl">
+		<Card
+			className={cn(
+				"w-[270px] bg-background flex flex-col gap-0 rounded-xl",
+				isChanged &&
+					"ring-2 ring-yellow-400/70 ring-offset-2 ring-offset-background",
+			)}
+		>
 			<CardHeader className="">
 				<div className="flex items-center gap-2">
 					<div className=" rounded-md">
