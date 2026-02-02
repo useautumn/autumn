@@ -1,5 +1,4 @@
 import { isOneOffProductV2, type ProductV2 } from "@autumn/shared";
-import { CubeIcon } from "@phosphor-icons/react";
 import type { SortingState } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -11,7 +10,6 @@ import { useProductsQueryState } from "@/views/products/hooks/useProductsQuerySt
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
-import { ProductListMenuButton } from "./ProductListMenuButton";
 
 type ProductWithCounts = ProductV2 & {
 	active_count?: number;
@@ -154,47 +152,31 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{showTableStructure ? (
 				<>
-					{/* Recurring Plans Section */}
-					<div>
-						<Table.Provider
-							config={{
-								table: recurringBaseTable,
-								numberOfColumns: columns.length,
-								enableSorting,
-								isLoading: isCountsLoading,
-								getRowHref,
-								emptyStateText: queryStates.showArchivedProducts
-									? "You haven't archived any plans yet"
-									: "You haven't created any main plans yet",
-								rowClassName: "h-10",
-							}}
-						>
-							<Table.Toolbar>
-								<div className="flex w-full justify-between items-center">
-									<Table.Heading>
-										<CubeIcon size={16} weight="fill" className="text-subtle" />
-										Recurring Plans
-									</Table.Heading>
-									<Table.Actions>
-										<div className="flex w-full justify-between items-center">
-											<div className="flex items-center gap-2">
-												<ProductListCreateButton />
-												<ProductListMenuButton />
-											</div>
-										</div>
-									</Table.Actions>
-								</div>
-							</Table.Toolbar>
-							<Table.Container>
-								{hasRecurringAddOns && <SectionTag>Main Plans</SectionTag>}
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</Table.Provider>
+				{/* Plans Section */}
+				<div>
+					<Table.Provider
+						config={{
+							table: recurringBaseTable,
+							numberOfColumns: columns.length,
+							enableSorting,
+							isLoading: isCountsLoading,
+							getRowHref,
+							emptyStateText: queryStates.showArchivedProducts
+								? "You haven't archived any plans yet"
+								: "Recurring plans that bill customers on a regular schedule",
+							rowClassName: "h-10",
+						}}
+					>
+						<Table.Container>
+							<SectionTag>Subscriptions</SectionTag>
+							<Table.Content>
+								<Table.Header />
+								<Table.Body />
+							</Table.Content>
+						</Table.Container>
+					</Table.Provider>
 
-						{/* Recurring Add-ons (only shown if add-ons exist) */}
+						{/* Add-on Plans (only shown when add-ons exist) */}
 						{hasRecurringAddOns && (
 							<Table.Provider
 								config={{
@@ -207,42 +189,35 @@ export function ProductListTable() {
 								}}
 							>
 								<Table.Container>
-									<SectionTag className="mt-4">Add-ons</SectionTag>
+									<SectionTag className="mt-4">Add-on subscriptions</SectionTag>
 									<Table.Content>
 										<Table.Body />
 									</Table.Content>
 								</Table.Container>
 							</Table.Provider>
 						)}
-					</div>
 
-					{/* One-Time Plans Section (only shown if one-time plans exist) */}
-					{hasOneTimePlans && (
-						<div>
-							<Table.Provider
-								config={{
-									table: oneTimeTable,
-									numberOfColumns: columns.length,
-									enableSorting,
-									isLoading: isCountsLoading,
-									getRowHref,
-									rowClassName: "h-10",
-								}}
-							>
-								<Table.Toolbar>
-									<Table.Heading>
-										<CubeIcon size={16} weight="fill" className="text-subtle" />
-										One-off Plans
-									</Table.Heading>
-								</Table.Toolbar>
-								<Table.Container>
-									<Table.Content>
-										<Table.Body />
-									</Table.Content>
-								</Table.Container>
-							</Table.Provider>
-						</div>
-					)}
+						{/* One-time Plans (always shown) */}
+						<Table.Provider
+							config={{
+								table: oneTimeTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: isCountsLoading,
+								getRowHref,
+								emptyStateText:
+									"One-time prices for top-ups or lifetime purchases",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Container>
+								<SectionTag className="mt-4">One-off purchases</SectionTag>
+								<Table.Content>
+									<Table.Body />
+								</Table.Content>
+							</Table.Container>
+						</Table.Provider>
+					</div>
 				</>
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
