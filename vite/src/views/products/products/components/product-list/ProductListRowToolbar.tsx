@@ -17,14 +17,18 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
 
-export const ProductListRowToolbar = ({ product }: { product: ProductV2 }) => {
+export const ProductListRowToolbar = ({
+	product,
+	onDeleteClick,
+}: {
+	product: ProductV2;
+	onDeleteClick?: (product: ProductV2) => void;
+}) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
 	const [copyToEnv, setCopyToEnv] = useState<AppEnv>(AppEnv.Sandbox);
-	const [deleteOpen, setDeleteOpen] = useState(false);
 	const { counts } = useProductsQuery();
 
 	const productCounts = counts[product.id];
@@ -44,12 +48,6 @@ export const ProductListRowToolbar = ({ product }: { product: ProductV2 }) => {
 				setOpen={setCopyOpen}
 				product={product}
 				targetEnv={copyToEnv}
-			/>
-			<DeletePlanDialog
-				propProduct={product}
-				open={deleteOpen}
-				setOpen={setDeleteOpen}
-				dropdownOpen={dropdownOpen}
 			/>
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -95,7 +93,7 @@ export const ProductListRowToolbar = ({ product }: { product: ProductV2 }) => {
 							e.stopPropagation();
 							e.preventDefault();
 							setDropdownOpen(false);
-							setDeleteOpen(true);
+							onDeleteClick?.(product);
 						}}
 					>
 						<DeleteIcon />
