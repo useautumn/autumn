@@ -72,7 +72,6 @@ interface PlanSelectionCardProps {
 		quantity: number,
 		billingUnits: number,
 	) => void;
-	isUpdating?: boolean;
 	outgoingPlanName?: string;
 }
 
@@ -81,7 +80,6 @@ export function PlanSelectionCard({
 	currency,
 	quantities,
 	onQuantityChange,
-	isUpdating = false,
 	outgoingPlanName,
 }: PlanSelectionCardProps) {
 	const { plan, feature_quantities } = change;
@@ -207,7 +205,6 @@ export function PlanSelectionCard({
 															: undefined
 													}
 													step={billingUnits}
-													disabled={isUpdating}
 												/>
 											</div>
 										</div>

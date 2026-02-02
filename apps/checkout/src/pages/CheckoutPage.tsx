@@ -65,7 +65,7 @@ export function CheckoutPage() {
 		(options: { feature_id: string; quantity: number }[]) => {
 			previewMutation.mutate(options);
 		},
-		300,
+		600,
 	);
 
 	const handleQuantityChange = useCallback(
@@ -170,7 +170,6 @@ export function CheckoutPage() {
 										currency={currency}
 										quantities={quantities}
 										onQuantityChange={handleQuantityChange}
-										isUpdating={isUpdating}
 										outgoingPlanName={outgoing?.[0]?.plan.name}
 									/>
 								))
