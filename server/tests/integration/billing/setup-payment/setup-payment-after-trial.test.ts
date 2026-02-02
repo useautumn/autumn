@@ -15,62 +15,59 @@ import chalk from "chalk";
  * their existing subscriptions are properly updated to use the new payment method.
  */
 
-test.concurrent(
-	`${chalk.yellowBright("setup-payment: invoices are paid after adding payment method during trial")}`,
-	async () => {
-		const messagesItem = items.monthlyMessages({
-			includedUsage: 0,
-		});
+test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after adding payment method during trial")}`, async () => {
+	const messagesItem = items.monthlyMessages({
+		includedUsage: 0,
+	});
 
-		const premium = products.base({
-			id: "premium",
-			items: [items.monthlyPrice({ price: 50 })],
-			freeTrial: {
-				length: 7,
-				duration: FreeTrialDuration.Day,
-				uniqueFingerprint: false,
-				cardRequired: false,
-			},
-		});
+	const premium = products.base({
+		id: "premium",
+		items: [items.monthlyPrice({ price: 50 })],
+		freeTrial: {
+			length: 7,
+			duration: FreeTrialDuration.Day,
+			uniqueFingerprint: false,
+			cardRequired: false,
+		},
+	});
 
-		const pro = products.pro({
-			id: "pro",
-			items: [messagesItem],
-		});
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
 
-		const { customerId, autumnV1, testClockId, ctx } = await initScenario({
-			customerId: "setup-payment-after-trial",
-			setup: [s.customer({}), s.products({ list: [pro, premium] })],
-			actions: [
-				s.attach({
-					productId: premium.id,
-				}),
-				s.attach({
-					productId: pro.id,
-				}),
-			],
-		});
+	const { customerId, autumnV1, testClockId, ctx } = await initScenario({
+		customerId: "setup-payment-after-trial",
+		setup: [s.customer({}), s.products({ list: [pro, premium] })],
+		actions: [
+			s.attach({
+				productId: premium.id,
+			}),
+			s.attach({
+				productId: pro.id,
+			}),
+		],
+	});
 
-		// Get setup payment URL and complete the form
-		const res = await autumnV1.setupPayment({
-			customer_id: customerId,
-		});
+	// Get setup payment URL and complete the form
+	const res = await autumnV1.billing.setupPayment({
+		customer_id: customerId,
+	});
 
-		await completeSetupPaymentForm({ url: res.url! });
+	await completeSetupPaymentForm({ url: res.url! });
 
-		// Advance clock past trial (7 days) + buffer to trigger invoice
-		await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId: testClockId!,
-			numberOfDays: 18,
-		});
+	// Advance clock past trial (7 days) + buffer to trigger invoice
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		numberOfDays: 18,
+	});
 
-		// Verify all invoices are paid
-		const customer = await autumnV1.customers.get(customerId);
+	// Verify all invoices are paid
+	const customer = await autumnV1.customers.get(customerId);
 
-		const allInvoicesPaid = customer.invoices?.every(
-			(invoice) => invoice.status === "paid",
-		);
-		expect(allInvoicesPaid).toBe(true);
-	},
-);
+	const allInvoicesPaid = customer.invoices?.every(
+		(invoice) => invoice.status === "paid",
+	);
+	expect(allInvoicesPaid).toBe(true);
+});
