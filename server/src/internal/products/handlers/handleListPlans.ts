@@ -4,9 +4,14 @@ import {
 	applyResponseVersionChanges,
 	ListPlansQuerySchema,
 } from "@autumn/shared";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../customers/CusService";
 import { ProductService } from "../ProductService";
+import {
+	buildProductsCacheKey,
+	PRODUCTS_CACHE_TTL,
+} from "../productCacheUtils";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse";
 import { sortFullProducts } from "../productUtils/sortProductUtils";
 
@@ -20,12 +25,30 @@ export const handleListPlans = createRoute({
 		const { customer_id, entity_id, include_archived, v1_schema } = query;
 
 		const startedAt = Date.now();
+
+		// Build cache key with query params that affect the product list
+		// Note: customer_id and entity_id don't affect the product list itself,
+		// only the response transformation, so they're not included in cache key
+		const productsCacheKey = buildProductsCacheKey({
+			orgId: org.id,
+			env,
+			queryParams: { include_archived },
+		});
+
 		const [products, customer] = await Promise.all([
-			ProductService.listFull({
-				db,
-				orgId: org.id,
-				env,
-				archived: include_archived ? undefined : false,
+			queryWithCache({
+				key: productsCacheKey,
+				ttl: PRODUCTS_CACHE_TTL,
+				fn: async () => {
+					const prods = await ProductService.listFull({
+						db,
+						orgId: org.id,
+						env,
+						archived: include_archived ? undefined : false,
+					});
+					sortFullProducts({ products: prods });
+					return prods;
+				},
 			}),
 			(async () => {
 				if (!customer_id) {
@@ -49,8 +72,6 @@ export const handleListPlans = createRoute({
 		ctx.logger.info(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
 		if (v1_schema) return c.json({ list: products });
-
-		sortFullProducts({ products });
 
 		const batchResponse = [];
 		for (const p of products) {
