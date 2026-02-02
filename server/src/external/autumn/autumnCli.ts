@@ -9,7 +9,7 @@ import {
 	type ApiCusProductV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
-	type AttachParamsV0Input,
+	type AttachParamsV0,
 	type BalancesUpdateParams,
 	type BillingPreviewResponse,
 	type BillingResponse,
@@ -25,6 +25,7 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
+	type SetupPaymentParams,
 	type TrackParams,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
@@ -699,14 +700,23 @@ export class AutumnInt {
 		{
 			skipCache = false,
 			timeout,
-		}: { skipCache?: boolean; timeout?: number } = {},
+			headers,
+		}: {
+			skipCache?: boolean;
+			timeout?: number;
+			headers?: Record<string, string>;
+		} = {},
 	) => {
 		const queryParams = new URLSearchParams();
 		if (skipCache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/track?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/track?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 
 		if (timeout) {
 			await new Promise((resolve) => setTimeout(resolve, timeout));
@@ -721,13 +731,18 @@ export class AutumnInt {
 
 	check = async <T = CheckResult>(
 		params: CheckParams & CheckQuery & { skip_event?: boolean },
+		{ headers }: { headers?: Record<string, string> } = {},
 	): Promise<T> => {
 		const queryParams = new URLSearchParams();
 		if (params.skip_cache) {
 			queryParams.append("skip_cache", "true");
 		}
 
-		const data = await this.post(`/check?${queryParams.toString()}`, params);
+		const data = await this.post(
+			`/check?${queryParams.toString()}`,
+			params,
+			headers,
+		);
 		return data;
 	};
 
@@ -800,7 +815,7 @@ export class AutumnInt {
 
 	billing = {
 		attach: async (
-			params: AttachParamsV0Input,
+			params: AttachParamsV0,
 			{
 				skipWebhooks,
 				idempotencyKey,
@@ -832,12 +847,16 @@ export class AutumnInt {
 		},
 
 		previewAttach: async (
-			params: AttachParamsV0Input,
+			params: AttachParamsV0,
 		): Promise<BillingPreviewResponse> => {
 			const data = await this.post(`/billing/preview_attach`, {
 				...params,
 				redirect_mode: "if_required",
 			});
+			return data;
+		},
+		setupPayment: async (params: SetupPaymentParams) => {
+			const data = await this.post(`/setup_payment`, params);
 			return data;
 		},
 	};

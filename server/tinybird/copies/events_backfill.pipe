@@ -1,0 +1,35 @@
+DESCRIPTION >
+    Chunked backfill of events from Postgres
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        customer_id,
+        coalesce(properties::String, '{}')::JSON(max_dynamic_types=2, max_dynamic_paths=16) as properties
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'events',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE timestamp > {{DateTime(start_date, '2025-01-01 00:00:00')}}
+      AND timestamp <= {{DateTime(end_date, '2025-01-01 00:00:01')}}
+
+TYPE COPY
+TARGET_DATASOURCE events
