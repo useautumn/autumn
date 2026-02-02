@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	type FreeTrial,
 	mapToProductV2,
 	notNullish,
@@ -20,6 +21,7 @@ import {
 } from "../../free-trials/freeTrialUtils.js";
 import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
+import { invalidateProductsCache } from "../../productCacheUtils.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
 import { handleUpdateProductDetails } from "../handleUpdateProduct/updateProductDetails.js";
@@ -139,9 +141,12 @@ export const updateProduct = async ({
 				env,
 			});
 
+			await invalidateProductsCache({ orgId: org.id, env: env as AppEnv });
 			return newProduct;
 		}
 
+		// Product details (name, group, etc.) may have changed via handleUpdateProductDetails
+		await invalidateProductsCache({ orgId: org.id, env: env as AppEnv });
 		return fullProduct;
 	}
 
@@ -212,6 +217,8 @@ export const updateProduct = async ({
 		product: newFullProduct,
 		features,
 	});
+
+	await invalidateProductsCache({ orgId: org.id, env: env as AppEnv });
 
 	return productResponse;
 };
