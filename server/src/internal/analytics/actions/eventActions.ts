@@ -1,4 +1,4 @@
-import { aggregate } from "./eventValidationUtils.js";
+import { aggregate } from "./aggregate";
 import { getCountAndSum } from "./getCountAndSum.js";
 import { getEventById } from "./getEventById.js";
 import { getTopEventNames } from "./getTopEventNames.js";
