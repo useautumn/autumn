@@ -1,6 +1,6 @@
 import { isOneOffProductV2, type ProductV2 } from "@autumn/shared";
 import type { SortingState } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -8,6 +8,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 
@@ -21,6 +22,16 @@ export function ProductListTable() {
 
 	// Shared sorting state for all tables
 	const [sorting, setSorting] = useState<SortingState>([]);
+
+	// Delete dialog state - lifted here so dialog doesn't unmount when row is removed
+	const [deleteDialog, setDeleteDialog] = useState<{
+		open: boolean;
+		product: ProductV2 | null;
+	}>({ open: false, product: null });
+
+	const handleDeleteClick = useCallback((product: ProductV2) => {
+		setDeleteDialog({ open: true, product });
+	}, []);
 
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
@@ -91,8 +102,12 @@ export function ProductListTable() {
 	);
 
 	const columns = useMemo(
-		() => createProductListColumns({ showGroup: hasAnyGroup }),
-		[hasAnyGroup],
+		() =>
+			createProductListColumns({
+				showGroup: hasAnyGroup,
+				onDeleteClick: handleDeleteClick,
+			}),
+		[hasAnyGroup, handleDeleteClick],
 	);
 
 	const recurringBaseTable = useProductTable({
@@ -152,29 +167,29 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{showTableStructure ? (
 				<>
-				{/* Plans Section */}
-				<div>
-					<Table.Provider
-						config={{
-							table: recurringBaseTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: isCountsLoading,
-							getRowHref,
-							emptyStateText: queryStates.showArchivedProducts
-								? "You haven't archived any plans yet"
-								: "Recurring plans that bill customers on a regular schedule",
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Container>
-							<SectionTag>Subscriptions</SectionTag>
-							<Table.Content>
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</Table.Provider>
+					{/* Plans Section */}
+					<div>
+						<Table.Provider
+							config={{
+								table: recurringBaseTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: isCountsLoading,
+								getRowHref,
+								emptyStateText: queryStates.showArchivedProducts
+									? "You haven't archived any plans yet"
+									: "Recurring plans that bill customers on a regular schedule",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Container>
+								<SectionTag>Subscriptions</SectionTag>
+								<Table.Content>
+									<Table.Header />
+									<Table.Body />
+								</Table.Content>
+							</Table.Container>
+						</Table.Provider>
 
 						{/* Add-on Plans (only shown when add-ons exist) */}
 						{hasRecurringAddOns && (
@@ -221,6 +236,15 @@ export function ProductListTable() {
 				</>
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
+			)}
+
+			{/* Delete dialog rendered at table level to prevent unmounting when row is removed */}
+			{deleteDialog.product && (
+				<DeletePlanDialog
+					propProduct={deleteDialog.product}
+					open={deleteDialog.open}
+					setOpen={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+				/>
 			)}
 		</div>
 	);
