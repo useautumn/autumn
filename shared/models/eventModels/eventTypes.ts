@@ -29,6 +29,7 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	group_by?: string;
 	no_count?: boolean;
 	timezone?: string;
+	enforceGroupLimit?: boolean;
 };
 
 export type CalculateDateRangeParams = Omit<

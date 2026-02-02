@@ -3,11 +3,14 @@ import {
 	type BillingCycleIntervalEnum,
 	type BillingCycleResult,
 	type ClickHouseResult,
+	ErrCode,
+	RecaseError,
 	type TimeseriesEventsParams,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { addDays, addHours, addMonths, format, sub } from "date-fns";
 import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
 import {
 	type AggregateGroupablePipeRow,
 	type AggregateSimplePipeRow,
@@ -356,6 +359,21 @@ export const aggregate = async ({
 			propertyKey = params.group_by;
 		}
 
+		// Validate property path segments (matches old ClickHouse behavior)
+		if (groupColumn === "property" && propertyKey) {
+			const pathSegments = propertyKey.split(".");
+			for (const segment of pathSegments) {
+				if (!/^[a-zA-Z0-9_]+$/.test(segment)) {
+					throw new RecaseError({
+						message:
+							"Invalid property path. Should only contain alphanumeric and underscore characters.",
+						code: ErrCode.InvalidInputs,
+						statusCode: StatusCodes.BAD_REQUEST,
+					});
+				}
+			}
+		}
+
 		const pipeParams = {
 			org_id: org.id,
 			env,
@@ -375,8 +393,11 @@ export const aggregate = async ({
 
 		const result = await pipes.aggregateGroupable(pipeParams);
 
-		// Extract truncation flag from first row (all rows have the same value)
-		truncated = result.data.length > 0 && result.data[0]._truncated === true;
+		// For external API (enforceGroupLimit), truncated is always false
+		// For internal API, return the actual truncation status from the pipe
+		truncated = params.enforceGroupLimit
+			? false
+			: result.data.length > 0 && result.data[0]._truncated === true;
 
 		formatted = formatGroupableResults({
 			rows: result.data,

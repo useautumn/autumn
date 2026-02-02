@@ -1,7 +1,7 @@
 import { type Feature, FeatureType } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { eventActions } from "../actions/index.js";
 import { AnalyticsService } from "../AnalyticsService.js";
+import { eventActions } from "../actions/eventActions.js";
 
 /**
  * Get top event names for the organization
@@ -9,7 +9,7 @@ import { AnalyticsService } from "../AnalyticsService.js";
 export const handleGetEventNames = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { org, env, features } = ctx;
+		const { features } = ctx;
 
 		AnalyticsService.handleEarlyExit();
 
