@@ -20,14 +20,15 @@ export interface CusProductActions {
 	newProductActions: NewProductAction[];
 }
 
-export const CusProductActionsSchema = z.object({
+export const CusProductActionsSchema: z.ZodObject = z.object({
 	ongoingCusProductAction: OngoingCusProductActionSchema,
 	scheduledCusProductAction: ScheduledCusProductActionSchema,
 	newProductActions: z.array(NewProductActionSchema),
 });
 
-export const EnrichedCusProductActionsSchema = CusProductActionsSchema.extend({
-	ongoingCusProductAction: OngoingCusProductActionSchema,
-	scheduledCusProductAction: ScheduledCusProductActionSchema,
-	newProductActions: z.array(EnrichedNewProductActionSchema),
-});
+export const EnrichedCusProductActionsSchema: z.ZodObject =
+	CusProductActionsSchema.extend({
+		ongoingCusProductAction: OngoingCusProductActionSchema,
+		scheduledCusProductAction: ScheduledCusProductActionSchema,
+		newProductActions: z.array(EnrichedNewProductActionSchema),
+	});
