@@ -1,4 +1,5 @@
 import type { CheckoutChange, ConfirmCheckoutResponse } from "@autumn/shared";
+import { format } from "date-fns";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -12,6 +13,7 @@ import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { OrderSummarySkeleton } from "@/components/checkout/OrderSummarySkeleton";
 import { PlanSelectionCard } from "@/components/checkout/PlanSelectionCard";
 import { PlanSelectionCardSkeleton } from "@/components/checkout/PlanSelectionCardSkeleton";
+import { SectionHeader } from "@/components/checkout/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,6 +101,60 @@ export function CheckoutPage() {
 		return checkoutData.incoming.some((change) => change.plan.price?.interval);
 	}, [checkoutData]);
 
+	// Build context subheading for Plan Details section
+	const planDetailsSubheading = useMemo(() => {
+		if (!checkoutData?.incoming?.length) return undefined;
+
+		const change = checkoutData.incoming[0];
+		const scenario = change.plan.customer_eligibility?.scenario;
+		const outgoingPlanName = checkoutData.outgoing?.[0]?.plan.name;
+		const entityName = checkoutData.entity?.name || checkoutData.entity?.id;
+
+		// Check for proration (period_end exists when prorated)
+		const periodEnd = checkoutData.preview?.period_end;
+		const isProrated = outgoingPlanName && periodEnd;
+
+		let context = "";
+		if (outgoingPlanName) {
+			if (scenario === "upgrade") {
+				context = `Upgrading from ${outgoingPlanName}`;
+			} else if (scenario === "downgrade") {
+				context = `Downgrading from ${outgoingPlanName}`;
+			} else {
+				context = `Changing from ${outgoingPlanName}`;
+			}
+		} else {
+			context = "New subscription";
+		}
+
+		if (entityName) {
+			context += ` for ${entityName}`;
+		}
+
+		// Add proration info when upgrading/downgrading mid-cycle
+		if (isProrated) {
+			context += `. Prorated until ${format(periodEnd, "MMM d")}`;
+		}
+
+		return context;
+	}, [checkoutData]);
+
+	// Build subheading for Order Summary section
+	const orderSummarySubheading = useMemo(() => {
+		if (!checkoutData?.preview) return undefined;
+
+		const { total, currency } = checkoutData.preview;
+		const entityName = checkoutData.entity?.name || checkoutData.entity?.id;
+
+		let context = `${formatAmount(total, currency)} due today`;
+
+		if (entityName) {
+			context += ` for ${entityName}`;
+		}
+
+		return context;
+	}, [checkoutData]);
+
 	if (!checkoutId) {
 		return <CheckoutErrorState message="Missing checkout ID" />;
 	}
@@ -151,6 +207,7 @@ export function CheckoutPage() {
 					<CheckoutHeader org={org} isLoading={isLoading} />
 				</motion.div>
 
+
 				{/* Main content - two columns */}
 				<LayoutGroup>
 					<div className="flex flex-col lg:flex-row gap-8 w-full">
@@ -160,6 +217,11 @@ export function CheckoutPage() {
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
 						>
+							<SectionHeader
+								title="Plan Details"
+								subheading={planDetailsSubheading}
+							/>
+
 							{isLoading ? (
 								<PlanSelectionCardSkeleton />
 							) : incoming ? (
@@ -170,18 +232,26 @@ export function CheckoutPage() {
 										currency={currency}
 										quantities={quantities}
 										onQuantityChange={handleQuantityChange}
-										outgoingPlanName={outgoing?.[0]?.plan.name}
 									/>
 								))
 							) : null}
 						</motion.div>
 
+						{/* Vertical separator - visible only on desktop */}
+						<Separator orientation="vertical" className="hidden lg:block h-auto self-stretch" />
+						<Separator orientation="horizontal" className="block lg:hidden h-auto self-stretch" />
+
 						{/* Right column - Order summary */}
 						<motion.div
-							className="flex flex-col gap-6 w-full lg:w-1/2"
+							className="flex flex-col gap-4 w-full lg:w-1/2"
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
 						>
+							<SectionHeader
+								title="Order Summary"
+								subheading={orderSummarySubheading}
+							/>
+
 							{/* Order summary */}
 							<motion.div
 								animate={{ opacity: isUpdating ? 0.6 : 1 }}
@@ -190,97 +260,100 @@ export function CheckoutPage() {
 								{isLoading ? (
 									<OrderSummarySkeleton />
 								) : preview ? (
-									<OrderSummary planName={primaryPlanName} preview={preview} />
+									<OrderSummary
+										planName={primaryPlanName}
+										preview={preview}
+										incoming={incoming}
+										outgoing={outgoing}
+									/>
 								) : null}
 							</motion.div>
-
-						{/* Spacer */}
-						<div className="flex-1" />
-
-						{/* Bottom section */}
-						<motion.div
-							className="flex flex-col gap-6"
-							variants={fadeUpVariants}
-							transition={{ ...STANDARD_TRANSITION, delay: 0.15 }}
-						>
-							<Separator />
-
-							{/* Amount summary */}
-							<div className="flex flex-col gap-1">
-								{/* Amount due today */}
-								<div className="flex items-center justify-between">
-									{isLoading ? (
-										<>
-											<Skeleton className="h-5 w-32" />
-											<Skeleton className="h-6 w-16" />
-										</>
-									) : (
-										<>
-											<span className="text-base font-medium text-foreground">
-												Amount due today
-											</span>
-											<span className="text-lg font-medium text-foreground tabular-nums">
-												{formatAmount(total, currency)}
-											</span>
-										</>
-									)}
-								</div>
-
-								{/* Amount next cycle */}
-								{!isLoading && preview?.next_cycle && (
-									<div className="flex items-center justify-between text-sm text-muted-foreground">
-										<span>Total due next cycle</span>
-										<span className="tabular-nums">
-											{formatAmount(preview.next_cycle.total, currency)}
-										</span>
-									</div>
-								)}
-							</div>
-
-							{/* Confirm button */}
-							{isLoading ? (
-								<Skeleton className="h-12 w-full rounded-lg" />
-							) : (
-								<motion.div
-									whileTap={{ scale: 0.98 }}
-									transition={FAST_TRANSITION}
-								>
-									<Button
-										className="w-full h-12 text-base font-medium rounded-lg"
-										onClick={handleConfirm}
-										disabled={confirmMutation.isPending || isUpdating}
-									>
-										{confirmMutation.isPending
-											? "Processing..."
-											: isUpdating
-												? "Updating..."
-												: isSubscription
-													? "Pay and subscribe"
-													: "Pay"}
-									</Button>
-								</motion.div>
-							)}
-
-							{/* Error message */}
-							<AnimatePresence>
-								{confirmMutation.error && (
-									<motion.p
-										className="text-sm text-destructive text-center"
-										initial={{ opacity: 0, y: -5 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -5 }}
-										transition={FAST_TRANSITION}
-									>
-										{confirmMutation.error instanceof Error
-											? confirmMutation.error.message
-											: "Failed to confirm checkout"}
-									</motion.p>
-								)}
-							</AnimatePresence>
-						</motion.div>
 						</motion.div>
 					</div>
 				</LayoutGroup>
+
+				<Separator />
+
+				{/* Bottom section - full width */}
+				<motion.div
+					className="flex flex-col gap-6"
+					variants={fadeUpVariants}
+					transition={{ ...STANDARD_TRANSITION, delay: 0.15 }}
+				>
+
+					{/* Amount summary */}
+					<div className="flex flex-col gap-1">
+						{/* Amount due today */}
+						<div className="flex items-center justify-between">
+							{isLoading ? (
+								<>
+									<Skeleton className="h-5 w-32" />
+									<Skeleton className="h-6 w-16" />
+								</>
+							) : (
+								<>
+									<span className="text-base font-medium text-foreground">
+										Amount due today
+									</span>
+									<span className="text-lg font-medium text-foreground tabular-nums">
+										{formatAmount(total, currency)}
+									</span>
+								</>
+							)}
+						</div>
+
+						{/* Amount next cycle */}
+						{!isLoading && preview?.next_cycle && (
+							<div className="flex items-center justify-between text-sm text-muted-foreground">
+								<span>Total due next cycle</span>
+								<span className="tabular-nums">
+									{formatAmount(preview.next_cycle.total, currency)}
+								</span>
+							</div>
+						)}
+					</div>
+
+					{/* Confirm button */}
+					{isLoading ? (
+						<Skeleton className="h-12 w-full rounded-lg" />
+					) : (
+						<motion.div
+							whileTap={{ scale: 0.98 }}
+							transition={FAST_TRANSITION}
+						>
+							<Button
+								className="w-full h-12 text-base font-medium rounded-lg"
+								onClick={handleConfirm}
+								disabled={confirmMutation.isPending || isUpdating}
+							>
+								{confirmMutation.isPending
+									? "Processing..."
+									: isUpdating
+										? "Updating..."
+										: isSubscription
+											? "Pay and subscribe"
+											: "Pay"}
+							</Button>
+						</motion.div>
+					)}
+
+					{/* Error message */}
+					<AnimatePresence>
+						{confirmMutation.error && (
+							<motion.p
+								className="text-sm text-destructive text-center"
+								initial={{ opacity: 0, y: -5 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: -5 }}
+								transition={FAST_TRANSITION}
+							>
+								{confirmMutation.error instanceof Error
+									? confirmMutation.error.message
+									: "Failed to confirm checkout"}
+							</motion.p>
+						)}
+					</AnimatePresence>
+				</motion.div>
 
 				<motion.div
 					variants={fadeUpVariants}

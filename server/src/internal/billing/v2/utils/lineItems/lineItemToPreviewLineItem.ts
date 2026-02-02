@@ -16,5 +16,6 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		is_base: isBase,
 		total_quantity: line.total_quantity ?? 1,
 		paid_quantity: line.paid_quantity ?? 1,
+		plan_id: line.context.product.id,
 	};
 };

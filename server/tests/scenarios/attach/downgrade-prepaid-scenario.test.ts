@@ -56,6 +56,7 @@ test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid 
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
 		options: proOptions,
+		redirect_mode: "always",
 	});
 	console.log("downgrade preview:", downgradePreview);
 

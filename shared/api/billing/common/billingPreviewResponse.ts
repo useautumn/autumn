@@ -7,6 +7,7 @@ export const PreviewLineItemSchema = z.object({
 	is_base: z.boolean().optional(),
 	total_quantity: z.number(),
 	paid_quantity: z.number(),
+	plan_id: z.string(),
 });
 
 export type PreviewLineItem = z.infer<typeof PreviewLineItemSchema>;

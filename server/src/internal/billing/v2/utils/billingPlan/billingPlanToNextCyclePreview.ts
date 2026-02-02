@@ -22,17 +22,14 @@ export const billingPlanToNextCyclePreview = ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }): BillingPreviewResponse["next_cycle"] => {
-	// 1. Return undefined if billing cycle anchor is now
 	const { billingCycleAnchorMs } = billingContext;
-
-	if (billingCycleAnchorMs === "now") return undefined;
 
 	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
 		autumnBillingPlan: billingPlan.autumn,
 	});
 	const { insertCustomerProducts } = billingPlan.autumn;
 
-	// 2. Get cycle end and if none, return undefined
+	// Get all customer products
 	const allCustomerProducts = [
 		...insertCustomerProducts,
 		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
@@ -50,14 +47,22 @@ export const billingPlanToNextCyclePreview = ({
 
 	const smallestInterval = getSmallestInterval({ prices });
 
+	// Return undefined if there's no recurring interval (not a subscription)
 	if (!smallestInterval) return undefined;
 
+	// Calculate next cycle start
+	// If billing cycle anchor is "now" (new subscription), calculate from current time
+	const anchorMs =
+		billingCycleAnchorMs === "now"
+			? billingContext.currentEpochMs
+			: billingCycleAnchorMs;
+
 	const nextCycleStart = getCycleEnd({
-		anchor: billingCycleAnchorMs,
+		anchor: anchorMs,
 		interval: smallestInterval.interval,
 		intervalCount: smallestInterval.intervalCount,
 		now: billingContext.currentEpochMs,
-		floor: billingCycleAnchorMs,
+		floor: anchorMs,
 	});
 
 	customerProducts = customerProducts.filter((customerProduct) => {
