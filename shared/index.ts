@@ -174,6 +174,8 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels.js"
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 export * from "./models/subModels/subModels.js";
 export * from "./models/subModels/subTable.js";
+// Agent Types (for pricing agent AI)
+export * from "./utils/agentTypes.js";
 export * from "./utils/billingUtils/index.js";
 export * from "./utils/common/formatUtils/formatAmount.js";
 export * from "./utils/common/index.js";

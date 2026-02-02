@@ -192,7 +192,11 @@ export const getFeaturePriceItemDisplay = ({
 		: "";
 
 	// Build price string (e.g., "$0.01")
-	const priceStr = formatTiers({ item, currency, amountFormatOptions }) ?? "";
+	const priceStr =
+		formatTiers({ item, currency, amountFormatOptions }) ??
+		(notNullish(item.price)
+			? formatAmount({ currency, amount: item.price, amountFormatOptions })
+			: "");
 
 	// Build billing unit string (e.g., "credit" or "100 credits")
 	const billingUnits = item.billing_units ?? 1;
