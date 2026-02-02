@@ -2,6 +2,7 @@ import { FadersHorizontalIcon } from "@phosphor-icons/react";
 import type { Column, VisibilityState } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
@@ -124,6 +125,7 @@ export function TableColumnVisibility() {
 		enableColumnVisibility,
 		columnVisibilityStorageKey,
 		columnGroups = [],
+		columnVisibilityInToolbar,
 	} = useTableContext();
 
 	// Load saved state synchronously on mount (for comparison to detect unsaved changes)
@@ -214,25 +216,45 @@ export function TableColumnVisibility() {
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant="skeleton"
-					size="icon"
-					className={cn(
-						"p-0 size-5 pointer-events-auto bg-card",
-						isOpen && "border-primary bg-interactive-secondary-hover",
-					)}
-					onClick={(e) => {
-						e.stopPropagation();
-					}}
-				>
-					<FadersHorizontalIcon
-						size={14}
-						weight="bold"
-						className="text-t3 size-3.5"
-					/>
-				</Button>
+				{columnVisibilityInToolbar ? (
+					<IconButton
+						variant="secondary"
+						className={cn(isOpen && "btn-secondary-active")}
+						icon={
+							<FadersHorizontalIcon
+								size={14}
+								weight="bold"
+								className="text-t3"
+							/>
+						}
+					>
+						Display
+					</IconButton>
+				) : (
+					<Button
+						variant="skeleton"
+						size="icon"
+						className={cn(
+							"p-0 size-5 pointer-events-auto bg-card",
+							isOpen && "border-primary bg-interactive-secondary-hover",
+						)}
+						onClick={(e) => {
+							e.stopPropagation();
+						}}
+					>
+						<FadersHorizontalIcon
+							size={14}
+							weight="bold"
+							className="text-t3 size-3.5"
+						/>
+					</Button>
+				)}
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-[150px] relative">
+			<DropdownMenuContent
+				align="start"
+				side="right"
+				className="min-w-[150px] relative"
+			>
 				{/* Base columns (not in any group) */}
 				{baseColumns.map((column) => (
 					<ColumnCheckboxItem key={column.id} column={column} />

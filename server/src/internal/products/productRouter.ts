@@ -1,4 +1,3 @@
-import express from "express";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
@@ -11,8 +10,6 @@ import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
 
 import { handleUpdatePlan } from "./handlers/handleUpdateProduct/handleUpdatePlan.js";
-
-export const expressProductRouter = express.Router();
 
 export const honoProductBetaRouter = new Hono<HonoEnv>();
 honoProductBetaRouter.get("", ...handleListPlans);

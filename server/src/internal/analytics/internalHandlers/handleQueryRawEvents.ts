@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { AnalyticsService } from "../AnalyticsService.js";
+import { eventActions } from "../actions/index.js";
 
 const QueryRawEventsSchema = z.object({
 	interval: z.string().nullish(),
@@ -47,14 +48,14 @@ export const handleQueryRawEvents = createRoute({
 			}
 		}
 
-		const events = await AnalyticsService.getRawEvents({
+		const events = await eventActions.listRawEvents({
 			ctx,
 			params: {
-				customer_id: customer?.id,
-				interval,
+				customer_id: customer?.id ?? undefined,
+				interval: interval ?? undefined,
+				customer,
+				aggregateAll,
 			},
-			customer,
-			aggregateAll,
 		});
 
 		return c.json({

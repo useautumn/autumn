@@ -2,6 +2,8 @@ import type { BinSizeEnum, FullCustomer, RangeEnum } from "@autumn/shared";
 
 export type ClickHouseResult<T = Record<string, string | number>> = {
 	data: T[];
+	meta: { name: string }[];
+	rows: number;
 };
 
 export interface RawEventFromClickHouse {

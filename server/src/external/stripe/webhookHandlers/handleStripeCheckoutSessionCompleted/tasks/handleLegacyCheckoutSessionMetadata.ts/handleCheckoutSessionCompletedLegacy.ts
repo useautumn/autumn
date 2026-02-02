@@ -8,6 +8,7 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext.js";
+import { handleStandaloneSetupCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleLegacyCheckoutSessionMetadata.ts/handleStandaloneSetupCheckout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -35,7 +36,23 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 
 	const { metadata, stripeCheckoutSession, stripeSubscription } =
 		checkoutContext;
-	if (metadata?.type !== MetadataType.CheckoutSessionCompleted) return null;
+
+	if (!metadata) {
+		if (checkoutContext.stripeCheckoutSession.mode === "setup") {
+			logger.info(
+				"checkout.completed: setup mode without metadata, handling standalone setup",
+			);
+			await handleStandaloneSetupCheckout({
+				ctx,
+				checkoutSession: checkoutContext.stripeCheckoutSession,
+			});
+			return null;
+		}
+		logger.info("checkout.completed: metadata not found, skipping");
+		return null;
+	}
+
+	if (metadata.type !== MetadataType.CheckoutSessionCompleted) return null;
 
 	// Get options
 	const stripeCli = createStripeCli({ org, env });

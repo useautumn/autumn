@@ -1,0 +1,12 @@
+DESCRIPTION >
+    Aggregates distinct event names with counts per org/env.
+    Used for listing available event names sorted by popularity.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `event_count` SimpleAggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_SORTING_KEY "org_id, env, event_name"

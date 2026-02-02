@@ -93,16 +93,17 @@ const logResponse = async ({
 			extras: ctx.extraLogs,
 		});
 
-		// Try to extract response body if it's JSON
+		// Only clone and log response body for /v1 API routes (saves memory on webhooks, health checks, etc.)
 		let responseBody: Record<string, unknown> | null = null;
-		const contentType = c.res.headers.get("content-type");
-		if (contentType?.includes("application/json")) {
-			try {
-				// Clone response to read body without consuming it
-				const clonedResponse = c.res.clone();
-				responseBody = await clonedResponse.json();
-			} catch (_error) {
-				// Response might not be JSON or already consumed
+		if (c.req.path.includes("/v1")) {
+			const contentType = c.res.headers.get("content-type");
+			if (contentType?.includes("application/json")) {
+				try {
+					const clonedResponse = c.res.clone();
+					responseBody = await clonedResponse.json();
+				} catch (_error) {
+					// Response might not be JSON or already consumed
+				}
 			}
 		}
 

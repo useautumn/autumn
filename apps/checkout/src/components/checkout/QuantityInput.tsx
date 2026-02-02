@@ -1,5 +1,5 @@
 import { Minus, Plus } from "@phosphor-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useRef, useState } from "react";
 import { FAST_TRANSITION } from "@/lib/animations";
 
@@ -21,12 +21,10 @@ export function QuantityInput({
 	disabled = false,
 }: QuantityInputProps) {
 	const [inputValue, setInputValue] = useState(value.toString());
-	const [direction, setDirection] = useState<"up" | "down" | null>(null);
 	const prevValue = useRef(value);
 
 	const handleDecrement = () => {
 		const newValue = Math.max(min, value - step);
-		setDirection("down");
 		onChange(newValue);
 		setInputValue(newValue.toString());
 		prevValue.current = newValue;
@@ -34,7 +32,6 @@ export function QuantityInput({
 
 	const handleIncrement = () => {
 		const newValue = Math.min(max, value + step);
-		setDirection("up");
 		onChange(newValue);
 		setInputValue(newValue.toString());
 		prevValue.current = newValue;
@@ -46,7 +43,6 @@ export function QuantityInput({
 
 		const parsed = Number.parseInt(raw, 10);
 		if (!Number.isNaN(parsed) && parsed >= min && parsed <= max) {
-			setDirection(parsed > prevValue.current ? "up" : "down");
 			onChange(parsed);
 			prevValue.current = parsed;
 		}
@@ -88,34 +84,18 @@ export function QuantityInput({
 				<Minus className="h-3.5 w-3.5" weight="bold" />
 			</motion.button>
 
-			{/* Number display with slide animation */}
+			{/* Number display */}
 			<div className="w-16 h-8 flex items-center justify-center overflow-hidden relative">
-				<AnimatePresence mode="popLayout" initial={false}>
-					<motion.input
-						key={value}
-						type="text"
-						inputMode="numeric"
-						pattern="[0-9]*"
-						className="w-full h-full text-center text-sm font-medium tabular-nums text-foreground bg-transparent border-none focus:outline-none focus:ring-0 disabled:opacity-50"
-						value={inputValue}
-						onChange={handleInputChange}
-						onBlur={handleBlur}
-						disabled={disabled}
-						initial={{
-							y: direction === "up" ? 10 : direction === "down" ? -10 : 0,
-							opacity: 0,
-						}}
-						animate={{
-							y: 0,
-							opacity: 1,
-						}}
-						exit={{
-							y: direction === "up" ? -10 : direction === "down" ? 10 : 0,
-							opacity: 0,
-						}}
-						transition={FAST_TRANSITION}
-					/>
-				</AnimatePresence>
+				<input
+					type="text"
+					inputMode="numeric"
+					pattern="[0-9]*"
+					className="w-full h-full text-center text-sm font-medium tabular-nums text-foreground bg-transparent border-none focus:outline-none focus:ring-0 disabled:opacity-50"
+					value={inputValue}
+					onChange={handleInputChange}
+					onBlur={handleBlur}
+					disabled={disabled}
+				/>
 			</div>
 
 			{/* Increment button */}
