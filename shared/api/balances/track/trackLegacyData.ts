@@ -4,4 +4,4 @@ export const TrackLegacyDataSchema = z.object({
 	feature_id: z.string(),
 });
 
-type TrackLegacyData = z.infer<typeof TrackLegacyDataSchema>;
+export type TrackLegacyData = z.infer<typeof TrackLegacyDataSchema>;

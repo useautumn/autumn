@@ -1,8 +1,9 @@
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { SuccessResponseSchema } from "../../../common/commonResponses.js";
 import { CreateBalanceParamsSchema } from "../../../models.js";
 import { xCodeSamplesLegacy } from "../../../utils/xCodeSamplesLegacy.js";
 
-export const balancesOpenApi = {
+export const balancesOpenApi: ZodOpenApiPathsObject = {
 	"/balances/create": {
 		post: {
 			summary: "Create Balance",
