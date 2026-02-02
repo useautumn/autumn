@@ -117,12 +117,6 @@ export const handleUpdatePlan = createRoute({
 			curProduct: fullProduct,
 		});
 
-		validateDefaultFlag({
-			ctx,
-			body: v1_2Body,
-			curProduct: fullProduct,
-		});
-
 		await handleUpdateProductDetails({
 			db,
 			curProduct: fullProduct,
