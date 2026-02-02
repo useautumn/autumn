@@ -4,6 +4,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	CHECK_RATE_LIMIT,
 	GENERAL_RATE_LIMIT,
+	LIST_PRODUCTS_RATE_LIMIT,
 	RateLimitType,
 	TRACK_RATE_LIMIT,
 } from "../external/upstash/rateLimitConstants";
@@ -63,6 +64,13 @@ const attachRateLimiter = rateLimiter({
 	keyGenerator: getRateLimitKeyFromContext,
 });
 
+const listProductsLimiter = rateLimiter({
+	windowMs: 1000,
+	limit: LIST_PRODUCTS_RATE_LIMIT,
+	standardHeaders: "draft-6",
+	keyGenerator: getRateLimitKeyFromContext,
+});
+
 const getLimiterForType = (type: RateLimitType) => {
 	switch (type) {
 		case RateLimitType.General:
@@ -75,6 +83,8 @@ const getLimiterForType = (type: RateLimitType) => {
 			return eventsLimiter;
 		case RateLimitType.Attach:
 			return attachRateLimiter;
+		case RateLimitType.ListProducts:
+			return listProductsLimiter;
 	}
 };
 

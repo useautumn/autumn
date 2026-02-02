@@ -9,6 +9,7 @@ import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
 	CHECK_RATE_LIMIT,
 	GENERAL_RATE_LIMIT,
+	LIST_PRODUCTS_RATE_LIMIT,
 	RateLimitType,
 	TRACK_RATE_LIMIT,
 } from "./rateLimitConstants";
@@ -77,6 +78,29 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			url: "/v1/attach",
 		},
 	];
+
+	const listProductsPatterns = [
+		{
+			method: "GET",
+			url: "/v1/products",
+		},
+		{
+			method: "GET",
+			url: "/v1/products_beta",
+		},
+		{
+			method: "GET",
+			url: "/v1/plans",
+		},
+	];
+
+	if (
+		listProductsPatterns.some((pattern) =>
+			matchRoute({ url: path, method, pattern }),
+		)
+	) {
+		return RateLimitType.ListProducts;
+	}
 
 	if (
 		attachPatterns.some((pattern) => matchRoute({ url: path, method, pattern }))
@@ -149,6 +173,9 @@ export const getRateLimitKey = async ({
 			return `attach:${orgId}:${env}:${customerId}`;
 		}
 
+		case RateLimitType.ListProducts:
+			return `list_products:${orgId}:${env}`;
+
 		case RateLimitType.General:
 			return `general:${orgId}:${env}`;
 	}
@@ -169,6 +196,11 @@ const getRateLimitConfig = ({
 			return {
 				windowMs: 1000, // 1 second window
 				limit: CHECK_RATE_LIMIT,
+			};
+		case RateLimitType.ListProducts:
+			return {
+				windowMs: 1000, // 1 second window
+				limit: LIST_PRODUCTS_RATE_LIMIT,
 			};
 		case RateLimitType.General:
 			return {
