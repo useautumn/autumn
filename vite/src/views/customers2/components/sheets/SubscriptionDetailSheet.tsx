@@ -10,6 +10,7 @@ import {
 import {
 	ArrowSquareOutIcon,
 	CalendarBlankIcon,
+	CreditCardIcon,
 	CubeIcon,
 	GitBranchIcon,
 	HashIcon,
@@ -23,6 +24,7 @@ import { format } from "date-fns";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -211,8 +213,8 @@ export function SubscriptionDetailSheet() {
 				)}
 				{/* Product Information */}
 				<SheetSection withSeparator={true}>
-					<div className="flex gap-2 justify-between">
-						<div className="space-y-3">
+					<div className="flex gap-2 justify-between overflow-hidden">
+						<div className="space-y-3 min-w-0 overflow-hidden">
 							<InfoRow
 								icon={<CubeIcon size={16} weight="duotone" />}
 								label="Plan"
@@ -235,6 +237,32 @@ export function SubscriptionDetailSheet() {
 									label="Quantity"
 									value={cusProduct.quantity.toString()}
 								/>
+							)}
+							{cusProduct.subscription_ids?.length > 0 && (
+								<div className="flex items-center gap-2 min-w-0 overflow-hidden">
+									<div className="text-t4/60 shrink-0">
+										<CreditCardIcon size={16} />
+									</div>
+									<div className="flex min-w-0 items-center overflow-hidden">
+										<div className="text-t3 text-sm font-medium w-20 shrink-0 whitespace-nowrap">
+											Sub ID
+										</div>
+										<div className="min-w-0 overflow-hidden">
+											<MiniCopyButton
+												text={cusProduct.subscription_ids[0]}
+												innerClassName="text-sm text-t1 font-mono truncate"
+											/>
+										</div>
+									</div>
+									<IconButton
+										variant="secondary"
+										onClick={handleViewStripe}
+										icon={<ArrowSquareOutIcon size={16} weight="duotone" />}
+										className="shrink-0"
+									>
+										View Stripe
+									</IconButton>
+								</div>
 							)}
 						</div>
 					</div>
@@ -259,64 +287,53 @@ export function SubscriptionDetailSheet() {
 				)}
 				{/* Status & Dates */}
 				<SheetSection>
-					<div className="flex gap-2 justify-between">
-						<div className="space-y-3">
+					<div className="space-y-3">
+						<InfoRow
+							icon={<HeartbeatIcon size={16} weight="duotone" />}
+							label="Status"
+							value={
+								<CustomerProductsStatus
+									status={cusProduct.status}
+									canceled={cusProduct.canceled}
+									canceled_at={cusProduct.canceled_at ?? undefined}
+									trialing={
+										isCustomerProductTrialing(cusProduct, {
+											nowMs: Date.now(),
+										}) || false
+									}
+									trial_ends_at={cusProduct.trial_ends_at ?? undefined}
+								/>
+							}
+						/>
+
+						<InfoRow
+							icon={<CalendarBlankIcon size={16} weight="duotone" />}
+							label="Started"
+							value={formatDate(cusProduct.starts_at)}
+						/>
+
+						{cusProduct.trial_ends_at && (
 							<InfoRow
-								icon={<HeartbeatIcon size={16} weight="duotone" />}
-								label="Status"
-								value={
-									<CustomerProductsStatus
-										status={cusProduct.status}
-										canceled={cusProduct.canceled}
-										canceled_at={cusProduct.canceled_at ?? undefined}
-										trialing={
-											isCustomerProductTrialing(cusProduct, {
-												nowMs: Date.now(),
-											}) || false
-										}
-										trial_ends_at={cusProduct.trial_ends_at ?? undefined}
-									/>
-								}
+								icon={<TimerIcon size={16} weight="duotone" />}
+								label="Trial Ends"
+								value={formatDate(cusProduct.trial_ends_at)}
 							/>
+						)}
 
+						{cusProduct.canceled_at && (
 							<InfoRow
-								icon={<CalendarBlankIcon size={16} weight="duotone" />}
-								label="Started"
-								value={formatDate(cusProduct.starts_at)}
+								icon={<XCircle size={16} weight="duotone" />}
+								label="Canceled"
+								value={formatDate(cusProduct.canceled_at)}
 							/>
+						)}
 
-							{cusProduct.trial_ends_at && (
-								<InfoRow
-									icon={<TimerIcon size={16} weight="duotone" />}
-									label="Trial Ends"
-									value={formatDate(cusProduct.trial_ends_at)}
-								/>
-							)}
-
-							{cusProduct.canceled_at && (
-								<InfoRow
-									icon={<XCircle size={16} weight="duotone" />}
-									label="Canceled"
-									value={formatDate(cusProduct.canceled_at)}
-								/>
-							)}
-
-							{cusProduct.ended_at && (
-								<InfoRow
-									icon={<XCircle size={16} weight="duotone" />}
-									label="Ended"
-									value={formatDate(cusProduct.ended_at)}
-								/>
-							)}
-						</div>
-						{cusProduct.subscription_ids?.length > 0 && (
-							<IconButton
-								variant="secondary"
-								onClick={handleViewStripe}
-								icon={<ArrowSquareOutIcon size={16} weight="duotone" />}
-							>
-								View Stripe
-							</IconButton>
+						{cusProduct.ended_at && (
+							<InfoRow
+								icon={<XCircle size={16} weight="duotone" />}
+								label="Ended"
+								value={formatDate(cusProduct.ended_at)}
+							/>
 						)}
 					</div>
 				</SheetSection>
@@ -338,7 +355,7 @@ export function SubscriptionDetailSheet() {
 								setSheet({ type: "subscription-uncancel", itemId })
 							}
 						>
-							Uncancel Subscription
+							Manage Cancellation
 						</Button>
 					) : (
 						<Button

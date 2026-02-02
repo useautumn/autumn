@@ -1,5 +1,7 @@
 import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
+import { BillingBehaviorSection } from "@/components/forms/cancel-subscription/components/BillingBehaviorSection";
+import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { UncancelFooter } from "@/components/forms/uncancel-subscription/components/UncancelFooter";
 import { UncancelPreviewSection } from "@/components/forms/uncancel-subscription/components/UncancelPreviewSection";
 import {
@@ -19,15 +21,21 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent() {
-	const { formContext } = useUpdateSubscriptionFormContext();
+	const { formContext, formValues } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
+
+	const isCancelMode = formValues.cancelAction === "cancel_immediately";
 
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
 				<SheetHeader
-					title="Uncancel Subscription"
-					description={`Resume ${customerProduct.product.name} for this customer`}
+					title={isCancelMode ? "Cancel Subscription" : "Uncancel Subscription"}
+					description={
+						isCancelMode
+							? `Cancel ${customerProduct.product.name} immediately`
+							: `Resume ${customerProduct.product.name} for this customer`
+					}
 					breadcrumbs={[
 						{
 							name: customerProduct.product.name,
@@ -37,15 +45,18 @@ function SheetContent() {
 					itemId={customerProduct.id}
 				/>
 
-				<div className="px-4 pt-4">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This subscription is scheduled to cancel on{" "}
-						{formatUnixToDateTime(customerProduct.canceled_at).date}.
-						Uncancelling will resume normal billing.
-					</InfoBox>
-				</div>
+				{!isCancelMode && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This subscription is scheduled to cancel on{" "}
+							{formatUnixToDateTime(customerProduct.canceled_at).date}.
+							Uncancelling will resume normal billing.
+						</InfoBox>
+					</div>
+				)}
 
-				<UncancelPreviewSection />
+				<BillingBehaviorSection />
+				{isCancelMode ? <CancelPreviewSection /> : <UncancelPreviewSection />}
 				<UncancelFooter />
 			</div>
 		</LayoutGroup>

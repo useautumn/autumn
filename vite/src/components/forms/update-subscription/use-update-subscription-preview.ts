@@ -63,15 +63,21 @@ export function useUpdateSubscriptionPreview({
 	);
 
 	const [debouncedQueryKey, setDebouncedQueryKey] = useState(queryKeyDeps);
+	const [isDebouncing, setIsDebouncing] = useState(false);
 
 	useEffect(() => {
+		if (queryKeyDeps === debouncedQueryKey) {
+			setIsDebouncing(false);
+			return;
+		}
+
+		setIsDebouncing(true);
 		const timer = setTimeout(() => {
 			setDebouncedQueryKey(queryKeyDeps);
+			setIsDebouncing(false);
 		}, 300);
 		return () => clearTimeout(timer);
-	}, [queryKeyDeps]);
-
-	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
+	}, [queryKeyDeps, debouncedQueryKey]);
 
 	const query = useQuery({
 		queryKey: ["update-subscription-preview", debouncedQueryKey],
