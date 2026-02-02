@@ -17,7 +17,7 @@ export const handleExternalListEvents = createRoute({
 				: [validatedParams.feature_id]
 			: undefined;
 
-		const result = await eventActions.listEventsForApi({
+		const result = await eventActions.listEvents({
 			ctx,
 			params: {
 				customer_id: validatedParams.customer_id,
