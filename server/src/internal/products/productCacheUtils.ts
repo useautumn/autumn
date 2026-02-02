@@ -1,7 +1,10 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils";
+import {
+	getConfiguredRegions,
+	getRegionalRedis,
+	redis,
+} from "@/external/redis/initRedis";
 
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
@@ -21,7 +24,11 @@ const hashQueryParams = (params: Record<string, unknown>): string => {
 	return crypto.createHash("md5").update(str).digest("hex").slice(0, 12);
 };
 
-/** Builds the base cache key prefix for products list (without query hash) */
+/**
+ * Builds the base cache key prefix for products list (without query hash).
+ * Uses Redis hash tag {orgId} to ensure all keys for the same org hash to the same slot,
+ * enabling multi-key operations (like DEL) in Redis Cluster.
+ */
 export const buildProductsCacheKeyPrefix = ({
 	orgId,
 	env,
@@ -29,7 +36,7 @@ export const buildProductsCacheKeyPrefix = ({
 	orgId: string;
 	env: AppEnv;
 }) => {
-	return `${PRODUCTS_CACHE_PREFIX}:${orgId}:${env}`;
+	return `${PRODUCTS_CACHE_PREFIX}:{${orgId}}:${env}`;
 };
 
 /** Builds the cache key for products list with optional query params */
@@ -47,35 +54,54 @@ export const buildProductsCacheKey = ({
 	return `${prefix}:${hash}`;
 };
 
-/** Invalidates all products cache entries for an org/env (wildcard delete) */
+/** All possible archived query param values that can be cached */
+const ARCHIVED_VARIANTS = [undefined, false, true] as const;
+
+/** Invalidates all products cache entries for an org/env across ALL regions */
 export const invalidateProductsCache = async ({
 	orgId,
 	env,
 }: {
 	orgId: string;
 	env: AppEnv;
-}) => {
-	const pattern = `${buildProductsCacheKeyPrefix({ orgId, env })}:*`;
+}): Promise<void> => {
+	if (redis.status !== "ready") return;
 
-	await tryRedisWrite(async () => {
-		// Use SCAN to find all matching keys, then delete them
-		const keys: string[] = [];
-		let cursor = "0";
+	// Build all possible cache keys (deterministic based on archived param variants)
+	const keysToDelete = ARCHIVED_VARIANTS.map((archived) =>
+		buildProductsCacheKey({
+			orgId,
+			env,
+			queryParams: archived !== undefined ? { archived } : undefined,
+		}),
+	);
 
-		do {
-			const [newCursor, foundKeys] = await redis.scan(
-				cursor,
-				"MATCH",
-				pattern,
-				"COUNT",
-				100,
+	const regions = getConfiguredRegions();
+
+	// Delete from all regions in parallel
+	const deletePromises = regions.map(async (region) => {
+		try {
+			const regionalRedis = getRegionalRedis(region);
+
+			if (regionalRedis.status !== "ready") {
+				console.warn(`[invalidateProductsCache] ${region}: not_ready`);
+				return { region, deleted: 0 };
+			}
+
+			const deleted = await regionalRedis.del(...keysToDelete);
+
+			console.info(
+				`[invalidateProductsCache] ${region}: deleted ${deleted} keys, org: ${orgId}, env: ${env}`,
 			);
-			cursor = newCursor;
-			keys.push(...foundKeys);
-		} while (cursor !== "0");
 
-		if (keys.length > 0) {
-			await redis.del(...keys);
+			return { region, deleted };
+		} catch (error) {
+			console.error(
+				`[invalidateProductsCache] ${region}: error, org: ${orgId}, env: ${env}, error: ${error}`,
+			);
+			return { region, deleted: 0 };
 		}
 	});
+
+	await Promise.all(deletePromises);
 };

@@ -15,6 +15,7 @@ import { createFeature } from "@/internal/features/featureActions/createFeature.
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/products/handlers/productActions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { buildPreviewOrgSlug } from "./handleSetupPreviewOrg.js";
 
 const SyncPreviewPricingSchema = z.object({
@@ -155,6 +156,11 @@ export const handleSyncPreviewPricing = createRoute({
 				}),
 			),
 		);
+
+		await invalidateProductsCache({
+			orgId: previewOrg.id,
+			env: AppEnv.Sandbox,
+		});
 
 		ctx.logger.debug(
 			`[Preview Sync] Summary: ${body.features.length} features, ${body.products.length} products`,

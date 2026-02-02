@@ -164,6 +164,8 @@ export const handleUpdatePlan = createRoute({
 				return c.json(newProduct);
 			}
 
+			// Product details (name, group, etc.) may have changed via handleUpdateProductDetails
+			await invalidateProductsCache({ orgId: org.id, env });
 			return c.json(fullProduct);
 		}
 
