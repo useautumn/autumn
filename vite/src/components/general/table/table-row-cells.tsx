@@ -43,13 +43,12 @@ function TableRowCellsInner<T>({
 					cell.column.columnDef.cell,
 					cell.getContext(),
 				);
-				const cellStyle = flexibleTableColumns
-					? {
-							width: `${cell.column.getSize()}px`,
-							maxWidth: `${cell.column.getSize()}px`,
-							minWidth: `${cell.column.getSize()}px`,
-						}
-					: { width: `${cell.column.getSize()}px` };
+			const cellStyle = flexibleTableColumns
+				? {
+						width: `${cell.column.getSize()}px`,
+						maxWidth: `${cell.column.getSize()}px`,
+					}
+				: { width: `${cell.column.getSize()}px` };
 
 				return (
 					<TableCell
