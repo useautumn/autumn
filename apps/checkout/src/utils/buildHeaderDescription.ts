@@ -3,9 +3,56 @@ import type {
 	BillingPreviewResponse,
 	CheckoutChange,
 	CheckoutEntity,
+	LineItemDiscount,
 } from "@autumn/shared";
 import { format } from "date-fns";
 import { formatAmount } from "./formatUtils";
+
+/**
+ * Builds a phrase describing applied discounts.
+ * Examples: "Discount code 20OFF applied for 20% off.", "Discount codes 20OFF (20% off) and SAVE10 ($10 off) applied."
+ */
+function buildDiscountPhrase({
+	lineItems,
+	currency,
+}: {
+	lineItems: BillingPreviewResponse["line_items"];
+	currency: string;
+}): string {
+	// Collect all discounts from line items
+	const allDiscounts = lineItems.flatMap((item) => item.discounts);
+	if (allDiscounts.length === 0) return "";
+
+	// Deduplicate by couponName (or stripeCouponId as fallback)
+	const uniqueDiscounts = new Map<string, LineItemDiscount>();
+	for (const discount of allDiscounts) {
+		const key = discount.couponName || discount.stripeCouponId || "unknown";
+		if (!uniqueDiscounts.has(key)) {
+			uniqueDiscounts.set(key, discount);
+		}
+	}
+
+	const discountList = Array.from(uniqueDiscounts.values());
+	if (discountList.length === 0) return "";
+
+	// Format each discount
+	const formatDiscount = (d: LineItemDiscount): string => {
+		const name = d.couponName || d.stripeCouponId || "Discount";
+		if (d.percentOff) {
+			return `${name} applied for ${d.percentOff}% off`;
+		}
+		return `${name} applied for ${formatAmount(d.amountOff, currency)} off`;
+	};
+
+	if (discountList.length === 1) {
+		return `Discount code ${formatDiscount(discountList[0])}.`;
+	}
+
+	// Multiple discounts
+	const formatted = discountList.map(formatDiscount);
+	const lastDiscount = formatted.pop();
+	return `Discount codes ${formatted.join(", ")} and ${lastDiscount}.`;
+}
 
 /**
  * Builds the action phrase based on the checkout scenario.
@@ -85,6 +132,9 @@ export function buildHeaderDescription({
 	const isScheduledChange =
 		line_items.length === 0 && total === 0 && next_cycle;
 
+	// Build discount phrase
+	const discountPhrase = buildDiscountPhrase({ lineItems: line_items, currency });
+
 	// Build the action phrase
 	let action = buildActionPhrase({
 		scenario,
@@ -106,7 +156,7 @@ export function buildHeaderDescription({
 	// Handle negative amounts (refund/credit from previous plan)
 	if (total < 0) {
 		const creditAmount = formatAmount(Math.abs(total), currency);
-		let sentence = `${action}. You'll receive a ${creditAmount} credit for unused time on your previous plan.`;
+		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit for unused time on your previous plan.`;
 
 		if (hasActiveTrial && next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
@@ -125,15 +175,15 @@ export function buildHeaderDescription({
 	if (hasActiveTrial && next_cycle) {
 		const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 		const nextAmount = formatAmount(next_cycle.total, currency);
-		return `${action}. Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
+		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 	}
 
 	// Handle scheduled changes (no immediate charges)
 	if (isScheduledChange) {
 		const effectiveDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
-		return `${action} with ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
+		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
 	}
 
 	// Standard format
-	return `${action}. ${formatAmount(total, currency)} due today.`;
+	return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today.`;
 }

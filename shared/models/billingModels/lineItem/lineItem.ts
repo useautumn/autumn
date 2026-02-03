@@ -5,6 +5,7 @@ export const LineItemDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.number().optional(),
 	stripeCouponId: z.string().optional(),
+	couponName: z.string().optional(),
 });
 
 export const LineItemSchema = z

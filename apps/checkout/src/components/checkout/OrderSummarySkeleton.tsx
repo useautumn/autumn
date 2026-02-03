@@ -5,16 +5,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 function PlanGroupSectionSkeleton() {
 	return (
 		<div>
-			{/* Header */}
-			<div className="flex items-center justify-between px-3 py-2 border-b bg-background/50">
+		{/* Header */}
+		<div className="flex items-center justify-between px-3 py-2.5 border-b bg-background/50">
 				<div className="flex items-center gap-2">
 					<Skeleton className="h-4 w-4" />
 					<Skeleton className="h-4 w-24" />
 				</div>
 				<Skeleton className="h-4 w-16" />
 			</div>
-			{/* Line item */}
-			<div className="px-3 py-2.5">
+		{/* Line item */}
+		<div className="px-3 py-2">
 				<div className="flex items-center justify-between">
 					<Skeleton className="h-4 w-20" />
 					<Skeleton className="h-4 w-12" />
