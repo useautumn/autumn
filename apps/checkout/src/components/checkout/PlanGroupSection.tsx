@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
 import { FAST_TRANSITION } from "@/lib/animations";
 import { cn } from "@/lib/utils";
-import { formatAmount } from "@/utils/formatUtils";
+import { formatAmount, formatPeriodRange } from "@/utils/formatUtils";
 
 type PlanChangeType = "incoming" | "outgoing";
 
@@ -23,7 +23,6 @@ export function PlanGroupSection({
 	currency,
 	type,
 }: PlanGroupSectionProps) {
-	const Icon = type === "outgoing" ? Minus : Plus;
 	const groupTotal = items.reduce((sum, item) => sum + item.amount, 0);
 
 	// Sort items so base price appears first
@@ -33,27 +32,32 @@ export function PlanGroupSection({
 		return 0;
 	});
 
+	// Extract group-level effective period from the first item with one
+	// (typically all items in a group share the same billing period)
+	const groupEffectivePeriod = items.find(
+		(item) => item.effective_period,
+	)?.effective_period;
+
 	return (
 		<div className="overflow-hidden">
 			{/* Plan header */}
-			<div className="flex items-center justify-between gap-4 px-3 py-2 border-b bg-background/50">
-				<div className="flex items-center gap-2 min-w-0">
-					<Icon
-						className={cn(
-							"h-4 w-4 shrink-0",
-							type === "outgoing"
-								? "dark:text-red-400/60 text-red-500"
-								: "dark:text-emerald-400/60 text-emerald-500"
-						)}
-						weight="bold"
-					/>
-					<span className="text-sm font-medium text-foreground truncate">
-						{planName}
+			<div className="px-3 py-2 border-b bg-background/50">
+				<div className="flex items-center justify-between gap-4">
+					<div className="flex items-center gap-2 min-w-0">
+						<span className="text-sm font-medium text-foreground truncate">
+							{planName}
+						</span>
+					</div>
+					<span className="text-sm font-medium tabular-nums text-foreground shrink-0">
+						{formatAmount(groupTotal, currency)}
 					</span>
 				</div>
-				<span className="text-sm font-medium tabular-nums text-foreground shrink-0">
-					{formatAmount(groupTotal, currency)}
-				</span>
+				{/* Group-level proration period */}
+				{groupEffectivePeriod && (
+					<p className="text-xs text-muted-foreground/70 mt-0.5">
+						{formatPeriodRange(groupEffectivePeriod.start, groupEffectivePeriod.end)}
+					</p>
+				)}
 			</div>
 
 			{/* Line items for this plan */}

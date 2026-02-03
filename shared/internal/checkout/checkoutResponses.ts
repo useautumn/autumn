@@ -57,6 +57,7 @@ export const CheckoutChangeSchema = z.object({
  * GET /checkouts/:checkout_id response
  */
 export const GetCheckoutResponseSchema = z.object({
+	env: z.string(),
 	preview: BillingPreviewResponseSchema,
 	org: CheckoutOrgSchema,
 	customer: CheckoutCustomerSchema,

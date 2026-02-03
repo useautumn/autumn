@@ -9,6 +9,12 @@ export const PreviewLineItemSchema = z.object({
 	paid_quantity: z.number(),
 	plan_id: z.string(),
 	deferred_for_trial: z.boolean().optional(),
+	effective_period: z
+		.object({
+			start: z.number(),
+			end: z.number(),
+		})
+		.optional(),
 });
 
 export type PreviewLineItem = z.infer<typeof PreviewLineItemSchema>;

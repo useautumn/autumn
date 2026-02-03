@@ -84,6 +84,7 @@ export const handlePreviewCheckout = createRoute({
 		});
 
 		const response: GetCheckoutResponse = {
+			env: checkout.env,
 			preview,
 			org: {
 				name: ctx.org.name,

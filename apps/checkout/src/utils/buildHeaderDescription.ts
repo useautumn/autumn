@@ -109,11 +109,11 @@ export function buildHeaderDescription({
 		let sentence = `${action}. You'll receive a ${creditAmount} credit for unused time on your previous plan.`;
 
 		if (hasActiveTrial && next_cycle) {
-			const nextDate = format(new Date(next_cycle.starts_at), "d MMM yyyy");
+			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 			const nextAmount = formatAmount(next_cycle.total, currency);
 			sentence += ` Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 		} else if (next_cycle) {
-			const nextDate = format(new Date(next_cycle.starts_at), "d MMM yyyy");
+			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 			const nextAmount = formatAmount(next_cycle.total, currency);
 			sentence += ` Your next charge of ${nextAmount} is on ${nextDate}.`;
 		}
@@ -123,14 +123,14 @@ export function buildHeaderDescription({
 
 	// Handle free trial (no immediate payment, trial starts)
 	if (hasActiveTrial && next_cycle) {
-		const nextDate = format(new Date(next_cycle.starts_at), "d MMM yyyy");
+		const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 		const nextAmount = formatAmount(next_cycle.total, currency);
 		return `${action}. Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 	}
 
 	// Handle scheduled changes (no immediate charges)
 	if (isScheduledChange) {
-		const effectiveDate = format(new Date(next_cycle.starts_at), "d MMM yyyy");
+		const effectiveDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 		return `${action} with ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
 	}
 

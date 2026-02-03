@@ -177,7 +177,7 @@ export function CheckoutPage() {
 	}
 
 	// Main checkout view - same structure for loading and loaded states
-	const { preview, incoming, outgoing, org } = checkoutData ?? {};
+	const { env, preview, incoming, outgoing, org } = checkoutData ?? {};
 	const currency = preview?.currency ?? "usd";
 	const total = preview?.total ?? 0;
 	const isUpdating = previewMutation.isPending;
@@ -191,7 +191,7 @@ export function CheckoutPage() {
 	const trialEndDate = incoming?.[0]?.period_end;
 
 	return (
-		<CheckoutBackground>
+		<CheckoutBackground isSandbox={env === "sandbox"}>
 			<motion.div
 				className="flex flex-col gap-8 w-full"
 				initial="initial"
@@ -303,7 +303,7 @@ export function CheckoutPage() {
 								{preview?.next_cycle && (
 									<div className="flex items-center justify-between text-sm text-muted-foreground">
 										<span>
-											{hasActiveTrial && preview.next_cycle.starts_at
+											{preview.next_cycle.starts_at
 												? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
 												: "Total due next cycle"}
 										</span>
