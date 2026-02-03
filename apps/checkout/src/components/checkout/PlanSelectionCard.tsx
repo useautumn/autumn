@@ -1,11 +1,11 @@
 import type { ApiPlanFeature, CheckoutChange } from "@autumn/shared";
 import { Check, Package } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { AnimatedCard } from "@/components/motion/animated-layout";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
 	FAST_TRANSITION,
+	LAYOUT_TRANSITION,
 	STANDARD_TRANSITION,
 	listContainerVariants,
 	listItemVariants,
@@ -96,7 +96,11 @@ export function PlanSelectionCard({
 	const showIncludedFeatures = !hasPricedFeatures && hasIncludedFeatures;
 
 	return (
-		<AnimatedCard layoutId="plan-selection-card">
+		<motion.div
+			layout
+			layoutId={`plan-selection-${plan.id}`}
+			transition={{ layout: LAYOUT_TRANSITION }}
+		>
 			<Card className="py-0 gap-0">
 				<CardBackground>
 				{/* Plan header */}
@@ -142,7 +146,7 @@ export function PlanSelectionCard({
 										key={feature.feature_id}
 										variants={listItemVariants}
 										layout
-										transition={STANDARD_TRANSITION}
+										transition={{ layout: LAYOUT_TRANSITION }}
 									>
 										{index > 0 && (
 											<div className="px-3">
@@ -222,7 +226,7 @@ export function PlanSelectionCard({
 										key={feature.feature_id}
 										variants={listItemVariants}
 										layout
-										transition={STANDARD_TRANSITION}
+										transition={{ layout: LAYOUT_TRANSITION }}
 									>
 										{showSeparator && (
 											<div className="px-3">
@@ -274,7 +278,7 @@ export function PlanSelectionCard({
 								key={feature.feature_id}
 								variants={listItemVariants}
 								layout
-								transition={STANDARD_TRANSITION}
+								transition={{ layout: LAYOUT_TRANSITION }}
 							>
 								{index > 0 && (
 									<div className="px-3">
@@ -313,6 +317,6 @@ export function PlanSelectionCard({
 				)}
 				</CardBackground>
 			</Card>
-		</AnimatedCard>
+		</motion.div>
 	);
 }

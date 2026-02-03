@@ -31,6 +31,45 @@ export const SPRING_TRANSITION: Transition = {
 	mass: 1,
 };
 
+/** Gentle layout transition for skeleton-to-content morphing and height changes */
+export const LAYOUT_TRANSITION: Transition = {
+	type: "spring",
+	stiffness: 150,
+	damping: 25,
+	mass: 1,
+};
+
+/** Crossfade transition for skeleton/content swaps */
+export const CROSSFADE_TRANSITION: Transition = {
+	duration: 0.3,
+	ease: [0.4, 0, 0.2, 1],
+};
+
+/** Skeleton cycling configuration */
+export const SKELETON_CYCLE_INTERVAL = 1200; // ms between state changes (1 item -> 2 items -> 1 item)
+export const SKELETON_ITEM_DURATION = 0.25; // seconds for enter/exit animations
+
+/** Skeleton item slide-down + fade animation */
+export const skeletonItemVariants: Variants = {
+	initial: { opacity: 0, y: -10 },
+	animate: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: SKELETON_ITEM_DURATION,
+			ease: [0.4, 0, 0.2, 1],
+		},
+	},
+	exit: {
+		opacity: 0,
+		y: 5,
+		transition: {
+			duration: SKELETON_ITEM_DURATION * 0.8,
+			ease: [0.4, 0, 1, 1],
+		},
+	},
+};
+
 /** Gentle spring for success animations */
 export const GENTLE_SPRING: Transition = {
 	type: "spring",

@@ -1,53 +1,38 @@
 import { CardBackground } from "@/components/checkout/CardBackground";
-import { AnimatedCard } from "@/components/motion/animated-layout";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Skeleton that matches PlanSelectionCard layout exactly */
+/** Skeleton that matches PlanSelectionCard layout */
 export function PlanSelectionCardSkeleton() {
 	return (
-		<AnimatedCard layoutId="plan-selection-card">
-			<Card className="py-0 gap-0 flex-1">
-				<CardBackground>
-					{/* Plan header - matches real component */}
-					<div className="flex items-center justify-between px-4 py-4">
-						<Skeleton className="h-5 w-32" />
-						<Skeleton className="h-5 w-24" />
+		<Card className="py-0 gap-0 flex-1">
+			<CardBackground>
+				{/* Plan header */}
+				<div className="flex items-center px-3 py-2 border-b bg-background/50">
+					<div className="flex items-center gap-2">
+						<Skeleton className="h-4 w-4" />
+						<Skeleton className="h-4 w-32" />
 					</div>
+				</div>
 
-					{/* Feature rows - simulate 4 features */}
-					{[0, 1, 2, 3].map((i) => (
-						<div key={`feature-skeleton-${i}`}>
-							<div className="px-4">
-								<Separator className="w-auto" />
+				{/* Feature rows - 2 rows for a balanced skeleton */}
+				{[0, 1].map((i) => (
+					<div key={`feature-skeleton-${i}`}>
+						{i > 0 && (
+							<div className="px-3">
+								<Separator />
 							</div>
-							<div className="flex items-center justify-between px-4 py-3">
-								<div className="flex items-center gap-3">
-									<Skeleton className="h-4 w-4" />
-									<Skeleton className="h-4 w-24" />
-								</div>
-								<Skeleton className="h-4 w-20" />
+						)}
+						<div className="flex items-center justify-between px-3 py-2.5">
+							<div className="flex items-center gap-2">
+								<Skeleton className="h-4 w-4" />
+								<Skeleton className="h-4 w-24" />
 							</div>
-						</div>
-					))}
-
-					{/* Prepaid feature row with quantity input */}
-					<div className="px-4">
-						<Separator className="w-auto" />
-					</div>
-					<div className="flex items-center justify-between px-4 py-4">
-						<div className="flex flex-col gap-1">
-							<Skeleton className="h-5 w-20" />
-							<Skeleton className="h-4 w-28" />
-						</div>
-						<div className="flex items-center gap-4">
-							<Skeleton className="h-5 w-16" />
-							<Skeleton className="h-9 w-28 rounded-md" />
 						</div>
 					</div>
-				</CardBackground>
-			</Card>
-		</AnimatedCard>
+				))}
+			</CardBackground>
+		</Card>
 	);
 }
