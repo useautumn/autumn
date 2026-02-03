@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { GetCheckoutResponse } from "@autumn/shared";
+import { FreeTrialDuration, type GetCheckoutResponse } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -97,7 +97,7 @@ test(
 
 		// Assertions
 		expect(incomingPlan?.free_trial).toBeDefined();
-		expect(incomingPlan?.free_trial?.duration_type).toBe("day");
+		expect(incomingPlan?.free_trial?.duration_type).toBe(FreeTrialDuration.Day);
 		expect(incomingPlan?.free_trial?.duration_length).toBe(7);
 		expect(incomingPlan?.free_trial?.card_required).toBe(true);
 		expect(incomingPlan?.customer_eligibility?.trial_available).toBe(true);

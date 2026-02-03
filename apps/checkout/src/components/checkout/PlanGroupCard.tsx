@@ -65,7 +65,7 @@ export function PlanGroupCard({
 			)}
 
 			{/* Plan header */}
-			<div className="flex items-center justify-between px-3 py-2 border-b bg-background/50">
+			<div className="flex items-center justify-between px-3 py-2.5 border-b bg-background/50">
 				<div className="flex items-center gap-2">
 					<Icon
 						className={cn(
@@ -76,11 +76,11 @@ export function PlanGroupCard({
 						)}
 						weight="bold"
 					/>
-					<span className="text-sm font-medium text-foreground">
+					<span className="text-sm font-semibold text-foreground">
 						{planName}
 					</span>
 				</div>
-				<span className="text-sm font-medium tabular-nums text-foreground">
+				<span className="text-sm font-semibold tabular-nums text-foreground">
 					{formatAmount(groupTotal, currency)}
 				</span>
 			</div>
@@ -88,26 +88,26 @@ export function PlanGroupCard({
 			{/* Line items for this plan */}
 			<div className="px-3">
 				{sortedItems.length === 0 ? (
-					<div className="flex items-center justify-between py-2.5">
-						<span className="text-sm text-muted-foreground">
+					<div className="flex items-center justify-between py-2">
+						<span className="text-xs text-muted-foreground">
 							{type === "outgoing" ? "No charges" : "Free"}
 						</span>
-						<span className="text-sm tabular-nums text-muted-foreground">
+						<span className="text-xs tabular-nums text-muted-foreground">
 							{formatAmount(0, currency)}
 						</span>
 					</div>
 				) : (
 					sortedItems.map((item, itemIndex) => (
 						<div key={`${item.title}-${itemIndex}`}>
-							<div className="flex items-center justify-between py-2.5">
+							<div className="flex items-center justify-between py-2">
 								<div className="flex items-center gap-2">
-									<span className="text-sm text-muted-foreground">
+									<span className="text-xs text-muted-foreground">
 										{item.is_base ? "Base Price" : item.title}
 									</span>
 									{!item.is_base && item.total_quantity > 1 && (
 										<motion.span
 											key={item.total_quantity}
-											className="text-xs text-muted-foreground"
+											className="text-xs text-muted-foreground/70"
 											initial={{ opacity: 0, scale: 0.9 }}
 											animate={{ opacity: 1, scale: 1 }}
 											transition={FAST_TRANSITION}
@@ -119,14 +119,14 @@ export function PlanGroupCard({
 								<div className="flex items-center gap-2">
 									{/* Show "After trial" for individual deferred items (only if not all are deferred) */}
 									{item.deferred_for_trial && !allDeferred && (
-										<span className="flex items-center gap-1 text-xs text-muted-foreground">
+										<span className="flex items-center gap-1 text-xs text-muted-foreground/70">
 											<Clock className="h-3 w-3" weight="bold" />
 											After trial
 										</span>
 									)}
 									<motion.span
 										key={item.amount}
-										className="text-sm tabular-nums text-muted-foreground"
+										className="text-xs tabular-nums text-muted-foreground"
 										initial={{ opacity: 0.5 }}
 										animate={{ opacity: 1 }}
 										transition={FAST_TRANSITION}

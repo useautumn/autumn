@@ -1,9 +1,6 @@
-import type { CheckoutChange, ConfirmCheckoutResponse } from "@autumn/shared";
 import { format } from "date-fns";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useDebouncedCallback } from "use-debounce";
 import { CheckoutBackground } from "@/components/checkout/CheckoutBackground";
 import { CheckoutErrorState } from "@/components/checkout/CheckoutErrorState";
 import { CheckoutFooter } from "@/components/checkout/CheckoutFooter";
@@ -18,38 +15,14 @@ import { SectionHeader } from "@/components/checkout/SectionHeader";
 import { CrossfadeContainer } from "@/components/motion/CrossfadeContainer";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-	useCheckout,
-	useConfirmCheckout,
-	usePreviewCheckout,
-} from "@/hooks/useCheckout";
+import { CheckoutProvider, useCheckoutContext } from "@/contexts/CheckoutContext";
 import {
 	FAST_TRANSITION,
 	STANDARD_TRANSITION,
 	fadeUpVariants,
 	listContainerVariants,
 } from "@/lib/animations";
-import { buildHeaderDescription } from "@/utils/buildHeaderDescription";
 import { formatAmount } from "@/utils/formatUtils";
-
-function buildOptionsArray(
-	incoming: CheckoutChange[],
-	quantities: Record<string, number>,
-): { feature_id: string; quantity: number }[] {
-	const options: { feature_id: string; quantity: number }[] = [];
-
-	for (const change of incoming) {
-		for (const fq of change.feature_quantities) {
-			const quantity = quantities[fq.feature_id] ?? fq.quantity;
-			options.push({
-				feature_id: fq.feature_id,
-				quantity,
-			});
-		}
-	}
-
-	return options;
-}
 
 function getButtonText({
 	isPending,
@@ -75,79 +48,159 @@ function getButtonText({
 	return isSubscription ? "Pay and Subscribe" : "Pay";
 }
 
-export function CheckoutPage() {
-	const { checkoutId: checkoutIdParam } = useParams<{ checkoutId: string }>();
-	const checkoutId = checkoutIdParam ?? "";
-	const [confirmResult, setConfirmResult] =
-		useState<ConfirmCheckoutResponse | null>(null);
+function PlanSection() {
+	const { incoming, status } = useCheckoutContext();
 
-	// Local quantity overrides for optimistic UI
-	const [quantities, setQuantities] = useState<Record<string, number>>({});
+	return (
+		<motion.div
+			className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
+			variants={fadeUpVariants}
+			transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
+		>
+			<SectionHeader title="Plan Details" />
 
-	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
-	const previewMutation = usePreviewCheckout({ checkoutId });
-	const confirmMutation = useConfirmCheckout({ checkoutId });
-
-	// Debounced preview update
-	const debouncedPreview = useDebouncedCallback(
-		(options: { feature_id: string; quantity: number }[]) => {
-			previewMutation.mutate(options);
-		},
-		600,
+			<CrossfadeContainer
+				isLoading={status.isLoading}
+				skeleton={<PlanSelectionCardSkeleton />}
+			>
+				{incoming?.map((change) => (
+					<PlanSelectionCard key={change.plan.id} change={change} />
+				))}
+			</CrossfadeContainer>
+		</motion.div>
 	);
+}
 
-	const handleQuantityChange = useCallback(
-		(featureId: string, quantity: number, _billingUnits: number) => {
-			setQuantities((prev) => ({ ...prev, [featureId]: quantity }));
+function OrderSummarySection() {
+	const { status } = useCheckoutContext();
 
-			if (checkoutData) {
-				const newQuantities = { ...quantities, [featureId]: quantity };
-				const options = buildOptionsArray(checkoutData.incoming, newQuantities);
-				debouncedPreview(options);
-			}
-		},
-		[checkoutData, quantities, debouncedPreview],
+	return (
+		<motion.div
+			className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
+			variants={fadeUpVariants}
+			transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
+		>
+			<SectionHeader title="Order Summary" />
+
+			<motion.div
+				animate={{ opacity: status.isUpdating ? 0.6 : 1 }}
+				transition={FAST_TRANSITION}
+			>
+				<CrossfadeContainer
+					isLoading={status.isLoading}
+					skeleton={<OrderSummarySkeleton />}
+				>
+					<OrderSummary />
+				</CrossfadeContainer>
+			</motion.div>
+		</motion.div>
 	);
+}
 
-	const handleConfirm = () => {
-		confirmMutation.mutate(undefined, {
-			onSuccess: (result) => {
-				setConfirmResult(result);
-			},
-		});
-	};
+function ConfirmSection() {
+	const {
+		status,
+		total,
+		currency,
+		preview,
+		isSubscription,
+		hasActiveTrial,
+		handleConfirm,
+	} = useCheckoutContext();
 
-	const primaryPlanName = useMemo(() => {
-		if (!checkoutData?.incoming?.length) return "Order";
-		return checkoutData.incoming[0].plan.name || "Order";
-	}, [checkoutData]);
+	return (
+		<div className="flex flex-col gap-4">
+			<motion.div
+				variants={fadeUpVariants}
+				transition={{ ...STANDARD_TRANSITION, delay: 0.15 }}
+			>
+				<CrossfadeContainer
+					isLoading={status.isLoading}
+					skeleton={<BottomSectionSkeleton />}
+					className="flex flex-col gap-6"
+				>
+					{/* Amount summary */}
+					<div className="flex flex-col gap-1">
+						{/* Amount due today */}
+						<div className="flex items-center justify-between">
+							<span className="text-base font-medium text-foreground">
+								Amount due today
+							</span>
+							<span className="text-lg font-medium text-foreground tabular-nums">
+								{formatAmount(total, currency)}
+							</span>
+						</div>
 
-	const isSubscription = useMemo(() => {
-		if (!checkoutData?.incoming?.length) return false;
-		return checkoutData.incoming.some((change) => change.plan.price?.interval);
-	}, [checkoutData]);
+						{/* Amount next cycle / Amount due on trial end */}
+						{preview?.next_cycle && (
+							<div className="flex items-center justify-between text-sm text-muted-foreground">
+								<span>
+									{preview.next_cycle.starts_at
+										? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
+										: "Total due next cycle"}
+								</span>
+								<span className="tabular-nums">
+									{formatAmount(preview.next_cycle.total, currency)}
+								</span>
+							</div>
+						)}
+					</div>
 
-	const headerDescription = useMemo(() => {
-		const incomingPlan = checkoutData?.incoming?.[0]?.plan;
-		const freeTrial = incomingPlan?.free_trial;
-		const trialAvailable =
-			incomingPlan?.customer_eligibility?.trial_available ?? false;
+					{/* Confirm button */}
+					<motion.div
+						whileTap={{ scale: 0.98 }}
+						transition={FAST_TRANSITION}
+						className="pt-4"
+					>
+						<Button
+							className="w-full h-12 text-base font-medium rounded-lg"
+							onClick={handleConfirm}
+							disabled={status.isConfirming || status.isUpdating}
+						>
+							{getButtonText({
+								isPending: status.isConfirming,
+								isUpdating: status.isUpdating,
+								total,
+								nextCycleTotal: preview?.next_cycle?.total ?? 0,
+								isSubscription,
+								hasActiveTrial,
+							})}
+						</Button>
+					</motion.div>
 
-		return buildHeaderDescription({
-			preview: checkoutData?.preview,
-			incoming: checkoutData?.incoming,
-			outgoing: checkoutData?.outgoing,
-			entity: checkoutData?.entity,
-			freeTrial,
-			trialAvailable,
-		});
-	}, [checkoutData]);
+					{/* Error message */}
+					<AnimatePresence>
+						{status.confirmError && (
+							<motion.p
+								className="text-sm text-destructive text-center"
+								initial={{ opacity: 0, y: -5 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: -5 }}
+								transition={FAST_TRANSITION}
+							>
+								{status.confirmError instanceof Error
+									? status.confirmError.message
+									: "Failed to confirm checkout"}
+							</motion.p>
+						)}
+					</AnimatePresence>
+				</CrossfadeContainer>
+			</motion.div>
 
-	if (!checkoutId) {
-		return <CheckoutErrorState message="Missing checkout ID" />;
-	}
+			<motion.div
+				variants={fadeUpVariants}
+				transition={{ ...STANDARD_TRANSITION, delay: 0.2 }}
+			>
+				<CheckoutFooter />
+			</motion.div>
+		</div>
+	);
+}
 
-	// Handle success and error states with AnimatePresence
+function CheckoutContent() {
+	const { confirmResult, status, isSandbox } = useCheckoutContext();
+
+	// Handle success state
 	if (confirmResult) {
 		return (
 			<motion.div
@@ -160,7 +213,8 @@ export function CheckoutPage() {
 		);
 	}
 
-	if (error) {
+	// Handle error state
+	if (status.error) {
 		return (
 			<motion.div
 				initial={{ opacity: 0 }}
@@ -169,29 +223,18 @@ export function CheckoutPage() {
 			>
 				<CheckoutErrorState
 					message={
-						error instanceof Error ? error.message : "Failed to load checkout"
+						status.error instanceof Error
+							? status.error.message
+							: "Failed to load checkout"
 					}
 				/>
 			</motion.div>
 		);
 	}
 
-	// Main checkout view - same structure for loading and loaded states
-	const { env, preview, incoming, outgoing, org } = checkoutData ?? {};
-	const currency = preview?.currency ?? "usd";
-	const total = preview?.total ?? 0;
-	const isUpdating = previewMutation.isPending;
-
-	// Extract free trial info from first incoming plan
-	const incomingPlan = incoming?.[0]?.plan;
-	const freeTrial = incomingPlan?.free_trial;
-	const trialAvailable =
-		incomingPlan?.customer_eligibility?.trial_available ?? false;
-	const hasActiveTrial = freeTrial && trialAvailable;
-	const trialEndDate = incoming?.[0]?.period_end;
-
+	// Main checkout view
 	return (
-		<CheckoutBackground isSandbox={env === "sandbox"}>
+		<CheckoutBackground isSandbox={isSandbox}>
 			<motion.div
 				className="flex flex-col gap-8 w-full"
 				initial="initial"
@@ -200,169 +243,47 @@ export function CheckoutPage() {
 			>
 				{/* Header */}
 				<motion.div variants={fadeUpVariants} transition={STANDARD_TRANSITION}>
-					<CheckoutHeader
-						org={org}
-						isLoading={isLoading}
-						description={headerDescription}
-					/>
+					<CheckoutHeader />
 				</motion.div>
-
 
 				{/* Main content - two columns */}
 				<LayoutGroup>
 					<div className="flex flex-col lg:flex-row gap-8 w-full max-w-4xl mx-auto">
-						{/* Left column - Plan selection */}
-						<motion.div
-							className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
-							variants={fadeUpVariants}
-							transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
-						>
-							<SectionHeader title="Plan Details" />
-
-							<CrossfadeContainer
-								isLoading={isLoading}
-								skeleton={<PlanSelectionCardSkeleton />}
-							>
-								{incoming?.map((change) => (
-									<PlanSelectionCard
-										key={change.plan.id}
-										change={change}
-										currency={currency}
-										quantities={quantities}
-										onQuantityChange={handleQuantityChange}
-									/>
-								))}
-							</CrossfadeContainer>
-						</motion.div>
+						<PlanSection />
 
 						{/* Vertical separator - visible only on desktop */}
-						<Separator orientation="vertical" className="hidden lg:block h-auto self-stretch" />
-						<Separator orientation="horizontal" className="block lg:hidden h-auto self-stretch" />
+						<Separator
+							orientation="vertical"
+							className="hidden lg:block h-auto self-stretch"
+						/>
+						<Separator
+							orientation="horizontal"
+							className="block lg:hidden h-auto self-stretch"
+						/>
 
-						{/* Right column - Order summary */}
-						<motion.div
-							className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
-							variants={fadeUpVariants}
-							transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
-						>
-							<SectionHeader title="Order Summary" />
-
-							{/* Order summary */}
-							<motion.div
-								animate={{ opacity: isUpdating ? 0.6 : 1 }}
-								transition={FAST_TRANSITION}
-							>
-								<CrossfadeContainer
-									isLoading={isLoading}
-									skeleton={<OrderSummarySkeleton />}
-								>
-									{preview && (
-										<OrderSummary
-											planName={primaryPlanName}
-											preview={preview}
-											incoming={incoming}
-											outgoing={outgoing}
-											freeTrial={freeTrial}
-											trialAvailable={trialAvailable}
-										/>
-									)}
-								</CrossfadeContainer>
-							</motion.div>
-
-
-						</motion.div>
+						<OrderSummarySection />
 					</div>
 				</LayoutGroup>
 
 				<Separator />
 
-				<div className="flex flex-col gap-4">
-
-					<motion.div
-						variants={fadeUpVariants}
-						transition={{ ...STANDARD_TRANSITION, delay: 0.15 }}
-					>
-						<CrossfadeContainer
-							isLoading={isLoading}
-							skeleton={<BottomSectionSkeleton />}
-							className="flex flex-col gap-6"
-						>
-							{/* Amount summary */}
-							<div className="flex flex-col gap-1">
-								{/* Amount due today */}
-								<div className="flex items-center justify-between">
-									<span className="text-base font-medium text-foreground">
-										Amount due today
-									</span>
-									<span className="text-lg font-medium text-foreground tabular-nums">
-										{formatAmount(total, currency)}
-									</span>
-								</div>
-
-								{/* Amount next cycle / Amount due on trial end */}
-								{preview?.next_cycle && (
-									<div className="flex items-center justify-between text-sm text-muted-foreground">
-										<span>
-											{preview.next_cycle.starts_at
-												? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
-												: "Total due next cycle"}
-										</span>
-										<span className="tabular-nums">
-											{formatAmount(preview.next_cycle.total, currency)}
-										</span>
-									</div>
-								)}
-							</div>
-
-							{/* Confirm button */}
-							<motion.div
-								whileTap={{ scale: 0.98 }}
-								transition={FAST_TRANSITION}
-								className="pt-4"
-							>
-								<Button
-									className="w-full h-12 text-base font-medium rounded-lg"
-									onClick={handleConfirm}
-									disabled={confirmMutation.isPending || isUpdating}
-								>
-									{getButtonText({
-										isPending: confirmMutation.isPending,
-										isUpdating,
-										total,
-										nextCycleTotal: preview?.next_cycle?.total ?? 0,
-										isSubscription,
-										hasActiveTrial: hasActiveTrial ?? false,
-									})}
-								</Button>
-							</motion.div>
-
-							{/* Error message */}
-							<AnimatePresence>
-								{confirmMutation.error && (
-									<motion.p
-										className="text-sm text-destructive text-center"
-										initial={{ opacity: 0, y: -5 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -5 }}
-										transition={FAST_TRANSITION}
-									>
-										{confirmMutation.error instanceof Error
-											? confirmMutation.error.message
-											: "Failed to confirm checkout"}
-									</motion.p>
-								)}
-							</AnimatePresence>
-						</CrossfadeContainer>
-					</motion.div>
-
-					<motion.div
-						variants={fadeUpVariants}
-						transition={{ ...STANDARD_TRANSITION, delay: 0.2 }}
-					>
-						<CheckoutFooter disabled={isLoading} />
-					</motion.div>
-				</div>
+				<ConfirmSection />
 			</motion.div>
 		</CheckoutBackground>
+	);
+}
+
+export function CheckoutPage() {
+	const { checkoutId: checkoutIdParam } = useParams<{ checkoutId: string }>();
+	const checkoutId = checkoutIdParam ?? "";
+
+	if (!checkoutId) {
+		return <CheckoutErrorState message="Missing checkout ID" />;
+	}
+
+	return (
+		<CheckoutProvider checkoutId={checkoutId}>
+			<CheckoutContent />
+		</CheckoutProvider>
 	);
 }
