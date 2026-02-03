@@ -1,6 +1,7 @@
 await import("../sentry.js");
 
 import {
+	DeleteMessageBatchCommand,
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
@@ -238,11 +239,16 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 			});
 
 			if (response.Messages && response.Messages.length > 0) {
+				// Track messages to batch delete (excludes migration jobs which are deleted immediately)
+				const toDelete: { Id: string; ReceiptHandle: string }[] = [];
+
 				await Promise.allSettled(
 					response.Messages.map(async (message) => {
 						if (!isRunning || !message.Body) return;
 
 						const job: SqsJob = JSON.parse(message.Body);
+
+						// Migration jobs: delete IMMEDIATELY before processing (long-running, avoid timeout redelivery)
 						if (job.name === JobName.Migration) {
 							logger.info(
 								`Returning success immediately for migration job ${job.data.migrationJobId}`,
@@ -266,20 +272,29 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 							}
 						}
 
-						if (message.ReceiptHandle) {
-							try {
-								await sqs.send(
-									new DeleteMessageCommand({
-										QueueUrl: QUEUE_URL,
-										ReceiptHandle: message.ReceiptHandle,
-									}),
-								);
-							} catch (deleteError: any) {
-								console.error(`Failed to delete message: ${deleteError.message}`);
-							}
+						// Queue for batch delete (skip migration jobs - already deleted)
+						if (message.ReceiptHandle && job.name !== JobName.Migration) {
+							toDelete.push({
+								Id: message.MessageId!,
+								ReceiptHandle: message.ReceiptHandle,
+							});
 						}
 					}),
 				);
+
+				// Batch delete all non-migration messages
+				if (toDelete.length > 0) {
+					try {
+						await sqs.send(
+							new DeleteMessageBatchCommand({
+								QueueUrl: QUEUE_URL,
+								Entries: toDelete,
+							}),
+						);
+					} catch (deleteError: any) {
+						console.error(`[SQS Worker ${process.pid}] Batch delete failed: ${deleteError.message}`);
+					}
+				}
 			}
 		} catch (error: any) {
 			if (error.name === "AbortError" || error.name === "RequestAbortedError") {
