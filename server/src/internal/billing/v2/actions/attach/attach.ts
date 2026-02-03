@@ -55,7 +55,6 @@ export async function attach({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
-		params,
 	});
 
 	// 4. Evaluate Stripe billing plan (handles checkout mode internally)

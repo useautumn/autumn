@@ -10,12 +10,12 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan.js";
+import { setupUpdateSubscriptionTrialContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionTrialContext";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionForBilling.js";
-import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext.js";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
@@ -65,7 +65,7 @@ export const handleUpdateQuantityFunction = async ({
 		secondsToMs(stripeSubscription?.billing_cycle_anchor) ?? "now";
 
 	// 1. Setup trial context first
-	const trialContext = setupTrialContext({
+	const trialContext = setupUpdateSubscriptionTrialContext({
 		stripeSubscription,
 		customerProduct: currentCustomerProduct,
 		currentEpochMs,

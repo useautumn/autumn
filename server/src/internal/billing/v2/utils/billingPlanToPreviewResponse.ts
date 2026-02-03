@@ -8,6 +8,7 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
 import { lineItemToPreviewLineItem } from "./lineItems/lineItemToPreviewLineItem";
+import { logBillingPreview } from "./logs/logBillingPreview";
 
 export const billingPlanToPreviewResponse = ({
 	ctx,
@@ -21,9 +22,9 @@ export const billingPlanToPreviewResponse = ({
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
-	const planLineItems = autumnBillingPlan.lineItems ?? [];
+	const allLineItems = autumnBillingPlan.lineItems ?? [];
 
-	const immediateLineItems = planLineItems.filter(
+	const immediateLineItems = allLineItems.filter(
 		(line) => line.chargeImmediately,
 	);
 
@@ -45,10 +46,20 @@ export const billingPlanToPreviewResponse = ({
 	const currency = orgToCurrency({ org: ctx.org });
 
 	// Get next cycle object
-	const nextCycle = billingPlanToNextCyclePreview({
+	const { nextCycle, debug: nextCycleDebug } = billingPlanToNextCyclePreview({
 		ctx,
 		billingContext,
 		billingPlan,
+	});
+
+	logBillingPreview({
+		ctx,
+		allLineItems,
+		immediateLineItems,
+		total,
+		currency,
+		nextCycleDebug,
+		nextCycle,
 	});
 
 	// Extract billing period from first line item with a billing period

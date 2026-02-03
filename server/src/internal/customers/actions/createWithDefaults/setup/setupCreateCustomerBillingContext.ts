@@ -1,6 +1,6 @@
+import { type BillingContext, BillingVersion } from "@autumn/shared";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { BillingContext } from "@autumn/shared";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
 /**
@@ -40,5 +40,6 @@ export const setupCreateCustomerBillingContext = async ({
 		customPrices: [],
 		customEnts: [],
 		isCustom: false,
+		billingVersion: BillingVersion.V2,
 	};
 };

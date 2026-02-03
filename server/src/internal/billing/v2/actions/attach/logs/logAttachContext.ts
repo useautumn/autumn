@@ -25,6 +25,7 @@ export const logAttachContext = ({
 		isCustom,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		trialContext,
 	} = billingContext;
 
 	addToExtraLogs({
@@ -58,6 +59,10 @@ export const logAttachContext = ({
 								.map((fq) => `${fq.feature_id}: ${fq.quantity}`)
 								.join(", ")
 						: "none",
+
+				trialContext: trialContext
+					? `trial ends at: ${formatMs(trialContext.trialEndsAt)} | free trial ID: ${trialContext.freeTrial?.id ?? "none"} | appliesToBilling: ${trialContext.appliesToBilling}`
+					: "none",
 			},
 		},
 	});

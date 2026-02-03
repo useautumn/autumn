@@ -101,10 +101,11 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial card required")}`,
 		usage: 0,
 	});
 
-	// Verify no invoice yet (trial)
+	// Verify $0 invoice for trial (Stripe creates invoice for trial subscriptions)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 0,
+		count: 1,
+		latestTotal: 0,
 	});
 });
 
@@ -183,9 +184,10 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial subscription_data"
 		usage: 0,
 	});
 
-	// Verify no invoice yet (trial)
+	// Verify $0 invoice for trial (Stripe creates invoice for trial subscriptions)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 0,
+		count: 1,
+		latestTotal: 0,
 	});
 });
