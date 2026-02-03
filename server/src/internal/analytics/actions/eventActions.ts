@@ -6,6 +6,7 @@ import { getTopEventNames } from "./getTopEventNames.js";
 import { listEventNames } from "./listEventNames.js";
 import { listEvents } from "./listEvents.js";
 import { listRawEvents } from "./listRawEvents.js";
+import { _legacyListRawEvents } from "./_legacyListRawEvents.js";
 
 export const eventActions = {
 	aggregate,
