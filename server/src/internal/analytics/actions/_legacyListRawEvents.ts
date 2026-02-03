@@ -111,13 +111,16 @@ export const _legacyListRawEvents = async ({
 		limit: params.limit ?? DEFAULT_LIMIT,
 	};
 
-	ctx.logger.debug("[_legacyListRawEvents] Querying via legacy list_events pipe", {
-		customerId: params.customer_id,
-		aggregateAll: params.aggregateAll,
-		startDate: finalStartDate,
-		endDate: finalEndDate,
-		limit: pipeParams.limit,
-	});
+	ctx.logger.debug(
+		"[_legacyListRawEvents] Querying via legacy list_events pipe",
+		{
+			customerId: params.customer_id,
+			aggregateAll: params.aggregateAll,
+			startDate: finalStartDate,
+			endDate: finalEndDate,
+			limit: pipeParams.limit,
+		},
+	);
 
 	const startTime = performance.now();
 	const result = await pipes.listEvents(pipeParams);
