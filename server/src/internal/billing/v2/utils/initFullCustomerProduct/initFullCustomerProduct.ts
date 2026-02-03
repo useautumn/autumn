@@ -59,6 +59,7 @@ export const initFullCustomerProduct = ({
 		product: rawProduct,
 		customer_entitlements: newFullCusEnts,
 		customer_prices: newCusPrices,
+		free_trial: initContext.freeTrial ?? null,
 	};
 
 	applyExistingUsages({
