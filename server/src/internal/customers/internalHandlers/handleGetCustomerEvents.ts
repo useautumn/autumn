@@ -2,7 +2,7 @@ import { CustomerNotFoundError } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
-import { CusService } from "../CusService";
+import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer";
 
 const QuerySchema = z.object({
 	interval: z.enum(["7d", "30d", "90d"]).optional(),
@@ -23,11 +23,10 @@ export const handleGetCustomerEvents = createRoute({
 		const { customer_id } = c.req.param();
 		const { interval, limit } = c.req.valid("query");
 
-		const customer = await CusService.get({
-			db,
+		const customer = await getCachedFullCustomer({
 			orgId: org.id,
 			env,
-			idOrInternalId: customer_id,
+			customerId: customer_id,
 		});
 
 		if (!customer) {
@@ -38,7 +37,7 @@ export const handleGetCustomerEvents = createRoute({
 		const result = await eventActions._legacyListRawEvents({
 			ctx,
 			params: {
-				customer_id: customer.id,
+				customer_id: customer.id ?? "",
 				customer,
 				interval: interval ?? "30d",
 				limit: limit ?? 50,
