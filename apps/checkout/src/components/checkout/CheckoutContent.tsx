@@ -2,13 +2,13 @@ import { LayoutGroup, motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { STANDARD_TRANSITION, fadeUpVariants, listContainerVariants } from "@/lib/animations";
-import { CheckoutBackground } from "./CheckoutBackground";
-import { CheckoutErrorState } from "./CheckoutErrorState";
-import { CheckoutHeader } from "./CheckoutHeader";
-import { CheckoutSuccessState } from "./CheckoutSuccessState";
-import { ConfirmSection } from "./ConfirmSection";
-import { OrderSummarySection } from "./OrderSummarySection";
-import { PlanSection } from "./PlanSection";
+import { ConfirmSection } from "./confirm/ConfirmSection";
+import { CheckoutBackground } from "./layout/CheckoutBackground";
+import { CheckoutHeader } from "./layout/CheckoutHeader";
+import { OrderSummarySection } from "./order-summary/OrderSummarySection";
+import { PlanSection } from "./plan/PlanSection";
+import { CheckoutErrorState } from "./states/CheckoutErrorState";
+import { CheckoutSuccessState } from "./states/CheckoutSuccessState";
 
 export function CheckoutContent() {
 	const { confirmResult, status, isSandbox } = useCheckoutContext();

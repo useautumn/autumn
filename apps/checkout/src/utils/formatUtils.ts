@@ -7,16 +7,8 @@ export function formatAmount(amount: number, currency: string): string {
 	}).format(amount);
 }
 
-export function formatDate(timestamp: number): string {
-	return format(new Date(timestamp * 1000), "do MMMM yyyy");
-}
-
-/** Formats a millisecond timestamp to a readable date (e.g., "3rd February") */
-export function formatPeriodDate(timestampMs: number): string {
-	return format(new Date(timestampMs), "do MMMM");
-}
-
-/** Formats a period range from millisecond timestamps (e.g., "Feb 18 – Mar 4") */
+/** Formats a period range from millisecond timestamps (e.g., "3rd February – 4th March") */
 export function formatPeriodRange(startMs: number, endMs: number): string {
-	return `${formatPeriodDate(startMs)} – ${formatPeriodDate(endMs)}`;
+	const formatDate = (ms: number) => format(new Date(ms), "do MMMM");
+	return `${formatDate(startMs)} – ${formatDate(endMs)}`;
 }

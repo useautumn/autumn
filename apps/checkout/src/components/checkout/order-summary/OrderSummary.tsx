@@ -1,9 +1,9 @@
 import type { PreviewLineItem } from "@autumn/shared";
 import { motion } from "motion/react";
 import { useMemo } from "react";
-import { CardBackground } from "@/components/checkout/CardBackground";
-import { FreeTrialSection } from "@/components/checkout/FreeTrialSection";
-import { PlanGroupSection } from "@/components/checkout/PlanGroupSection";
+import { CardBackground } from "@/components/checkout/layout/CardBackground";
+import { PlanGroupSection } from "@/components/checkout/plan/PlanGroupSection";
+import { FreeTrialSection } from "@/components/checkout/trial/FreeTrialSection";
 import { Separator } from "@/components/ui/separator";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { LAYOUT_TRANSITION } from "@/lib/animations";

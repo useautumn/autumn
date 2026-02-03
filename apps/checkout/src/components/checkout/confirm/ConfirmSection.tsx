@@ -6,7 +6,7 @@ import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { FAST_TRANSITION, STANDARD_TRANSITION, fadeUpVariants } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
 import { BottomSectionSkeleton } from "./BottomSectionSkeleton";
-import { CheckoutFooter } from "./CheckoutFooter";
+import { CheckoutFooter } from "../layout/CheckoutFooter";
 
 function getButtonText({
 	isPending,

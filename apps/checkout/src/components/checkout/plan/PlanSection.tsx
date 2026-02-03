@@ -4,7 +4,7 @@ import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { STANDARD_TRANSITION, fadeUpVariants } from "@/lib/animations";
 import { PlanSelectionCard } from "./PlanSelectionCard";
 import { PlanSelectionCardSkeleton } from "./PlanSelectionCardSkeleton";
-import { SectionHeader } from "./SectionHeader";
+import { SectionHeader } from "../shared/SectionHeader";
 
 export function PlanSection() {
 	const { incoming, status } = useCheckoutContext();
