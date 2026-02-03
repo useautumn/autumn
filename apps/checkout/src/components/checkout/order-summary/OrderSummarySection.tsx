@@ -4,7 +4,7 @@ import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { FAST_TRANSITION, STANDARD_TRANSITION, fadeUpVariants } from "@/lib/animations";
 import { OrderSummary } from "./OrderSummary";
 import { OrderSummarySkeleton } from "./OrderSummarySkeleton";
-import { SectionHeader } from "./SectionHeader";
+import { SectionHeader } from "../shared/SectionHeader";
 
 export function OrderSummarySection() {
 	const { status } = useCheckoutContext();

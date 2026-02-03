@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { BackgroundBeams } from "@/components/bg/background-beams";
-import { SandboxBanner } from "@/components/checkout/SandboxBanner";
+import { SandboxBanner } from "@/components/checkout/layout/SandboxBanner";
 import { SLOW_TRANSITION, SPRING_TRANSITION } from "@/lib/animations";
 
 interface CheckoutBackgroundProps {

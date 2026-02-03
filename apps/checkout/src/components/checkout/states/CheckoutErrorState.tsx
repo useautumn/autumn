@@ -1,6 +1,6 @@
 import { WarningIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { CheckoutBackground } from "@/components/checkout/CheckoutBackground";
+import { CheckoutBackground } from "@/components/checkout/layout/CheckoutBackground";
 import { STANDARD_TRANSITION } from "@/lib/animations";
 
 export function CheckoutErrorState({ message }: { message: string }) {

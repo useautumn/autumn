@@ -1,7 +1,7 @@
 import type { ConfirmCheckoutResponse } from "@autumn/shared";
 import { CheckIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { CheckoutBackground } from "@/components/checkout/CheckoutBackground";
+import { CheckoutBackground } from "@/components/checkout/layout/CheckoutBackground";
 import { STANDARD_TRANSITION } from "@/lib/animations";
 
 export function CheckoutSuccessState({

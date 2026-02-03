@@ -12,8 +12,8 @@ import {
 	listItemVariants,
 } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
-import { CardBackground } from "@/components/checkout/CardBackground";
-import { QuantityInput } from "./QuantityInput";
+import { CardBackground } from "@/components/checkout/layout/CardBackground";
+import { QuantityInput } from "../shared/QuantityInput";
 
 function categorizeFeatures(features: ApiPlanFeature[]): {
 	prepaid: ApiPlanFeature[];

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { CheckoutBackground } from "./components/checkout/CheckoutBackground";
+import { CheckoutBackground } from "./components/checkout/layout/CheckoutBackground";
 import { ThemeProvider } from "./components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { useDevThemeToggle } from "./hooks/useDevThemeToggle";
