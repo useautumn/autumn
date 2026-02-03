@@ -18,5 +18,6 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		paid_quantity: line.paid_quantity ?? 1,
 		plan_id: line.context.product.id,
 		deferred_for_trial: line.deferredForTrial,
+		effective_period: line.context.effectivePeriod,
 	};
 };

@@ -38,6 +38,7 @@
 	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
 	--sidebar-border: oklch(0.92 0.004 286.32);
 	--sidebar-ring: #504af6;
+	--sandbox: #0f9bff;
 }
 
 .dark {
@@ -72,10 +73,12 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--sandbox: #0f9bff;
 }
 
 @theme inline {
 	--font-sans: "Inter", "Inter Fallback", sans-serif;
+	--color-sandbox: var(--sandbox);
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
