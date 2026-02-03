@@ -19,6 +19,7 @@ export const idempotencyMiddleware = async (
 			orgId: ctx.org.id,
 			env: ctx.env,
 			idempotencyKey,
+			logger: ctx.logger,
 		});
 	}
 
