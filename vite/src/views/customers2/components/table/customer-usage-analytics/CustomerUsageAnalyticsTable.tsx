@@ -34,13 +34,14 @@ export function CustomerUsageAnalyticsTable() {
 
 	// Map selectedDays to interval for API
 	const interval = useMemo(() => {
-		if (selectedDays <= 7) return "7d";
-		return "30d";
+		if (selectedDays <= 7) return "7d" as const;
+		return "30d" as const;
 	}, [selectedDays]);
 
-	// Fetch raw events for the table via API
-	const { events: rawEvents, isLoading: rawEventsLoading } =
-		useCusEventsQuery();
+	// Fetch raw events for the table via API - use same interval as chart
+	const { events: rawEvents, isLoading: rawEventsLoading } = useCusEventsQuery({
+		interval,
+	});
 
 	// Extract unique event names from raw events for the chart query
 	const customerEventNames = useMemo(() => {
