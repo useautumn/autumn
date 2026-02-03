@@ -1,8 +1,8 @@
 import type {
+	BillingParamsBase,
 	EntitlementWithFeature,
 	FeatureOptions,
 	Price,
-	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { notNullish, roundUsageToNearestBillingUnit } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -12,7 +12,7 @@ export const paramsToFeatureOptions = ({
 	price,
 	entitlement,
 }: {
-	params: UpdateSubscriptionV0Params;
+	params: BillingParamsBase;
 	price: Price;
 	entitlement: EntitlementWithFeature;
 }): FeatureOptions | undefined => {

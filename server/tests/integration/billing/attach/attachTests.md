@@ -30,7 +30,33 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
 
 ## Key Gotchas
 
-1. **Always use `product.id`, never string literals**
+1. **Trial Invoice Count - Stripe creates $0 invoice on subscription creation**
+   ```typescript
+   // ❌ WRONG - Trial subscription DOES create an invoice
+   await expectCustomerInvoiceCorrect({
+     customer,
+     count: 0,  // Wrong! Trial creates $0 invoice
+   });
+   
+   // ✅ RIGHT - Trial subscription creates 1 invoice with $0 total
+   await expectCustomerInvoiceCorrect({
+     customer,
+     count: 1,
+     latestTotal: 0,
+   });
+   
+   // ✅ RIGHT - Free product (no Stripe subscription) has no invoice
+   await expectCustomerInvoiceCorrect({
+     customer,
+     count: 0,  // Correct for free products
+   });
+   ```
+   Rules:
+   - **Stripe subscription created (even trialing)**: `count: 1, latestTotal: 0`
+   - **Subscription updated while trialing**: Invoice count increases by 1 (still `latestTotal: 0`)
+   - **Free product (no Stripe subscription)**: `count: 0` is correct
+
+2. **Always use `product.id`, never string literals**
    ```typescript
    // ✅ GOOD
    s.billing.attach({ productId: pro.id })
@@ -39,26 +65,26 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
    s.billing.attach({ productId: "pro" })
    ```
 
-2. **Multiple products need unique IDs**
+3. **Multiple products need unique IDs**
    - Without `isAddOn: true`, second product **replaces** the first
    ```typescript
    const prod1 = constructProduct({ type: "free", id: "prod1", items: [...] });
    const prod2 = constructProduct({ type: "free", id: "prod2", isAddOn: true, items: [...] });
    ```
 
-3. **Payment method required for paid features**
+4. **Payment method required for paid features**
    ```typescript
    s.customer({ paymentMethod: "success" })  // Required for overage, per-seat, usage-based, base price
    ```
 
-4. **Wait 2000ms after `track` before `attach`**
+5. **Wait 2000ms after `track` before `attach`**
    ```typescript
    await autumnV1.track({ ... });
    await new Promise(r => setTimeout(r, 2000));  // track syncs to Postgres async
    await autumnV1.attach({ ... });
    ```
 
-5. **Prepaid items require `options` with `quantity` on attach**
+6. **Prepaid items require `options` with `quantity` on attach**
    - The `quantity` represents actual units (e.g., 100 messages), NOT number of packs
    - If `billingUnits: 100` and you want 1 pack, pass `quantity: 100`
    ```typescript
@@ -69,7 +95,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
    })
    ```
 
-5b. **Prepaid `includedUsage` must be a multiple of `billingUnits` (or 0)**
+6b. **Prepaid `includedUsage` must be a multiple of `billingUnits` (or 0)**
    - When Stripe tiered pricing is created, `up_to` = `includedUsage / billingUnits`
    - Stripe requires `up_to` to be a positive integer or "inf"
    - If this results in a decimal (e.g., 50/100=0.5), Stripe rejects it
@@ -89,20 +115,20 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
    });
    ```
 
-6. **Use `products.base()` for free products** (no base price)
+7. **Use `products.base()` for free products** (no base price)
    - `products.pro()` already includes $20/mo base price — don't add `monthlyPrice()`
 
-7. **Lifetime interval: `null` vs `"one_off"`**
+8. **Lifetime interval: `null` vs `"one_off"`**
    - Constructing: use `null` → `constructFeatureItem({ interval: null })`
    - In API responses: use `ResetInterval.OneOff`
 
-8. **Canceling/Downgrading is NOT a status**
+9. **Canceling/Downgrading is NOT a status**
    - Use `expectProductCanceling` helper, not `expect(product.status).toBe("canceling")`
 
-9. **Server logs not visible in tests**
-   - Console logs in server code don't appear in test output
+10. **Server logs not visible in tests**
+    - Console logs in server code don't appear in test output
 
-10. **ALWAYS verify Stripe subscription state after billing calls**
+11. **ALWAYS verify Stripe subscription state after billing calls**
     - After EVERY `billing.attach()` call, verify the Stripe subscription state matches Autumn
     - For paid products: use `expectSubToBeCorrect`
     - For free products (no Stripe subscription): use `expectNoStripeSubscription`
@@ -167,7 +193,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     s.billing.attach({ productId: pro.id, isAddOn: true });
     ```
 
-19. **Use `s.billing.attach()` and `autumnV1.billing.attach()` - NOT the legacy attach**
+13. **Use `s.billing.attach()` and `autumnV1.billing.attach()` - NOT the legacy attach**
     - These tests are for the NEW billing.attach endpoint (V2 attach flow)
     - Never use `s.attach()` or `autumnV1.attach()` in these test files
     ```typescript
@@ -180,7 +206,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     await autumnV1.attach({ customer_id: customerId, product_id: pro.id })
     ```
 
-20. **For scheduled switches (downgrades), always call previewAttach first with exact `startsAt` verification**
+14. **For scheduled switches (downgrades), always call previewAttach first with exact `startsAt` verification**
     - Preview should return `total: 0` since the change is scheduled, not immediate
     - Use `expectPreviewNextCycleCorrect` to verify `next_cycle.starts_at` and `next_cycle.total`
     - Pass the EXACT `startsAt` using `addMonths(advancedTo, 1).getTime()` - do NOT use approximates
@@ -215,7 +241,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     });
     ```
 
-21. **Do NOT create a new initScenario to advance the test clock**
+15. **Do NOT create a new initScenario to advance the test clock**
     - WRONG: Creating a second `initScenario` with the same customerId to advance time
     - RIGHT: Keep downgrade attach OUT of initScenario, call it in test body, then use helpers to advance
     ```typescript
@@ -249,7 +275,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     // B. Use advanceTestClock helper from the same ctx
     ```
 
-22. **Prepaid next_cycle.total depends on quantity passed at attach time**
+16. **Prepaid next_cycle.total depends on quantity passed at attach time**
     - If `options: [{ quantity: 100 }]` passed → `next_cycle.total` = price for 100 units
     - If no options passed → inherits current product's quantity (if any), else 0
     ```typescript
@@ -269,7 +295,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     });
     ```
 
-13. **Product IDs in expectations - just use `product.id`**
+17. **Product IDs in expectations - just use `product.id`**
     - `initScenario` already prefixes product IDs with `customerId`
     - Don't double-prefix in expectations
     ```typescript
@@ -280,7 +306,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     expectProductActive({ customer, productId: `${pro.id}_${customerId}` });
     ```
 
-15. **Use `expectCustomerProducts` batch helper when checking multiple products**
+18. **Use `expectCustomerProducts` batch helper when checking multiple products**
     - When verifying 2+ product states, use the batch helper instead of individual calls
     - More concise and easier to read
     ```typescript
@@ -297,7 +323,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     await expectProductNotPresent({ customer, productId: free.id });
     ```
 
-14. **Always pass `redirect_mode: "if_required"` to attach calls**
+19. **Always pass `redirect_mode: "if_required"` to attach calls**
     - Prevents checkout redirect when customer already has a payment method
     - Without this, the endpoint may redirect to Stripe Checkout even when payment method exists
     ```typescript
@@ -308,12 +334,12 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     });
     ```
 
-16. **One-time products do NOT replace/expire other products**
+20. **One-time products do NOT replace/expire other products**
     - Attaching a one-time product will NOT cancel or replace existing main products
     - One-time products are always treated as add-ons (they stack with existing products)
     - Only recurring products can replace other recurring products
 
-17. **Set up scenario state in `initScenario`, test only the action being tested**
+21. **Set up scenario state in `initScenario`, test only the action being tested**
     - All prerequisite state (existing products, entities, usage) should be set up in `initScenario` actions
     - The test body should only call the single action being tested and verify results
     ```typescript
@@ -338,7 +364,7 @@ bun test server/tests/integration/billing/attach/immediate-switch/immediate-swit
     await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
     ```
 
-18. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
+22. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
     - After scheduling a downgrade, advance the test clock to verify:
       - A. Next cycle invoice is correct
       - B. Products on customer are correct after cycle

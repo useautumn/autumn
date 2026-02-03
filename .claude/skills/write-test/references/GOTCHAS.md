@@ -229,6 +229,33 @@ expectCustomerFeatureCorrect({
 
 ## Billing & Invoices
 
+### Trial Invoice Count
+When a Stripe subscription is created (even with a trial), Stripe generates a $0 invoice:
+```typescript
+// WRONG - Trial subscription DOES create an invoice
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 0,  // Wrong! Trial creates $0 invoice
+});
+
+// RIGHT - Trial subscription creates 1 invoice with $0 total
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 1,
+  latestTotal: 0,
+});
+
+// RIGHT - Free product (no Stripe subscription) has no invoice
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 0,  // Correct for free products
+});
+```
+Rules:
+- **Stripe subscription created (even trialing)**: `count: 1, latestTotal: 0`
+- **Subscription updated while trialing**: Invoice count increases by 1 (still `latestTotal: 0`)
+- **Free product (no Stripe subscription)**: `count: 0` is correct
+
 ### Consumable Overage: Not Charged on Update
 ```typescript
 expect(preview.total).toBe(0);  // Even with existing overage

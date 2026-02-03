@@ -1,9 +1,6 @@
 import { RefundBehaviorSchema } from "@api/billing/common/refundBehavior";
-import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
-import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
-import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase";
 import { CancelActionSchema } from "../common/cancelAction";
@@ -16,12 +13,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		invoice: z.boolean().optional(),
 		enable_product_immediately: z.boolean().optional(),
 		finalize_invoice: z.boolean().optional(),
-		options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
 
 		// New
-		version: z.number().optional(),
-		items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
-		free_trial: CreateFreeTrialSchema.nullable().optional(),
 
 		// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
 		cancel_action: CancelActionSchema.optional(),

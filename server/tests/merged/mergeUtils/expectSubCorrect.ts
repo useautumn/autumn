@@ -169,6 +169,7 @@ export const expectSubToBeCorrect = async ({
 	shouldBeTrialing?: boolean;
 	flags?: {
 		checkNotTrialing?: boolean;
+		checkTrialing?: boolean;
 	};
 	subId?: string;
 	rewards?: string[];
@@ -427,6 +428,10 @@ export const expectSubToBeCorrect = async ({
 
 	if (flags?.checkNotTrialing) {
 		expect(sub.status).not.toBe("trialing");
+	}
+
+	if (flags?.checkTrialing) {
+		expect(sub.status).toBe("trialing");
 	}
 
 	// Should be canceled
