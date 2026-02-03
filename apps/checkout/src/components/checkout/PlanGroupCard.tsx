@@ -1,5 +1,5 @@
 import type { PreviewLineItem } from "@autumn/shared";
-import { Minus, Plus } from "@phosphor-icons/react";
+import { Clock, Minus, Plus } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
 import { FAST_TRANSITION, LAYOUT_TRANSITION, listItemVariants } from "@/lib/animations";
@@ -29,6 +29,10 @@ export function PlanGroupCard({
 	const Icon = type === "outgoing" ? Minus : Plus;
 	const groupTotal = items.reduce((sum, item) => sum + item.amount, 0);
 
+	// Check if all items in this group are deferred for trial
+	const allDeferred =
+		items.length > 0 && items.every((item) => item.deferred_for_trial);
+
 	// Sort items so base price appears first
 	const sortedItems = [...items].sort((a, b) => {
 		if (a.is_base && !b.is_base) return -1;
@@ -51,6 +55,14 @@ export function PlanGroupCard({
 			className="rounded-lg border border-border overflow-hidden"
 		>
 			<CardBackground>
+
+			{/* After trial banner */}
+			{allDeferred && (
+				<div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 border-b text-xs text-muted-foreground">
+					<Clock className="h-3 w-3" weight="bold" />
+					<span>Charged after trial ends</span>
+				</div>
+			)}
 
 			{/* Plan header */}
 			<div className="flex items-center justify-between px-3 py-2 border-b bg-background/50">
@@ -104,15 +116,24 @@ export function PlanGroupCard({
 										</motion.span>
 									)}
 								</div>
-								<motion.span
-									key={item.amount}
-									className="text-sm tabular-nums text-muted-foreground"
-									initial={{ opacity: 0.5 }}
-									animate={{ opacity: 1 }}
-									transition={FAST_TRANSITION}
-								>
-									{formatAmount(item.amount, currency)}
-								</motion.span>
+								<div className="flex items-center gap-2">
+									{/* Show "After trial" for individual deferred items (only if not all are deferred) */}
+									{item.deferred_for_trial && !allDeferred && (
+										<span className="flex items-center gap-1 text-xs text-muted-foreground">
+											<Clock className="h-3 w-3" weight="bold" />
+											After trial
+										</span>
+									)}
+									<motion.span
+										key={item.amount}
+										className="text-sm tabular-nums text-muted-foreground"
+										initial={{ opacity: 0.5 }}
+										animate={{ opacity: 1 }}
+										transition={FAST_TRANSITION}
+									>
+										{formatAmount(item.amount, currency)}
+									</motion.span>
+								</div>
 							</div>
 							{itemIndex < sortedItems.length - 1 && (
 								<Separator className="opacity-50" />

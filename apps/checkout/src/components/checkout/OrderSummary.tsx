@@ -1,13 +1,16 @@
 import type {
+	ApiFreeTrialV2,
 	BillingPreviewResponse,
 	CheckoutChange,
 	PreviewLineItem,
 } from "@autumn/shared";
-import { format } from "date-fns";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useMemo } from "react";
-import { PlanGroupCard } from "@/components/checkout/PlanGroupCard";
-import { LAYOUT_TRANSITION, STANDARD_TRANSITION } from "@/lib/animations";
+import { CardBackground } from "@/components/checkout/CardBackground";
+import { FreeTrialSection } from "@/components/checkout/FreeTrialSection";
+import { PlanGroupSection } from "@/components/checkout/PlanGroupSection";
+import { Separator } from "@/components/ui/separator";
+import { LAYOUT_TRANSITION } from "@/lib/animations";
 
 interface PlanGroup {
 	planId: string;
@@ -21,6 +24,8 @@ interface OrderSummaryProps {
 	preview: BillingPreviewResponse;
 	incoming?: CheckoutChange[];
 	outgoing?: CheckoutChange[];
+	freeTrial?: ApiFreeTrialV2;
+	trialAvailable?: boolean;
 }
 
 export function OrderSummary({
@@ -28,6 +33,8 @@ export function OrderSummary({
 	preview,
 	incoming = [],
 	outgoing = [],
+	freeTrial,
+	trialAvailable = false,
 }: OrderSummaryProps) {
 	const { line_items, total, currency, next_cycle } = preview;
 
@@ -104,41 +111,50 @@ export function OrderSummary({
 		return groups;
 	}, [displayLineItems, outgoing, incoming, planNameMap]);
 
+	const showFreeTrial = freeTrial && trialAvailable;
+
 	return (
 		<motion.div
 			layout
-			className="flex flex-col gap-4"
+			className="flex flex-col gap-4 min-w-0"
 			transition={{ layout: LAYOUT_TRANSITION }}
 		>
-			{/* Plan groups as cards */}
-			<div className="flex flex-col gap-3">
-				<AnimatePresence mode="popLayout">
+			{/* Unified card containing all sections */}
+			<motion.div
+				layout
+				layoutId="order-summary-card"
+				transition={{ layout: LAYOUT_TRANSITION }}
+				className="rounded-lg border border-border overflow-hidden"
+			>
+				<CardBackground>
 					{planGroups.map((group, groupIndex) => (
-						<PlanGroupCard
-							key={group.planId}
-							planId={group.planId}
-							planName={group.planName}
-							items={group.items}
-							currency={currency}
-							index={groupIndex}
-							type={group.type}
-						/>
+						<div key={group.planId}>
+							{/* Separator between sections */}
+							{groupIndex > 0 && <Separator />}
+							<PlanGroupSection
+								planId={group.planId}
+								planName={group.planName}
+								items={group.items}
+								currency={currency}
+								type={group.type}
+							/>
+						</div>
 					))}
-				</AnimatePresence>
-			</div>
 
-			{/* Message explaining changes take effect next cycle */}
-			{showNextCycleBreakdown && (
-				<motion.p
-					className="text-xs text-muted-foreground"
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					transition={{ ...STANDARD_TRANSITION, delay: 0.2 }}
-				>
-					Changes take effect{" "}
-					{format(new Date(next_cycle.starts_at), "d MMM yyyy")}
-				</motion.p>
-			)}
+					{/* Free trial section */}
+					{showFreeTrial && (
+						<>
+							<Separator />
+							<FreeTrialSection
+								freeTrial={freeTrial}
+								trialAvailable={trialAvailable}
+							/>
+						</>
+					)}
+				</CardBackground>
+			</motion.div>
+
+
 		</motion.div>
 	);
 }

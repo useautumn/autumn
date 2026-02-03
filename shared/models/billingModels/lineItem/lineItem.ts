@@ -27,6 +27,9 @@ export const LineItemSchema = z
 
 		// Optional - for testing
 		chargeImmediately: z.boolean().default(true),
+
+		// Trial deferral - item will be charged after trial ends
+		deferredForTrial: z.boolean().optional(),
 	})
 	.transform((data) => {
 		return {

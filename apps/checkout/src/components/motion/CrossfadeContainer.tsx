@@ -26,7 +26,7 @@ export function CrossfadeContainer({
 			transition={{ layout: LAYOUT_TRANSITION }}
 			className={cn("relative", className)}
 		>
-			<AnimatePresence mode="popLayout" initial={false}>
+			<AnimatePresence mode="popLayout">
 				{isLoading ? (
 					<motion.div
 						key="skeleton"
