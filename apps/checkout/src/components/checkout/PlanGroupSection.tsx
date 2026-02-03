@@ -55,12 +55,6 @@ export function PlanGroupSection({
 		return 0;
 	});
 
-	// Extract group-level effective period from the first item with one
-	// (typically all items in a group share the same billing period)
-	const groupEffectivePeriod = items.find(
-		(item) => item.effective_period,
-	)?.effective_period;
-
 	return (
 		<div className="overflow-hidden">
 			{/* Plan header */}
@@ -75,12 +69,6 @@ export function PlanGroupSection({
 						{formatAmount(groupTotal, currency)}
 					</span>
 				</div>
-				{/* Group-level proration period */}
-				{groupEffectivePeriod && (
-					<p className="text-xs text-muted-foreground mt-0.5">
-						{formatPeriodRange(groupEffectivePeriod.start, groupEffectivePeriod.end)}
-					</p>
-				)}
 			</div>
 
 			{/* Line items for this plan */}
@@ -98,20 +86,27 @@ export function PlanGroupSection({
 					sortedItems.map((item, itemIndex) => (
 						<div key={`${item.title}-${itemIndex}`}>
 							<div className="flex items-center justify-between gap-4 py-2">
-								<div className="flex items-center gap-2 min-w-0">
-									<span className="text-xs text-muted-foreground truncate">
-										{item.is_base ? "Base Price" : item.title}
-									</span>
-									{!item.is_base && item.total_quantity > 1 && (
-										<motion.span
-											key={item.total_quantity}
-											className="text-xs text-muted-foreground shrink-0"
-											initial={{ opacity: 0, scale: 0.9 }}
-											animate={{ opacity: 1, scale: 1 }}
-											transition={FAST_TRANSITION}
-										>
-											x{item.total_quantity}
-										</motion.span>
+								<div className="flex flex-col min-w-0">
+									<div className="flex items-center gap-2">
+										<span className="text-xs text-muted-foreground truncate">
+											{item.is_base ? "Base Price" : item.title}
+										</span>
+										{!item.is_base && item.total_quantity > 1 && (
+											<motion.span
+												key={item.total_quantity}
+												className="text-xs text-muted-foreground shrink-0"
+												initial={{ opacity: 0, scale: 0.9 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={FAST_TRANSITION}
+											>
+												x{item.total_quantity}
+											</motion.span>
+										)}
+									</div>
+									{item.effective_period && (
+										<span className="text-xs text-muted-foreground/60">
+											{formatPeriodRange(item.effective_period.start, item.effective_period.end)}
+										</span>
 									)}
 								</div>
 								<LineItemAmount item={item} currency={currency} />
