@@ -110,9 +110,9 @@ export function PlanSelectionCard({
 					animate={{ opacity: 1 }}
 					transition={STANDARD_TRANSITION}
 				>
-					<div className="flex items-center gap-2">
-						<Package className="h-4 w-4 text-muted-foreground" weight="bold" />
-						<span className="text-sm font-medium text-foreground">{plan.name}</span>
+					<div className="flex items-center gap-2 min-w-0">
+						<Package className="h-4 w-4 text-muted-foreground shrink-0" weight="bold" />
+						<span className="text-sm font-medium text-foreground truncate">{plan.name}</span>
 					</div>
 				</motion.div>
 
@@ -153,19 +153,19 @@ export function PlanSelectionCard({
 												<Separator />
 											</div>
 										)}
-										<div className="flex items-center justify-between px-3 py-2.5">
-											<div className="flex flex-col gap-0.5">
-												<span className="text-sm text-foreground">
+										<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+											<div className="flex flex-col gap-0.5 min-w-0">
+												<span className="text-sm text-foreground truncate">
 													{getFeatureName(feature)}
 												</span>
-												<span className="text-xs text-muted-foreground">
+												<span className="text-xs text-muted-foreground truncate">
 													{formatAmount(unitPrice, currency)} per{" "}
 													{billingUnits === 1
 														? getFeatureUnitDisplay(feature, false)
 														: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
 												</span>
 											</div>
-											<div className="flex items-center gap-4">
+											<div className="flex items-center gap-4 shrink-0">
 												<motion.span
 													key={totalPrice}
 													className="text-sm text-muted-foreground tabular-nums"
@@ -233,9 +233,10 @@ export function PlanSelectionCard({
 												<Separator />
 											</div>
 										)}
-										<div className="flex items-center justify-between px-3 py-2.5">
-											<div className="flex items-center gap-2">
+										<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+											<div className="flex items-center gap-2 min-w-0">
 												<motion.div
+													className="shrink-0"
 													initial={{ scale: 0, opacity: 0 }}
 													animate={{ scale: 1, opacity: 1 }}
 													transition={{
@@ -245,13 +246,13 @@ export function PlanSelectionCard({
 														delay: 0.1 + index * 0.05,
 													}}
 												>
-													<Check className="h-4 w-4 text-muted-foreground shrink-0" />
+													<Check className="h-4 w-4 text-muted-foreground" />
 												</motion.div>
-												<span className="text-sm text-muted-foreground">
+												<span className="text-sm text-muted-foreground truncate">
 													{getFeatureName(feature)}
 												</span>
 											</div>
-											<span className="text-sm text-muted-foreground">
+											<span className="text-sm text-muted-foreground shrink-0">
 												{priceDisplay} per{" "}
 												{billingUnits === 1
 													? getFeatureUnitDisplay(feature, false)
@@ -285,9 +286,10 @@ export function PlanSelectionCard({
 										<Separator />
 									</div>
 								)}
-								<div className="flex items-center justify-between px-3 py-2.5">
-									<div className="flex items-center gap-2">
+								<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+									<div className="flex items-center gap-2 min-w-0">
 										<motion.div
+											className="shrink-0"
 											initial={{ scale: 0, opacity: 0 }}
 											animate={{ scale: 1, opacity: 1 }}
 											transition={{
@@ -297,14 +299,14 @@ export function PlanSelectionCard({
 												delay: 0.1 + index * 0.05,
 											}}
 										>
-											<Check className="h-4 w-4 text-muted-foreground shrink-0" />
+											<Check className="h-4 w-4 text-muted-foreground" />
 										</motion.div>
-										<span className="text-sm text-muted-foreground">
+										<span className="text-sm text-muted-foreground truncate">
 											{getFeatureName(feature)}
 										</span>
 									</div>
 									{feature.included_usage !== undefined && feature.included_usage !== null && (
-										<span className="text-sm text-muted-foreground">
+										<span className="text-sm text-muted-foreground shrink-0">
 											{feature.included_usage === -1
 												? "Unlimited"
 												: `${feature.included_usage} included`}

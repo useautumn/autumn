@@ -10,8 +10,6 @@ import { CheckoutFooter } from "@/components/checkout/CheckoutFooter";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { CheckoutSuccessState } from "@/components/checkout/CheckoutSuccessState";
 import { BottomSectionSkeleton } from "@/components/checkout/BottomSectionSkeleton";
-import { FreeTrialCard } from "@/components/checkout/FreeTrialCard";
-import { FreeTrialCardSkeleton } from "@/components/checkout/FreeTrialCardSkeleton";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { OrderSummarySkeleton } from "@/components/checkout/OrderSummarySkeleton";
 import { PlanSelectionCard } from "@/components/checkout/PlanSelectionCard";
@@ -31,6 +29,7 @@ import {
 	fadeUpVariants,
 	listContainerVariants,
 } from "@/lib/animations";
+import { buildHeaderDescription } from "@/utils/buildHeaderDescription";
 import { formatAmount } from "@/utils/formatUtils";
 
 function buildOptionsArray(
@@ -58,15 +57,18 @@ function getButtonText({
 	total,
 	nextCycleTotal,
 	isSubscription,
+	hasActiveTrial,
 }: {
 	isPending: boolean;
 	isUpdating: boolean;
 	total: number;
 	nextCycleTotal: number;
 	isSubscription: boolean;
+	hasActiveTrial: boolean;
 }): string {
 	if (isPending) return "Processing...";
 	if (isUpdating) return "Updating...";
+	if (hasActiveTrial) return "Confirm and start trial";
 	if (total === 0) {
 		return nextCycleTotal > 0 ? "Confirm and Subscribe" : "Confirm";
 	}
@@ -125,58 +127,20 @@ export function CheckoutPage() {
 		return checkoutData.incoming.some((change) => change.plan.price?.interval);
 	}, [checkoutData]);
 
-	// Build context subheading for Plan Details section
-	const planDetailsSubheading = useMemo(() => {
-		if (!checkoutData?.incoming?.length) return undefined;
+	const headerDescription = useMemo(() => {
+		const incomingPlan = checkoutData?.incoming?.[0]?.plan;
+		const freeTrial = incomingPlan?.free_trial;
+		const trialAvailable =
+			incomingPlan?.customer_eligibility?.trial_available ?? false;
 
-		const change = checkoutData.incoming[0];
-		const scenario = change.plan.customer_eligibility?.scenario;
-		const outgoingPlanName = checkoutData.outgoing?.[0]?.plan.name;
-		const entityName = checkoutData.entity?.name || checkoutData.entity?.id;
-
-		// Check for proration (period_end exists when prorated)
-		const periodEnd = checkoutData.preview?.period_end;
-		const isProrated = outgoingPlanName && periodEnd;
-
-		let context = "";
-		if (outgoingPlanName) {
-			if (scenario === "upgrade") {
-				context = `Upgrading from ${outgoingPlanName}`;
-			} else if (scenario === "downgrade") {
-				context = `Downgrading from ${outgoingPlanName}`;
-			} else {
-				context = `Changing from ${outgoingPlanName}`;
-			}
-		} else {
-			context = "New subscription";
-		}
-
-		if (entityName) {
-			context += ` for ${entityName}`;
-		}
-
-		// Add proration info when upgrading/downgrading mid-cycle
-		if (isProrated) {
-			context += `. Prorated until ${format(periodEnd, "MMM d")}`;
-		}
-
-		return context;
-	}, [checkoutData]);
-
-	// Build subheading for Order Summary section
-	const orderSummarySubheading = useMemo(() => {
-		if (!checkoutData?.preview) return undefined;
-
-		const { total, currency } = checkoutData.preview;
-		const entityName = checkoutData.entity?.name || checkoutData.entity?.id;
-
-		let context = `${formatAmount(total, currency)} due today`;
-
-		if (entityName) {
-			context += ` for ${entityName}`;
-		}
-
-		return context;
+		return buildHeaderDescription({
+			preview: checkoutData?.preview,
+			incoming: checkoutData?.incoming,
+			outgoing: checkoutData?.outgoing,
+			entity: checkoutData?.entity,
+			freeTrial,
+			trialAvailable,
+		});
 	}, [checkoutData]);
 
 	if (!checkoutId) {
@@ -221,7 +185,10 @@ export function CheckoutPage() {
 	// Extract free trial info from first incoming plan
 	const incomingPlan = incoming?.[0]?.plan;
 	const freeTrial = incomingPlan?.free_trial;
-	const trialAvailable = incomingPlan?.customer_eligibility?.trial_available ?? false;
+	const trialAvailable =
+		incomingPlan?.customer_eligibility?.trial_available ?? false;
+	const hasActiveTrial = freeTrial && trialAvailable;
+	const trialEndDate = incoming?.[0]?.period_end;
 
 	return (
 		<CheckoutBackground>
@@ -233,23 +200,24 @@ export function CheckoutPage() {
 			>
 				{/* Header */}
 				<motion.div variants={fadeUpVariants} transition={STANDARD_TRANSITION}>
-					<CheckoutHeader org={org} isLoading={isLoading} />
+					<CheckoutHeader
+						org={org}
+						isLoading={isLoading}
+						description={headerDescription}
+					/>
 				</motion.div>
 
 
 				{/* Main content - two columns */}
 				<LayoutGroup>
-					<div className="flex flex-col lg:flex-row gap-8 w-full">
+					<div className="flex flex-col lg:flex-row gap-8 w-full max-w-4xl mx-auto">
 						{/* Left column - Plan selection */}
 						<motion.div
-							className="flex flex-col gap-4 w-full lg:w-1/2"
+							className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
 						>
-							<SectionHeader
-								title="Plan Details"
-								subheading={planDetailsSubheading}
-							/>
+							<SectionHeader title="Plan Details" />
 
 							<CrossfadeContainer
 								isLoading={isLoading}
@@ -273,14 +241,11 @@ export function CheckoutPage() {
 
 						{/* Right column - Order summary */}
 						<motion.div
-							className="flex flex-col gap-4 w-full lg:w-1/2"
+							className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
 							variants={fadeUpVariants}
 							transition={{ ...STANDARD_TRANSITION, delay: 0.1 }}
 						>
-							<SectionHeader
-								title="Order Summary"
-								subheading={orderSummarySubheading}
-							/>
+							<SectionHeader title="Order Summary" />
 
 							{/* Order summary */}
 							<motion.div
@@ -297,33 +262,20 @@ export function CheckoutPage() {
 											preview={preview}
 											incoming={incoming}
 											outgoing={outgoing}
+											freeTrial={freeTrial}
+											trialAvailable={trialAvailable}
 										/>
 									)}
 								</CrossfadeContainer>
 							</motion.div>
 
-							{/* Free trial card */}
-							{freeTrial && (
-								<CrossfadeContainer
-									isLoading={isLoading}
-									skeleton={<FreeTrialCardSkeleton />}
-								>
-									<FreeTrialCard
-										freeTrial={freeTrial}
-										trialAvailable={trialAvailable}
-									/>
-								</CrossfadeContainer>
-							)}
+
 						</motion.div>
 					</div>
 				</LayoutGroup>
 
 				<Separator />
 
-				{/* Bottom section - full width */}
-				<div>
-
-				</div>
 				<div className="flex flex-col gap-4">
 
 					<motion.div
@@ -347,10 +299,14 @@ export function CheckoutPage() {
 									</span>
 								</div>
 
-								{/* Amount next cycle */}
+								{/* Amount next cycle / Amount due on trial end */}
 								{preview?.next_cycle && (
 									<div className="flex items-center justify-between text-sm text-muted-foreground">
-										<span>Total due next cycle</span>
+										<span>
+											{hasActiveTrial && preview.next_cycle.starts_at
+												? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
+												: "Total due next cycle"}
+										</span>
 										<span className="tabular-nums">
 											{formatAmount(preview.next_cycle.total, currency)}
 										</span>
@@ -375,6 +331,7 @@ export function CheckoutPage() {
 										total,
 										nextCycleTotal: preview?.next_cycle?.total ?? 0,
 										isSubscription,
+										hasActiveTrial: hasActiveTrial ?? false,
 									})}
 								</Button>
 							</motion.div>

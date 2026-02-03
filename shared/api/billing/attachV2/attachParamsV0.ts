@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels.js";
+import { CreateFreeTrialSchema } from "../../../models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 
@@ -18,6 +19,12 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	// Product config
 	options: z.array(FeatureOptionsSchema).nullish(),
 	version: z.number().optional(),
+
+	// Free trial override
+	// - undefined: use product's default trial (check eligibility)
+	// - null: explicitly disable trial
+	// - object: custom trial override
+	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("always"),

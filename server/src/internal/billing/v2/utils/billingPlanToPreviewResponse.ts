@@ -31,8 +31,13 @@ export const billingPlanToPreviewResponse = ({
 		lineItemToPreviewLineItem,
 	);
 
+	// Exclude deferred items from total (they'll be charged after trial ends)
+	const chargeableItems = previewImmediateLineItems.filter(
+		(line) => !line.deferred_for_trial,
+	);
+
 	const total = new Decimal(
-		sumValues(previewImmediateLineItems.map((line) => line.amount)),
+		sumValues(chargeableItems.map((line) => line.amount)),
 	)
 		.toDP(2)
 		.toNumber();
