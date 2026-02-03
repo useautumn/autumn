@@ -71,15 +71,30 @@ const base = ({
 const pro = ({
 	items,
 	id = "pro",
+	freeTrial,
 }: {
 	items: ProductItem[];
 	id?: string;
+	freeTrial?: {
+		length: number;
+		duration: FreeTrialDuration;
+		cardRequired?: boolean;
+		uniqueFingerprint?: boolean;
+	};
 }): ProductV2 =>
 	constructProduct({
 		id,
 		items: [...items],
 		type: "pro",
 		isDefault: false,
+		freeTrial: freeTrial
+			? ({
+					length: freeTrial.length,
+					duration: freeTrial.duration,
+					unique_fingerprint: freeTrial.uniqueFingerprint ?? false,
+					card_required: freeTrial.cardRequired ?? true,
+				} as unknown as FreeTrial)
+			: undefined,
 	});
 
 /**

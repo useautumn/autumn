@@ -49,14 +49,17 @@ const adminRights = () =>
 const monthlyMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
+	resetUsageWhenEnabled = false,
 }: {
 	includedUsage?: number;
 	entityFeatureId?: string;
+	resetUsageWhenEnabled?: boolean;
 } = {}): LimitedItem =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		entityFeatureId,
+		resetUsageWhenEnabled,
 	}) as LimitedItem;
 
 /**
