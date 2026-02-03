@@ -36,6 +36,12 @@
 		"scripts": {
 			"entry": ["**/*.{ts,js}"],
 			"project": ["**/*.{ts,js}"]
+		},
+		"apps/checkout": {
+			"entry": ["src/main.tsx"],
+			"project": ["src/**/*.{ts,tsx}"],
+			"ignore": ["src/components/ui/**", "src/hooks/**"],
+			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		}
 	},
 	"ignoreBinaries": ["infisical", "lsof", "serve"]

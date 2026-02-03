@@ -65,6 +65,7 @@ export const handleGetCheckout = createRoute({
 		});
 
 		const response: GetCheckoutResponse = {
+			env: checkout.env,
 			preview,
 			org: {
 				name: ctx.org.name,
