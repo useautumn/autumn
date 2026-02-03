@@ -1,15 +1,11 @@
-import type {
-	ApiFreeTrialV2,
-	BillingPreviewResponse,
-	CheckoutChange,
-	PreviewLineItem,
-} from "@autumn/shared";
+import type { PreviewLineItem } from "@autumn/shared";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { CardBackground } from "@/components/checkout/CardBackground";
 import { FreeTrialSection } from "@/components/checkout/FreeTrialSection";
 import { PlanGroupSection } from "@/components/checkout/PlanGroupSection";
 import { Separator } from "@/components/ui/separator";
+import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { LAYOUT_TRANSITION } from "@/lib/animations";
 
 interface PlanGroup {
@@ -19,23 +15,13 @@ interface PlanGroup {
 	type: "incoming" | "outgoing";
 }
 
-interface OrderSummaryProps {
-	planName: string;
-	preview: BillingPreviewResponse;
-	incoming?: CheckoutChange[];
-	outgoing?: CheckoutChange[];
-	freeTrial?: ApiFreeTrialV2;
-	trialAvailable?: boolean;
-}
+export function OrderSummary() {
+	const { preview, incoming = [], outgoing = [], freeTrial, trialAvailable } =
+		useCheckoutContext();
 
-export function OrderSummary({
-	planName,
-	preview,
-	incoming = [],
-	outgoing = [],
-	freeTrial,
-	trialAvailable = false,
-}: OrderSummaryProps) {
+	// Early return if no preview data yet
+	if (!preview) return null;
+
 	const { line_items, total, currency, next_cycle } = preview;
 
 	const hasNoImmediateCharges = line_items.length === 0 && total === 0;

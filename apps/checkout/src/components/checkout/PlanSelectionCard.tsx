@@ -3,6 +3,7 @@ import { Check, Package } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import {
 	FAST_TRANSITION,
 	LAYOUT_TRANSITION,
@@ -11,8 +12,8 @@ import {
 	listItemVariants,
 } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
-import { QuantityInput } from "./QuantityInput";
 import { CardBackground } from "@/components/checkout/CardBackground";
+import { QuantityInput } from "./QuantityInput";
 
 function categorizeFeatures(features: ApiPlanFeature[]): {
 	prepaid: ApiPlanFeature[];
@@ -71,21 +72,10 @@ function getFeatureUnitDisplay(
 
 interface PlanSelectionCardProps {
 	change: CheckoutChange;
-	currency: string;
-	quantities: Record<string, number>;
-	onQuantityChange: (
-		featureId: string,
-		quantity: number,
-		billingUnits: number,
-	) => void;
 }
 
-export function PlanSelectionCard({
-	change,
-	currency,
-	quantities,
-	onQuantityChange,
-}: PlanSelectionCardProps) {
+export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
+	const { currency, quantities, handleQuantityChange } = useCheckoutContext();
 	const { plan, feature_quantities } = change;
 	const { prepaid, payPerUse, included } = categorizeFeatures(plan.features);
 	const basePrice = plan.price;
@@ -105,14 +95,14 @@ export function PlanSelectionCard({
 				<CardBackground>
 				{/* Plan header */}
 				<motion.div
-					className="flex items-center px-3 py-2 border-b bg-background/50"
+					className="flex items-center px-3 py-2.5 border-b bg-background/50"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={STANDARD_TRANSITION}
 				>
 					<div className="flex items-center gap-2 min-w-0">
 						<Package className="h-4 w-4 text-muted-foreground shrink-0" weight="bold" />
-						<span className="text-sm font-medium text-foreground truncate">{plan.name}</span>
+						<span className="text-sm text-foreground truncate">{plan.name}</span>
 					</div>
 				</motion.div>
 
@@ -153,9 +143,9 @@ export function PlanSelectionCard({
 												<Separator />
 											</div>
 										)}
-										<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+										<div className="flex items-center justify-between gap-4 px-3 py-2">
 											<div className="flex flex-col gap-0.5 min-w-0">
-												<span className="text-sm text-foreground truncate">
+												<span className="text-xs text-foreground truncate">
 													{getFeatureName(feature)}
 												</span>
 												<span className="text-xs text-muted-foreground truncate">
@@ -168,7 +158,7 @@ export function PlanSelectionCard({
 											<div className="flex items-center gap-4 shrink-0">
 												<motion.span
 													key={totalPrice}
-													className="text-sm text-muted-foreground tabular-nums"
+													className="text-xs text-muted-foreground tabular-nums"
 													initial={{ opacity: 0.5 }}
 													animate={{ opacity: 1 }}
 													transition={FAST_TRANSITION}
@@ -178,7 +168,7 @@ export function PlanSelectionCard({
 												<QuantityInput
 													value={currentQuantity}
 													onChange={(value) =>
-														onQuantityChange(
+														handleQuantityChange(
 															feature.feature_id,
 															value,
 															billingUnits,
@@ -233,7 +223,7 @@ export function PlanSelectionCard({
 												<Separator />
 											</div>
 										)}
-										<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+										<div className="flex items-center justify-between gap-4 px-3 py-2">
 											<div className="flex items-center gap-2 min-w-0">
 												<motion.div
 													className="shrink-0"
@@ -246,13 +236,13 @@ export function PlanSelectionCard({
 														delay: 0.1 + index * 0.05,
 													}}
 												>
-													<Check className="h-4 w-4 text-muted-foreground" />
+													<Check className="h-3.5 w-3.5 text-muted-foreground" />
 												</motion.div>
-												<span className="text-sm text-muted-foreground truncate">
+												<span className="text-xs text-muted-foreground truncate">
 													{getFeatureName(feature)}
 												</span>
 											</div>
-											<span className="text-sm text-muted-foreground shrink-0">
+											<span className="text-xs text-muted-foreground shrink-0">
 												{priceDisplay} per{" "}
 												{billingUnits === 1
 													? getFeatureUnitDisplay(feature, false)
@@ -286,7 +276,7 @@ export function PlanSelectionCard({
 										<Separator />
 									</div>
 								)}
-								<div className="flex items-center justify-between gap-4 px-3 py-2.5">
+								<div className="flex items-center justify-between gap-4 px-3 py-2">
 									<div className="flex items-center gap-2 min-w-0">
 										<motion.div
 											className="shrink-0"
@@ -299,14 +289,14 @@ export function PlanSelectionCard({
 												delay: 0.1 + index * 0.05,
 											}}
 										>
-											<Check className="h-4 w-4 text-muted-foreground" />
+											<Check className="h-3.5 w-3.5 text-muted-foreground" />
 										</motion.div>
-										<span className="text-sm text-muted-foreground truncate">
+										<span className="text-xs text-muted-foreground truncate">
 											{getFeatureName(feature)}
 										</span>
 									</div>
 									{feature.included_usage !== undefined && feature.included_usage !== null && (
-										<span className="text-sm text-muted-foreground shrink-0">
+										<span className="text-xs text-muted-foreground shrink-0">
 											{feature.included_usage === -1
 												? "Unlimited"
 												: `${feature.included_usage} included`}

@@ -1,21 +1,11 @@
 import { motion } from "motion/react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STANDARD_TRANSITION, GENTLE_SPRING } from "@/lib/animations";
+import { useCheckoutContext } from "@/contexts/CheckoutContext";
+import { GENTLE_SPRING, STANDARD_TRANSITION } from "@/lib/animations";
 
-interface CheckoutHeaderProps {
-	org?: {
-		name: string;
-		logo: string | null;
-	};
-	isLoading?: boolean;
-	description?: string;
-}
-
-export function CheckoutHeader({
-	org,
-	isLoading = false,
-	description,
-}: CheckoutHeaderProps) {
+export function CheckoutHeader() {
+	const { org, status, headerDescription } = useCheckoutContext();
+	const isLoading = status.isLoading;
 	return (
 		<div className="flex flex-col gap-4">
 			{/* Org branding */}
@@ -49,14 +39,14 @@ export function CheckoutHeader({
 				</h1>
 				{isLoading ? (
 					<Skeleton className="h-5 w-80" />
-				) : description ? (
+				) : headerDescription ? (
 					<motion.p
 						className="text-sm text-muted-foreground"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						transition={STANDARD_TRANSITION}
 					>
-						{description}
+						{headerDescription}
 					</motion.p>
 				) : null}
 			</div>

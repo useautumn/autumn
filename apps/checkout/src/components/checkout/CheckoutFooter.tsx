@@ -9,15 +9,15 @@ export function CheckoutFooter() {
 			href="https://useautumn.com"
 			target="_blank"
 			rel="noopener noreferrer"
-			className="flex items-center justify-center gap-[3px] group focus-visible:underline outline-none"
+			className="w-fit mx-auto flex items-center justify-center gap-0.5 group focus-visible:underline outline-none"
 		>
-			<span className={cn("text-sm text-muted-foreground group-hover:text-foreground", transitionClass)}>Powered by</span>
+			<span className={cn("text-xs text-muted-foreground group-hover:text-foreground", transitionClass)}>Powered by</span>
 			<img
 				src={autumnLogo}
 				alt="Autumn"
-				className={cn("h-5 w-5 grayscale group-hover:grayscale-0", transitionClass)}
+				className={cn("h-4.5 w-4.5 grayscale group-hover:grayscale-0", transitionClass)}
 			/>
-			<span className={cn("text-sm text-muted-foreground group-hover:text-foreground", transitionClass)}>Autumn</span>
+			<span className={cn("text-xs text-muted-foreground group-hover:text-foreground", transitionClass)}>Autumn</span>
 		</a>
 	);
 }

@@ -41,20 +41,20 @@ export function PlanGroupSection({
 	return (
 		<div className="overflow-hidden">
 			{/* Plan header */}
-			<div className="px-3 py-2 border-b bg-background/50">
+			<div className="px-3 py-2.5 border-b bg-background/50">
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex items-center gap-2 min-w-0">
-						<span className="text-sm font-medium text-foreground truncate">
+						<span className="text-sm text-foreground truncate">
 							{planName}
 						</span>
 					</div>
-					<span className="text-sm font-medium tabular-nums text-foreground shrink-0">
+					<span className="text-sm font-semibold tabular-nums text-foreground shrink-0">
 						{formatAmount(groupTotal, currency)}
 					</span>
 				</div>
 				{/* Group-level proration period */}
 				{groupEffectivePeriod && (
-					<p className="text-xs text-muted-foreground/70 mt-0.5">
+					<p className="text-xs text-muted-foreground mt-0.5">
 						{formatPeriodRange(groupEffectivePeriod.start, groupEffectivePeriod.end)}
 					</p>
 				)}
@@ -63,20 +63,20 @@ export function PlanGroupSection({
 			{/* Line items for this plan */}
 			<div className="px-3">
 				{sortedItems.length === 0 ? (
-					<div className="flex items-center justify-between gap-4 py-2.5">
-						<span className="text-sm text-muted-foreground">
+					<div className="flex items-center justify-between gap-4 py-2">
+						<span className="text-xs text-muted-foreground">
 							{type === "outgoing" ? "No charges" : "Free"}
 						</span>
-						<span className="text-sm tabular-nums text-muted-foreground shrink-0">
+						<span className="text-xs tabular-nums text-muted-foreground shrink-0">
 							{formatAmount(0, currency)}
 						</span>
 					</div>
 				) : (
 					sortedItems.map((item, itemIndex) => (
 						<div key={`${item.title}-${itemIndex}`}>
-							<div className="flex items-center justify-between gap-4 py-2.5">
+							<div className="flex items-center justify-between gap-4 py-2">
 								<div className="flex items-center gap-2 min-w-0">
-									<span className="text-sm text-muted-foreground truncate">
+									<span className="text-xs text-muted-foreground truncate">
 										{item.is_base ? "Base Price" : item.title}
 									</span>
 									{!item.is_base && item.total_quantity > 1 && (
@@ -93,7 +93,7 @@ export function PlanGroupSection({
 								</div>
 								<motion.span
 									key={item.amount}
-									className="text-sm tabular-nums text-muted-foreground shrink-0"
+									className="text-xs tabular-nums text-muted-foreground shrink-0"
 									initial={{ opacity: 0.5 }}
 									animate={{ opacity: 1 }}
 									transition={FAST_TRANSITION}

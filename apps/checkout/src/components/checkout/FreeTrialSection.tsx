@@ -13,11 +13,11 @@ export function FreeTrialSection({ freeTrial, trialAvailable }: FreeTrialSection
 	});
 
 	return (
-		<div className="flex items-center justify-between gap-4 px-3 py-2.5">
-			<span className="text-sm text-muted-foreground">
+		<div className="flex items-center justify-between gap-4 px-3 py-2">
+			<span className="text-xs text-muted-foreground">
 				Free Trial
 			</span>
-			<span className="text-sm text-muted-foreground shrink-0">
+			<span className="text-xs text-muted-foreground shrink-0">
 				{duration}
 			</span>
 		</div>
