@@ -22,6 +22,7 @@ import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -279,6 +280,17 @@ export function BalanceEditSheet() {
 										Unlimited
 									</span>
 								}
+							/>
+						)}
+
+						{selectedCusEnt.expires_at && (
+							<InfoRow
+								label="Expires At"
+								value={`${
+									formatUnixToDateTime(selectedCusEnt.expires_at, {
+										withYear: true,
+									}).date
+								}, ${formatUnixToDateTime(selectedCusEnt.expires_at).time}`}
 							/>
 						)}
 					</div>

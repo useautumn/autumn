@@ -25,10 +25,13 @@ export const formatUnixToDate = (
 
 export const formatUnixToDateTime = (
 	unix: number | null | undefined,
-	options?: { ampm?: boolean; case?: TimeCase },
+	options?: { ampm?: boolean; case?: TimeCase; withYear?: boolean },
 ) => {
 	if (!unix) return { date: "", time: "" };
-	const date = format(new Date(unix), "d MMM");
+	const date = format(
+		new Date(unix),
+		options?.withYear ? "d MMM yyyy" : "d MMM",
+	);
 
 	const pattern = options?.ampm ? "HH:mm a" : "HH:mm";
 	let time = format(new Date(unix), pattern);
