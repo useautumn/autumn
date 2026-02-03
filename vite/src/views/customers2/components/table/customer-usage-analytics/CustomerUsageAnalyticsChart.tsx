@@ -25,6 +25,7 @@ export function CustomerUsageAnalyticsChart({
 	daysToShow?: number;
 }) {
 	const isSheetOpen = useIsSheetOpen();
+
 	function formatYAxisTick(value: number): string {
 		// if (value === 0) return "";
 
@@ -47,16 +48,17 @@ export function CustomerUsageAnalyticsChart({
 		// Prefer timeseries data if available
 		if (timeseriesEvents?.data && timeseriesEvents.data.length > 0) {
 			const preparedData = prepareTimeseriesChartData({ timeseriesEvents });
-			if (preparedData.eventNames.length !== 0) return preparedData;
-			//if no event names return default data
-			else return prepareChartData({ events, daysToShow });
+			if (preparedData.eventNames.length !== 0) {
+				return preparedData;
+			}
+			// If no event names, return default data
+			return prepareChartData({ events, daysToShow });
 		}
-		//otherwise this is default data
+		// Otherwise use default data
 		return prepareChartData({ events, daysToShow });
 	}, [timeseriesEvents, events, daysToShow]);
 
 	const yAxisTicks = maxValue === 0 ? [0, 50, 100, 150, 200] : undefined;
-	// console.log("yAxisTicks: ", yAxisTicks);
 
 	return (
 		<ChartContainer
