@@ -42,6 +42,7 @@ export const setupAttachBillingContext = async ({
 		setupAttachTransitionContext({
 			fullCustomer,
 			attachProduct,
+			planScheduleOverride: params.plan_schedule,
 		});
 
 	const {
@@ -103,6 +104,7 @@ export const setupAttachBillingContext = async ({
 	const endOfCycleMs = setupAttachEndOfCycleMs({
 		planTiming,
 		currentCustomerProduct,
+		stripeSubscription,
 		billingCycleAnchorMs,
 		currentEpochMs,
 	});

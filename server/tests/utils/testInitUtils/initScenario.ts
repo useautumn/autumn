@@ -1,4 +1,9 @@
-import { ApiVersion, type ProductItem, type ProductV2 } from "@autumn/shared";
+import {
+	ApiVersion,
+	type PlanTiming,
+	type ProductItem,
+	type ProductV2,
+} from "@autumn/shared";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -93,6 +98,7 @@ type BillingAttachAction = {
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
+	planSchedule?: PlanTiming;
 	timeout?: number;
 };
 
@@ -541,22 +547,25 @@ const deleteCustomer = (
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
  * @param options - Optional feature options (e.g., prepaid quantity)
  * @param newBillingSubscription - Create a separate Stripe subscription for this product
+ * @param planSchedule - Override plan timing: "immediate" or "end_of_cycle"
  * @param timeout - Optional timeout in milliseconds for the attach request
  * @example s.billing.attach({ productId: "pro" }) // customer-level
  * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
- * @example s.billing.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
+ * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" }) // scheduled upgrade
  */
 const billingAttach = ({
 	productId,
 	entityIndex,
 	options,
 	newBillingSubscription,
+	planSchedule,
 	timeout,
 }: {
 	productId: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
+	planSchedule?: PlanTiming;
 	timeout?: number;
 }): ConfigFn => {
 	return (config) => ({
@@ -569,6 +578,7 @@ const billingAttach = ({
 				entityIndex,
 				options,
 				newBillingSubscription,
+				planSchedule,
 				timeout,
 			},
 		],
@@ -1048,6 +1058,7 @@ export async function initScenario({
 					entity_id: entityId,
 					options: action.options,
 					new_billing_subscription: action.newBillingSubscription,
+					plan_schedule: action.planSchedule,
 				},
 				{ timeout: action.timeout },
 			);
