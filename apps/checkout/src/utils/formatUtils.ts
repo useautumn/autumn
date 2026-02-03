@@ -1,10 +1,10 @@
 import { format } from "date-fns";
 
-export function formatAmount(cents: number, currency: string): string {
+export function formatAmount(amount: number, currency: string): string {
 	return new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: currency.toUpperCase(),
-	}).format(cents / 100);
+	}).format(amount);
 }
 
 export function formatDate(timestamp: number): string {

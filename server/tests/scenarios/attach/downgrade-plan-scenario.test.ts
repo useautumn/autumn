@@ -6,14 +6,14 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 /**
- * Upgrade Plan Scenario
+ * Downgrade Plan Scenario
  *
- * Tests upgrading from a basic plan to a more expensive premium plan.
- * Customer starts with a starter plan attached, then upgrades to pro.
+ * Tests downgrading from a premium plan to a basic cheaper plan.
+ * Customer starts with a pro plan attached, then downgrades to starter.
  */
 
-test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, async () => {
-	const customerId = "attach-upgrade";
+test(`${chalk.yellowBright("attach: downgrade - from pro to starter plan")}`, async () => {
+	const customerId = "attach-downgrade";
 
 	// Starter plan ($19/mo) - basic features
 	const starter = products.base({
@@ -38,7 +38,10 @@ test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, asyn
 		],
 	});
 
-	// Setup: customer with payment method and starter plan already attached
+	// Options for prepaid features in pro plan
+	const proOptions = [{ feature_id: TestFeature.Users, quantity: 5 }];
+
+	// Setup: customer with payment method and pro plan already attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -46,14 +49,14 @@ test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, asyn
 			s.products({ list: [starter, pro] }),
 		],
 		actions: [
-			// Attach starter plan first
-			s.attach({ productId: "starter" }),
+			// Attach pro plan first with prepaid users
+			s.attach({ productId: "pro", options: proOptions }),
 		],
 	});
 
 	// Get customer state after initial attach
 	const customerBefore = await autumnV1.customers.get(customerId);
-	console.log("customer before upgrade:", {
+	console.log("customer before downgrade:", {
 		products: customerBefore.products?.map(
 			(p: { id: string; name: string | null }) => ({
 				id: p.id,
@@ -62,24 +65,19 @@ test(`${chalk.yellowBright("attach: upgrade - from starter to pro plan")}`, asyn
 		),
 	});
 
-	// Options for prepaid features in pro plan
-	const proOptions = [{ feature_id: TestFeature.Users, quantity: 5 }];
-
-	// 1. Preview the upgrade
-	const upgradePreview = await autumnV1.billing.previewAttach({
+	// 1. Preview the downgrade
+	const downgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
-		product_id: `pro_${customerId}`,
-		options: proOptions,
+		product_id: `starter_${customerId}`,
 		redirect_mode: "always",
 	});
-	console.log("upgrade preview:", upgradePreview);
+	console.log("downgrade preview:", downgradePreview);
 
-	// 2. Perform the upgrade with redirect_mode: "always" (Autumn checkout URL)
-	const upgradeResult = await autumnV1.billing.attach({
+	// 2. Perform the downgrade with redirect_mode: "always" (Autumn checkout URL)
+	const downgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: `pro_${customerId}`,
+		product_id: `starter_${customerId}`,
 		redirect_mode: "always",
-		options: proOptions,
 	});
-	console.log("upgrade result:", upgradeResult);
+	console.log("downgrade result:", downgradeResult);
 });

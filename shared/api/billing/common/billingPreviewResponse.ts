@@ -1,17 +1,20 @@
 import { z } from "zod/v4";
 
+export const PreviewLineItemSchema = z.object({
+	title: z.string(),
+	description: z.string(),
+	amount: z.number(),
+	is_base: z.boolean().optional(),
+	total_quantity: z.number(),
+	paid_quantity: z.number(),
+	plan_id: z.string(),
+});
+
+export type PreviewLineItem = z.infer<typeof PreviewLineItemSchema>;
+
 export const BillingPreviewResponseSchema = z.object({
 	customer_id: z.string(),
-	line_items: z.array(
-		z.object({
-			title: z.string(),
-			description: z.string(),
-			amount: z.number(),
-			is_base: z.boolean().optional(),
-			total_quantity: z.number(),
-			paid_quantity: z.number(),
-		}),
-	),
+	line_items: z.array(PreviewLineItemSchema),
 
 	total: z.number(),
 	currency: z.string(),
@@ -23,6 +26,7 @@ export const BillingPreviewResponseSchema = z.object({
 		.object({
 			starts_at: z.number(),
 			total: z.number(),
+			line_items: z.array(PreviewLineItemSchema),
 		})
 		.optional(),
 });
