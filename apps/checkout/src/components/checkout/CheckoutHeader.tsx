@@ -40,7 +40,7 @@ export function CheckoutHeader({ org, isLoading = false }: CheckoutHeaderProps) 
 			{/* Title and description - always show these, no skeleton needed */}
 			<div className="flex flex-col gap-2">
 				<h1 className="text-2xl text-foreground tracking-tight">Confirm your order</h1>
-				<p className="text-base text-muted-foreground tracking-tight">
+				<p className="text-base text-muted-foreground">
 					Please review your order and confirm to complete your purchase.
 				</p>
 			</div>

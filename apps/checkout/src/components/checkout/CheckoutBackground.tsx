@@ -27,7 +27,7 @@ export function CheckoutBackground({ children }: { children: ReactNode }) {
 				transition={{ duration: 0.6, delay: 0.1 }}
 			/>
 			{/* Animated beams */}
-			<BackgroundBeams className="absolute inset-0 pointer-events-none opacity-5" />
+			<BackgroundBeams className="absolute inset-0 pointer-events-none opacity-6" />
 			{/* Frosted glass content container */}
 			<motion.div
 				layout
