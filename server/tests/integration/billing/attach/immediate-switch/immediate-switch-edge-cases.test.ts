@@ -80,6 +80,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 1: all featur
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
+
 	// Track consumable messages (50)
 	await autumnV1.track({
 		customer_id: customerId,
@@ -213,6 +216,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 2: all types 
 		],
 	});
 
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
+
 	// Track usage mid-cycle
 	await autumnV1.track({
 		customer_id: customerId,
@@ -294,11 +300,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 2: all types 
  * - Pro with:
  *   - Consumable messages (100 included) - track 150 (50 overage)
  *   - Allocated users (3 included) - track 5 (2 over limit, billed immediately)
- * - Upgrade to Premium
+ * - Upgrade to Premium (500 messages, 10 users)
  *
  * Expected Result:
- * - Consumable overage NOT charged on upgrade (billed at cycle end)
- * - Allocated overage already billed on track
+ * - Consumable overage charged on upgrade: 50 × $0.10 = $5
+ * - Allocated overage refunded (2 paid seats now within limit): -$20
+ * - Base price difference: $50 - $20 = $30
+ * - Net upgrade charge: $30 - $20 + $5 = $15
  * - Consumable resets, allocated carries over (now within limit)
  */
 test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 3: consumable overage + allocated over limit")}`, async () => {
@@ -328,6 +336,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 3: consumable
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track consumable into overage (150 usage, 50 over)
 	await autumnV1.track({
@@ -372,12 +383,16 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 3: consumable
 		latestTotal: 20, // 2 seats * $10/seat
 	});
 
-	// 1. Preview upgrade - only price difference (no consumable overage)
+	// 1. Preview upgrade
+	// Base price difference: $50 - $20 = +$30
+	// Allocated refund: 2 paid seats now within Premium's 10 limit = -$20
+	// Consumable overage: 50 messages × $0.10 = +$5
+	// Net: $30 - $20 + $5 = $15
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	expect(preview.total).toBe(30); // $50 - $20
+	expect(preview.total).toBe(15);
 
 	// 2. Attach premium
 	await autumnV1.billing.attach({
@@ -413,11 +428,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 3: consumable
 		usage: 5,
 	});
 
-	// Verify invoices: pro ($20) + allocated overage ($20) + upgrade ($30)
+	// Verify invoices: pro ($20) + allocated overage ($20) + upgrade ($15)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 3,
-		latestTotal: 30,
+		latestTotal: 15,
 	});
 });
 
@@ -430,14 +445,16 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 3: consumable
  * - Pro with:
  *   - Prepaid messages (100 included, buy more at $10/100 units)
  *   - Allocated users (3 included)
- * - Purchase 200 additional messages (2 packs = $20)
- * - Track 150 messages (using from prepaid balance)
+ * - Attach with quantity: 200 (total, inclusive of 100 base = 1 extra pack = $10)
+ * - Track 150 messages (using from 200 balance)
  * - Track 2 users
- * - Upgrade to Premium with higher prepaid and allocated
+ * - Upgrade to Premium with higher prepaid (500 included) and allocated (10 included)
  *
  * Expected Result:
- * - Prepaid balance recalculated based on new product config
+ * - Old prepaid pack refunded (prorated unused time)
+ * - New product has 500 included which covers old 200 total, so 0 additional packs
  * - Allocated usage carries over
+ * - Total: Base diff ($30) - Prepaid refund ($10) = $20
  */
 test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 4: prepaid + allocated combo")}`, async () => {
 	const customerId = "imm-switch-prepaid-allocated";
@@ -472,7 +489,10 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 4: prepaid + 
 		],
 	});
 
-	// Track messages (150 usage from 300 balance)
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
+
+	// Track messages (150 usage from 200 balance)
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -492,12 +512,12 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 4: prepaid + 
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance: 100 included + 200 purchased - 150 used = 150
+	// Balance: 200 total (quantity is inclusive) - 150 used = 50
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		includedUsage: 300, // 100 included + 200 purchased
-		balance: 150,
+		includedUsage: 200, // quantity: 200 is total, not additional
+		balance: 50,
 		usage: 150,
 	});
 
@@ -514,8 +534,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 4: prepaid + 
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	// Price difference: $50 - $20 = $30 (prepaid purchase was separate)
-	expect(preview.total).toBe(30);
+	// Base price difference: $50 - $20 = $30
+	// Prepaid: old quantity (200) carries over but new allowance (500) covers it, so 0 prepaid packs needed
+	// Old prepaid pack refund: -$10 (prorated unused from old product)
+	// Total: $30 (base diff) - $10 (prepaid refund) = $20
+	expect(preview.total).toBe(20);
 
 	// 2. Attach premium
 	await autumnV1.billing.attach({
@@ -597,6 +620,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 5: consecutiv
 		actions: [s.billing.attach({ productId: free.id })],
 	});
 
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
+
 	// Track initial usage on free
 	await autumnV1.track({
 		customer_id: customerId,
@@ -624,6 +650,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 5: consecutiv
 		product_id: pro.id,
 		redirect_mode: "if_required",
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Verify after first upgrade
 	const customerAfterPro =
@@ -663,7 +692,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 5: consecutiv
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
-		value: 2, // Now at 2 total
+		value: 2, // Adds 2 to existing 1 = 3 total
 	});
 
 	await new Promise((r) => setTimeout(r, 2000));
@@ -699,13 +728,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 5: consecutiv
 		usage: 0,
 	});
 
-	// Allocated carried over (2 users)
+	// Allocated carried over (3 users: 1 from free + 2 from pro)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
 		includedUsage: 10,
-		balance: 8, // 10 - 2 = 8
-		usage: 2,
+		balance: 7, // 10 - 3 = 7
+		usage: 3,
 	});
 
 	// Verify invoices: pro ($20) + premium upgrade ($30)

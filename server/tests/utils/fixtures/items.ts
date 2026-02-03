@@ -45,33 +45,57 @@ const adminRights = () =>
  * Monthly messages - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
  */
 const monthlyMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
+	resetUsageWhenEnabled,
 }: {
 	includedUsage?: number;
 	entityFeatureId?: string;
-} = {}): LimitedItem =>
-	constructFeatureItem({
+	resetUsageWhenEnabled?: boolean;
+} = {}): LimitedItem => {
+	const item = constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		entityFeatureId,
 	}) as LimitedItem;
 
+	if (resetUsageWhenEnabled !== undefined) {
+		item.reset_usage_when_enabled = resetUsageWhenEnabled;
+	}
+
+	return item;
+};
+
 /**
  * Monthly words - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
  */
 const monthlyWords = ({
 	includedUsage = 100,
+	entityFeatureId,
+	resetUsageWhenEnabled,
 }: {
 	includedUsage?: number;
-} = {}): LimitedItem =>
-	constructFeatureItem({
+	entityFeatureId?: string;
+	resetUsageWhenEnabled?: boolean;
+} = {}): LimitedItem => {
+	const item = constructFeatureItem({
 		featureId: TestFeature.Words,
 		includedUsage,
+		entityFeatureId,
 	}) as LimitedItem;
+
+	if (resetUsageWhenEnabled !== undefined) {
+		item.reset_usage_when_enabled = resetUsageWhenEnabled;
+	}
+
+	return item;
+};
 
 /**
  * Monthly credits - resets each billing cycle
@@ -123,6 +147,42 @@ const freeUsers = ({
 	constructFeatureItem({
 		featureId: TestFeature.Users,
 		includedUsage,
+	}) as LimitedItem;
+
+/**
+ * Free allocated users - allocated seats with no price, usage carries over on product switch
+ * @param includedUsage - Free seats included (default: 5)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ */
+const freeAllocatedUsers = ({
+	includedUsage = 5,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Users,
+		includedUsage,
+		entityFeatureId,
+	}) as LimitedItem;
+
+/**
+ * Free allocated workflows - allocated workflows with no price, usage carries over on product switch
+ * @param includedUsage - Free workflows included (default: 5)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ */
+const freeAllocatedWorkflows = ({
+	includedUsage = 5,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Workflows,
+		includedUsage,
+		entityFeatureId,
 	}) as LimitedItem;
 
 /**
@@ -492,6 +552,8 @@ export const items = {
 	monthlyCredits,
 	monthlyUsers,
 	freeUsers,
+	freeAllocatedUsers,
+	freeAllocatedWorkflows,
 	unlimitedMessages,
 	lifetimeMessages,
 

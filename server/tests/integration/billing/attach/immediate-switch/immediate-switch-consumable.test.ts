@@ -56,8 +56,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-consumable 1: overage, u
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id, timeout: 5000 })],
+		actions: [s.billing.attach({ productId: pro.id })],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track 150 usage (50 overage at $0.10 = $5 potential overage)
 	await autumnV1.track({
@@ -170,6 +173,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-consumable 2: multiple w
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track messages into overage: 150 usage (50 overage × $0.10 = $5)
 	await autumnV1.track({

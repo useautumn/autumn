@@ -14,5 +14,6 @@ export * from "./invoicingUtils/lineItemUtils/lineItemToCustomerEntitlement.js";
 export * from "./invoicingUtils/lineItemUtils/priceToLineAmount.js";
 export * from "./invoicingUtils/lineItemUtils/tiersToLineAmount.js";
 export * from "./invoicingUtils/prorationUtils/applyProration.js";
+export * from "./invoicingUtils/prorationUtils/getEffectivePeriod.js";
 export * from "./invoicingUtils/prorationUtils/prorationConfigUtils.js";
 export * from "./usageUtils/roundUsageToNearestBillingUnit.js";

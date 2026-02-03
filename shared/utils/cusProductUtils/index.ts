@@ -1,3 +1,5 @@
+import { customerProductToFeaturesToCarryUsagesFor } from "@utils/cusProductUtils/convertCusProduct/customerProductToFeaturesToCarryUsagesFor.js";
+
 export * from "./classifyCustomerProduct/classifyCustomerProduct.js";
 export * from "./classifyCustomerProduct/cpBuilder.js";
 export * from "./convertCusProduct/cusProductToConvertedFeatureOptions.js";
@@ -15,3 +17,9 @@ export * from "./findCustomerProduct/findCustomerProduct.js";
 export * from "./findCustomerProduct/findScheduledCustomerProduct.js";
 export * from "./getCusProductFromCustomer.js";
 export * from "./productIdToCusProduct.js";
+
+export const customerProductUtils = {
+	convert: {
+		toFeaturesToCarryUsagesFor: customerProductToFeaturesToCarryUsagesFor,
+	},
+};

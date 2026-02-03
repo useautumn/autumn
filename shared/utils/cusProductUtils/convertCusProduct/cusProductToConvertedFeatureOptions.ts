@@ -5,6 +5,7 @@ import type {
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
+import { cusPriceToCusEnt } from "@utils/cusPriceUtils";
 import { findPrepaidCusPriceByFeature } from "@utils/cusPriceUtils/findCusPriceUtils/findPrepaidCusPriceByFeature";
 import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
@@ -35,6 +36,11 @@ export const cusProductToConvertedFeatureOptions = ({
 	// If no old price found, we can't interpret the stored quantity
 	if (!oldCusPrice) return undefined;
 
+	const oldCustomerEntitlement = cusPriceToCusEnt({
+		cusPrice: oldCusPrice,
+		cusEnts: cusProduct.customer_entitlements,
+	});
+
 	const oldBillingUnits = oldCusPrice.price.config.billing_units ?? 1;
 	const newBillingUnits = newPrice.config.billing_units ?? 1;
 
@@ -49,14 +55,35 @@ export const cusProductToConvertedFeatureOptions = ({
 		billingUnits: newBillingUnits,
 	});
 
+	// 3. Add current allowance
+	const oldAllowance = oldCustomerEntitlement?.entitlement?.allowance ?? 0;
+	const quantityWithOldAllowance = new Decimal(roundedQuantity)
+		.add(oldAllowance)
+		.toNumber();
+
+	// 4. Subtract new allowance
+	const newAllowance = entitlement.allowance ?? 0;
+	const quantityWithoutNewAllowance = new Decimal(quantityWithOldAllowance)
+		.sub(newAllowance)
+		.toNumber();
+
+	// 5. Round to nearest new billing unit
+	const roundedQuantityWithoutNewAllowance = roundUsageToNearestBillingUnit({
+		usage: quantityWithoutNewAllowance,
+		billingUnits: newBillingUnits,
+	});
+
 	// 3. Divide by new billing units
-	const convertedQuantity = new Decimal(roundedQuantity)
+	const convertedQuantity = new Decimal(roundedQuantityWithoutNewAllowance)
 		.div(newBillingUnits)
 		.toNumber();
+
+	// Clamp to 0 minimum - if new allowance exceeds old total, no additional packs needed
+	const finalQuantity = Math.max(0, convertedQuantity);
 
 	return {
 		internal_feature_id: feature.internal_id,
 		feature_id: feature.id,
-		quantity: convertedQuantity,
+		quantity: finalQuantity,
 	};
 };

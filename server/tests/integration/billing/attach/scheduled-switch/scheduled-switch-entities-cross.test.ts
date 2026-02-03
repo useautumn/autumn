@@ -9,7 +9,7 @@
  * - Mixed billing intervals (annual + monthly) across entities
  */
 
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import {
 	expectProductActive,
@@ -370,7 +370,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 4: entity
 
 	const premiumAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
 	const premiumAnnualPrice = items.annualPrice({ price: 500 });
-	const premiumAnnual = products.premium({
+	const premiumAnnual = products.base({
 		id: "premium-annual",
 		items: [premiumAnnualMessages, premiumAnnualPrice],
 	});

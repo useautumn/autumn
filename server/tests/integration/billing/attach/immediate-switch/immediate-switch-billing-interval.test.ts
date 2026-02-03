@@ -162,6 +162,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-billing-interval 2: to a
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
+		redirect_mode: "if_required",
 	});
 	expect(preview.total).toBeCloseTo(expectedTotal, 0);
 

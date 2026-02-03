@@ -42,12 +42,24 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
 	);
 
-	const prices = cusProductsToPrices({
-		cusProducts: customerProducts,
+	const currentCustomerProducts = allCustomerProducts.filter(
+		(customerProduct) =>
+			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
+	);
+
+	console.log(
+		"currentCustomerProducts",
+		currentCustomerProducts.map((cp) => cp.product.name),
+	);
+
+	const currentPrices = cusProductsToPrices({
+		cusProducts: currentCustomerProducts,
 		filters: { excludeOneOffPrices: true },
 	});
 
-	const smallestInterval = getSmallestInterval({ prices });
+	const smallestInterval = getSmallestInterval({ prices: currentPrices });
+
+	console.log("smallestInterval", smallestInterval);
 
 	if (!smallestInterval) return undefined;
 

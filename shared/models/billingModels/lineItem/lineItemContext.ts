@@ -14,7 +14,8 @@ export const LineItemContextSchema = z.object({
 	feature: FeatureSchema.optional(),
 
 	currency: z.string(),
-	billingPeriod: BillingPeriodSchema.optional(), // undefined for one off prices
+	billingPeriod: BillingPeriodSchema.optional(), // Full cycle period (for proration calculation)
+	effectivePeriod: BillingPeriodSchema.optional(), // Actual period being charged/refunded (for descriptions and Stripe)
 	direction: z.enum(["charge", "refund"]),
 	now: z.number(),
 	billingTiming: z.enum(["in_arrear", "in_advance"]),

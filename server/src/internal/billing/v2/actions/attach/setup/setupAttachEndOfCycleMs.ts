@@ -1,11 +1,10 @@
+import type { PlanTiming } from "@autumn/shared";
 import {
 	cusProductToPrices,
 	type FullCusProduct,
 	getCycleEnd,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
-import type { PlanTiming } from "@autumn/shared";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
 /**
@@ -15,12 +14,13 @@ import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceI
 export const setupAttachEndOfCycleMs = ({
 	planTiming,
 	currentCustomerProduct,
-	stripeSubscription,
+	billingCycleAnchorMs,
 	currentEpochMs,
 }: {
 	planTiming: PlanTiming;
 	currentCustomerProduct?: FullCusProduct;
 	stripeSubscription?: Stripe.Subscription;
+	billingCycleAnchorMs: number | "now";
 	currentEpochMs: number;
 }): number | undefined => {
 	if (planTiming !== "end_of_cycle" || !currentCustomerProduct) {
@@ -40,16 +40,11 @@ export const setupAttachEndOfCycleMs = ({
 		return undefined;
 	}
 
-	// Use Stripe subscription's earliest period end if available
-	const billingAnchor = stripeSubscription
-		? getEarliestPeriodEnd({ sub: stripeSubscription }) * 1000
-		: currentEpochMs;
-
 	return getCycleEnd({
-		anchor: billingAnchor,
+		anchor: billingCycleAnchorMs,
 		interval: largestInterval.interval,
 		intervalCount: largestInterval.intervalCount,
 		now: currentEpochMs,
-		floor: billingAnchor,
+		floor: billingCycleAnchorMs === "now" ? undefined : billingCycleAnchorMs,
 	});
 };
