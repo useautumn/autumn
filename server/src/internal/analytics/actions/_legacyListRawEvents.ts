@@ -40,7 +40,8 @@ const calculateStartDateFromInterval = (interval: string): Date => {
 			startDate.setDate(startDate.getDate() - 90);
 			break;
 		default:
-			startDate.setDate(startDate.getDate() - 24);
+			// Default to 30 days
+			startDate.setDate(startDate.getDate() - 30);
 			break;
 	}
 
@@ -72,7 +73,7 @@ export const _legacyListRawEvents = async ({
 	const pipes = getTinybirdPipes();
 	const { org, env, db } = ctx;
 
-	const intervalType = params.interval ?? "day";
+	const intervalType = params.interval ?? "30d";
 	const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
 
 	// Calculate billing cycle dates if needed
