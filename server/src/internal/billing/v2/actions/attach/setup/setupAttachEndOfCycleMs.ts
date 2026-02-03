@@ -6,6 +6,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
 /**
@@ -57,10 +58,17 @@ export const setupAttachEndOfCycleMs = ({
 		});
 	}
 
+	const latestPeriodEndSeconds = getLatestPeriodEnd({
+		sub: stripeSubscription,
+		subItems: stripeSubscription?.items.data,
+	});
+	const latestPeriodEndMs = latestPeriodEndSeconds
+		? secondsToMs(latestPeriodEndSeconds)
+		: undefined;
 	// Case 2: Merged subscription - no existing product but joining existing subscription
 	// Use the subscription's current period end as the scheduled start time
-	if (stripeSubscription?.current_period_end) {
-		return secondsToMs(stripeSubscription.current_period_end);
+	if (latestPeriodEndMs) {
+		return latestPeriodEndMs;
 	}
 
 	return undefined;
