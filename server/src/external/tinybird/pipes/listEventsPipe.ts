@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 /**
  * Response schema for the legacy list_events pipe.
