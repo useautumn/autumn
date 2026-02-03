@@ -11,9 +11,9 @@ import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupUpgradeDowngradeBillingContext } from "@/internal/billing/v2/actions/legacy/setup/setupUpgradeBillingContext";
+import { setupUpdateSubscriptionTrialContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionTrialContext";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionScheduleForBilling";
-import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
 
 export const attachParamsToAttachBillingContext = async ({
@@ -85,7 +85,7 @@ export const attachParamsToAttachBillingContext = async ({
 	const paramsFreeTrial = attachParams.freeTrial;
 	let trialContext: TrialContext | undefined;
 	if (paramsFreeTrial && !attachParams.config?.disableTrial) {
-		trialContext = setupTrialContext({
+		trialContext = setupUpdateSubscriptionTrialContext({
 			stripeSubscription,
 			customerProduct: currentCustomerProduct,
 			currentEpochMs,

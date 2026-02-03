@@ -1,4 +1,8 @@
-import type { BillingContext, BillingPlan } from "@autumn/shared";
+import type {
+	BillingContext,
+	BillingPlan,
+	FullCusProduct,
+} from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	cp,
@@ -13,6 +17,20 @@ import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils
 import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
 import { lineItemToPreviewLineItem } from "../lineItems/lineItemToPreviewLineItem";
 
+export type NextCyclePreviewDebug = {
+	allCustomerProducts: FullCusProduct[];
+	currentCustomerProducts: FullCusProduct[];
+	smallestInterval: { interval: string; intervalCount: number } | null;
+	anchorMs: number;
+	nextCycleStart: number | null;
+	filteredCustomerProducts: FullCusProduct[];
+};
+
+export type NextCyclePreviewResult = {
+	nextCycle: BillingPreviewResponse["next_cycle"];
+	debug: NextCyclePreviewDebug;
+};
+
 export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
@@ -21,7 +39,7 @@ export const billingPlanToNextCyclePreview = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-}): BillingPreviewResponse["next_cycle"] => {
+}): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
 
 	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
@@ -35,7 +53,7 @@ export const billingPlanToNextCyclePreview = ({
 		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
 	];
 
-	let customerProducts = allCustomerProducts.filter(
+	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
 			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
 	);
@@ -45,11 +63,6 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	console.log(
-		"currentCustomerProducts",
-		currentCustomerProducts.map((cp) => cp.product.name),
-	);
-
 	const currentPrices = cusProductsToPrices({
 		cusProducts: currentCustomerProducts,
 		filters: { excludeOneOffPrices: true },
@@ -57,18 +70,28 @@ export const billingPlanToNextCyclePreview = ({
 
 	const smallestInterval = getSmallestInterval({ prices: currentPrices });
 
-	console.log("smallestInterval", smallestInterval);
-
-	// Return undefined if there's no recurring interval (not a subscription)
-	if (!smallestInterval) return undefined;
-
-	// Calculate next cycle start
-	// If billing cycle anchor is "now" (new subscription), calculate from current time
+	// Calculate anchor
 	const anchorMs =
 		billingCycleAnchorMs === "now"
 			? billingContext.currentEpochMs
 			: billingCycleAnchorMs;
 
+	const baseDebug = {
+		allCustomerProducts,
+		currentCustomerProducts,
+		smallestInterval,
+		anchorMs,
+	};
+
+	// Return undefined if there's no recurring interval (not a subscription)
+	if (!smallestInterval) {
+		return {
+			nextCycle: undefined,
+			debug: { ...baseDebug, nextCycleStart: null, filteredCustomerProducts: [] },
+		};
+	}
+
+	// Calculate next cycle start
 	const nextCycleStart = getCycleEnd({
 		anchor: anchorMs,
 		interval: smallestInterval.interval,
@@ -77,15 +100,22 @@ export const billingPlanToNextCyclePreview = ({
 		floor: anchorMs,
 	});
 
-	customerProducts = customerProducts.filter((customerProduct) => {
-		return !hasCustomerProductEnded(customerProduct, {
-			nowMs: nextCycleStart,
-		});
-	});
+	const filteredCustomerProducts = customerProducts.filter(
+		(customerProduct) => {
+			return !hasCustomerProductEnded(customerProduct, {
+				nowMs: nextCycleStart,
+			});
+		},
+	);
 
-	if (customerProducts.length === 0) return undefined;
+	if (filteredCustomerProducts.length === 0) {
+		return {
+			nextCycle: undefined,
+			debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
+		};
+	}
 
-	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
+	const autumnLineItems = filteredCustomerProducts.flatMap((customerProduct) =>
 		customerProductToLineItems({
 			ctx,
 			customerProduct: customerProduct,
@@ -101,8 +131,11 @@ export const billingPlanToNextCyclePreview = ({
 	const total = sumValues(autumnLineItems.map((line) => line.finalAmount));
 
 	return {
-		starts_at: nextCycleStart,
-		total,
-		line_items: previewLineItems,
+		nextCycle: {
+			starts_at: nextCycleStart,
+			total,
+			line_items: previewLineItems,
+		},
+		debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
 	};
 };

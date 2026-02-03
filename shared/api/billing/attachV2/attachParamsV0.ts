@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 
@@ -16,8 +15,6 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	finalize_invoice: z.boolean().optional(),
 
 	// Product config
-	options: z.array(FeatureOptionsSchema).nullish(),
-	version: z.number().optional(),
 
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("always"),

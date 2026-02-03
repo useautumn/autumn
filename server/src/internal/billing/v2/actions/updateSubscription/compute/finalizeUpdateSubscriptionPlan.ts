@@ -1,15 +1,16 @@
 import {
-	filterUnchangedPricesFromLineItems,
+	type AutumnBillingPlan,
 	isCustomerProductOneOff,
+	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
-import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
-import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 
+/**
+ * Finalizes the update subscription billing plan by processing line items
+ * and applying update-subscription-specific guards.
+ */
 export const finalizeUpdateSubscriptionPlan = ({
 	ctx,
 	plan,
@@ -21,35 +22,15 @@ export const finalizeUpdateSubscriptionPlan = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV0Params;
 }): AutumnBillingPlan => {
-	// Filter line items based on trial state transitions
-	plan.lineItems = filterLineItemsForTrialTransition({
+	// Finalize line items (shared logic)
+	plan.lineItems = finalizeLineItems({
 		ctx,
 		lineItems: plan.lineItems ?? [],
 		billingContext,
-	});
-
-	// Filter out unchanged prices (refund + charge pairs that cancel out)
-	plan.lineItems = filterUnchangedPricesFromLineItems({
-		lineItems: plan.lineItems,
-	});
-
-	// Add line items for sibling products affected by trial state changes
-	const sharedTrialLineItems = buildSharedSubscriptionTrialLineItems({
-		ctx,
-		billingContext,
 		autumnBillingPlan: plan,
 	});
-	plan.lineItems = [...plan.lineItems, ...sharedTrialLineItems];
 
-	// Apply discounts
-	if (billingContext.stripeDiscounts?.length) {
-		plan.lineItems = applyStripeDiscountsToLineItems({
-			lineItems: plan.lineItems,
-			discounts: billingContext.stripeDiscounts,
-		});
-	}
-
-	// Guard: if current customer product is one off, make sure there are no line items.
+	// Guard: if current customer product is one off, make sure there are no line items
 	if (isCustomerProductOneOff(billingContext.customerProduct)) {
 		plan.lineItems = [];
 	}

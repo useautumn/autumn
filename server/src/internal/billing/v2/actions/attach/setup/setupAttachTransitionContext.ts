@@ -1,3 +1,4 @@
+import type { PlanTiming } from "@autumn/shared";
 import {
 	cusProductToPrices,
 	type FullCustomer,
@@ -7,7 +8,6 @@ import {
 	isOneOffProduct,
 	isProductUpgrade,
 } from "@autumn/shared";
-import type { PlanTiming } from "@autumn/shared";
 
 /**
  * Sets up the transition context for attaching a product.

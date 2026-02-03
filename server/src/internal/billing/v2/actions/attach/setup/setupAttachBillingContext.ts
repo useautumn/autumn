@@ -15,6 +15,7 @@ import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
+import { setupAttachTrialContext } from "./setupAttachTrialContext";
 
 /**
  * Assembles the full billing context for attaching a product.
@@ -70,22 +71,36 @@ export const setupAttachBillingContext = async ({
 
 	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
-	const billingCycleAnchorMs = setupBillingCycleAnchor({
+
+	// Setup trial context
+	const trialContext = await setupAttachTrialContext({
+		ctx,
+		params,
+		currentContext: {
+			fullCustomer,
+			attachProduct,
+			stripeSubscription,
+			currentEpochMs,
+			currentCustomerProduct,
+		},
+	});
+
+	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
 		customerProduct: currentCustomerProduct,
 		newFullProduct: attachProduct,
-		trialContext: undefined,
+		trialContext,
 		currentEpochMs,
 	});
 
-	// if (trialContext?.trialEndsAt) {
-	// 	// 4. Trial ends at overrides reset cycle anchor
-	// 	billingCycleAnchorMs = trialContext.trialEndsAt;
-	// }
+	// Trial ends at overrides billing cycle anchor
+	if (trialContext?.trialEndsAt) {
+		billingCycleAnchorMs = trialContext.trialEndsAt;
+	}
 
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
-		customerProduct: currentCustomerProduct,
+		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
 		newFullProduct: attachProduct,
 	});
 
@@ -101,6 +116,7 @@ export const setupAttachBillingContext = async ({
 		redirectMode: params.redirect_mode,
 		attachProduct,
 		stripeSubscription,
+		trialContext,
 	});
 
 	return {
@@ -131,6 +147,7 @@ export const setupAttachBillingContext = async ({
 		customPrices,
 		customEnts,
 		isCustom,
+		trialContext,
 
 		billingVersion: BillingVersion.V2,
 	};

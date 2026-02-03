@@ -1,4 +1,4 @@
-import type { CheckoutMode } from "@autumn/shared";
+import type { CheckoutMode, TrialContext } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	type FullProduct,
@@ -18,12 +18,14 @@ export const setupAttachCheckoutMode = ({
 	attachProduct,
 	currentCustomerProduct,
 	stripeSubscription,
+	trialContext,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	currentCustomerProduct?: FullCusProduct;
 	redirectMode?: RedirectMode;
 	attachProduct: FullProduct;
 	stripeSubscription?: Stripe.Subscription;
+	trialContext?: TrialContext;
 }): CheckoutMode => {
 	const hasPaymentMethod = !!paymentMethod;
 	const hasExistingSubscription = !!stripeSubscription;
@@ -39,8 +41,13 @@ export const setupAttachCheckoutMode = ({
 
 		if (productIsOneOff) return "stripe_checkout";
 
-		if (!hasExistingSubscription && productIsPaidRecurring)
+		if (!hasExistingSubscription && productIsPaidRecurring) {
+			// If trial no card required, direct billing
+			if (trialContext?.trialEndsAt && trialContext?.cardRequired === false) {
+				return null;
+			}
 			return "stripe_checkout";
+		}
 
 		return null;
 	};

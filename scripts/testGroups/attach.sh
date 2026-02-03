@@ -8,5 +8,7 @@ set -e
 
 BUN_PARALLEL_V2 \
   'attach/immediate-switch' \
+  'attach/scheduled-switch' \
+  'attach/free-trial' \
   # 'attach/new-plan' 
 

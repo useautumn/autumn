@@ -1,18 +1,12 @@
-import { filterUnchangedPricesFromLineItems } from "@autumn/shared";
+import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
-import type {
-	AttachBillingContext,
-	AutumnBillingPlan,
-} from "@autumn/shared";
+import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 
 /**
- * Finalizes the attach billing plan by:
- * 1. Filtering out unchanged prices (refund + charge pairs that cancel out)
- * 2. Applying Stripe discounts to line items
+ * Finalizes the attach billing plan by processing line items.
  */
 export const finalizeAttachPlan = ({
-	ctx: _ctx,
+	ctx,
 	plan,
 	attachBillingContext,
 }: {
@@ -20,18 +14,12 @@ export const finalizeAttachPlan = ({
 	plan: AutumnBillingPlan;
 	attachBillingContext: AttachBillingContext;
 }): AutumnBillingPlan => {
-	// 1. Filter out unchanged prices (refund + charge pairs that cancel out)
-	plan.lineItems = filterUnchangedPricesFromLineItems({
+	plan.lineItems = finalizeLineItems({
+		ctx,
 		lineItems: plan.lineItems ?? [],
+		billingContext: attachBillingContext,
+		autumnBillingPlan: plan,
 	});
-
-	// 2. Apply Stripe discounts if present
-	if (attachBillingContext.stripeDiscounts?.length) {
-		plan.lineItems = applyStripeDiscountsToLineItems({
-			lineItems: plan.lineItems ?? [],
-			discounts: attachBillingContext.stripeDiscounts,
-		});
-	}
 
 	return plan;
 };
