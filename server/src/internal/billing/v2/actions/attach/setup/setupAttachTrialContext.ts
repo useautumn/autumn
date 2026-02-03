@@ -1,96 +1,79 @@
 import type {
 	AttachParamsV0,
-	FreeTrial,
+	FullCusProduct,
 	FullCustomer,
 	FullProduct,
 	TrialContext,
 } from "@autumn/shared";
-import { addDuration, isProductPaidAndRecurring } from "@autumn/shared";
+import { isProductPaidAndRecurring } from "@autumn/shared";
+import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getFreeTrialAfterFingerprint } from "@/internal/products/free-trials/freeTrialUtils";
-import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
+import {
+	applyProductTrialConfig,
+	handleFreeTrialParam,
+	inheritTrialFromSubscription,
+} from "@/internal/billing/v2/setup/trialContext";
+import { isAttachUpgrade } from "../utils/isAttachUpgrade";
 
 /**
- * Sets up trial context for the V2 attach flow.
+ * Sets up trial context for attach operations.
  *
- * Handles three cases:
- * - `params.free_trial === null`: Explicitly disabled, returns undefined
- * - `params.free_trial` defined: Custom override (DB insert deferred to execute phase)
- * - `params.free_trial === undefined`: Uses product's default trial
- *
- * Always checks customer eligibility via fingerprint before returning trial context.
+ * Logic:
+ * 1. If free_trial param passed → Use it (null removes trial, value sets fresh trial)
+ * 2. If NOT upgrade AND stripeSubscription exists → Inherit from subscription
+ * 3. Otherwise (upgrade OR fresh attach) → Apply product's trial config with dedup
  */
 export const setupAttachTrialContext = async ({
 	ctx,
-	attachProduct,
-	fullCustomer,
-	currentEpochMs,
 	params,
+	currentContext,
 }: {
 	ctx: AutumnContext;
-	attachProduct: FullProduct;
-	fullCustomer: FullCustomer;
-	currentEpochMs: number;
 	params: AttachParamsV0;
+	currentContext: {
+		fullCustomer: FullCustomer;
+		attachProduct: FullProduct;
+		stripeSubscription?: Stripe.Subscription;
+		currentEpochMs: number;
+		currentCustomerProduct?: FullCusProduct;
+	};
 }): Promise<TrialContext | undefined> => {
-	const { db, org } = ctx;
-	const paramsFreeTrial = params.free_trial as FreeTrial | null | undefined;
+	const {
+		fullCustomer,
+		attachProduct,
+		stripeSubscription,
+		currentEpochMs,
+		currentCustomerProduct,
+	} = currentContext;
 
-	// Case 1: Explicitly disabled (null)
-	if (paramsFreeTrial === null) {
-		return undefined;
-	}
-
-	let freeTrial: FreeTrial | null = null;
-
-	// Case 2: Custom trial override (defined)
-	if (paramsFreeTrial !== undefined) {
-		// Create in-memory FreeTrial object (DB insert happens in execute phase)
-		freeTrial = initFreeTrial({
-			freeTrialParams: paramsFreeTrial,
-			internalProductId: attachProduct.internal_id,
-			isCustom: true,
+	// Handle explicit free_trial param (null or value)
+	if (params.free_trial !== undefined) {
+		return handleFreeTrialParam({
+			freeTrialParams: params.free_trial,
+			stripeSubscription,
+			fullProduct: attachProduct,
+			currentEpochMs,
 		});
 	}
-	// Case 3: Use product default (undefined)
-	else {
-		freeTrial = attachProduct.free_trial ?? null;
-	}
 
-	// No trial to apply
-	if (!freeTrial) {
-		return undefined;
-	}
+	const newProductIsPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
-	// Check customer eligibility via fingerprint
-	const eligibleFreeTrial = await getFreeTrialAfterFingerprint({
-		db,
-		freeTrial,
-		productId: attachProduct.id,
-		fingerprint: fullCustomer.fingerprint,
-		internalCustomerId: fullCustomer.internal_id,
-		multipleAllowed: org.config.multiple_trials,
+	// Determine if this is an upgrade
+	const isUpgrade = isAttachUpgrade({
+		currentCustomerProduct,
+		attachProduct,
 	});
 
-	// Customer not eligible (already used trial)
-	if (!eligibleFreeTrial) {
-		return undefined;
+	// Inherit from subscription (merge/downgrade - NOT upgrade)
+	if (newProductIsPaidRecurring && stripeSubscription && !isUpgrade) {
+		return inheritTrialFromSubscription({ stripeSubscription });
 	}
 
-	// Calculate trial end date
-	const trialEndsAt = addDuration({
-		now: currentEpochMs,
-		durationType: eligibleFreeTrial.duration,
-		durationLength: eligibleFreeTrial.length,
+	// Apply product's trial config (upgrade or fresh attach) with dedup check
+	return applyProductTrialConfig({
+		ctx,
+		fullProduct: attachProduct,
+		fullCustomer,
+		currentEpochMs,
 	});
-
-	return {
-		freeTrial: eligibleFreeTrial,
-		trialEndsAt,
-		appliesToBilling: isProductPaidAndRecurring(attachProduct),
-		cardRequired: eligibleFreeTrial.card_required,
-		// Mark as custom if params override was used
-		customFreeTrial:
-			paramsFreeTrial !== undefined ? eligibleFreeTrial : undefined,
-	};
 };

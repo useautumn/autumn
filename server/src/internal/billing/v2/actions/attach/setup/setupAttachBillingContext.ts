@@ -76,10 +76,14 @@ export const setupAttachBillingContext = async ({
 	// Setup trial context
 	const trialContext = await setupAttachTrialContext({
 		ctx,
-		attachProduct,
-		fullCustomer,
-		currentEpochMs,
 		params,
+		currentContext: {
+			fullCustomer,
+			attachProduct,
+			stripeSubscription,
+			currentEpochMs,
+			currentCustomerProduct,
+		},
 	});
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
@@ -97,7 +101,7 @@ export const setupAttachBillingContext = async ({
 
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
-		customerProduct: currentCustomerProduct,
+		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
 		newFullProduct: attachProduct,
 	});
 
@@ -114,6 +118,7 @@ export const setupAttachBillingContext = async ({
 		redirectMode: params.redirect_mode,
 		attachProduct,
 		stripeSubscription,
+		trialContext,
 	});
 
 	return {

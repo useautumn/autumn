@@ -14,7 +14,7 @@ import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setup
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
+import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
 /**
  * Fetch the context for updating a subscription
@@ -64,7 +64,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
 	// 1. Setup trial context first
-	const trialContext = setupTrialContext({
+	const trialContext = setupUpdateSubscriptionTrialContext({
 		stripeSubscription,
 		customerProduct,
 		currentEpochMs,

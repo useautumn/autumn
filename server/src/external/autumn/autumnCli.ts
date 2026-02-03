@@ -9,7 +9,6 @@ import {
 	type ApiCusProductV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
-	type AttachParamsV0,
 	type AttachParamsV0Input,
 	type BalancesUpdateParams,
 	type BillingPreviewResponse,
@@ -816,7 +815,7 @@ export class AutumnInt {
 
 	billing = {
 		attach: async (
-			params: AttachParamsV0,
+			params: AttachParamsV0Input,
 			{
 				skipWebhooks,
 				idempotencyKey,

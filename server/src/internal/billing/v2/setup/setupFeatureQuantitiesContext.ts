@@ -1,11 +1,11 @@
 import {
+	type BillingParamsBase,
 	cusProductToConvertedFeatureOptions,
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
 	isPrepaidPrice,
 	priceToEnt,
-	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAutumnUtils/paramsToFeatureOptions";
@@ -15,6 +15,7 @@ import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAut
  * For each prepaid price, uses new quantity from params or falls back to existing subscription.
  */
 export const setupFeatureQuantitiesContext = ({
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
 	ctx,
 	featureQuantitiesParams,
 	fullProduct,
@@ -22,7 +23,7 @@ export const setupFeatureQuantitiesContext = ({
 	initializeUndefinedQuantities = false,
 }: {
 	ctx: AutumnContext;
-	featureQuantitiesParams: UpdateSubscriptionV0Params;
+	featureQuantitiesParams: BillingParamsBase;
 	fullProduct: FullProduct;
 	currentCustomerProduct?: FullCusProduct;
 	initializeUndefinedQuantities?: boolean;
