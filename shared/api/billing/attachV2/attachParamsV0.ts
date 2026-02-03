@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels.js";
 import { CreateFreeTrialSchema } from "../../../models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
@@ -31,6 +32,12 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),
+
+	// Plan schedule override
+	// - undefined: use default behavior (upgrade=immediate, downgrade=end_of_cycle)
+	// - "immediate": force immediate activation (prorated credit on downgrade)
+	// - "end_of_cycle": schedule for next billing cycle
+	plan_schedule: PlanTimingSchema.optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
