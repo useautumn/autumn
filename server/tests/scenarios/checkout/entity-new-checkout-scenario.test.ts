@@ -6,14 +6,14 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 /**
- * Entity New Attach Scenario
+ * Entity New Checkout Scenario
  *
  * Tests attaching a product to a new entity when another entity already has a plan.
  * Customer has pro on entity-1, then attaches pro to entity-2 (new entity).
  */
 
-test(`${chalk.yellowBright("attach: entity - pro on entity-1, attach pro to entity-2")}`, async () => {
-	const customerId = "entity-new-attach";
+test(`${chalk.yellowBright("checkout: entity - pro on entity-1, checkout pro to entity-2")}`, async () => {
+	const customerId = "entity-new-checkout";
 
 	// Pro plan ($20/mo) - standard features
 	const pro = products.pro({
@@ -47,7 +47,7 @@ test(`${chalk.yellowBright("attach: entity - pro on entity-1, attach pro to enti
 
 	// Get customer state after initial attach
 	const customerBefore = await autumnV1.customers.get(customerId);
-	console.log("customer before new entity attach:", {
+	console.log("customer before new entity checkout:", {
 		products: customerBefore.products?.map(
 			(p: { id: string; name: string | null }) => ({
 				id: p.id,
@@ -58,20 +58,20 @@ test(`${chalk.yellowBright("attach: entity - pro on entity-1, attach pro to enti
 	});
 
 	// 1. Preview attaching pro to entity-2
-	const attachPreview = await autumnV1.billing.previewAttach({
+	const checkoutPreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
 		entity_id: entities[1].id, // ent-2
 		redirect_mode: "always",
 	});
-	console.log("new entity attach preview:", attachPreview);
+	console.log("new entity checkout preview:", checkoutPreview);
 
 	// 2. Attach pro to entity-2 with redirect_mode: "always" (Autumn checkout URL)
-	const attachResult = await autumnV1.billing.attach({
+	const checkoutResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
 		entity_id: entities[1].id, // ent-2
 		redirect_mode: "always",
 	});
-	console.log("new entity attach result:", attachResult);
+	console.log("new entity checkout result:", checkoutResult);
 });

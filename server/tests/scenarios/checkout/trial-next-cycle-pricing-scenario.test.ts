@@ -41,10 +41,12 @@ test(`${chalk.yellowBright("autumn-checkout: trial shows next cycle pricing - $0
 	// Get customer state before trial
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("customer before trial:", {
-		products: customerBefore.products?.map((p: { id: string; name: string | null }) => ({
-			id: p.id,
-			name: p.name,
-		})),
+		products: customerBefore.products?.map(
+			(p: { id: string; name: string | null }) => ({
+				id: p.id,
+				name: p.name,
+			}),
+		),
 	});
 
 	// 1. Preview the trial attach - should show $0 due today
@@ -55,8 +57,10 @@ test(`${chalk.yellowBright("autumn-checkout: trial shows next cycle pricing - $0
 	});
 	console.log("trial preview (should show $0 now, $20 next cycle):", {
 		preview: trialPreview,
-		due_today: (trialPreview as { due_today?: { total: number } }).due_today?.total,
-		next_cycle: (trialPreview as { next_cycle?: { total: number } }).next_cycle?.total,
+		due_today: (trialPreview as { due_today?: { total: number } }).due_today
+			?.total,
+		next_cycle: (trialPreview as { next_cycle?: { total: number } }).next_cycle
+			?.total,
 	});
 
 	// 2. Start trial with redirect_mode: "always" (Autumn checkout URL)
