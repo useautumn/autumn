@@ -153,8 +153,22 @@ export function BalanceSelectionSheet() {
 										)}
 										<InfoRow
 											label="Created"
-											value={`${formatUnixToDateTime(cusEnt.created_at).date}, ${formatUnixToDateTime(cusEnt.created_at).time}`}
+											value={`${
+												formatUnixToDateTime(cusEnt.created_at, {
+													withYear: true,
+												}).date
+											}, ${formatUnixToDateTime(cusEnt.created_at).time}`}
 										/>
+										{cusEnt.expires_at && (
+											<InfoRow
+												label="Expires At"
+												value={`${
+													formatUnixToDateTime(cusEnt.expires_at, {
+														withYear: true,
+													}).date
+												}, ${formatUnixToDateTime(cusEnt.expires_at).time}`}
+											/>
+										)}
 									</div>
 
 									<div className="bg-muted px-1 py-0.5 rounded-md text-t1 w-fit flex items-center gap-1">

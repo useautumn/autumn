@@ -17,6 +17,8 @@ const breakdownDescriptions = {
 		"The maximum usage allowed for this feature. null if unlimited or no limit is set",
 	overage_allowed:
 		"Whether the customer can continue using the feature beyond the usage limit. If false, access is blocked when limit is reached",
+	expires_at:
+		"Unix timestamp (in milliseconds) when the balance will expire. Only present for loose entitlements",
 };
 
 const coreFeatureDescriptions = {
@@ -74,7 +76,9 @@ export const ApiCusFeatureV3BreakdownSchema = z.object({
 	usage_limit: z.number().nullish().meta({
 		description: breakdownDescriptions.usage_limit,
 	}),
-
+	expires_at: z.number().nullish().meta({
+		description: breakdownDescriptions.expires_at,
+	}),
 	overage_allowed: z.boolean().nullish().meta({
 		description: breakdownDescriptions.overage_allowed,
 	}),
