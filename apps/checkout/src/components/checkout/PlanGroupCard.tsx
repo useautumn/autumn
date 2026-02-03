@@ -2,7 +2,7 @@ import type { PreviewLineItem } from "@autumn/shared";
 import { Minus, Plus } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
-import { FAST_TRANSITION, STANDARD_TRANSITION, listItemVariants } from "@/lib/animations";
+import { FAST_TRANSITION, LAYOUT_TRANSITION, listItemVariants } from "@/lib/animations";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/utils/formatUtils";
 import { CardBackground } from "@/components/checkout/CardBackground";
@@ -10,6 +10,7 @@ import { CardBackground } from "@/components/checkout/CardBackground";
 type PlanChangeType = "incoming" | "outgoing";
 
 interface PlanGroupCardProps {
+	planId: string;
 	planName: string;
 	items: PreviewLineItem[];
 	currency: string;
@@ -18,6 +19,7 @@ interface PlanGroupCardProps {
 }
 
 export function PlanGroupCard({
+	planId,
 	planName,
 	items,
 	currency,
@@ -37,13 +39,14 @@ export function PlanGroupCard({
 	return (
 		<motion.div
 			layout
+			layoutId={`plan-group-${planId}`}
 			variants={listItemVariants}
 			initial="initial"
 			animate="animate"
 			exit="exit"
 			transition={{
-				...STANDARD_TRANSITION,
-				delay: index * 0.05,
+				layout: LAYOUT_TRANSITION,
+				opacity: { duration: 0.2, delay: index * 0.03 },
 			}}
 			className="rounded-lg border border-border overflow-hidden"
 		>

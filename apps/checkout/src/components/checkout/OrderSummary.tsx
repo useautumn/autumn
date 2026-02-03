@@ -6,9 +6,8 @@ import type {
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
-import { AnimatedLayout } from "@/components/motion/animated-layout";
 import { PlanGroupCard } from "@/components/checkout/PlanGroupCard";
-import { STANDARD_TRANSITION, listContainerVariants } from "@/lib/animations";
+import { LAYOUT_TRANSITION, STANDARD_TRANSITION } from "@/lib/animations";
 
 interface PlanGroup {
 	planId: string;
@@ -106,12 +105,10 @@ export function OrderSummary({
 	}, [displayLineItems, outgoing, incoming, planNameMap]);
 
 	return (
-		<AnimatedLayout
+		<motion.div
+			layout
 			className="flex flex-col gap-4"
-			layoutId="order-summary"
-			variants={listContainerVariants}
-			initial="initial"
-			animate="animate"
+			transition={{ layout: LAYOUT_TRANSITION }}
 		>
 			{/* Plan groups as cards */}
 			<div className="flex flex-col gap-3">
@@ -119,6 +116,7 @@ export function OrderSummary({
 					{planGroups.map((group, groupIndex) => (
 						<PlanGroupCard
 							key={group.planId}
+							planId={group.planId}
 							planName={group.planName}
 							items={group.items}
 							currency={currency}
@@ -141,6 +139,6 @@ export function OrderSummary({
 					{format(new Date(next_cycle.starts_at), "d MMM yyyy")}
 				</motion.p>
 			)}
-		</AnimatedLayout>
+		</motion.div>
 	);
 }

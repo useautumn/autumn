@@ -1,6 +1,6 @@
 import { type HTMLMotionProps, motion } from "motion/react";
 import { forwardRef } from "react";
-import { SPRING_TRANSITION } from "@/lib/animations";
+import { LAYOUT_TRANSITION } from "@/lib/animations";
 
 type AnimatedLayoutProps = HTMLMotionProps<"div"> & {
 	/** Unique ID for layout animations - elements with matching IDs animate between each other */
@@ -9,7 +9,7 @@ type AnimatedLayoutProps = HTMLMotionProps<"div"> & {
 
 /**
  * A div that smoothly animates size/position changes.
- * Use matching `layoutId` on skeleton and content components for seamless transitions.
+ * Uses a gentle spring transition optimized for skeleton-to-content morphing.
  */
 export const AnimatedLayout = forwardRef<HTMLDivElement, AnimatedLayoutProps>(
 	({ children, layoutId, transition, ...props }, ref) => (
@@ -17,7 +17,10 @@ export const AnimatedLayout = forwardRef<HTMLDivElement, AnimatedLayoutProps>(
 			ref={ref}
 			layout
 			layoutId={layoutId}
-			transition={transition ?? SPRING_TRANSITION}
+			transition={{
+				layout: LAYOUT_TRANSITION,
+				...transition,
+			}}
 			{...props}
 		>
 			{children}
@@ -33,7 +36,10 @@ export const AnimatedCard = forwardRef<HTMLDivElement, AnimatedLayoutProps>(
 			ref={ref}
 			layout
 			layoutId={layoutId}
-			transition={transition ?? SPRING_TRANSITION}
+			transition={{
+				layout: LAYOUT_TRANSITION,
+				...transition,
+			}}
 			{...props}
 		>
 			{children}
@@ -51,7 +57,10 @@ export const AnimatedListItem = forwardRef<HTMLDivElement, AnimatedLayoutProps>(
 		<motion.div
 			ref={ref}
 			layout
-			transition={transition ?? SPRING_TRANSITION}
+			transition={{
+				layout: LAYOUT_TRANSITION,
+				...transition,
+			}}
 			{...props}
 		>
 			{children}
