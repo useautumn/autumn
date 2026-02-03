@@ -1,5 +1,5 @@
 import type { ApiPlanFeature, CheckoutChange } from "@autumn/shared";
-import { Check, Package } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -78,7 +78,6 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 	const { currency, quantities, handleQuantityChange } = useCheckoutContext();
 	const { plan, feature_quantities } = change;
 	const { prepaid, payPerUse, included } = categorizeFeatures(plan.features);
-	const basePrice = plan.price;
 	const hasPricedFeatures = prepaid.length > 0 || payPerUse.length > 0;
 	const hasIncludedFeatures = included.length > 0;
 
@@ -100,10 +99,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 					animate={{ opacity: 1 }}
 					transition={STANDARD_TRANSITION}
 				>
-					<div className="flex items-center gap-2 min-w-0">
-						<Package className="h-4 w-4 text-muted-foreground shrink-0" weight="bold" />
-						<span className="text-sm text-foreground truncate">{plan.name}</span>
-					</div>
+					<span className="text-sm text-foreground truncate">{plan.name}</span>
 				</motion.div>
 
 				{hasPricedFeatures && (
@@ -236,7 +232,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 														delay: 0.1 + index * 0.05,
 													}}
 												>
-													<Check className="h-3.5 w-3.5 text-muted-foreground" />
+													<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
 												</motion.div>
 												<span className="text-xs text-muted-foreground truncate">
 													{getFeatureName(feature)}
@@ -289,19 +285,19 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 												delay: 0.1 + index * 0.05,
 											}}
 										>
-											<Check className="h-3.5 w-3.5 text-muted-foreground" />
+											<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
 										</motion.div>
 										<span className="text-xs text-muted-foreground truncate">
 											{getFeatureName(feature)}
 										</span>
 									</div>
-									{feature.included_usage !== undefined && feature.included_usage !== null && (
-										<span className="text-xs text-muted-foreground shrink-0">
-											{feature.included_usage === -1
-												? "Unlimited"
-												: `${feature.included_usage} included`}
-										</span>
-									)}
+								{feature.granted_balance > 0 || feature.unlimited ? (
+									<span className="text-xs text-muted-foreground shrink-0">
+										{feature.unlimited
+											? "Unlimited"
+											: `${feature.granted_balance} included`}
+									</span>
+								) : null}
 								</div>
 							</motion.div>
 						))}

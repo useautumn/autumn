@@ -13,6 +13,7 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		title,
 		description: line.description,
 		amount: line.finalAmount,
+		discounts: line.discounts,
 		is_base: isBase,
 		total_quantity: line.total_quantity ?? 1,
 		paid_quantity: line.paid_quantity ?? 1,

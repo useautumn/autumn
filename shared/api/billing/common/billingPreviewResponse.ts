@@ -1,9 +1,11 @@
+import { LineItemDiscountSchema } from "@models/billingModels/lineItem/lineItem.js";
 import { z } from "zod/v4";
 
 export const PreviewLineItemSchema = z.object({
 	title: z.string(),
 	description: z.string(),
 	amount: z.number(),
+	discounts: z.array(LineItemDiscountSchema).default([]),
 	is_base: z.boolean().optional(),
 	total_quantity: z.number(),
 	paid_quantity: z.number(),

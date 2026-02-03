@@ -4,7 +4,6 @@ import {
 	createPercentCoupon,
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
-import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -13,41 +12,43 @@ import chalk from "chalk";
 /**
  * Discount Product Scenario
  *
- * Tests attaching a product with a discount applied.
- * Customer attaches pro plan with prepaid messages, then a 20% discount is applied.
- * Previews an upgrade to verify the discount is reflected in pricing.
+ * Tests upgrading from one product to another with a discount applied.
+ * Customer attaches starter plan, then a 20% discount is applied.
+ * Upgrades to pro plan to verify the discount is reflected in pricing.
  */
 
-test(`${chalk.yellowBright("checkout: discount applied to product - 20% off")}`, async () => {
+test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`, async () => {
 	const customerId = "checkout-discount-product";
 
-	// Pro plan ($20/mo) - standard features with prepaid messages
-	const pro = products.pro({
-		id: "pro",
+	// Starter plan ($19/mo) - basic features
+	const starter = products.base({
+		id: "starter",
 		items: [
 			items.dashboard(),
-			items.prepaidMessages({
-				includedUsage: 0,
-				billingUnits: 100,
-				price: 10, // $10 per 100 messages
-			}),
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 19 }),
 		],
 	});
 
-	// Setup: customer with payment method and pro plan attached
+	// Pro plan ($49/mo) - more features
+	const pro = products.base({
+		id: "pro",
+		items: [
+			items.dashboard(),
+			items.adminRights(),
+			items.monthlyMessages({ includedUsage: 500 }),
+			items.monthlyPrice({ price: 49 }),
+		],
+	});
+
+	// Setup: customer with payment method and starter plan attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
+			s.products({ list: [starter, pro] }),
 		],
-		actions: [
-			// Attach pro plan with 500 messages ($50 for messages + $20 base = $70)
-			s.attach({
-				productId: "pro",
-				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
-			}),
-		],
+		actions: [s.attach({ productId: "starter" })],
 	});
 
 	// Get Stripe subscription and apply discount
@@ -78,11 +79,10 @@ test(`${chalk.yellowBright("checkout: discount applied to product - 20% off")}`,
 		),
 	});
 
-	// 1. Preview upgrade to more messages (should show discounted charge)
+	// 1. Preview upgrade to pro (should show discounted charge)
 	const upgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
 		redirect_mode: "always",
 	});
 	console.log("upgrade with 20% discount preview:", upgradePreview);
@@ -91,7 +91,6 @@ test(`${chalk.yellowBright("checkout: discount applied to product - 20% off")}`,
 	const upgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
 		redirect_mode: "always",
 	});
 	console.log("upgrade with 20% discount result:", upgradeResult);

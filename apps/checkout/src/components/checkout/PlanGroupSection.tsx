@@ -1,12 +1,35 @@
 import type { PreviewLineItem } from "@autumn/shared";
-import { Minus, Plus } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
 import { FAST_TRANSITION } from "@/lib/animations";
-import { cn } from "@/lib/utils";
 import { formatAmount, formatPeriodRange } from "@/utils/formatUtils";
 
 type PlanChangeType = "incoming" | "outgoing";
+
+function LineItemAmount({ item, currency }: { item: PreviewLineItem; currency: string }) {
+	const totalDiscount = item.discounts.reduce((sum, d) => sum + d.amountOff, 0);
+	const hasDiscount = totalDiscount > 0;
+	const originalAmount = item.amount + totalDiscount;
+
+	return (
+		<motion.div
+			key={item.amount}
+			className="flex items-center gap-1.5 shrink-0"
+			initial={{ opacity: 0.5 }}
+			animate={{ opacity: 1 }}
+			transition={FAST_TRANSITION}
+		>
+			{hasDiscount && (
+				<span className="text-xs tabular-nums text-muted-foreground/60 line-through">
+					{formatAmount(originalAmount, currency)}
+				</span>
+			)}
+			<span className="text-xs tabular-nums text-muted-foreground">
+				{formatAmount(item.amount, currency)}
+			</span>
+		</motion.div>
+	);
+}
 
 interface PlanGroupSectionProps {
 	planId: string;
@@ -91,15 +114,7 @@ export function PlanGroupSection({
 										</motion.span>
 									)}
 								</div>
-								<motion.span
-									key={item.amount}
-									className="text-xs tabular-nums text-muted-foreground shrink-0"
-									initial={{ opacity: 0.5 }}
-									animate={{ opacity: 1 }}
-									transition={FAST_TRANSITION}
-								>
-									{formatAmount(item.amount, currency)}
-								</motion.span>
+								<LineItemAmount item={item} currency={currency} />
 							</div>
 							{itemIndex < sortedItems.length - 1 && (
 								<Separator className="opacity-50" />

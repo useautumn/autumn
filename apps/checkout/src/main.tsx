@@ -4,8 +4,14 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { CheckoutBackground } from "./components/checkout/CheckoutBackground";
 import { ThemeProvider } from "./components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { useDevThemeToggle } from "./hooks/useDevThemeToggle";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import "./index.css";
+
+function DevTools() {
+	useDevThemeToggle();
+	return null;
+}
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -18,6 +24,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
 	<ThemeProvider defaultTheme="system" storageKey="checkout-theme">
+		<DevTools />
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter>
 				<Routes>

@@ -9,7 +9,7 @@ export function PlanSelectionCardSkeleton() {
 		<Card className="py-0 gap-0 flex-1">
 			<CardBackground>
 				{/* Plan header */}
-				<div className="flex items-center px-3 py-2 border-b bg-background/50">
+				<div className="flex items-center px-3 py-2.5 border-b bg-background/50">
 					<div className="flex items-center gap-2">
 						<Skeleton className="h-4 w-4" />
 						<Skeleton className="h-4 w-32" />
@@ -24,7 +24,7 @@ export function PlanSelectionCardSkeleton() {
 								<Separator />
 							</div>
 						)}
-						<div className="flex items-center justify-between px-3 py-2.5">
+						<div className="flex items-center justify-between px-3 py-2">
 							<div className="flex items-center gap-2">
 								<Skeleton className="h-4 w-4" />
 								<Skeleton className="h-4 w-24" />
