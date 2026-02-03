@@ -3,6 +3,9 @@ import type Stripe from "stripe";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceItemCreateParams
+ *
+ * Uses effectivePeriod (the actual period being charged/refunded) for Stripe,
+ * which accounts for mid-cycle changes.
  */
 const toStripeCreateInvoiceItemParams = ({
 	stripeCustomerId,
@@ -16,7 +19,7 @@ const toStripeCreateInvoiceItemParams = ({
 	lineItem: LineItem;
 }): Stripe.InvoiceItemCreateParams => {
 	const { finalAmount, description, context } = lineItem;
-	const { billingPeriod, currency } = context;
+	const { effectivePeriod, currency } = context;
 
 	return {
 		customer: stripeCustomerId,
@@ -26,10 +29,10 @@ const toStripeCreateInvoiceItemParams = ({
 		currency,
 		description,
 		discountable: false,
-		period: billingPeriod
+		period: effectivePeriod
 			? {
-					start: msToSeconds(billingPeriod.start),
-					end: msToSeconds(billingPeriod.end),
+					start: msToSeconds(effectivePeriod.start),
+					end: msToSeconds(effectivePeriod.end),
 				}
 			: undefined,
 	};

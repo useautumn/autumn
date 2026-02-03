@@ -4,15 +4,15 @@
  * Tests for next_reset_at and usage reset behavior during upgrades.
  *
  * Key behaviors:
- * - Consumable: usage carries over, reset_at follows billing cycle
+ * - Consumable: usage RESETS, reset_at preserved (same billing interval)
  * - Prepaid: usage RESETS, reset_at preserved
- * - Allocated: usage carries over, reset_at preserved
- * - Free to paid: reset_at follows new subscription cycle
- * - Monthly to annual: reset_at follows new cycle
+ * - Allocated: usage CARRIES OVER, reset_at preserved
+ * - Free to paid: reset_at preserved (anchor from free product)
+ * - Monthly to annual: reset_at preserved (same anchor)
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ms } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -26,16 +26,17 @@ import chalk from "chalk";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Consumable - same interval upgrade preserves reset_at
+ * Consumable - same interval upgrade preserves reset_at, usage resets
  *
  * Scenario:
  * - Pro monthly (100 messages)
- * - Track 30 usage mid-cycle
+ * - Advance 15 days mid-cycle
+ * - Track 30 usage
  * - Upgrade to Premium monthly (500 messages)
  *
  * Expected:
  * - next_reset_at stays the same (same billing interval)
- * - Usage carries over for consumable
+ * - Usage RESETS for consumable (new allowance starts fresh)
  */
 test.concurrent(`${chalk.yellowBright("immediate-switch-reset 1: consumable same interval preserves reset_at")}`, async () => {
 	const customerId = "reset-consumable-same-interval";
@@ -52,14 +53,21 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 1: consumable same
 		items: [premiumMessages],
 	});
 
+	// Advance 15 days so we're mid-cycle when upgrading - this makes reset_at comparison meaningful
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.advanceTestClock({ days: 15 }),
+		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track some usage
 	await autumnV1.track({
@@ -101,13 +109,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 1: consumable same
 		notPresent: [pro.id],
 	});
 
-	// KEY: next_reset_at should stay the same
+	// KEY: next_reset_at stays the same, but usage RESETS for consumable
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
-		balance: 470, // 500 - 30 (usage carries over for consumable)
-		usage: 30,
+		balance: 500, // Usage resets for consumable on upgrade
+		usage: 0,
 		resetsAt: originalResetAt!,
 	});
 });
@@ -121,6 +129,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 1: consumable same
  *
  * Scenario:
  * - Pro with prepaid (200 purchased)
+ * - Advance 15 days mid-cycle
  * - Track 50 usage (balance = 150)
  * - Upgrade to premium with prepaid (300 purchased)
  *
@@ -155,7 +164,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 2: prepaid usage r
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
 		actions: [
@@ -163,8 +172,12 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 2: prepaid usage r
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 			}),
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track 50 usage
 	await autumnV1.track({
@@ -232,6 +245,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 2: prepaid usage r
  *
  * Scenario:
  * - Pro with BOTH prepaid messages and allocated users
+ * - Advance 15 days mid-cycle
  * - Track 50 messages and 3 users
  * - Upgrade to premium with both
  *
@@ -267,7 +281,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 3: prepaid resets,
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
 		actions: [
@@ -275,8 +289,12 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 3: prepaid resets,
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 			}),
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track both features
 	await autumnV1.track({
@@ -363,6 +381,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 3: prepaid resets,
  *
  * Scenario:
  * - Pro with allocated (5 users included)
+ * - Advance 15 days mid-cycle
  * - Track 3 users
  * - Upgrade to Premium (10 users included)
  *
@@ -388,11 +407,17 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 4: allocated prese
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.advanceTestClock({ days: 15 }),
+		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track 3 users
 	await autumnV1.track({
@@ -450,18 +475,19 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 4: allocated prese
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Free to Paid - reset_at follows new subscription cycle
+ * Free to Paid - reset_at anchor preserved from free product
  *
  * Scenario:
  * - Free product (50 messages)
+ * - Advance 15 days mid-cycle
  * - Track 20 usage
  * - Upgrade to Pro paid ($20/mo, 100 messages)
  *
  * Expected:
- * - next_reset_at changes to the new paid subscription's cycle end
- * - Should be approximately 1 month from now
+ * - next_reset_at anchor preserved from free product
+ * - Usage resets for consumable
  */
-test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid sets new reset_at")}`, async () => {
+test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid preserves reset_at anchor")}`, async () => {
 	const customerId = "reset-free-to-paid";
 
 	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
@@ -476,14 +502,21 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid se
 		items: [proMessages],
 	});
 
+	// Advance 15 days so we're mid-cycle when upgrading
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [free, pro] }),
 		],
-		actions: [s.billing.attach({ productId: free.id })],
+		actions: [
+			s.billing.attach({ productId: free.id }),
+			s.advanceTestClock({ days: 15 }),
+		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track some usage on free
 	await autumnV1.track({
@@ -494,7 +527,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid se
 
 	await new Promise((r) => setTimeout(r, 2000));
 
-	// Get free product's reset_at
+	// Get free product's reset_at - this is the anchor we expect to be preserved
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const freeResetAt =
@@ -502,7 +535,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid se
 	expect(freeResetAt).toBeDefined();
 
 	// Upgrade to paid
-	const now = Date.now();
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -517,22 +549,20 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid se
 		notPresent: [free.id],
 	});
 
-	// KEY: next_reset_at should be ~1 month from now (new subscription cycle)
+	// KEY: next_reset_at should preserve the same anchor from free product
 	const newResetAt = customer.features[TestFeature.Messages]?.next_reset_at;
 	expect(newResetAt).toBeDefined();
 
-	// Should be approximately 1 month from now (within 10 minutes tolerance)
-	const expectedResetAt = now + ms.days(30);
-	const diff = Math.abs(newResetAt! - expectedResetAt);
-	expect(diff).toBeLessThanOrEqual(ms.minutes(10));
+	// Reset anchor is preserved - should be the same as the free product's reset_at
+	expect(newResetAt).toBe(freeResetAt);
 
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
-		balance: 80, // 100 - 20 (usage carries over for consumable)
-		usage: 20,
-		resetsAt: expectedResetAt,
+		balance: 100, // Usage resets for consumable on upgrade
+		usage: 0,
+		resetsAt: freeResetAt!,
 	});
 });
 
@@ -541,18 +571,19 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 5: free to paid se
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Monthly to Annual - separate subscriptions, new reset_at
+ * Monthly to Annual - reset_at anchor preserved
  *
  * Scenario:
  * - Pro monthly ($20/mo, 100 messages)
+ * - Advance 15 days mid-cycle
  * - Track 30 usage
  * - Upgrade to Pro annual ($200/year, 100 messages)
  *
  * Expected:
- * - next_reset_at changes to the annual cycle
- * - Dual subscriptions in Stripe, new reset cycle
+ * - next_reset_at anchor is preserved from monthly
+ * - Usage resets for consumable
  */
-test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annual gets new reset_at")}`, async () => {
+test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annual preserves reset_at anchor")}`, async () => {
 	const customerId = "reset-monthly-to-annual";
 
 	const proMonthlyMessages = items.monthlyMessages({ includedUsage: 100 });
@@ -567,14 +598,21 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annu
 		items: [proAnnualMessages],
 	});
 
+	// Advance 15 days so we're mid-cycle when upgrading
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [proMonthly, proAnnual] }),
 		],
-		actions: [s.billing.attach({ productId: proMonthly.id })],
+		actions: [
+			s.billing.attach({ productId: proMonthly.id }),
+			s.advanceTestClock({ days: 15 }),
+		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track some usage
 	await autumnV1.track({
@@ -585,7 +623,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annu
 
 	await new Promise((r) => setTimeout(r, 2000));
 
-	// Get monthly reset_at
+	// Get monthly reset_at - this is the anchor we expect to be preserved
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const monthlyResetAt =
@@ -593,7 +631,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annu
 	expect(monthlyResetAt).toBeDefined();
 
 	// Upgrade to annual
-	const now = Date.now();
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
@@ -608,21 +645,19 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-reset 6: monthly to annu
 		notPresent: [proMonthly.id],
 	});
 
-	// KEY: next_reset_at should be ~1 year from now (annual cycle)
+	// KEY: next_reset_at should preserve the same anchor (monthly reset carries over to annual)
 	const newResetAt = customer.features[TestFeature.Messages]?.next_reset_at;
 	expect(newResetAt).toBeDefined();
 
-	// Should be approximately 1 year from now
-	const expectedAnnualResetAt = now + ms.days(365);
-	const diff = Math.abs(newResetAt! - expectedAnnualResetAt);
-	expect(diff).toBeLessThanOrEqual(ms.minutes(10));
+	// Reset anchor is preserved - should be the same as the monthly reset_at
+	expect(newResetAt).toBe(monthlyResetAt);
 
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
-		balance: 70, // 100 - 30 (usage carries over)
-		usage: 30,
-		resetsAt: expectedAnnualResetAt,
+		balance: 100, // Usage resets for consumable on upgrade
+		usage: 0,
+		resetsAt: monthlyResetAt!,
 	});
 });

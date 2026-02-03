@@ -61,7 +61,7 @@ export const setupAttachBillingContext = async ({
 		ctx,
 		featureQuantitiesParams: params,
 		fullProduct: attachProduct,
-		currentCustomerProduct: undefined,
+		currentCustomerProduct: currentCustomerProduct,
 		initializeUndefinedQuantities: true,
 	});
 
@@ -92,7 +92,7 @@ export const setupAttachBillingContext = async ({
 	const endOfCycleMs = setupAttachEndOfCycleMs({
 		planTiming,
 		currentCustomerProduct,
-		stripeSubscription,
+		billingCycleAnchorMs,
 		currentEpochMs,
 	});
 

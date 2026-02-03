@@ -1,4 +1,5 @@
 import { getExpiredCustomerProductsCacheAndMerge } from "@/internal/customers/cusProducts/actions/expiredCache/getExpiredCustomerProductsCache";
+import { activateFreeSuccessorProduct } from "./activateFreeSuccessorProduct";
 import { activateScheduledCustomerProduct } from "./activateScheduled";
 import { deleteScheduledCustomerProduct } from "./deleteScheduledCustomerProduct";
 import { expireCustomerProductAndActivateDefault } from "./expireAndActivateDefault";
@@ -10,6 +11,9 @@ import {
 export const customerProductActions = {
 	/** Expires a customer product and activates default if no other active in group */
 	expireAndActivateDefault: expireCustomerProductAndActivateDefault,
+
+	/** Activates a free successor product (scheduled or default) after expiry */
+	activateFreeSuccessor: activateFreeSuccessorProduct,
 
 	/** Activates a scheduled customer product with new subscription/schedule IDs */
 	activateScheduled: activateScheduledCustomerProduct,

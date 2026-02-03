@@ -241,7 +241,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 2: pro with c
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 20 + expectedOverage,
+		latestTotal: expectedOverage,
 		latestInvoiceProductIds: [pro.id],
 	});
 
@@ -347,5 +347,212 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 3: premium wi
 		count: 2,
 		latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
 		latestInvoiceProductIds: [pro.id, premium.id],
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: Premium with consumable credits, downgrade to pro
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Premium ($50/mo) with consumable credits (200 included, $0.10/unit overage)
+ * - Track 300 credits (100 overage = $10)
+ * - Downgrade to pro ($20/mo) with consumable credits (100 included)
+ * - Advance to cycle end
+ *
+ * Expected Result:
+ * - Overage charged on premium ($10) at cycle end
+ * - Pro active with usage reset to 0 and balance at 100 (pro's included)
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 4: premium with consumable credits, downgrade to pro")}`, async () => {
+	const customerId = "sched-switch-premium-credits-to-pro";
+
+	const premiumConsumableCredits = items.consumable({
+		featureId: TestFeature.Credits,
+		includedUsage: 200,
+		price: 0.1,
+		billingUnits: 1,
+	});
+
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumConsumableCredits],
+	});
+
+	const proConsumableCredits = items.consumable({
+		featureId: TestFeature.Credits,
+		includedUsage: 100,
+		price: 0.1,
+		billingUnits: 1,
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [proConsumableCredits],
+	});
+
+	const usageAmount = 300; // 100 overage (300 - 200 included)
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id, timeout: 5000 }),
+			s.track({
+				featureId: TestFeature.Credits,
+				value: usageAmount,
+				timeout: 2000,
+			}),
+			s.billing.attach({ productId: pro.id }), // Schedule downgrade
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	// Verify Stripe subscription after all operations
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+
+	// Calculate expected overage: 100 units * $0.10 = $10.00
+	const expectedOverage = calculateExpectedInvoiceAmount({
+		items: premium.items,
+		usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
+		options: { includeFixed: false, onlyArrear: true },
+	});
+	expect(expectedOverage).toBe(10);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// After cycle: pro active, premium removed
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// Features at pro tier (100 included), usage reset to 0
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Credits,
+		balance: 100,
+		usage: 0,
+	});
+
+	// Invoices:
+	// 1. Premium ($50) initial
+	// 2. Pro renewal ($20) + premium overage ($10) = $30
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20 + expectedOverage,
+		latestInvoiceProductIds: [pro.id, premium.id],
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Premium with consumable credits, downgrade to free
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Premium ($50/mo) with consumable credits (200 included, $0.10/unit overage)
+ * - Track 350 credits (150 overage = $15)
+ * - Downgrade to free (50 monthly credits, no overage)
+ * - Advance to cycle end
+ *
+ * Expected Result:
+ * - Overage charged on premium ($15) at cycle end
+ * - Free active with usage reset to 0 and balance at 50 (free's included)
+ * - No Stripe subscription after downgrade to free
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 5: premium with consumable credits, downgrade to free")}`, async () => {
+	const customerId = "sched-switch-premium-credits-to-free";
+
+	const premiumConsumableCredits = items.consumable({
+		featureId: TestFeature.Credits,
+		includedUsage: 200,
+		price: 0.1,
+		billingUnits: 1,
+	});
+
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumConsumableCredits],
+	});
+
+	const freeCredits = items.monthlyCredits({ includedUsage: 50 });
+	const free = products.base({
+		id: "free",
+		items: [freeCredits],
+	});
+
+	const usageAmount = 350; // 150 overage (350 - 200 included)
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, free] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id, timeout: 5000 }),
+			s.track({
+				featureId: TestFeature.Credits,
+				value: usageAmount,
+				timeout: 2000,
+			}),
+			s.billing.attach({ productId: free.id }), // Schedule downgrade
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	// Calculate expected overage: 150 units * $0.10 = $15.00
+	const expectedOverage = calculateExpectedInvoiceAmount({
+		items: premium.items,
+		usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
+		options: { includeFixed: false, onlyArrear: true },
+	});
+	expect(expectedOverage).toBe(15);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// After cycle: free active, premium removed
+	await expectCustomerProducts({
+		customer,
+		active: [free.id],
+		notPresent: [premium.id],
+	});
+
+	// Features at free tier (50 included), usage reset to 0
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Credits,
+		balance: 50,
+		usage: 0,
+	});
+
+	// Invoices:
+	// 1. Premium ($50) initial
+	// 2. Premium overage ($15) at cycle end
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: expectedOverage,
+		latestInvoiceProductIds: [premium.id],
+	});
+
+	// After downgrading to free, there should be no Stripe subscription
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });

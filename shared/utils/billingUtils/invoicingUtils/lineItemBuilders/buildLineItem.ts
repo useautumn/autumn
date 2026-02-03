@@ -7,6 +7,7 @@ import {
 } from "../../../../models/billingModels/lineItem/lineItem";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { applyProration } from "../prorationUtils/applyProration";
+import { getEffectivePeriod } from "../prorationUtils/getEffectivePeriod";
 
 export const buildLineItem = ({
 	context,
@@ -29,7 +30,23 @@ export const buildLineItem = ({
 	usage?: number;
 	overage?: number;
 }): LineItem => {
-	// 1. Apply proration if needed
+	// 1. Compute effectivePeriod if not already set
+	let effectivePeriod = context.effectivePeriod;
+	if (!effectivePeriod && context.billingPeriod) {
+		effectivePeriod = getEffectivePeriod({
+			now: context.now,
+			billingPeriod: context.billingPeriod,
+			billingTiming: context.billingTiming,
+		});
+	}
+
+	// Update context with effective period
+	const updatedContext: LineItemContext = {
+		...context,
+		effectivePeriod,
+	};
+
+	// 2. Apply proration if needed
 	if (shouldProrate && context.billingPeriod) {
 		amount = applyProration({
 			now: context.now,
@@ -38,16 +55,16 @@ export const buildLineItem = ({
 		});
 	}
 
-	// 2. Handle refund direction
+	// 3. Handle refund direction
 	if (context.direction === "refund") {
 		amount = -amount;
 	}
 
-	// 3. Return LineItem
+	// 4. Return LineItem
 	const lineItemData = {
 		amount,
 		description,
-		context,
+		context: updatedContext,
 		stripePriceId,
 		stripeProductId,
 		chargeImmediately,

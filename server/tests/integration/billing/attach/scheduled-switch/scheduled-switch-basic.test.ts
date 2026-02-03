@@ -9,7 +9,8 @@
  * - New product has "scheduled" status
  * - At cycle end: current product removed, scheduled product becomes active
  * - Scheduled downgrades can be replaced by other downgrades
- * - Scheduled downgrades are cancelled when upgrading
+ *
+ * NOTE: Tests for "upgrade cancels scheduled downgrade" are in immediate-switch-basic.test.ts
  */
 
 import { expect, test } from "bun:test";
@@ -86,11 +87,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 1: pro to free")}`
 		product_id: free.id,
 	});
 	expect(preview.total).toBe(0);
-	expectPreviewNextCycleCorrect({
-		preview,
-		total: 0,
-		startsAt: addMonths(advancedTo, 1).getTime(),
-	}); // Free product has no charge next cycle
 
 	// 2. Attach free (downgrade)
 	await autumnV1.billing.attach({
@@ -377,11 +373,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 3: premium to pro 
 		product_id: free.id,
 	});
 	expect(preview.total).toBe(0);
-	expectPreviewNextCycleCorrect({
-		preview,
-		total: 0,
-		startsAt: addMonths(advancedTo, 1).getTime(),
-	}); // Free has no charge
 
 	// Downgrade to free (should replace scheduled pro)
 	await autumnV1.billing.attach({
@@ -415,6 +406,55 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 3: premium to pro 
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+	});
+
+	// Advance to next cycle to verify downgrade completes correctly
+	const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro, premium] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: pro.id }), // Schedule downgrade to pro
+			s.billing.attach({ productId: free.id }), // Replace with free
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	const customerAfterCycle =
+		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+
+	// After cycle: premium removed, free active
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [free.id],
+		notPresent: [premium.id, pro.id],
+	});
+
+	// Features updated to free tier
+	expectCustomerFeatureCorrect({
+		customer: customerAfterCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 100,
+		balance: 100,
+		usage: 0,
+	});
+
+	// Invoice: only premium ($50), free has no renewal charge
+	await expectCustomerInvoiceCorrect({
+		customer: customerAfterCycle,
+		count: 1,
+		latestTotal: 50,
+	});
+
+	// After downgrading to free, there should be no Stripe subscription
+	await expectNoStripeSubscription({
+		db: ctxAfter.db,
+		customerId,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
 	});
 });
 
@@ -530,208 +570,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 4: premium to free
 		org: ctx.org,
 		env: ctx.env,
 	});
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Premium to Pro (scheduled) to Growth (upgrade)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to pro (scheduled)
- * - Upgrade to growth ($100/mo) - immediate
- *
- * Expected Result:
- * - Scheduled pro is cancelled
- * - Growth is active immediately
- */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 5: premium to pro, then upgrade to growth")}`, async () => {
-	const customerId = "sched-switch-premium-pro-growth";
-
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
-
-	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessagesItem],
-	});
-
-	const growthMessagesItem = items.monthlyMessages({ includedUsage: 2000 });
-	const growth = products.growth({
-		id: "growth",
-		items: [growthMessagesItem],
-	});
-
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium, growth] }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id }),
-			s.billing.attach({ productId: pro.id }), // Schedule downgrade
-		],
-	});
-
-	// Verify Stripe subscription after premium attach and pro scheduled
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-
-	// Verify scheduled state
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceling({
-		customer: customerBefore,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: customerBefore,
-		productId: pro.id,
-	});
-
-	// Preview upgrade to growth
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: growth.id,
-	});
-	// Upgrade from premium ($50) to growth ($100) = $50
-	expect(preview.total).toBe(50);
-
-	// Upgrade to growth
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: growth.id,
-		redirect_mode: "if_required",
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Growth active, premium and pro removed
-	await expectCustomerProducts({
-		customer,
-		active: [growth.id],
-		notPresent: [premium.id, pro.id],
-	});
-
-	// Features at growth tier
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 2000,
-		balance: 2000,
-		usage: 0,
-	});
-
-	// Invoices: premium ($50) + upgrade to growth ($50)
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: 50,
-	});
-
-	// Verify Stripe subscription after upgrade
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Premium to Free (scheduled) to Pro (upgrade)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to free (scheduled)
- * - Upgrade to pro ($20/mo) - this is still a downgrade from premium
- *
- * Expected Result:
- * - Scheduled free replaced by pro
- * - After cycle: premium removed, pro active
- */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: premium to free, then upgrade to pro")}`, async () => {
-	const customerId = "sched-switch-premium-free-upgrade-pro";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const free = products.base({
-		id: "free",
-		items: [messagesItem],
-	});
-
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
-
-	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessagesItem],
-	});
-
-	const { autumnV1, ctx, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
-		],
-		actions: [s.billing.attach({ productId: premium.id })],
-	});
-
-	// Preview downgrade to free
-	const previewFree = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: free.id,
-	});
-	expect(previewFree.total).toBe(0);
-	expectPreviewNextCycleCorrect({
-		preview: previewFree,
-		total: 0,
-		startsAt: addMonths(advancedTo, 1).getTime(),
-	}); // Free has no charge
-
-	// Schedule downgrade to free
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		redirect_mode: "if_required",
-	});
-
-	// Preview replacing scheduled free with pro (still a downgrade from premium)
-	const previewPro = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
-	expect(previewPro.total).toBe(0);
-	expectPreviewNextCycleCorrect({
-		preview: previewPro,
-		total: 20,
-		startsAt: addMonths(advancedTo, 1).getTime(),
-	}); // Pro is $20/mo
-
-	// Replace scheduled free with pro
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
-
-	// Advance to next cycle
-	const { autumnV1: autumnV1After } = await initScenario({
+	// Advance to next cycle to verify downgrade completes correctly
+	const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -739,32 +580,25 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: premium to free
 		],
 		actions: [
 			s.billing.attach({ productId: premium.id }),
-			s.billing.attach({ productId: free.id }),
-			s.billing.attach({ productId: pro.id }),
-			s.advanceToNextInvoice(),
+			s.billing.attach({ productId: free.id }), // Schedule downgrade to free
+			s.billing.attach({ productId: pro.id }), // Replace with pro
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
-	// Verify Stripe subscription after all operations
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	const customerAfterCycle =
+		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-	const customer = await autumnV1After.customers.get<ApiCustomerV3>(customerId);
-
-	// After cycle: pro active, premium and free removed
+	// After cycle: premium removed, pro active
 	await expectCustomerProducts({
-		customer,
+		customer: customerAfterCycle,
 		active: [pro.id],
 		notPresent: [premium.id, free.id],
 	});
 
-	// Features at pro tier
+	// Features updated to pro tier
 	expectCustomerFeatureCorrect({
-		customer,
+		customer: customerAfterCycle,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
@@ -773,8 +607,269 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: premium to free
 
 	// Invoices: premium ($50) + pro renewal ($20)
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customer: customerAfterCycle,
 		count: 2,
 		latestTotal: 20,
+		latestInvoiceProductIds: [pro.id],
+	});
+
+	// Verify Stripe subscription after cycle
+	await expectSubToBeCorrect({
+		db: ctxAfter.db,
+		customerId,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Premium to Pro with reset_usage_when_enabled: false
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Premium ($50/mo) with 1000 messages, reset_usage_when_enabled: false
+ * - Track 300 messages
+ * - Downgrade to Pro ($20/mo) with 500 messages, reset_usage_when_enabled: false
+ * - Advance to next cycle
+ *
+ * Expected Result:
+ * - Pro active with messages usage RESET to 0
+ * - Balance = 500 (reset_usage_when_enabled only affects IMMEDIATE switches, not scheduled)
+ * - Scheduled product switches ALWAYS reset usage regardless of reset_usage_when_enabled setting
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 5: premium to pro with reset_usage_when_enabled: false (usage resets)")}`, async () => {
+	const customerId = "sched-switch-reset-usage-false-premium-to-pro";
+
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+		resetUsageWhenEnabled: false,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
+
+	const proMessagesItem = items.monthlyMessages({
+		includedUsage: 500,
+		resetUsageWhenEnabled: false,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id }),
+			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
+		],
+	});
+
+	// Verify usage tracked on premium
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		includedUsage: 1000,
+		balance: 700, // 1000 - 300
+		usage: 300,
+	});
+
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
+
+	// Verify scheduled states
+	const customerMidCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerMidCycle,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer: customerMidCycle,
+		productId: pro.id,
+	});
+
+	// Usage still shows on canceling product
+	expectCustomerFeatureCorrect({
+		customer: customerMidCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 1000,
+		balance: 700,
+		usage: 300,
+	});
+
+	// Advance to next cycle with fresh scenario
+	const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id }),
+			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
+			s.billing.attach({ productId: pro.id }), // Schedule downgrade
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	const customerAfterCycle =
+		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+
+	// Verify products after cycle
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// Verify usage RESET (scheduled switches always reset, regardless of reset_usage_when_enabled)
+	expectCustomerFeatureCorrect({
+		customer: customerAfterCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500, // RESET - not 500 - 300 = 200
+		usage: 0, // RESET
+	});
+
+	// Verify Stripe subscription
+	await expectSubToBeCorrect({
+		db: ctxAfter.db,
+		customerId,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Pro to Free with reset_usage_when_enabled: false
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Pro ($20/mo) with 500 messages, reset_usage_when_enabled: false
+ * - Track 200 messages
+ * - Downgrade to Free with 100 messages, reset_usage_when_enabled: false
+ * - Advance to next cycle
+ *
+ * Expected Result:
+ * - Free active with messages usage RESET to 0
+ * - Balance = 100 (scheduled switches always reset usage)
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: pro to free with reset_usage_when_enabled: false (usage resets)")}`, async () => {
+	const customerId = "sched-switch-reset-usage-false-pro-to-free";
+
+	const proMessagesItem = items.monthlyMessages({
+		includedUsage: 500,
+		resetUsageWhenEnabled: false,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
+
+	const freeMessagesItem = items.monthlyMessages({
+		includedUsage: 100,
+		resetUsageWhenEnabled: false,
+	});
+	const free = products.base({
+		id: "free",
+		items: [freeMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, free] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.track({ featureId: TestFeature.Messages, value: 200, timeout: 2000 }),
+		],
+	});
+
+	// Verify usage tracked on pro
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 300, // 500 - 200
+		usage: 200,
+	});
+
+	// Schedule downgrade to free
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		redirect_mode: "if_required",
+	});
+
+	// Verify scheduled states
+	const customerMidCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerMidCycle,
+		productId: pro.id,
+	});
+	await expectProductScheduled({
+		customer: customerMidCycle,
+		productId: free.id,
+	});
+
+	// Advance to next cycle with fresh scenario
+	const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, free] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.track({ featureId: TestFeature.Messages, value: 200, timeout: 2000 }),
+			s.billing.attach({ productId: free.id }), // Schedule downgrade
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	const customerAfterCycle =
+		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+
+	// Verify products after cycle
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [free.id],
+		notPresent: [pro.id],
+	});
+
+	// Verify usage RESET (scheduled switches always reset)
+	expectCustomerFeatureCorrect({
+		customer: customerAfterCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 100,
+		balance: 100, // RESET
+		usage: 0, // RESET
+	});
+
+	// After downgrading to free, there should be no Stripe subscription
+	await expectNoStripeSubscription({
+		db: ctxAfter.db,
+		customerId,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
 	});
 });

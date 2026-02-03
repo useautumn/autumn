@@ -10,21 +10,22 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import type { ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
-	expectCustomerProducts,
 	expectProductActive,
 	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths, addYears } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Entity 1 premiumAnnual, entity 2 premium, downgrade both to pro, advance monthly cycle
@@ -58,12 +59,13 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 1: entity
 
 	const premiumAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
 	const premiumAnnualPrice = items.annualPrice({ price: 500 });
-	const premiumAnnual = products.premium({
+	// Use products.base for custom pricing (products.premium adds $50/mo automatically)
+	const premiumAnnual = products.base({
 		id: "premium-annual",
 		items: [premiumAnnualMessages, premiumAnnualPrice],
 	});
 
-	const { autumnV1, entities, ctx } = await initScenario({
+	const { autumnV1, entities, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -73,17 +75,77 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 1: entity
 		actions: [
 			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }), // Annual
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }), // Monthly
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Schedule downgrade (annual)
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Schedule downgrade (monthly)
-			s.advanceToNextInvoice(), // Advance 1 month
+		],
+	});
+
+	// Preview downgrade for entity 1 (annual -> pro)
+	// Next cycle should be 1 year from now (annual subscription)
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect(preview1.total).toBe(0); // Downgrade = no immediate charge
+	expectPreviewNextCycleCorrect({
+		preview: preview1,
+		startsAt: addYears(advancedTo, 1).getTime(), // Annual cycle
+		total: 20, // Pro is $20/mo
+	});
+
+	// Preview downgrade for entity 2 (monthly -> pro)
+	// Next cycle should be 1 month from now (monthly subscription)
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+	});
+	expect(preview2.total).toBe(0); // Downgrade = no immediate charge
+	expectPreviewNextCycleCorrect({
+		preview: preview2,
+		startsAt: addMonths(advancedTo, 1).getTime(), // Monthly cycle
+		total: 20, // Pro is $20/mo
+	});
+
+	// Schedule the downgrades
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+		redirect_mode: "if_required",
+	});
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+		redirect_mode: "if_required",
+	});
+
+	// Advance to next invoice (1 month) with fresh scenario
+	const {
+		autumnV1: autumnV1After,
+		ctx: ctxAfter,
+		entities: entitiesAfter,
+	} = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium, premiumAnnual] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }),
+			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+			s.advanceToNextInvoice(),
 		],
 	});
 
 	// Verify entity 1: premiumAnnual still canceling, pro scheduled
 	// Annual hasn't ended yet
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+	const entity1 = await autumnV1After.entities.get<ApiEntityV0>(
 		customerId,
-		entities[0].id,
+		entitiesAfter[0].id,
 	);
 	await expectProductCanceling({
 		customer: entity1,
@@ -95,9 +157,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 1: entity
 	});
 
 	// Verify entity 2: now on pro (monthly completed)
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+	const entity2 = await autumnV1After.entities.get<ApiEntityV0>(
 		customerId,
-		entities[1].id,
+		entitiesAfter[1].id,
 	);
 	await expectProductActive({
 		customer: entity2,
@@ -110,10 +172,10 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 1: entity
 
 	// Verify Stripe subscription
 	await expectSubToBeCorrect({
-		db: ctx.db,
+		db: ctxAfter.db,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
 	});
 });
 
@@ -149,12 +211,13 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 2: entity
 
 	const premiumAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
 	const premiumAnnualPrice = items.annualPrice({ price: 500 });
-	const premiumAnnual = products.premium({
+	// Use products.base for custom pricing
+	const premiumAnnual = products.base({
 		id: "premium-annual",
 		items: [premiumAnnualMessages, premiumAnnualPrice],
 	});
 
-	const { autumnV1, entities, ctx } = await initScenario({
+	const { autumnV1, entities, ctx, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -164,9 +227,47 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 2: entity
 		actions: [
 			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }), // Annual
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }), // Monthly
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Schedule downgrade (annual)
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Schedule downgrade (monthly)
 		],
+	});
+
+	// Preview downgrade for entity 1 (annual -> pro)
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect(preview1.total).toBe(0);
+	expectPreviewNextCycleCorrect({
+		preview: preview1,
+		startsAt: addYears(advancedTo, 1).getTime(), // Annual cycle
+		total: 20,
+	});
+
+	// Preview downgrade for entity 2 (monthly -> pro)
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+	});
+	expect(preview2.total).toBe(0);
+	expectPreviewNextCycleCorrect({
+		preview: preview2,
+		startsAt: addMonths(advancedTo, 1).getTime(), // Monthly cycle
+		total: 20,
+	});
+
+	// Schedule the downgrades
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+		redirect_mode: "if_required",
+	});
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+		redirect_mode: "if_required",
 	});
 
 	// Verify scheduled states before re-upgrade
@@ -288,12 +389,13 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 3: entity
 
 	const premiumAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
 	const premiumAnnualPrice = items.annualPrice({ price: 500 });
-	const premiumAnnual = products.premium({
+	// Use products.base for custom pricing
+	const premiumAnnual = products.base({
 		id: "premium-annual",
 		items: [premiumAnnualMessages, premiumAnnualPrice],
 	});
 
-	const { autumnV1, entities, ctx } = await initScenario({
+	const { autumnV1, entities, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -303,21 +405,65 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 3: entity
 		actions: [
 			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }), // Annual
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }), // Monthly
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Schedule downgrade (annual)
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Schedule downgrade (monthly)
+		],
+	});
+
+	// Preview downgrade for entity 1 (annual -> pro)
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect(preview1.total).toBe(0);
+	expectPreviewNextCycleCorrect({
+		preview: preview1,
+		startsAt: addYears(advancedTo, 1).getTime(), // Annual cycle
+		total: 20,
+	});
+
+	// Preview downgrade for entity 2 (monthly -> pro)
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+	});
+	expect(preview2.total).toBe(0);
+	expectPreviewNextCycleCorrect({
+		preview: preview2,
+		startsAt: addMonths(advancedTo, 1).getTime(), // Monthly cycle
+		total: 20,
+	});
+
+	// Schedule the downgrades and advance 12 months with fresh scenario
+	const {
+		autumnV1: autumnV1After,
+		ctx: ctxAfter,
+		entities: entitiesAfter,
+	} = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium, premiumAnnual] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }),
+			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
 			// Advance 12 months to complete annual cycle
 			s.advanceTestClock({ months: 12, waitForSeconds: 30 }),
 		],
 	});
 
 	// Verify both entities now on pro
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+	const entity1 = await autumnV1After.entities.get<ApiEntityV0>(
 		customerId,
-		entities[0].id,
+		entitiesAfter[0].id,
 	);
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+	const entity2 = await autumnV1After.entities.get<ApiEntityV0>(
 		customerId,
-		entities[1].id,
+		entitiesAfter[1].id,
 	);
 
 	// Entity 1: pro active, premiumAnnual removed (annual cycle completed)
@@ -356,9 +502,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-multi-interval 3: entity
 
 	// Verify Stripe subscription
 	await expectSubToBeCorrect({
-		db: ctx.db,
+		db: ctxAfter.db,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
+		org: ctxAfter.org,
+		env: ctxAfter.env,
 	});
 });

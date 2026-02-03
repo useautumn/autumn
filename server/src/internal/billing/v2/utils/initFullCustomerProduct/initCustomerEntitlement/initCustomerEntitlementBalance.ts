@@ -3,6 +3,9 @@ import {
 	type EntityBalance,
 	entToOptions,
 	entToPrice,
+	type FeatureOptions,
+	type FullCustomer,
+	type FullProduct,
 	getStartingBalance,
 	type InitFullCustomerProductContext,
 	isBooleanEntitlement,
@@ -10,16 +13,17 @@ import {
 } from "@autumn/shared";
 import { initCustomerEntitlementEntities } from "./initCustomerEntitlementEntities";
 
-interface InitCustomerEntitlementBalanceResult {
-	balance: number;
-	entities: Record<string, EntityBalance> | null;
-}
-
 export const initCustomerEntitlementBalance = ({
 	initContext,
 	entitlement,
 }: {
-	initContext: InitFullCustomerProductContext;
+	initContext:
+		| InitFullCustomerProductContext
+		| {
+				fullCustomer: FullCustomer;
+				fullProduct: FullProduct;
+				featureQuantities: FeatureOptions[];
+		  };
 	entitlement: EntitlementWithFeature;
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
 	// 1. If entitlement is boolean or unlimited, return 0

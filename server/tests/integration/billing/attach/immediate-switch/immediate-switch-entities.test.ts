@@ -684,6 +684,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities 7: entities wit
 		],
 	});
 
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
+
 	// Track usage on both entities
 	await autumnV1.track({
 		customer_id: customerId,

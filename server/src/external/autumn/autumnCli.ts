@@ -10,6 +10,7 @@ import {
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0,
+	type AttachParamsV0Input,
 	type BalancesUpdateParams,
 	type BillingPreviewResponse,
 	type BillingResponse,
@@ -847,7 +848,7 @@ export class AutumnInt {
 		},
 
 		previewAttach: async (
-			params: AttachParamsV0,
+			params: AttachParamsV0Input,
 		): Promise<BillingPreviewResponse> => {
 			const data = await this.post(`/billing/preview_attach`, {
 				...params,

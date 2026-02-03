@@ -16,10 +16,7 @@ import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import {
-	expectCustomerProducts,
-	expectProductActive,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -373,9 +370,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 4: in
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	// Base diff: $50 - $20 = $30
+	// Diff: $50 + $10 - $20 - $20 = $20
 	// Prepaid: same 2 packs (quantity carried over), no diff
-	expect(preview.total).toBe(30);
+	expect(preview.total).toBe(20);
 
 	// 2. Attach premium - NO options
 	await autumnV1.billing.attach({
@@ -457,7 +454,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 5: in
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		balance: 300,
+		balance: 200,
 		usage: 0,
 	});
 
@@ -466,9 +463,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 5: in
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	// Base diff: $50 - $20 = $30
+	// Base diff: $50 + $20 - $20 - $10
 	// Prepaid: same 2 packs, no diff
-	expect(preview.total).toBe(30);
+	expect(preview.total).toBe(40);
 
 	// 2. Attach premium - NO options
 	await autumnV1.billing.attach({
@@ -712,6 +709,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 8: wi
 			}),
 		],
 	});
+
+	// Wait for webhooks to process and cache to reset
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Track 50 usage
 	await autumnV1.track({

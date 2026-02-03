@@ -74,7 +74,7 @@ export const computeAttachNewCustomerProduct = ({
 			fullCustomer,
 			fullProduct: attachProduct,
 			featureQuantities,
-			existingUsages,
+			existingUsages: isScheduled ? undefined : existingUsages,
 			existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
