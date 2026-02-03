@@ -6,15 +6,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 /**
- * Multi-Attach Scenario
+ * Multi-Checkout Scenario
  *
  * Tests attaching multiple products with Autumn checkout URLs.
  * Uses billing.attach with redirect_mode: "always" for each product
  * to get Autumn checkout URLs (not Stripe).
  */
 
-test(`${chalk.yellowBright("attach: multi - multiple products with autumn checkout")}`, async () => {
-	const customerId = "attach-multi";
+test(`${chalk.yellowBright("checkout: multi - multiple products with autumn checkout")}`, async () => {
+	const customerId = "checkout-multi";
 
 	// Main subscription product ($49/mo) with features
 	const proSubscription = products.base({

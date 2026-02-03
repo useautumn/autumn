@@ -6,15 +6,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 /**
- * Complex Attach Scenario
+ * Complex Checkout Scenario
  *
- * Tests attach functionality with a product containing many line items
+ * Tests checkout functionality with a product containing many line items
  * including boolean features, metered usage, prepaid, consumable,
  * and allocated seat-based items.
  */
 
-test(`${chalk.yellowBright("attach: complex - product with many line items")}`, async () => {
-	const customerId = "attach-complex";
+test(`${chalk.yellowBright("checkout: complex - product with many line items")}`, async () => {
+	const customerId = "checkout-complex";
 
 	const enterprise = products.base({
 		id: "enterprise",
