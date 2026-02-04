@@ -5,7 +5,11 @@ import { LayoutGroup, motion } from "motion/react";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { TrialEditorRow } from "@/components/forms/update-subscription-v2/components/TrialEditorRow";
-import { LAYOUT_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
+import {
+	LAYOUT_TRANSITION,
+	STAGGER_CONTAINER,
+	STAGGER_ITEM,
+} from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -46,95 +50,126 @@ export function AttachPlanSection() {
 	if (!product) return null;
 
 	return (
-		<SheetSection title={<AttachSectionTitle />} withSeparator>
+		<SheetSection withSeparator>
 			{(product?.items?.length ?? 0) > 0 || deletedItems.length > 0 ? (
-				<>
-					<div className="flex gap-2 justify-between items-center mb-3">
-						<PriceDisplay product={product} currency={currency} />
-					</div>
-					<LayoutGroup>
-						<div className="space-y-2">
-							{product?.items?.map((item: ProductItem, index: number) => {
-								if (!item.feature_id) return null;
+				<LayoutGroup>
+					<motion.div
+						className="space-y-2"
+						initial="hidden"
+						animate="visible"
+						variants={STAGGER_CONTAINER}
+					>
+						<motion.div variants={STAGGER_ITEM}>
+							<h3 className="text-sub select-none w-full">
+								<AttachSectionTitle />
+							</h3>
+						</motion.div>
 
-								const featureId = item.feature_id;
-								const isPrepaid = item.usage_model === UsageModel.Prepaid;
-								const currentPrepaidQuantity = isPrepaid
-									? (prepaidOptions[featureId] ?? 0)
-									: undefined;
+						<motion.div
+							variants={STAGGER_ITEM}
+							className="flex gap-2 justify-between items-center"
+						>
+							<PriceDisplay product={product} currency={currency} />
+						</motion.div>
 
-								const originalItem = originalItemsMap.get(featureId);
-								const isCreated =
-									hasCustomizations &&
-									!originalItem &&
-									originalItems &&
-									originalItems.length > 0;
+						{product?.items?.map((item: ProductItem, index: number) => {
+							if (!item.feature_id) return null;
 
-								const edits = hasCustomizations
-									? buildEditsForItem({
-											updatedItem: item,
-											originalItem,
-											updatedPrepaidQuantity: currentPrepaidQuantity,
-											originalPrepaidQuantity: undefined,
-										})
-									: [];
+							const featureId = item.feature_id;
+							const isPrepaid = item.usage_model === UsageModel.Prepaid;
+							const currentPrepaidQuantity = isPrepaid
+								? (prepaidOptions[featureId] ?? 0)
+								: undefined;
 
-								return (
-									<motion.div
-										key={featureId || item.price_id || index}
-										layout
-										transition={LAYOUT_TRANSITION}
-									>
-										<SubscriptionItemRow
-											item={item}
-											edits={edits}
-											prepaidQuantity={currentPrepaidQuantity}
-											form={form}
-											featureId={featureId}
-											isCreated={isCreated}
-										/>
-									</motion.div>
-								);
-							})}
-							{deletedItems.map((item: ProductItem, index: number) => (
+							const originalItem = originalItemsMap.get(featureId);
+							const isCreated =
+								hasCustomizations &&
+								!originalItem &&
+								originalItems &&
+								originalItems.length > 0;
+
+							const edits = hasCustomizations
+								? buildEditsForItem({
+										updatedItem: item,
+										originalItem,
+										updatedPrepaidQuantity: currentPrepaidQuantity,
+										originalPrepaidQuantity: undefined,
+									})
+								: [];
+
+							return (
 								<motion.div
-									key={`deleted-${item.feature_id || index}`}
+									key={featureId || item.price_id || index}
 									layout
+									variants={STAGGER_ITEM}
 									transition={LAYOUT_TRANSITION}
 								>
-									<SubscriptionItemRow item={item} isDeleted />
-								</motion.div>
-							))}
-							{trialEnabled && (
-								<motion.div
-									key="trial-editor"
-									layout
-									transition={LAYOUT_TRANSITION}
-								>
-									<TrialEditorRow
+									<SubscriptionItemRow
+										item={item}
+										edits={edits}
+										prepaidQuantity={currentPrepaidQuantity}
 										form={form}
-										onCollapse={() => form.setFieldValue("trialEnabled", false)}
+										featureId={featureId}
+										isCreated={isCreated}
 									/>
 								</motion.div>
-							)}
-							<motion.div layout transition={LAYOUT_TRANSITION}>
-								<Button
-									variant="secondary"
-									onClick={handleEditPlan}
-									className="w-full"
-								>
-									<PencilSimpleIcon size={14} className="mr-1" />
-									Edit Plan Items
-								</Button>
+							);
+						})}
+						{deletedItems.map((item: ProductItem, index: number) => (
+							<motion.div
+								key={`deleted-${item.feature_id || index}`}
+								layout
+								variants={STAGGER_ITEM}
+								transition={LAYOUT_TRANSITION}
+							>
+								<SubscriptionItemRow item={item} isDeleted />
 							</motion.div>
-						</div>
-					</LayoutGroup>
-				</>
+						))}
+						{trialEnabled && (
+							<motion.div
+								key="trial-editor"
+								layout
+								variants={STAGGER_ITEM}
+								transition={LAYOUT_TRANSITION}
+							>
+								<TrialEditorRow
+									form={form}
+									onCollapse={() => form.setFieldValue("trialEnabled", false)}
+								/>
+							</motion.div>
+						)}
+						<motion.div
+							layout
+							variants={STAGGER_ITEM}
+							transition={LAYOUT_TRANSITION}
+						>
+							<Button
+								variant="secondary"
+								onClick={handleEditPlan}
+								className="w-full"
+							>
+								<PencilSimpleIcon size={14} className="mr-1" />
+								Edit Plan Items
+							</Button>
+						</motion.div>
+					</motion.div>
+				</LayoutGroup>
 			) : (
-				<Button variant="secondary" onClick={handleEditPlan} className="w-full">
-					<PencilSimpleIcon size={14} className="mr-1" />
-					Edit Plan Items
-				</Button>
+				<>
+					<div className="flex items-center justify-between h-6 mb-2">
+						<h3 className="text-sub select-none w-full">
+							<AttachSectionTitle />
+						</h3>
+					</div>
+					<Button
+						variant="secondary"
+						onClick={handleEditPlan}
+						className="w-full"
+					>
+						<PencilSimpleIcon size={14} className="mr-1" />
+						Edit Plan Items
+					</Button>
+				</>
 			)}
 		</SheetSection>
 	);
