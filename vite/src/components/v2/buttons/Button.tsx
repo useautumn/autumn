@@ -25,11 +25,9 @@ const buttonVariants = cva(
 				hover:bg-primary/90
 				relative overflow-hidden
 				border
-				border-primary/50
 				border-primary
 				before:content-[''] before:absolute before:inset-0 before:z-[1] before:pointer-events-none
-				dark:before:bg-transparent dark:hover:before:bg-background/25
-				dark:before:bg-background/20 dark:hover:before:bg-background/25
+				dark:hover:before:bg-background/25 dark:before:bg-background/20 dark:hover:before:bg-background/25
 				after:content-[''] after:absolute after:inset-0 after:z-[1] after:pointer-events-none
 				after:bg-[linear-gradient(135deg,color-mix(in_oklch,var(--background)_10%,transparent)_10%,transparent_65%,color-mix(in_oklch,var(--background)_10%,transparent)_100%)]
 				shadow-sm
