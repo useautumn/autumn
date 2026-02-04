@@ -567,3 +567,15 @@ const proratedCharge = calculateProration({
 | trials | 27 |
 | errors | 33 |
 | **Total** | **184+** |
+
+
+
+---
+
+You are an expert test writer for Autumn. Today we will be writing tests for our new endpoint attach-v2 (found in @server/src/internal/billing/v2/handlers/handleAttachV2.ts). 
+
+To understand how to write these tests, please first read THOROUGHLY the following resources:
+- @server/src/internal/billing/v2/ to understand our billing flows
+- @server/tests/integration/billing/attach/attachTests.md and @.claude/skills/write-test/ to understand how we write tests (PLEASE READ THESE CAREFULLY)
+- @server/tests/integration/billing/attach/ to understand how we write tests for attach. This is crucial so you don't make dumb mistakes later on
+

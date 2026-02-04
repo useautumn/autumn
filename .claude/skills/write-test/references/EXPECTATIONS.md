@@ -80,6 +80,16 @@ expectCustomerInvoiceCorrect({
 
 ## Product State Expectations
 
+### Product States Are Mutually Exclusive
+
+**CRITICAL:** `active` and `canceling` are **mutually exclusive** states:
+- **`active`**: Product is active and NOT scheduled for cancellation
+- **`canceling`**: Product is scheduled for cancellation at end of billing cycle (has `canceled_at` set)
+
+A product CANNOT be both `active` and `canceling`. When a downgrade is scheduled:
+- The current product becomes `canceling` (NOT active)
+- The new product becomes `scheduled`
+
 ### `expectCustomerProducts` (Batch Check - PREFERRED)
 
 Verify multiple product states in a single call. **Always use this when checking 2+ products.**
@@ -87,14 +97,33 @@ Verify multiple product states in a single call. **Always use this when checking
 ```typescript
 await expectCustomerProducts({
   customer,                    // Or customerId
-  active: [pro.id, addon.id],  // Products that should be active
-  canceling: [premium.id],     // Products that should be canceling
-  scheduled: [free.id],        // Products that should be scheduled
+  active: [pro.id, addon.id],  // Products that are active (NOT canceling)
+  canceling: [premium.id],     // Products scheduled for cancellation
+  scheduled: [free.id],        // Products waiting to become active
   notPresent: [oldProduct.id], // Products that should not exist
 });
 ```
 
 All arrays are optional - only include the states you need to verify.
+
+**Example - scheduled downgrade from Pro to Free with add-on:**
+```typescript
+// ✅ CORRECT - canceling and active are separate
+await expectCustomerProducts({
+  customer,
+  canceling: [pro.id],        // Pro is canceling (NOT active)
+  active: [recurringAddon.id], // Add-on remains active
+  scheduled: [free.id],        // Free is scheduled
+});
+
+// ❌ WRONG - Pro cannot be both active and canceling
+await expectCustomerProducts({
+  customer,
+  active: [pro.id, recurringAddon.id],  // WRONG: pro is canceling, not active
+  canceling: [pro.id],
+  scheduled: [free.id],
+});
+```
 
 **Example - upgrade from pro to premium:**
 ```typescript

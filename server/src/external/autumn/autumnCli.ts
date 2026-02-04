@@ -24,6 +24,7 @@ import {
 	ErrCode,
 	type LegacyVersion,
 	type OrgConfig,
+	type ProductItem,
 	type RewardRedemption,
 	type SetupPaymentParams,
 	type TrackParams,
@@ -815,7 +816,7 @@ export class AutumnInt {
 
 	billing = {
 		attach: async (
-			params: AttachParamsV0Input,
+			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
 			{
 				skipWebhooks,
 				idempotencyKey,
@@ -847,7 +848,7 @@ export class AutumnInt {
 		},
 
 		previewAttach: async (
-			params: AttachParamsV0Input,
+			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
 		): Promise<BillingPreviewResponse> => {
 			const data = await this.post(`/billing/preview_attach`, {
 				...params,

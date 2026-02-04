@@ -378,7 +378,95 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: one-off with tiered pric
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Product with recurring + one-off items
+// TEST 5: One-off with checkout_mode: "always" (force checkout even with PM)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer on Pro ($20/mo) - already has payment method
+ * - Attach one-off credits with checkout_mode: "always"
+ *
+ * Expected Result:
+ * - Returns Stripe Checkout URL even though customer has payment method
+ * - Credits granted after checkout completion
+ */
+test.concurrent(`${chalk.yellowBright("stripe-checkout: one-off with checkout_mode always")}`, async () => {
+	const customerId = "stripe-checkout-one-off-always";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
+
+	const oneOffCreditsItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const oneOffCredits = products.oneOff({
+		id: "one-off-credits",
+		items: [oneOffCreditsItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }), // Has payment method!
+			s.products({ list: [pro, oneOffCredits] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	// Verify Pro is attached
+	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: pro.id });
+
+	// 1. Preview attach - base ($10) + 100 credits ($10) = $20
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOffCredits.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+	});
+	expect(preview.total).toBe(20);
+
+	// 2. Attach with checkout_mode: "always" - should return payment_url
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOffCredits.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		checkout_mode: "always",
+	});
+
+	// Should return checkout URL even though customer has payment method
+	expect(result.payment_url).toBeDefined();
+	expect(result.payment_url).toContain("checkout.stripe.com");
+
+	// 3. Complete checkout
+	await completeCheckoutForm(result.payment_url);
+	await timeout(12000);
+
+	// 4. Verify credits were granted
+	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({ customer, productId: pro.id });
+	await expectProductActive({ customer, productId: oneOffCredits.id });
+
+	// Messages: 100 from Pro + 100 from one-off = 200
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 200,
+		usage: 0,
+	});
+
+	// Verify invoices: Pro ($20) + one-off ($20)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Product with recurring + one-off items
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**

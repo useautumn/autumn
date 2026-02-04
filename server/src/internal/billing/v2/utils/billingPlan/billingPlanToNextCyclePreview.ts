@@ -87,7 +87,11 @@ export const billingPlanToNextCyclePreview = ({
 	if (!smallestInterval) {
 		return {
 			nextCycle: undefined,
-			debug: { ...baseDebug, nextCycleStart: null, filteredCustomerProducts: [] },
+			debug: {
+				...baseDebug,
+				nextCycleStart: null,
+				filteredCustomerProducts: [],
+			},
 		};
 	}
 
