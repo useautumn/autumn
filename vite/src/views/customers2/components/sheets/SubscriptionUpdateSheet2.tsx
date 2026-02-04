@@ -186,7 +186,7 @@ export function SubscriptionUpdateSheet2() {
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onInvoiceCreated={(invoiceId) => {
 				const invoiceLink = getStripeInvoiceLink({
-					stripeInvoice: invoiceId,
+					stripeInvoice: { stripe_id: invoiceId },
 					env,
 					accountId: stripeAccount?.id,
 				});
