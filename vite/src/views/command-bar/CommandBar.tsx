@@ -40,7 +40,7 @@ import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
 import { handleSwitchOrg } from "@/views/main-sidebar/components/OrgDropdown";
-import { handleEnvChange } from "@/views/main-sidebar/EnvDropdown";
+import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 type Customer = z.infer<typeof CustomerSchema>;
 
@@ -76,6 +76,7 @@ const CommandBar = () => {
 
 	const navigate = useNavigate();
 	const env = useEnv();
+	const handleEnvChange = useEnvChange();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
@@ -311,9 +312,9 @@ const CommandBar = () => {
 				return { type: "org" as const, data: org, score };
 			});
 
-		return [...orgResults, ...userResults]
-			.sort((a, b) => a.score - b.score)
-			.slice(0, 15);
+			return [...orgResults, ...userResults]
+				.sort((a, b) => a.score - b.score)
+				.slice(0, 15);
 		}
 
 		return [];
