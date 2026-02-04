@@ -16,9 +16,11 @@ import {
 export const setupAttachTransitionContext = ({
 	fullCustomer,
 	attachProduct,
+	planScheduleOverride,
 }: {
 	fullCustomer: FullCustomer;
 	attachProduct: FullProduct;
+	planScheduleOverride?: PlanTiming;
 }) => {
 	// Only main recurring products can trigger transitions
 	const isMainRecurring =
@@ -57,6 +59,11 @@ export const setupAttachTransitionContext = ({
 		});
 
 		planTiming = isUpgrade ? "immediate" : "end_of_cycle";
+	}
+
+	// Override if plan_schedule param is provided
+	if (planScheduleOverride) {
+		planTiming = planScheduleOverride;
 	}
 
 	return {
