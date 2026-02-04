@@ -1,22 +1,8 @@
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
+import { CheckIcon } from "lucide-react";
 import { FieldInfo } from "@/components/general/form/field-info";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFieldContext } from "@/hooks/form/form-context";
-import { cn } from "@/lib/utils";
 
 export type SelectFieldOption<T extends string | number = string> = {
 	label: string;
@@ -50,112 +36,54 @@ export function SelectField<T extends string | number = string>({
 	emptyText?: string;
 }) {
 	const field = useFieldContext<T>();
-	const [open, setOpen] = useState(false);
-
 	const stringValue = String(field.state.value);
-	const selectedOption = options.find(
-		(opt) => String(opt.value) === stringValue,
-	);
 
-	const handleSelect = (option: SelectFieldOption<T>) => {
-		if (option.disabledValue) return;
-		field.handleChange(option.value);
-		setOpen(false);
+	const handleChange = (value: string) => {
+		const typedValue = (
+			typeof field.state.value === "number" ? Number(value) : value
+		) as T;
+		field.handleChange(typedValue);
 	};
 
 	return (
 		<div className={className}>
 			{label && <Label>{label}</Label>}
-			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger asChild disabled={disabled}>
-					<button
-						type="button"
-						aria-expanded={open}
-						aria-haspopup="listbox"
-						disabled={disabled}
-						className={cn(
-							"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
-							"input-base input-shadow-default",
-							open && "input-shadow-focus border-primary",
-							!open && "hover:input-shadow-hover",
+			<SearchableSelect
+				value={stringValue}
+				onValueChange={handleChange}
+				options={options}
+				getOptionValue={(opt) => String(opt.value)}
+				getOptionLabel={(opt) => opt.label}
+				getOptionDisabled={(opt) => !!opt.disabledValue}
+				placeholder={placeholder}
+				searchable={searchable}
+				searchPlaceholder={searchPlaceholder}
+				emptyText={emptyText}
+				disabled={disabled}
+				renderValue={(opt) => (
+					<>
+						<span className={!opt ? "text-t3" : undefined}>
+							{opt?.label || placeholder}
+						</span>
+						{selectValueAfter && opt && (
+							<span className="shrink-0">{selectValueAfter}</span>
 						)}
-					>
-						<div className="flex items-center gap-2 min-w-0 flex-1">
-							<span
-								className={cn("truncate min-w-0", !selectedOption && "text-t3")}
-							>
-								{selectedOption?.label || placeholder}
+					</>
+				)}
+				renderOption={(opt, isSelected) => (
+					<>
+						<span className="flex-1 truncate min-w-0">{opt.label}</span>
+						{opt.disabledValue && (
+							<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+								{opt.disabledValue}
 							</span>
-							{selectValueAfter && selectedOption && (
-								<span className="shrink-0">{selectValueAfter}</span>
-							)}
-						</div>
-						<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
-					</button>
-				</PopoverTrigger>
-				<PopoverContent
-					align="start"
-					className="w-[var(--radix-popover-trigger-width)] p-0 z-[200] rounded-md overflow-hidden"
-				>
-					<Command
-						className="bg-interactive-secondary"
-						filter={
-							searchable
-								? (value, search) => {
-										const option = options.find(
-											(opt) => String(opt.value) === value,
-										);
-										if (!option) return 0;
-										const searchLower = search.toLowerCase();
-										const labelMatch = option.label
-											.toLowerCase()
-											.includes(searchLower);
-										const valueMatch = String(option.value)
-											.toLowerCase()
-											.includes(searchLower);
-										return labelMatch || valueMatch ? 1 : 0;
-									}
-								: undefined
-						}
-					>
-						{searchable && <CommandInput placeholder={searchPlaceholder} />}
-						<CommandList>
-							<CommandEmpty>{emptyText}</CommandEmpty>
-							<CommandGroup>
-								{options.map((option) => {
-									const isSelected = String(option.value) === stringValue;
-									const isDisabled = !!option.disabledValue;
-
-									return (
-										<CommandItem
-											key={String(option.value)}
-											value={String(option.value)}
-											onSelect={() => handleSelect(option)}
-											disabled={isDisabled}
-											className={cn(
-												"min-w-0",
-												isDisabled && "text-t4 pointer-events-none opacity-50",
-											)}
-										>
-											<span className="flex-1 truncate min-w-0">
-												{option.label}
-											</span>
-											{option.disabledValue && (
-												<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
-													{option.disabledValue}
-												</span>
-											)}
-											{isSelected && !isDisabled && (
-												<CheckIcon className="size-4 shrink-0" />
-											)}
-										</CommandItem>
-									);
-								})}
-							</CommandGroup>
-						</CommandList>
-					</Command>
-				</PopoverContent>
-			</Popover>
+						)}
+						{isSelected && !opt.disabledValue && (
+							<CheckIcon className="size-4 shrink-0" />
+						)}
+					</>
+				)}
+			/>
 			{textAfter && (
 				<section
 					aria-live="polite"
