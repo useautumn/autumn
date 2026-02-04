@@ -29,13 +29,7 @@ import {
 } from "../hooks/useAttachPreview";
 import { useAttachRequestBody } from "../hooks/useAttachRequestBody";
 
-export interface AttachFormContext {
-	customerId: string | undefined;
-	entityId: string | undefined;
-}
-
 interface AttachFormContextValue {
-	formContext: AttachFormContext;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
@@ -93,7 +87,15 @@ export function AttachFormProvider({
 	const { products } = useProductsQuery();
 
 	const formValues = useStore(form.store, (state) => state.values);
-	const { productId, prepaidOptions, items, version } = formValues;
+	const {
+		productId,
+		prepaidOptions,
+		items,
+		version,
+		trialLength,
+		trialDuration,
+		trialEnabled,
+	} = formValues;
 
 	const product = useMemo(
 		() => products.find((p) => p.id === productId && !p.archived),
@@ -155,23 +157,19 @@ export function AttachFormProvider({
 		return baseFrontendProduct;
 	}, [product, items]);
 
-	const previewQuery = useAttachPreview({
+	const { requestBody, buildRequestBody } = useAttachRequestBody({
 		customerId,
 		entityId,
 		product,
 		prepaidOptions,
 		items,
 		version,
+		trialLength,
+		trialDuration,
+		trialEnabled,
 	});
 
-	const { buildRequestBody } = useAttachRequestBody({
-		customerId,
-		entityId,
-		product,
-		prepaidOptions,
-		items,
-		version,
-	});
+	const previewQuery = useAttachPreview({ requestBody });
 
 	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
 		customerId,
@@ -221,17 +219,8 @@ export function AttachFormProvider({
 		onPlanEditorClose?.();
 	}, [onPlanEditorClose]);
 
-	const formContext = useMemo(
-		(): AttachFormContext => ({
-			customerId,
-			entityId,
-		}),
-		[customerId, entityId],
-	);
-
 	const value = useMemo<AttachFormContextValue>(
 		() => ({
-			formContext,
 			form,
 			formValues,
 			features,
@@ -250,7 +239,6 @@ export function AttachFormProvider({
 			handleInvoiceAttach,
 		}),
 		[
-			formContext,
 			form,
 			formValues,
 			features,

@@ -20,6 +20,7 @@ export function AttachProductSelection() {
 				{(field) => (
 					<field.SelectField
 						label=""
+						searchable
 						options={availableProducts.map((p) => ({
 							label: p.name,
 							value: p.id,
@@ -32,6 +33,8 @@ export function AttachProductSelection() {
 								: undefined,
 						}))}
 						placeholder="Select Product"
+						searchPlaceholder="Search plans..."
+						emptyText="No products found"
 						hideFieldInfo
 						selectValueAfter={
 							hasCustomizations && productId ? (

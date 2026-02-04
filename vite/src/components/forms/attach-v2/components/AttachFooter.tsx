@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 const FOOTER_DELAY_MS = 350;
@@ -19,6 +20,9 @@ export function AttachFooter() {
 		handleInvoiceAttach,
 		formValues,
 	} = useAttachFormContext();
+
+	const { org } = useOrg();
+	const ownStripeAccount = org?.stripe_connection !== "default";
 
 	const hasProductSelected = !!formValues.productId;
 	const isLoading = previewQuery.isLoading;
@@ -47,7 +51,11 @@ export function AttachFooter() {
 			>
 				<Popover>
 					<PopoverTrigger asChild>
-						<Button variant="secondary" className="w-full" disabled={isPending}>
+						<Button
+							variant="secondary"
+							className="w-full"
+							disabled={isPending || !ownStripeAccount}
+						>
 							Send an Invoice
 						</Button>
 					</PopoverTrigger>
