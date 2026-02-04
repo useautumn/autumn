@@ -1,4 +1,4 @@
-import type { FullCustomer } from "@autumn/shared";
+import { AppEnv, type FullCustomer } from "@autumn/shared";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useMounted } from "@/hooks/useMounted";
+import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
@@ -32,6 +33,11 @@ export function CustomerListTable({
 }) {
 	// Defer rendering until after mount to ensure correct table layout on navigation
 	const isMounted = useMounted();
+	const env = useEnv();
+
+	// Account for sandbox banner height (40px) in table container height
+	const tableContainerHeight =
+		env === AppEnv.Sandbox ? "calc(100vh - 164px)" : "calc(100vh - 124px)";
 
 	const { features } = useFeaturesQuery();
 	const { queryStates } = useCustomersQueryStates();
@@ -182,7 +188,7 @@ export function CustomerListTable({
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
 				virtualization: {
-					containerHeight: "calc(100vh - 164px)",
+					containerHeight: tableContainerHeight,
 				},
 			}}
 		>
