@@ -13,17 +13,26 @@ import { cn } from "@/lib/utils";
 // focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
 const buttonVariants = cva(
 	`inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none 
-  rounded-lg group/btn transition-none w-fit
+  rounded-lg group/btn transition-none w-fit transition-all duration-100
   `,
 	{
 		variants: {
 			variant: {
 				// Custom
-				primary: `btn-primary-shadow !text-primary-foreground bg-primary border border-transparent hover:bg-primary-btn-hover 
-        active:bg-primary-btn-active active:border-primary-btn-border
-				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
-
-				btn-primary-dark
+				primary: `
+				!text-primary-foreground
+				bg-primary
+				hover:bg-primary/90
+				relative overflow-hidden
+				border
+				border-primary/50
+				border-primary
+				before:content-[''] before:absolute before:inset-0 before:z-[1] before:pointer-events-none
+				dark:before:bg-transparent dark:hover:before:bg-background/25
+				dark:before:bg-background/20 dark:hover:before:bg-background/25
+				after:content-[''] after:absolute after:inset-0 after:z-[1] after:pointer-events-none
+				after:bg-[linear-gradient(135deg,color-mix(in_oklch,var(--background)_10%,transparent)_10%,transparent_65%,color-mix(in_oklch,var(--background)_10%,transparent)_100%)]
+				shadow-sm
 				`,
 
 				secondary: `bg-interactive-secondary border border-[var(--color-input)] hover:bg-interactive-secondary-hover active:bg-interactive-secondary-hover btn-secondary-shadow
@@ -129,7 +138,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
 			switch (variant) {
 				case "primary":
-					return "active:!bg-primary active:!border-transparent focus-visible:!bg-primary focus-visible:!border-transparent";
+					return "";
 
 				case "secondary":
 					return "active:!bg-interactive-secondary-hover active:!border-[var(--color-input)] focus-visible:!bg-interactive-secondary-hover focus-visible:!border-[var(--color-input)]";
@@ -171,7 +180,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				disabled={isLoading || props.disabled}
 				{...props}
 			>
-				{isLoading ? <SmallSpinner size={14} /> : children}
+				{isLoading ? (
+					<SmallSpinner
+						size={14}
+						className={variant === "primary" ? "relative z-10" : undefined}
+					/>
+				) : variant === "primary" ? (
+					<span className="relative z-10 inline-flex items-center gap-2">
+						{children}
+					</span>
+				) : (
+					children
+				)}
 			</Comp>
 		);
 	},
