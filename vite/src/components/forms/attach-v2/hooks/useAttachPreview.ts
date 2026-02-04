@@ -1,5 +1,5 @@
-import type { AttachParamsV0, BillingPreviewResponse } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import type { AttachParamsV0, AttachPreviewResponse } from "@autumn/shared";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -40,7 +40,7 @@ export function useAttachPreview({
 				return null;
 			}
 
-			const response = await axiosInstance.post<BillingPreviewResponse>(
+			const response = await axiosInstance.post<AttachPreviewResponse>(
 				"/v1/billing/preview_attach",
 				requestBody,
 			);
@@ -49,6 +49,7 @@ export function useAttachPreview({
 		},
 		enabled: shouldEnable,
 		staleTime: 0,
+		placeholderData: keepPreviousData,
 		retry: (failureCount, error) => {
 			const status = (error as AxiosError)?.response?.status;
 			if (status && status >= 400 && status < 500) return false;
