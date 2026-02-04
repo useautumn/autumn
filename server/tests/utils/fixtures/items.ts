@@ -3,6 +3,7 @@ import {
 	type LimitedItem,
 	type ProductItemConfig,
 	ProductItemInterval,
+	type RolloverConfig,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -198,6 +199,24 @@ const lifetimeMessages = ({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		interval: null,
+	}) as LimitedItem;
+
+/**
+ * Monthly messages with rollover - unused balance rolls over to next cycle
+ * @param includedUsage - Free usage allowance (default: 100)
+ * @param rolloverConfig - Rollover configuration (max, length, duration)
+ */
+const monthlyMessagesWithRollover = ({
+	includedUsage = 100,
+	rolloverConfig,
+}: {
+	includedUsage?: number;
+	rolloverConfig: RolloverConfig;
+}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+		rolloverConfig,
 	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -602,6 +621,7 @@ export const items = {
 	freeAllocatedWorkflows,
 	unlimitedMessages,
 	lifetimeMessages,
+	monthlyMessagesWithRollover,
 
 	// Prepaid
 	prepaid,

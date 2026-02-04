@@ -40,12 +40,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after ad
 		customerId: "setup-payment-after-trial",
 		setup: [s.customer({}), s.products({ list: [pro, premium] })],
 		actions: [
-			s.attach({
-				productId: premium.id,
-			}),
-			s.attach({
-				productId: pro.id,
-			}),
+			s.attach({ productId: premium.id }),
+			s.attach({ productId: pro.id }),
 		],
 	});
 

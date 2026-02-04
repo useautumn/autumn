@@ -1,4 +1,5 @@
 import type { BillingVersion } from "@models/billingModels/context/billingContext";
+import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { FreeTrial } from "@models/productModels/freeTrialModels/freeTrialModels";
 import type { ApiVersion } from "../../../api/versionUtils/ApiVersion";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -6,10 +7,21 @@ import type {
 	CollectionMethod,
 	CusProductStatus,
 } from "../../cusProductModels/cusProductEnums";
-import type { FeatureOptions } from "../../cusProductModels/cusProductModels";
+import type {
+	FeatureOptions,
+	FullCusProduct,
+} from "../../cusProductModels/cusProductModels";
 import type { FullProduct } from "../../productModels/productModels";
-import type { ExistingRollover } from "./existingRollovers";
-import type { ExistingUsages } from "./existingUsages";
+
+export interface ExistingUsagesConfig {
+	fromCustomerProduct: FullCusProduct;
+	carryAllConsumableFeatures?: boolean;
+	consumableFeatureIdsToCarry?: string[];
+}
+
+export interface ExistingRolloversConfig {
+	fromCustomerProduct: FullCusProduct;
+}
 
 export interface InitFullCustomerProductContext {
 	fullCustomer: FullCustomer;
@@ -18,14 +30,20 @@ export interface InitFullCustomerProductContext {
 
 	// For customer entitlements
 	resetCycleAnchor: number | "now"; // Unix timestamp of the next
-	existingUsages?: ExistingUsages;
-	existingRollovers?: ExistingRollover[];
+	// existingUsages?: ExistingUsages;
+	// existingRollovers?: ExistingRollover[];
 
 	// Others
 	freeTrial: FreeTrial | null;
 	trialEndsAt?: number;
 	now: number; // milliseconds since epoch
 	billingVersion?: BillingVersion;
+
+	existingUsagesConfig?: ExistingUsagesConfig;
+
+	existingRolloversConfig?: ExistingRolloversConfig;
+
+	transitionConfigs?: TransitionConfig[];
 }
 
 export interface InitFullCustomerProductOptions {

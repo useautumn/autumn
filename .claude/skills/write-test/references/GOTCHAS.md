@@ -392,6 +392,48 @@ For prepaid features, `next_cycle.total` reflects the price for the quantity tha
 
 ---
 
+---
+
+## Resetting Feature Usage (Rollovers)
+
+### Free Features vs Paid Features Reset Differently
+
+**Free features (no price):** Use `s.resetFeature()` - simulates cycle reset without advancing test clock:
+```typescript
+// Free product with rollover
+const free = products.base({ id: "free", items: [freeMessagesWithRollover] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: free.id }),
+    s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+    s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }),
+  ],
+});
+```
+
+**Paid features (consumable, prepaid, base price):** Use `s.advanceToNextInvoice()` - advances test clock and triggers Stripe subscription renewal:
+```typescript
+// Paid product with consumable or prepaid
+const pro = products.pro({ id: "pro", items: [consumableMessages] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: pro.id }),
+    s.advanceToNextInvoice(),  // Triggers Stripe renewal → resets usage
+  ],
+});
+```
+
+### Why the Difference?
+
+- **Free products**: No Stripe subscription exists. Usage must be reset manually via `s.resetFeature()` which simulates the cron job.
+- **Paid products**: Stripe subscription exists. Advancing the test clock triggers `invoice.paid` webhook which resets usage.
+
+---
+
 ## Quick Reference
 
 | Context | Import |

@@ -1,24 +1,23 @@
 /**
  * Converts an AutumnBillingPlan to sendProductsUpdated workflow triggers.
  * Handles:
- * - New/active product inserts (scenario: "new")
+ * - New/active product inserts (scenario: "new" or "upgrade" based on expired product)
  * - Cancel updates (scenario: "cancel" or "downgrade" based on scheduled product)
  * - Uncancel updates (scenario: "renew")
  * - Filters out scheduled products from insert webhooks
  */
 
+import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import {
 	AttachScenario,
 	CusProductStatus,
+	cusProductToPrices,
 	type FullCusProduct,
 	isCustomerProductFree,
 	isCustomerProductScheduled,
+	isProductUpgrade,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type {
-	AutumnBillingPlan,
-	BillingContext,
-} from "@autumn/shared";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import { workflows } from "@/queue/workflows.js";
 
@@ -77,19 +76,53 @@ const getUpdateScenario = ({
 	return null;
 };
 
-// /** Derive webhook scenario from customer product status (for inserts) */
-// const deriveScenarioFromStatus = ({ status }: { status: string }): string => {
-// 	switch (status) {
-// 		case CusProductStatus.Active:
-// 			return AttachScenario.New;
-// 		case CusProductStatus.Expired:
-// 			return AttachScenario.Expired;
-// 		case CusProductStatus.PastDue:
-// 			return AttachScenario.PastDue;
-// 		default:
-// 			return AttachScenario.New;
-// 	}
-// };
+/**
+ * Determines the webhook scenario for an inserted customer product.
+ * - "upgrade" if replacing an expired product and new product is more expensive
+ * - "new" otherwise (first product, add-on, or no expired product)
+ */
+const getInsertScenario = ({
+	insertedProduct,
+	expiredProduct,
+}: {
+	insertedProduct: FullCusProduct;
+	expiredProduct?: FullCusProduct;
+}): AttachScenario => {
+	// No expired product means this is a new attachment (not a replacement)
+	if (!expiredProduct) {
+		return AttachScenario.New;
+	}
+
+	// Compare prices to determine if it's an upgrade
+	const expiredPrices = cusProductToPrices({ cusProduct: expiredProduct });
+	const insertedPrices = cusProductToPrices({ cusProduct: insertedProduct });
+
+	const isUpgrade = isProductUpgrade({
+		prices1: expiredPrices,
+		prices2: insertedPrices,
+	});
+
+	return isUpgrade ? AttachScenario.Upgrade : AttachScenario.New;
+};
+
+/**
+ * Get the expired product from the billing plan's updateCustomerProduct.
+ * Returns the customer product if it's being set to "expired" status.
+ */
+const getExpiredProduct = ({
+	updateCustomerProduct,
+}: {
+	updateCustomerProduct: AutumnBillingPlan["updateCustomerProduct"];
+}): FullCusProduct | undefined => {
+	if (!updateCustomerProduct) return undefined;
+
+	// Check if the update is setting the status to "expired"
+	if (updateCustomerProduct.updates.status === CusProductStatus.Expired) {
+		return updateCustomerProduct.customerProduct;
+	}
+
+	return undefined;
+};
 
 // ============================================================================
 // MAIN FUNCTION
@@ -109,6 +142,9 @@ export const billingPlanToSendProductsUpdated = async ({
 	const { fullCustomer } = billingContext;
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 	const { insertCustomerProducts, updateCustomerProduct } = autumnBillingPlan;
+
+	// Get the expired product from updateCustomerProduct (if status is being set to "expired")
+	const expiredProduct = getExpiredProduct({ updateCustomerProduct });
 
 	// A. Handle cancel/uncancel webhook for updateCustomerProduct
 	if (updateCustomerProduct) {
@@ -142,8 +178,10 @@ export const billingPlanToSendProductsUpdated = async ({
 	for (const cusProduct of insertCustomerProducts) {
 		if (isCustomerProductScheduled(cusProduct)) continue;
 
-		// const scenario = deriveScenarioFromStatus({ status: cusProduct.status });
-		const scenario = AttachScenario.New;
+		const scenario = getInsertScenario({
+			insertedProduct: cusProduct,
+			expiredProduct,
+		});
 
 		try {
 			await workflows.triggerSendProductsUpdated({
