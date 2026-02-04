@@ -31,6 +31,8 @@ function SheetContent() {
 
 	const isDefault = customerProduct.product.is_default;
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
+	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
+	const isFreeDefault = isDefault && isFreeOrOneOff;
 
 	return (
 		<LayoutGroup>
@@ -57,7 +59,7 @@ function SheetContent() {
 					</div>
 				)}
 
-				{isDefault && (
+				{isFreeDefault && (
 					<div className="px-4 pt-4">
 						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
 							This is the default plan. Cancelling it means this customer will
