@@ -671,6 +671,29 @@ export class AutumnInt {
 			});
 			return data;
 		},
+
+		list: async (params: { customer_id: string; entity_id?: string }) => {
+			const data = await this.post(`/events/list`, params);
+			return data;
+		},
+
+		aggregate: async (params: {
+			customer_id: string;
+			entity_id?: string;
+			feature_id?: string;
+		}) => {
+			const data = await this.post(`/events/aggregate`, params);
+			return data;
+		},
+
+		query: async (params: {
+			customer_id: string;
+			entity_id?: string;
+			feature_id?: string;
+		}) => {
+			const data = await this.post(`/query`, params);
+			return data;
+		},
 	};
 
 	stripe = {
