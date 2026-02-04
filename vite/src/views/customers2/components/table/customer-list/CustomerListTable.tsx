@@ -182,7 +182,7 @@ export function CustomerListTable({
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
 				virtualization: {
-					containerHeight: "calc(100vh - 120px)",
+					containerHeight: "calc(100vh - 164px)",
 				},
 			}}
 		>
