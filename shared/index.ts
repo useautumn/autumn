@@ -4,6 +4,7 @@ export { schemas };
 
 export * from "./api/apiUtils.js";
 // Billing common schemas
+export * from "./api/billing/common/attachPreviewResponse.js";
 export * from "./api/billing/common/billingBehavior.js";
 export * from "./api/billing/common/billingPreviewResponse.js";
 export * from "./api/billing/common/billingResponse.js";
