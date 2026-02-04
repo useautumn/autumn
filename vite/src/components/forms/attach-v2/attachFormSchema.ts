@@ -1,4 +1,8 @@
-import { FreeTrialDuration, type ProductItem } from "@autumn/shared";
+import {
+	FreeTrialDuration,
+	type PlanTiming,
+	type ProductItem,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const AttachFormSchema = z.object({
@@ -9,6 +13,7 @@ export const AttachFormSchema = z.object({
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
 	trialEnabled: z.boolean(),
+	planSchedule: z.custom<PlanTiming>().nullable(),
 });
 
 export type AttachForm = z.infer<typeof AttachFormSchema>;

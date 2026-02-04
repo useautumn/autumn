@@ -7,6 +7,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { AttachSettingsPopover } from "./AttachSettingsPopover";
 
 export function AttachSectionTitle() {
 	const { hasCustomizations, form, formValues } = useAttachFormContext();
@@ -35,6 +36,7 @@ export function AttachSectionTitle() {
 				)}
 			</span>
 			<span className="flex items-center gap-2">
+				<AttachSettingsPopover />
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<IconButton

@@ -1,4 +1,4 @@
-import { TimerIcon } from "@phosphor-icons/react";
+import { GearIcon, TimerIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import {
 	STAGGER_CONTAINER,
@@ -17,21 +17,31 @@ export function AttachPlanSkeleton() {
 				animate="visible"
 				variants={STAGGER_CONTAINER}
 			>
-				{/* Section title - static content with disabled button */}
+				{/* Section title - static content with disabled buttons */}
 				<motion.div variants={STAGGER_ITEM}>
 					<h3 className="text-sub select-none w-full">
 						<span className="flex items-center justify-between w-full gap-2">
 							<span className="flex items-center gap-1.5">
 								Plan Configuration
 							</span>
-							<IconButton
-								icon={<TimerIcon size={14} />}
-								variant="secondary"
-								className="h-7 whitespace-nowrap"
-								disabled
-							>
-								Free Trial
-							</IconButton>
+							<span className="flex items-center gap-2">
+								<IconButton
+									icon={<GearIcon size={14} />}
+									variant="secondary"
+									className="h-7 whitespace-nowrap"
+									disabled
+								>
+									Settings
+								</IconButton>
+								<IconButton
+									icon={<TimerIcon size={14} />}
+									variant="secondary"
+									className="h-7 whitespace-nowrap"
+									disabled
+								>
+									Free Trial
+								</IconButton>
+							</span>
 						</span>
 					</h3>
 				</motion.div>

@@ -95,6 +95,7 @@ export function AttachFormProvider({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		planSchedule,
 	} = formValues;
 
 	const product = useMemo(
@@ -167,6 +168,7 @@ export function AttachFormProvider({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		planSchedule,
 	});
 
 	const previewQuery = useAttachPreview({ requestBody });
