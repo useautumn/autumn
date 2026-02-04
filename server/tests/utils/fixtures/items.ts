@@ -338,6 +338,52 @@ const oneOffMessages = ({
 	}) as LimitedItem;
 
 /**
+ * One-off words - purchase units once (no recurring charges)
+ * @param includedUsage - Free units included (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param price - Price per pack (default: 10)
+ */
+const oneOffWords = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	price = 10,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	price?: number;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Words,
+		price,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
+/**
+ * One-off storage - purchase units once (no recurring charges)
+ * @param includedUsage - Free units included (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param price - Price per pack (default: 10)
+ */
+const oneOffStorage = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	price = 10,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	price?: number;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Storage,
+		price,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
+/**
  * Tiered one-off messages - volume pricing with tiers (no recurring charges)
  * Default tiers:
  * - 0-500 units: $10/pack (100 units/pack)
@@ -565,6 +611,8 @@ export const items = {
 
 	// One-off
 	oneOffMessages,
+	oneOffWords,
+	oneOffStorage,
 	tieredOneOffMessages,
 
 	// Consumable

@@ -7,12 +7,14 @@ import {
 	type ExpandedStripeInvoice,
 	getStripeInvoice,
 } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
+import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
 export interface StripeInvoicePaidContext {
 	stripeInvoice: ExpandedStripeInvoice<["discounts.source.coupon", "payments"]>;
+	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionId?: string;
 	customerProducts?: FullCusProduct[];
 }
@@ -57,9 +59,18 @@ export const setupStripeInvoicePaidContext = async ({
 		fullCustomer.customer_products = customerProducts;
 	}
 
+	let stripeSubscription: Stripe.Subscription | undefined;
+	if (stripeSubscriptionId) {
+		stripeSubscription = await getExpandedStripeSubscription({
+			ctx,
+			subscriptionId: stripeSubscriptionId,
+		});
+	}
+
 	return {
 		stripeInvoice,
 		stripeSubscriptionId,
 		customerProducts,
+		stripeSubscription,
 	};
 };

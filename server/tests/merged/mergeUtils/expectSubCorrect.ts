@@ -8,6 +8,7 @@ import {
 	cusProductToProduct,
 	type FullCustomer,
 	isConsumablePrice,
+	isOneOffPrice,
 	type Organization,
 } from "@autumn/shared";
 import { notNullish } from "@shared/utils/utils.js";
@@ -334,6 +335,8 @@ export const expectSubToBeCorrect = async ({
 				carryExistingUsages: true,
 				internalEntityId: cusProduct.internal_entity_id || undefined,
 			});
+
+			if (isOneOffPrice(price)) continue; // One-off prices are not in the subscription
 
 			const res = priceToStripeItem({
 				price,
