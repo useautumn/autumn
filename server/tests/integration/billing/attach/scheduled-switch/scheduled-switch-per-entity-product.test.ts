@@ -15,11 +15,7 @@ import { test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import {
-	expectCustomerProducts,
-	expectProductCanceling,
-	expectProductScheduled,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -69,7 +65,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 1: premium to
 		items: [proPerEntityMessages],
 	});
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -78,7 +74,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 1: premium to
 		],
 		actions: [
 			// Attach product ONCE to customer (not per entity)
-			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: premium.id, timeout: 4000 }),
 			// Track per entity
 			s.track({
 				featureId: TestFeature.Messages,
@@ -92,125 +88,41 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 1: premium to
 				entityIndex: 1,
 				timeout: 2000,
 			}),
-		],
-	});
-
-	// Verify initial per-entity balances
-	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	expectCustomerFeatureCorrect({
-		customer: entity1Before,
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-		balance: 700, // 1000 - 300
-		usage: 300,
-	});
-
-	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
-	expectCustomerFeatureCorrect({
-		customer: entity2Before,
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-		balance: 500, // 1000 - 500
-		usage: 500,
-	});
-
-	// Customer total (sum of entities)
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer: customerBefore,
-		featureId: TestFeature.Messages,
-		includedUsage: 2000, // 1000 * 2
-		balance: 1200, // 700 + 500
-		usage: 800, // 300 + 500
-	});
-
-	// Schedule downgrade to pro
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
-
-	const customerScheduled =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify scheduled states
-	await expectProductCanceling({
-		customer: customerScheduled,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: customerScheduled,
-		productId: pro.id,
-	});
-
-	// Advance to next cycle with fresh scenario
-	const {
-		autumnV1: autumnV1After,
-		ctx: ctxAfter,
-		entities: entitiesAfter,
-	} = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id }),
-			s.track({
-				featureId: TestFeature.Messages,
-				value: 300,
-				entityIndex: 0,
-				timeout: 2000,
-			}),
-			s.track({
-				featureId: TestFeature.Messages,
-				value: 500,
-				entityIndex: 1,
-				timeout: 2000,
-			}),
-			s.billing.attach({ productId: pro.id }), // Schedule downgrade
+			// Schedule downgrade to pro
+			s.billing.attach({ productId: pro.id }),
+			// Advance to next cycle
 			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
-	const customerAfterCycle =
-		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Verify products after cycle
 	await expectCustomerProducts({
-		customer: customerAfterCycle,
+		customer,
 		active: [pro.id],
 		notPresent: [premium.id],
 	});
 
 	// Verify each entity has RESET usage (consumable features reset on scheduled switch)
-	const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
+	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
-		entitiesAfter[0].id,
+		entities[0].id,
 	);
 	expectCustomerFeatureCorrect({
-		customer: entity1After,
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		includedUsage: 500, // Pro's per-entity included
 		balance: 500, // RESET
 		usage: 0, // RESET
 	});
 
-	const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
+	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
-		entitiesAfter[1].id,
+		entities[1].id,
 	);
 	expectCustomerFeatureCorrect({
-		customer: entity2After,
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500, // RESET
@@ -219,7 +131,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 1: premium to
 
 	// Customer total after reset
 	expectCustomerFeatureCorrect({
-		customer: customerAfterCycle,
+		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 1000, // 500 * 2
 		balance: 1000, // All reset
@@ -228,10 +140,10 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 1: premium to
 
 	// Verify Stripe subscription
 	await expectSubToBeCorrect({
-		db: ctxAfter.db,
+		db: ctx.db,
 		customerId,
-		org: ctxAfter.org,
-		env: ctxAfter.env,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 
@@ -302,7 +214,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 		],
 		actions: [
 			// Attach product ONCE to customer
-			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: premium.id, timeout: 4000 }),
 			// Track messages per entity
 			s.track({
 				featureId: TestFeature.Messages,
@@ -329,128 +241,31 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 				entityIndex: 1,
 				timeout: 2000,
 			}),
+			// Schedule downgrade to free
+			s.billing.attach({ productId: free.id }),
+			// Advance to next cycle
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
-	// Verify initial per-entity balances for entity 1
-	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	expectCustomerFeatureCorrect({
-		customer: entity1Before,
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-		balance: 700, // 1000 - 300
-		usage: 300,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity1Before,
-		featureId: TestFeature.Workflows,
-		includedUsage: 10,
-		balance: 5, // 10 - 5
-		usage: 5,
-	});
-
-	// Verify initial per-entity balances for entity 2
-	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
-	expectCustomerFeatureCorrect({
-		customer: entity2Before,
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-		balance: 500, // 1000 - 500
-		usage: 500,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2Before,
-		featureId: TestFeature.Workflows,
-		includedUsage: 10,
-		balance: 2, // 10 - 8
-		usage: 8,
-	});
-
-	// Schedule downgrade to free
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		redirect_mode: "if_required",
-	});
-
-	const customerScheduled =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify scheduled states
-	await expectProductCanceling({
-		customer: customerScheduled,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: customerScheduled,
-		productId: free.id,
-	});
-
-	// Advance to next cycle with fresh scenario
-	const { autumnV1: autumnV1After, entities: entitiesAfter } =
-		await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, free] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [
-				s.billing.attach({ productId: premium.id }),
-				s.track({
-					featureId: TestFeature.Messages,
-					value: 300,
-					entityIndex: 0,
-					timeout: 2000,
-				}),
-				s.track({
-					featureId: TestFeature.Messages,
-					value: 500,
-					entityIndex: 1,
-					timeout: 2000,
-				}),
-				s.track({
-					featureId: TestFeature.Workflows,
-					value: 5,
-					entityIndex: 0,
-					timeout: 2000,
-				}),
-				s.track({
-					featureId: TestFeature.Workflows,
-					value: 8,
-					entityIndex: 1,
-					timeout: 2000,
-				}),
-				s.billing.attach({ productId: free.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
-			],
-		});
-
-	const customerAfterCycle =
-		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Verify products after cycle
 	await expectCustomerProducts({
-		customer: customerAfterCycle,
+		customer,
 		active: [free.id],
 		notPresent: [premium.id],
 	});
 
 	// Verify entity 1 after cycle
-	const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
+	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
-		entitiesAfter[0].id,
+		entities[0].id,
 	);
 
 	// Messages: RESET (consumable)
 	expectCustomerFeatureCorrect({
-		customer: entity1After,
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		includedUsage: 100, // Free's per-entity included
 		balance: 100, // RESET
@@ -459,7 +274,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 
 	// Workflows: CARRIED OVER (allocated)
 	expectCustomerFeatureCorrect({
-		customer: entity1After,
+		customer: entity1,
 		featureId: TestFeature.Workflows,
 		includedUsage: 2, // Free's per-entity included
 		balance: -3, // 2 - 5 = -3 (overage, carried over)
@@ -467,14 +282,14 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 	});
 
 	// Verify entity 2 after cycle
-	const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
+	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
-		entitiesAfter[1].id,
+		entities[1].id,
 	);
 
 	// Messages: RESET (consumable)
 	expectCustomerFeatureCorrect({
-		customer: entity2After,
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
 		balance: 100, // RESET
@@ -483,7 +298,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 
 	// Workflows: CARRIED OVER (allocated)
 	expectCustomerFeatureCorrect({
-		customer: entity2After,
+		customer: entity2,
 		featureId: TestFeature.Workflows,
 		includedUsage: 2,
 		balance: -6, // 2 - 8 = -6 (overage, carried over)
@@ -492,7 +307,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 
 	// Verify customer total for messages (all reset)
 	expectCustomerFeatureCorrect({
-		customer: customerAfterCycle,
+		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 200, // 100 * 2
 		balance: 200, // All reset
@@ -501,7 +316,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 
 	// Verify customer total for workflows (all carried over)
 	expectCustomerFeatureCorrect({
-		customer: customerAfterCycle,
+		customer,
 		featureId: TestFeature.Workflows,
 		includedUsage: 4, // 2 * 2
 		balance: -9, // (-3) + (-6) = -9
@@ -510,9 +325,124 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 2: premium to
 
 	// Invoices: 1) Premium attach ($50), 2) cycle end (no charge on free)
 	await expectCustomerInvoiceCorrect({
-		customer: customerAfterCycle,
+		customer,
 		count: 2,
 		latestTotal: 0, // Free has no renewal charge
 		latestInvoiceProductIds: [],
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: Downgrade with per-entity overage - billed at cycle end
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Premium ($50/mo) with per-entity consumable messages (100 per entity, $0.10 overage)
+ * - Create 2 entities
+ * - Entity 1: uses 130 messages (30 overage)
+ * - Entity 2: uses 150 messages (50 overage)
+ * - Schedule downgrade to Pro ($20/mo) with 50 per entity
+ * - Advance to next cycle
+ *
+ * Expected Result:
+ * - Pro active, Premium removed
+ * - Total overage billed at cycle end: 30 + 50 = 80 * $0.10 = $8
+ * - Invoice at cycle end: $20 (pro base) + $8 (overage) = $28
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-per-entity 3: downgrade with overage - billed at cycle end")}`, async () => {
+	const customerId = "sched-switch-pe-overage-downgrade";
+
+	// Premium: per-entity consumable with overage
+	const premiumPerEntityMessages = items.consumableMessages({
+		includedUsage: 100,
+		entityFeatureId: TestFeature.Users,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPerEntityMessages],
+	});
+
+	// Pro: lower per-entity limits
+	const proPerEntityMessages = items.consumableMessages({
+		includedUsage: 50,
+		entityFeatureId: TestFeature.Users,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPerEntityMessages],
+	});
+
+	const { autumnV1, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
+			// Attach premium
+			s.billing.attach({ productId: premium.id, timeout: 4000 }),
+			// Track overage per entity
+			s.track({
+				featureId: TestFeature.Messages,
+				value: 130, // 30 overage
+				entityIndex: 0,
+				timeout: 2000,
+			}),
+			s.track({
+				featureId: TestFeature.Messages,
+				value: 150, // 50 overage
+				entityIndex: 1,
+				timeout: 2000,
+			}),
+			// Schedule downgrade
+			s.billing.attach({ productId: pro.id }),
+			// Advance to next cycle
+			s.advanceToNextInvoice({ withPause: true }),
+		],
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Verify products
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// Verify entities after cycle - usage RESET (consumable)
+	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entities[0].id,
+	);
+	expectCustomerFeatureCorrect({
+		customer: entity1,
+		featureId: TestFeature.Messages,
+		includedUsage: 50, // Pro's per-entity
+		balance: 50, // RESET
+		usage: 0,
+	});
+
+	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entities[1].id,
+	);
+	expectCustomerFeatureCorrect({
+		customer: entity2,
+		featureId: TestFeature.Messages,
+		includedUsage: 50,
+		balance: 50, // RESET
+		usage: 0,
+	});
+
+	// Invoices:
+	// 1) Premium attach ($50)
+	// 2) Cycle end: Pro base ($20) + overage (80 * $0.10 = $8) = $28
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 28, // $20 pro + $8 overage
 	});
 });

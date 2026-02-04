@@ -59,6 +59,14 @@ export const completeCheckoutForm = async (
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
 
+		// Email field may be present if customer has no email set
+		try {
+			await page.waitForSelector("#email", { timeout: 2000 });
+			await page.type("#email", "test@example.com");
+		} catch (_e) {
+			// Email field doesn't exist (customer already has email), continue without it
+		}
+
 		// Postal code may not be present for all countries (e.g., UK)
 		try {
 			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });

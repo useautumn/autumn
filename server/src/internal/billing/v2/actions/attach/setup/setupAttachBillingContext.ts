@@ -11,6 +11,7 @@ import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setup
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -125,6 +126,8 @@ export const setupAttachBillingContext = async ({
 		fullCustomer,
 		fullProducts: [attachProduct],
 		attachProduct,
+		featureQuantities,
+		transitionConfigs: setupTransitionConfigs({ params }),
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
@@ -144,7 +147,6 @@ export const setupAttachBillingContext = async ({
 		resetCycleAnchorMs,
 
 		invoiceMode,
-		featureQuantities,
 
 		customPrices,
 		customEnts,

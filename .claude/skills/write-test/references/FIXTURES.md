@@ -48,6 +48,33 @@ items.unlimitedMessages()                          // No usage cap
 items.lifetimeMessages({ includedUsage?: number }) // Default: 100, never resets
 ```
 
+### Rollover Features
+
+```typescript
+import { RolloverExpiryDurationType } from "@autumn/shared";
+
+items.monthlyMessagesWithRollover({
+  includedUsage?: number,      // Default: 100
+  rolloverConfig: {
+    max: number | null,        // Maximum rollover amount (null = unlimited)
+    length: number,            // Number of periods to keep rollovers
+    duration: RolloverExpiryDurationType,  // Month, Year, etc.
+  },
+})
+```
+
+**Example:**
+```typescript
+const messagesWithRollover = items.monthlyMessagesWithRollover({
+  includedUsage: 400,
+  rolloverConfig: {
+    max: 500,
+    length: 1,
+    duration: RolloverExpiryDurationType.Month,
+  },
+});
+```
+
 ### Prepaid (purchase upfront)
 
 ```typescript

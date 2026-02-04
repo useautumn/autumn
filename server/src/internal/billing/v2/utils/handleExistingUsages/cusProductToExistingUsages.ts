@@ -13,11 +13,15 @@ import { Decimal } from "decimal.js";
 export const cusProductToExistingUsages = ({
 	cusProduct,
 	entityId,
-	featureIds,
+
+	carryAllConsumableFeatures,
+	consumableFeatureIdsToCarry = [],
 }: {
 	cusProduct?: FullCusProduct;
 	entityId?: string;
-	featureIds?: string[];
+
+	carryAllConsumableFeatures?: boolean;
+	consumableFeatureIdsToCarry?: string[];
 }): ExistingUsages => {
 	if (!cusProduct) return {};
 
@@ -37,11 +41,13 @@ export const cusProductToExistingUsages = ({
 		if (cusEnts.some(isUnlimitedCusEnt)) continue;
 
 		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
-		const inFeatureIdsToCarry = featureIds
-			? featureIds.includes(cusEnt.entitlement.feature.id)
-			: true;
 
-		const shouldCarry = isAllocated || inFeatureIdsToCarry;
+		// By default, don't carry any consumable feature, unless carryAll is true, OR consumableFeatureIdsToCarry includes the feature id
+		const carryConsumableFeature =
+			carryAllConsumableFeatures ||
+			consumableFeatureIdsToCarry.includes(cusEnt.entitlement.feature.id);
+
+		const shouldCarry = isAllocated || carryConsumableFeature;
 
 		if (!shouldCarry) continue;
 

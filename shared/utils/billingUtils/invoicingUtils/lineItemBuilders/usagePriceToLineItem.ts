@@ -70,6 +70,7 @@ export const usagePriceToLineItem = ({
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}
 
+
 	const lineItemContext: LineItemContext = {
 		...context,
 		price: cusPrice.price,

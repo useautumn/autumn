@@ -12,6 +12,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -180,6 +181,17 @@ const processMessage = async ({
 				return;
 			}
 			await runTriggerCheckoutReward({
+				ctx,
+				payload: job.data,
+			});
+		}
+
+		if (job.name === JobName.GrantCheckoutReward) {
+			if (!ctx) {
+				workerLogger.error("No context found for grant checkout reward job");
+				return;
+			}
+			await grantCheckoutReward({
 				ctx,
 				payload: job.data,
 			});

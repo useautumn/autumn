@@ -1,23 +1,29 @@
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
+import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext.js";
 
 /**
  * Handles standalone setup checkout (setup mode without Autumn metadata).
- * Updates customer's default payment method and all active subscriptions.
+ * Updates customer's default payment method.
  */
 export const handleStandaloneSetupCheckout = async ({
 	ctx,
-	checkoutSession,
+	checkoutContext,
 }: {
-	ctx: AutumnContext;
-	checkoutSession: Stripe.Checkout.Session;
+	ctx: StripeWebhookContext;
+	checkoutContext: CheckoutSessionCompletedContext;
 }) => {
 	const { org, env, logger } = ctx;
+	const { stripeCheckoutSession, metadata } = checkoutContext;
 
-	const stripeCustomerId = checkoutSession.customer as string;
+	// Only handle setup mode without Autumn metadata
+	if (stripeCheckoutSession.mode !== "setup" || metadata) {
+		return;
+	}
+
+	const stripeCustomerId = stripeCheckoutSession.customer as string;
 	if (!stripeCustomerId) {
 		logger.info("Standalone setup checkout: no customer ID, skipping");
 		return;
@@ -54,7 +60,7 @@ export const handleStandaloneSetupCheckout = async ({
 		`Standalone setup checkout: updating default payment method for customer ${customer.id}`,
 	);
 
-	// 1. Set as customer's default payment method
+	// Set as customer's default payment method
 	await stripeCli.customers.update(stripeCustomerId, {
 		invoice_settings: {
 			default_payment_method: paymentMethod.id,

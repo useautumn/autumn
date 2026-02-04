@@ -410,6 +410,30 @@ test.concurrent(`${chalk.yellowBright("trial: full lifecycle")}`, async () => {
 });
 ```
 
+## Rollover Expectations
+
+### `expectCustomerRolloverCorrect`
+
+Verify customer feature rollover state.
+
+```typescript
+import { expectCustomerRolloverCorrect, expectNoRollovers } from "@tests/integration/billing/utils/rollover/expectCustomerRolloverCorrect";
+
+// Check rollover balances
+expectCustomerRolloverCorrect({
+  customer,
+  featureId: TestFeature.Messages,
+  expectedRollovers: [{ balance: 150 }],  // Array of expected rollovers
+  totalBalance: 550,                       // Optional: verify total balance
+});
+
+// Verify NO rollovers exist
+expectNoRollovers({
+  customer,
+  featureId: TestFeature.Messages,
+});
+```
+
 ## Time Utilities
 
 ```typescript

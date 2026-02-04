@@ -15,8 +15,6 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
-	// Product config
-
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
