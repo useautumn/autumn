@@ -75,8 +75,8 @@ function SheetContent() {
 
 				{hasProductSelected && (
 					<>
-						<AttachPlanSection />
 						<AttachUpdatesSection />
+						<AttachPlanSection />
 						<AttachPreviewSection />
 						<AttachFooter />
 					</>
