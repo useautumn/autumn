@@ -1,5 +1,6 @@
 import { MinusCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export function AttachUpdatesSection() {
@@ -37,7 +38,7 @@ export function AttachUpdatesSection() {
 
 	return (
 		<SheetSection withSeparator>
-			<p className="text-sm text-t3">
+			<InfoBox variant="note">
 				Attaching{" "}
 				<PlusCircleIcon
 					weight="fill"
@@ -45,7 +46,7 @@ export function AttachUpdatesSection() {
 				/>
 				<span className="text-foreground font-medium">{product.name}</span> and
 				removing {renderOutgoingPlans()}
-			</p>
+			</InfoBox>
 		</SheetSection>
 	);
 }
