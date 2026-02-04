@@ -1,15 +1,8 @@
-import type { AttachParamsV0 } from "@autumn/shared";
+import type { AttachParamsV0, BillingResponse } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-
-interface AttachResponse {
-	checkout_url?: string;
-	invoice?: {
-		stripe_id: string;
-	};
-}
 
 export function useAttachMutation({
 	customerId,
@@ -51,7 +44,7 @@ export function useAttachMutation({
 				throw new Error("Failed to build request body");
 			}
 
-			const response = await axiosInstance.post<AttachResponse>(
+			const response = await axiosInstance.post<BillingResponse>(
 				"/v1/billing/attach",
 				requestBody,
 			);
@@ -59,15 +52,14 @@ export function useAttachMutation({
 			return { data: response.data, useInvoice };
 		},
 		onSuccess: ({ data, useInvoice }) => {
-			if (data?.checkout_url) {
-				onCheckoutRedirect?.(data.checkout_url);
-				toast.success("Redirecting to checkout...");
-				return;
-			}
-
-			if (useInvoice && data?.invoice) {
-				onInvoiceCreated?.(data.invoice.stripe_id);
-				toast.success("Invoice created successfully");
+			if (useInvoice) {
+				if (data?.invoice) {
+					onInvoiceCreated?.(data.invoice.stripe_id);
+					toast.success("Invoice created successfully");
+				}
+			} else if (data?.payment_url) {
+				onCheckoutRedirect?.(data.payment_url);
+				toast.success("Redirecting to complete payment...");
 			} else {
 				toast.success("Product attached successfully");
 			}

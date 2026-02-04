@@ -9,6 +9,7 @@ import {
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
+import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Tooltip,
@@ -26,22 +27,22 @@ import { getTrialRingClass } from "../utils/ringClassUtils";
 import { StatusBadge } from "./StatusBadge";
 
 interface TrialEditorRowProps {
-	form: UseUpdateSubscriptionForm;
-	isCurrentlyTrialing: boolean;
-	initialTrialLength: number | null;
-	initialTrialFormatted: string | null;
-	removeTrial: boolean;
-	onEndTrial: () => void;
+	form: UseUpdateSubscriptionForm | UseAttachForm;
+	isCurrentlyTrialing?: boolean;
+	initialTrialLength?: number | null;
+	initialTrialFormatted?: string | null;
+	removeTrial?: boolean;
+	onEndTrial?: () => void;
 	onCollapse: () => void;
-	onRevert: () => void;
+	onRevert?: () => void;
 }
 
 export function TrialEditorRow({
 	form,
-	isCurrentlyTrialing,
-	initialTrialLength,
-	initialTrialFormatted,
-	removeTrial,
+	isCurrentlyTrialing = false,
+	initialTrialLength = null,
+	initialTrialFormatted = null,
+	removeTrial = false,
 	onEndTrial,
 	onCollapse,
 	onRevert,
@@ -105,7 +106,7 @@ export function TrialEditorRow({
 		}, 0);
 	};
 
-	if (removeTrial) {
+	if (removeTrial && onRevert) {
 		return (
 			<div className="flex items-center gap-2">
 				<div
@@ -217,7 +218,7 @@ export function TrialEditorRow({
 		setIsAddingNewTrial(true);
 
 		// Only mark for removal if they're currently trialing (ending an active trial)
-		if (isCurrentlyTrialing) {
+		if (isCurrentlyTrialing && onEndTrial) {
 			onEndTrial();
 		}
 	};

@@ -3,22 +3,14 @@ import { buildEditsForItem, UsageModel } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { LayoutGroup, motion } from "motion/react";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
-import { StatusBadge } from "@/components/forms/update-subscription-v2/components/StatusBadge";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
+import { TrialEditorRow } from "@/components/forms/update-subscription-v2/components/TrialEditorRow";
 import { LAYOUT_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-
-function SectionTitle({ hasCustomizations }: { hasCustomizations: boolean }) {
-	return (
-		<div className="flex items-center gap-2">
-			<span>Plan Configuration</span>
-			{hasCustomizations && <StatusBadge variant="created">Custom</StatusBadge>}
-		</div>
-	);
-}
+import { AttachSectionTitle } from "./AttachSectionTitle";
 
 export function AttachPlanSection() {
 	const {
@@ -30,7 +22,7 @@ export function AttachPlanSection() {
 		handleEditPlan,
 	} = useAttachFormContext();
 
-	const { prepaidOptions } = formValues;
+	const { prepaidOptions, trialEnabled } = formValues;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
@@ -54,10 +46,7 @@ export function AttachPlanSection() {
 	if (!product) return null;
 
 	return (
-		<SheetSection
-			title={<SectionTitle hasCustomizations={hasCustomizations} />}
-			withSeparator
-		>
+		<SheetSection title={<AttachSectionTitle />} withSeparator>
 			{(product?.items?.length ?? 0) > 0 || deletedItems.length > 0 ? (
 				<>
 					<div className="flex gap-2 justify-between items-center mb-3">
@@ -116,6 +105,18 @@ export function AttachPlanSection() {
 									<SubscriptionItemRow item={item} isDeleted />
 								</motion.div>
 							))}
+							{trialEnabled && (
+								<motion.div
+									key="trial-editor"
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<TrialEditorRow
+										form={form}
+										onCollapse={() => form.setFieldValue("trialEnabled", false)}
+									/>
+								</motion.div>
+							)}
 							<motion.div layout transition={LAYOUT_TRANSITION}>
 								<Button
 									variant="secondary"

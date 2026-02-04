@@ -2,6 +2,7 @@ import {
 	type AttachParamsV0,
 	type AttachParamsV0Input,
 	type FeatureOptions,
+	type FreeTrialDuration,
 	type ProductItem,
 	ProductItemInterval,
 	type ProductV2,
@@ -9,6 +10,7 @@ import {
 } from "@autumn/shared";
 import Decimal from "decimal.js";
 import { useMemo } from "react";
+import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 
 interface UseAttachRequestBodyParams {
 	customerId: string | undefined;
@@ -17,6 +19,9 @@ interface UseAttachRequestBodyParams {
 	prepaidOptions: Record<string, number>;
 	items: ProductItem[] | null;
 	version: number | undefined;
+	trialLength: number | null;
+	trialDuration: FreeTrialDuration;
+	trialEnabled: boolean;
 }
 
 function convertPrepaidOptionsToFeatureOptions({
@@ -64,6 +69,9 @@ export function useAttachRequestBody({
 	prepaidOptions,
 	items,
 	version,
+	trialLength,
+	trialDuration,
+	trialEnabled,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
 		if (!customerId || !product) {
@@ -100,8 +108,28 @@ export function useAttachRequestBody({
 			body.version = version;
 		}
 
+		const freeTrial = getFreeTrial({
+			removeTrial: false,
+			trialLength,
+			trialDuration,
+			trialEnabled,
+		});
+		if (freeTrial !== undefined) {
+			body.free_trial = freeTrial;
+		}
+
 		return body;
-	}, [customerId, entityId, product, prepaidOptions, items, version]);
+	}, [
+		customerId,
+		entityId,
+		product,
+		prepaidOptions,
+		items,
+		version,
+		trialLength,
+		trialDuration,
+		trialEnabled,
+	]);
 
 	const buildRequestBody = useMemo(
 		() =>

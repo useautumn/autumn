@@ -1,46 +1,21 @@
-import type {
-	BillingPreviewResponse,
-	ProductItem,
-	ProductV2,
-} from "@autumn/shared";
+import type { AttachParamsV0, BillingPreviewResponse } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useAttachRequestBody } from "./useAttachRequestBody";
 
 interface UseAttachPreviewParams {
-	customerId: string | undefined;
-	entityId: string | undefined;
-	product: ProductV2 | undefined;
-	prepaidOptions: Record<string, number>;
-	items: ProductItem[] | null;
-	version: number | undefined;
+	requestBody: AttachParamsV0 | null;
 	enabled?: boolean;
 }
 
 export function useAttachPreview({
-	customerId,
-	entityId,
-	product,
-	prepaidOptions,
-	items,
-	version,
+	requestBody,
 	enabled,
 }: UseAttachPreviewParams) {
 	const axiosInstance = useAxiosInstance();
 
-	const { requestBody } = useAttachRequestBody({
-		customerId,
-		entityId,
-		product,
-		prepaidOptions,
-		items,
-		version,
-	});
-
-	const shouldEnable =
-		enabled !== undefined ? enabled : !!(customerId && product && requestBody);
+	const shouldEnable = enabled !== undefined ? enabled : !!requestBody;
 
 	const queryKeyDeps = useMemo(
 		() => JSON.stringify(requestBody),
@@ -61,7 +36,7 @@ export function useAttachPreview({
 	const query = useQuery({
 		queryKey: ["attach-preview-v2", debouncedQueryKey],
 		queryFn: async () => {
-			if (!requestBody || !customerId) {
+			if (!requestBody) {
 				return null;
 			}
 
