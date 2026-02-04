@@ -5,7 +5,7 @@ import { useListOrganizations } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
-import { handleEnvChange } from "@/views/main-sidebar/EnvDropdown";
+import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 interface UseCommandBarHotkeysProps {
 	/** Whether the command bar is open */
@@ -32,6 +32,7 @@ export const useCommandBarHotkeys = ({
 }: UseCommandBarHotkeysProps) => {
 	const navigate = useNavigate();
 	const env = useEnv();
+	const handleEnvChange = useEnvChange();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const { isAdmin } = useAdmin();
 
