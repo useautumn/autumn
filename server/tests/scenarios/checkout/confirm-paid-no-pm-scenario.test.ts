@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
 import type { ConfirmCheckoutResponse } from "@autumn/shared";
-import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import axios from "axios";
 import chalk from "chalk";
+import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods";
 
 /**
  * Confirm Paid Product Without Payment Method Scenario
@@ -84,7 +84,10 @@ test(
 		// Should return payment_url since payment is required but no PM exists
 		try {
 			const confirmResponse = await axios.post<
-				ConfirmCheckoutResponse & { payment_url?: string; checkout_url?: string }
+				ConfirmCheckoutResponse & {
+					payment_url?: string;
+					checkout_url?: string;
+				}
 			>(
 				`http://localhost:8080/checkouts/${checkoutId}/confirm`,
 				{},
