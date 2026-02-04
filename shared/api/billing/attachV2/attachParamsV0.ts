@@ -1,5 +1,5 @@
-import { FreeTrialParamsV0Schema } from "@api/billing/common/freeTrial/freeTrialParamsV0.js";
 import { z } from "zod/v4";
+import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 
@@ -17,17 +17,17 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 
 	// Product config
 
-	// Free trial override
-	// - undefined: use product's default trial (check eligibility)
-	// - null: explicitly disable trial
-	// - object: custom trial override
-	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
-
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),
+
+	// Plan schedule override
+	// - undefined: use default behavior (upgrade=immediate, downgrade=end_of_cycle)
+	// - "immediate": force immediate activation (prorated credit on downgrade)
+	// - "end_of_cycle": schedule for next billing cycle
+	plan_schedule: PlanTimingSchema.optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
