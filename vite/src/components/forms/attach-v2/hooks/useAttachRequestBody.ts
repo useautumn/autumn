@@ -3,6 +3,7 @@ import {
 	type AttachParamsV0Input,
 	type FeatureOptions,
 	type FreeTrialDuration,
+	type PlanTiming,
 	type ProductItem,
 	ProductItemInterval,
 	type ProductV2,
@@ -22,6 +23,7 @@ interface UseAttachRequestBodyParams {
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
+	planSchedule: PlanTiming | null;
 }
 
 function convertPrepaidOptionsToFeatureOptions({
@@ -72,6 +74,7 @@ export function useAttachRequestBody({
 	trialLength,
 	trialDuration,
 	trialEnabled,
+	planSchedule,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
 		if (!customerId || !product) {
@@ -118,6 +121,10 @@ export function useAttachRequestBody({
 			body.free_trial = freeTrial;
 		}
 
+		if (planSchedule) {
+			body.plan_schedule = planSchedule;
+		}
+
 		return body;
 	}, [
 		customerId,
@@ -129,6 +136,7 @@ export function useAttachRequestBody({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		planSchedule,
 	]);
 
 	const buildRequestBody = useMemo(
