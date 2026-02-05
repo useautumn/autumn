@@ -64,8 +64,7 @@ export function BillingBehaviorSection() {
 										Next cycle only
 									</div>
 									<div className="text-body-secondary leading-tight">
-										No charges or credits issued. Access ends at the current
-										period's end.
+										No charges or credits issued. Access ends immediately.
 									</div>
 								</div>
 							</div>
