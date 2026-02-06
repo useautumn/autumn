@@ -1,5 +1,10 @@
-import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AttachBillingContext,
+	AttachParamsV0,
+	AutumnBillingPlan,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleAttachBillingBehaviorErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachBillingBehaviorErrors";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
@@ -13,10 +18,12 @@ export const handleAttachV2Errors = ({
 	ctx,
 	billingContext,
 	autumnBillingPlan,
+	params,
 }: {
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	params: AttachParamsV0;
 }) => {
 	// 1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
@@ -35,4 +42,11 @@ export const handleAttachV2Errors = ({
 
 	// 5. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
+
+	// 6. Billing behavior errors (next_cycle_only restrictions)
+	handleAttachBillingBehaviorErrors({
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
 };

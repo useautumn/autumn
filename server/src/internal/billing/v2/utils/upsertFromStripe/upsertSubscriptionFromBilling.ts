@@ -11,5 +11,5 @@ export const upsertSubscriptionFromBilling = async ({
 	stripeSubscription: Stripe.Subscription;
 }) => {
 	const subscription = initSubscriptionFromStripe({ ctx, stripeSubscription });
-	await SubService.upsert({ db: ctx.db, subscription });
+	await SubService.upsertByStripeId({ db: ctx.db, subscription });
 };

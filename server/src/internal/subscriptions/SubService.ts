@@ -4,7 +4,6 @@ import {
 	type Subscription,
 	subscriptions,
 } from "@autumn/shared";
-import { buildConflictUpdateColumns } from "@server/db/dbUtils.js";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { subToPeriodStartEnd } from "@server/external/stripe/stripeSubUtils/convertSubUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
@@ -97,6 +96,22 @@ export class SubService {
 		return updateResult[0] as Subscription;
 	}
 
+	static async update({
+		db,
+		subscriptionId,
+		updates,
+	}: {
+		db: DrizzleCli;
+		subscriptionId: string;
+		updates: Partial<Subscription>;
+	}) {
+		return await db
+			.update(subscriptions)
+			.set(updates)
+			.where(eq(subscriptions.id, subscriptionId))
+			.returning();
+	}
+
 	static async updateFromStripe({
 		db,
 		stripeSub,
@@ -183,17 +198,45 @@ export class SubService {
 			.where(inArray(subscriptions.stripe_id, ids))) as Subscription[];
 	}
 
-	static async upsert({
+	static async getByStripeId({
+		db,
+		stripeId,
+	}: {
+		db: DrizzleCli;
+		stripeId: string;
+	}) {
+		return await db.query.subscriptions.findFirst({
+			where: eq(subscriptions.stripe_id, stripeId),
+		});
+	}
+
+	static async upsertByStripeId({
 		db,
 		subscription,
 	}: {
 		db: DrizzleCli;
 		subscription: Subscription;
 	}) {
-		const updateColumns = buildConflictUpdateColumns(subscriptions, ["id"]);
-		await db.insert(subscriptions).values(subscription).onConflictDoUpdate({
-			target: subscriptions.stripe_id,
-			set: updateColumns,
+		// 1. Get by stripe ID
+		const existingSub = await SubService.getByStripeId({
+			db,
+			stripeId: subscription.stripe_id ?? "",
 		});
+
+		if (existingSub) {
+			return await SubService.update({
+				db,
+				subscriptionId: existingSub.id,
+				updates: {
+					current_period_start: subscription.current_period_start,
+					current_period_end: subscription.current_period_end,
+				},
+			});
+		} else {
+			return await SubService.createSub({
+				db,
+				sub: subscription,
+			});
+		}
 	}
 }

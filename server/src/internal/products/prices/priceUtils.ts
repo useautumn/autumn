@@ -26,7 +26,7 @@ import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";
 
-const constructPrice = ({
+export const constructPrice = ({
 	internalProductId,
 	entitlementId,
 	orgId,
