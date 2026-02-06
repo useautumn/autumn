@@ -34,20 +34,22 @@ export const findMainActiveCustomerProductByGroup = ({
 };
 
 export const findActiveCustomerProductById = ({
-	fullCustomer,
+	fullCus,
 	productId,
 	internalEntityId,
 }: {
-	fullCustomer: FullCustomer;
+	fullCus: FullCustomer;
 	productId: string;
 	internalEntityId?: string;
 }) => {
-	const cusProducts = fullCustomer.customer_products;
+	if (!internalEntityId) {
+		internalEntityId = fullCus.entity?.internal_id;
+	}
+
+	const cusProducts = fullCus.customer_products;
 
 	const activeMainCusProduct = cusProducts.find((customerProduct) => {
 		const { valid } = cp(customerProduct)
-			.activeRecurring()
-			.main()
 			.hasProductId({ productId })
 			.onEntity({ internalEntityId });
 
