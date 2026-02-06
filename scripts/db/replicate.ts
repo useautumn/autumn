@@ -185,7 +185,7 @@ async function replicateDatabase({
 		// Step 1: Dump the source database
 		console.log("📦 Dumping source database...");
 		await execWithOutput(
-			`pg_dump "${cleanedFromUrl}" --no-owner --no-privileges -f "${tempFile}" 2>&1`,
+			`pg_dump "${cleanedFromUrl}" --no-owner --no-privileges --exclude-schema='ddb$*' -f "${tempFile}" 2>&1`,
 		);
 		console.log("✅ Source database dumped successfully");
 

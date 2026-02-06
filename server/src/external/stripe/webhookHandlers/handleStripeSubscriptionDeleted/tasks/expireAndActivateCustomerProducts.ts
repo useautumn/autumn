@@ -3,7 +3,6 @@ import {
 	findMainScheduledCustomerProductByGroup,
 	isCustomerProductFree,
 	isCustomerProductOnStripeSubscription,
-	isCustomerProductPaid,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
@@ -47,11 +46,12 @@ export const expireAndActivateCustomerProducts = async ({
 		if (!onStripeSubscription) continue;
 
 		// 2. Expire and activate default product if needed
-		const { updates } = await customerProductActions.expireAndActivateDefault({
-			ctx,
-			customerProduct,
-			fullCustomer,
-		});
+		const { updates, activatedDefault } =
+			await customerProductActions.expireAndActivateDefault({
+				ctx,
+				customerProduct,
+				fullCustomer,
+			});
 
 		expiredCustomerProducts.push(customerProduct);
 
@@ -72,11 +72,11 @@ export const expireAndActivateCustomerProducts = async ({
 			const scheduledIsFreeCustomerProduct = isCustomerProductFree(
 				scheduledCustomerProduct,
 			);
-			const scheduledIsPaidCustomerProduct = isCustomerProductPaid(
-				scheduledCustomerProduct,
-			);
+			// const scheduledIsPaidCustomerProduct = isCustomerProductPaid(
+			// 	scheduledCustomerProduct,
+			// );
 
-			if (scheduledIsFreeCustomerProduct) {
+			if (scheduledIsFreeCustomerProduct && !activatedDefault) {
 				const { updates: activateScheduledUpdates } =
 					await customerProductActions.activateScheduled({
 						ctx,
@@ -89,7 +89,7 @@ export const expireAndActivateCustomerProducts = async ({
 					customerProduct: scheduledCustomerProduct,
 					updates: activateScheduledUpdates,
 				});
-			} else if (scheduledIsPaidCustomerProduct) {
+			} else {
 				await CusProductService.delete({
 					db: ctx.db,
 					cusProductId: scheduledCustomerProduct.id,
