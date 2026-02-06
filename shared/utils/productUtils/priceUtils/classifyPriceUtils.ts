@@ -1,3 +1,4 @@
+import type { Feature } from "../../../models/featureModels/featureModels";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
 import type { UsagePriceConfig } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
@@ -72,4 +73,17 @@ export const isPrepaidPrice = (
 ): price is Price & { config: UsagePriceConfig } => {
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.UsageInAdvance;
+};
+
+export const priceOnFeature = ({
+	price,
+	feature,
+}: {
+	price: Price;
+	feature: Feature;
+}) => {
+	return (
+		price.config.internal_feature_id === feature.internal_id ||
+		price.config.feature_id === feature.id
+	);
 };

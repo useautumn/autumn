@@ -32,3 +32,29 @@ export const findMainActiveCustomerProductByGroup = ({
 
 	return activeMainCusProduct;
 };
+
+export const findActiveCustomerProductById = ({
+	fullCus,
+	productId,
+	internalEntityId,
+}: {
+	fullCus: FullCustomer;
+	productId: string;
+	internalEntityId?: string;
+}) => {
+	if (!internalEntityId) {
+		internalEntityId = fullCus.entity?.internal_id;
+	}
+
+	const cusProducts = fullCus.customer_products;
+
+	const activeMainCusProduct = cusProducts.find((customerProduct) => {
+		const { valid } = cp(customerProduct)
+			.hasProductId({ productId })
+			.onEntity({ internalEntityId });
+
+		return valid;
+	});
+
+	return activeMainCusProduct;
+};
