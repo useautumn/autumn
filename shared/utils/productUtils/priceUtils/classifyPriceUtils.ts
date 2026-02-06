@@ -1,3 +1,4 @@
+import type { Feature } from "@models/featureModels/featureModels";
 import { Infinite } from "@models/productModels/productEnums";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
@@ -88,4 +89,17 @@ export const isNotFinalTier = (
 	tier: UsageTier,
 ): tier is UsageTier & { to: number } => {
 	return tier.to !== -1 && tier.to !== Infinite;
+};
+
+export const priceOnFeature = ({
+	price,
+	feature,
+}: {
+	price: Price;
+	feature: Feature;
+}) => {
+	return (
+		price.config.internal_feature_id === feature.internal_id ||
+		price.config.feature_id === feature.id
+	);
 };
