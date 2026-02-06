@@ -1,7 +1,7 @@
 import {
 	type LineItem,
 	type LineItemDiscount,
-	type StripeDiscountWithCoupon,
+	type ResolvedStripeCoupon,
 	stripeToAtmnAmount,
 	sumValues,
 } from "@autumn/shared";
@@ -18,7 +18,7 @@ export const applyAmountOffDiscountToLineItems = ({
 	discount,
 }: {
 	lineItems: LineItem[];
-	discount: StripeDiscountWithCoupon;
+	discount: ResolvedStripeCoupon;
 }): LineItem[] => {
 	const coupon = discount.source.coupon;
 	const amountOffCents = coupon.amount_off;

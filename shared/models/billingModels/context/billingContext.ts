@@ -9,7 +9,7 @@ import type Stripe from "stripe";
 import { z } from "zod/v4";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
 import type { FullProduct } from "../../productModels/productModels";
-import type { StripeDiscountWithCoupon } from "../stripe/stripeDiscountWithCoupon";
+import type { ResolvedStripeCoupon } from "../stripe/stripeDiscountWithCoupon";
 
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
@@ -48,7 +48,7 @@ export interface BillingContext {
 	stripeCustomer: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
-	stripeDiscounts?: StripeDiscountWithCoupon[];
+	stripeDiscounts?: ResolvedStripeCoupon[];
 	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
