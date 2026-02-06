@@ -1,4 +1,7 @@
-import type { AttachBillingContext } from "@autumn/shared";
+import type {
+	AttachBillingContext,
+	BillingContextOverride,
+} from "@autumn/shared";
 import {
 	type AttachParamsV0,
 	BillingVersion,
@@ -24,20 +27,30 @@ import { setupAttachTrialContext } from "./setupAttachTrialContext";
 export const setupAttachBillingContext = async ({
 	ctx,
 	params,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV0;
+	contextOverride?: BillingContextOverride;
 }): Promise<AttachBillingContext> => {
-	const fullCustomer = await setupFullCustomerContext({
-		ctx,
-		params,
-	});
+	const { fullCustomer: fullCustomerOverride } = contextOverride;
 
-	const { attachProduct, customPrices, customEnts } =
-		await setupAttachProductContext({
+	const fullCustomer =
+		fullCustomerOverride ??
+		(await setupFullCustomerContext({
 			ctx,
 			params,
-		});
+		}));
+
+	const {
+		fullProduct: attachProduct,
+		customPrices,
+		customEnts,
+	} = await setupAttachProductContext({
+		ctx,
+		params,
+		contextOverride,
+	});
 
 	const { currentCustomerProduct, scheduledCustomerProduct, planTiming } =
 		setupAttachTransitionContext({
@@ -58,6 +71,7 @@ export const setupAttachBillingContext = async ({
 		fullCustomer,
 		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
+		contextOverride,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -66,6 +80,7 @@ export const setupAttachBillingContext = async ({
 		fullProduct: attachProduct,
 		currentCustomerProduct: currentCustomerProduct,
 		initializeUndefinedQuantities: true,
+		contextOverride,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
@@ -122,12 +137,17 @@ export const setupAttachBillingContext = async ({
 		trialContext,
 	});
 
+	const transitionConfigs = setupTransitionConfigs({
+		params,
+		contextOverride,
+	});
+
 	return {
 		fullCustomer,
 		fullProducts: [attachProduct],
 		attachProduct,
 		featureQuantities,
-		transitionConfigs: setupTransitionConfigs({ params }),
+		transitionConfigs,
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
@@ -153,6 +173,6 @@ export const setupAttachBillingContext = async ({
 		isCustom,
 		trialContext,
 
-		billingVersion: BillingVersion.V2,
+		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 	};
 };

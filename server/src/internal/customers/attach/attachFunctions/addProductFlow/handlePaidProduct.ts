@@ -1,10 +1,10 @@
 import {
+	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
 	AttachScenario,
-	isCustomerProductTrialing,
 	MetadataType,
 	SuccessCode,
 	secondsToMs,
@@ -12,36 +12,33 @@ import {
 import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
-import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils.js";
 import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import {
+	attachToInvoiceResponse,
+	insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay.js";
-import {
-	getCustomerSchedule,
-	getCustomerSub,
-} from "../../attachUtils/convertAttachParams.js";
-import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
-import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
-import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
+import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
 
 export const handlePaidProduct = async ({
 	ctx,
 	attachParams,
+	body,
 	config,
 	branch,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
+	body: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 }): Promise<AttachFunctionResponse> => {
@@ -78,92 +75,115 @@ export const handlePaidProduct = async ({
 	}
 
 	let sub: Stripe.Subscription | null = null;
-	let schedule: Stripe.SubscriptionSchedule | null | undefined = null;
+	const schedule: Stripe.SubscriptionSchedule | null | undefined = null;
 	let invoice: Stripe.Invoice | undefined;
 	let trialEndsAt: number | null | undefined;
 
 	// 1. If merge sub
 
 	if (mergeSub && !config.disableMerge) {
-		if (mergeCusProduct?.free_trial) {
-			trialEndsAt = isCustomerProductTrialing(mergeCusProduct, {
-				nowMs: attachParams.now,
-			})
-				? mergeCusProduct.trial_ends_at
-				: undefined;
-		}
-		attachParams.freeTrial = null;
-		// 1. If merged sub is canceled, also add to current schedule
-		const newItemSet = await paramsToSubItems({
-			ctx,
-			sub: mergeSub,
-			attachParams,
-			config,
-		});
+		// Handle merge case
 
-		await setStripeSubscriptionLock({
-			stripeSubscriptionId: mergeSub.id,
-			lockedAtMs: attachParams.now || Date.now(),
-		});
-
-		const { updatedSub, latestInvoice, url } = await updateStripeSub2({
-			ctx,
-			attachParams,
-			curSub: mergeSub,
-			itemSet: newItemSet,
-			config,
-			branch,
-		});
-
-		sub = updatedSub;
-
-		if (latestInvoice) {
-			invoice = await insertInvoiceFromAttach({
-				db,
-				stripeInvoice: latestInvoice,
-				attachParams,
-				logger,
-			});
-		}
-
-		if (url) {
-			return AttachFunctionResponseSchema.parse({
-				checkout_url: url,
-				code: SuccessCode.InvoiceActionRequired,
-				message: "Payment action required",
-			});
-		}
-
-		if (isStripeSubscriptionCanceling(mergeSub)) {
-			logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
-			schedule = await subToNewSchedule({
+		const { billingResponse, billingResult } =
+			await billingActions.legacy.attach({
 				ctx,
-				sub: mergeSub,
+				body,
 				attachParams,
-				config,
-				endOfBillingPeriod: mergeSub.cancel_at!,
-				removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
+				planTiming: "immediate",
 			});
-		} else {
-			const res = await getCustomerSchedule({
-				attachParams,
-				subId: mergeSub.id,
-				logger,
-			});
-			schedule = res.schedule;
-			logger.info(`ADD PRODUCT FLOW, SCHEDULE ID: ${schedule?.id}`);
-			if (schedule) {
-				await handleUpgradeFlowSchedule({
-					ctx,
-					attachParams,
-					config,
-					schedule,
-					curSub: mergeSub,
-					removeCusProducts: [],
-					fromAddProduct: true,
-				});
-			}
-		}
+
+		return AttachFunctionResponseSchema.parse({
+			code: SuccessCode.NewProductAttached,
+			message: `Successfully attached product`,
+
+			checkout_url: billingResponse?.payment_url,
+
+			invoice: attachParams.invoiceOnly
+				? attachToInvoiceResponse({
+						invoice: billingResult?.stripe?.stripeInvoice || undefined,
+					})
+				: undefined,
+		});
+
+		// if (mergeCusProduct?.free_trial) {
+		// 	trialEndsAt = isCustomerProductTrialing(mergeCusProduct, {
+		// 		nowMs: attachParams.now,
+		// 	})
+		// 		? mergeCusProduct.trial_ends_at
+		// 		: undefined;
+		// }
+		// attachParams.freeTrial = null;
+		// // 1. If merged sub is canceled, also add to current schedule
+		// const newItemSet = await paramsToSubItems({
+		// 	ctx,
+		// 	sub: mergeSub,
+		// 	attachParams,
+		// 	config,
+		// });
+
+		// await setStripeSubscriptionLock({
+		// 	stripeSubscriptionId: mergeSub.id,
+		// 	lockedAtMs: attachParams.now || Date.now(),
+		// });
+
+		// const { updatedSub, latestInvoice, url } = await updateStripeSub2({
+		// 	ctx,
+		// 	attachParams,
+		// 	curSub: mergeSub,
+		// 	itemSet: newItemSet,
+		// 	config,
+		// 	branch,
+		// });
+
+		// sub = updatedSub;
+
+		// if (latestInvoice) {
+		// 	invoice = await insertInvoiceFromAttach({
+		// 		db,
+		// 		stripeInvoice: latestInvoice,
+		// 		attachParams,
+		// 		logger,
+		// 	});
+		// }
+
+		// if (url) {
+		// 	return AttachFunctionResponseSchema.parse({
+		// 		checkout_url: url,
+		// 		code: SuccessCode.InvoiceActionRequired,
+		// 		message: "Payment action required",
+		// 	});
+		// }
+
+		// if (isStripeSubscriptionCanceling(mergeSub)) {
+		// 	logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
+		// 	schedule = await subToNewSchedule({
+		// 		ctx,
+		// 		sub: mergeSub,
+		// 		attachParams,
+		// 		config,
+		// 		endOfBillingPeriod: mergeSub.cancel_at!,
+		// 		removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
+		// 	});
+		// } else {
+		// 	const res = await getCustomerSchedule({
+		// 		attachParams,
+		// 		subId: mergeSub.id,
+		// 		logger,
+		// 	});
+		// 	schedule = res.schedule;
+		// 	logger.info(`ADD PRODUCT FLOW, SCHEDULE ID: ${schedule?.id}`);
+		// 	if (schedule) {
+		// 		await handleUpgradeFlowSchedule({
+		// 			ctx,
+		// 			attachParams,
+		// 			config,
+		// 			schedule,
+		// 			curSub: mergeSub,
+		// 			removeCusProducts: [],
+		// 			fromAddProduct: true,
+		// 		});
+		// 	}
+		// }
 	} else {
 		let billingCycleAnchorUnix: number | undefined;
 		const smallestInterval = getSmallestInterval({
@@ -268,11 +288,11 @@ export const handlePaidProduct = async ({
 				db: ctx.db,
 				attachParams: attachToInsertParams(attachParams, product),
 				subscriptionIds: subscriptions.map((s) => s.id),
-				subscriptionScheduleIds: schedule ? [schedule.id] : undefined,
 				anchorToUnix,
 				carryExistingUsages: config.carryUsage,
 				scenario: AttachScenario.New,
 				trialEndsAt: trialEndsAt || undefined,
+				// subscriptionScheduleIds: schedule ? [schedule.id] : undefined,
 				// startsAt: attachParams.now,
 				logger,
 			}),

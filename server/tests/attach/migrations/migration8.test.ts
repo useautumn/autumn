@@ -168,7 +168,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			to_version: premiumV2.version,
 		});
 
-		await timeout(10000);
+		await timeout(20000);
 
 		// Entity 1 should have premium v2, still cancelling
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);

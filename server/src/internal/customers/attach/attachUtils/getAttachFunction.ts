@@ -176,7 +176,7 @@ export const runAttachFunction = async ({
 		return await handleRenewProduct({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 
@@ -247,7 +247,7 @@ export const runAttachFunction = async ({
 		return await handleScheduleFunction2({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 
@@ -258,6 +258,7 @@ export const runAttachFunction = async ({
 		return await handleUpgradeFlow({
 			ctx,
 			attachParams,
+			body: attachBody,
 			config,
 			branch,
 		});
@@ -267,7 +268,7 @@ export const runAttachFunction = async ({
 		return await handleUpdateQuantityFunction({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 

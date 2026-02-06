@@ -119,6 +119,7 @@ type BillingAttachAction = {
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
+	items?: ProductItem[]; // Custom product items (creates is_custom product)
 };
 
 type CreateReferralCodeAction = {
@@ -668,10 +669,12 @@ const deleteCustomer = (
  * @param newBillingSubscription - Create a separate Stripe subscription for this product
  * @param planSchedule - Override plan timing: "immediate" or "end_of_cycle"
  * @param timeout - Optional timeout in milliseconds for the attach request
+ * @param items - Custom product items (creates is_custom customer product)
  * @example s.billing.attach({ productId: "pro" }) // customer-level
  * @example s.billing.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
  * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
  * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" }) // scheduled upgrade
+ * @example s.billing.attach({ productId: "pro", items: [items.monthlyMessages({ includedUsage: 750 })] }) // custom plan
  */
 const billingAttach = ({
 	productId,
@@ -681,6 +684,7 @@ const billingAttach = ({
 	newBillingSubscription,
 	planSchedule,
 	timeout,
+	items,
 }: {
 	productId: string;
 	customerId?: string;
@@ -689,6 +693,7 @@ const billingAttach = ({
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
+	items?: ProductItem[];
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -703,6 +708,7 @@ const billingAttach = ({
 				newBillingSubscription,
 				planSchedule,
 				timeout,
+				items,
 			},
 		],
 	});
@@ -1325,6 +1331,7 @@ export async function initScenario({
 					options: action.options,
 					new_billing_subscription: action.newBillingSubscription,
 					plan_schedule: action.planSchedule,
+					items: action.items,
 				},
 				{ timeout: action.timeout },
 			);

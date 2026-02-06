@@ -21,10 +21,6 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 
 	new_billing_subscription: z.boolean().optional(),
 
-	// Plan schedule override
-	// - undefined: use default behavior (upgrade=immediate, downgrade=end_of_cycle)
-	// - "immediate": force immediate activation (prorated credit on downgrade)
-	// - "end_of_cycle": schedule for next billing cycle
 	plan_schedule: PlanTimingSchema.optional(),
 });
 

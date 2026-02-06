@@ -8,6 +8,51 @@ Quick reference for common mistakes. Each gotcha follows the format:
 
 ## Setup & Initialization
 
+### NEVER Call `initScenario` Twice - Use Single Scenario for Multiple Customers
+
+**CRITICAL:** When testing scenarios with multiple customers, **NEVER** call `initScenario` multiple times. Instead, use a single `initScenario` call and create additional customers using the autumn client directly.
+
+```typescript
+// ❌ WRONG - Calling initScenario twice
+const { autumnV1: autumnA } = await initScenario({
+  customerId: customerIdA,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro] })],
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+const { autumnV1: autumnB } = await initScenario({
+  customerId: customerIdB,
+  setup: [s.customer({ paymentMethod: "success" })],  // DON'T DO THIS!
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+// ✅ RIGHT - Single initScenario, create additional customers manually
+const { autumnV1, ctx } = await initScenario({
+  customerId: customerIdA,
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+  ],
+  actions: [
+    s.billing.attach({ productId: "pro" }),
+    s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
+  ],
+});
+
+// Create second customer using the autumn client
+await autumnV1.customers.create(customerIdB, { ... });
+await autumnV1.attach({
+  customer_id: customerIdB,
+  product_id: pro.id,
+});
+```
+
+**Why?**
+- `initScenario` creates test context, Stripe test clocks, and products with prefixes
+- Calling it twice can cause conflicts with product IDs, test clocks, and org state
+- The second call may try to recreate products that already exist
+- Use the autumn client from the first `initScenario` to manage additional customers
+
 ### Payment Method Required for Paid Features
 ```typescript
 // WRONG
