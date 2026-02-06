@@ -31,7 +31,10 @@ export const expireCustomerProductAndActivateDefault = async ({
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-}): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
+}): Promise<{
+	updates: Partial<InsertCustomerProduct>;
+	activatedDefault?: boolean;
+}> => {
 	const { db, org, env, logger } = ctx;
 
 	// 1. Expire the product
@@ -83,12 +86,13 @@ export const expireCustomerProductAndActivateDefault = async ({
 		internalEntityId: customerProduct.internal_entity_id ?? undefined,
 	});
 
+	let activatedDefault = false;
 	if (!hasActiveInGroup) {
 		logger.info(
 			`No active product in group "${customerProduct.product.group}", activating default`,
 		);
 
-		await activateDefaultProduct({
+		activatedDefault = await activateDefaultProduct({
 			ctx,
 			productGroup: customerProduct.product.group,
 			fullCus: fullCustomer,
@@ -96,5 +100,5 @@ export const expireCustomerProductAndActivateDefault = async ({
 		});
 	}
 
-	return { updates };
+	return { updates, activatedDefault };
 };
