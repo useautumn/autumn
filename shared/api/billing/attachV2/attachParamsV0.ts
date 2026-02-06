@@ -1,9 +1,10 @@
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { BillingBehaviorSchema } from "../common/billingBehavior.js";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 
-export const RedirectModeSchema = z.enum(["always", "if_required"]);
+export const RedirectModeSchema = z.enum(["always", "if_required", "never"]);
 export type RedirectMode = z.infer<typeof RedirectModeSchema>;
 
 export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
@@ -22,6 +23,11 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	new_billing_subscription: z.boolean().optional(),
 
 	plan_schedule: PlanTimingSchema.optional(),
+
+	// Billing behavior for attach operations (product transitions):
+	// - 'prorate_immediately' (default): Invoice line items are charged immediately
+	// - 'next_cycle_only': Do NOT create any charges due to the attach
+	billing_behavior: BillingBehaviorSchema.optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({

@@ -49,6 +49,7 @@ export async function attach({
 	const autumnBillingPlan = computeAttachPlan({
 		ctx,
 		attachBillingContext: billingContext,
+		params,
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
@@ -58,6 +59,7 @@ export async function attach({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
+		params,
 	});
 
 	// 4. Evaluate Stripe billing plan (handles checkout mode internally)
