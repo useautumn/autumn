@@ -13,6 +13,7 @@ export const handleEventIdempotencyKey = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		idempotencyKey: `track:${body.idempotency_key}`,
+		logger: ctx.logger,
 	});
 
 	// const eventInfo = buildEventInfo(body);

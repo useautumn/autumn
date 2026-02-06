@@ -1,4 +1,4 @@
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@autumn/shared";
 import { getCurrentBillingCycleAnchorMs } from "@/internal/billing/v2/utils/billingContext/getCurrentBillingCycleAnchorMs";
 
 /**

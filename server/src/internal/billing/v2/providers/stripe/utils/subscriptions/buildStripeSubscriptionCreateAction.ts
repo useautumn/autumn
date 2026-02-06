@@ -1,7 +1,7 @@
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@autumn/shared";
 
 export const buildStripeSubscriptionCreateAction = ({
 	ctx,
@@ -20,7 +20,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
-	const isFreeTrialWithCardRequired = trialContext?.cardRequired;
+	const freeTrialNoCardRequired = trialContext?.cardRequired === false;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
@@ -44,7 +44,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		cancel_at: subscriptionCancelAt,
 
-		...(isFreeTrialWithCardRequired && {
+		...(freeTrialNoCardRequired && {
 			trial_settings: {
 				end_behavior: {
 					missing_payment_method: "cancel",

@@ -1,6 +1,6 @@
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
+import type { StripeBillingPlanResult } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 const formatInvoice = (invoice: StripeBillingPlanResult["stripeInvoice"]) => {

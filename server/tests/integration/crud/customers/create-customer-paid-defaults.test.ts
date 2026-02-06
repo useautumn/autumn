@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import {
 	calculateTrialEndMs,
 	expectProductTrialing,
@@ -9,6 +11,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { FreeTrialDuration } from "autumn-js";
 import chalk from "chalk";
@@ -29,10 +32,10 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		trialDays: 14,
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: false, withDefault: true }),
+			s.customer({ testClock: true, withDefault: true }),
 			s.products({ list: [trialDefault] }),
 		],
 		actions: [],
@@ -59,9 +62,28 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		env: ctx.env,
 		subCount: 1,
 	});
+
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId ?? "",
+		numberOfDays: 18,
+		waitForSeconds: 30,
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductNotPresent({
+		customer: customerAfter,
+		productId: trialDefault.id,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer: customerAfter,
+		count: 1,
+		latestTotal: 0,
+	});
 });
 
-test.concurrent(`${chalk.yellowBright("paid-defaults: trial product with prepaid messages")}`, async () => {
+test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`, async () => {
 	const customerId = "paid-defaults-trial-prepaid";
 
 	const prepaidMessagesItem = items.prepaidMessages({

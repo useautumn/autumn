@@ -1,7 +1,7 @@
 import { type FullCusProduct, hasCustomerProductEnded } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
+import { expireAndActivateWithTracking } from "../../../common";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
 /**
@@ -17,8 +17,7 @@ export const expireEndedCustomerProducts = async ({
 	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
 	const { logger } = ctx;
-	const { customerProducts, fullCustomer, stripeSubscription, nowMs } =
-		eventContext;
+	const { customerProducts, stripeSubscription, nowMs } = eventContext;
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
@@ -29,19 +28,13 @@ export const expireEndedCustomerProducts = async ({
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		const { updates } = await customerProductActions.expireAndActivateDefault({
+		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
 			ctx,
-			customerProduct,
-			fullCustomer,
-		});
-
-		expiredCustomerProducts.push(customerProduct);
-
-		trackCustomerProductUpdate({
 			eventContext,
 			customerProduct,
-			updates,
 		});
+
+		expiredCustomerProducts.push(expiredCustomerProduct);
 	}
 
 	// Cache expired products so invoice.created can access them for usage-based billing

@@ -7,6 +7,7 @@ import {
 	isBooleanEntitlement,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
+	transitionConfigsUtils,
 } from "@autumn/shared";
 
 export const initCustomerEntitlementNextResetAt = ({
@@ -25,8 +26,17 @@ export const initCustomerEntitlementNextResetAt = ({
 
 	if (isLifetime || isUnlimited || isBoolean) return null;
 
-	const { resetCycleAnchor, now } = initContext;
+	let { resetCycleAnchor, now, trialEndsAt, transitionConfigs } = initContext;
 	const { startsAt } = initOptions ?? {};
+
+	const transitionConfig = transitionConfigsUtils.find.byFeature({
+		transitionConfigs,
+		feature: entitlement.feature,
+	});
+
+	if (transitionConfig?.reset_after_trial_end && trialEndsAt) {
+		now = trialEndsAt;
+	}
 
 	const nextResetAt = getCycleEnd({
 		anchor: resetCycleAnchor,

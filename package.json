@@ -6,7 +6,8 @@
 			"server",
 			"shared",
 			"vite",
-			"scripts"
+			"scripts",
+			"apps/checkout"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -15,7 +16,10 @@
 			"@sentry/bun": "10.25.0",
 			"@clickhouse/client": "1.11.2",
 			"@date-fns/utc": "2.1.0",
-			"@better-auth/dash": "0.1.6"
+			"@better-auth/dash": "0.1.6",
+			"@orpc/contract": "^1.0.0",
+			"@orpc/client": "^1.0.0",
+			"@orpc/openapi-client": "^1.0.0"
 		}
 	},
 	"overrides": {
@@ -48,7 +52,8 @@
 		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
 		"knip": "knip",
 		"knip:fix": "knip --fix",
-		"knip:fix-all": "knip --fix --allow-remove-files"
+		"knip:fix-all": "knip --fix --allow-remove-files",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@aws-sdk/client-firehose": "^3.975.0",
@@ -70,6 +75,7 @@
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
+		"husky": "^9.1.7",
 		"inquirer": "^12.10.0"
 	}
 }

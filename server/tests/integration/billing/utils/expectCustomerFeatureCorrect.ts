@@ -38,6 +38,7 @@ export const expectCustomerFeatureCorrect = ({
 	balance,
 	usage,
 	resetsAt,
+	toleranceMs = TEN_MINUTES_MS,
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;
@@ -46,6 +47,7 @@ export const expectCustomerFeatureCorrect = ({
 	balance?: number;
 	usage?: number;
 	resetsAt?: number;
+	toleranceMs?: number;
 }) => {
 	if (!providedCustomer && !customerId) {
 		throw new Error("Either customer or customerId must be provided");
@@ -75,6 +77,6 @@ export const expectCustomerFeatureCorrect = ({
 		expect(
 			diff,
 			`resetsAt mismatch for ${featureId}: expected ${formatMs(resetsAt)}, got ${formatMs(actualResetsAt)} `,
-		).toBeLessThanOrEqual(TEN_MINUTES_MS);
+		).toBeLessThanOrEqual(toleranceMs);
 	}
 };

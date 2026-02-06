@@ -1,5 +1,7 @@
+import { cusEntsToAllowance } from "@utils/cusEntUtils";
+import { Decimal } from "decimal.js";
 import { InternalError } from "../../../../api/errors/base/InternalError";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { cusEntsToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity";
 import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
@@ -58,13 +60,16 @@ export const usagePriceToLineItem = ({
 	// 2. Get usage
 	let usage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		usage = cusEntsToPrepaidQuantity({
+		const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
+		const prepaidQuantity = cusEntsToPrepaidQuantity({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
 		});
+		usage = new Decimal(allowance).add(prepaidQuantity).toNumber();
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}
+
 
 	const lineItemContext: LineItemContext = {
 		...context,
@@ -102,5 +107,8 @@ export const usagePriceToLineItem = ({
 
 		shouldProrate,
 		chargeImmediately: options.chargeImmediatelyOverride,
+
+		usage,
+		overage,
 	});
 };

@@ -43,10 +43,9 @@ export const handleStripeSubscriptionDeleted = async ({
 	// Task 3: Void open invoices (if org config enabled)
 	await voidInvoicesForSubscriptionDeleted({ ctx, eventContext });
 
-	// Task 4: Log all customer product updates and deletions
+	// Task 4: Log all customer product updates, deletions, and insertions
 	logCustomerProductUpdates({
 		ctx,
 		eventContext,
-		logPrefix: "[sub.deleted]",
 	});
 };

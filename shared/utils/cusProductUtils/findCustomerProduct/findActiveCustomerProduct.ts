@@ -32,3 +32,27 @@ export const findMainActiveCustomerProductByGroup = ({
 
 	return activeMainCusProduct;
 };
+
+export const findActiveCustomerProductById = ({
+	fullCustomer,
+	productId,
+	internalEntityId,
+}: {
+	fullCustomer: FullCustomer;
+	productId: string;
+	internalEntityId?: string;
+}) => {
+	const cusProducts = fullCustomer.customer_products;
+
+	const activeMainCusProduct = cusProducts.find((customerProduct) => {
+		const { valid } = cp(customerProduct)
+			.activeRecurring()
+			.main()
+			.hasProductId({ productId })
+			.onEntity({ internalEntityId });
+
+		return valid;
+	});
+
+	return activeMainCusProduct;
+};

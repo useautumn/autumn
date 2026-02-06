@@ -1,14 +1,8 @@
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 
-async function ensureStripeProducts({ ctx }: { ctx: AutumnContext }) {
-	await ensureStripeProductsWithEnv({
-		ctx,
-	});
-}
 export async function ensureStripeProductsWithEnv({
 	ctx,
 }: {
@@ -24,10 +18,8 @@ export async function ensureStripeProductsWithEnv({
 	});
 
 	const stripeCli = createStripeCli({ org, env });
-
 	// Fetch updated org data to ensure we have the latest Stripe configuration
 	const products = await stripeCli.products.list({ limit: 100 });
-	const updatedOrg = await OrgService.get({ db, orgId: org.id });
 
 	const batchInit: Promise<void>[] = [];
 	for (const fullProduct of fullProducts) {
@@ -42,10 +34,7 @@ export async function ensureStripeProductsWithEnv({
 
 			try {
 				await initProductInStripe({
-					db,
-					org: updatedOrg,
-					env,
-					logger,
+					ctx,
 					product: fullProduct,
 				});
 

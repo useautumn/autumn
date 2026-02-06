@@ -1,14 +1,12 @@
 import type {
 	BillingBehavior,
+	CancelAction,
 	CreateFreeTrial,
 	FeatureOptions,
 	ProductItem,
 	ProductV2,
+	RefundBehavior,
 } from "@autumn/shared";
-import type {
-	CancelActionValue,
-	RefundBehaviorValue,
-} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
 
 export const getUpdateSubscriptionBody = ({
 	customerId,
@@ -40,9 +38,9 @@ export const getUpdateSubscriptionBody = ({
 	// Custom items - separate from isCustom logic for preview support
 	items?: ProductItem[] | null;
 	// Cancel action fields
-	cancelAction?: CancelActionValue | null;
+	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
-	refundBehavior?: RefundBehaviorValue | null;
+	refundBehavior?: RefundBehavior | null;
 }) => {
 	// For cancel actions, only include cancellation-related fields
 	if (cancelAction) {

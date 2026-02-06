@@ -28,10 +28,12 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - **ALWAYS use `test.concurrent()` for ALL tests** - never use plain `test()`. This enables parallel execution.
 - Use `initScenario` with `s.*` builders
 - Use `product.id` in `s.attach()` (never string literals)
+- Use `product.id` in expectations too (initScenario already prefixes with customerId)
 - Use `Decimal.js` for balance calculations in track tests
 - Unique `customerId` per test
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
 - **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
+- **Set up all prerequisite state in `initScenario` actions** - the test body should only call the single action being tested
 
 **DON'T:**
 - Use plain `test()` - **ALWAYS use `test.concurrent()`**
@@ -41,6 +43,10 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Use raw arithmetic for balance calculations (floating point errors)
 - Use `as unknown as Type` casting - use generic types instead
 - Write manual assertion loops when a utility function exists
+- Use `${product.id}_${customerId}` for productId - just use `product.id` (already prefixed)
+- **Call multiple setup actions in the test body** - put prerequisite attaches/tracks in `initScenario` actions, test body should only call the action being tested
+- **Use prepaid `includedUsage` that's NOT a multiple of `billingUnits`** - Stripe requires integer tier values (e.g., `includedUsage: 50` with `billingUnits: 100` = 0.5, which Stripe rejects)
+- **Use tiered pricing without `"inf"` on the last tier** - Stripe requires the last tier to have `to: "inf"` as a catch-all. Always use: `tiers: [{ to: 500, amount: 10 }, { to: "inf", amount: 5 }]`
 
 ## AutumnInt Response Types
 
@@ -76,6 +82,35 @@ test.concurrent(`${chalk.yellowBright("feature: description")}`, async () => {
 });
 ```
 
+## Test Structure: Scenario vs Action
+
+**Key principle:** Set up all prerequisite state in `initScenario`, test body only calls the action being tested.
+
+```typescript
+// ✅ GOOD - Testing "attach one-time after pro"
+// Pre-existing pro product set up in initScenario actions
+const { autumnV1 } = await initScenario({
+  customerId,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+  actions: [s.attach({ productId: pro.id })],  // Prerequisite state
+});
+
+// Test body only tests the ONE action we care about
+const preview = await autumnV1.billing.previewAttach({ customer_id: customerId, product_id: oneOff.id });
+await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
+// ... verify results
+
+// ❌ BAD - Multiple attaches in test body
+const { autumnV1 } = await initScenario({
+  customerId,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro, oneOff] })],
+  actions: [],  // Empty!
+});
+
+await autumnV1.billing.attach({ customer_id: customerId, product_id: pro.id });  // Should be in initScenario
+await autumnV1.billing.attach({ customer_id: customerId, product_id: oneOff.id });
+```
+
 ## References
 
 Load these on-demand for detailed information:
@@ -85,6 +120,7 @@ Load these on-demand for detailed information:
 - [references/ENTITIES.md](references/ENTITIES.md) - Entity-based testing (multi-tenant, per-entity billing)
 - [references/TRACK-CHECK.md](references/TRACK-CHECK.md) - Track/check endpoint testing, credit systems, Decimal.js
 - [references/EXPECTATIONS.md](references/EXPECTATIONS.md) - All expectation utilities
+- [references/PRORATION.md](references/PRORATION.md) - Proration utilities for mid-cycle upgrade/downgrade testing
 - [references/GOTCHAS.md](references/GOTCHAS.md) - Common pitfalls, debugging, billing edge cases
 - [references/WEBHOOKS.md](references/WEBHOOKS.md) - Outbound webhook testing with Svix Play
 - [references/STRIPE-BEHAVIORS.md](references/STRIPE-BEHAVIORS.md) - Stripe webhook behaviors for consumables, trials, cancellations
@@ -95,6 +131,19 @@ Tests: `server/tests/integration/billing/` organized by feature area.
 
 ## Run Tests
 
+Run a single test file:
 ```bash
-bun test path/to/file.test.ts
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts
 ```
+
+Run a specific test by name pattern:
+```bash
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts -t "test 3"
+```
+
+Run with longer timeout (for slow tests):
+```bash
+bun test server/tests/integration/billing/attach/immediate-switch/immediate-switch-basic.test.ts --timeout 60000
+```
+
+**Note**: Only run one test at a time during development to avoid test clock conflicts.

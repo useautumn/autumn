@@ -51,6 +51,8 @@ export const customerProducts = pgTable(
 		// Optional...
 		customer_id: text("customer_id"),
 		entity_id: text("entity_id"),
+		billing_version: text("billing_version"),
+
 		api_version: numeric({ mode: "number" }),
 		api_semver: text("api_semver"),
 	},

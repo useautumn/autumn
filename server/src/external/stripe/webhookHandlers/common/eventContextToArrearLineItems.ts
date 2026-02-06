@@ -1,9 +1,9 @@
 import type { FullCusEntWithFullCusProduct, LineItem } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@autumn/shared";
 import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
-import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import {
 	type BaseWebhookEventContext,

@@ -3,6 +3,8 @@ import { z } from "zod"; // zod-bird requires zod v3, not zod/v4
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
+import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
+import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
 import { createListEventsPipe } from "./pipes/listEventsPipe.js";
 
 const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
@@ -46,6 +48,9 @@ export const tinybirdPipes = tinybirdClient
 			aggregate: createAggregatePipe(tinybirdClient),
 			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
+			listEventNames: createListEventNamesPipe(tinybirdClient),
+			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
+			/** @deprecated Use listEventsPaginated instead. Kept for backwards compatibility. */
 			listEvents: createListEventsPipe(tinybirdClient),
 		}
 	: null;
@@ -90,6 +95,10 @@ export type {
 	AggregatePipeRow,
 	AggregateSimplePipeParams,
 	AggregateSimplePipeRow,
+	ListEventNamesPipeParams,
+	ListEventNamesPipeRow,
+	ListEventsPaginatedPipeParams,
+	ListEventsPaginatedPipeRow,
 	ListEventsPipeParams,
 	ListEventsPipeRow,
 } from "./pipes/index.js";

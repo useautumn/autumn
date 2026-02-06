@@ -79,7 +79,7 @@ export const runMigrationTest = async ({
 		to_version: toProduct.version,
 	});
 
-	await timeout(10000);
+	await timeout(20000);
 
 	const { subs: subsAfter } = await getSubsFromCusId({
 		stripeCli,

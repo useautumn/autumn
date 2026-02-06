@@ -20,6 +20,20 @@ export {
 	createAggregateSimplePipe,
 } from "./aggregateSimplePipe.js";
 export {
+	createListEventNamesPipe,
+	type ListEventNamesPipeParams,
+	type ListEventNamesPipeRow,
+	listEventNamesPipeParamsSchema,
+	listEventNamesPipeResponseSchema,
+} from "./listEventNamesPipe.js";
+export {
+	createListEventsPaginatedPipe,
+	type ListEventsPaginatedPipeParams,
+	type ListEventsPaginatedPipeRow,
+	listEventsPaginatedPipeParamsSchema,
+	listEventsPaginatedPipeResponseSchema,
+} from "./listEventsPaginatedPipe.js";
+export {
 	createListEventsPipe,
 	type ListEventsPipeParams,
 	type ListEventsPipeRow,

@@ -14,6 +14,7 @@ import {
 	getTinybirdPipes,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
@@ -356,6 +357,8 @@ export const aggregate = async ({
 			propertyKey = params.group_by;
 		}
 
+		validatePropertyPathForJSON({ propertyKey });
+
 		const pipeParams = {
 			org_id: org.id,
 			env,
@@ -375,8 +378,11 @@ export const aggregate = async ({
 
 		const result = await pipes.aggregateGroupable(pipeParams);
 
-		// Extract truncation flag from first row (all rows have the same value)
-		truncated = result.data.length > 0 && result.data[0]._truncated === true;
+		// For external API (enforceGroupLimit), truncated is always false
+		// For internal API, return the actual truncation status from the pipe
+		truncated = params.enforceGroupLimit
+			? false
+			: result.data.length > 0 && result.data[0]._truncated === true;
 
 		formatted = formatGroupableResults({
 			rows: result.data,

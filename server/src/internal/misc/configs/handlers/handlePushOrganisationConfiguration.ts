@@ -12,6 +12,7 @@ import { FeatureService } from "@/internal/features/FeatureService";
 import { createFeature } from "@/internal/features/featureActions/createFeature";
 import { createProduct } from "@/internal/products/handlers/productActions/createProduct";
 import { ProductService } from "@/internal/products/ProductService";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 const OrganisationConfigurationSchema = z.object({
 	features: z.array(CreateFeatureV0ParamsSchema).optional().default([]),
@@ -34,6 +35,8 @@ export const handlePushOrganisationConfiguration = createRoute({
 			orgId: org.id,
 			env,
 		});
+
+		let productsCreated = false;
 
 		await db.transaction(async (tx) => {
 			const txDb = tx as unknown as DrizzleCli;
@@ -86,8 +89,13 @@ export const handlePushOrganisationConfiguration = createRoute({
 						free_trial: apiProduct.free_trial,
 					},
 				});
+				productsCreated = true;
 			}
 		});
+
+		if (productsCreated) {
+			await invalidateProductsCache({ orgId: org.id, env });
+		}
 
 		return c.json({
 			features: body.features,

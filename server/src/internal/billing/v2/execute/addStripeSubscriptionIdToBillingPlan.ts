@@ -1,5 +1,5 @@
 import { cp } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { AutumnBillingPlan } from "@autumn/shared";
 
 /**
  * Adds a Stripe subscription ID to a billing plan.

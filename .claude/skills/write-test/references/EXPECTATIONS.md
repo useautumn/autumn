@@ -80,25 +80,69 @@ expectCustomerInvoiceCorrect({
 
 ## Product State Expectations
 
-### `expectCustomerProducts` (Batch Check - Preferred)
+### Product States Are Mutually Exclusive
 
-Verify multiple product states in a single call. Use this when checking 2+ products.
+**CRITICAL:** `active` and `canceling` are **mutually exclusive** states:
+- **`active`**: Product is active and NOT scheduled for cancellation
+- **`canceling`**: Product is scheduled for cancellation at end of billing cycle (has `canceled_at` set)
+
+A product CANNOT be both `active` and `canceling`. When a downgrade is scheduled:
+- The current product becomes `canceling` (NOT active)
+- The new product becomes `scheduled`
+
+### `expectCustomerProducts` (Batch Check - PREFERRED)
+
+Verify multiple product states in a single call. **Always use this when checking 2+ products.**
 
 ```typescript
 await expectCustomerProducts({
   customer,                    // Or customerId
-  active: [pro.id, addon.id],  // Products that should be active
-  canceling: [premium.id],     // Products that should be canceling
-  scheduled: [free.id],        // Products that should be scheduled
+  active: [pro.id, addon.id],  // Products that are active (NOT canceling)
+  canceling: [premium.id],     // Products scheduled for cancellation
+  scheduled: [free.id],        // Products waiting to become active
   notPresent: [oldProduct.id], // Products that should not exist
 });
 ```
 
 All arrays are optional - only include the states you need to verify.
 
+**Example - scheduled downgrade from Pro to Free with add-on:**
+```typescript
+// ✅ CORRECT - canceling and active are separate
+await expectCustomerProducts({
+  customer,
+  canceling: [pro.id],        // Pro is canceling (NOT active)
+  active: [recurringAddon.id], // Add-on remains active
+  scheduled: [free.id],        // Free is scheduled
+});
+
+// ❌ WRONG - Pro cannot be both active and canceling
+await expectCustomerProducts({
+  customer,
+  active: [pro.id, recurringAddon.id],  // WRONG: pro is canceling, not active
+  canceling: [pro.id],
+  scheduled: [free.id],
+});
+```
+
+**Example - upgrade from pro to premium:**
+```typescript
+// ✅ GOOD - batch check
+await expectCustomerProducts({
+  customer,
+  active: [premium.id],
+  notPresent: [pro.id, free.id],
+});
+
+// ❌ BAD - multiple individual calls (don't do this)
+await expectProductActive({ customer, productId: premium.id });
+await expectProductNotPresent({ customer, productId: pro.id });
+await expectProductNotPresent({ customer, productId: free.id });
+```
+
 ### `expectProductActive`
 
-Verify a single product is active. For multiple products, prefer `expectProducts`.
+Verify a single product is active. **For multiple products, prefer `expectCustomerProducts`.**
 
 ```typescript
 await expectProductActive({
@@ -224,13 +268,19 @@ expectPreviewNextCycleCorrect({
 });
 ```
 
-## Subscription Verification
+## Subscription Verification (CRITICAL)
+
+**ALWAYS verify Stripe subscription state after EVERY `billing.attach()` call!**
+
+This ensures the Stripe subscription state matches Autumn's internal state.
 
 ### `expectSubToBeCorrect`
 
-Deep verification of subscription state in database.
+Deep verification of subscription state in database. **Use for paid products.**
 
 ```typescript
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+
 await expectSubToBeCorrect({
   db: ctx.db,
   customerId,
@@ -245,6 +295,31 @@ await expectSubToBeCorrect({
   },
 });
 ```
+
+### `expectNoStripeSubscription`
+
+Verify customer has no active Stripe subscriptions. **Use for free products OR after downgrading to free.**
+
+```typescript
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+
+await expectNoStripeSubscription({
+  db: ctx.db,
+  customerId,
+  org: ctx.org,
+  env: ctx.env,
+});
+```
+
+### When to Use Which
+
+| Scenario | Utility |
+|----------|---------|
+| Attached paid product | `expectSubToBeCorrect` |
+| Attached free product | `expectNoStripeSubscription` |
+| Upgraded free → paid | `expectSubToBeCorrect` |
+| Downgraded paid → free (after cycle) | `expectNoStripeSubscription` |
+| Scheduled downgrade (before cycle) | `expectSubToBeCorrect` (sub still exists until cycle end) |
 
 ## Complete Example
 
@@ -332,6 +407,30 @@ test.concurrent(`${chalk.yellowBright("trial: full lifecycle")}`, async () => {
     env: ctx.env,
     flags: { checkNotTrialing: true },
   });
+});
+```
+
+## Rollover Expectations
+
+### `expectCustomerRolloverCorrect`
+
+Verify customer feature rollover state.
+
+```typescript
+import { expectCustomerRolloverCorrect, expectNoRollovers } from "@tests/integration/billing/utils/rollover/expectCustomerRolloverCorrect";
+
+// Check rollover balances
+expectCustomerRolloverCorrect({
+  customer,
+  featureId: TestFeature.Messages,
+  expectedRollovers: [{ balance: 150 }],  // Array of expected rollovers
+  totalBalance: 550,                       // Optional: verify total balance
+});
+
+// Verify NO rollovers exist
+expectNoRollovers({
+  customer,
+  featureId: TestFeature.Messages,
 });
 ```
 

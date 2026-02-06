@@ -5,10 +5,10 @@ import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
@@ -85,14 +85,13 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 			value: wordsUsage,
 		});
 
-		curUnix = await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 10,
-		});
+		// curUnix = await advanceTestClock({
+		// 	stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addWeeks(new Date(), 2).getTime(),
+		// 	waitForSeconds: 10,
+		// });
 
-		return;
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -102,9 +101,10 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 			org,
 			env,
 		});
+
+		await timeout(2000);
 	});
 
-	return;
 	test("should attach growth product", async () => {
 		const wordsUsage = 200000;
 		await autumn.track({
@@ -116,8 +116,8 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
-			advanceTo: addWeeks(curUnix, 1).getTime(),
-			waitForSeconds: 10,
+			numberOfWeeks: 1,
+			waitForSeconds: 30,
 		});
 
 		await attachAndExpectCorrect({

@@ -1,4 +1,7 @@
-import type { FullCusProduct } from "@autumn/shared";
+import {
+	customerProductHasActiveStatus,
+	type FullCusProduct,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { CusProductService } from "../../../../customers/cusProducts/CusProductService";
 import { CusEntService } from "../../../../customers/cusProducts/cusEnts/CusEntitlementService";
@@ -37,12 +40,21 @@ export const insertNewCusProducts = async ({
 		data: cusPrices,
 	});
 
-	// 1. Insert rollovers
+	// 1. Upsert rollovers (use upsert to handle carried-over rollovers from plan switches)
+
 	for (const cusEnt of cusEnts) {
-		await RolloverService.insert({
-			db: ctx.db,
-			rows: cusEnt.rollovers,
-			fullCusEnt: cusEnt,
-		});
+		const cusProduct = newCusProducts.find(
+			(cusProduct) => cusProduct.id === cusEnt.customer_product_id,
+		);
+
+		if (!customerProductHasActiveStatus(cusProduct)) continue;
+
+		if (cusEnt.rollovers.length > 0) {
+			await RolloverService.insert({
+				db: ctx.db,
+				rows: cusEnt.rollovers,
+				fullCusEnt: cusEnt,
+			});
+		}
 	}
 };

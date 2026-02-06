@@ -1,0 +1,16 @@
+DESCRIPTION >
+    Materializes event names with counts from events table.
+    Used for listing available event names sorted by popularity.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        count() as event_count
+    FROM events
+    GROUP BY org_id, env, event_name
+
+TYPE materialized
+DATASOURCE event_names_mv

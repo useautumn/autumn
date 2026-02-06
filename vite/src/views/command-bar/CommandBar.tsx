@@ -5,7 +5,7 @@ import {
 	FingerprintIcon,
 	GearIcon,
 } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { AppEnv } from "autumn-js";
 import {
 	CircleUserRoundIcon,
@@ -40,7 +40,7 @@ import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
 import { handleSwitchOrg } from "@/views/main-sidebar/components/OrgDropdown";
-import { handleEnvChange } from "@/views/main-sidebar/EnvDropdown";
+import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 type Customer = z.infer<typeof CustomerSchema>;
 
@@ -76,6 +76,7 @@ const CommandBar = () => {
 
 	const navigate = useNavigate();
 	const env = useEnv();
+	const handleEnvChange = useEnvChange();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
@@ -166,45 +167,46 @@ const CommandBar = () => {
 			enabled: open && debouncedSearch.length > 0 && currentPage === "main",
 		});
 
-	// Search users for impersonation
-	const { data: searchedUsersData, isLoading: searchUsersLoading } = useQuery<{
-		rows: User[];
-	}>({
-		queryKey: ["command-palette-users-search", debouncedSearch],
-		queryFn: async () => {
-			const params = new URLSearchParams();
-			if (debouncedSearch) params.append("search", debouncedSearch);
-			const { data } = await axiosInstance.get(
-				`/admin/users?${params.toString()}`,
-			);
-			return data;
-		},
-		enabled:
-			open &&
-			debouncedSearch.length > 0 &&
-			currentPage === "impersonate" &&
-			isAdmin,
+	// Search orgs and users for impersonation (concurrent requests)
+	const impersonateEnabled =
+		open &&
+		debouncedSearch.length > 0 &&
+		currentPage === "impersonate" &&
+		isAdmin;
+
+	const [orgsQuery, usersQuery] = useQueries({
+		queries: [
+			{
+				queryKey: ["command-palette-orgs-search", debouncedSearch],
+				queryFn: async () => {
+					const params = new URLSearchParams();
+					if (debouncedSearch) params.append("search", debouncedSearch);
+					const { data } = await axiosInstance.get<{ rows: Org[] }>(
+						`/admin/orgs?${params.toString()}`,
+					);
+					return data;
+				},
+				enabled: impersonateEnabled,
+			},
+			{
+				queryKey: ["command-palette-users-search", debouncedSearch],
+				queryFn: async () => {
+					const params = new URLSearchParams();
+					if (debouncedSearch) params.append("search", debouncedSearch);
+					const { data } = await axiosInstance.get<{ rows: User[] }>(
+						`/admin/users?${params.toString()}`,
+					);
+					return data;
+				},
+				enabled: impersonateEnabled,
+			},
+		],
 	});
 
-	// Search orgs for impersonation
-	const { data: searchedOrgsData, isLoading: searchOrgsLoading } = useQuery<{
-		rows: Org[];
-	}>({
-		queryKey: ["command-palette-orgs-search", debouncedSearch],
-		queryFn: async () => {
-			const params = new URLSearchParams();
-			if (debouncedSearch) params.append("search", debouncedSearch);
-			const { data } = await axiosInstance.get(
-				`/admin/orgs?${params.toString()}`,
-			);
-			return data;
-		},
-		enabled:
-			open &&
-			debouncedSearch.length > 0 &&
-			currentPage === "impersonate" &&
-			isAdmin,
-	});
+	const searchedOrgsData = orgsQuery.data;
+	const searchOrgsLoading = orgsQuery.isLoading;
+	const searchedUsersData = usersQuery.data;
+	const searchUsersLoading = usersQuery.isLoading;
 
 	// Initialize hotkeys (only active when command bar is open)
 	useCommandBarHotkeys({
@@ -310,7 +312,7 @@ const CommandBar = () => {
 				return { type: "org" as const, data: org, score };
 			});
 
-			return [...userResults, ...orgResults]
+			return [...orgResults, ...userResults]
 				.sort((a, b) => a.score - b.score)
 				.slice(0, 15);
 		}
@@ -498,10 +500,40 @@ const CommandBar = () => {
 		const userResults = sortedResults.filter((r) => r.type === "user");
 		const orgResults = sortedResults.filter((r) => r.type === "org");
 
+		// Wait for orgs to load before showing anything so first org gets auto-selected
+		const waitingForOrgs = showResults && searchOrgsLoading;
+
 		return (
 			<>
-				{showResults && (
+				{showResults && !waitingForOrgs && (
 					<>
+						{orgResults.length > 0 && (
+							<CommandGroup heading="Organizations" className="p-1.5">
+								{orgResults.map((result) => {
+									const org = result.data as Org;
+									const firstUser = org.users?.[0];
+									if (!firstUser) return null;
+
+									return (
+										<CommandRow
+											key={`org-${org.id}`}
+											icon={<AtIcon />}
+											title={org.name}
+											subtext={org.slug}
+											onSelect={async () => {
+												try {
+													await impersonateUser(firstUser.id);
+													closeDialog();
+												} catch (error) {
+													console.error("Failed to impersonate user:", error);
+												}
+											}}
+										/>
+									);
+								})}
+							</CommandGroup>
+						)}
+
 						{userResults.length > 0 && (
 							<CommandGroup heading="Users" className="p-1.5">
 								{userResults.map((result) => {
@@ -520,33 +552,6 @@ const CommandBar = () => {
 												try {
 													closeDialog();
 													await impersonateUser(user.id);
-												} catch (error) {
-													console.error("Failed to impersonate user:", error);
-												}
-											}}
-										/>
-									);
-								})}
-							</CommandGroup>
-						)}
-
-						{orgResults.length > 0 && (
-							<CommandGroup heading="Organizations" className="p-1.5">
-								{orgResults.map((result) => {
-									const org = result.data as Org;
-									const firstUser = org.users?.[0];
-									if (!firstUser) return null;
-
-									return (
-										<CommandRow
-											key={`org-${org.id}`}
-											icon={<AtIcon />}
-											title={org.name}
-											subtext={org.slug}
-											onSelect={async () => {
-												try {
-													await impersonateUser(firstUser.id);
-													closeDialog();
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}

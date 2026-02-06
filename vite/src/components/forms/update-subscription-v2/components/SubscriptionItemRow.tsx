@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Tooltip,
@@ -32,7 +33,7 @@ import { StatusBadge } from "./StatusBadge";
 interface SubscriptionItemRowProps {
 	item: ProductItem;
 	edits?: ItemEdit[];
-	form?: UseUpdateSubscriptionForm;
+	form?: UseUpdateSubscriptionForm | UseAttachForm;
 	featureId?: string;
 	prepaidQuantity?: number | null;
 	isDeleted?: boolean;

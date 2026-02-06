@@ -1,3 +1,4 @@
+import { InternalError } from "@api/errors/base/InternalError.js";
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
 import type {
 	Entitlement,
@@ -20,19 +21,39 @@ export const entToPrice = ({
 	);
 };
 
-export const priceToEnt = ({
+export function priceToEnt(params: {
+	price: Price;
+	entitlements: EntitlementWithFeature[];
+	errorOnNotFound: true;
+}): EntitlementWithFeature;
+export function priceToEnt(params: {
+	price: Price;
+	entitlements: EntitlementWithFeature[];
+	errorOnNotFound?: false;
+}): EntitlementWithFeature | undefined;
+export function priceToEnt({
 	price,
 	entitlements,
+	errorOnNotFound,
 }: {
 	price: Price;
 	entitlements: EntitlementWithFeature[];
-}) => {
-	return entitlements.find(
+	errorOnNotFound?: boolean;
+}): EntitlementWithFeature | undefined {
+	const entitlement = entitlements.find(
 		(ent) =>
 			ent.id === price.entitlement_id &&
 			ent.internal_product_id === price.internal_product_id,
 	);
-};
+
+	if (!entitlement && errorOnNotFound) {
+		throw new InternalError({
+			message: `Entitlement not found for price ${price.id}`,
+		});
+	}
+
+	return entitlement;
+}
 
 export const entToOptions = ({
 	ent,

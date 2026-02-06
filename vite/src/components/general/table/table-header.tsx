@@ -112,13 +112,12 @@ export function TableHeader({
 					)}
 					{headerGroup.headers.map((header, index, arr) => {
 						const isLast = index === arr.length - 1;
-						const headerStyle = flexibleTableColumns
-							? {
-									width: `${header.getSize()}px`,
-									maxWidth: `${header.getSize()}px`,
-									minWidth: `${header.getSize()}px`,
-								}
-							: { width: `${header.getSize()}px` };
+					const headerStyle = flexibleTableColumns
+						? {
+								width: `${header.getSize()}px`,
+								maxWidth: `${header.getSize()}px`,
+							}
+						: { width: `${header.getSize()}px` };
 						return (
 							<TableHead
 								className={cn(

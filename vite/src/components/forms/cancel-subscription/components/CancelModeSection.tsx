@@ -1,4 +1,4 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, cp } from "@autumn/shared";
 import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
@@ -14,7 +14,11 @@ export function CancelModeSection() {
 		customerProduct.subscription_ids &&
 		customerProduct.subscription_ids.length > 0;
 
-	const canChooseCancelMode = !isScheduled && !isDefault && !!hasSubscription;
+	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
+	const isFreeDefault = isDefault && isFreeOrOneOff;
+
+	const canChooseCancelMode =
+		!isScheduled && !isFreeDefault && !!hasSubscription;
 
 	if (!canChooseCancelMode) return null;
 
