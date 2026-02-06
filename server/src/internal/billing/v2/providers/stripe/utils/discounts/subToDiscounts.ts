@@ -1,11 +1,11 @@
-import { notNullish, type ResolvedStripeCoupon } from "@autumn/shared";
+import { notNullish, type StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 
 export const subToDiscounts = ({
 	sub,
 }: {
 	sub?: Stripe.Subscription;
-}): ResolvedStripeCoupon[] => {
+}): StripeDiscountWithCoupon[] => {
 	if (!sub) return [];
 
 	const discounts = sub.discounts
@@ -16,7 +16,7 @@ export const subToDiscounts = ({
 			const coupon = discount.source?.coupon;
 			if (!coupon || typeof coupon === "string") return null;
 
-			return discount as ResolvedStripeCoupon;
+			return discount as StripeDiscountWithCoupon;
 		})
 		.filter(notNullish);
 

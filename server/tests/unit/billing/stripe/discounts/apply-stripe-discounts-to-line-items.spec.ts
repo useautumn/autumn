@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { LineItem, ResolvedStripeCoupon } from "@autumn/shared";
+import type { LineItem, StripeDiscountWithCoupon } from "@autumn/shared";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/db/lineItems";
 import chalk from "chalk";
@@ -30,7 +30,7 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 
 		test("empty discounts returns unchanged line items", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 100 })];
-			const discountList: ResolvedStripeCoupon[] = [];
+			const discountList: StripeDiscountWithCoupon[] = [];
 
 			const result = applyStripeDiscountsToLineItems({
 				lineItems,

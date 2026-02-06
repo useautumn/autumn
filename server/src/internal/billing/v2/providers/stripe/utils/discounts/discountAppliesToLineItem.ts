@@ -1,4 +1,4 @@
-import type { LineItem, ResolvedStripeCoupon } from "@autumn/shared";
+import type { LineItem, StripeDiscountWithCoupon } from "@autumn/shared";
 
 /**
  * Checks if a discount applies to a specific line item based on applies_to.products
@@ -7,7 +7,7 @@ export const discountAppliesToLineItem = ({
 	discount,
 	lineItem,
 }: {
-	discount: ResolvedStripeCoupon;
+	discount: StripeDiscountWithCoupon;
 	lineItem: LineItem;
 }): boolean => {
 	// Discounts only apply to charges, not refunds

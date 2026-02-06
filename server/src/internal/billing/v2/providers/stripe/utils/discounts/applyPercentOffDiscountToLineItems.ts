@@ -1,7 +1,7 @@
 import type {
 	LineItem,
 	LineItemDiscount,
-	ResolvedStripeCoupon,
+	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
@@ -16,7 +16,7 @@ export const applyPercentOffDiscountToLineItems = ({
 	discount,
 }: {
 	lineItems: LineItem[];
-	discount: ResolvedStripeCoupon;
+	discount: StripeDiscountWithCoupon;
 }): LineItem[] => {
 	const coupon = discount.source.coupon;
 	const percentOff = coupon.percent_off;

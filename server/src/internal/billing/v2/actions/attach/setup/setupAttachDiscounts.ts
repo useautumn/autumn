@@ -1,7 +1,7 @@
 import type {
 	AttachParamsV0,
 	FullCustomer,
-	ResolvedStripeCoupon,
+	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -17,8 +17,8 @@ export const setupAttachDiscounts = async ({
 	ctx: AutumnContext;
 	params: AttachParamsV0;
 	fullCustomer: FullCustomer;
-	stripeDiscounts?: ResolvedStripeCoupon[];
-}): Promise<ResolvedStripeCoupon[] | undefined> => {
+	stripeDiscounts?: StripeDiscountWithCoupon[];
+}): Promise<StripeDiscountWithCoupon[] | undefined> => {
 	if (!params.discounts?.length) {
 		return stripeDiscounts;
 	}
