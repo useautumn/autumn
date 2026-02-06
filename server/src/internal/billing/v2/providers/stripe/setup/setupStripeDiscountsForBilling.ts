@@ -1,4 +1,4 @@
-import type { ResolvedStripeCoupon } from "@autumn/shared";
+import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type {
 	StripeCustomerWithDiscount,
 	StripeSubscriptionWithDiscounts,
@@ -21,7 +21,7 @@ export const setupStripeDiscountsForBilling = ({
 }: {
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer: StripeCustomerWithDiscount;
-}): ResolvedStripeCoupon[] => {
+}): StripeDiscountWithCoupon[] => {
 	const subscriptionDiscounts = subToDiscounts({ sub: stripeSubscription });
 
 	if (subscriptionDiscounts.length > 0) {
@@ -35,5 +35,5 @@ export const setupStripeDiscountsForBilling = ({
 	if (!coupon || typeof coupon === "string") return [];
 
 	// Customer discount already has source.coupon structure, return as-is
-	return [customerDiscount as ResolvedStripeCoupon];
+	return [customerDiscount as StripeDiscountWithCoupon];
 };

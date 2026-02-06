@@ -1,4 +1,4 @@
-import type { ResolvedStripeCoupon } from "@autumn/shared";
+import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -13,7 +13,7 @@ const percentOff = ({
 	percentOff: number;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): ResolvedStripeCoupon => ({
+}): StripeDiscountWithCoupon => ({
 	source: {
 		coupon: buildCoupon({
 			couponId,
@@ -31,7 +31,7 @@ const tenPercentOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	percentOff({ percentOff: 10, appliesToProducts, couponId });
 
 const twentyPercentOff = ({
@@ -40,7 +40,7 @@ const twentyPercentOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	percentOff({ percentOff: 20, appliesToProducts, couponId });
 
 const fiftyPercentOff = ({
@@ -49,7 +49,7 @@ const fiftyPercentOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	percentOff({ percentOff: 50, appliesToProducts, couponId });
 
 const hundredPercentOff = ({
@@ -58,7 +58,7 @@ const hundredPercentOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	percentOff({ percentOff: 100, appliesToProducts, couponId });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -75,7 +75,7 @@ const amountOff = ({
 	currency?: string;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): ResolvedStripeCoupon => ({
+}): StripeDiscountWithCoupon => ({
 	source: {
 		coupon: buildCoupon({
 			couponId,
@@ -93,7 +93,7 @@ const fiveDollarsOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	amountOff({ amountOffCents: 500, appliesToProducts, couponId });
 
 const tenDollarsOff = ({
@@ -102,7 +102,7 @@ const tenDollarsOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	amountOff({ amountOffCents: 1000, appliesToProducts, couponId });
 
 const twentyDollarsOff = ({
@@ -111,7 +111,7 @@ const twentyDollarsOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	amountOff({ amountOffCents: 2000, appliesToProducts, couponId });
 
 const fiftyDollarsOff = ({
@@ -120,7 +120,7 @@ const fiftyDollarsOff = ({
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): ResolvedStripeCoupon =>
+} = {}): StripeDiscountWithCoupon =>
 	amountOff({ amountOffCents: 5000, appliesToProducts, couponId });
 
 // ═══════════════════════════════════════════════════════════════════

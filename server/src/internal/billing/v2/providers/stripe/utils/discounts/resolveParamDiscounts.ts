@@ -2,7 +2,7 @@ import {
 	type AttachDiscount,
 	ErrCode,
 	RecaseError,
-	type ResolvedStripeCoupon,
+	type StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
@@ -16,7 +16,7 @@ export const resolveParamDiscounts = async ({
 }: {
 	stripeCli: Stripe;
 	discounts: AttachDiscount[];
-}): Promise<ResolvedStripeCoupon[]> => {
+}): Promise<StripeDiscountWithCoupon[]> => {
 	const resolved = await Promise.all(
 		discounts.map((discount) => {
 			if ("reward_id" in discount) {
@@ -45,7 +45,7 @@ const resolveCoupon = async ({
 }: {
 	stripeCli: Stripe;
 	couponId: string;
-}): Promise<ResolvedStripeCoupon> => {
+}): Promise<StripeDiscountWithCoupon> => {
 	try {
 		const coupon = await stripeCli.coupons.retrieve(couponId);
 
@@ -75,7 +75,7 @@ const resolvePromotionCode = async ({
 }: {
 	stripeCli: Stripe;
 	code: string;
-}): Promise<ResolvedStripeCoupon> => {
+}): Promise<StripeDiscountWithCoupon> => {
 	const promos = await stripeCli.promotionCodes.list({
 		code,
 		active: true,
