@@ -1,6 +1,9 @@
-import { type BillingResponse, stripeToAtmnAmount } from "@autumn/shared";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
+import type { BillingContext, BillingResult } from "@autumn/shared";
+import {
+	type BillingResponse,
+	checkoutToUrl,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 
 export const billingResultToResponse = ({
 	billingContext,
@@ -14,6 +17,17 @@ export const billingResultToResponse = ({
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 
 	const stripeInvoice = billingResult.stripe.stripeInvoice;
+	const stripeCheckoutSession = billingResult.stripe.stripeCheckoutSession;
+	const autumnCheckout = billingResult.autumn?.checkout;
+
+	// Autumn checkout URL takes priority, then Stripe checkout session, then invoice hosted URL
+	const paymentUrl = autumnCheckout
+		? checkoutToUrl({ checkoutId: autumnCheckout.id })
+		: stripeCheckoutSession?.url
+			? stripeCheckoutSession.url
+			: stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
+				? stripeInvoice.hosted_invoice_url
+				: null;
 
 	return {
 		customer_id: customerId,
@@ -30,11 +44,7 @@ export const billingResultToResponse = ({
 					hosted_invoice_url: stripeInvoice.hosted_invoice_url ?? null,
 				}
 			: undefined,
-		payment_url:
-			stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
-				? stripeInvoice.hosted_invoice_url
-				: null,
-
+		payment_url: paymentUrl,
 		required_action: billingResult.stripe.requiredAction,
 	} satisfies BillingResponse;
 };

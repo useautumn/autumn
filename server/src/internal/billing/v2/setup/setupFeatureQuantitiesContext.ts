@@ -1,11 +1,12 @@
 import {
+	type BillingContextOverride,
+	type BillingParamsBase,
 	cusProductToConvertedFeatureOptions,
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
 	isPrepaidPrice,
-	priceToFeature,
-	type UpdateSubscriptionV0Params,
+	priceToEnt,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAutumnUtils/paramsToFeatureOptions";
@@ -15,24 +16,39 @@ import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAut
  * For each prepaid price, uses new quantity from params or falls back to existing subscription.
  */
 export const setupFeatureQuantitiesContext = ({
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
 	ctx,
 	featureQuantitiesParams,
 	fullProduct,
 	currentCustomerProduct,
+	initializeUndefinedQuantities = false,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	featureQuantitiesParams: UpdateSubscriptionV0Params;
+	featureQuantitiesParams: BillingParamsBase;
 	fullProduct: FullProduct;
 	currentCustomerProduct?: FullCusProduct;
+	initializeUndefinedQuantities?: boolean;
+	contextOverride?: BillingContextOverride;
 }): FeatureOptions[] => {
+	if (contextOverride.featureQuantities) {
+		return contextOverride.featureQuantities;
+	}
+
 	const options: FeatureOptions[] = [];
 
 	for (const price of fullProduct.prices) {
 		if (!isPrepaidPrice(price)) continue;
 
-		const feature = priceToFeature({
+		// const feature = priceToFeature({
+		// 	price,
+		// 	features: ctx.features,
+		// 	errorOnNotFound: true,
+		// });
+
+		const entitlement = priceToEnt({
 			price,
-			features: ctx.features,
+			entitlements: fullProduct.entitlements,
 			errorOnNotFound: true,
 		});
 
@@ -40,14 +56,14 @@ export const setupFeatureQuantitiesContext = ({
 		const newFeatureQuantity = paramsToFeatureOptions({
 			params: featureQuantitiesParams,
 			price,
-			feature,
+			entitlement,
 		});
 
 		// Get current feature quantity from existing subscription
 		const currentFeatureQuantity = currentCustomerProduct
 			? cusProductToConvertedFeatureOptions({
 					cusProduct: currentCustomerProduct,
-					feature,
+					entitlement,
 					newPrice: price,
 				})
 			: undefined;
@@ -57,6 +73,15 @@ export const setupFeatureQuantitiesContext = ({
 
 		if (featureQuantity) {
 			options.push(featureQuantity);
+			continue;
+		}
+
+		if (initializeUndefinedQuantities) {
+			options.push({
+				feature_id: entitlement.feature.id,
+				internal_feature_id: entitlement.feature.internal_id,
+				quantity: 0,
+			});
 		}
 	}
 

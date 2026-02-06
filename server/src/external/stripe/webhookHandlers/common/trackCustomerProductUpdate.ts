@@ -82,3 +82,30 @@ export const trackCustomerProductDeletion = ({
 		fullCustomer.customer_products.splice(fullCustomerIdx, 1);
 	}
 };
+
+/**
+ * Tracks a customer product insertion for subscription event workflows.
+ * - Adds to insertedCustomerProducts list for logging/audit
+ * - Adds to customerProducts array in place so subsequent tasks see the change
+ * - Note: fullCustomer.customer_products should already be updated by the action
+ */
+export const trackCustomerProductInsertion = ({
+	eventContext,
+	customerProduct,
+}: {
+	eventContext:
+		| StripeSubscriptionDeletedContext
+		| StripeSubscriptionUpdatedContext;
+	customerProduct: FullCusProduct;
+}): void => {
+	const { customerProducts, insertedCustomerProducts } = eventContext;
+
+	// Track the insertion for logging
+	insertedCustomerProducts.push(customerProduct);
+
+	// Add to customerProducts array if not already present
+	const exists = customerProducts.some((cp) => cp.id === customerProduct.id);
+	if (!exists) {
+		customerProducts.push(customerProduct);
+	}
+};

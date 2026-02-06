@@ -204,7 +204,6 @@ export function CustomerFeatureUsageTable() {
 							{hasMeteredBalances && (
 								<CustomerBalanceTable
 									allEnts={meteredEnts}
-									filteredCustomerProducts={filteredCustomerProducts}
 									entityId={entityId ?? null}
 									aggregatedMap={aggregatedMap}
 									isLoading={isLoading}

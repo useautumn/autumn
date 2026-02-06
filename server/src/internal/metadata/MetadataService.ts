@@ -57,4 +57,22 @@ export class MetadataService {
 	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
 		await db.delete(metadata).where(eq(metadata.id, id));
 	}
+
+	static async update({
+		db,
+		id,
+		updates,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		updates: Partial<MetadataInsert>;
+	}) {
+		const updatedMetadata = await db
+			.update(metadata)
+			.set(updates)
+			.where(eq(metadata.id, id))
+			.returning();
+
+		return updatedMetadata[0] as Metadata | undefined;
+	}
 }

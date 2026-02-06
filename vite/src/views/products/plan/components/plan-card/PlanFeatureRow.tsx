@@ -143,6 +143,15 @@ export const PlanFeatureRow = ({
 						},
 					]
 				: []),
+
+			...(item.price_config?.stripe_prepaid_price_v2_id
+				? [
+						{
+							key: "Stripe Prepaid Price V2 ID",
+							value: item.price_config?.stripe_prepaid_price_v2_id || "N/A",
+						},
+					]
+				: []),
 		];
 	};
 

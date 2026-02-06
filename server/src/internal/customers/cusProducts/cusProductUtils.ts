@@ -1,14 +1,12 @@
 import {
 	ACTIVE_STATUSES,
-	AttachScenario,
-	CusProductStatus,
+	type CusProductStatus,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
@@ -18,7 +16,6 @@ import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handl
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
-import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 
 export const getFreeDefaultProductByGroup = async ({
 	ctx,
@@ -110,50 +107,6 @@ export const activateDefaultProduct = async ({
 	});
 
 	return true;
-};
-
-const activateFutureProduct = async ({
-	ctx,
-	cusProduct,
-}: {
-	ctx: AutumnContext;
-	cusProduct: FullCusProduct;
-}) => {
-	const { db, org, env } = ctx;
-
-	const cusProducts = await CusProductService.list({
-		db,
-		internalCustomerId: cusProduct.internal_customer_id,
-		inStatuses: [CusProductStatus.Scheduled],
-	});
-
-	const { curScheduledProduct: futureProduct } = getExistingCusProducts({
-		product: cusProduct.product,
-		cusProducts,
-		internalEntityId: cusProduct.internal_entity_id,
-	});
-
-	if (!futureProduct) {
-		return false;
-	}
-
-	await CusProductService.update({
-		db,
-		cusProductId: futureProduct.id,
-		updates: { status: CusProductStatus.Active },
-	});
-
-	await addProductsUpdatedWebhookTask({
-		ctx,
-		internalCustomerId: cusProduct.internal_customer_id,
-		org,
-		env,
-		customerId: null,
-		scenario: AttachScenario.New,
-		cusProduct: futureProduct,
-	});
-
-	return futureProduct;
 };
 
 export const searchCusProducts = ({

@@ -15,6 +15,7 @@ import { createFeature } from "@/internal/features/featureActions/createFeature.
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/products/handlers/productActions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { buildPreviewOrgSlug } from "./handleSetupPreviewOrg.js";
 
 const SyncPreviewPricingSchema = z.object({
@@ -99,23 +100,34 @@ export const handleSyncPreviewPricing = createRoute({
 			features: [] as Awaited<ReturnType<typeof FeatureService.list>>,
 		};
 
-		// Create features
-		await Promise.all(
-			body.features.map((apiFeature) => {
-				const dbFeature = apiFeatureToDbFeature({ apiFeature });
-				return createFeature({
-					ctx: previewCtx,
-					data: {
-						id: dbFeature.id,
-						name: dbFeature.name,
-						type: dbFeature.type,
-						config: dbFeature.config,
-						event_names: dbFeature.event_names,
-					},
-					skipGenerateDisplay: true,
-				});
-			}),
-		);
+		// Deduplicate features by ID (keep first occurrence)
+		const seenFeatureIds = new Set<string>();
+		const uniqueFeatures = body.features.filter((f) => {
+			if (seenFeatureIds.has(f.id)) {
+				ctx.logger.warn(
+					`[Preview Sync] Duplicate feature ID found: ${f.id}, skipping...`,
+				);
+				return false;
+			}
+			seenFeatureIds.add(f.id);
+			return true;
+		});
+
+		// Create features sequentially to avoid race conditions
+		for (const apiFeature of uniqueFeatures) {
+			const dbFeature = apiFeatureToDbFeature({ apiFeature });
+			await createFeature({
+				ctx: previewCtx,
+				data: {
+					id: dbFeature.id,
+					name: dbFeature.name,
+					type: dbFeature.type,
+					config: dbFeature.config,
+					event_names: dbFeature.event_names,
+				},
+				skipGenerateDisplay: true,
+			});
+		}
 
 		// Get updated features for product creation
 		const updatedFeatures = await FeatureService.list({
@@ -144,6 +156,11 @@ export const handleSyncPreviewPricing = createRoute({
 				}),
 			),
 		);
+
+		await invalidateProductsCache({
+			orgId: previewOrg.id,
+			env: AppEnv.Sandbox,
+		});
 
 		ctx.logger.debug(
 			`[Preview Sync] Summary: ${body.features.length} features, ${body.products.length} products`,

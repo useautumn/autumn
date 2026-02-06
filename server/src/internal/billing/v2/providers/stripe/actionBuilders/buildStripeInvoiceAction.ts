@@ -1,5 +1,5 @@
 import type { LineItem } from "@autumn/shared";
-import type { StripeInvoiceAction } from "../../../types/billingPlan";
+import type { StripeInvoiceAction } from "@autumn/shared";
 import { lineItemsToInvoiceAddLinesParams } from "../utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 
 /**

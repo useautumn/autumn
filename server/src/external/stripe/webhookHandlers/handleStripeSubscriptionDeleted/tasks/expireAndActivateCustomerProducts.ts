@@ -1,16 +1,15 @@
 import {
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
-	isCustomerProductFree,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductPaid,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { deleteScheduledCustomerProduct } from "@/internal/customers/cusProducts/actions/deleteScheduledCustomerProduct";
 import {
+	expireAndActivateWithTracking,
 	trackCustomerProductDeletion,
-	trackCustomerProductUpdate,
 } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
@@ -46,59 +45,36 @@ export const expireAndActivateCustomerProducts = async ({
 
 		if (!onStripeSubscription) continue;
 
-		// 2. Expire and activate default product if needed
-		const { updates } = await customerProductActions.expireAndActivateDefault({
+		// 2. Expire and activate free successor (with tracking)
+		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
 			ctx,
-			customerProduct,
-			fullCustomer,
-		});
-
-		expiredCustomerProducts.push(customerProduct);
-
-		trackCustomerProductUpdate({
 			eventContext,
 			customerProduct,
-			updates,
 		});
 
-		// Find scheduled main product in the same group
+		expiredCustomerProducts.push(expiredCustomerProduct);
+
+		// 3. Delete paid scheduled customer product for this group if it exists...
 		const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
 			fullCustomer,
 			productGroup: customerProduct.product.group,
 			internalEntityId: customerProduct.internal_entity_id ?? undefined,
 		});
 
-		if (scheduledCustomerProduct) {
-			const scheduledIsFreeCustomerProduct = isCustomerProductFree(
-				scheduledCustomerProduct,
-			);
-			const scheduledIsPaidCustomerProduct = isCustomerProductPaid(
-				scheduledCustomerProduct,
-			);
+		if (
+			scheduledCustomerProduct &&
+			isCustomerProductPaid(scheduledCustomerProduct)
+		) {
+			await deleteScheduledCustomerProduct({
+				ctx,
+				customerProduct: scheduledCustomerProduct,
+				fullCustomer,
+			});
 
-			if (scheduledIsFreeCustomerProduct) {
-				const { updates: activateScheduledUpdates } =
-					await customerProductActions.activateScheduled({
-						ctx,
-						customerProduct: scheduledCustomerProduct,
-						fullCustomer,
-					});
-
-				trackCustomerProductUpdate({
-					eventContext,
-					customerProduct: scheduledCustomerProduct,
-					updates: activateScheduledUpdates,
-				});
-			} else if (scheduledIsPaidCustomerProduct) {
-				await CusProductService.delete({
-					db: ctx.db,
-					cusProductId: scheduledCustomerProduct.id,
-				});
-				trackCustomerProductDeletion({
-					eventContext,
-					customerProduct: scheduledCustomerProduct,
-				});
-			}
+			trackCustomerProductDeletion({
+				eventContext,
+				customerProduct: scheduledCustomerProduct,
+			});
 		}
 	}
 

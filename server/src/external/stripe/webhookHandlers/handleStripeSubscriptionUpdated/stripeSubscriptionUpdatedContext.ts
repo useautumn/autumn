@@ -33,4 +33,6 @@ export interface StripeSubscriptionUpdatedContext {
 	}[];
 	/** Tracks all deletions made to customer products during this handler */
 	deletedCustomerProducts: FullCusProduct[];
+	/** Tracks all insertions (new customer products created) during this handler */
+	insertedCustomerProducts: FullCusProduct[];
 }

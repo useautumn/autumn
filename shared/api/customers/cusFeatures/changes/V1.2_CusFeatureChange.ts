@@ -160,7 +160,18 @@ const toV3BalanceParams = ({
 		? new Decimal(input.max_purchase).add(includedUsage).toNumber()
 		: undefined;
 
-	return { includedUsage, balance, usage, overageAllowed, usageLimit };
+	// 6. Expires at
+	const expiresAt =
+		"expires_at" in input ? (input as ApiBalanceBreakdown).expires_at : null;
+
+	return {
+		includedUsage,
+		balance,
+		usage,
+		overageAllowed,
+		usageLimit,
+		expiresAt,
+	};
 };
 
 export function transformBalanceToCusFeatureV3({
@@ -202,14 +213,20 @@ export function transformBalanceToCusFeatureV3({
 					unlimited: isUnlimited,
 				});
 
-			const { includedUsage, balance, usage, overageAllowed, usageLimit } =
-				toV3BalanceParams({
-					input: breakdown,
-					feature,
-					unlimited: isUnlimited,
-					legacyData,
-					isBreakdown: true,
-				});
+			const {
+				includedUsage,
+				balance,
+				usage,
+				overageAllowed,
+				usageLimit,
+				expiresAt,
+			} = toV3BalanceParams({
+				input: breakdown,
+				feature,
+				unlimited: isUnlimited,
+				legacyData,
+				isBreakdown: true,
+			});
 
 			return {
 				interval: interval === "multiple" || !interval ? null : interval,
@@ -222,6 +239,7 @@ export function transformBalanceToCusFeatureV3({
 				next_reset_at: next_reset_at,
 				usage_limit: usageLimit,
 				overage_allowed: overageAllowed,
+				expires_at: expiresAt,
 			} satisfies ApiCusFeatureV3Breakdown;
 		});
 	}

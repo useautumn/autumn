@@ -7,7 +7,7 @@ interface TemplatePromptsProps {
 
 export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 	return (
-		<div className="flex flex-col items-center gap-3 relative z-10 bg-background/50 rounded-2xl pt-2 pb-4 px-4 border-border/50">
+		<div className="flex flex-col items-center gap-3 relative z-10 rounded-2xl pt-2 pb-4 px-4 border-border/50">
 			{/* Header with decorative lines */}
 
 			<div className="flex items-center gap-3 w-full justify-center">

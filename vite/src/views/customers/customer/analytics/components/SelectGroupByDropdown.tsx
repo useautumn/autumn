@@ -34,6 +34,8 @@ export const SelectGroupByDropdown = ({
 		useAnalyticsContext();
 
 	const currentGroupBy = searchParams.get("group_by") || "";
+	const customerId = searchParams.get("customer_id");
+	const showCustomerIdOption = !customerId;
 
 	const updateQueryParams = ({ groupBy }: { groupBy: string | null }) => {
 		const params = new URLSearchParams(location.search);
@@ -68,7 +70,9 @@ export const SelectGroupByDropdown = ({
 					iconOrientation="right"
 					className={cn(classNames?.trigger, open && "btn-secondary-active")}
 				>
-					{currentGroupBy ? `Group: ${currentGroupBy}` : "Group By"}
+					{currentGroupBy
+						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy}`
+						: "Group By"}
 				</IconButton>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-[200px]">
@@ -86,7 +90,7 @@ export const SelectGroupByDropdown = ({
 					</div>
 				)}
 
-				<div className="max-h-[300px] overflow-y-auto">
+				<div className="max-h-[300px] overflow-y-auto pt-1">
 					<DropdownMenuItem
 						onClick={() => handleSelect({ property: null })}
 						className="flex items-center justify-between"
@@ -94,6 +98,22 @@ export const SelectGroupByDropdown = ({
 						<span className="text-xs">No grouping</span>
 						{!currentGroupBy && <Check className="ml-2 h-3 w-3 text-t3" />}
 					</DropdownMenuItem>
+
+					{/* Customer ID special option - only shown when not filtering by a specific customer */}
+					{showCustomerIdOption && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => handleSelect({ property: "customer_id" })}
+								className="flex items-center justify-between"
+							>
+								<span className="text-xs font-medium text-t2">Customer ID</span>
+								{currentGroupBy === "customer_id" && (
+									<Check className="ml-2 h-3 w-3 text-t3" />
+								)}
+							</DropdownMenuItem>
+						</>
+					)}
 
 					{propertyKeys.length > 0 && <DropdownMenuSeparator />}
 

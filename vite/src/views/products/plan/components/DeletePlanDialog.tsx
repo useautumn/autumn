@@ -31,13 +31,11 @@ export const DeletePlanDialog = ({
 	open,
 	setOpen,
 	onDeleteSuccess,
-	dropdownOpen = false,
 }: {
 	propProduct?: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	onDeleteSuccess?: () => Promise<void>;
-	dropdownOpen?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const storeProduct = useProductStore((s) => s.product);
@@ -52,13 +50,12 @@ export const DeletePlanDialog = ({
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { invalidate: invalidateProduct, refetch: refetchProduct } =
-		useProductQuery();
+	const { invalidate: invalidateProduct } = useProductQuery();
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
 		queryKey: ["productInfo", product.id],
-		enabled: dropdownOpen || open,
+		enabled: open,
 		method: "GET",
 	});
 
@@ -71,15 +68,17 @@ export const DeletePlanDialog = ({
 				deleteAllVersions,
 			);
 
-			await Promise.all([invalidateProducts(), invalidateProduct()]);
+			// Close dialog and show toast immediately
+			setOpen(false);
+			toast.success("Plan deleted successfully");
 
-			// Call onDeleteSuccess callback if provided (for onboarding)
+			// Invalidate in background (don't await - let table update async)
+			Promise.all([invalidateProducts(), invalidateProduct()]);
+
+			// Call onDeleteSuccess callback if provided (for navigation)
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
-
-			setOpen(false);
-			toast.success("Plan deleted successfully");
 		} catch (error: unknown) {
 			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
 		} finally {
@@ -94,12 +93,16 @@ export const DeletePlanDialog = ({
 				archived: true,
 			});
 
+			// Close dialog and show toast immediately
+			setOpen(false);
+			toast.success(`${product.name} archived successfully`);
+
+			// Invalidate in background (don't await)
+			Promise.all([invalidateProducts(), invalidateProduct()]);
+
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
-			toast.success(`${product.name} archived successfully`);
-			setOpen(false);
-			await Promise.all([invalidateProducts(), invalidateProduct()]);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Error archiving plan"));
 		} finally {
@@ -114,12 +117,16 @@ export const DeletePlanDialog = ({
 				archived: false,
 			});
 
+			// Close dialog and show toast immediately
+			setOpen(false);
+			toast.success(`${product.name} unarchived successfully`);
+
+			// Invalidate in background (don't await)
+			Promise.all([invalidateProducts(), invalidateProduct()]);
+
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
-			await Promise.all([invalidateProducts(), invalidateProduct()]);
-			toast.success(`${product.name} unarchived successfully`);
-			setOpen(false);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Error unarchiving plan"));
 		} finally {

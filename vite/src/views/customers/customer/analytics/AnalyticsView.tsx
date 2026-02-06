@@ -7,6 +7,7 @@ import {
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -48,10 +49,23 @@ export const AnalyticsView = () => {
 		queryLoading,
 		error,
 		bcExclusionFlag,
-		topEventsLoading,
-		topEvents,
 		groupBy,
+		truncated,
 	} = useAnalyticsData({ hasCleared });
+
+	// Show toast when data is truncated due to too many unique group values
+	const hasShownTruncationToast = useRef(false);
+	useEffect(() => {
+		if (truncated && groupBy && !hasShownTruncationToast.current) {
+			toast.error(
+				`Too many unique values for '${groupBy}'. Showing top 10 by volume.`,
+			);
+			hasShownTruncationToast.current = true;
+		}
+		if (!truncated || !groupBy) {
+			hasShownTruncationToast.current = false;
+		}
+	}, [truncated, groupBy]);
 
 	// Clear the filter when groupBy changes
 	useEffect(() => {
@@ -64,7 +78,9 @@ export const AnalyticsView = () => {
 			return [];
 		}
 
-		const groupByColumn = `properties.${groupBy}`;
+		// Handle special case for customer_id (not a property)
+		const groupByColumn =
+			groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
 		const uniqueValues = new Set<string>();
 
 		for (const row of events.data) {
@@ -93,7 +109,9 @@ export const AnalyticsView = () => {
 		// Apply frontend filter if a group filter is selected
 		let filteredEvents = events;
 		if (groupBy && groupFilter) {
-			const groupByColumn = `properties.${groupBy}`;
+			// Handle special case for customer_id (not a property)
+			const groupByColumn =
+				groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
 			const filteredData = events.data.filter(
 				(row: Record<string, string | number>) =>
 					String(row[groupByColumn]) === groupFilter,
@@ -139,7 +157,6 @@ export const AnalyticsView = () => {
 	// Show empty state if no actual analytics events (check rawEvents and totalRows)
 	const hasNoData =
 		!rawQueryLoading &&
-		!topEventsLoading &&
 		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
 		totalRows === 0;
 
@@ -200,7 +217,6 @@ export const AnalyticsView = () => {
 				setTotalPages,
 				totalRows,
 				setTotalRows,
-				topEvents,
 				propertyKeys,
 				groupFilter,
 				setGroupFilter,
@@ -216,7 +232,7 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-					{(queryLoading || topEventsLoading) && (
+					{queryLoading && (
 						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
 								Loading chart {customerId ? `for ${customerId}` : ""}

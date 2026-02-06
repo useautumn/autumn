@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Lists distinct event names for an org/env sorted by popularity (event count).
+
+TOKEN "list_event_names_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        event_name,
+        sum(event_count) as event_count
+    FROM event_names_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+    GROUP BY event_name
+    ORDER BY event_count DESC
+    {% if defined(limit) %}
+    LIMIT {{ Int32(limit, 100) }}
+    {% end %}

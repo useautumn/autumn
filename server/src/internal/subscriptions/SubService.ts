@@ -4,6 +4,7 @@ import {
 	type Subscription,
 	subscriptions,
 } from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils.js";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { subToPeriodStartEnd } from "@server/external/stripe/stripeSubUtils/convertSubUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
@@ -180,5 +181,19 @@ export class SubService {
 			.select()
 			.from(subscriptions)
 			.where(inArray(subscriptions.stripe_id, ids))) as Subscription[];
+	}
+
+	static async upsert({
+		db,
+		subscription,
+	}: {
+		db: DrizzleCli;
+		subscription: Subscription;
+	}) {
+		const updateColumns = buildConflictUpdateColumns(subscriptions, ["id"]);
+		await db.insert(subscriptions).values(subscription).onConflictDoUpdate({
+			target: subscriptions.stripe_id,
+			set: updateColumns,
+		});
 	}
 }

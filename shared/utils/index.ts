@@ -46,10 +46,10 @@ export * from "./productUtils/classifyProduct/isProductPaidAndRecurring.js";
 export * from "./productUtils/convertProductUtils.js";
 export * from "./productUtils/entUtils/index.js";
 export * from "./productUtils/freeTrialUtils.js";
+export * from "./productUtils/index.js";
 export * from "./productUtils/isProductUpgrade.js";
 export * from "./productUtils/priceUtils/index.js";
 export * from "./productUtils/priceUtils.js";
-
 export * from "./productV2Utils/mapToProductV2.js";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils.js";
 export * from "./productV2Utils/productItemUtils/getItemType.js";

@@ -1,3 +1,8 @@
+import type {
+	BillingContext,
+	BillingPlan,
+	FullCusProduct,
+} from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	cp,
@@ -8,10 +13,23 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
+import { lineItemToPreviewLineItem } from "../lineItems/lineItemToPreviewLineItem";
+
+export type NextCyclePreviewDebug = {
+	allCustomerProducts: FullCusProduct[];
+	currentCustomerProducts: FullCusProduct[];
+	smallestInterval: { interval: string; intervalCount: number } | null;
+	anchorMs: number;
+	nextCycleStart: number | null;
+	filteredCustomerProducts: FullCusProduct[];
+};
+
+export type NextCyclePreviewResult = {
+	nextCycle: BillingPreviewResponse["next_cycle"];
+	debug: NextCyclePreviewDebug;
+};
 
 export const billingPlanToNextCyclePreview = ({
 	ctx,
@@ -21,54 +39,87 @@ export const billingPlanToNextCyclePreview = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-}): BillingPreviewResponse["next_cycle"] => {
-	// 1. Return undefined if billing cycle anchor is now
+}): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
-
-	if (billingCycleAnchorMs === "now") return undefined;
 
 	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
 		autumnBillingPlan: billingPlan.autumn,
 	});
 	const { insertCustomerProducts } = billingPlan.autumn;
 
-	// 2. Get cycle end and if none, return undefined
+	// Get all customer products
 	const allCustomerProducts = [
 		...insertCustomerProducts,
 		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
 	];
 
-	let customerProducts = allCustomerProducts.filter(
+	const customerProducts = allCustomerProducts.filter(
+		(customerProduct) =>
+			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
+	);
+
+	const currentCustomerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	const prices = cusProductsToPrices({
-		cusProducts: customerProducts,
+	const currentPrices = cusProductsToPrices({
+		cusProducts: currentCustomerProducts,
 		filters: { excludeOneOffPrices: true },
 	});
 
-	const smallestInterval = getSmallestInterval({ prices });
+	const smallestInterval = getSmallestInterval({ prices: currentPrices });
 
-	if (!smallestInterval) return undefined;
+	// Calculate anchor
+	const anchorMs =
+		billingCycleAnchorMs === "now"
+			? billingContext.currentEpochMs
+			: billingCycleAnchorMs;
 
+	const baseDebug = {
+		allCustomerProducts,
+		currentCustomerProducts,
+		smallestInterval,
+		anchorMs,
+	};
+
+	// Return undefined if there's no recurring interval (not a subscription)
+	if (!smallestInterval) {
+		return {
+			nextCycle: undefined,
+			debug: {
+				...baseDebug,
+				nextCycleStart: null,
+				filteredCustomerProducts: [],
+			},
+		};
+	}
+
+	// Calculate next cycle start
 	const nextCycleStart = getCycleEnd({
-		anchor: billingCycleAnchorMs,
+		anchor: anchorMs,
 		interval: smallestInterval.interval,
 		intervalCount: smallestInterval.intervalCount,
 		now: billingContext.currentEpochMs,
-		floor: billingCycleAnchorMs,
+		floor: anchorMs,
 	});
 
-	customerProducts = customerProducts.filter((customerProduct) => {
-		return !hasCustomerProductEnded(customerProduct, {
-			nowMs: nextCycleStart,
-		});
-	});
+	const filteredCustomerProducts = customerProducts.filter(
+		(customerProduct) => {
+			return !hasCustomerProductEnded(customerProduct, {
+				nowMs: nextCycleStart,
+			});
+		},
+	);
 
-	if (customerProducts.length === 0) return undefined;
+	if (filteredCustomerProducts.length === 0) {
+		return {
+			nextCycle: undefined,
+			debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
+		};
+	}
 
-	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
+	const autumnLineItems = filteredCustomerProducts.flatMap((customerProduct) =>
 		customerProductToLineItems({
 			ctx,
 			customerProduct: customerProduct,
@@ -80,10 +131,15 @@ export const billingPlanToNextCyclePreview = ({
 		}),
 	);
 
+	const previewLineItems = autumnLineItems.map(lineItemToPreviewLineItem);
 	const total = sumValues(autumnLineItems.map((line) => line.finalAmount));
 
 	return {
-		starts_at: nextCycleStart,
-		total,
+		nextCycle: {
+			starts_at: nextCycleStart,
+			total,
+			line_items: previewLineItems,
+		},
+		debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
 	};
 };

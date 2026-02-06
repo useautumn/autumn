@@ -2,10 +2,9 @@ import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
 import { CusProductStatus, ErrCode, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { activateDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { isOneOff } from "@/internal/products/productUtils";
 
 export const handleExpiration = async ({
 	event,
@@ -49,16 +48,23 @@ export const handleExpiration = async ({
 
 	logger.info(`Expired cus_product: ${curSameProduct.id}`);
 
-	// Activate default product if this was a main product
-	const isMain = !product.is_add_on;
-	const isOneOffProduct = isOneOff(product.prices);
+	await customerProductActions.activateFreeSuccessor({
+		ctx,
+		fromCustomerProduct: curSameProduct,
+		fullCustomer: customer,
+	});
 
-	if (isMain && !isOneOffProduct) {
-		await activateDefaultProduct({
-			ctx,
-			productGroup: product.group,
-			fullCus: customer,
-			curCusProduct: curSameProduct,
-		});
-	}
+	// Activate default product if this was a main product
+	// const isMain = !product.is_add_on;
+	// const isOneOffProduct = isOneOff(product.prices);
+
+	// if (isMain && !isOneOffProduct) {
+
+	// 	// await activateDefaultProduct({
+	// 	// 	ctx,
+	// 	// 	productGroup: product.group,
+	// 	// 	fullCus: customer,
+	// 	// 	curCusProduct: curSameProduct,
+	// 	// });
+	// }
 };

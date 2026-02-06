@@ -1,12 +1,7 @@
+import { CheckIcon } from "lucide-react";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFieldContext } from "@/hooks/form/form-context";
 
 export type SelectFieldOption<T extends string | number = string> = {
@@ -24,6 +19,9 @@ export function SelectField<T extends string | number = string>({
 	hideFieldInfo,
 	selectValueAfter,
 	disabled,
+	searchable = false,
+	searchPlaceholder = "Search...",
+	emptyText = "No results found",
 }: {
 	label: string;
 	options: SelectFieldOption<T>[];
@@ -33,13 +31,14 @@ export function SelectField<T extends string | number = string>({
 	hideFieldInfo?: boolean;
 	selectValueAfter?: React.ReactNode;
 	disabled?: boolean;
+	searchable?: boolean;
+	searchPlaceholder?: string;
+	emptyText?: string;
 }) {
 	const field = useFieldContext<T>();
-
-	// Convert value to string for the Select component (which only accepts strings)
 	const stringValue = String(field.state.value);
+
 	const handleChange = (value: string) => {
-		// Convert back to the original type
 		const typedValue = (
 			typeof field.state.value === "number" ? Number(value) : value
 		) as T;
@@ -48,37 +47,43 @@ export function SelectField<T extends string | number = string>({
 
 	return (
 		<div className={className}>
-			<Label>{label}</Label>
-			<Select
+			{label && <Label>{label}</Label>}
+			<SearchableSelect
 				value={stringValue}
 				onValueChange={handleChange}
+				options={options}
+				getOptionValue={(opt) => String(opt.value)}
+				getOptionLabel={(opt) => opt.label}
+				getOptionDisabled={(opt) => !!opt.disabledValue}
+				placeholder={placeholder}
+				searchable={searchable}
+				searchPlaceholder={searchPlaceholder}
+				emptyText={emptyText}
 				disabled={disabled}
-			>
-				<SelectTrigger className="w-full h-7" disabled={disabled}>
-					<div className="flex items-center gap-2">
-						<SelectValue placeholder={placeholder} />
-						{selectValueAfter && selectValueAfter}
-					</div>
-				</SelectTrigger>
-				<SelectContent>
-					{options.map((option) => (
-						<SelectItem
-							key={String(option.value)}
-							value={String(option.value)}
-							className={
-								option.disabledValue ? "text-t4 pointer-events-none" : ""
-							}
-						>
-							{option.label}
-							{option.disabledValue && (
-								<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
-									{option.disabledValue}
-								</span>
-							)}
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
+				renderValue={(opt) => (
+					<>
+						<span className={!opt ? "text-t3" : undefined}>
+							{opt?.label || placeholder}
+						</span>
+						{selectValueAfter && opt && (
+							<span className="shrink-0">{selectValueAfter}</span>
+						)}
+					</>
+				)}
+				renderOption={(opt, isSelected) => (
+					<>
+						<span className="flex-1 truncate min-w-0">{opt.label}</span>
+						{opt.disabledValue && (
+							<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+								{opt.disabledValue}
+							</span>
+						)}
+						{isSelected && !opt.disabledValue && (
+							<CheckIcon className="size-4 shrink-0" />
+						)}
+					</>
+				)}
+			/>
 			{textAfter && (
 				<section
 					aria-live="polite"

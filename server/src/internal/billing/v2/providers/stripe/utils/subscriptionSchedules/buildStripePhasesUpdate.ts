@@ -1,3 +1,4 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	msToSeconds,
@@ -6,7 +7,6 @@ import {
 import type Stripe from "stripe";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
@@ -107,13 +107,17 @@ export const buildStripePhasesUpdate = ({
 		trialEndsAt: normalizedTrialEndsAt,
 	});
 
+	const debugLogs = false;
+
 	// Log customer products and transition points
-	logTransitionPoints({
-		ctx,
-		customerProducts: normalizedCustomerProducts,
-		transitionPoints,
-		nowMs,
-	});
+	if (debugLogs) {
+		logTransitionPoints({
+			ctx,
+			customerProducts: normalizedCustomerProducts,
+			transitionPoints,
+			nowMs,
+		});
+	}
 
 	let startMs = nowMs;
 
@@ -166,14 +170,16 @@ export const buildStripePhasesUpdate = ({
 		};
 
 		// Log phase details
-		logPhase({
-			ctx,
-			phase,
-			customerProducts: activeCustomerProducts,
-			phaseIndex,
-			logPrefix: "[buildStripePhasesUpdate]",
-			showCustomerProducts: true,
-		});
+		if (debugLogs) {
+			logPhase({
+				ctx,
+				phase,
+				customerProducts: activeCustomerProducts,
+				phaseIndex,
+				logPrefix: "[buildStripePhasesUpdate]",
+				showCustomerProducts: true,
+			});
+		}
 
 		phases.push(phase);
 

@@ -16,6 +16,7 @@ interface TableRowCellsProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	rowHref?: string;
+	visibleColumnKey?: string;
 }
 
 function TableRowCellsInner<T>({
@@ -42,13 +43,12 @@ function TableRowCellsInner<T>({
 					cell.column.columnDef.cell,
 					cell.getContext(),
 				);
-				const cellStyle = flexibleTableColumns
-					? {
-							width: `${cell.column.getSize()}px`,
-							maxWidth: `${cell.column.getSize()}px`,
-							minWidth: `${cell.column.getSize()}px`,
-						}
-					: { width: `${cell.column.getSize()}px` };
+			const cellStyle = flexibleTableColumns
+				? {
+						width: `${cell.column.getSize()}px`,
+						maxWidth: `${cell.column.getSize()}px`,
+					}
+				: { width: `${cell.column.getSize()}px` };
 
 				return (
 					<TableCell
@@ -86,7 +86,7 @@ export const TableRowCells = memo(
 	(prevProps, nextProps) => {
 		// Only re-render if essential data changed
 		// Check row.original identity to handle data changes with keepPreviousData
-		// Check visible cells length to catch column additions/removals
+		// Check visibleColumnKey to handle column visibility changes (not just length)
 		return (
 			prevProps.row.id === nextProps.row.id &&
 			prevProps.row.original === nextProps.row.original &&
@@ -94,8 +94,7 @@ export const TableRowCells = memo(
 			prevProps.rowHref === nextProps.rowHref &&
 			prevProps.enableSelection === nextProps.enableSelection &&
 			prevProps.flexibleTableColumns === nextProps.flexibleTableColumns &&
-			prevProps.row.getVisibleCells().length ===
-				nextProps.row.getVisibleCells().length
+			prevProps.visibleColumnKey === nextProps.visibleColumnKey
 		);
 	},
 ) as typeof TableRowCellsInner;
@@ -122,7 +121,7 @@ export function TableEmptyState({
 							<SmallSpinner />
 						</div>
 					) : (
-						<div className="text-t4 text-center w-full h-full items-center justify-center flex">
+						<div className="text-t4 text-xs text-center w-full h-full items-center justify-center flex">
 							{emptyStateChildren || emptyStateText}
 						</div>
 					)}

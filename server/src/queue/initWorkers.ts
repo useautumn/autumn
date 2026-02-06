@@ -1,6 +1,7 @@
 await import("../sentry.js");
 
 import {
+	DeleteMessageBatchCommand,
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
@@ -12,6 +13,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -184,6 +186,17 @@ const processMessage = async ({
 				payload: job.data,
 			});
 		}
+
+		if (job.name === JobName.GrantCheckoutReward) {
+			if (!ctx) {
+				workerLogger.error("No context found for grant checkout reward job");
+				return;
+			}
+			await grantCheckoutReward({
+				ctx,
+				payload: job.data,
+			});
+		}
 	} catch (error) {
 		Sentry.captureException(error);
 		if (error instanceof Error) {
@@ -202,21 +215,34 @@ let isRunning = true;
 const isFifoQueue = QUEUE_URL.endsWith(".fifo");
 let abortController: AbortController;
 
+// Tracking for periodic stats
+let messagesProcessed = 0;
+let lastStatsTime = Date.now();
+
 /**
  * Single SQS polling loop - runs continuously until shutdown
  */
 const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
-	console.log(`[Process ${process.pid}] SQS poller started`);
+	console.log(`[SQS Worker ${process.pid}] Started polling ${QUEUE_URL}`);
 	abortController = new AbortController();
+
+	// Log stats every 60 seconds
+	const statsInterval = setInterval(() => {
+		const elapsed = ((Date.now() - lastStatsTime) / 1000).toFixed(0);
+		console.log(
+			`[SQS Worker ${process.pid}] Processed ${messagesProcessed} messages in ${elapsed}s`,
+		);
+		messagesProcessed = 0;
+		lastStatsTime = Date.now();
+	}, 60000);
 
 	while (isRunning) {
 		try {
 			const command = new ReceiveMessageCommand({
 				QueueUrl: QUEUE_URL,
-				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
-				WaitTimeSeconds: 20, // Long polling
-				VisibilityTimeout: 30, // 12 hours (max) - prevents duplicate processing of long-running jobs
-				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
+				MaxNumberOfMessages: 10,
+				WaitTimeSeconds: 20,
+				VisibilityTimeout: 30,
 				...(isFifoQueue && {
 					ReceiveRequestAttemptId: generateId("receive"),
 				}),
@@ -227,14 +253,16 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 			});
 
 			if (response.Messages && response.Messages.length > 0) {
-				// Process all messages concurrently
+				// Track messages to batch delete (excludes migration jobs which are deleted immediately)
+				const toDelete: { Id: string; ReceiptHandle: string }[] = [];
+
 				await Promise.allSettled(
 					response.Messages.map(async (message) => {
-						// Check if we should stop before processing
 						if (!isRunning || !message.Body) return;
 
-						// If migration job, return success immediately to avoid duplicate processing
 						const job: SqsJob = JSON.parse(message.Body);
+
+						// Migration jobs: delete IMMEDIATELY before processing (long-running, avoid timeout redelivery)
 						if (job.name === JobName.Migration) {
 							logger.info(
 								`Returning success immediately for migration job ${job.data.migrationJobId}`,
@@ -249,6 +277,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 
 						try {
 							await processMessage({ message, db });
+							messagesProcessed++;
 						} catch (error) {
 							if (error instanceof Error) {
 								logger.error(
@@ -257,40 +286,49 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 							}
 						}
 
-						// Always delete message, even on error (receive once only)
-						if (message.ReceiptHandle) {
-							try {
-								await sqs.send(
-									new DeleteMessageCommand({
-										QueueUrl: QUEUE_URL,
-										ReceiptHandle: message.ReceiptHandle,
-									}),
-								);
-							} catch (deleteError: any) {
-								console.error(
-									`Failed to delete message ${message.MessageId}:`,
-									deleteError.message,
-								);
-							}
+						// Queue for batch delete (skip migration jobs - already deleted)
+						if (message.ReceiptHandle && job.name !== JobName.Migration) {
+							toDelete.push({
+								Id: message.MessageId!,
+								ReceiptHandle: message.ReceiptHandle,
+							});
 						}
 					}),
 				);
+
+				// Batch delete all non-migration messages
+				if (toDelete.length > 0) {
+					try {
+						await sqs.send(
+							new DeleteMessageBatchCommand({
+								QueueUrl: QUEUE_URL,
+								Entries: toDelete,
+							}),
+						);
+					} catch (deleteError: any) {
+						console.error(
+							`[SQS Worker ${process.pid}] Batch delete failed: ${deleteError.message}`,
+						);
+					}
+				}
 			}
 		} catch (error: any) {
-			// Ignore abort errors during shutdown
 			if (error.name === "AbortError" || error.name === "RequestAbortedError") {
+				console.log(`[SQS Worker ${process.pid}] Polling aborted (shutdown)`);
 				break;
 			}
 
 			if (isRunning) {
-				console.error("SQS polling error:", error.message);
-				// Wait a bit before retrying after an error
+				console.error(
+					`[SQS Worker ${process.pid}] Polling error: ${error.message}`,
+				);
 				await new Promise((resolve) => setTimeout(resolve, 5000));
 			}
 		}
 	}
 
-	console.log("SQS poller stopped");
+	clearInterval(statsInterval);
+	console.log(`[SQS Worker ${process.pid}] Stopped`);
 };
 
 /**
@@ -300,26 +338,15 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 export const initWorkers = async () => {
 	const { db } = initDrizzle({ maxConnections: 3 });
 
-	// Graceful shutdown handler
 	const shutdown = async () => {
-		console.log("Shutting down SQS poller...");
+		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
+		if (abortController) abortController.abort();
 
-		// Abort in-flight SQS request
-		if (abortController) {
-			abortController.abort();
-		}
-
-		// In production, give 5 seconds to finish current message processing
-		// In development, exit immediately for faster hot reloads
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
-			setTimeout(() => {
-				console.log("Shutdown timeout reached, forcing exit");
-				process.exit(0);
-			}, 5000);
+			setTimeout(() => process.exit(0), 5000);
 		} else {
-			console.log("Development mode: exiting immediately");
 			process.exit(0);
 		}
 	};
@@ -327,7 +354,6 @@ export const initWorkers = async () => {
 	process.on("SIGTERM", shutdown);
 	process.on("SIGINT", shutdown);
 
-	// Start the single polling loop
 	await startPollingLoop({ db });
 };
 

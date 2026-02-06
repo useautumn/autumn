@@ -26,7 +26,7 @@ export const completeCheckoutForm = async (
 	_isLocal?: boolean,
 ) => {
 	const browser = await puppeteer.launch({
-		headless: true,
+		headless: false,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
@@ -58,8 +58,22 @@ export const completeCheckoutForm = async (
 
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
-		await page.waitForSelector("#billingPostalCode");
-		await page.type("#billingPostalCode", "123456");
+
+		// Email field may be present if customer has no email set
+		try {
+			await page.waitForSelector("#email", { timeout: 2000 });
+			await page.type("#email", "test@example.com");
+		} catch (_e) {
+			// Email field doesn't exist (customer already has email), continue without it
+		}
+
+		// Postal code may not be present for all countries (e.g., UK)
+		try {
+			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });
+			await page.type("#billingPostalCode", "123456");
+		} catch (_e) {
+			// Postal code field doesn't exist, continue without it
+		}
 
 		if (overrideQuantity) {
 			const quantityBtn = await page.$(".AdjustableQuantitySelector");
@@ -89,6 +103,70 @@ export const completeCheckoutForm = async (
 		await timeout(7000);
 	} finally {
 		// always close browser
+		await browser.close();
+	}
+};
+
+/** Automates the Stripe setup payment checkout flow (mode: "setup") */
+export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
+	const browser = await puppeteer.launch({
+		headless: true,
+		executablePath: process.env.TESTS_CHROMIUM_PATH,
+		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+	});
+
+	try {
+		const page = await browser.newPage();
+		await page.setViewport({ width: 1280, height: 800 });
+		await page.goto(url, { waitUntil: "networkidle2" });
+
+		// Click on Card radio button to expand the card form
+		try {
+			await page.waitForSelector("#payment-method-accordion-item-title-card", {
+				timeout: 3000,
+			});
+			await page.click("#payment-method-accordion-item-title-card");
+			await timeout(500);
+		} catch (_e) {
+			// Card section might already be expanded or have different structure
+		}
+
+		// Fill card number
+		await page.waitForSelector("#cardNumber", { timeout: 5000 });
+		await page.type("#cardNumber", "4242424242424242");
+
+		// Fill expiry (MM/YY format)
+		await page.waitForSelector("#cardExpiry");
+		await page.type("#cardExpiry", "1228");
+
+		// Fill CVC
+		await page.waitForSelector("#cardCvc");
+		await page.type("#cardCvc", "100");
+
+		// Fill cardholder name
+		await page.waitForSelector("#billingName");
+		await page.type("#billingName", "Test Customer");
+
+		// Some setup forms have country dropdown, some have postal code
+		// Try postal code first, then skip if not present
+		try {
+			const postalCode = await page.$("#billingPostalCode");
+			if (postalCode) {
+				await page.type("#billingPostalCode", "12345");
+			}
+		} catch (_e) {
+			// Postal code field not present
+		}
+
+		// Click the Save button
+		const submitButton = await page.$(".SubmitButton-TextContainer");
+		await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
+
+		// Wait for form submission to complete
+		await timeout(7000);
+
+		console.log("[completeSetupPaymentForm] Setup payment completed");
+	} finally {
 		await browser.close();
 	}
 };
@@ -234,20 +312,28 @@ export const advanceTestClock = async ({
 		startingFrom = new Date();
 	}
 
-	if (numberOfDays) {
-		advanceTo = addDays(startingFrom, numberOfDays).getTime();
+	// Stack all time units - they accumulate from startingFrom
+	let targetDate = startingFrom;
+
+	if (numberOfMonths) {
+		targetDate = addMonths(targetDate, numberOfMonths);
 	}
 
 	if (numberOfWeeks) {
-		advanceTo = addWeeks(startingFrom, numberOfWeeks).getTime();
+		targetDate = addWeeks(targetDate, numberOfWeeks);
+	}
+
+	if (numberOfDays) {
+		targetDate = addDays(targetDate, numberOfDays);
 	}
 
 	if (numberOfHours) {
-		advanceTo = addHours(startingFrom, numberOfHours).getTime();
+		targetDate = addHours(targetDate, numberOfHours);
 	}
 
-	if (numberOfMonths) {
-		advanceTo = addMonths(startingFrom, numberOfMonths).getTime();
+	// Only use calculated targetDate if we actually had time params
+	if (numberOfMonths || numberOfWeeks || numberOfDays || numberOfHours) {
+		advanceTo = targetDate.getTime();
 	}
 
 	if (!advanceTo) {
@@ -287,7 +373,7 @@ export const advanceClockForInvoice = async ({
 	numberOfDays?: number;
 	startingFrom?: Date;
 }) => {
-	let advanceTo;
+	let advanceTo: number;
 
 	if (!startingFrom) {
 		startingFrom = new Date();

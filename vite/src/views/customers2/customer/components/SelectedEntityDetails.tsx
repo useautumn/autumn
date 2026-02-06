@@ -1,18 +1,13 @@
 import type { Entity, Feature, FullCustomer } from "@autumn/shared";
 import { FeatureUsageType, getFeatureName } from "@autumn/shared";
 import { TrashIcon, XIcon } from "@phosphor-icons/react";
-import { Check, ChevronDown } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
-import { cn } from "@/lib/utils";
 import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
 import { DeleteEntity } from "./DeleteEntity";
 
@@ -74,79 +69,51 @@ export const SelectedEntityDetails = () => {
 		return entities.length === 1 ? "entity" : "entities";
 	};
 
-	// Render the entity selector
-	const renderEntitySelector = () => {
-		const entity = entities.find(
-			(e: Entity) => e.id === entityId || e.internal_id === entityId,
-		);
-		const displayText = entityId
-			? entity?.name || entity?.id || entity?.internal_id || entityId
-			: "Select entity";
-
-		return (
-			<Popover>
-				<PopoverTrigger asChild>
-					<Button
-						variant="secondary"
-						role="combobox"
-						size="mini"
-						className="justify-between font-normal px-2! gap-3 w-48"
-					>
-						<span className="truncate text-sm">
-							{entityId ? (
-								<span className="text-t2">{displayText}</span>
-							) : (
-								<span className="text-t6">{displayText}</span>
-							)}
-						</span>
-						<ChevronDown className="h-4 w-4 shrink-0 text-t3" />
-					</Button>
-				</PopoverTrigger>
-				<PopoverContent
-					className="w-[320px] p-1 max-h-[300px] overflow-y-auto"
-					align="start"
-				>
-					{entities.map((e: Entity) => {
-						const isSelected = entityId === e.id || entityId === e.internal_id;
-						const entityValue = e.id || e.internal_id;
-						return (
-							<div
-								key={entityValue}
-								className={cn(
-									"relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground gap-2",
-									isSelected && "bg-accent/50",
-								)}
-								onClick={() => handleValueChange(entityValue)}
-							>
-								<div className="flex gap-2 items-center min-w-0 flex-1">
-									{e.name && (
-										<span className="text-sm truncate max-w-[120px]">
-											{e.name}
-										</span>
-									)}
-									<span className="truncate overflow-hidden text-t3 font-mono text-xs">
-										{entityValue}
-									</span>
-								</div>
-								<Check
-									className={cn(
-										"h-4 w-4 shrink-0",
-										isSelected ? "opacity-100" : "opacity-0",
-									)}
-								/>
-							</div>
-						);
-					})}
-				</PopoverContent>
-			</Popover>
-		);
-	};
+	const getEntityValue = (entity: Entity) => entity.id || entity.internal_id;
+	const getEntityLabel = (entity: Entity) =>
+		entity.name || entity.id || entity.internal_id;
 
 	return (
 		<>
 			<div className="flex gap-2 items-center justify-between w-full bg-card mt-1 border p-2 rounded-lg overflow-hidden">
 				<div className="flex items-center gap-2 shrink-0">
-					{renderEntitySelector()}
+					<SearchableSelect
+						value={entityId}
+						onValueChange={handleValueChange}
+						options={entities}
+						getOptionValue={getEntityValue}
+						getOptionLabel={getEntityLabel}
+						placeholder="Select entity"
+						searchable
+						searchPlaceholder="Search entities..."
+						emptyText="No entities found"
+						triggerClassName="w-72"
+						renderValue={(entity) =>
+							entity ? (
+								<span className="text-t2 truncate">
+									{entity.name || entity.id || entity.internal_id}
+								</span>
+							) : (
+								<span className="text-t3">Select entity</span>
+							)
+						}
+						renderOption={(entity, isSelected) => {
+							const entityValue = getEntityValue(entity);
+							return (
+								<>
+									<div className="flex gap-2 items-center min-w-0 flex-1">
+										{entity.name && (
+											<span className="text-sm shrink-0">{entity.name}</span>
+										)}
+										<span className="truncate text-t3 font-mono text-xs min-w-0">
+											{entityValue}
+										</span>
+									</div>
+									{isSelected && <CheckIcon className="size-4 shrink-0" />}
+								</>
+							);
+						}}
+					/>
 					{entityId && (
 						<Button
 							size="icon"
@@ -161,11 +128,6 @@ export const SelectedEntityDetails = () => {
 				</div>
 				{entityId ? (
 					<div className="flex gap-2 items-center min-w-0 shrink">
-						{/* {selectedEntity.name && (
-							<div className={mutedDivClassName}>
-								<span className="truncate">{selectedEntity.name}</span>
-							</div>
-						)} */}
 						<CopyButton
 							text={entityId || placeholderText}
 							size="mini"

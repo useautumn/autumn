@@ -1,10 +1,8 @@
 import {
-	type AppEnv,
 	type CreateReward,
 	DiscountConfigSchema,
 	ErrCode,
 	isFixedPrice,
-	type Organization,
 	type Price,
 	type Product,
 	type Reward,
@@ -14,7 +12,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
@@ -135,17 +133,11 @@ export const getOriginalCouponId = (couponId: string) => {
 };
 
 export const initRewardStripePrices = async ({
-	db,
+	ctx,
 	prices,
-	org,
-	env,
-	logger,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
-	org: Organization;
-	env: AppEnv;
-	logger: any;
 }) => {
 	const pricesToInit = prices.map((p: Price) =>
 		nullish(p.config.stripe_price_id),
@@ -159,7 +151,7 @@ export const initRewardStripePrices = async ({
 		prices.map((p: Price) => p.internal_product_id),
 	);
 	const products = await ProductService.listByInternalIds({
-		db,
+		db: ctx.db,
 		internalIds: internalProductIds,
 	});
 
@@ -167,11 +159,8 @@ export const initRewardStripePrices = async ({
 	for (const product of products) {
 		batchInit.push(
 			initProductInStripe({
-				db,
+				ctx,
 				product,
-				org,
-				env,
-				logger,
 			}),
 		);
 	}

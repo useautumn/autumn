@@ -15,23 +15,21 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 export const fetchStripeSubscriptionForBilling = async ({
 	ctx,
 	fullCus,
-	products,
+	product,
 	targetCusProductId,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
-	products: Product[];
+	product?: Product;
 	targetCusProductId?: string;
 }): Promise<StripeSubscriptionWithDiscounts | undefined> => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
-	const product: Product | undefined = products[0];
-
 	const cusProductWithSub = getTargetSubscriptionCusProduct({
 		fullCus,
-		productId: product?.id,
-		productGroup: product?.group,
+		productId: product?.id ?? "",
+		productGroup: product?.group ?? "",
 		cusProductId: targetCusProductId,
 	});
 

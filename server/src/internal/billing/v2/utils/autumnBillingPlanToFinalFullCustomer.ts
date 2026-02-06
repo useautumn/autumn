@@ -1,5 +1,5 @@
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 
 export const autumnBillingPlanToFinalFullCustomer = ({
