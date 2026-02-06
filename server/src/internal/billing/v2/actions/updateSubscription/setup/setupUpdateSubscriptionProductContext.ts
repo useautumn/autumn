@@ -3,6 +3,7 @@ import {
 	type FullCustomer,
 	InternalError,
 	notNullish,
+	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -14,11 +15,17 @@ export const setupUpdateSubscriptionProductContext = async ({
 	ctx,
 	fullCustomer,
 	params,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	params: UpdateSubscriptionV0Params;
+	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }) => {
+	const { productContext } = contextOverride;
+
+	if (productContext) return productContext;
+
 	const targetCustomerProduct = findTargetCustomerProduct({
 		params,
 		fullCustomer,

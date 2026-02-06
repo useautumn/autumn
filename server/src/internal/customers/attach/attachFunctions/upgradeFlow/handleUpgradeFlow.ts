@@ -1,4 +1,5 @@
 import {
+	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	AttachFunctionResponseSchema,
@@ -12,12 +13,14 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 export const handleUpgradeFlow = async ({
 	ctx,
 	attachParams,
+	body,
 	config,
 	branch,
 	fromMigration = false,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
+	body: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 	fromMigration?: boolean;
@@ -253,17 +256,24 @@ export const handleUpgradeFlow = async ({
 	// 	});
 	// }
 
-	const { billingResult } = await billingActions.legacy.upgrade({
-		ctx,
-		attachParams,
-	});
+	const { billingResponse, billingResult } = await billingActions.legacy.attach(
+		{
+			ctx,
+			body,
+			attachParams,
+			planTiming: "immediate",
+		},
+	);
 
 	return AttachFunctionResponseSchema.parse({
 		code: SuccessCode.UpgradedToNewProduct,
 		message: `Successfully updated product`,
+
+		checkout_url: billingResponse?.payment_url,
+
 		invoice: attachParams.invoiceOnly
 			? attachToInvoiceResponse({
-					invoice: billingResult.stripe?.stripeInvoice || undefined,
+					invoice: billingResult?.stripe?.stripeInvoice || undefined,
 				})
 			: undefined,
 	});

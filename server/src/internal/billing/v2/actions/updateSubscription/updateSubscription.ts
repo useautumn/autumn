@@ -2,6 +2,7 @@ import type {
 	BillingPlan,
 	BillingResult,
 	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionBillingContextOverride,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -19,10 +20,12 @@ export async function updateSubscription({
 	ctx,
 	params,
 	preview = false,
+	contextOverride,
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV0Params;
 	preview?: boolean;
+	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<{
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
@@ -36,7 +39,9 @@ export async function updateSubscription({
 	const billingContext = await setupUpdateSubscriptionBillingContext({
 		ctx,
 		params,
+		contextOverride,
 	});
+
 	logUpdateSubscriptionContext({ ctx, billingContext });
 
 	// 2. Compute

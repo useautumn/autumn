@@ -28,3 +28,25 @@ export interface AttachBillingContext extends BillingContext {
 	// Checkout
 	checkoutMode: CheckoutMode;
 }
+
+// export interface AttachBillingContextOverride {
+// 	fullCustomer?: FullCustomer;
+
+// 	stripeBillingContext?: StripeBillingContextOverride;
+
+// 	productContext?: {
+// 		attachProduct: FullProduct;
+// 		customPrices?: Price[];
+// 		customEnts?: Entitlement[];
+// 	};
+
+// 	// transitionContext?: {
+// 	// 	currentCustomerProduct?: FullCusProduct;
+// 	// 	scheduledCustomerProduct?: FullCusProduct;
+// 	// 	planTiming: PlanTiming;
+// 	// };
+
+// 	featureQuantities?: FeatureOptions[];
+// 	transitionConfigs?: TransitionConfig[];
+// 	billingVersion?: BillingVersion;
+// }

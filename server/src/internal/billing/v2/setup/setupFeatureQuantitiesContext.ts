@@ -1,4 +1,5 @@
 import {
+	type BillingContextOverride,
 	type BillingParamsBase,
 	cusProductToConvertedFeatureOptions,
 	type FeatureOptions,
@@ -21,13 +22,19 @@ export const setupFeatureQuantitiesContext = ({
 	fullProduct,
 	currentCustomerProduct,
 	initializeUndefinedQuantities = false,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	featureQuantitiesParams: BillingParamsBase;
 	fullProduct: FullProduct;
 	currentCustomerProduct?: FullCusProduct;
 	initializeUndefinedQuantities?: boolean;
+	contextOverride?: BillingContextOverride;
 }): FeatureOptions[] => {
+	if (contextOverride.featureQuantities) {
+		return contextOverride.featureQuantities;
+	}
+
 	const options: FeatureOptions[] = [];
 
 	for (const price of fullProduct.prices) {

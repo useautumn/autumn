@@ -6,12 +6,12 @@ export TEST_FILE_CONCURRENCY=6
 
 BUN_PARALLEL_V2 \
   'attach/basic' \
+  'attach/migrations' \
   'attach/upgrade' \
   'attach/downgrade' \
   'attach/free' \
   'attach/addOn' \
   'attach/checkout' \
-  'attach/migrations' \
   'attach/others' \
   'attach/upgradeOld' \
   'attach/response' \
