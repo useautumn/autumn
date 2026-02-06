@@ -20,15 +20,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const item = useCurrentItem();
 
 	const handleAddFeatureClick = () => {
-		const addedFeatureIds = new Set(
-			product.items?.map((item) => item.feature_id).filter(Boolean) || [],
-		);
-
-		const availableFeatures = features.filter(
-			(feature) => !addedFeatureIds.has(feature.id),
-		);
-
-		if (availableFeatures.length === 0) {
+		if (features.length === 0) {
 			setSheet({ type: "new-feature", itemId: "new" });
 		} else {
 			setSheet({ type: "select-feature", itemId: "select" });

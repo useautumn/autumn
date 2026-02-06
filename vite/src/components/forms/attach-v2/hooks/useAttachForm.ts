@@ -1,3 +1,4 @@
+import { FreeTrialDuration } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
 import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
 
@@ -14,6 +15,10 @@ export function useAttachForm({
 			prepaidOptions: initialPrepaidOptions ?? {},
 			items: null,
 			version: undefined,
+			trialLength: null,
+			trialDuration: FreeTrialDuration.Day,
+			trialEnabled: false,
+			planSchedule: null,
 		} as AttachForm,
 		validators: {
 			onChange: AttachFormSchema,

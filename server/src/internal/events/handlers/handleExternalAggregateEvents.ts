@@ -6,9 +6,9 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 import { CusService } from "@/internal/customers/CusService";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { EventsAggregationService } from "../EventsAggregationService";
 import {
 	backfillMissingGroupValues,
 	buildGroupedTimeseries,
@@ -16,7 +16,7 @@ import {
 	convertPeriodsToEpoch,
 } from "../eventUtils.js";
 
-export const handleAggregateEvents = createRoute({
+export const handleExternalAggregateEvents = createRoute({
 	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -47,8 +47,8 @@ export const handleAggregateEvents = createRoute({
 
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
 
-		const [events, total] = await Promise.all([
-			EventsAggregationService.getTimeseriesEvents({
+		const [eventsResult, total] = await Promise.all([
+			eventActions.aggregate({
 				ctx,
 				params: {
 					aggregateAll: false,
@@ -60,9 +60,10 @@ export const handleAggregateEvents = createRoute({
 					group_by,
 					bin_size: bin_size ?? "day",
 					custom_range,
+					enforceGroupLimit: true,
 				},
 			}),
-			EventsAggregationService.getTotalEvents({
+			eventActions.getCountAndSum({
 				ctx,
 				params: {
 					aggregateAll: false,
@@ -75,6 +76,8 @@ export const handleAggregateEvents = createRoute({
 				},
 			}),
 		]);
+
+		const events = eventsResult.formatted;
 
 		if (!events) {
 			throw new RecaseError({

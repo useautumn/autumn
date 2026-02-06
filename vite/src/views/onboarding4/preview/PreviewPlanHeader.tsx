@@ -12,7 +12,7 @@ export function PreviewPlanHeader({ product }: PreviewPlanHeaderProps) {
 		<div className="flex flex-col gap-1.5">
 			{/* Name row with badges */}
 			<div className="flex items-center gap-1.5">
-				<span className="text-sm font-medium text-foreground truncate">
+				<span className="text-sm font-medium text-foreground truncate max-w-[160px]">
 					{product.name}
 				</span>
 				<PlanTypeBadges

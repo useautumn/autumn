@@ -1,3 +1,4 @@
+import type { AgentFeature } from "@autumn/shared";
 import { Coins } from "lucide-react";
 import {
 	Card,
@@ -5,11 +6,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/v2/cards/Card";
-import type { AgentFeature } from "../pricingAgentUtils";
+import { cn } from "@/lib/utils";
 
 interface PreviewCreditSchemaCardProps {
 	creditFeature: AgentFeature;
 	allFeatures: AgentFeature[];
+	isChanged?: boolean;
 }
 
 /**
@@ -18,6 +20,7 @@ interface PreviewCreditSchemaCardProps {
 export function PreviewCreditSchemaCard({
 	creditFeature,
 	allFeatures,
+	isChanged = false,
 }: PreviewCreditSchemaCardProps) {
 	const creditSchema = creditFeature.credit_schema;
 
@@ -30,15 +33,20 @@ export function PreviewCreditSchemaCard({
 	const creditSingular = creditFeature.display?.singular ?? "credit";
 
 	return (
-		<Card className="w-[280px] bg-card flex flex-col gap-0 rounded-xl">
+		<Card
+			className={cn(
+				"w-[270px] bg-background flex flex-col gap-0 rounded-xl",
+				isChanged &&
+					"ring-2 ring-yellow-400/70 ring-offset-2 ring-offset-background",
+			)}
+		>
 			<CardHeader className="">
 				<div className="flex items-center gap-2">
-					<div className="p-1.5 rounded-md bg-amber-500/10">
-						<Coins className="size-4 text-amber-500" />
+					<div className=" rounded-md">
+						<Coins className="size-3.5 text-amber-500" />
 					</div>
 					<CardTitle className="text-sm">{creditDisplayName}</CardTitle>
 				</div>
-				<p className="text-xs text-t3 mt-1">Credit cost per action</p>
 			</CardHeader>
 
 			<CardContent className="pt-1">
@@ -55,7 +63,7 @@ export function PreviewCreditSchemaCard({
 						return (
 							<div
 								key={mapping.metered_feature_id}
-								className="flex items-center justify-between px-2 py-1.5 bg-secondary/50 rounded-md"
+								className="flex items-center justify-between px-2 py-1 rounded-md"
 							>
 								<span className="text-xs text-foreground truncate">
 									{targetName}

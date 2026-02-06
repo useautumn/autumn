@@ -105,7 +105,7 @@ function StepCard({
 			animate={{ flex: isActive ? 4 : 1 }}
 			transition={{ duration: 0.3, ease: "easeInOut" }}
 			className={cn(
-				"relative border dark:border-none rounded-xl bg-card cursor-pointer h-29 overflow-hidden",
+				"relative dark:border-none rounded-xl bg-card cursor-pointer h-29 overflow-hidden",
 				isActive
 					? ""
 					: "hover:border-primary/20 hover:bg-interactive-secondary-hover",
@@ -277,7 +277,7 @@ export function OnboardingGuide() {
 	}
 
 	return (
-		<div className="relative rounded-xl border bg-interactive-secondary p-4 shadow-sm">
+		<div className="relative rounded-xl bg-t8/10 p-4 border border-t8/20">
 			{/* Dismiss button */}
 			<button
 				type="button"
@@ -310,7 +310,7 @@ export function OnboardingGuide() {
 							to learn more about what you can do with Autumn
 						</>
 					) : (
-						"4 steps to get your app's billing done in less than 30 minutes"
+						"Setup billing and gating in your app in under 30 minutes"
 					)}
 				</p>
 			</div>

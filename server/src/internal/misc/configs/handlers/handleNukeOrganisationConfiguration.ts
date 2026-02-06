@@ -3,6 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 export const handleNukeOrganisationConfiguration = createRoute({
 	handler: async (c) => {
@@ -29,6 +30,8 @@ export const handleNukeOrganisationConfiguration = createRoute({
 			orgId: org.id,
 			env: AppEnv.Sandbox,
 		});
+
+		await invalidateProductsCache({ orgId: org.id, env: AppEnv.Sandbox });
 
 		return c.json({ message: "Organisation configuration cleared" });
 	},

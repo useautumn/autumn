@@ -5,6 +5,7 @@ import {
 	AttachPlanSection,
 	AttachPreviewSection,
 	AttachProductSelection,
+	AttachUpdatesSection,
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
@@ -35,7 +36,8 @@ function SheetContent() {
 
 	const { entityId } = useEntity();
 	const { customer } = useCusQuery();
-	const entities = (customer as FullCustomer)?.entities || [];
+	const fullCustomer = customer as FullCustomer | null;
+	const entities = fullCustomer?.entities || [];
 	const fullEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
@@ -73,6 +75,7 @@ function SheetContent() {
 
 				{hasProductSelected && (
 					<>
+						<AttachUpdatesSection />
 						<AttachPlanSection />
 						<AttachPreviewSection />
 						<AttachFooter />

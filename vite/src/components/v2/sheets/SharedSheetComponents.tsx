@@ -1,6 +1,7 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useId } from "react";
+import { LAYOUT_TRANSITION as ANIM_LAYOUT_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Separator } from "@/components/v2/separator";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
@@ -121,9 +122,9 @@ export function SheetSection({
 				{children}
 			</div>
 			{withSeparator && (
-				<div className="px-4">
+				<motion.div layout transition={ANIM_LAYOUT_TRANSITION} className="px-4">
 					<Separator />
-				</div>
+				</motion.div>
 			)}
 		</>
 	);

@@ -1,4 +1,4 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, cp } from "@autumn/shared";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
@@ -14,6 +14,8 @@ export function CancelFooter() {
 
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
 	const isDefault = customerProduct.product.is_default;
+	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
+	const isFreeDefault = isDefault && isFreeOrOneOff;
 
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
@@ -33,7 +35,7 @@ export function CancelFooter() {
 
 	const buttonLabel = isScheduled
 		? "Cancel Scheduled Plan"
-		: isDefault
+		: isFreeDefault
 			? "Cancel Default Plan"
 			: "Cancel Subscription";
 

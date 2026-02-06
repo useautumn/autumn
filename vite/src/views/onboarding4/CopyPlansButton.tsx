@@ -1,3 +1,4 @@
+import type { AgentPricingConfig } from "@autumn/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -15,7 +16,6 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
-import type { AgentPricingConfig } from "./pricingAgentUtils";
 
 interface CopyPlansButtonProps {
 	pricingConfig: AgentPricingConfig;

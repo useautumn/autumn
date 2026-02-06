@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { AnalyticsService } from "../AnalyticsService.js";
-import { eventActions } from "../actions/index.js";
+import { eventActions } from "../actions/eventActions.js";
 
 const ListEventNamesSchema = z.object({
 	limit: z.coerce.number().optional(),

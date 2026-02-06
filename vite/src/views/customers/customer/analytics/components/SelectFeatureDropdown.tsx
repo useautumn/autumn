@@ -1,7 +1,7 @@
 import type { Feature } from "@autumn/shared";
-import { FeatureType, FeatureUsageType } from "@autumn/shared";
+import { FeatureType } from "@autumn/shared";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -12,17 +12,56 @@ import {
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
-import {
-	eventNameBelongsToFeature,
-	getAllEventNames,
-} from "../utils/getAllEventNames";
+import { useEventNames } from "../hooks/useEventNames";
 
 const MAX_NUM_SELECTED = 10;
+
+type EventOption = {
+	eventName: string;
+	eventCount: number;
+	linkedFeatures: Feature[];
+	selected: boolean;
+};
+
+/** Gets all metered features and credit systems linked to this event name.
+ *  First checks event_names array, then falls back to matching by feature ID. */
+const getFeaturesForEventName = (
+	eventName: string,
+	features: Feature[],
+): Feature[] => {
+	// First, find features that have this event name in their event_names array
+	const byEventName = features.filter(
+		(feature) =>
+			(feature.type === FeatureType.Metered ||
+				feature.type === FeatureType.CreditSystem) &&
+			feature.event_names?.includes(eventName),
+	);
+
+	if (byEventName.length > 0) {
+		return byEventName;
+	}
+
+	// Fallback: if the "event name" is actually a feature ID, find that feature
+	const byFeatureId = features.filter(
+		(feature) =>
+			(feature.type === FeatureType.Metered ||
+				feature.type === FeatureType.CreditSystem) &&
+			feature.id === eventName,
+	);
+
+	return byFeatureId;
+};
+
+/** Formats the feature label for display using feature name */
+const formatFeatureLabel = (linkedFeatures: Feature[]): string | null => {
+	if (linkedFeatures.length === 0) return null;
+	if (linkedFeatures.length === 1) return linkedFeatures[0].name;
+	return `${linkedFeatures[0].name} + ${linkedFeatures.length - 1} more`;
+};
 
 export const SelectFeatureDropdown = ({
 	classNames,
@@ -32,6 +71,7 @@ export const SelectFeatureDropdown = ({
 	};
 }) => {
 	const { features, setHasCleared } = useAnalyticsContext();
+	const { eventNames: eventNamesData } = useEventNames();
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
@@ -39,24 +79,41 @@ export const SelectFeatureDropdown = ({
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	// Get all event names
-	const allEventNames = getAllEventNames({ features });
-
-	// Read current values from query parameters
-	const currentFeatureIds =
-		searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
+	// Read current selected event names from query parameters
 	const currentEventNames =
 		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
+	// Build event options from useEventNames data, enriched with feature info
+	const eventOptions: EventOption[] = useMemo(() => {
+		return eventNamesData.map((item) => ({
+			eventName: item.event_name,
+			eventCount: item.event_count,
+			linkedFeatures: getFeaturesForEventName(item.event_name, features),
+			selected: currentEventNames.includes(item.event_name),
+		}));
+	}, [eventNamesData, features, currentEventNames]);
+
+	// Filter options based on search (search both event name and feature ids)
+	const filteredOptions = useMemo(() => {
+		if (!searchValue) return eventOptions;
+		const lowerSearch = searchValue.toLowerCase();
+		return eventOptions.filter(
+			(option) =>
+				option.eventName.toLowerCase().includes(lowerSearch) ||
+				option.linkedFeatures.some(
+					(f) =>
+						f.id.toLowerCase().includes(lowerSearch) ||
+						f.name.toLowerCase().includes(lowerSearch),
+				),
+		);
+	}, [eventOptions, searchValue]);
+
 	// Helper function to update query parameters
-	const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
+	const updateQueryParams = (eventNames: string[]) => {
 		const params = new URLSearchParams(location.search);
 
-		if (featureIds.length > 0) {
-			params.set("feature_ids", featureIds.join(","));
-		} else {
-			params.delete("feature_ids");
-		}
+		// Clear feature_ids since we're now only using event_names
+		params.delete("feature_ids");
 
 		if (eventNames.length > 0) {
 			params.set("event_names", eventNames.join(","));
@@ -67,94 +124,28 @@ export const SelectFeatureDropdown = ({
 		navigate(`${location.pathname}?${params.toString()}`);
 	};
 
-	const numSelected = currentFeatureIds.length + currentEventNames.length;
+	const numSelected = currentEventNames.length;
 
-	// Create combined options for search
-	const featureOptions = features
-		.filter(
-			(feature: Feature) =>
-				feature.type === FeatureType.Metered &&
-				feature.config.usage_type === FeatureUsageType.Single,
-		)
-		.map((feature: Feature) => ({
-			type: "feature" as const,
-			id: feature.id,
-			name: feature.name,
-			selected: currentFeatureIds.includes(feature.id),
-		}));
-
-	const eventOptions = allEventNames
-		.filter((eventName: string) =>
-			eventNameBelongsToFeature({ eventName, features }),
-		)
-		.map((eventName: string) => ({
-			type: "event" as const,
-			id: eventName,
-			name: eventName,
-			selected: currentEventNames.includes(eventName),
-		}));
-
-	const allOptions = [...featureOptions, ...eventOptions];
-
-	// Filter options based on search
-	const filteredOptions = allOptions.filter((option) =>
-		option.name.toLowerCase().includes(searchValue.toLowerCase()),
-	);
-
-	const filteredFeatures = filteredOptions.filter(
-		(option) => option.type === "feature",
-	);
-	const filteredEvents = filteredOptions.filter(
-		(option) => option.type === "event",
-	);
-
-	const handleToggleItem = (option: (typeof allOptions)[0]) => {
-		if (option.type === "feature") {
-			if (option.selected) {
-				updateQueryParams(
-					currentFeatureIds.filter((id: string) => id !== option.id),
-					currentEventNames,
-				);
-			} else {
-				if (numSelected === MAX_NUM_SELECTED) {
-					toast.error(
-						`You can only select up to ${MAX_NUM_SELECTED} events/features`,
-					);
-				} else {
-					updateQueryParams(
-						[...currentFeatureIds, option.id],
-						currentEventNames,
-					);
-				}
-			}
+	const handleToggleItem = (option: EventOption) => {
+		if (option.selected) {
+			updateQueryParams(
+				currentEventNames.filter((name) => name !== option.eventName),
+			);
 		} else {
-			if (option.selected) {
-				updateQueryParams(
-					currentFeatureIds,
-					currentEventNames.filter((name: string) => name !== option.id),
-				);
+			if (numSelected >= MAX_NUM_SELECTED) {
+				toast.error(`You can only select up to ${MAX_NUM_SELECTED} events`);
 			} else {
-				if (numSelected === MAX_NUM_SELECTED) {
-					toast.error(
-						`You can only select up to ${MAX_NUM_SELECTED} events/features`,
-					);
-				} else {
-					updateQueryParams(currentFeatureIds, [
-						...currentEventNames,
-						option.id,
-					]);
-				}
+				updateQueryParams([...currentEventNames, option.eventName]);
 			}
 		}
 	};
 
 	const handleClear = () => {
-		updateQueryParams([], []);
+		updateQueryParams([]);
 		setHasCleared(true);
 	};
 
-	const hasNoResults =
-		filteredFeatures.length === 0 && filteredEvents.length === 0;
+	const hasNoResults = filteredOptions.length === 0;
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
@@ -166,16 +157,16 @@ export const SelectFeatureDropdown = ({
 					iconOrientation="right"
 					className={cn(classNames?.trigger, open && "btn-secondary-active")}
 				>
-					{numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
+					{numSelected > 0 ? `${numSelected} Selected` : "Select Events"}
 				</IconButton>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-[240px]">
+			<DropdownMenuContent align="end" className="w-[300px]">
 				{/* Search input */}
 				<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
 					<MagnifyingGlassIcon className="size-4 text-t4" />
 					<input
 						type="text"
-						placeholder="Search..."
+						placeholder="Search events..."
 						value={searchValue}
 						onChange={(e) => setSearchValue(e.target.value)}
 						onKeyDown={(e) => e.stopPropagation()}
@@ -186,49 +177,37 @@ export const SelectFeatureDropdown = ({
 				<div className="max-h-[300px] overflow-y-auto">
 					{hasNoResults ? (
 						<div className="py-4 text-center text-sm text-t4">
-							No results found.
+							No events found.
 						</div>
 					) : (
-						<>
-							{filteredFeatures.length > 0 && (
-								<DropdownMenuGroup>
-									<DropdownMenuLabel className="text-xs text-t4">
-										Features
-									</DropdownMenuLabel>
-									{filteredFeatures.map((option) => (
-										<DropdownMenuCheckboxItem
-											key={`feature-${option.id}`}
-											checked={option.selected}
-											onCheckedChange={() => handleToggleItem(option)}
-											onSelect={(e) => e.preventDefault()}
-										>
-											<span className="text-xs">{option.name}</span>
-										</DropdownMenuCheckboxItem>
-									))}
-								</DropdownMenuGroup>
-							)}
-
-							{filteredEvents.length > 0 && (
-								<>
-									{filteredFeatures.length > 0 && <DropdownMenuSeparator />}
-									<DropdownMenuGroup>
-										<DropdownMenuLabel className="text-xs text-t4">
-											Events
-										</DropdownMenuLabel>
-										{filteredEvents.map((option, index) => (
-											<DropdownMenuCheckboxItem
-												key={`event-${option.id}-${index}`}
-												checked={option.selected}
-												onCheckedChange={() => handleToggleItem(option)}
-												onSelect={(e) => e.preventDefault()}
-											>
-												<span className="text-xs">{option.name}</span>
-											</DropdownMenuCheckboxItem>
-										))}
-									</DropdownMenuGroup>
-								</>
-							)}
-						</>
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="text-xs text-t4">
+								Events
+							</DropdownMenuLabel>
+							{filteredOptions.map((option) => {
+								const featureLabel = formatFeatureLabel(option.linkedFeatures);
+								return (
+									<DropdownMenuCheckboxItem
+										key={option.eventName}
+										checked={option.selected}
+										onCheckedChange={() => handleToggleItem(option)}
+										onSelect={(e) => e.preventDefault()}
+										className="pl-2"
+									>
+										<div className="flex items-center gap-1.5 min-w-0">
+											<span className="text-xs truncate">
+												{option.eventName}
+											</span>
+											{featureLabel && (
+												<span className="text-xs text-t4 truncate">
+													({featureLabel})
+												</span>
+											)}
+										</div>
+									</DropdownMenuCheckboxItem>
+								);
+							})}
+						</DropdownMenuGroup>
 					)}
 				</div>
 

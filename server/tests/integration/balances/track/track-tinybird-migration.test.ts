@@ -3,7 +3,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { eventActions } from "@/internal/analytics/actions/index.js";
+import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 import { generateId, timeout } from "@/utils/genUtils.js";
 
 const free = products.base({

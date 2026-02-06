@@ -1,4 +1,6 @@
 DESCRIPTION >
+    DEPRECATED: Use list_events_paginated.pipe instead.
+    Kept for backwards compatibility during migration.
     Lists raw events with filtering by org, env, customer, and date range.
     Optimized for the raw logs viewer UI. Supports pagination via cursor.
     Queries events_by_timestamp_mv which is sorted by (org_id, env, timestamp) for fast time-range queries.

@@ -8,7 +8,6 @@ import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../customers/CusService";
 import { ProductService } from "../ProductService";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse";
-import { sortFullProducts } from "../productUtils/sortProductUtils";
 
 export const handleListPlans = createRoute({
 	query: ListPlansQuerySchema,
@@ -20,6 +19,7 @@ export const handleListPlans = createRoute({
 		const { customer_id, entity_id, include_archived, v1_schema } = query;
 
 		const startedAt = Date.now();
+
 		const [products, customer] = await Promise.all([
 			ProductService.listFull({
 				db,
@@ -27,30 +27,24 @@ export const handleListPlans = createRoute({
 				env,
 				archived: include_archived ? undefined : false,
 			}),
-			(async () => {
-				if (!customer_id) {
-					return undefined;
-				}
-
-				return await CusService.getFull({
-					db,
-					idOrInternalId: customer_id,
-					orgId: org.id,
-					env,
-					entityId: entity_id,
-					withEntities: true,
-					withSubs: true,
-					allowNotFound: true,
-				});
-			})(),
+			customer_id
+				? CusService.getFull({
+						db,
+						idOrInternalId: customer_id,
+						orgId: org.id,
+						env,
+						entityId: entity_id,
+						withEntities: true,
+						withSubs: true,
+						allowNotFound: true,
+					})
+				: undefined,
 		]);
 
 		const endedAt = Date.now();
-		ctx.logger.info(`[handleListPlans] query took ${endedAt - startedAt}ms`);
+		ctx.logger.debug(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
 		if (v1_schema) return c.json({ list: products });
-
-		sortFullProducts({ products });
 
 		const batchResponse = [];
 		for (const p of products) {
