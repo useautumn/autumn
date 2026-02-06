@@ -116,12 +116,6 @@ export const handleUpdatePlan = createRoute({
 			curProduct: fullProduct,
 		});
 
-		validateDefaultFlag({
-			ctx,
-			body: v1_2Body,
-			curProduct: fullProduct,
-		});
-
 		await handleUpdateProductDetails({
 			db,
 			curProduct: fullProduct,
@@ -167,6 +161,7 @@ export const handleUpdatePlan = createRoute({
 				return c.json(newProduct);
 			}
 
+			// Product details (name, group, etc.) may have changed via handleUpdateProductDetails
 			return c.json(fullProduct);
 		}
 
@@ -211,8 +206,11 @@ export const handleUpdatePlan = createRoute({
 		// New full product
 
 		await initProductInStripe({
-			ctx,
+			db,
 			product: newFullProduct,
+			org,
+			env,
+			logger,
 		});
 
 		logger.info("Adding task to queue to detect base variant");
@@ -247,6 +245,7 @@ export const handleUpdatePlan = createRoute({
 			},
 			ctx,
 		});
+
 		return c.json(versionedResponse);
 	},
 });

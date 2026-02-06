@@ -52,7 +52,8 @@
 		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
 		"knip": "knip",
 		"knip:fix": "knip --fix",
-		"knip:fix-all": "knip --fix --allow-remove-files"
+		"knip:fix-all": "knip --fix --allow-remove-files",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@aws-sdk/client-firehose": "^3.975.0",
@@ -74,6 +75,7 @@
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
+		"husky": "^9.1.7",
 		"inquirer": "^12.10.0"
 	}
 }

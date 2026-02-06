@@ -6,7 +6,7 @@ type CheckoutState = "idle" | "waiting_for_sync" | "creating_checkout";
 
 interface PreviewCheckoutButtonProps {
 	productId: string;
-	previewApiKey: string;
+	previewApiKey?: string;
 	isSyncing: boolean;
 }
 
@@ -18,6 +18,7 @@ export function PreviewCheckoutButton({
 	const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
 
 	const createCheckout = useCallback(async () => {
+		if (!previewApiKey) return;
 		setCheckoutState("creating_checkout");
 		try {
 			console.log(
@@ -70,6 +71,7 @@ export function PreviewCheckoutButton({
 	}, [checkoutState, isSyncing, createCheckout]);
 
 	const handleClick = () => {
+		if (!previewApiKey) return;
 		if (isSyncing) {
 			// Wait for sync to complete
 			setCheckoutState("waiting_for_sync");
@@ -80,6 +82,7 @@ export function PreviewCheckoutButton({
 	};
 
 	const isLoading = checkoutState !== "idle";
+	const isDisabled = isLoading || !previewApiKey;
 
 	const getButtonText = () => {
 		switch (checkoutState) {
@@ -98,7 +101,7 @@ export function PreviewCheckoutButton({
 			size="sm"
 			className="w-full mt-auto"
 			onClick={handleClick}
-			disabled={isLoading}
+			disabled={isDisabled}
 		>
 			{isLoading ? (
 				<>

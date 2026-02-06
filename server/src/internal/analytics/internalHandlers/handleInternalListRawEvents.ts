@@ -3,10 +3,9 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { AnalyticsService } from "../AnalyticsService.js";
-import { eventActions } from "../actions/index.js";
+import { eventActions } from "../actions/eventActions.js";
 
-const QueryRawEventsSchema = z.object({
+const InternalListRawEventsSchema = z.object({
 	interval: z.string().nullish(),
 	customer_id: z.string().nullish(),
 });
@@ -14,14 +13,12 @@ const QueryRawEventsSchema = z.object({
 /**
  * Query raw events by customer ID
  */
-export const handleQueryRawEvents = createRoute({
-	body: QueryRawEventsSchema,
+export const handleInternalListRawEvents = createRoute({
+	body: InternalListRawEventsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
 		const { interval, customer_id } = c.req.valid("json");
-
-		AnalyticsService.handleEarlyExit();
 
 		let aggregateAll = false;
 		let customer: FullCustomer | undefined;

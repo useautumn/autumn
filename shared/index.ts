@@ -4,8 +4,10 @@ export { schemas };
 
 export * from "./api/apiUtils.js";
 // Billing common schemas
+export * from "./api/billing/common/attachPreviewResponse.js";
 export * from "./api/billing/common/billingBehavior.js";
 export * from "./api/billing/common/billingPreviewResponse.js";
+export * from "./api/billing/common/billingResponse.js";
 export * from "./api/billing/common/cancelAction.js";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas.js";
@@ -171,6 +173,8 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels.js"
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 export * from "./models/subModels/subModels.js";
 export * from "./models/subModels/subTable.js";
+// Agent Types (for pricing agent AI)
+export * from "./utils/agentTypes.js";
 export * from "./utils/billingUtils/index.js";
 // Checkout Utils
 export * from "./utils/checkoutUtils/index.js";

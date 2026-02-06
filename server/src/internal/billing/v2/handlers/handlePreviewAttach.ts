@@ -1,5 +1,6 @@
 import { AttachParamsV0Schema } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -40,6 +41,20 @@ export const handlePreviewAttach = createRoute({
 			billingPlan,
 		});
 
-		return c.json(previewResponse, 200);
+		// 8. Build incoming/outgoing changes
+		const { incoming, outgoing } = await billingPlanToChanges({
+			ctx,
+			billingContext,
+			billingPlan,
+		});
+
+		return c.json(
+			{
+				...previewResponse,
+				incoming,
+				outgoing,
+			},
+			200,
+		);
 	},
 });

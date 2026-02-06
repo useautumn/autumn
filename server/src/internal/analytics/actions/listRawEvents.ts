@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	getTinybirdPipes,
-	type ListEventsPipeRow,
+	type ListEventsPaginatedPipeRow,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
@@ -50,7 +50,7 @@ const calculateStartDateFromInterval = (interval: string): Date => {
 
 /** Converts pipe row to the expected ClickHouse format */
 const convertPipeRowToClickHouseFormat = (
-	row: ListEventsPipeRow,
+	row: ListEventsPaginatedPipeRow,
 ): RawEventFromClickHouse => ({
 	id: row.id,
 	customer_id: row.customer_id,
@@ -67,8 +67,6 @@ export type ListRawEventsParams = {
 	aggregateAll?: boolean;
 	event_name?: string;
 	limit?: number;
-	cursor_timestamp?: string;
-	cursor_id?: string;
 };
 
 /** Lists raw events with optional filtering by customer and date range */
@@ -114,10 +112,9 @@ export const listRawEvents = async ({
 		start_date: finalStartDate,
 		end_date: finalEndDate,
 		customer_id: params.aggregateAll ? undefined : params.customer_id,
-		event_name: params.event_name,
+		event_names: params.event_name ? [params.event_name] : undefined,
 		limit: params.limit ?? DEFAULT_LIMIT,
-		cursor_timestamp: params.cursor_timestamp,
-		cursor_id: params.cursor_id,
+		offset: 0,
 	};
 
 	ctx.logger.debug("Listing raw events via Tinybird pipe", {
@@ -126,11 +123,10 @@ export const listRawEvents = async ({
 		startDate: finalStartDate,
 		endDate: finalEndDate,
 		limit: pipeParams.limit,
-		hasCursor: !!(params.cursor_timestamp && params.cursor_id),
 	});
 
 	const startTime = performance.now();
-	const result = await pipes.listEvents(pipeParams);
+	const result = await pipes.listEventsPaginated(pipeParams);
 	const queryDuration = performance.now() - startTime;
 
 	ctx.logger.debug("Raw events result", {

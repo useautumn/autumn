@@ -1,83 +1,19 @@
 import type { Context, Env, Next } from "hono";
-import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
-	CHECK_RATE_LIMIT,
-	GENERAL_RATE_LIMIT,
-	RateLimitType,
-	TRACK_RATE_LIMIT,
-} from "../external/upstash/rateLimitConstants";
-import {
+	getLimiterForType,
 	getRateLimitKey,
+	setRateLimitKeyInContext,
+} from "@/internal/misc/rateLimiter/rateLimitFactory";
+import {
 	getRateLimitType,
-} from "../external/upstash/rateLimitUtils";
+	RateLimitType,
+} from "../internal/misc/rateLimiter/rateLimitConfigs";
 
 /**
  * In-memory rate limiting middleware for Hono
  * Uses different rate limits based on endpoint type (General, Track, Check)
  */
-
-// Helper to get rate limit key from context
-const getRateLimitKeyFromContext = (c: Context): string => {
-	return (c as Context & { rateLimitKey?: string }).rateLimitKey ?? "unknown";
-};
-
-// Helper to set rate limit key in context
-const setRateLimitKeyInContext = (c: Context, key: string): void => {
-	(c as Context & { rateLimitKey: string }).rateLimitKey = key;
-};
-
-// Create single rate limiters that share the same in-memory store
-const generalLimiter = rateLimiter({
-	windowMs: 1000,
-	limit: GENERAL_RATE_LIMIT,
-	standardHeaders: "draft-6",
-	keyGenerator: getRateLimitKeyFromContext,
-});
-
-const trackLimiter = rateLimiter({
-	windowMs: 1000,
-	limit: TRACK_RATE_LIMIT,
-	standardHeaders: "draft-6",
-	keyGenerator: getRateLimitKeyFromContext,
-});
-
-const checkLimiter = rateLimiter({
-	windowMs: 1000,
-	limit: CHECK_RATE_LIMIT,
-	standardHeaders: "draft-6",
-	keyGenerator: getRateLimitKeyFromContext,
-});
-
-const eventsLimiter = rateLimiter({
-	windowMs: 1000,
-	limit: 5,
-	standardHeaders: "draft-6",
-	keyGenerator: getRateLimitKeyFromContext,
-});
-
-const attachRateLimiter = rateLimiter({
-	windowMs: 60000,
-	limit: 5,
-	standardHeaders: "draft-6",
-	keyGenerator: getRateLimitKeyFromContext,
-});
-
-const getLimiterForType = (type: RateLimitType) => {
-	switch (type) {
-		case RateLimitType.General:
-			return generalLimiter;
-		case RateLimitType.Track:
-			return trackLimiter;
-		case RateLimitType.Check:
-			return checkLimiter;
-		case RateLimitType.Events:
-			return eventsLimiter;
-		case RateLimitType.Attach:
-			return attachRateLimiter;
-	}
-};
-
 export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
