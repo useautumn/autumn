@@ -1,15 +1,10 @@
-import type { StripeDiscountWithCoupon } from "@autumn/shared";
+import type { ResolvedStripeCoupon } from "@autumn/shared";
+import type Stripe from "stripe";
 
 // ═══════════════════════════════════════════════════════════════════
 // PERCENT-OFF DISCOUNTS
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Create a percent-off discount
- * @param percentOff - Percentage discount (e.g., 20 for 20%)
- * @param appliesToProducts - Optional list of Stripe product IDs this discount applies to
- * @param couponId - Optional coupon ID (default: "coupon_percent")
- */
 const percentOff = ({
 	percentOff,
 	appliesToProducts,
@@ -18,98 +13,58 @@ const percentOff = ({
 	percentOff: number;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): StripeDiscountWithCoupon => {
-	const now = Date.now() / 1000;
-	return {
-		id: `di_${couponId}`,
-		object: "discount",
-		checkout_session: null,
-		customer: null,
-		end: null,
-		invoice: null,
-		invoice_item: null,
-		promotion_code: null,
-		start: now,
-		subscription: null,
-		subscription_item: null,
-		source: {
-			coupon: {
-				id: couponId,
-				object: "coupon",
-				percent_off: percentOff,
-				amount_off: null,
-				currency: null,
-				applies_to: appliesToProducts
-					? { products: appliesToProducts }
-					: undefined,
-				created: now,
-				livemode: false,
-				valid: true,
-			} as StripeDiscountWithCoupon["source"]["coupon"],
-			type: "coupon",
-		},
-	};
-};
+}): ResolvedStripeCoupon => ({
+	source: {
+		coupon: buildCoupon({
+			couponId,
+			percent_off: percentOff,
+			amount_off: null,
+			currency: null,
+			appliesToProducts,
+		}),
+	},
+});
 
-/**
- * 10% off discount
- */
 const tenPercentOff = ({
 	appliesToProducts,
 	couponId = "coupon_10_percent",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	percentOff({ percentOff: 10, appliesToProducts, couponId });
 
-/**
- * 20% off discount
- */
 const twentyPercentOff = ({
 	appliesToProducts,
 	couponId = "coupon_20_percent",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	percentOff({ percentOff: 20, appliesToProducts, couponId });
 
-/**
- * 50% off discount
- */
 const fiftyPercentOff = ({
 	appliesToProducts,
 	couponId = "coupon_50_percent",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	percentOff({ percentOff: 50, appliesToProducts, couponId });
 
-/**
- * 100% off discount (free)
- */
 const hundredPercentOff = ({
 	appliesToProducts,
 	couponId = "coupon_100_percent",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	percentOff({ percentOff: 100, appliesToProducts, couponId });
 
 // ═══════════════════════════════════════════════════════════════════
 // AMOUNT-OFF DISCOUNTS
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Create an amount-off discount
- * @param amountOffCents - Amount off in Stripe cents (e.g., 1000 for $10)
- * @param currency - Currency code (default: "usd")
- * @param appliesToProducts - Optional list of Stripe product IDs this discount applies to
- * @param couponId - Optional coupon ID (default: "coupon_amount")
- */
 const amountOff = ({
 	amountOffCents,
 	currency = "usd",
@@ -120,86 +75,83 @@ const amountOff = ({
 	currency?: string;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): StripeDiscountWithCoupon => {
-	const now = Date.now() / 1000;
-	return {
-		id: `di_${couponId}`,
-		object: "discount",
-		checkout_session: null,
-		customer: null,
-		end: null,
-		invoice: null,
-		invoice_item: null,
-		promotion_code: null,
-		start: now,
-		subscription: null,
-		subscription_item: null,
-		source: {
-			coupon: {
-				id: couponId,
-				object: "coupon",
-				percent_off: null,
-				amount_off: amountOffCents,
-				currency,
-				applies_to: appliesToProducts
-					? { products: appliesToProducts }
-					: undefined,
-				created: now,
-				livemode: false,
-				valid: true,
-			} as StripeDiscountWithCoupon["source"]["coupon"],
-			type: "coupon",
-		},
-	};
-};
+}): ResolvedStripeCoupon => ({
+	source: {
+		coupon: buildCoupon({
+			couponId,
+			percent_off: null,
+			amount_off: amountOffCents,
+			currency,
+			appliesToProducts,
+		}),
+	},
+});
 
-/**
- * $5 off discount (500 cents)
- */
 const fiveDollarsOff = ({
 	appliesToProducts,
 	couponId = "coupon_5_off",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	amountOff({ amountOffCents: 500, appliesToProducts, couponId });
 
-/**
- * $10 off discount (1000 cents)
- */
 const tenDollarsOff = ({
 	appliesToProducts,
 	couponId = "coupon_10_off",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	amountOff({ amountOffCents: 1000, appliesToProducts, couponId });
 
-/**
- * $20 off discount (2000 cents)
- */
 const twentyDollarsOff = ({
 	appliesToProducts,
 	couponId = "coupon_20_off",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	amountOff({ amountOffCents: 2000, appliesToProducts, couponId });
 
-/**
- * $50 off discount (5000 cents)
- */
 const fiftyDollarsOff = ({
 	appliesToProducts,
 	couponId = "coupon_50_off",
 }: {
 	appliesToProducts?: string[];
 	couponId?: string;
-} = {}): StripeDiscountWithCoupon =>
+} = {}): ResolvedStripeCoupon =>
 	amountOff({ amountOffCents: 5000, appliesToProducts, couponId });
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+/** Builds a partial Stripe.Coupon with only the fields used by the discount system. */
+const buildCoupon = ({
+	couponId,
+	percent_off,
+	amount_off,
+	currency,
+	appliesToProducts,
+}: {
+	couponId: string;
+	percent_off: number | null;
+	amount_off: number | null;
+	currency: string | null;
+	appliesToProducts?: string[];
+}): Stripe.Coupon =>
+	({
+		id: couponId,
+		object: "coupon",
+		percent_off,
+		amount_off,
+		currency,
+		applies_to: appliesToProducts ? { products: appliesToProducts } : undefined,
+		created: Date.now() / 1000,
+		livemode: false,
+		valid: true,
+	}) as Stripe.Coupon;
 
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT

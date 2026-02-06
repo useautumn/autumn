@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 
-export type StripeDiscountWithCoupon = Stripe.Discount & {
+/** A discount source with a guaranteed expanded Stripe Coupon object. */
+export type ResolvedStripeCoupon = {
 	source: { coupon: Stripe.Coupon };
 };

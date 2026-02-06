@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { StripeDiscountWithCoupon } from "@autumn/shared";
+import type { ResolvedStripeCoupon } from "@autumn/shared";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import { stripeCustomers } from "@tests/utils/fixtures/stripe/customers";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
@@ -30,7 +30,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 	}) => stripeCustomers.create(params) as StripeCustomerWithDiscount;
 
 	const normalizeStripeCouponAppliesTo = (
-		coupon: StripeDiscountWithCoupon["source"]["coupon"],
+		coupon: ResolvedStripeCoupon["source"]["coupon"],
 	) => {
 		const couponObject = coupon as Stripe.Coupon;
 		return {
@@ -39,9 +39,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		};
 	};
 
-	const toSubscriptionDiscounts = (
-		stripeDiscounts: StripeDiscountWithCoupon[],
-	) =>
+	const toSubscriptionDiscounts = (stripeDiscounts: ResolvedStripeCoupon[]) =>
 		stripeDiscounts.map((discount) => ({
 			...discount,
 			source: {
@@ -50,7 +48,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 			},
 		})) as StripeSubscriptionWithDiscounts["discounts"];
 
-	const toCustomerDiscount = (discount: StripeDiscountWithCoupon) =>
+	const toCustomerDiscount = (discount: ResolvedStripeCoupon) =>
 		({
 			...discount,
 			coupon: normalizeStripeCouponAppliesTo(discount.source.coupon),

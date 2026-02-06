@@ -1,4 +1,4 @@
-import type { LineItem, StripeDiscountWithCoupon } from "@autumn/shared";
+import type { LineItem, ResolvedStripeCoupon } from "@autumn/shared";
 import { applyAmountOffDiscountToLineItems } from "./applyAmountOffDiscountToLineItems";
 import { applyPercentOffDiscountToLineItems } from "./applyPercentOffDiscountToLineItems";
 
@@ -7,7 +7,7 @@ export const applyStripeDiscountsToLineItems = ({
 	discounts,
 }: {
 	lineItems: LineItem[];
-	discounts: StripeDiscountWithCoupon[];
+	discounts: ResolvedStripeCoupon[];
 }): LineItem[] => {
 	const percentOffDiscounts = discounts.filter(
 		(d) => d.source.coupon.percent_off,
