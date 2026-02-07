@@ -1,6 +1,8 @@
-import type { LineItem } from "@autumn/shared";
+import type {
+	LineItem,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 
 /**
@@ -16,10 +18,12 @@ export const computeCancelLineItems = ({
 }): LineItem[] => {
 	if (billingContext.cancelAction !== "cancel_immediately") return [];
 
-	return buildAutumnLineItems({
+	const { allLineItems } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [],
 		deletedCustomerProduct: billingContext.customerProduct,
 		billingContext,
 	});
+
+	return allLineItems;
 };

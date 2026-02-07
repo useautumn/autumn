@@ -116,6 +116,7 @@ export const handleAttach = createRoute({
 			product_ids: products.map((p) => p.id),
 			customer_id: customer.id || customer.internal_id,
 			...response,
+			checkout_url: response.checkout_url ?? undefined,
 			invoice: response.invoice
 				? attachToInvoiceResponse({ invoice: response.invoice })
 				: undefined,

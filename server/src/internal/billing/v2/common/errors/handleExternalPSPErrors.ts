@@ -1,6 +1,6 @@
 import {
 	cusProductToProcessorType,
-	type FullCustomerProduct,
+	type FullCusProduct,
 	ProcessorType,
 	RecaseError,
 } from "@autumn/shared";
@@ -12,7 +12,7 @@ export const handleExternalPSPErrors = ({
 	customerProduct,
 	action,
 }: {
-	customerProduct: FullCustomerProduct | null | undefined;
+	customerProduct?: FullCusProduct;
 	action: "attach" | "update";
 }) => {
 	if (!customerProduct) return;

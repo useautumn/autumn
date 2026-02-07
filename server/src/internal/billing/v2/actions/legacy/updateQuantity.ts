@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
 import { setupLegacyTransitionContext } from "@/internal/billing/v2/actions/legacy/utils/setupLegacyFeatureQuantitiesContext";
+import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
 
 export const updateQuantity = async ({
@@ -37,7 +38,7 @@ export const updateQuantity = async ({
 
 	// Current customer product
 	const currentCustomerProduct = findActiveCustomerProductById({
-		fullCustomer: attachParams.customer,
+		fullCus: attachParams.customer,
 		productId: fullProduct.id,
 		internalEntityId: attachParams.customer.entity?.internal_id,
 	});
@@ -75,9 +76,19 @@ export const updateQuantity = async ({
 		options: attachParams.optionsList,
 	};
 
-	return await billingActions.updateSubscription({
+	const res = await billingActions.updateSubscription({
 		ctx,
 		params,
 		contextOverride: billingContextOverride,
 	});
+
+	const billingResponse = billingResultToResponse({
+		billingContext: res.billingContext,
+		billingResult: res.billingResult ?? { stripe: {} },
+	});
+
+	return {
+		...res,
+		billingResponse,
+	};
 };

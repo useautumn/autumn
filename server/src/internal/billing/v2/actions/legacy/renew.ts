@@ -37,7 +37,7 @@ export const renew = async ({
 
 	// Current customer product
 	const currentCustomerProduct = findActiveCustomerProductById({
-		fullCustomer: attachParams.customer,
+		fullCus: attachParams.customer,
 		productId: fullProduct.id,
 		internalEntityId: attachParams.customer.entity?.internal_id,
 	});

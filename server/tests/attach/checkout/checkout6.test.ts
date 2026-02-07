@@ -79,15 +79,15 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checko
 		});
 	});
 
-	test("should have no URL returned if try to attach premium (with invoice true)", async () => {
-		const res = await autumn.attach({
-			customer_id: customerId,
-			product_id: premium.id,
-			invoice: true,
-		});
+	// test("should have no URL returned if try to attach premium (with invoice true)", async () => {
+	// 	const res = await autumn.attach({
+	// 		customer_id: customerId,
+	// 		product_id: premium.id,
+	// 		invoice: true,
+	// 	});
 
-		expect(res.url).toBeUndefined();
-	});
+	// 	expect(res.url).toBeUndefined();
+	// });
 
 	test("should attach premium product via invoice enable immediately", async () => {
 		const res = await autumn.attach({

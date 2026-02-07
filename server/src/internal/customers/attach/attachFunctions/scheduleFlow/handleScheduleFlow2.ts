@@ -205,7 +205,6 @@ export const handleScheduleFunction2 = async ({
 	const { billingContext } = await billingActions.legacy.attach({
 		ctx,
 		attachParams,
-		body,
 		planTiming: "end_of_cycle",
 	});
 

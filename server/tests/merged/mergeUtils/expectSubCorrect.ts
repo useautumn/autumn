@@ -37,7 +37,6 @@ import {
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
 import type { TestContext } from "../../utils/testInitUtils/createTestContext.js";
-import { cusProductToSubIds } from "../mergeUtils.test.js";
 
 const compareActualItems = async ({
 	actualItems,
@@ -201,7 +200,9 @@ export const expectSubToBeCorrect = async ({
 	let cusProducts = fullCus.customer_products;
 
 	if (!subId) {
-		const subIds = cusProductToSubIds({ cusProducts });
+		const subIds = [
+			...new Set(cusProducts.flatMap((cp) => cp.subscription_ids || [])),
+		];
 		subId = subIds[0];
 		expect(subIds.length).toBe(1);
 	} else {
