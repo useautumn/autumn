@@ -88,10 +88,7 @@ test.concurrent(`${chalk.yellowBright("void-invoice-cron 1: void open invoice fr
 	// Run the void invoice cron handler
 	await handleVoidInvoiceCron({
 		metadata: metadata!,
-		ctx: {
-			db: ctx.db,
-			logger: ctx.logger,
-		},
+		ctx,
 	});
 
 	// Verify the Stripe invoice is now voided

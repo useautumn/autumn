@@ -63,9 +63,10 @@ export const cusProductToConvertedFeatureOptions = ({
 
 	// 4. Subtract new allowance
 	const newAllowance = entitlement.allowance ?? 0;
-	const quantityWithoutNewAllowance = new Decimal(quantityWithOldAllowance)
-		.sub(newAllowance)
-		.toNumber();
+	const quantityWithoutNewAllowance = Math.max(
+		0,
+		new Decimal(quantityWithOldAllowance).sub(newAllowance).toNumber(),
+	);
 
 	// 5. Round to nearest new billing unit
 	const roundedQuantityWithoutNewAllowance = roundUsageToNearestBillingUnit({
