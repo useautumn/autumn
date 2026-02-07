@@ -16,9 +16,13 @@
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, CusExpand } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import {
+	expectCustomerProducts,
+	expectProductActive,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -69,13 +73,19 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 		],
 	});
 
-	// After first add-on attach: 2 subs
+	// After first add-on attach: 2 subs, both products active
 	await expectSubCount({ ctx, customerId, count: 2 });
 
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectProductAttached({ customer: customer1, productId: addOn.id });
-	expect(customer1.invoices.length).toBe(2);
-	expect(customer1.invoices[0].total).toBe(10);
+	await expectCustomerProducts({
+		customer: customer1,
+		active: [pro.id, addOn.id],
+	});
+	expectCustomerInvoiceCorrect({
+		customer: customer1,
+		count: 2,
+		latestTotal: 20, // recurringAddOn uses type: "pro" → $20/month
+	});
 
 	// Attach same add-on again → 3 subs
 	await autumnV1.attach({
@@ -89,8 +99,11 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const addOnProduct = customer2.products.find((p) => p.id === addOn.id);
 	expect(addOnProduct?.quantity).toBe(2);
-	expect(customer2.invoices?.length).toBe(3);
-	expect(customer2.invoices?.[0].total).toBe(10);
+	expectCustomerInvoiceCorrect({
+		customer: customer2,
+		count: 3,
+		latestTotal: 20,
+	});
 }, 120000);
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -143,7 +156,7 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 	await expectSubCount({ ctx, customerId, count: 2 });
 
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
-	expectProductAttached({ customer: entity1, productId: premium.id });
+	await expectProductActive({ customer: entity1, productId: premium.id });
 
 	// Attach premium to entity 2 → 3 subs
 	await autumnV1.attach({
@@ -156,30 +169,25 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 	await expectSubCount({ ctx, customerId, count: 3 });
 
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	expectProductAttached({ customer: entity2, productId: premium.id });
+	await expectProductActive({ customer: entity2, productId: premium.id });
 
-	// Verify final state
+	// Verify final state: customer pro active, both entity premiums active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 		expand: [CusExpand.Invoices],
 	});
-
-	const customerPro = customer.products.find((p) => p.id === pro.id);
-	expect(customerPro).toBeDefined();
-	expect(customerPro?.status).toBe("active");
+	await expectProductActive({ customer, productId: pro.id });
 
 	const entity1Final = await autumnV1.entities.get(customerId, entities[0].id);
-	const e1Premium = entity1Final.products?.find(
-		(p: { id?: string }) => p.id === premium.id,
-	);
-	expect(e1Premium).toBeDefined();
-	expect(e1Premium!.status).toBe("active");
+	await expectProductActive({
+		customer: entity1Final,
+		productId: premium.id,
+	});
 
 	const entity2Final = await autumnV1.entities.get(customerId, entities[1].id);
-	const e2Premium = entity2Final.products?.find(
-		(p: { id?: string }) => p.id === premium.id,
-	);
-	expect(e2Premium).toBeDefined();
-	expect(e2Premium!.status).toBe("active");
+	await expectProductActive({
+		customer: entity2Final,
+		productId: premium.id,
+	});
 }, 120000);
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -229,11 +237,15 @@ test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect e
 	// Verify initial: customer pro + entity premium = 2 subs
 	await expectSubCount({ ctx, customerId, count: 2 });
 
-	const customerBefore = await autumnV1.customers.get(customerId);
-	expectProductAttached({ customer: customerBefore, productId: pro.id });
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer: customerBefore, productId: pro.id });
 
 	const entityBefore = await autumnV1.entities.get(customerId, entities[0].id);
-	expectProductAttached({ customer: entityBefore, productId: premium.id });
+	await expectProductActive({
+		customer: entityBefore,
+		productId: premium.id,
+	});
 
 	// Upgrade customer from pro → premium
 	await autumnV1.attach({
@@ -241,29 +253,25 @@ test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect e
 		product_id: premium.id,
 	});
 
+	// Customer should have premium active, pro gone
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectProductAttached({ customer: customerAfter, productId: premium.id });
-
-	// Pro should be gone from customer-level products
-	const proProduct = customerAfter.products.find(
-		(p) => p.id === pro.id && !p.entity_id,
-	);
-	expect(proProduct).toBeUndefined();
+	await expectCustomerProducts({
+		customer: customerAfter,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
 
 	// Still 2 subs (customer premium + entity premium on separate sub)
 	await expectSubCount({ ctx, customerId, count: 2 });
 
-	// Entity should still have premium on its separate sub
+	// Entity should still have premium active on its separate sub
 	const entityAfter = await autumnV1.entities.get(customerId, entities[0].id);
-	const entityProducts = entityAfter.products!;
-	expect(entityProducts.length).toBe(1);
-	const entityPremium = entityProducts.find(
-		(p: { id?: string }) => p.id === premium.id,
-	);
-	expect(entityPremium).toBeDefined();
-	expect(entityPremium!.status).toBe("active");
+	await expectProductActive({
+		customer: entityAfter,
+		productId: premium.id,
+	});
+	expect(entityAfter.products!.length).toBe(1);
 
-	const invoices = customerAfter.invoices;
-	expect(invoices).toBeDefined();
-	expect(invoices!.length).toBeGreaterThanOrEqual(1);
-}, 120000);
+	expect(customerAfter.invoices).toBeDefined();
+	expect(customerAfter.invoices!.length).toBeGreaterThanOrEqual(1);
+});

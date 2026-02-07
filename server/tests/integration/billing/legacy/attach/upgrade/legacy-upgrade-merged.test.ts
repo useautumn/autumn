@@ -14,8 +14,9 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, CusProductStatus } from "@autumn/shared";
+import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -57,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity i
 		],
 		actions: [
 			s.attach({ productId: pro.id, entityIndex: 0 }),
-			s.attach({ productId: pro.id, entityIndex: 1, timeout: 3000 }),
+			s.attach({ productId: pro.id, entityIndex: 1, timeout: 4000 }),
 			s.track({
 				featureId: TestFeature.Words,
 				value: entity1Val,
@@ -70,7 +71,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity i
 				entityIndex: 1,
 				timeout: 3000,
 			}),
-			s.advanceTestClock({ weeks: 2 }),
+			// s.advanceTestClock({ weeks: 2 }),
 		],
 	});
 
@@ -81,6 +82,24 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity i
 		entity_id: "ent-1",
 	});
 
+	const entity1Overage = calculateExpectedInvoiceAmount({
+		items: pro.items,
+		usage: [{ featureId: TestFeature.Words, value: entity1Val }],
+		options: { onlyArrear: true },
+	});
+
+	const entity1Base =
+		getBasePrice({ product: premium }) - getBasePrice({ product: pro });
+
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerInvoiceCorrect({
+		customer: customerAfterAttach,
+		count: 3,
+		latestTotal: entity1Base + entity1Overage,
+	});
+
 	// Advance to next invoice to check usage billing
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
@@ -89,15 +108,10 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity i
 	});
 
 	// Entity 2's usage on pro should show up on the invoice
-	const expectedUsageTotal = await getExpectedInvoiceTotal({
-		customerId,
-		productId: pro.id,
+	const expectedUsageTotal = calculateExpectedInvoiceAmount({
+		items: pro.items,
 		usage: [{ featureId: TestFeature.Words, value: entity2Val }],
-		onlyIncludeUsage: true,
-		stripeCli: ctx.stripeCli,
-		db: ctx.db,
-		org: ctx.org,
-		env: ctx.env,
+		options: { includeFixed: false, onlyArrear: true },
 	});
 
 	const basePrice =
@@ -106,7 +120,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity i
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoice = customer.invoices![0];
 	expect(invoice.total).toBe(basePrice + expectedUsageTotal);
-}, 120000);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Upgrade cancels scheduled downgrade (single entity)
