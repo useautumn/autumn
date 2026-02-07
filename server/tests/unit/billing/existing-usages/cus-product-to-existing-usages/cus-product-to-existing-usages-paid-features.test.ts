@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { FeatureUsageType } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
@@ -45,7 +46,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 150: 100 from included + 50 from overage
 				// Formula: usage = includedUsage - balance = 100 - (-50) = 150
@@ -83,7 +87,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 70: allowance 100 - balance 30 = 70
 				expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -121,7 +128,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 200: all from overage (0 - (-200) = 200)
 				expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -158,7 +168,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 100: exactly at the limit
 				expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -183,6 +196,7 @@ describe(
 					featureName: "Users",
 					allowance: 5, // 5 included seats
 					balance: 2, // 3 seats used
+					featureConfig: { usage_type: FeatureUsageType.Continuous },
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -220,6 +234,7 @@ describe(
 					featureName: "Users",
 					allowance: 3, // 3 included seats
 					balance: -2, // 5 seats used (2 over)
+					featureConfig: { usage_type: FeatureUsageType.Continuous },
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -257,6 +272,7 @@ describe(
 					featureName: "Users",
 					allowance: 0, // no included seats
 					balance: -10, // 10 seats purchased/used
+					featureConfig: { usage_type: FeatureUsageType.Continuous },
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -320,7 +336,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// For prepaid, usage = purchasedQuantity - balance
 				// purchasedQuantity from 10 billing units = 1000
@@ -362,7 +381,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 			});
@@ -399,7 +421,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				// Overage should be captured
@@ -442,6 +467,7 @@ describe(
 					featureName: "Users",
 					allowance: 5,
 					balance: -2, // 7 used
+					featureConfig: { usage_type: FeatureUsageType.Continuous },
 				});
 
 				const usersPrice = prices.createAllocated({
@@ -471,7 +497,10 @@ describe(
 					],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Messages: 100 - (-20) = 120 used
 				expect(existingUsages[messagesFeatureId]).toBeDefined();
@@ -550,7 +579,10 @@ describe(
 					],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Messages: 50 - (-150) = 200 used
 				expect(existingUsages[messagesFeatureId]).toBeDefined();
@@ -601,7 +633,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 0
 				expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -638,7 +673,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 10100: 100 - (-10000) = 10100
 				expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -675,7 +713,10 @@ describe(
 					customerPrices: [customerPrice],
 				});
 
-				const existingUsages = cusProductToExistingUsages({ cusProduct });
+				const existingUsages = cusProductToExistingUsages({
+					cusProduct,
+					carryAllConsumableFeatures: true,
+				});
 
 				// Usage should be 150.5
 				expect(existingUsages[internalFeatureId]).toBeDefined();
