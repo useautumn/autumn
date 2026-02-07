@@ -92,6 +92,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 		});
 
 		newPro.items = newItems;
+		newPro.version = 2;
 		await autumn.products.update(pro.id, {
 			items: newItems,
 		});
@@ -111,15 +112,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 			testClockId,
 			advanceTo: addWeeks(Date.now(), 1).getTime(),
 		});
-
-		await autumn.migrate({
-			from_product_id: pro.id,
-			to_product_id: newPro.id,
-			from_version: 1,
-			to_version: 2,
-		});
-
-		await timeout(4000);
 
 		await runMigrationTest({
 			autumn,
