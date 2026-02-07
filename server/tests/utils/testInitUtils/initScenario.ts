@@ -86,6 +86,23 @@ type AdvanceToNextInvoiceAction = {
 	withPause?: boolean;
 };
 
+type AssertContext = {
+	customerId: string | undefined;
+	autumnV1: AutumnInt;
+	autumnV1Beta: AutumnInt;
+	autumnV2: AutumnInt;
+	ctx: TestContext;
+	entities: GeneratedEntity[];
+	advancedTo: number;
+	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
+	testClockId: string | undefined;
+};
+
+type AssertAction = {
+	type: "assert";
+	fn: (context: AssertContext) => Promise<void> | void;
+};
+
 type ScenarioAction =
 	| AttachAction
 	| CancelAction
@@ -94,7 +111,8 @@ type ScenarioAction =
 	| RemovePaymentMethodAction
 	| TrackAction
 	| UpdateSubscriptionAction
-	| AdvanceToNextInvoiceAction;
+	| AdvanceToNextInvoiceAction
+	| AssertAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];
@@ -480,6 +498,26 @@ const advanceToNextInvoice = ({
 	});
 };
 
+type AssertFn = (ctx: AssertContext) => Promise<void> | void;
+
+/**
+ * Run custom assertions inline with other actions.
+ * The callback receives the full scenario context.
+ * @example s.assert(async ({ autumnV1, customerId }) => { ... })
+ * @example s.assert("customer should have product", async ({ autumnV1 }) => { ... })
+ */
+const assert = (
+	descriptionOrFn: string | AssertFn,
+	fn?: AssertFn,
+): ConfigFn => {
+	const actualFn =
+		typeof descriptionOrFn === "function" ? descriptionOrFn : fn!;
+	return (config) => ({
+		...config,
+		actions: [...config.actions, { type: "assert" as const, fn: actualFn }],
+	});
+};
+
 /**
  * Delete a customer before the test runs.
  * Uses API to clear cache. Silently ignores if customer doesn't exist.
@@ -544,6 +582,7 @@ export const s = {
 	track,
 	updateSubscription,
 	deleteCustomer,
+	assert,
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -955,6 +994,18 @@ export async function initScenario({
 					waitForSeconds: 30,
 				});
 			}
+		} else if (action.type === "assert") {
+			await action.fn({
+				customerId,
+				autumnV1,
+				autumnV1Beta,
+				autumnV2,
+				ctx,
+				entities: generatedEntities,
+				advancedTo,
+				customer,
+				testClockId,
+			});
 		}
 	}
 

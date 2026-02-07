@@ -23,6 +23,7 @@ export const constructFeatureItem = ({
 	unlimited = false,
 	rolloverConfig,
 	featureType,
+	resetUsageWhenEnabled = false,
 }: {
 	featureId: string;
 	includedUsage?: number;
@@ -33,6 +34,7 @@ export const constructFeatureItem = ({
 	rolloverConfig?: RolloverConfig;
 	featureType?: ProductItemFeatureType;
 	unlimited?: boolean;
+	resetUsageWhenEnabled?: boolean;
 }) => {
 	if (isBoolean) {
 		return {
@@ -54,6 +56,7 @@ export const constructFeatureItem = ({
 		feature_type: featureType,
 		interval: interval,
 		interval_count: intervalCount,
+		reset_usage_when_enabled: resetUsageWhenEnabled,
 	};
 
 	if (rolloverConfig) {
