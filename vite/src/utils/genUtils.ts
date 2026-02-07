@@ -190,3 +190,14 @@ export const throwBackendError = (error: any): never => {
 	}
 	throw error;
 };
+
+/** Opens a URL in a new tab without being blocked by popup blockers */
+export const openInNewTab = ({ url }: { url: string }) => {
+	const a = document.createElement("a");
+	a.href = url;
+	a.target = "_blank";
+	a.rel = "noopener noreferrer";
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+};

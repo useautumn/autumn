@@ -4,9 +4,9 @@ import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { spawn } from "bun";
-import { Box, render, Text, useApp } from "ink";
+import { Box, render, Static, Text, useApp } from "ink";
 import pLimit from "p-limit";
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Base path for shorthand test paths
 const INTEGRATION_TEST_BASE = "server/tests";
@@ -158,20 +158,21 @@ function parseErrorFromLines(
 		// Match stack trace lines like:
 		// at async <anonymous> (/path/to/file.test.ts:38:29)
 		// at functionName (/path/to/file.ts:123:45)
-		const stackMatch = line.match(/at\s+.*?\(([^)]+\.ts):(\d+):\d+\)/);
+		const stackMatch = line.match(/at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/);
 		if (stackMatch) {
 			const matchedFile = stackMatch[1];
 			const lineNum = stackMatch[2];
+			const colNum = stackMatch[3];
 
 			// Prefer .test.ts files
 			if (matchedFile.endsWith(".test.ts")) {
-				location = `${matchedFile}:${lineNum}`;
+				location = `${matchedFile}:${lineNum}:${colNum}`;
 				break;
 			}
 
 			// Otherwise take first server file if we don't have one yet
 			if (!location && matchedFile.includes("/server/")) {
-				location = `${matchedFile}:${lineNum}`;
+				location = `${matchedFile}:${lineNum}:${colNum}`;
 			}
 		}
 	}
@@ -313,7 +314,7 @@ async function runTestFile(
 
 		onUpdate(finalResult);
 		return finalResult;
-	} catch (error) {
+	} catch {
 		const duration = performance.now() - startTime;
 		const finalResult: TestFileResult = {
 			file,
@@ -346,13 +347,13 @@ function Spinner() {
 
 function truncate(str: string, maxLength: number): string {
 	if (str.length <= maxLength) return str;
-	return str.substring(0, maxLength - 3) + "...";
+	return `${str.substring(0, maxLength - 3)}...`;
 }
 
-function toRelativePath(absolutePath: string): string {
+function toClickablePath(absolutePath: string): string {
 	const workspaceRoot = process.cwd();
 	if (absolutePath.startsWith(workspaceRoot)) {
-		return absolutePath.slice(workspaceRoot.length + 1);
+		return `./${absolutePath.slice(workspaceRoot.length + 1)}`;
 	}
 	return absolutePath;
 }
@@ -383,26 +384,21 @@ function CompletedFile({ result }: CompletedFileProps) {
 
 interface FailedTestProps {
 	test: IndividualTest;
-	fileName: string;
 }
 
-function FailedTest({ test, fileName }: FailedTestProps) {
+function FailedTest({ test }: FailedTestProps) {
 	return (
-		<Box flexDirection="column" marginBottom={1}>
+		<Box flexDirection="column" marginLeft={2}>
 			<Box>
-				<Text color="red">✗ </Text>
+				<Text color="red"> ✗ </Text>
 				<Text>{truncate(test.name, 60)}</Text>
+				{test.error?.message && (
+					<Text color="yellow"> — {truncate(test.error.message, 70)}</Text>
+				)}
 			</Box>
-			{test.error?.message && (
-				<Box marginLeft={2}>
-					<Text dimColor>→ </Text>
-					<Text color="yellow">{truncate(test.error.message, 70)}</Text>
-				</Box>
-			)}
 			{test.error?.location && (
-				<Box marginLeft={2}>
-					<Text dimColor>→ </Text>
-					<Text color="cyan">{toRelativePath(test.error.location)}</Text>
+				<Box marginLeft={4}>
+					<Text color="cyan">{toClickablePath(test.error.location)}</Text>
 				</Box>
 			)}
 		</Box>
@@ -444,10 +440,21 @@ interface TestRunnerAppProps {
 
 function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 	const { exit } = useApp();
+
+	// Mutable ref accumulates updates from stdout chunks without triggering re-renders.
+	// A fixed-interval timer flushes the ref into React state at ~10fps.
+	const pendingRef = useRef<Map<string, TestFileResult>>(new Map());
+	const dirtyRef = useRef(false);
+
 	const [results, setResults] = useState<Map<string, TestFileResult>>(
 		new Map(),
 	);
 	const [isComplete, setIsComplete] = useState(false);
+
+	// Track which completed files have already been emitted to <Static>
+	// so we only append new ones (Static items are write-once).
+	const emittedFilesRef = useRef<Set<string>>(new Set());
+	const [staticItems, setStaticItems] = useState<TestFileResult[]>([]);
 
 	// Initialize all files as pending
 	useEffect(() => {
@@ -460,112 +467,143 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				duration: 0,
 			});
 		}
+		pendingRef.current = initial;
 		setResults(initial);
 	}, [testFiles]);
+
+	// Flush pending ref into state on a fixed interval (~10fps)
+	useEffect(() => {
+		const interval = setInterval(() => {
+			if (!dirtyRef.current) return;
+			dirtyRef.current = false;
+
+			const snapshot = new Map(pendingRef.current);
+			setResults(snapshot);
+
+			// Emit newly-completed files to <Static>
+			const newStatic: TestFileResult[] = [];
+			for (const [file, result] of snapshot) {
+				if (
+					(result.status === "passed" || result.status === "failed") &&
+					!emittedFilesRef.current.has(file)
+				) {
+					emittedFilesRef.current.add(file);
+					newStatic.push(result);
+				}
+			}
+			if (newStatic.length > 0) {
+				setStaticItems((prev) => [...prev, ...newStatic]);
+			}
+		}, 100);
+
+		return () => clearInterval(interval);
+	}, []);
+
+	// The callback given to each test process — writes to the mutable ref only
+	const updateResult = useCallback((result: TestFileResult) => {
+		pendingRef.current.set(result.file, result);
+		dirtyRef.current = true;
+	}, []);
 
 	// Run tests
 	useEffect(() => {
 		const runAllTests = async () => {
 			const limit = pLimit(maxParallel);
 
-			const updateResult = (result: TestFileResult) => {
-				setResults((prev) => {
-					const next = new Map(prev);
-					next.set(result.file, result);
-					return next;
-				});
-			};
-
 			const promises = testFiles.map((file) =>
 				limit(() => runTestFile(file, updateResult)),
 			);
 
 			await Promise.all(promises);
+
+			// Final flush to ensure every completed result is captured
+			const finalSnapshot = new Map(pendingRef.current);
+			setResults(finalSnapshot);
+
+			const newStatic: TestFileResult[] = [];
+			for (const [file, result] of finalSnapshot) {
+				if (
+					(result.status === "passed" || result.status === "failed") &&
+					!emittedFilesRef.current.has(file)
+				) {
+					emittedFilesRef.current.add(file);
+					newStatic.push(result);
+				}
+			}
+			if (newStatic.length > 0) {
+				setStaticItems((prev) => [...prev, ...newStatic]);
+			}
+
 			setIsComplete(true);
 		};
 
 		if (testFiles.length > 0) {
 			runAllTests();
 		}
-	}, [testFiles, maxParallel]);
+	}, [testFiles, maxParallel, updateResult]);
 
 	// Exit when complete
 	useEffect(() => {
-		if (isComplete) {
-			const allResults = Array.from(results.values());
-			const failedTests = allResults.flatMap((r) =>
-				r.tests.filter((t) => t.status === "failed"),
-			);
+		if (!isComplete) return;
 
-			// Small delay to ensure final render
-			setTimeout(() => {
-				exit();
-				process.exit(failedTests.length > 0 ? 1 : 0);
-			}, 100);
-		}
+		const allResults = Array.from(results.values());
+		const failedTests = allResults.flatMap((r) =>
+			r.tests.filter((t) => t.status === "failed"),
+		);
+
+		// Small delay to ensure final render
+		setTimeout(() => {
+			exit();
+			process.exit(failedTests.length > 0 ? 1 : 0);
+		}, 100);
 	}, [isComplete, results, exit]);
 
 	const allResults = Array.from(results.values());
+	const runningFiles = allResults.filter((r) => r.status === "running");
+
 	const completedFiles = allResults.filter(
 		(r) => r.status === "passed" || r.status === "failed",
 	);
-	const runningFiles = allResults.filter((r) => r.status === "running");
-
 	const completedTests = completedFiles.flatMap((r) => r.tests);
 	const passedTests = completedTests.filter((t) => t.status === "passed");
 	const failedTests = completedTests.filter((t) => t.status === "failed");
 
-	// Get ALL failures
-	const allFailures = completedFiles.flatMap((r) =>
-		r.tests
-			.filter((t) => t.status === "failed")
-			.map((t) => ({ test: t, fileName: basename(r.file), file: r.file })),
-	);
-
 	return (
 		<Box flexDirection="column">
-			{/* Header */}
-			<Text bold color="cyan">
-				Running {testFiles.length} test files...
-			</Text>
-			<Text> </Text>
+			{/* Static section: completed files + failures. Written once, never re-rendered. */}
+			<Static items={staticItems}>
+				{(result) => (
+					<Box key={result.file} flexDirection="column">
+						<CompletedFile result={result} />
+						{result.tests
+							.filter((t) => t.status === "failed")
+							.map((t) => (
+								<FailedTest key={`${result.file}-${t.name}`} test={t} />
+							))}
+					</Box>
+				)}
+			</Static>
+
+			{/* Dynamic section below — only this part re-renders */}
+			<Text dimColor>{"─".repeat(60)}</Text>
 
 			{/* Running files */}
 			{runningFiles.length > 0 && (
 				<Box flexDirection="column">
-					<Text bold color="yellow">
-						Running ({runningFiles.length}):
-					</Text>
 					{runningFiles.map((r) => (
 						<RunningFile key={r.file} result={r} />
 					))}
-					<Text> </Text>
 				</Box>
 			)}
 
-			{/* Completed files (last 3) */}
-			{completedFiles.length > 0 && (
-				<Box flexDirection="column">
-					<Text dimColor>
-						Completed ({completedFiles.length}/{testFiles.length} files):
-					</Text>
-					{completedFiles.slice(-3).map((r) => (
-						<CompletedFile key={r.file} result={r} />
-					))}
-					<Text> </Text>
-				</Box>
-			)}
-
-			{/* Progress bar */}
-			<Text dimColor>{"─".repeat(60)}</Text>
+			{/* Progress */}
 			<Box>
 				{!isComplete && <Spinner />}
 				{isComplete && <Text color="green">✓</Text>}
 				<Text>
 					{" "}
-					Progress:{" "}
 					<Text bold>
-						{completedFiles.length}/{testFiles.length} files
+						{completedFiles.length}/{testFiles.length}
 					</Text>{" "}
 					| <Text color="green">✓ {passedTests.length}</Text> |{" "}
 					<Text color={failedTests.length > 0 ? "red" : undefined}>
@@ -576,22 +614,6 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 					)}
 				</Text>
 			</Box>
-
-			{/* ALL failures - shown below progress */}
-			{allFailures.length > 0 && (
-				<Box flexDirection="column" marginTop={1}>
-					<Text bold color="red">
-						Failures ({allFailures.length}):
-					</Text>
-					{allFailures.map((f) => (
-						<FailedTest
-							key={`${f.file}-${f.test.name}`}
-							test={f.test}
-							fileName={f.fileName}
-						/>
-					))}
-				</Box>
-			)}
 
 			{/* Final summary when complete */}
 			{isComplete && (
@@ -661,7 +683,10 @@ function FinalSummary({ results }: FinalSummaryProps) {
 						<Box key={test.name} flexDirection="column" marginTop={1}>
 							<Text color="red"> ✗ {test.name}</Text>
 							{test.error?.location && (
-								<Text color="cyan"> {toRelativePath(test.error.location)}</Text>
+								<Text color="cyan">
+									{" "}
+									{toClickablePath(test.error.location)}
+								</Text>
 							)}
 							{test.error?.message && (
 								<Text color="yellow"> {test.error.message}</Text>

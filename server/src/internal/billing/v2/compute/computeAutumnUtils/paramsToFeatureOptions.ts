@@ -25,9 +25,10 @@ export const paramsToFeatureOptions = ({
 	const billingUnits = price.config.billing_units ?? 1;
 
 	if (notNullish(options?.quantity)) {
-		const quantityExcludingAllowance = new Decimal(options.quantity)
-			.sub(entitlement.allowance ?? 0)
-			.toNumber();
+		const quantityExcludingAllowance = Math.max(
+			0,
+			new Decimal(options.quantity).sub(entitlement.allowance ?? 0).toNumber(),
+		);
 
 		const roundedQuantity = roundUsageToNearestBillingUnit({
 			usage: quantityExcludingAllowance,

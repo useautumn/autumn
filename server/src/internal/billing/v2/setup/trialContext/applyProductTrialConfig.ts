@@ -57,7 +57,7 @@ export const applyProductTrialConfig = async ({
 	});
 
 	if (!freeTrial) {
-		return undefined;
+		return undefined; // second entity upgrade case comes here
 	}
 
 	const trialEndsAt = addDuration({

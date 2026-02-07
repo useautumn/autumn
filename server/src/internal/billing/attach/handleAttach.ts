@@ -111,8 +111,6 @@ export const handleAttach = createRoute({
 
 		const { products, customer } = attachParams;
 
-		console.log("ATTACH RESPONSE:", response);
-
 		const responseV1 = AttachResponseV1Schema.parse({
 			success: true,
 			product_ids: products.map((p) => p.id),
@@ -123,6 +121,8 @@ export const handleAttach = createRoute({
 				? attachToInvoiceResponse({ invoice: response.invoice })
 				: undefined,
 		});
+
+		console.log("ATTACH RESPONSE:", responseV1);
 
 		return c.json(
 			applyResponseVersionChanges<AttachResponseV1>({

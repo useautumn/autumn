@@ -17,7 +17,7 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: free default then pro with 
 
 	await autumnV1.attach({
 		customer_id: "test",
-		product_id: "pro_seed-cancel-test",
+		product_id: "pro_seed",
 		options: [
 			{
 				feature_id: "messages",

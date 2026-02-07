@@ -210,7 +210,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		customerId,
 		setup: [
 			// No payment method — force_checkout will provide the payment page
-			s.customer({ testClock: true }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium, addOn] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
@@ -324,4 +324,4 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		env: ctx.env,
 		subId: entity2SubId,
 	});
-}, 120000);
+});
