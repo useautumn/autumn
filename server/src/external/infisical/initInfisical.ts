@@ -33,6 +33,7 @@ export const initInfisical = async (params?: { secretPath?: string }) => {
 			projectId,
 			secretPath: params?.secretPath,
 			includeImports: true,
+			recursive: true,
 		});
 
 		// Load secrets into process.env
