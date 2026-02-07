@@ -5,9 +5,8 @@ import {
 	type InitFullCustomerProductOptions,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
 import { generateId } from "@/utils/genUtils";
-import { applyExistingRollovers } from "../handleExistingRollovers/applyExistingRollovers";
-import { applyExistingUsages } from "../handleExistingUsages/applyExistingUsages";
 import { initCustomerEntitlement } from "./initCustomerEntitlement/initCustomerEntitlement";
 import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
@@ -59,18 +58,15 @@ export const initFullCustomerProduct = ({
 		product: rawProduct,
 		customer_entitlements: newFullCusEnts,
 		customer_prices: newCusPrices,
+		free_trial: initContext.freeTrial ?? null,
 	};
 
-	applyExistingUsages({
+	applyExistingStatesToCustomerProduct({
 		ctx,
+		fullCustomer,
 		customerProduct: newFullCustomerProduct,
-		existingUsages: initContext.existingUsages,
-		entities: fullCustomer.entities,
-	});
-
-	applyExistingRollovers({
-		customerProduct: newFullCustomerProduct,
-		existingRollovers: initContext.existingRollovers ?? [],
+		existingUsagesConfig: initContext.existingUsagesConfig,
+		existingRolloversConfig: initContext.existingRolloversConfig,
 	});
 
 	const { valid: isPaidRecurring } = cp(newFullCustomerProduct)

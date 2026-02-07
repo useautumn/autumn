@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { EntInterval } from "@autumn/shared";
+import { EntInterval, FeatureUsageType } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { rollovers } from "@tests/utils/fixtures/db/rollovers";
@@ -19,6 +19,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				allowance: 100,
 				balance: 80,
 				interval: EntInterval.Lifetime,
+				featureConfig: { usage_type: FeatureUsageType.Continuous },
 			});
 
 			// Monthly cusEnt: allowance 50, balance 30 -> usage = 20
@@ -30,6 +31,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				balance: 30,
 				interval: EntInterval.Month,
 				nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+				featureConfig: { usage_type: FeatureUsageType.Continuous },
 			});
 
 			const cusProduct = customerProducts.create({
@@ -57,6 +59,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				featureName: "Feature A",
 				allowance: 100,
 				balance: 70,
+				featureConfig: { usage_type: FeatureUsageType.Continuous },
 			});
 
 			// Entity-scoped cusEnt with entities
@@ -71,6 +74,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 					entity1: { id: "entity1", balance: 40, adjustment: 0 },
 					entity2: { id: "entity2", balance: 25, adjustment: 0 },
 				},
+				featureConfig: { usage_type: FeatureUsageType.Continuous },
 			});
 
 			const cusProduct = customerProducts.create({
@@ -114,6 +118,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				featureName: "Feature A",
 				allowance: 100,
 				balance: 80, // Current balance
+				featureConfig: { usage_type: FeatureUsageType.Continuous },
 			});
 
 			// Add rollover to the cusEnt

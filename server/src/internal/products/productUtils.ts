@@ -322,6 +322,7 @@ export const attachToInsertParams = (
 		entitlements: getEntitlementsForProduct(product, attachParams.entitlements),
 		entityId: attachEntityId,
 		internalEntityId: internalEntityId,
+		curCusProduct: attachParams.cusProduct,
 	} as InsertCusProductParams;
 };
 

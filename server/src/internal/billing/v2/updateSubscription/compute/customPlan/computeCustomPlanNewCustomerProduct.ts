@@ -2,8 +2,7 @@ import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { computeCancelFields } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCancelFields";
-import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
-import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
+
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 export const computeCustomPlanNewCustomerProduct = ({
@@ -29,20 +28,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cancelAction,
 	} = updateSubscriptionContext;
 
-	const existingUsages = cusProductToExistingUsages({
-		cusProduct: customerProduct,
-		entityId: fullCustomer.entity?.id,
-	});
-
-	const existingRollovers = cusProductToExistingRollovers({
-		cusProduct: customerProduct,
-	});
-
-	ctx.logger.debug(
-		`[computeNewCustomerProduct] existing usages:`,
-		existingUsages,
-	);
-
 	const cancelFields = computeCancelFields({
 		cancelAction,
 		currentCustomerProduct,
@@ -56,8 +41,14 @@ export const computeCustomPlanNewCustomerProduct = ({
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
-			existingUsages,
-			existingRollovers,
+			existingUsagesConfig: {
+				fromCustomerProduct: customerProduct,
+				carryAllConsumableFeatures: true,
+			},
+
+			existingRolloversConfig: {
+				fromCustomerProduct: customerProduct,
+			},
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 

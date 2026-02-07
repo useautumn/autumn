@@ -134,6 +134,25 @@ const proWithTrial = ({
 	});
 
 /**
+ * Premium product - $50/month base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "premium")
+ */
+const premium = ({
+	items,
+	id = "premium",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "premium",
+		isDefault: false,
+	});
+
+/**
  * Premium product with free trial - $50/month base price with configurable trial
  * @param items - Product items (features)
  * @param id - Product ID (default: "premium-trial")
@@ -272,6 +291,7 @@ export const products = {
 	pro,
 	proAnnual,
 	proWithTrial,
+	premium,
 	premiumWithTrial,
 	oneOff,
 	recurringAddOn,

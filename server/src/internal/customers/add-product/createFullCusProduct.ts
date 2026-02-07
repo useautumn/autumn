@@ -326,13 +326,14 @@ export const createFullCusProduct = async ({
 		attachParams;
 
 	// Try to get current cus product or set to null...
-	const curCusProduct = await getExistingCusProduct({
-		db,
-		cusProducts: attachParams.cusProducts,
-		product,
-		internalCustomerId: customer.internal_id,
-		internalEntityId: attachParams.internalEntityId,
-	});
+	const curCusProduct =
+		(await getExistingCusProduct({
+			db,
+			cusProducts: attachParams.cusProducts,
+			product,
+			internalCustomerId: customer.internal_id,
+			internalEntityId: attachParams.internalEntityId,
+		})) || attachParams.curCusProduct;
 
 	freeTrial = disableFreeTrial ? null : freeTrial;
 

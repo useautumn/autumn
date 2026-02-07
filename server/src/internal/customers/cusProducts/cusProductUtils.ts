@@ -16,6 +16,7 @@ import { nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
+import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
@@ -99,14 +100,27 @@ export const activateDefaultProduct = async ({
 		return false;
 	}
 
+	const attachParams = newCusToAttachParams({
+		ctx,
+		newCus: fullCus,
+		products: [defaultProd],
+		stripeCli,
+	});
+
+	// Pass the expiring product so allocated feature usage can be carried to the default
+	if (curCusProduct) {
+		attachParams.cusProduct = curCusProduct;
+	}
+
+	const config = {
+		...getDefaultAttachConfig(),
+		carryUsage: true,
+	};
+
 	await handleAddProduct({
 		ctx,
-		attachParams: newCusToAttachParams({
-			ctx,
-			newCus: fullCus,
-			products: [defaultProd],
-			stripeCli,
-		}),
+		attachParams,
+		config,
 	});
 
 	return true;

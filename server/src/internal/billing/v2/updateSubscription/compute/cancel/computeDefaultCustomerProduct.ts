@@ -50,6 +50,14 @@ export const computeDefaultCustomerProduct = ({
 			resetCycleAnchor: startsAt,
 			now: currentEpochMs,
 			freeTrial: null,
+
+			existingUsagesConfig: {
+				fromCustomerProduct: customerProduct,
+			},
+
+			existingRolloversConfig: {
+				fromCustomerProduct: customerProduct,
+			},
 		},
 		initOptions: {
 			isCustom: false,
