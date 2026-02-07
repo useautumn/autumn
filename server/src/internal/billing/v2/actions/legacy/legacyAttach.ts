@@ -1,9 +1,5 @@
 import type { BillingContextOverride, PlanTiming } from "@autumn/shared";
-import {
-	type AttachBodyV0,
-	type AttachParamsV0,
-	BillingVersion,
-} from "@autumn/shared";
+import { type AttachParamsV0, BillingVersion } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
@@ -13,12 +9,12 @@ import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams
 
 export const legacyAttach = async ({
 	ctx,
-	body,
+	// body,
 	attachParams,
 	planTiming,
 }: {
 	ctx: AutumnContext;
-	body: AttachBodyV0;
+	// body: AttachBodyV0;
 	attachParams: AttachParams;
 	planTiming: PlanTiming;
 }) => {
@@ -52,16 +48,16 @@ export const legacyAttach = async ({
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
 		product_id: fullProduct.id,
-		items: body.items,
+		// items: body.items,
+		// version: body.version,
+		// invoice: body.invoice,
+		// free_trial: body.free_trial === false ? null : undefined,
 
-		version: body.version,
-		invoice: body.invoice,
-		enable_product_immediately: body.enable_product_immediately,
-		finalize_invoice: body.finalize_invoice,
+		invoice: attachParams.invoiceOnly,
+		enable_product_immediately: true,
+		finalize_invoice: attachParams.finalizeInvoice,
 
 		redirect_mode: "if_required",
-
-		free_trial: body.free_trial === false ? null : undefined,
 
 		plan_schedule: planTiming,
 	};

@@ -5,7 +5,7 @@ import {
 	cusProductToPrices,
 	formatAmount,
 	InternalError,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPreviewUtils/priceToUnusedPreviewItem.js";
@@ -47,7 +47,7 @@ export const getItemsForCurProduct = async ({
 		});
 	}
 
-	let items: PreviewLineItem[] = [];
+	let items: LegacyPreviewLineItem[] = [];
 	const subItems = sub?.items.data || [];
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 	// const anchor = sub?.billing_cycle_anchor ? sub.billing_cycle_anchor * 1000 : undefined;

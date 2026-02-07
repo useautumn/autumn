@@ -30,6 +30,10 @@
 
 import { test } from "bun:test";
 import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import {
+	expectProductActive,
+	expectProductCanceling,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -93,12 +97,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: basic renew with same q
 	// Verify customer is canceled but still has access until period end
 	const customerCanceled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const canceledProduct = customerCanceled.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (!canceledProduct?.canceled) {
-		throw new Error("Expected product to be in canceled state");
-	}
+	await expectProductCanceling({
+		customer: customerCanceled,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	// V1 attach to same product (renew flow)
 	await autumnV1.attach({
@@ -114,14 +116,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: basic renew with same q
 
 	// Verify customer is renewed (no longer canceled)
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Product should no longer be canceled
-	const renewedProduct = customerAfter.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (renewedProduct?.canceled) {
-		throw new Error("Expected product to NOT be canceled after renew");
-	}
+	await expectProductActive({
+		customer: customerAfter,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -224,12 +222,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: renew preserves usage")
 	// Verify canceled
 	const customerCanceled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const canceledProduct = customerCanceled.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (!canceledProduct?.canceled) {
-		throw new Error("Expected product to be in canceled state");
-	}
+	await expectProductCanceling({
+		customer: customerCanceled,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	// V1 attach to same product (renew flow)
 	await autumnV1.attach({
@@ -245,14 +241,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: renew preserves usage")
 
 	// Verify customer is renewed with usage preserved
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Product should no longer be canceled
-	const renewedProduct = customerAfter.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (renewedProduct?.canceled) {
-		throw new Error("Expected product to NOT be canceled after renew");
-	}
+	await expectProductActive({
+		customer: customerAfter,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	// Usage should be preserved after renew
 	expectCustomerFeatureCorrect({
@@ -339,14 +331,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: renew with increased qu
 
 	// Verify customer is renewed with new quantity
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Product should no longer be canceled
-	const renewedProduct = customerAfter.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (renewedProduct?.canceled) {
-		throw new Error("Expected product to NOT be canceled after renew");
-	}
+	await expectProductActive({
+		customer: customerAfter,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -438,14 +426,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: renew with decreased qu
 
 	// Verify customer is renewed with new quantity
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Product should no longer be canceled
-	const renewedProduct = customerAfter.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (renewedProduct?.canceled) {
-		throw new Error("Expected product to NOT be canceled after renew");
-	}
+	await expectProductActive({
+		customer: customerAfter,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -533,14 +517,10 @@ test.concurrent(`${chalk.yellowBright("v2→v1 uncancel: single billing unit (us
 
 	// Verify customer is renewed
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Product should no longer be canceled
-	const renewedProduct = customerAfter.products.find((p) =>
-		p.id.includes(pro.id),
-	);
-	if (renewedProduct?.canceled) {
-		throw new Error("Expected product to NOT be canceled after renew");
-	}
+	await expectProductActive({
+		customer: customerAfter,
+		productId: `${pro.id}_${customerId}`,
+	});
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,

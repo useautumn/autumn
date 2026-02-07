@@ -1,5 +1,4 @@
 import {
-	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	AttachFunctionResponseSchema,
@@ -13,14 +12,12 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 export const handleUpgradeFlow = async ({
 	ctx,
 	attachParams,
-	body,
 	config,
 	branch,
 	fromMigration = false,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	body: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 	fromMigration?: boolean;
@@ -259,7 +256,6 @@ export const handleUpgradeFlow = async ({
 	const { billingResponse, billingResult } = await billingActions.legacy.attach(
 		{
 			ctx,
-			body,
 			attachParams,
 			planTiming: "immediate",
 		},
