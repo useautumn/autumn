@@ -1,71 +1,72 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomer } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
+import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 /**
- * Test: Attach pro plan with prepaid allocated users, then track concurrently
+ * Test: Attach free default product, then attach pro with invoice mode
  */
-test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track concurrently")}`, async () => {
-	const prepaidUsersItem = items.prepaidUsers({
-		includedUsage: 0,
-		billingUnits: 1,
+test.concurrent(`${chalk.yellowBright("invoice-mode: free default then pro with invoice checkout")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
+
+	// Free default product
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
 	});
 
+	// Pro product with price
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const pro = products.pro({
 		id: "pro",
-		items: [prepaidUsersItem],
+		items: [proMessagesItem],
 	});
 
-	const { customerId, autumnV2 } = await initScenario({
-		customerId: "temp-prepaid-users-concurrent",
+	const customerId = "temp-invoice-free-then-pro";
+
+	// Setup customer with default attached
+	const { autumnV1 } = await initScenario({
+		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
+			s.customer({ withDefault: true }),
+			s.products({ list: [free, pro] }),
 		],
-		actions: [
-			s.attach({
-				productId: pro.id,
-				options: [{ feature_id: TestFeature.Users, quantity: 50 }],
-			}),
-		],
+		actions: [s.attachPaymentMethod({ type: "fail" })],
 	});
 
-	// Verify initial state: 50 prepaid users
-	const customerBefore = await autumnV2.customers.get<ApiCustomer>(customerId);
-	expect(customerBefore.balances[TestFeature.Users]).toMatchObject({
-		granted_balance: 0,
-		purchased_balance: 50,
-		current_balance: 50,
-		usage: 0,
+	// Attach pro with invoice mode
+	const attachResult = await autumnV1.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		// invoice: true,
 	});
 
-	// Track 10 times concurrently - each adding 1 user
-	const trackPromises = Array.from({ length: 10 }, (_, i) =>
-		autumnV2.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: 1,
-			// idempotency_key: `concurrent-track-${i}`,
-		}),
-	);
+	console.log("attachResult", attachResult);
+	return;
 
-	const trackResults = await Promise.all(trackPromises);
+	expect(attachResult.checkout_url).toBeDefined();
 
-	// All track calls should succeed
-	for (const result of trackResults) {
-		expect(result.balance).toBeDefined();
-	}
+	// Complete invoice checkout
+	await completeInvoiceCheckout({
+		url: attachResult.checkout_url!,
+	});
 
-	// Verify final state: 50 - 10 = 40 current_balance
-	const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
-	expect(customerAfter.balances[TestFeature.Users]).toMatchObject({
-		granted_balance: 0,
-		purchased_balance: 50,
-		current_balance: 40,
-		usage: 10,
+	// Verify pro is now active
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectProductActive({
+		customer: customerAfter,
+		productId: pro.id,
+	});
+	expectCustomerFeatureCorrect({
+		customer: customerAfter,
+		featureId: TestFeature.Messages,
+		balance: 200,
 	});
 });
