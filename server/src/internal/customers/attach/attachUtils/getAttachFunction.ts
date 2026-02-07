@@ -258,7 +258,6 @@ export const runAttachFunction = async ({
 		return await handleUpgradeFlow({
 			ctx,
 			attachParams,
-			body: attachBody,
 			config,
 			branch,
 		});

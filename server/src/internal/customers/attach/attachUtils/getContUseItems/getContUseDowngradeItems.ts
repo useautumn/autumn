@@ -2,7 +2,7 @@ import {
 	AttachReplaceableSchema,
 	type FullCustomerEntitlement,
 	type FullEntitlement,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	type Price,
 	usageToFeatureName,
 } from "@autumn/shared";
@@ -28,7 +28,7 @@ export const getContUseDowngradeItems = async ({
 	ent: FullEntitlement;
 	prevCusEnt: FullCustomerEntitlement;
 	attachParams: AttachParams;
-	curItem: PreviewLineItem;
+	curItem: LegacyPreviewLineItem;
 	curUsage: number;
 	proration?: Proration;
 	logger: any;
