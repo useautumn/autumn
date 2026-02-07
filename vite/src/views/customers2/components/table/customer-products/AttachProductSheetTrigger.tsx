@@ -19,7 +19,7 @@ export function AttachProductSheetTrigger() {
 	const feature = features.features.find((f) => f.id === entity?.feature_id);
 
 	const handleClick = () => {
-		setSheet({ type: "attach-product-v2" });
+		setSheet({ type: "attach-product" });
 	};
 	return (
 		<Button
