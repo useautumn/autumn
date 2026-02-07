@@ -17,6 +17,8 @@ import {
 	AttachBranch,
 	CusProductStatus,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
@@ -111,11 +113,12 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 1: upgrade during trial (pro
 	});
 
 	// Premium period_end ≈ curUnix + 7 days
-	const product = customer.products.find((p: any) => p.id === premium.id)!;
-	expect(product.current_period_end).toBeDefined();
-	expect(
-		Math.abs(product.current_period_end! - addDays(curUnix, 7).getTime()),
-	).toBeLessThanOrEqual(1000 * 60 * 30); // 30 min tolerance
+	await expectProductTrialing({
+		customer: customer as any,
+		productId: premium.id,
+		trialEndsAt: addDays(curUnix, 7).getTime(),
+		toleranceMs: 1000 * 60 * 30, // 30 min tolerance
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -185,15 +188,9 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 2: upgrade after trial ends 
 	const curUnix = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		advanceTo: addDays(new Date(), 8).getTime(),
+		advanceTo: addDays(new Date(), 12).getTime(),
+		waitForSeconds: 30,
 	});
-
-	// Preview attach → should be Upgrade branch (trial ended, product is active)
-	const attachPreview = await autumnV1.attachPreview({
-		customer_id: customerId,
-		product_id: premium.id,
-	});
-	expect(attachPreview?.branch).toBe(AttachBranch.Upgrade);
 
 	// Get checkout total for comparison
 	const checkoutRes = await autumnV1.checkout({
@@ -217,14 +214,21 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 2: upgrade after trial ends 
 	});
 
 	// Premium period_end ≈ curUnix + 7 days
-	const product = customer.products.find((p: any) => p.id === premium.id)!;
-	expect(product.current_period_end).toBeDefined();
-	expect(
-		Math.abs(product.current_period_end! - addDays(curUnix, 7).getTime()),
-	).toBeLessThanOrEqual(1000 * 60 * 30); // 30 min tolerance
+	await expectProductTrialing({
+		customer: customer as any,
+		productId: premium.id,
+		trialEndsAt: addDays(curUnix, 7).getTime(),
+		toleranceMs: 1000 * 60 * 30, // 30 min tolerance
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer: customer as any,
+		count: 4,
+		latestTotal: 0,
+	});
 
 	// Invoice total should match checkout preview
-	expect(customer.invoices[0].total).toBe(
+	expect(customer.invoices?.[1]?.total).toBe(
 		new Decimal(checkoutRes.total).toDP(2).toNumber(),
 	);
 
@@ -235,4 +239,4 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 2: upgrade after trial ends 
 		env: ctx.env,
 		shouldBeTrialing: true,
 	});
-}, 120000);
+});

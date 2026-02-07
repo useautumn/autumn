@@ -111,6 +111,8 @@ export const handleAttach = createRoute({
 
 		const { products, customer } = attachParams;
 
+		console.log("ATTACH RESPONSE:", response);
+
 		const responseV1 = AttachResponseV1Schema.parse({
 			success: true,
 			product_ids: products.map((p) => p.id),

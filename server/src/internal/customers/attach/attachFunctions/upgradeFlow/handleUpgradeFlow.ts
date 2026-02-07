@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { attachToInvoiceResponse } from "@/internal/invoices/invoiceUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 
 export const handleUpgradeFlow = async ({
@@ -268,9 +267,7 @@ export const handleUpgradeFlow = async ({
 		checkout_url: billingResponse?.payment_url,
 
 		invoice: attachParams.invoiceOnly
-			? attachToInvoiceResponse({
-					invoice: billingResult?.stripe?.stripeInvoice || undefined,
-				})
+			? billingResult?.stripe?.stripeInvoice
 			: undefined,
 	});
 };

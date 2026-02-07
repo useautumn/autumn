@@ -26,7 +26,7 @@ export const completeCheckoutForm = async (
 	_isLocal?: boolean,
 ) => {
 	const browser = await puppeteer.launch({
-		headless: false,
+		headless: true,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
