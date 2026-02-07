@@ -15,13 +15,19 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	AttachErrCode,
+	OnDecrease,
+	OnIncrease,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductItemCorrect } from "@tests/integration/billing/utils/expectProductItemCorrect";
 import { calculateProratedCharge } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
@@ -643,5 +649,90 @@ test.concurrent(`${chalk.yellowBright("attach: quantity decrease with OnDecrease
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Prepaid users (billingUnits: 1) - upgrade quantity mid-cycle, usage preserved
+// (Migrated from updateQuantity/updateQuantity1.test.ts)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Attach prepaid users with quantity 2 (billingUnits: 1, $12/user)
+ * - Error when re-attaching with same options
+ * - Track 2 users usage
+ * - Advance test clock 1 week (mid-cycle)
+ * - Upgrade quantity to 4
+ *
+ * Expected Result:
+ * - Re-attach with same options throws ProductAlreadyAttached
+ * - After upgrade: balance = 4 - 2 = 2, usage stays at 2
+ */
+test.concurrent(`${chalk.yellowBright("attach: prepaid users upgrade quantity mid-cycle, usage preserved")}`, async () => {
+	const customerId = "attach-prepaid-users-qty-upgrade";
+	const usage = 2;
+
+	const prepaidItem = items.prepaidUsers({
+		billingUnits: 1,
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [prepaidItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Users, quantity: 2 }],
+			}),
+		],
+	});
+
+	// Re-attaching with same options should throw
+	await expectAutumnError({
+		errCode: AttachErrCode.ProductAlreadyAttached,
+		func: async () => {
+			await autumnV1.attach({
+				customer_id: customerId,
+				product_id: pro.id,
+				options: [{ feature_id: TestFeature.Users, quantity: 2 }],
+			});
+		},
+	});
+
+	// Track 2 users, advance 1 week, upgrade to quantity 4
+	await autumnV1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Users,
+		value: usage,
+	});
+
+	await new Promise((resolve) => setTimeout(resolve, 3000));
+
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Users, quantity: 4 }],
+	});
+
+	await new Promise((resolve) => setTimeout(resolve, 5000));
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Usage should stay the same after quantity upgrade
+	expectCustomerFeatureCorrect({
+		customer: customerAfter,
+		featureId: TestFeature.Users,
+		includedUsage: 4,
+		balance: 4 - usage,
+		usage,
 	});
 });

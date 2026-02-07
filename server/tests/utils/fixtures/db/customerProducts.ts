@@ -1,4 +1,5 @@
 import {
+	BillingVersion,
 	CollectionMethod,
 	CusProductStatus,
 	type FeatureOptions,
@@ -65,6 +66,7 @@ const create = ({
 	customer_entitlements: customerEntitlements,
 	product: product ?? (products.createFull({ id: productId }) as FullProduct),
 	free_trial: null,
+	billing_version: BillingVersion.V2,
 });
 
 // ═══════════════════════════════════════════════════════════════════

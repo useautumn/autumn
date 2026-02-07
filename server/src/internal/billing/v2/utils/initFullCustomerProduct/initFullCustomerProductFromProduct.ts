@@ -29,7 +29,13 @@ export const initFullCustomerProductFromProduct = ({
 		existingRolloversConfig?: ExistingRolloversConfig;
 	};
 }): FullCusProduct => {
-	const { fullCustomer, fullProduct, currentEpochMs } = initContext;
+	const {
+		fullCustomer,
+		fullProduct,
+		currentEpochMs,
+		existingUsagesConfig,
+		existingRolloversConfig,
+	} = initContext;
 
 	const freeTrial = fullProduct.free_trial ?? null;
 	let trialEndsAt: number | undefined;

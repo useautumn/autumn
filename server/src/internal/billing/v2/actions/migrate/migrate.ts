@@ -62,7 +62,7 @@ export async function migrate({
 	await billingActions.updateSubscription({
 		ctx,
 		params: updateSubscriptionParams,
-		contextOverrides: {
+		contextOverride: {
 			productContext: {
 				customerProduct: currentCustomerProduct,
 				fullProduct: newProduct,

@@ -1,5 +1,4 @@
 import {
-	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	type AttachFunctionResponse,
@@ -32,17 +31,15 @@ import { createStripeSub2 } from "./createStripeSub2.js";
 export const handlePaidProduct = async ({
 	ctx,
 	attachParams,
-	body,
 	config,
 	branch,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	body: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 }): Promise<AttachFunctionResponse> => {
-	const { logger, db } = ctx;
+	const { logger } = ctx;
 
 	const {
 		org,
@@ -75,7 +72,7 @@ export const handlePaidProduct = async ({
 	}
 
 	let sub: Stripe.Subscription | null = null;
-	const schedule: Stripe.SubscriptionSchedule | null | undefined = null;
+
 	let invoice: Stripe.Invoice | undefined;
 	let trialEndsAt: number | null | undefined;
 
@@ -87,7 +84,6 @@ export const handlePaidProduct = async ({
 		const { billingResponse, billingResult } =
 			await billingActions.legacy.attach({
 				ctx,
-				body,
 				attachParams,
 				planTiming: "immediate",
 			});
@@ -96,7 +92,7 @@ export const handlePaidProduct = async ({
 			code: SuccessCode.NewProductAttached,
 			message: `Successfully attached product`,
 
-			checkout_url: billingResponse?.payment_url,
+			checkout_url: billingResponse?.payment_url ?? undefined,
 
 			invoice: attachParams.invoiceOnly
 				? attachToInvoiceResponse({

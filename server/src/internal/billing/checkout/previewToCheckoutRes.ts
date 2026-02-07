@@ -7,7 +7,7 @@ import {
 	cusProductToPrices,
 	cusProductToProduct,
 	isUsagePrice,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	toProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -57,7 +57,7 @@ export const previewToCheckoutRes = async ({
 
 	if (preview.due_today && preview.due_today.line_items.length > 0) {
 		lines = preview.due_today.line_items
-			.map((li: PreviewLineItem) => {
+			.map((li: LegacyPreviewLineItem) => {
 				const price = allPrices.find((p) => p.id === li.price_id);
 
 				if (!price) {

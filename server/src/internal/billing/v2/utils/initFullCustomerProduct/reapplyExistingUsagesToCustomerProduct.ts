@@ -4,7 +4,6 @@ import {
 	type FullCustomer,
 	findMainActiveCustomerProductByGroup,
 } from "@autumn/shared";
-import { customerProductToFeaturesToCarryUsagesFor } from "@shared/utils/cusProductUtils/convertCusProduct/customerProductToFeaturesToCarryUsagesFor";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
@@ -37,14 +36,13 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 	if (!currentCustomerProduct) return;
 
-	const featuresToCarryUsagesFor = customerProductToFeaturesToCarryUsagesFor({
-		cusProduct: customerProduct,
-	});
+	// const featuresToCarryUsagesFor = customerProductToFeaturesToCarryUsagesFor({
+	// 	cusProduct: customerProduct,
+	// });
 
 	const currentUsages = cusProductToExistingUsages({
 		cusProduct: currentCustomerProduct,
 		entityId: customerProduct.entity_id ?? undefined,
-		featureIds: [], // reset all consumable features
 	});
 
 	// Reinitialize customer entitlements with reset balance

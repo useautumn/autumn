@@ -1,4 +1,4 @@
-import { _legacyListRawEvents } from "./_legacyListRawEvents.js";
+import { _legacyListRawEvents } from "@/internal/analytics/actions/_legacyListRawEvents";
 import { aggregate } from "./aggregate";
 import { getCountAndSum } from "./getCountAndSum.js";
 import { getEventById } from "./getEventById.js";

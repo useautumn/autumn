@@ -57,32 +57,6 @@ const onCheckoutBoth = ({
 });
 
 /**
- * Referral program that triggers on checkout, reward goes to redeemer only
- * @param id - Program ID (default: "checkout-redeemer")
- * @param rewardId - The reward ID to use
- * @param productIds - Product IDs that trigger this program
- * @param maxRedemptions - Max number of redemptions (default: 2)
- */
-const onCheckoutRedeemer = ({
-	id = "checkout-redeemer",
-	rewardId,
-	productIds,
-	maxRedemptions = 2,
-}: {
-	id?: string;
-	rewardId: string;
-	productIds: string[];
-	maxRedemptions?: number;
-}): CreateRewardProgram => ({
-	id,
-	when: RewardTriggerEvent.Checkout,
-	product_ids: productIds,
-	internal_reward_id: rewardId,
-	max_redemptions: maxRedemptions,
-	received_by: RewardReceivedBy.Redeemer,
-});
-
-/**
  * Referral program that triggers immediately on customer creation, reward goes to referrer
  * @param id - Program ID (default: "immediate-referrer")
  * @param rewardId - The reward ID to use
@@ -131,7 +105,6 @@ const onCustomerCreationBoth = ({
 export const referralPrograms = {
 	onCheckoutReferrer,
 	onCheckoutBoth,
-	onCheckoutRedeemer,
 	onCustomerCreationReferrer,
 	onCustomerCreationBoth,
 } as const;

@@ -100,7 +100,7 @@ export const setupInvoiceCreatedContext = async ({
 			const scheduleId = stripeSubscriptionToScheduleId({ stripeSubscription });
 			return isCustomerProductOnStripeSubscriptionSchedule({
 				customerProduct: cp,
-				stripeSubscriptionScheduleId: scheduleId,
+				stripeSubscriptionScheduleId: scheduleId ?? undefined,
 			});
 		},
 	);
