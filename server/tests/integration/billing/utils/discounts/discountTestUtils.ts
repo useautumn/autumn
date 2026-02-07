@@ -188,3 +188,25 @@ export const removeCustomerDiscount = async ({
 		});
 	}
 };
+
+/**
+ * Create a Stripe promotion code wrapping a coupon.
+ * Code is made unique per-call to avoid collisions in concurrent tests.
+ */
+export const createPromotionCode = async ({
+	stripeCli,
+	coupon,
+	code,
+}: {
+	stripeCli: Stripe;
+	coupon: Stripe.Coupon;
+	code: string;
+}) => {
+	return stripeCli.promotionCodes.create({
+		promotion: {
+			type: "coupon",
+			coupon: coupon.id,
+		},
+		code: `${code}${Date.now()}`,
+	});
+};
