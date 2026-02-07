@@ -207,6 +207,6 @@ export const createPromotionCode = async ({
 			type: "coupon",
 			coupon: coupon.id,
 		},
-		code: `${code}-${Date.now()}`,
+		code: `${code}${Date.now()}`,
 	});
 };
