@@ -120,51 +120,6 @@ export class CusProductService {
 		return cusProduct;
 	}
 
-	static async get({
-		db,
-		id,
-		orgId,
-		env,
-		withCustomer = false,
-	}: {
-		db: DrizzleCli;
-		id: string;
-		orgId: string;
-		env: AppEnv;
-		withCustomer?: boolean;
-	}) {
-		const cusProduct = (await db.query.customerProducts.findFirst({
-			where: eq(customerProducts.id, id),
-			with: {
-				customer: withCustomer ? true : undefined,
-				product: true,
-				customer_entitlements: {
-					with: {
-						entitlement: {
-							with: {
-								feature: true,
-							},
-						},
-						replaceables: true,
-						rollovers: true,
-					},
-				},
-				customer_prices: {
-					with: {
-						price: true,
-					},
-				},
-				free_trial: true,
-			},
-		})) as FullCusProduct;
-
-		if (!cusProduct || !orgOwnsCusProduct({ cusProduct, orgId, env })) {
-			return null;
-		}
-
-		return cusProduct;
-	}
-
 	static async insert({
 		db,
 		data,

@@ -2,6 +2,7 @@
 // import { prepaidPriceToLineItem } from "./lineItemBuilders/prepaidPriceToLineItem";
 // import { allocatedPriceToLineItem } from "./lineItemBuilders/allocatedPriceToLineItem";
 
+import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	cusPriceToCusEnt,
@@ -17,7 +18,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
-import type { BillingContext } from "../../billingContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 type LineItemDirection = "charge" | "refund";
@@ -45,7 +45,7 @@ export const customerProductToLineItems = ({
 		excludeOneOffPrices?: boolean;
 	};
 }): LineItem[] => {
-	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
+	const { currentEpochMs } = billingContext;
 
 	const anchorMs = getBillingCycleAnchorForDirection({
 		billingContext,

@@ -3,6 +3,7 @@ import {
 	cusEntsToUsage,
 	type ExistingUsages,
 	type FullCusProduct,
+	featureUtils,
 	isBooleanCusEnt,
 	isEntityScopedCusEnt,
 	isUnlimitedCusEnt,
@@ -12,9 +13,15 @@ import { Decimal } from "decimal.js";
 export const cusProductToExistingUsages = ({
 	cusProduct,
 	entityId,
+
+	carryAllConsumableFeatures,
+	consumableFeatureIdsToCarry = [],
 }: {
 	cusProduct?: FullCusProduct;
 	entityId?: string;
+
+	carryAllConsumableFeatures?: boolean;
+	consumableFeatureIdsToCarry?: string[];
 }): ExistingUsages => {
 	if (!cusProduct) return {};
 
@@ -32,6 +39,17 @@ export const cusProductToExistingUsages = ({
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
 		if (cusEnts.some(isUnlimitedCusEnt)) continue;
+
+		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
+
+		// By default, don't carry any consumable feature, unless carryAll is true, OR consumableFeatureIdsToCarry includes the feature id
+		const carryConsumableFeature =
+			carryAllConsumableFeatures ||
+			consumableFeatureIdsToCarry.includes(cusEnt.entitlement.feature.id);
+
+		const shouldCarry = isAllocated || carryConsumableFeature;
+
+		if (!shouldCarry) continue;
 
 		const internalFeatureId = cusEnt.entitlement.internal_feature_id;
 

@@ -125,3 +125,15 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `npx ultracite fix` before committing to ensure compliance.
+
+---
+
+## Type Checking
+
+After making edits to server code, run `bun ts` in the `server/` package to check for type errors:
+
+```bash
+cd server && bun ts
+```
+
+This ensures TypeScript compilation succeeds before committing changes.

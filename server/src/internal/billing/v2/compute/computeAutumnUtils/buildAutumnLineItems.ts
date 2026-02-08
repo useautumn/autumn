@@ -1,5 +1,5 @@
-import type { FullCusProduct, LineItem } from "@autumn/shared";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext, FullCusProduct } from "@autumn/shared";
+import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
 import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";
@@ -9,22 +9,31 @@ export const buildAutumnLineItems = ({
 	newCustomerProducts,
 	deletedCustomerProduct,
 	billingContext,
+	includeArrearLineItems = false,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
 	deletedCustomerProduct?: FullCusProduct;
 	billingContext: BillingContext;
+	includeArrearLineItems?: boolean;
 }) => {
 	const { logger } = ctx;
 
 	// For now, update subscription doesn't charge for existing usage.
-	const arrearLineItems: LineItem[] = [];
-	// cusProductToArrearLineItems({
-	// 	cusProduct: deletedCustomerProduct,
-	// 	billingCycleAnchorMs,
-	// 	nowMs: currentEpochMs,
-	// 	org,
-	// })
+	let { lineItems: arrearLineItems, updateCustomerEntitlements } =
+		deletedCustomerProduct && includeArrearLineItems
+			? customerProductToArrearLineItems({
+					ctx,
+					customerProduct: deletedCustomerProduct,
+					billingContext,
+					options: {
+						includePeriodDescription: true,
+						updateNextResetAt: true,
+					},
+				})
+			: { lineItems: [], updateCustomerEntitlements: [] };
+
+	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
 	// Get line items for ongoing cus product
 	const deletedLineItems = deletedCustomerProduct
@@ -48,13 +57,20 @@ export const buildAutumnLineItems = ({
 
 	// Combine all line items - trial filtering and unchanged price filtering
 	// will be handled in finalizeUpdateSubscriptionPlan
-	const allLineItems = [...deletedLineItems, ...newLineItems];
+	const allLineItems = [
+		...arrearLineItems,
+		...deletedLineItems,
+		...newLineItems,
+	];
 
-	logBuildAutumnLineItems({
-		logger,
-		deletedLineItems,
-		newLineItems,
-	});
+	const debugLogs = false;
+	if (debugLogs) {
+		logBuildAutumnLineItems({
+			logger,
+			deletedLineItems,
+			newLineItems,
+		});
+	}
 
-	return allLineItems;
+	return { allLineItems, updateCustomerEntitlements };
 };

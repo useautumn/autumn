@@ -71,6 +71,12 @@ export const isAllocatedCustomerEntitlement = (
 	return true;
 };
 
+export const customerEntitlementAllowsRollovers = (
+	customerEntitlement: FullCustomerEntitlement,
+) => {
+	return notNullish(customerEntitlement.entitlement.rollover);
+};
+
 /**
  *
  * Only applicable for paid customer entitlements

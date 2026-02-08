@@ -1,9 +1,10 @@
-import type {
-	EntitlementWithFeature,
-	FeatureOptions,
-	Organization,
-	Price,
-	UsagePriceConfig,
+import {
+	type EntitlementWithFeature,
+	type FeatureOptions,
+	featureOptionUtils,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { orgToCurrency } from "@server/internal/orgs/orgUtils";
 import { getPriceForOverage } from "@server/internal/products/prices/priceUtils";
@@ -49,15 +50,33 @@ export const priceToOneOffAndTiered = ({
 
 export const priceToUsageInAdvance = ({
 	price,
+	entitlement,
 	options,
 	isCheckout,
+	isPrepaidPriceV2 = false,
 }: {
 	price: Price;
+	entitlement: EntitlementWithFeature;
 	options: FeatureOptions | undefined | null;
 	isCheckout: boolean;
+	isPrepaidPriceV2?: boolean;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const optionsQuantity = options?.quantity;
+
+	if (isPrepaidPriceV2) {
+		const quantity = featureOptionUtils.convert.toV2StripeQuantity({
+			featureOptions: options ?? undefined,
+			price,
+			entitlement,
+		});
+
+		return {
+			price: config.stripe_prepaid_price_v2_id,
+			quantity: quantity,
+		};
+	}
+
+	const optionsQuantity = options?.upcoming_quantity ?? options?.quantity;
 	let finalQuantity = optionsQuantity;
 
 	// 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false

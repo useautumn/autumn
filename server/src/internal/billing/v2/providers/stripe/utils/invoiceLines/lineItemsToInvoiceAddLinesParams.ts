@@ -3,6 +3,9 @@ import type Stripe from "stripe";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceAddLinesParams.Line
+ *
+ * Uses effectivePeriod (the actual period being charged/refunded) for Stripe,
+ * which accounts for mid-cycle changes.
  */
 const toStripeAddLineParams = ({
 	lineItem,
@@ -10,16 +13,16 @@ const toStripeAddLineParams = ({
 	lineItem: LineItem;
 }): Stripe.InvoiceAddLinesParams.Line => {
 	const { finalAmount, description, context } = lineItem;
-	const { billingPeriod } = context;
+	const { effectivePeriod } = context;
 
 	return {
 		description,
 		amount: atmnToStripeAmount({ amount: finalAmount }),
 		discountable: false,
-		period: billingPeriod
+		period: effectivePeriod
 			? {
-					start: msToSeconds(billingPeriod.start),
-					end: msToSeconds(billingPeriod.end),
+					start: msToSeconds(effectivePeriod.start),
+					end: msToSeconds(effectivePeriod.end),
 				}
 			: undefined,
 	};

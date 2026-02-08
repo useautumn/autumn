@@ -2,11 +2,11 @@ import { msToSeconds } from "@shared/utils/common/unixUtils";
 import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@autumn/shared";
 import type {
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types/billingPlan";
+} from "@autumn/shared";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future

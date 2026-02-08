@@ -1,10 +1,10 @@
+import type { TrialContext } from "@autumn/shared";
 import {
 	addDuration,
 	FreeTrialDuration,
 	type FullProduct,
 	InternalError,
 } from "@autumn/shared";
-import type { TrialContext } from "@/internal/billing/v2/billingContext.js";
 
 export const setupCreateCustomerTrialContext = ({
 	paidProducts,

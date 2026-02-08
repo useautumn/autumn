@@ -629,7 +629,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		customerId,
 		productId: entityPro.id,
 		periodStartMs: Date.now(),
-		periodEndMs: advancedTo,
+		periodEndMs: addMonths(Date.now(), 1).getTime(),
 	});
 });
 
@@ -752,6 +752,6 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		customerId,
 		productId: entityPro.id,
 		periodStartMs: Date.now(),
-		periodEndMs: advancedTo,
+		periodEndMs: addMonths(Date.now(), 1).getTime(),
 	});
 });

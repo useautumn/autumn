@@ -16,7 +16,7 @@ export const cusEntToInvoiceOverage = ({
 			totalOverage = totalOverage.add(overage);
 		}
 
-		return totalOverage.toNumber();
+		return totalOverage.toNumber(); // this is NOT to be used for any amount calculations OR billing calculations. ONLY display purposes (invoice descriptions)
 	}
 
 	// 2. If not entity scoped

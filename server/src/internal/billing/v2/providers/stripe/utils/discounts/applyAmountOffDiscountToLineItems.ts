@@ -66,6 +66,7 @@ export const applyAmountOffDiscountToLineItems = ({
 		const newDiscount: LineItemDiscount = {
 			amountOff: itemDiscount,
 			stripeCouponId: coupon.id,
+			couponName: coupon.name || coupon.id,
 		};
 
 		const existingDiscounts = item.discounts ?? [];

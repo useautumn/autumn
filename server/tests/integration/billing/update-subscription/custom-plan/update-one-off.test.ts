@@ -249,7 +249,12 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		customer_id: customerId,
 		product_id: oneOffProduct.id,
 		items: [updatedPrepaidItem],
-		options: [{ feature_id: TestFeature.Messages, quantity }],
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: quantity + newIncludedUsage,
+			},
+		],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);

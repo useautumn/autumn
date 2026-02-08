@@ -6,7 +6,7 @@ import {
 	PriceType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { BillingContext } from "@server/internal/billing/v2/billingContext";
+import type { BillingContext } from "@autumn/shared";
 import { getBillingType } from "@server/internal/products/prices/priceUtils";
 
 /**

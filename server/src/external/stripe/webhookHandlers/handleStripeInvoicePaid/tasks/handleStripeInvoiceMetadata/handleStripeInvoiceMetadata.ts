@@ -14,7 +14,7 @@ export const handleStripeInvoiceMetadata = async ({
 	ctx: StripeWebhookContext;
 	invoicePaidContext: StripeInvoicePaidContext;
 }) => {
-	const { stripeInvoice } = invoicePaidContext;
+	const { stripeInvoice, stripeSubscription } = invoicePaidContext;
 	const metadataId = stripeInvoice.metadata?.autumn_metadata_id;
 
 	if (!metadataId) return;
@@ -28,7 +28,7 @@ export const handleStripeInvoiceMetadata = async ({
 
 	// Handle deferred billing plan (v2 flow)
 	if (metadata.type === MetadataType.DeferredInvoice) {
-		await executeDeferredBillingPlan({ ctx, metadata });
+		await executeDeferredBillingPlan({ ctx, metadata, stripeSubscription });
 		return;
 	}
 

@@ -8,7 +8,6 @@ import {
 	type MigrationJob,
 	MigrationJobStep,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { MigrationService } from "../MigrationService.js";
@@ -39,18 +38,14 @@ export const migrateCustomers = async ({
 	});
 
 	// Create stripe prices if they don't exist
-	const stripeCli = createStripeCli({ org, env });
 	const batchCreate = [];
 	for (const price of toProduct.prices) {
 		batchCreate.push(
 			createStripePriceIFNotExist({
-				db,
-				stripeCli,
+				ctx,
 				price,
 				entitlements: toProduct.entitlements,
 				product: toProduct,
-				org,
-				logger,
 			}),
 		);
 	}

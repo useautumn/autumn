@@ -21,6 +21,7 @@ export const PriceSchema = z.object({
 	billing_type: z.nativeEnum(BillingType).nullish(),
 	is_custom: z.boolean().optional(),
 	config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
+
 	entitlement_id: z.string().nullish(),
 
 	proration_config: ProrationConfigSchema.nullable(),

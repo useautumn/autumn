@@ -15,6 +15,7 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
+import { openInNewTab } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
@@ -83,15 +84,7 @@ export function AttachProductActions({
 			return;
 		}
 
-		console.log("[attach product actions] handleAttach", {
-			useInvoice,
-			enableProductImmediately,
-		});
-
-		console.log("Calling attachMutation");
-
 		try {
-			//does the attach
 			const result = await attachMutation.mutateAsync({
 				product,
 				prepaidOptions: prepaidOptions || {},
@@ -102,16 +95,15 @@ export function AttachProductActions({
 
 			// Handle checkout URLs and invoice links
 			if (result.data.checkout_url) {
-				window.open(result.data.checkout_url, "_blank");
+				openInNewTab({ url: result.data.checkout_url });
 			} else if (result.data.invoice) {
-				window.open(
-					getStripeInvoiceLink({
-						stripeInvoice: result.data.invoice,
-						env,
-						accountId: stripeAccount?.id,
-					}),
-					"_blank",
-				);
+				const stripeInvoiceUrl = getStripeInvoiceLink({
+					stripeInvoice: result.data.invoice,
+					env,
+					accountId: stripeAccount?.id,
+				});
+
+				openInNewTab({ url: stripeInvoiceUrl });
 				toast.success("Redirected to Stripe to finalize the invoice");
 			}
 		} catch (error) {

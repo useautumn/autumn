@@ -174,7 +174,7 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	stripeSubscriptionScheduleId,
 }: {
 	customerProduct: FullCusProduct;
-	stripeSubscriptionScheduleId: string | null;
+	stripeSubscriptionScheduleId?: string;
 }) => {
 	if (!stripeSubscriptionScheduleId) return false;
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
@@ -205,6 +205,16 @@ export const customerProductHasSubscriptionSchedule = ({
 	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
 
 	const subId = cusProduct.scheduled_ids?.[0];
+
+	return notNullish(subId);
+};
+
+export const customerProductHasSubscription = (cusProduct?: FullCusProduct) => {
+	if (!cusProduct) return false;
+	const prices = cusProductToPrices({ cusProduct });
+	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
+
+	const subId = cusProduct.subscription_ids?.[0];
 
 	return notNullish(subId);
 };

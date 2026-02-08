@@ -103,11 +103,8 @@ export const createProduct = async ({
 	};
 
 	await initProductInStripe({
-		db,
+		ctx,
 		product: newFullProduct,
-		org,
-		env,
-		logger,
 	});
 
 	await addTaskToQueue({

@@ -1,5 +1,5 @@
 import type { UpdateSubscriptionV0Params } from "@shared/api/billing/updateSubscription/updateSubscriptionV0Params";
-import type { CancelAction } from "@shared/api/common/cancelMode";
+import type { CancelAction } from "@autumn/shared";
 
 /**
  * Setup cancel action from params
