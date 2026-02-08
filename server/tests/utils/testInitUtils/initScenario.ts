@@ -707,7 +707,7 @@ const billingAttach = ({
 				options,
 				newBillingSubscription,
 				planSchedule,
-				timeout,
+				timeout: timeout ?? 2000,
 				items,
 			},
 		],
