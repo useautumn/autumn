@@ -38,6 +38,10 @@ export const getRequiredActionFromSubscriptionInvoice = async ({
 	// If invoice isn't open, no action required (could be draft, void, etc.)
 	if (invoice.status !== "open") return undefined;
 
+	// send_invoice invoices don't have automatic payment attempts —
+	// payment comes via the hosted invoice URL, so no "required action" exists
+	if (invoice.collection_method === "send_invoice") return undefined;
+
 	// If no payment method on customer, that's the issue
 	if (!hasPaymentMethod) {
 		return {
