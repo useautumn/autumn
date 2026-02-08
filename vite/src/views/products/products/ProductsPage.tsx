@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useClearQueryParams } from "@/hooks/common/useClearQueryParams";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductsAIChatView } from "./components/ProductsAIChatView";
 import { ProductsPageHeader } from "./components/ProductsPageHeader";
 import {
@@ -15,17 +17,27 @@ export const ProductsPage = () => {
 	useClearQueryParams({ queryParams: ["step", "product_id"] });
 
 	const [viewMode, setViewMode] = useState<ProductsViewMode>("list");
+	const { products, isLoading } = useProductsQuery();
+
+	const hasPlans = products && products.length > 0;
+
+	// Show empty state without the header when no plans exist
+	if (!isLoading && !hasPlans) {
+		return (
+			<div className="h-fit max-h-full px-10">
+				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
+			</div>
+		);
+	}
 
 	return (
 		<div className="h-fit max-h-full px-10">
-			{/* Shared header - always visible */}
 			<ProductsPageHeader>
 				<ProductsViewToggle value={viewMode} onValueChange={setViewMode} />
 				<ProductListCreateButton />
 				<ProductListMenuButton />
 			</ProductsPageHeader>
 
-			{/* Conditional content */}
 			{viewMode === "list" ? <ProductListTable /> : <ProductsAIChatView />}
 		</div>
 	);

@@ -5,6 +5,7 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import { CustomerListTable } from "../customers2/components/table/customer-list/CustomerListTable";
 import LoadingScreen from "../general/LoadingScreen";
+import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { CustomersContext } from "./CustomersContext";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
 import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
@@ -31,7 +32,8 @@ function CustomersPage() {
 				customers,
 			}}
 		>
-			<div className="max-h-full px-10 flex flex-col h-full relative w-full pb-8 max-w-5xl mx-auto pt-8">
+			<div className="px-10 flex flex-col relative w-full pb-8 max-w-5xl mx-auto pt-8 gap-4">
+				<OnboardingGuide />
 				<CustomerListTable customers={customers} isLoading={customersLoading} />
 			</div>
 		</CustomersContext.Provider>

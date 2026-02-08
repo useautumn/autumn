@@ -5,11 +5,12 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useIsSheetOpen, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
+import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
 import { CustomerPlansSection } from "../components/CustomerPlansSection";
@@ -33,6 +34,7 @@ export default function CustomerView2() {
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
+	const isSheetOpen = useIsSheetOpen();
 	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
@@ -72,41 +74,41 @@ export default function CustomerView2() {
 					}}
 					transition={SHEET_ANIMATION}
 				>
-					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-5xl [&>*:not([data-slot=separator-root])]:mx-auto">
-						<div className="flex flex-col gap-2 w-full">
-							<div className="flex flex-col w-full">
-								<div className="flex items-center justify-between w-full gap-4">
-									<CustomerBreadcrumbs />
-									{/* <CustomerActions /> */}
-								</div>
-								<div className="flex items-center justify-between w-full pt-2 gap-2">
-									<h3
-										className={`text-md font-semibold truncate ${
-											customer.name
-												? "text-t1"
-												: customer.email
-													? "text-t3"
-													: "text-t4 font-mono font-medium!"
-										}`}
-									>
-										{customer.name || customer.email || customer.id}
-									</h3>
-
-									<CustomerPageDetails />
-								</div>
-							</div>
-							<SelectedEntityDetails />
+					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">
+						<div className="w-full max-w-5xl mx-auto pt-8 px-10">
+							<OnboardingGuide collapseAll={isSheetOpen} />
 						</div>
-						{/* <Separator /> */}
-						{/* <Separator className="my-2" /> */}
-						<div className="flex flex-col gap-12 w-full">
-							<CustomerPlansSection />
-							{/* <Separator /> */}
-							<CustomerFeatureUsageTable />
-							{/* <Separator /> */}
-							<CustomerUsageAnalyticsTable />
-							{/* <Separator /> */}
-							<CustomerInvoicesTable />
+						{/* Rest of content shrinks normally with the container */}
+						<div className="flex flex-col gap-4 w-full max-w-5xl mx-auto pt-4 px-10">
+							<div className="flex flex-col gap-2 w-full">
+								<div className="flex flex-col w-full">
+									<div className="flex items-center justify-between w-full gap-4">
+										<CustomerBreadcrumbs />
+									</div>
+									<div className="flex items-center justify-between w-full pt-2 gap-2">
+										<h3
+											className={`text-md font-semibold truncate ${
+												customer.name
+													? "text-t1"
+													: customer.email
+														? "text-t3"
+														: "text-t4 font-mono font-medium!"
+											}`}
+										>
+											{customer.name || customer.email || customer.id}
+										</h3>
+
+										<CustomerPageDetails />
+									</div>
+								</div>
+								<SelectedEntityDetails />
+							</div>
+							<div className="flex flex-col gap-12 w-full">
+								<CustomerPlansSection />
+								<CustomerFeatureUsageTable />
+								<CustomerUsageAnalyticsTable />
+								<CustomerInvoicesTable />
+							</div>
 						</div>
 					</div>
 					{createPortal(

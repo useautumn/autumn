@@ -16,6 +16,7 @@ import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
 import PaginationPanel from "./components/PaginationPanel";
 import { QueryTopbar } from "./components/QueryTopbar";
+import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import {
 	useAnalyticsData,
 	useRawAnalyticsData,
@@ -224,9 +225,10 @@ export const AnalyticsView = () => {
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
-				<div className="max-h-[400px] min-h-[400px] pb-6">
+				<OnboardingGuide />
+				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
-						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
+						<div className="text-t3 text-md flex gap-2 items-center">
 							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
 							Usage
 						</div>
@@ -265,9 +267,9 @@ export const AnalyticsView = () => {
 					</div>
 				</div>
 
-				<div className="h-full mb-8">
+				<div className="flex-1 min-h-[400px] pb-8">
 					<div className="flex justify-between pb-4 h-10">
-						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
+						<div className="text-t3 text-md flex gap-2 items-center">
 							<DatabaseIcon size={16} weight="fill" className="text-subtle" />
 							Events
 						</div>
@@ -289,7 +291,7 @@ export const AnalyticsView = () => {
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-full border-none rounded-none shadow-none py-0">
+						<Card className="w-full h-[calc(100%-2.5rem)] border-none rounded-none shadow-none py-0">
 							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
 								<EventsAGGrid data={rawEvents} />
 							</CardContent>

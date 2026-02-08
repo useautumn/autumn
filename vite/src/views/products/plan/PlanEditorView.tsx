@@ -1,5 +1,6 @@
+import { productV2ToFeatureItems } from "@autumn/shared";
 import { AxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useDiscardItemAndClose } from "@/hooks/stores/useProductStore";
@@ -13,6 +14,7 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext } from "../product/ProductContext";
 import { PlanEditor } from "./components/PlanEditor";
+import { useOpenAddFeatureSheet } from "./hooks/useOpenAddFeatureSheet";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 export default function PlanEditorView() {
@@ -31,6 +33,21 @@ export default function PlanEditorView() {
 	useProductSync({ product: originalProduct });
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+	const openAddFeatureSheet = useOpenAddFeatureSheet();
+	const hasAutoOpenedAddFeatureRef = useRef(false);
+
+	// Auto-open add feature sheet when plan has no features (e.g., newly created plan)
+	useEffect(() => {
+		if (!originalProduct || hasAutoOpenedAddFeatureRef.current) return;
+
+		const featureItems = productV2ToFeatureItems({
+			items: originalProduct.items,
+		});
+		if (featureItems.length === 0) {
+			openAddFeatureSheet();
+			hasAutoOpenedAddFeatureRef.current = true;
+		}
+	}, [originalProduct, openAddFeatureSheet]);
 
 	// Custom close handler that discards item changes before closing
 	const discardAndClose = useDiscardItemAndClose();

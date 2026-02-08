@@ -39,7 +39,6 @@ export function CustomerListFilterButton() {
 			<DropdownMenuTrigger asChild>
 				<IconButton
 					variant="secondary"
-					size="default"
 					className={cn("gap-2", open && "btn-secondary-active")}
 					icon={<FunnelSimpleIcon size={14} className="text-t3" />}
 				>

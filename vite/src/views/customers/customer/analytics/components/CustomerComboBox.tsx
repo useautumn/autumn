@@ -33,13 +33,7 @@ interface CustomerSearchResult {
 	email?: string;
 }
 
-export function CustomerComboBox({
-	classNames,
-}: {
-	classNames?: {
-		trigger?: string;
-	};
-}) {
+export function CustomerComboBox() {
 	const env = useEnv();
 	const navigate = useNavigate();
 	const location = useLocation();

@@ -34,6 +34,9 @@ function InputGroup({
 				// Error state.
 				"has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
 
+				// Disabled state
+				"data-[disabled=true]:opacity-50 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:pointer-events-none",
+
 				className,
 			)}
 			onClick={(e) => {
