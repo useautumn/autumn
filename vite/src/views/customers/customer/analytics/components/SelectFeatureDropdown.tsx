@@ -63,13 +63,7 @@ const formatFeatureLabel = (linkedFeatures: Feature[]): string | null => {
 	return `${linkedFeatures[0].name} + ${linkedFeatures.length - 1} more`;
 };
 
-export const SelectFeatureDropdown = ({
-	classNames,
-}: {
-	classNames?: {
-		trigger?: string;
-	};
-}) => {
+export const SelectFeatureDropdown = () => {
 	const { features, setHasCleared } = useAnalyticsContext();
 	const { eventNames: eventNamesData } = useEventNames();
 	const [open, setOpen] = useState(false);
@@ -155,7 +149,7 @@ export const SelectFeatureDropdown = ({
 					size="default"
 					icon={<CaretDownIcon size={12} weight="bold" />}
 					iconOrientation="right"
-					className={cn(classNames?.trigger, open && "btn-secondary-active")}
+					className={cn(open && "btn-secondary-active")}
 				>
 					{numSelected > 0 ? `${numSelected} Selected` : "Select Events"}
 				</IconButton>

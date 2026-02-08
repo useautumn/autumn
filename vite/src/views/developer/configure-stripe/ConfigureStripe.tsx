@@ -214,7 +214,7 @@ export const ConfigureStripe = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="px-10 max-w-[600px] flex flex-col gap-4">
+			<div className="max-w-[600px] flex flex-col gap-4">
 				<Card className="shadow-none bg-interactive-secondary">
 					<CardHeader>
 						<CardTitle>Connect your Stripe account</CardTitle>
