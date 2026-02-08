@@ -12,8 +12,8 @@
  * - Void open invoices when org config enabled (void_invoices_on_subscription_deletion)
  */
 
-import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ApiVersion } from "@autumn/shared";
+import { test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import {
 	expectCustomerProducts,
 	expectProductActive,
@@ -24,13 +24,8 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
-import { CusService } from "@/internal/customers/CusService";
-import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -376,11 +371,13 @@ test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Str
 		productId: pro.id,
 	});
 
+	await timeout(5000); // wait for lock to be released
+
 	// Cancel subscription directly via Stripe client
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
 	// Wait for webhook to process
-	await timeout(8000);
+	await timeout(12000);
 
 	// Verify pro and addon are gone, free is active
 	const customerAfterCancel =

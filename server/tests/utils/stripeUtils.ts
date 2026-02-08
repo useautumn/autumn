@@ -110,7 +110,7 @@ export const completeCheckoutForm = async (
 /** Automates the Stripe setup payment checkout flow (mode: "setup") */
 export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 	const browser = await puppeteer.launch({
-		headless: true,
+		headless: false,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
@@ -146,6 +146,17 @@ export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 		// Fill cardholder name
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
+
+		// Uncheck "Save my information for faster checkout" (Stripe Link) if present
+		try {
+			const enableStripePass = await page.waitForSelector("#enableStripePass", { timeout: 3000 });
+			if (enableStripePass) {
+				await enableStripePass.click();
+				await timeout(500);
+			}
+		} catch (_e) {
+			// Stripe Link checkbox not present
+		}
 
 		// Some setup forms have country dropdown, some have postal code
 		// Try postal code first, then skip if not present

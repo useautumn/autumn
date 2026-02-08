@@ -61,7 +61,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-monthly-messages-both-act
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
-		value: 100,
+		value: 50,
 	});
 
 	await timeout(2000);

@@ -381,6 +381,7 @@ test.concurrent(`${chalk.yellowBright("migrate-prepaid-4: with usage - usage pre
 			s.billing.attach({
 				productId: "pro",
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 4000,
 			}),
 			s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
 		],

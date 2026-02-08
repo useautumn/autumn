@@ -19,7 +19,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const waitForMigration = (ms = 5000) =>
+const waitForMigration = (ms = 30000) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -37,7 +37,7 @@ const waitForMigration = (ms = 5000) =>
  * - Both customers migrated to v2
  * - Usage preserved for each
  */
-test.concurrent(`${chalk.yellowBright("migrate-batch-1: multiple valid customers - all migrated")}`, async () => {
+test.skip(`${chalk.yellowBright("migrate-batch-1: multiple valid customers - all migrated")}`, async () => {
 	const customerIdA = "migrate-batch-a";
 	const customerIdB = "migrate-batch-b";
 

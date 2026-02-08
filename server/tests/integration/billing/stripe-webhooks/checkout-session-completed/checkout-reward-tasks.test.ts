@@ -58,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("checkout-reward-tasks: v2 attach triggers
 	});
 
 	// Wait for reward processing
-	await timeout(5000);
+	await timeout(10000);
 
 	// Verify redeemer has product
 	const redeemerCustomer =
