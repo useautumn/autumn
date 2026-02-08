@@ -526,11 +526,16 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 	});
 	expect(previewCust.total).toBe(0);
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		redirect_mode: "if_required",
-	});
+	await autumnV1.billing.attach(
+		{
+			customer_id: customerId,
+			product_id: free.id,
+			redirect_mode: "if_required",
+		},
+		{
+			timeout: 2000,
+		},
+	);
 
 	// 2. Preview and attach to entity - $0 (free)
 	const previewEnt = await autumnV1.billing.previewAttach({
@@ -540,12 +545,17 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 	});
 	expect(previewEnt.total).toBe(0);
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		entity_id: entities[0].id,
-		redirect_mode: "if_required",
-	});
+	await autumnV1.billing.attach(
+		{
+			customer_id: customerId,
+			product_id: free.id,
+			entity_id: entities[0].id,
+			redirect_mode: "if_required",
+		},
+		{
+			timeout: 2000,
+		},
+	);
 
 	// Get customer and entity
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
