@@ -51,7 +51,6 @@ export const checkoutToAttachContext = async ({
 	const func = await getAttachFunction({
 		branch,
 		attachParams,
-		attachBody: checkoutParams,
 		config,
 	});
 
