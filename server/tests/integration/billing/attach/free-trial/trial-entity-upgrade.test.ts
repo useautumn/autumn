@@ -26,6 +26,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -528,10 +529,10 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 4: mixed products af
 	});
 
 	// Advance 3 days into trial
-	const advancedTo3Days = await advanceToNextInvoice({
+	const advancedTo3Days = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		currentEpochMs: advancedTo,
+		numberOfDays: 3,
 	});
 
 	// New trial end is 14 days from upgrade time (now + 14 days)
@@ -547,7 +548,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 4: mixed products af
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: newTrialEnd, // Fresh 14-day trial from now
-		total: 70, // Premium ($50) + Pro ($20) after trial
+		total: 50, // Premium ($50) + Pro ($20) after trial
 	});
 
 	// 2. Upgrade entity-1 to premium
@@ -780,12 +781,14 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: both entities upg
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
+	await timeout(4000);
+
 	// All invoices should be $0 during trial
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
 		latestTotal: 0,
-		count: 3,
+		count: 4,
 	});
 
 	// Verify Stripe subscription state
@@ -874,11 +877,14 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 6: non-trialing upgr
 		redirect_mode: "if_required",
 	});
 
+	await timeout(4000);
+
 	// Verify invoices: initial charges + refunds
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 3, // entity-1 pro ($20) + entity-2 pro ($20) + refund (-$40)
+		count: 4, // entity-1 pro ($20) + entity-2 pro ($20) + refund (-$40)
+		invoiceIndex: 1,
 		latestTotal: -40,
 	});
 

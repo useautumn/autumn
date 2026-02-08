@@ -57,14 +57,16 @@ export const buildStripeCheckoutSessionItems = ({
 			return {
 				price: stripePriceId,
 				quantity: quantity ?? 0,
-				// adjustable_quantity: {
-				// 	enabled: true,
-				// 	minimum: priceUtils.convert.toAllowanceInPacks({
-				// 		price: autumnPrice,
-				// 		entitlement: autumnEntitlement,
-				// 	}),
-				// 	maximum: 999999,
-				// },
+				adjustable_quantity: billingContext.checkoutQuantityAdjustable
+					? {
+							enabled: true,
+							minimum: priceUtils.convert.toAllowanceInPacks({
+								price: autumnPrice,
+								entitlement: autumnEntitlement,
+							}),
+							maximum: 999999,
+						}
+					: undefined,
 			} as Stripe.Checkout.SessionCreateParams.LineItem;
 		}
 

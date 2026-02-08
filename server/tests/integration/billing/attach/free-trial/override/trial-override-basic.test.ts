@@ -22,6 +22,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Fresh attach with free_trial override (product has no trial config)
@@ -162,14 +163,14 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 		customer_id: customerId,
 		product_id: proTrial.id,
 		free_trial: {
-			length: 30,
-			duration: FreeTrialDuration.Day,
+			length: 1,
+			duration: FreeTrialDuration.Month,
 		},
 	});
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(30), // Override, not product config
+		startsAt: addMonths(advancedTo, 1).getTime(), // Override, not product config
 		total: 20,
 	});
 
@@ -178,8 +179,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 		customer_id: customerId,
 		product_id: proTrial.id,
 		free_trial: {
-			length: 30,
-			duration: FreeTrialDuration.Day,
+			length: 1,
+			duration: FreeTrialDuration.Month,
 		},
 		redirect_mode: "if_required",
 	});
@@ -190,7 +191,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
-		trialEndsAt: advancedTo + ms.days(30),
+		trialEndsAt: addMonths(advancedTo, 1).getTime(),
+		toleranceMs: ms.hours(2),
 	});
 
 	// Verify feature reset aligns with overridden trial (30 days, not 14)
@@ -200,7 +202,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(30), // Reset aligns with override, not product config
+		resetsAt: addMonths(advancedTo, 1).getTime(), // Reset aligns with override, not product config
+		toleranceMs: ms.hours(2),
 	});
 
 	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)

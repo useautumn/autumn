@@ -204,7 +204,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 2: pro with c
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
-			s.billing.attach({ productId: pro.id, timeout: 2000 }),
+			s.billing.attach({ productId: pro.id }),
 			s.track({
 				featureId: TestFeature.Messages,
 				value: usageAmount,

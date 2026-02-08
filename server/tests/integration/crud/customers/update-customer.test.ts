@@ -34,6 +34,7 @@ test.concurrent(`${chalk.yellowBright("update: send_email_receipts can be update
 	const getData = (await autumnV1.customers.get(customerId)) as {
 		send_email_receipts: boolean;
 	};
+
 	expect(getData.send_email_receipts).toBe(true);
 });
 

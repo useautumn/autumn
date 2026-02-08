@@ -12,13 +12,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const INTEGRATION_TEST_BASE = "server/tests";
 
 /**
- * Recursively search for a folder by name within a base directory.
- * Returns the first matching folder path, or null if not found.
+ * Recursively search for a folder whose path ends with the given suffix.
+ * e.g. searching for "attach/free-trial" will match ".../billing/attach/free-trial"
+ * but NOT ".../update-subscription/free-trial".
  */
-async function findFolderByName(
+async function findFolderByPath(
 	basePath: string,
-	folderName: string,
+	pathSuffix: string,
 ): Promise<string | null> {
+	const normalizedSuffix = `/${pathSuffix}`;
 	try {
 		const entries = await readdir(basePath);
 		for (const entry of entries) {
@@ -26,10 +28,10 @@ async function findFolderByName(
 			const entryStat = await stat(fullPath);
 
 			if (entryStat.isDirectory()) {
-				if (entry === folderName) {
+				if (fullPath.endsWith(normalizedSuffix)) {
 					return fullPath;
 				}
-				const found = await findFolderByName(fullPath, folderName);
+				const found = await findFolderByPath(fullPath, pathSuffix);
 				if (found) return found;
 			}
 		}
@@ -746,10 +748,9 @@ async function main() {
 				if (existsSync(withBaseFull)) {
 					resolvedPath = withBase;
 				} else {
-					// Search for the folder by name within the base directory
-					const folderName = basename(arg);
+					// Search for a folder whose path ends with the given arg
 					const baseFullPath = resolve(process.cwd(), INTEGRATION_TEST_BASE);
-					const found = await findFolderByName(baseFullPath, folderName);
+					const found = await findFolderByPath(baseFullPath, arg);
 					if (found) {
 						// Convert back to relative path
 						resolvedPath = found.replace(`${process.cwd()}/`, "");

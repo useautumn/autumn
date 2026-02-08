@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { RewardType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { createReward } from "@tests/utils/productUtils.js";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach coupon`)}`, () => {
 			reward: reward.id,
 		});
 
-		await completeCheckoutForm(res.checkout_url);
+		await completeStripeCheckoutForm({ url: res.checkout_url });
 		await timeout(10000);
 
 		const customer = await autumn.customers.get(customerId);

@@ -1,16 +1,17 @@
-import type {
-	AttachParamsV0,
-	FullCusProduct,
-	FullCustomer,
-	FullProduct,
-	TrialContext,
+import {
+	type AttachParamsV0,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullProduct,
+	isProductPaidAndRecurring,
+	type TrialContext,
 } from "@autumn/shared";
-import { isProductPaidAndRecurring } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
+	inheritTrialFromCustomerProduct,
 	inheritTrialFromSubscription,
 } from "@/internal/billing/v2/setup/trialContext";
 import { isAttachUpgrade } from "../utils/isAttachUpgrade";
@@ -56,17 +57,24 @@ export const setupAttachTrialContext = async ({
 		});
 	}
 
-	const newProductIsPaidRecurring = isProductPaidAndRecurring(attachProduct);
-
 	// Determine if this is an upgrade
 	const isUpgrade = isAttachUpgrade({
 		currentCustomerProduct,
 		attachProduct,
 	});
 
-	// Inherit from subscription (merge/downgrade - NOT upgrade)
+	// If there's current stripe subscription and no upgrade, inherit trial from stripe subscription...
+	const newProductIsPaidRecurring = isProductPaidAndRecurring(attachProduct);
 	if (newProductIsPaidRecurring && stripeSubscription && !isUpgrade) {
 		return inheritTrialFromSubscription({ stripeSubscription });
+	}
+
+	// For free products, inherit trial from current customer product
+	if (!newProductIsPaidRecurring && currentCustomerProduct) {
+		return inheritTrialFromCustomerProduct({
+			customerProduct: currentCustomerProduct,
+			currentEpochMs,
+		});
 	}
 
 	// Apply product's trial config (upgrade or fresh attach) with dedup check
@@ -74,6 +82,7 @@ export const setupAttachTrialContext = async ({
 		ctx,
 		fullProduct: attachProduct,
 		fullCustomer,
+		stripeSubscription,
 		currentEpochMs,
 	});
 };

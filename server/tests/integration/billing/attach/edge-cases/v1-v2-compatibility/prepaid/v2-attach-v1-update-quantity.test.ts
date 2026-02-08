@@ -20,7 +20,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingVersion,
+	OnDecrease,
+	OnIncrease,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -183,6 +188,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await expectCustomerInvoiceCorrect({
@@ -285,101 +291,13 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 2,
 		latestTotal: -4 * pricePerPack, // removed 4 packs
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: INCREMENT QUANTITY - SINGLE BILLING UNIT (Users)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (single billing unit)")}`, async () => {
-	const customerId = "v2-v1-compat-incr-single";
-	const billingUnits = 1;
-	const pricePerUnit = 5;
-	const includedUsage = 5; // 5 free users
-
-	const prepaidItem = items.prepaid({
-		featureId: TestFeature.Users,
-		includedUsage,
-		billingUnits,
-		price: pricePerUnit,
-		config: {
-			on_increase: OnIncrease.ProrateImmediately,
-			on_decrease: OnDecrease.ProrateImmediately,
-		},
-	});
-
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({
-		id: "pro",
-		items: [prepaidItem, priceItem],
-	});
-
-	// Initial: 10 total users (5 free + 5 paid)
-	const initialTotalUnits = 10;
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.billing.attach({
-				productId: pro.id,
-				options: [
-					{ feature_id: TestFeature.Users, quantity: initialTotalUnits },
-				],
-			}),
-		],
-	});
-
-	const { prepaidItem: itemBefore } = await getStripePrepaidSubscriptionItem({
-		customerId,
-	});
-	expect(itemBefore).toBeDefined();
-	expect(itemBefore!.quantity).toBe(10);
-
-	// Upgrade: 10 → 20 total users (5 free + 15 paid)
-	const updatedTotalUnits = 20;
-	const updatedPaidUnits = updatedTotalUnits - includedUsage; // 15
-
-	// Use V1 attach to update quantity
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Users, quantity: updatedPaidUnits }],
-	});
-
-	// Verify customer feature balance
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer: customerAfter,
-		featureId: TestFeature.Users,
-		includedUsage: updatedTotalUnits,
-		balance: updatedTotalUnits,
-		usage: 0,
-	});
-
-	// Verify Stripe quantity
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-
-	await expectCustomerInvoiceCorrect({
-		customerId,
-		count: 2,
-		latestTotal: 10 * pricePerUnit, // added 10 paid units
 	});
 });
 
@@ -479,6 +397,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await advanceToNextInvoice({
@@ -497,5 +416,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 });

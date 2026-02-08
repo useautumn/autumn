@@ -173,6 +173,8 @@ export const setupAttachBillingContext = async ({
 		isCustom,
 		trialContext,
 
+		checkoutQuantityAdjustable: params.adjustable_quantity,
+
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 	};
 };

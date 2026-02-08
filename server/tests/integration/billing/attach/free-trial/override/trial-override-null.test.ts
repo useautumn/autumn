@@ -9,7 +9,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, type ApiEntityV0, ms } from "@autumn/shared";
+import { type ApiCustomerV3, type ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -22,6 +22,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -93,7 +94,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(30), // No trial, reset at billing cycle end
+		resetsAt: addMonths(advancedTo, 1).getTime(),
 	});
 
 	// Verify invoice: $20 charge

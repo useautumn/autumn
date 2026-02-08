@@ -362,6 +362,8 @@ const attach = ({
 	newBillingSubscription?: boolean;
 	timeout?: number;
 }): ConfigFn => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
 	return (config) => ({
 		...config,
 		actions: [
@@ -373,7 +375,7 @@ const attach = ({
 				entityIndex,
 				options,
 				newBillingSubscription,
-				timeout,
+				timeout: timeout ?? defaultTimeout,
 			},
 		],
 	});
@@ -695,6 +697,8 @@ const billingAttach = ({
 	timeout?: number;
 	items?: ProductItem[];
 }): ConfigFn => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
 	return (config) => ({
 		...config,
 		actions: [
@@ -707,7 +711,7 @@ const billingAttach = ({
 				options,
 				newBillingSubscription,
 				planSchedule,
-				timeout: timeout ?? 2000,
+				timeout: timeout ?? defaultTimeout,
 				items,
 			},
 		],

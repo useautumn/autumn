@@ -370,8 +370,8 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 4: in
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	// Diff: $50 + $10 - $20 - $20 = $20
-	// Prepaid: same 2 packs (quantity carried over), no diff
+	// Base price difference: $50 - $20 = $30
+	// Prepaid refund: -$10 (prorated unused from old product, new product no paid units)
 	expect(preview.total).toBe(20);
 
 	// 2. Attach premium - NO options
@@ -393,7 +393,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 4: in
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 300,
+		balance: 200,
 		usage: 0,
 	});
 });
@@ -959,9 +959,9 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 10: a
 		product_id: premium.id,
 	});
 	// Base diff: $50 - $20 = $30
-	// Prepaid diff: (4 * $15) - (2 * $10) = $60 - $20 = $40
-	// Total: $70
-	expect(preview.total).toBe(70);
+	// Prepaid diff: (3 * $15) - (2 * $10) = $45 - $20 = $25
+	// Total: $55
+	expect(preview.total).toBe(55);
 
 	// 2. Attach premium - NO options
 	await autumnV1.billing.attach({
@@ -978,11 +978,10 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-prepaid-no-options 10: a
 		notPresent: [pro.id],
 	});
 
-	// Verify balance: 50 included + 200 purchased = 250
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 250,
+		balance: 200,
 		usage: 0,
 	});
 });

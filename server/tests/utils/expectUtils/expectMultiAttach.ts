@@ -13,8 +13,10 @@ import { expect } from "chai";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
-import { completeInvoiceCheckout } from "../stripeUtils/completeInvoiceCheckout.js";
-import { completeCheckoutForm } from "../stripeUtils.js";
+import {
+	completeInvoiceCheckout,
+	completeStripeCheckoutForm,
+} from "../browserPool";
 
 export const expectMultiAttachCorrect = async ({
 	autumn,
@@ -70,7 +72,7 @@ export const expectMultiAttachCorrect = async ({
 				isLocal: true,
 			});
 		}
-		await completeCheckoutForm(attachRes.checkout_url);
+		await completeStripeCheckoutForm({ url: attachRes.checkout_url });
 		await timeout(5000);
 	}
 

@@ -122,7 +122,7 @@ export const handleAttach = createRoute({
 				: undefined,
 		});
 
-		console.log("ATTACH RESPONSE:", responseV1);
+		
 
 		return c.json(
 			applyResponseVersionChanges<AttachResponseV1>({

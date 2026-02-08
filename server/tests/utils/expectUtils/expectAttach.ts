@@ -23,7 +23,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { completeCheckoutForm } from "../stripeUtils.js";
+import { completeStripeCheckoutForm } from "../browserPool";
 
 export const attachAndExpectCorrect = async ({
 	autumn,
@@ -115,7 +115,7 @@ export const attachAndExpectCorrect = async ({
 	});
 
 	if (checkout_url) {
-		await completeCheckoutForm(checkout_url);
+		await completeStripeCheckoutForm({ url: checkout_url });
 		await timeout(10000);
 	}
 

@@ -158,6 +158,7 @@ export const expectSubToBeCorrect = async ({
 	subId,
 	rewards,
 	subCount,
+	billingVersion,
 }: {
 	db: DrizzleCli;
 	customerId: string;
@@ -174,6 +175,7 @@ export const expectSubToBeCorrect = async ({
 	subId?: string;
 	rewards?: string[];
 	subCount?: number;
+	billingVersion?: BillingVersion;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
@@ -349,7 +351,8 @@ export const expectSubToBeCorrect = async ({
 				withEntity: Boolean(cusProduct.internal_entity_id),
 				isCheckout: false,
 				apiVersion,
-				isPrepaidPriceV2: cusProduct.billing_version === BillingVersion.V2,
+				isPrepaidPriceV2:
+					(billingVersion ?? cusProduct.billing_version) === BillingVersion.V2,
 			});
 
 			if (res?.lineItem && nullish(res.lineItem.quantity)) {
