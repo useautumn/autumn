@@ -46,8 +46,10 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 	});
 
 	// Reinitialize customer entitlements with reset balance
+	// Use the NEW customerProduct (not currentCustomerProduct) to get the correct
+	// prices and allowances for balance initialization
 	const fullProduct = cusProductToProduct({
-		cusProduct: currentCustomerProduct,
+		cusProduct: customerProduct,
 	});
 	for (const cusEnt of customerProduct.customer_entitlements) {
 		const { balance, entities } = initCustomerEntitlementBalance({

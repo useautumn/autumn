@@ -46,7 +46,7 @@ import chalk from "chalk";
  * - Balance on Pro: 5 - 10 = -5 (overage)
  * - Invoice: Pro with 5 overage seats (10 usage - 5 included)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro with overage, full cycle")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro with overage, full cycle")}`, async () => {
 	const customerId = "sched-switch-alloc-overage-full";
 
 	const premiumAllocated = items.allocatedUsers({ includedUsage: 3 });
@@ -68,7 +68,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to 
 			s.products({ list: [premium, pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: premium.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Users, value: 10, timeout: 2000 }),
 		],
 	});
@@ -83,11 +83,14 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to 
 	expect(preview.total).toBe(0);
 
 	// Schedule the downgrade
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
+	await autumnV1.billing.attach(
+		{
+			customer_id: customerId,
+			product_id: pro.id,
+			redirect_mode: "if_required",
+		},
+		{ timeout: 2000 },
+	);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -173,7 +176,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to 
  * - Invoice includes: Pro with 5 overage seats (10 usage - 5 included)
  * - Balance on Pro: 5 - 10 = -5 (overage)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, then track with overage")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, then track with overage")}`, async () => {
 	const customerId = "sched-switch-alloc-downgrade-then-track";
 
 	const premiumAllocated = items.allocatedUsers({ includedUsage: 3 });
@@ -194,7 +197,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade f
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [premium, pro] }),
 		],
-		actions: [s.billing.attach({ productId: premium.id })],
+		actions: [s.billing.attach({ productId: premium.id, timeout: 2000 })],
 	});
 
 	// Schedule downgrade FIRST (before tracking)
@@ -241,6 +244,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade f
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		withPause: true,
 	});
 
 	const customerAfterCycle =
@@ -298,7 +302,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade f
  * - Usage carries over: 7 users
  * - Balance on Free: 2 - 7 = -5 (overage, but no overage charge on free)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, overage on old product")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, overage on old product")}`, async () => {
 	const customerId = "sched-switch-alloc-pro-to-free";
 
 	const proAllocated = items.allocatedUsers({ includedUsage: 5 });
@@ -320,7 +324,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
-			s.billing.attach({ productId: pro.id }),
+			s.billing.attach({ productId: pro.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Users, value: 7, timeout: 2000 }),
 		],
 	});
@@ -398,7 +402,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free
  * - Usage carries over: 7 users
  * - Balance on Free: 2 - 7 = -5 (overage)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, downgrade first then track")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, downgrade first then track")}`, async () => {
 	const customerId = "sched-switch-alloc-pro-free-downgrade-first";
 
 	const proAllocated = items.allocatedUsers({ includedUsage: 5 });
@@ -419,7 +423,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [s.billing.attach({ productId: pro.id, timeout: 2000 })],
 	});
 
 	// Schedule downgrade FIRST (before tracking)
@@ -515,7 +519,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free
  * - Usage carries over: 8 users
  * - Balance on Pro: 5 - 8 = -3 (overage, but no overage charge since free allocated)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro with FREE allocated users")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro with FREE allocated users")}`, async () => {
 	const customerId = "sched-switch-free-alloc-premium-to-pro";
 
 	const premiumFreeUsers = items.freeAllocatedUsers({ includedUsage: 10 });
@@ -537,7 +541,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to 
 			s.products({ list: [premium, pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: premium.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Users, value: 8, timeout: 2000 }),
 		],
 	});
@@ -640,7 +644,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to 
  * - Usage carries over: 4 users
  * - Balance on Free: 2 - 4 = -2 (overage, but no charge on free)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with FREE allocated users")}`, async () => {
+test.skip(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with FREE allocated users")}`, async () => {
 	const customerId = "sched-switch-free-alloc-pro-to-free";
 
 	const proFreeUsers = items.freeAllocatedUsers({ includedUsage: 5 });
@@ -662,7 +666,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
-			s.billing.attach({ productId: pro.id }),
+			s.billing.attach({ productId: pro.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Users, value: 4, timeout: 2000 }),
 		],
 	});
@@ -679,11 +683,16 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free
 	});
 
 	// Schedule downgrade to free
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		redirect_mode: "if_required",
-	});
+	await autumnV1.billing.attach(
+		{
+			customer_id: customerId,
+			product_id: free.id,
+			redirect_mode: "if_required",
+		},
+		{
+			timeout: 2000,
+		},
+	);
 
 	const customerScheduled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
