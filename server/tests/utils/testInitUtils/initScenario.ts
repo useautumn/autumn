@@ -2,6 +2,7 @@ import {
 	ApiVersion,
 	type CreateReward,
 	type CreateRewardProgram,
+	type OrgConfig,
 	type PlanTiming,
 	type ProductItem,
 	type ProductV2,
@@ -180,6 +181,7 @@ type ScenarioConfig = {
 	actions: ScenarioAction[];
 	otherCustomers: OtherCustomerConfig[];
 	referralProgram?: ReferralProgramConfig;
+	orgConfig?: Partial<OrgConfig>;
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -299,6 +301,15 @@ const entities = ({
 	featureId: string;
 }): ConfigFn => {
 	return (config) => ({ ...config, entityConfig: { count, featureId } });
+};
+
+/**
+ * Set org config overrides for this test scenario.
+ * Sent as a header on every request via the AutumnInt client.
+ * @example s.orgConfig({ entity_product: true })
+ */
+const orgConfig = (config: Partial<OrgConfig>): ConfigFn => {
+	return (c) => ({ ...c, orgConfig: config });
 };
 
 /**
@@ -792,6 +803,7 @@ export const s = {
 	otherCustomers,
 	products,
 	entities,
+	orgConfig,
 	referralProgram: referralProgramSetup,
 	attach,
 	cancel,
@@ -1073,16 +1085,19 @@ export async function initScenario({
 	const autumnV1 = new AutumnInt({
 		version: ApiVersion.V1_2,
 		secretKey: ctx.orgSecretKey,
+		orgConfig: config.orgConfig,
 	});
 
 	const autumnV1Beta = new AutumnInt({
 		version: ApiVersion.V1_Beta,
 		secretKey: ctx.orgSecretKey,
+		orgConfig: config.orgConfig,
 	});
 
 	const autumnV2 = new AutumnInt({
 		version: ApiVersion.V2_0,
 		secretKey: ctx.orgSecretKey,
+		orgConfig: config.orgConfig,
 	});
 
 	// 4. Create entities if any (requires customerId)

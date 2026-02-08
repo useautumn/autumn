@@ -122,7 +122,8 @@ export const getTargetSubscriptionCusProduct = ({
 		const { valid } = cp(customerProduct)
 			.recurring()
 			.hasActiveStatus()
-			.hasSubscription();
+			.hasSubscription()
+			.onEntity({ internalEntityId });
 
 		return valid;
 	});
@@ -160,11 +161,14 @@ export const getTargetSubscriptionScheduleCusProduct = ({
 }) => {
 	const internalEntityId = fullCus.entity?.internal_id;
 
-	const cusProducts = fullCus.customer_products.filter((cp) => {
+	const cusProducts = fullCus.customer_products.filter((cusProduct) => {
 		const hasSubscriptionSchedule = customerProductHasSubscriptionSchedule({
-			cusProduct: cp,
+			cusProduct,
 		});
-		return hasSubscriptionSchedule;
+		const { valid: entityMatch } = cp(cusProduct).onEntity({
+			internalEntityId,
+		});
+		return hasSubscriptionSchedule && entityMatch;
 	});
 
 	// Sort by merge order:

@@ -3,6 +3,7 @@ import {
 	type CusFeatureLegacyData,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
+	filterOutEntityCusEnts,
 	fullCustomerToCustomerEntitlements,
 	orgToInStatuses,
 } from "@autumn/shared";
@@ -19,11 +20,17 @@ export const getApiBalances = async ({
 }) => {
 	const { org } = ctx;
 
-	const allCusEnts = fullCustomerToCustomerEntitlements({
+	let allCusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org }),
 		entity: fullCus.entity,
 	});
+
+	// When no entity is set (customer-level GET), filter out entity-scoped entitlements
+	// to prevent entity-level products from leaking into customer-level balances
+	if (!fullCus.entity) {
+		allCusEnts = filterOutEntityCusEnts({ cusEnts: allCusEnts });
+	}
 
 	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of allCusEnts) {

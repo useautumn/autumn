@@ -48,12 +48,8 @@ export const filterOutEntityCusEnts = ({
 }) => {
 	return cusEnts.filter(
 		(ce) =>
-			nullish(ce.entitlement.entity_feature_id) &&
 			nullish(ce.customer_product?.internal_entity_id) &&
-			// NEW: Filter out new approach (internal_entity_id on cusEnt)
-			nullish(ce.internal_entity_id) &&
-			// OLD: Filter out old approach (entities object)
-			(!ce.entities || Object.keys(ce.entities).length === 0),
+			nullish(ce.internal_entity_id),
 	);
 };
 

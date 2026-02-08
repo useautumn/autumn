@@ -415,6 +415,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to customer, then pr
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.orgConfig({ entity_product: true }),
 		],
 		actions: [],
 	});
@@ -515,6 +516,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 			s.customer({}),
 			s.products({ list: [free] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.orgConfig({ entity_product: true }),
 		],
 		actions: [],
 	});

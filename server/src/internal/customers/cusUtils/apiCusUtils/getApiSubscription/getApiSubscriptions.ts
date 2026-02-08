@@ -4,6 +4,7 @@ import {
 	type CusProductLegacyData,
 	type CusProductStatus,
 	type FullCustomer,
+	nullish,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubscription } from "./getApiSubscription.js";
@@ -53,7 +54,11 @@ export const getApiSubscriptions = async ({
 	// Process full subscriptions
 	const apiSubs: ApiSubscription[] = [];
 
-	const cusProducts = fullCus.customer_products;
+	// When no entity is set (customer-level GET), filter out entity-scoped products
+	// to prevent entity-level subscriptions from appearing in the customer's products list
+	const cusProducts = fullCus.entity
+		? fullCus.customer_products
+		: fullCus.customer_products.filter((cp) => nullish(cp.internal_entity_id));
 
 	const legacyData: Record<string, CusProductLegacyData> = {};
 	for (const cusProduct of cusProducts) {
