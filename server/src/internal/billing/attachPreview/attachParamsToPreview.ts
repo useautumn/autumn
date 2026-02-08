@@ -48,7 +48,6 @@ export const attachParamsToPreview = async ({
 	const func = await getAttachFunction({
 		branch,
 		attachParams,
-		attachBody,
 		config,
 	});
 

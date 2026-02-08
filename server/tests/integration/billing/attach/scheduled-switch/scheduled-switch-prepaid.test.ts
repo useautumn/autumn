@@ -19,14 +19,13 @@ import {
 	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
-import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Prepaid 5 packs to 2 packs (explicit options)
@@ -73,6 +72,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 1: 5 packs to 2 
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+				timeout: 2000,
 			}),
 		],
 	});
@@ -185,6 +185,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 2: no options pa
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+				timeout: 2000,
 			}),
 		],
 	});
@@ -271,6 +272,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 3: no options, d
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+				timeout: 2000,
 			}),
 		],
 	});
@@ -341,6 +343,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 4: to quantity 0
 		billingUnits: 100,
 		price: 10,
 	});
+
 	const pro = products.pro({
 		id: "pro",
 		items: [proPrepaid],
@@ -356,6 +359,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 4: to quantity 0
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+				timeout: 2000,
 			}),
 		],
 	});
@@ -628,10 +632,12 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 7: included usag
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 2000,
 			}),
 			s.billing.attach({
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 2000,
 			}),
 			s.advanceToNextInvoice(),
 		],
@@ -706,6 +712,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 8: included usag
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 2000,
 			}),
 		],
 	});
@@ -735,6 +742,8 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 8: included usag
 		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 		redirect_mode: "if_required",
 	});
+
+	await timeout(2000);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
