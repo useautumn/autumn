@@ -7,27 +7,22 @@ type EventContext =
 	| StripeSubscriptionUpdatedContext
 	| StripeSubscriptionDeletedContext;
 
-const hasDeletedCustomerProducts = (
-	context: EventContext,
-): context is StripeSubscriptionDeletedContext => {
-	return "deletedCustomerProducts" in context;
-};
-
 /**
- * Logs all customer product updates and deletions in a structured format for easy querying in Axiom.
+ * Logs all customer product updates, deletions, and insertions in a structured format for easy querying in Axiom.
  * Called at the end of subscription handlers to provide a summary.
  */
 export const logCustomerProductUpdates = ({
 	ctx,
 	eventContext,
-	logPrefix,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: EventContext;
-	logPrefix: string;
 }): void => {
-	const { logger } = ctx;
-	const { updatedCustomerProducts } = eventContext;
+	const {
+		updatedCustomerProducts,
+		deletedCustomerProducts,
+		insertedCustomerProducts,
+	} = eventContext;
 
 	const updates = updatedCustomerProducts.map(
 		({ customerProduct, updates }) => ({
@@ -39,27 +34,33 @@ export const logCustomerProductUpdates = ({
 		}),
 	);
 
-	const deletions = hasDeletedCustomerProducts(eventContext)
-		? eventContext.deletedCustomerProducts.map((customerProduct) => ({
-				id: customerProduct.id,
-				productId: customerProduct.product.id,
-				productName: customerProduct.product.name,
-				status: customerProduct.status,
-			}))
-		: [];
+	const deletions = deletedCustomerProducts.map((customerProduct) => ({
+		id: customerProduct.id,
+		productId: customerProduct.product.id,
+		productName: customerProduct.product.name,
+		status: customerProduct.status,
+	}));
 
-	if (updates.length === 0 && deletions.length === 0) return;
+	const insertions = insertedCustomerProducts.map((customerProduct) => ({
+		id: customerProduct.id,
+		productId: customerProduct.product.id,
+		productName: customerProduct.product.name,
+		status: customerProduct.status,
+	}));
+
+	if (
+		updates.length === 0 &&
+		deletions.length === 0 &&
+		insertions.length === 0
+	)
+		return;
 
 	addToExtraLogs({
 		ctx,
 		extras: {
 			updates,
 			deletions,
+			insertions,
 		},
 	});
-
-	// logger.info(`${logPrefix} Customer product changes`, {
-	// 	updates,
-	// 	deletions,
-	// });
 };

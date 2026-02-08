@@ -1,5 +1,7 @@
 import {
 	addDuration,
+	type ExistingRolloversConfig,
+	type ExistingUsagesConfig,
 	type FeatureOptions,
 	FreeTrialDuration,
 	type FullCusProduct,
@@ -22,9 +24,18 @@ export const initFullCustomerProductFromProduct = ({
 		fullProduct: FullProduct;
 		currentEpochMs: number;
 		featureQuantities?: FeatureOptions[];
+
+		existingUsagesConfig?: ExistingUsagesConfig;
+		existingRolloversConfig?: ExistingRolloversConfig;
 	};
 }): FullCusProduct => {
-	const { fullCustomer, fullProduct, currentEpochMs } = initContext;
+	const {
+		fullCustomer,
+		fullProduct,
+		currentEpochMs,
+		existingUsagesConfig,
+		existingRolloversConfig,
+	} = initContext;
 
 	const freeTrial = fullProduct.free_trial ?? null;
 	let trialEndsAt: number | undefined;
@@ -66,6 +77,9 @@ export const initFullCustomerProductFromProduct = ({
 		freeTrial,
 		trialEndsAt,
 		now: currentEpochMs,
+
+		existingUsagesConfig,
+		existingRolloversConfig,
 	};
 
 	return initFullCustomerProduct({

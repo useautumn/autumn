@@ -15,6 +15,7 @@ import { getNewProductPreview } from "@/internal/customers/attach/handleAttachPr
 import { getUpgradeProductPreview } from "@/internal/customers/attach/handleAttachPreview/getUpgradeProductPreview.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
+import { attachParamsToChanges } from "./attachParamsToChanges.js";
 
 export const attachParamsToPreview = async ({
 	ctx,
@@ -47,7 +48,6 @@ export const attachParamsToPreview = async ({
 	const func = await getAttachFunction({
 		branch,
 		attachParams,
-		attachBody,
 		config,
 	});
 
@@ -102,6 +102,13 @@ export const attachParamsToPreview = async ({
 	const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
+	// Compute incoming/outgoing changes for the UI
+	const { incoming, outgoing } = await attachParamsToChanges({
+		ctx,
+		attachParams,
+		curCusProduct,
+	});
+
 	return {
 		branch,
 		func,
@@ -112,5 +119,7 @@ export const attachParamsToPreview = async ({
 				})
 			: null,
 		scheduled_product: curScheduledProduct,
+		incoming,
+		outgoing,
 	};
 };

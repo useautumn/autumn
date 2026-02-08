@@ -7,6 +7,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
+import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -21,12 +23,14 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  */
 export const activateScheduledCustomerProduct = async ({
 	ctx,
+	fromCustomerProduct,
 	customerProduct,
 	fullCustomer,
 	subscriptionIds,
 	scheduledIds,
 }: {
 	ctx: AutumnContext;
+	fromCustomerProduct?: FullCusProduct; // for cases where expiry happens before activation (eg. expireAndActivateDefault)
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	subscriptionIds?: string[];
@@ -35,8 +39,22 @@ export const activateScheduledCustomerProduct = async ({
 	const { db, org, env, logger } = ctx;
 
 	logger.info(
-		`Activating scheduled product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
+		`[activateScheduledCustomerProduct] Activating ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 	);
+
+	await reapplyExistingUsagesToCustomerProduct({
+		ctx,
+		fromCustomerProduct,
+		customerProduct,
+		fullCustomer,
+	});
+
+	await reapplyExistingRolloversToCustomerProduct({
+		ctx,
+		fromCustomerProduct,
+		customerProduct,
+		fullCustomer,
+	});
 
 	// 1. Update status and subscription/schedule IDs
 	const updates: Partial<InsertCustomerProduct> = {

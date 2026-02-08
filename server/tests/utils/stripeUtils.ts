@@ -4,6 +4,7 @@ import {
 	BillingInterval,
 	type Customer,
 	type FullProduct,
+	notNullish,
 } from "@autumn/shared";
 import {
 	addDays,
@@ -25,6 +26,8 @@ export const completeCheckoutForm = async (
 	promoCode?: string,
 	_isLocal?: boolean,
 ) => {
+	let step = "launching browser";
+
 	const browser = await puppeteer.launch({
 		headless: true,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
@@ -34,7 +37,9 @@ export const completeCheckoutForm = async (
 	try {
 		const page = await browser.newPage();
 		await page.setViewport({ width: 1280, height: 800 }); // Set standard desktop viewport size
-		await page.goto(url, { waitUntil: "networkidle2" });
+
+		step = "navigating to checkout URL";
+		await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 
 		// Try to click accordion if it exists (wait up to 2 seconds)
 		try {
@@ -47,46 +52,85 @@ export const completeCheckoutForm = async (
 			// Accordion doesn't exist or didn't appear, continue without clicking
 		}
 
-		await page.waitForSelector("#cardNumber");
+		step = "waiting for #cardNumber";
+		await page.waitForSelector("#cardNumber", { timeout: 60000 });
 		await page.type("#cardNumber", "4242424242424242");
 
-		await page.waitForSelector("#cardExpiry");
+		step = "filling card expiry";
+		await page.waitForSelector("#cardExpiry", { timeout: 60000 });
 		await page.type("#cardExpiry", "1234");
 
-		await page.waitForSelector("#cardCvc");
+		step = "filling card CVC";
+		await page.waitForSelector("#cardCvc", { timeout: 60000 });
 		await page.type("#cardCvc", "123");
 
-		await page.waitForSelector("#billingName");
+		step = "filling billing name";
+		await page.waitForSelector("#billingName", { timeout: 60000 });
 		await page.type("#billingName", "Test Customer");
-		await page.waitForSelector("#billingPostalCode");
-		await page.type("#billingPostalCode", "123456");
 
-		if (overrideQuantity) {
+		// Email field may be present if customer has no email set
+		try {
+			await page.waitForSelector("#email", { timeout: 2000 });
+			await page.type("#email", "test@example.com");
+		} catch (_e) {
+			// Email field doesn't exist (customer already has email), continue without it
+		}
+
+		// Postal code may not be present for all countries (e.g., UK)
+		try {
+			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });
+			await page.type("#billingPostalCode", "123456");
+		} catch (_e) {
+			// Postal code field doesn't exist, continue without it
+		}
+
+		if (notNullish(overrideQuantity)) {
+			step = `finding .AdjustableQuantitySelector for quantity=${overrideQuantity}`;
 			const quantityBtn = await page.$(".AdjustableQuantitySelector");
-			await quantityBtn?.evaluate((b: any) => (b as HTMLElement).click());
+			if (!quantityBtn) {
+				throw new Error(
+					`.AdjustableQuantitySelector not found - did you pass adjustable_quantity: true in attach params?`,
+				);
+			}
+			await quantityBtn.evaluate((b: any) => (b as HTMLElement).click());
 
-			await page.waitForSelector("#adjustQuantity");
+			step = "waiting for #adjustQuantity input";
+			await page.waitForSelector("#adjustQuantity", { timeout: 60000 });
 			await page.click("#adjustQuantity", { clickCount: 3 }); // Select all text
 			await page.keyboard.press("Backspace"); // Delete selected text
 			await page.type("#adjustQuantity", overrideQuantity.toString());
 
+			step = "clicking quantity update button";
 			const updateBtn = await page.$(".AdjustQuantityFooter-btn");
-			await updateBtn?.evaluate((b: any) => (b as HTMLElement).click());
+			if (!updateBtn) {
+				throw new Error(`.AdjustQuantityFooter-btn not found`);
+			}
+			await updateBtn.evaluate((b: any) => (b as HTMLElement).click());
 
 			await timeout(1000);
 		}
 
 		if (promoCode) {
-			await page.waitForSelector("#promotionCode");
+			step = "applying promo code";
+			await page.waitForSelector("#promotionCode", { timeout: 60000 });
 			await page.click("#promotionCode");
 			await page.type("#promotionCode", promoCode);
 			await page.keyboard.press("Enter");
 			await timeout(5000);
 		}
 
+		step = "clicking submit button";
 		const submitButton = await page.$(".SubmitButton-TextContainer");
-		await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
-		await timeout(7000);
+		if (!submitButton) {
+			throw new Error(`.SubmitButton-TextContainer not found`);
+		}
+		await submitButton.evaluate((b: any) => (b as HTMLElement).click());
+
+		step = "waiting for checkout to process";
+		await timeout(15000);
+	} catch (error: any) {
+		const msg = error?.message || String(error);
+		throw new Error(`[completeCheckoutForm] Failed at "${step}": ${msg}`);
 	} finally {
 		// always close browser
 		await browser.close();
@@ -96,7 +140,7 @@ export const completeCheckoutForm = async (
 /** Automates the Stripe setup payment checkout flow (mode: "setup") */
 export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 	const browser = await puppeteer.launch({
-		headless: true,
+		headless: false,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
@@ -132,6 +176,19 @@ export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 		// Fill cardholder name
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
+
+		// Uncheck "Save my information for faster checkout" (Stripe Link) if present
+		try {
+			const enableStripePass = await page.waitForSelector("#enableStripePass", {
+				timeout: 3000,
+			});
+			if (enableStripePass) {
+				await enableStripePass.click();
+				await timeout(500);
+			}
+		} catch (_e) {
+			// Stripe Link checkbox not present
+		}
 
 		// Some setup forms have country dropdown, some have postal code
 		// Try postal code first, then skip if not present
@@ -298,20 +355,28 @@ export const advanceTestClock = async ({
 		startingFrom = new Date();
 	}
 
-	if (numberOfDays) {
-		advanceTo = addDays(startingFrom, numberOfDays).getTime();
+	// Stack all time units - they accumulate from startingFrom
+	let targetDate = startingFrom;
+
+	if (numberOfMonths) {
+		targetDate = addMonths(targetDate, numberOfMonths);
 	}
 
 	if (numberOfWeeks) {
-		advanceTo = addWeeks(startingFrom, numberOfWeeks).getTime();
+		targetDate = addWeeks(targetDate, numberOfWeeks);
+	}
+
+	if (numberOfDays) {
+		targetDate = addDays(targetDate, numberOfDays);
 	}
 
 	if (numberOfHours) {
-		advanceTo = addHours(startingFrom, numberOfHours).getTime();
+		targetDate = addHours(targetDate, numberOfHours);
 	}
 
-	if (numberOfMonths) {
-		advanceTo = addMonths(startingFrom, numberOfMonths).getTime();
+	// Only use calculated targetDate if we actually had time params
+	if (numberOfMonths || numberOfWeeks || numberOfDays || numberOfHours) {
+		advanceTo = targetDate.getTime();
 	}
 
 	if (!advanceTo) {
@@ -351,7 +416,7 @@ export const advanceClockForInvoice = async ({
 	numberOfDays?: number;
 	startingFrom?: Date;
 }) => {
-	let advanceTo;
+	let advanceTo: number;
 
 	if (!startingFrom) {
 		startingFrom = new Date();

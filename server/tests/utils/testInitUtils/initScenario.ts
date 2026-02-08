@@ -1,4 +1,14 @@
-import { ApiVersion, type ProductItem, type ProductV2 } from "@autumn/shared";
+import {
+	ApiVersion,
+	type CreateReward,
+	type CreateRewardProgram,
+	type PlanTiming,
+	type ProductItem,
+	type ProductV2,
+	type ReferralCode,
+	type RewardRedemption,
+} from "@autumn/shared";
+import { resetAndGetCusEnt } from "@tests/advanced/rollovers/rolloverTestUtils.js";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -8,6 +18,7 @@ import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtil
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
+import { createReferralProgram } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
 import defaultCtx, { type TestContext } from "./createTestContext.js";
 
@@ -31,10 +42,22 @@ type GeneratedEntity = {
 	featureId: string;
 };
 
+type OtherCustomerConfig = {
+	id: string;
+	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
+	data?: CustomerData;
+};
+
+type ReferralProgramConfig = {
+	reward: CreateReward;
+	program: CreateRewardProgram;
+};
+
 // Discriminated union for all action types
 type AttachAction = {
 	type: "attach";
 	productId: string;
+	customerId?: string; // Override: use this customer instead of primary
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
@@ -71,6 +94,7 @@ type TrackAction = {
 	featureId: string;
 	value: number;
 	entityIndex?: number;
+	timeout?: number;
 };
 
 type UpdateSubscriptionAction = {
@@ -86,6 +110,38 @@ type AdvanceToNextInvoiceAction = {
 	withPause?: boolean;
 };
 
+type BillingAttachAction = {
+	type: "billingAttach";
+	productId: string;
+	customerId?: string; // Override: use this customer instead of primary
+	entityIndex?: number;
+	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
+	planSchedule?: PlanTiming;
+	timeout?: number;
+	items?: ProductItem[]; // Custom product items (creates is_custom product)
+};
+
+type CreateReferralCodeAction = {
+	type: "createReferralCode";
+};
+
+type RedeemReferralCodeAction = {
+	type: "redeemReferralCode";
+	customerId: string;
+};
+
+type CreateAndRedeemReferralCodeAction = {
+	type: "createAndRedeemReferralCode";
+	customerId: string;
+};
+
+type ResetFeatureAction = {
+	type: "resetFeature";
+	featureId: string;
+	timeout?: number;
+};
+
 type ScenarioAction =
 	| AttachAction
 	| CancelAction
@@ -94,7 +150,12 @@ type ScenarioAction =
 	| RemovePaymentMethodAction
 	| TrackAction
 	| UpdateSubscriptionAction
-	| AdvanceToNextInvoiceAction;
+	| AdvanceToNextInvoiceAction
+	| BillingAttachAction
+	| CreateReferralCodeAction
+	| RedeemReferralCodeAction
+	| CreateAndRedeemReferralCodeAction
+	| ResetFeatureAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];
@@ -109,12 +170,16 @@ type ScenarioConfig = {
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
 	sendEmailReceipts?: boolean;
+	nameOverride?: string | null;
+	emailOverride?: string | null;
 	products: ProductV2[];
 	productPrefix?: string;
 	entityConfig?: EntityConfig;
 	customerIds?: string[];
 	cleanup: CleanupConfig;
 	actions: ScenarioAction[];
+	otherCustomers: OtherCustomerConfig[];
+	referralProgram?: ReferralProgramConfig;
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -148,11 +213,14 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
  * @param defaultGroup - The product group to use for default product selection
  * @param skipWebhooks - Skip sending webhooks for this customer creation (default: undefined, uses server default)
  * @param send_email_receipts - Whether to send email receipts to the customer
+ * @param name - Override customer name (pass null for no name, undefined to use default)
+ * @param email - Override customer email (pass null for no email, undefined to use default)
  * @example s.customer({ paymentMethod: "success" })
  * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
  * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
  * @example s.customer({ withDefault: true, skipWebhooks: false }) // Enable webhooks for testing
  * @example s.customer({ paymentMethod: "success", send_email_receipts: true })
+ * @example s.customer({ name: null, email: null }) // Customer with no name or email
  */
 const customer = ({
 	testClock = true,
@@ -162,6 +230,8 @@ const customer = ({
 	defaultGroup,
 	skipWebhooks,
 	send_email_receipts,
+	name,
+	email,
 }: {
 	testClock?: boolean;
 	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
@@ -170,6 +240,8 @@ const customer = ({
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
 	send_email_receipts?: boolean;
+	name?: string | null;
+	email?: string | null;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -180,6 +252,8 @@ const customer = ({
 		defaultGroup: defaultGroup ?? config.defaultGroup,
 		skipWebhooks: skipWebhooks ?? config.skipWebhooks,
 		sendEmailReceipts: send_email_receipts ?? config.sendEmailReceipts,
+		nameOverride: name,
+		emailOverride: email,
 	});
 };
 
@@ -228,15 +302,45 @@ const entities = ({
 };
 
 /**
+ * Define additional customers for this test scenario.
+ * Useful for referral tests where you need a referrer and redeemer.
+ * Other customers share the same test clock as the primary customer.
+ * @param customers - Array of customer configurations
+ * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success" }])
+ */
+const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
+	return (config) => ({ ...config, otherCustomers: customers });
+};
+
+/**
+ * Define a referral program for this test scenario.
+ * IDs are auto-suffixed with the product prefix for test isolation.
+ * @param reward - The reward configuration
+ * @param program - The referral program configuration
+ * @example s.referralProgram({ reward: rewards.monthOff(), program: referralPrograms.onCheckoutReferrer({ ... }) })
+ */
+const referralProgramSetup = ({
+	reward,
+	program,
+}: {
+	reward: CreateReward;
+	program: CreateRewardProgram;
+}): ConfigFn => {
+	return (config) => ({ ...config, referralProgram: { reward, program } });
+};
+
+/**
  * Attach a product to the customer or a specific entity.
  * Product ID is auto-prefixed with customerId.
  * Actions are executed in the order they appear in the actions array.
  * @param productId - The product ID (without prefix)
+ * @param customerId - Optional: use this customer instead of primary (from otherCustomers)
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
  * @param options - Optional feature options (e.g., prepaid quantity)
  * @param newBillingSubscription - Create a separate Stripe subscription for this product
  * @param timeout - Optional timeout in milliseconds for the attach request
  * @example s.attach({ productId: "pro" }) // customer-level
+ * @example s.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
  * @example s.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity (ent-1)
  * @example s.attach({ productId: "free", entityIndex: 1 }) // attach to second entity (ent-2)
  * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
@@ -245,17 +349,21 @@ const entities = ({
  */
 const attach = ({
 	productId,
+	customerId,
 	entityIndex,
 	options,
 	newBillingSubscription,
 	timeout,
 }: {
 	productId: string;
+	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
 	timeout?: number;
 }): ConfigFn => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
 	return (config) => ({
 		...config,
 		actions: [
@@ -263,10 +371,11 @@ const attach = ({
 			{
 				type: "attach" as const,
 				productId,
+				customerId,
 				entityIndex,
 				options,
 				newBillingSubscription,
-				timeout,
+				timeout: timeout ?? defaultTimeout,
 			},
 		],
 	});
@@ -395,17 +504,21 @@ const removePaymentMethod = (): ConfigFn => {
  * @param featureId - The feature ID to track usage for
  * @param value - The usage value to track
  * @param entityIndex - Optional entity index (0-based) to track for (omit for customer-level)
+ * @param timeout - Optional timeout in milliseconds to wait after tracking (for sync)
  * @example s.track({ featureId: TestFeature.Messages, value: 300 }) // customer-level
  * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }) // entity-level
+ * @example s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }) // with timeout
  */
 const track = ({
 	featureId,
 	value,
 	entityIndex,
+	timeout,
 }: {
 	featureId: string;
 	value: number;
 	entityIndex?: number;
+	timeout?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -416,6 +529,7 @@ const track = ({
 				featureId,
 				value,
 				entityIndex,
+				timeout,
 			},
 		],
 	});
@@ -481,6 +595,35 @@ const advanceToNextInvoice = ({
 };
 
 /**
+ * Reset a feature's usage cycle to simulate end-of-cycle rollover creation.
+ * Use this for FREE products (no Stripe subscription) to create rollovers.
+ * For PAID products, use s.advanceToNextInvoice() instead.
+ *
+ * @param featureId - The feature ID to reset
+ * @param timeout - Optional timeout in milliseconds to wait after reset (default: 2000)
+ * @example s.resetFeature({ featureId: TestFeature.Messages })
+ */
+const resetFeature = ({
+	featureId,
+	timeout,
+}: {
+	featureId: string;
+	timeout?: number;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "resetFeature" as const,
+				featureId,
+				timeout,
+			},
+		],
+	});
+};
+
+/**
  * Delete a customer before the test runs.
  * Uses API to clear cache. Silently ignores if customer doesn't exist.
  * @param customerId - Delete by customer ID
@@ -515,6 +658,123 @@ const deleteCustomer = (
 };
 
 /**
+ * Attach a product using the NEW billing/attach V2 endpoint.
+ * Product ID is auto-prefixed with customerId.
+ *
+ * NOTE: Add-on is defined at product level using `products.recurringAddOn()` or
+ * `products.base({ isAddOn: true })`, NOT in the attach params.
+ *
+ * @param productId - The product ID (without prefix)
+ * @param customerId - Optional: use this customer instead of primary (from otherCustomers)
+ * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
+ * @param options - Optional feature options (e.g., prepaid quantity)
+ * @param newBillingSubscription - Create a separate Stripe subscription for this product
+ * @param planSchedule - Override plan timing: "immediate" or "end_of_cycle"
+ * @param timeout - Optional timeout in milliseconds for the attach request
+ * @param items - Custom product items (creates is_custom customer product)
+ * @example s.billing.attach({ productId: "pro" }) // customer-level
+ * @example s.billing.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
+ * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
+ * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" }) // scheduled upgrade
+ * @example s.billing.attach({ productId: "pro", items: [items.monthlyMessages({ includedUsage: 750 })] }) // custom plan
+ */
+const billingAttach = ({
+	productId,
+	customerId,
+	entityIndex,
+	options,
+	newBillingSubscription,
+	planSchedule,
+	timeout,
+	items,
+}: {
+	productId: string;
+	customerId?: string;
+	entityIndex?: number;
+	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
+	planSchedule?: PlanTiming;
+	timeout?: number;
+	items?: ProductItem[];
+}): ConfigFn => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "billingAttach" as const,
+				productId,
+				customerId,
+				entityIndex,
+				options,
+				newBillingSubscription,
+				planSchedule,
+				timeout: timeout ?? defaultTimeout,
+				items,
+			},
+		],
+	});
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// REFERRAL ACTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Create a referral code for the primary customer.
+ * Requires s.referralProgram() to be configured.
+ * @example s.referral.createCode()
+ */
+const createReferralCode = (): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [...config.actions, { type: "createReferralCode" as const }],
+	});
+};
+
+/**
+ * Redeem the created referral code for a customer.
+ * Requires s.referral.createCode() to be called first.
+ * @param customerId - The customer ID to redeem for (from otherCustomers)
+ * @example s.referral.redeem({ customerId: "redeemer" })
+ */
+const redeemReferralCode = ({
+	customerId,
+}: {
+	customerId: string;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{ type: "redeemReferralCode" as const, customerId },
+		],
+	});
+};
+
+/**
+ * Create and redeem a referral code in one action.
+ * Creates code for primary customer, redeems for specified customer.
+ * @param customerId - The customer ID to redeem for (from otherCustomers)
+ * @example s.referral.createAndRedeem({ customerId: "redeemer" })
+ */
+const createAndRedeemReferralCode = ({
+	customerId,
+}: {
+	customerId: string;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{ type: "createAndRedeemReferralCode" as const, customerId },
+		],
+	});
+};
+
+/**
  * Scenario configuration functions.
  * Import and use with initScenario to configure test setup.
  * @example
@@ -533,8 +793,10 @@ const deleteCustomer = (
  */
 export const s = {
 	customer,
+	otherCustomers,
 	products,
 	entities,
+	referralProgram: referralProgramSetup,
 	attach,
 	cancel,
 	advanceTestClock,
@@ -544,6 +806,15 @@ export const s = {
 	track,
 	updateSubscription,
 	deleteCustomer,
+	resetFeature,
+	billing: {
+		attach: billingAttach,
+	},
+	referral: {
+		createCode: createReferralCode,
+		redeem: redeemReferralCode,
+		createAndRedeem: createAndRedeemReferralCode,
+	},
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -561,6 +832,8 @@ const defaultConfig: ScenarioConfig = {
 		emailsToDelete: [],
 	},
 	actions: [],
+	otherCustomers: [],
+	referralProgram: undefined,
 };
 
 /**
@@ -609,6 +882,12 @@ const defaultConfig: ScenarioConfig = {
  * });
  * ```
  */
+// Other customer result type
+type OtherCustomerResult = {
+	id: string;
+	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
+};
+
 // Overload: when customerId is provided, return type has customerId: string
 export async function initScenario(params: {
 	customerId: string;
@@ -625,6 +904,9 @@ export async function initScenario(params: {
 	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
+	otherCustomers: Map<string, OtherCustomerResult>;
+	referralCode: ReferralCode | null;
+	redemption: RewardRedemption | null;
 }>;
 
 // Overload: when customerId is not provided, return type has customerId: undefined
@@ -643,6 +925,9 @@ export async function initScenario(params: {
 	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
+	otherCustomers: Map<string, OtherCustomerResult>;
+	referralCode: ReferralCode | null;
+	redemption: RewardRedemption | null;
 }>;
 
 // Implementation
@@ -698,12 +983,49 @@ export async function initScenario({
 	// 1. Initialize products & delete previous customers (prefix = customerId for isolation)
 	// Priority: explicit productPrefix > customerId > "shared"
 	const productPrefix = config.productPrefix ?? customerId ?? "shared";
+
+	// Collect all customer IDs to delete (primary + other customers)
+	const otherCustomerIds = config.otherCustomers.map((c) => c.id);
+	const allCustomerIds = config.customerIds ?? [
+		...(customerId ? [customerId] : []),
+		...otherCustomerIds,
+	];
+
 	if (config.products.length > 0) {
 		await initProductsV0({
 			ctx,
 			products: config.products,
 			prefix: productPrefix,
-			customerIds: config.customerIds ?? (customerId ? [customerId] : []),
+			customerIds: allCustomerIds,
+		});
+	}
+
+	// 1.5. Initialize referral program (if configured)
+	// Suffix IDs with productPrefix for isolation and mutate in place
+	if (config.referralProgram) {
+		const { reward, program } = config.referralProgram;
+
+		// Suffix reward ID
+		reward.id = `${reward.id}_${productPrefix}`;
+
+		// Suffix program ID and update internal_reward_id reference
+		program.id = `${program.id}_${productPrefix}`;
+		program.internal_reward_id = reward.id;
+
+		// Suffix product_ids to match prefixed products
+		if (program.product_ids && program.product_ids.length > 0) {
+			program.product_ids = program.product_ids.map(
+				(pid) => `${pid}_${productPrefix}`,
+			);
+		}
+
+		await createReferralProgram({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			autumn: cleanupAutumn,
+			reward,
+			rewardProgram: program,
 		});
 	}
 
@@ -724,9 +1046,31 @@ export async function initScenario({
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
 			sendEmailReceipts: config.sendEmailReceipts,
+			nameOverride: config.nameOverride,
+			emailOverride: config.emailOverride,
 		});
 		testClockId = result.testClockId;
 		customer = result.customer;
+	}
+
+	// 2.5. Initialize other customers (share test clock with primary customer)
+	const otherCustomersMap = new Map<string, OtherCustomerResult>();
+	for (const otherCusConfig of config.otherCustomers) {
+		const otherResult = await initCustomerV3({
+			ctx,
+			customerId: otherCusConfig.id,
+			customerData: otherCusConfig.data,
+			attachPm: otherCusConfig.paymentMethod,
+			withTestClock: false, // Don't create a new test clock
+			existingTestClockId: testClockId, // Reuse primary customer's test clock
+			withDefault: false,
+			defaultGroup: productPrefix,
+			skipWebhooks: config.skipWebhooks,
+		});
+		otherCustomersMap.set(otherCusConfig.id, {
+			id: otherCusConfig.id,
+			customer: otherResult.customer,
+		});
 	}
 
 	// 3. Create autumn clients
@@ -760,12 +1104,16 @@ export async function initScenario({
 		await autumnV1.entities.create(customerId, entityDefs);
 	}
 
-	// 5. Execute actions in order (attach, cancel, advanceClock)
+	// 5. Execute actions in order (attach, cancel, advanceClock, referrals)
 	let advancedTo: number = Date.now();
+	let referralCode: ReferralCode | null = null;
+	let redemption: RewardRedemption | null = null;
 
 	for (const action of config.actions) {
 		if (action.type === "attach") {
-			if (!customerId) {
+			// Resolve target customer: action.customerId override or primary customerId
+			const targetCustomerId = action.customerId ?? customerId;
+			if (!targetCustomerId) {
 				throw new Error(
 					"Cannot attach product: customerId is required when using s.attach()",
 				);
@@ -784,7 +1132,7 @@ export async function initScenario({
 			}
 
 			await autumnV1.attach({
-				customer_id: customerId,
+				customer_id: targetCustomerId,
 				product_id: prefixedProductId,
 				entity_id: entityId,
 				options: action.options,
@@ -897,6 +1245,9 @@ export async function initScenario({
 				value: action.value,
 				entity_id: entityId,
 			});
+			if (action.timeout) {
+				await new Promise((resolve) => setTimeout(resolve, action.timeout));
+			}
 		} else if (action.type === "updateSubscription") {
 			if (!customerId) {
 				throw new Error(
@@ -955,6 +1306,109 @@ export async function initScenario({
 					waitForSeconds: 30,
 				});
 			}
+		} else if (action.type === "billingAttach") {
+			// Resolve target customer: action.customerId override or primary customerId
+			const targetCustomerId = action.customerId ?? customerId;
+			if (!targetCustomerId) {
+				throw new Error(
+					"Cannot attach product: customerId is required when using s.billing.attach()",
+				);
+			}
+			const prefixedProductId = `${action.productId}_${productPrefix}`;
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.billing.attach(
+				{
+					customer_id: targetCustomerId,
+					product_id: prefixedProductId,
+					entity_id: entityId,
+					options: action.options,
+					new_billing_subscription: action.newBillingSubscription,
+					plan_schedule: action.planSchedule,
+					items: action.items,
+				},
+				{ timeout: action.timeout },
+			);
+		} else if (action.type === "createReferralCode") {
+			if (!customerId) {
+				throw new Error("Cannot create referral code: customerId is required");
+			}
+			if (!config.referralProgram) {
+				throw new Error(
+					"Cannot create referral code: s.referralProgram() must be configured in setup",
+				);
+			}
+			referralCode = await autumnV1.referrals.createCode({
+				customerId,
+				referralId: config.referralProgram.program.id,
+			});
+		} else if (action.type === "redeemReferralCode") {
+			if (!referralCode) {
+				throw new Error(
+					"Cannot redeem referral code: s.referral.createCode() must be called first",
+				);
+			}
+			redemption = await autumnV1.referrals.redeem({
+				customerId: action.customerId,
+				code: referralCode.code,
+			});
+		} else if (action.type === "createAndRedeemReferralCode") {
+			if (!customerId) {
+				throw new Error("Cannot create referral code: customerId is required");
+			}
+			if (!config.referralProgram) {
+				throw new Error(
+					"Cannot create referral code: s.referralProgram() must be configured in setup",
+				);
+			}
+			// Create code for primary customer
+			const createdCode = await autumnV1.referrals.createCode({
+				customerId,
+				referralId: config.referralProgram.program.id,
+			});
+			referralCode = createdCode;
+			// Redeem for specified customer
+			redemption = await autumnV1.referrals.redeem({
+				customerId: action.customerId,
+				code: createdCode.code,
+			});
+		} else if (action.type === "resetFeature") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot reset feature: customerId is required when using s.resetFeature()",
+				);
+			}
+			if (!customer) {
+				throw new Error(
+					"Cannot reset feature: customer not initialized. Ensure s.customer() is in setup.",
+				);
+			}
+
+			// Product group is always the productPrefix (customerId)
+			// All products in a test share the same group unless explicitly overridden
+			// The productId param is not used for group - it was a naming confusion
+			const productGroup = productPrefix;
+
+			await resetAndGetCusEnt({
+				db: ctx.db,
+				customer,
+				productGroup,
+				featureId: action.featureId,
+			});
+
+			// Wait for cache to clear (default 2000ms)
+			const waitTime = action.timeout ?? 2000;
+			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		}
 	}
 
@@ -968,5 +1422,8 @@ export async function initScenario({
 		ctx,
 		entities: generatedEntities,
 		advancedTo,
+		otherCustomers: otherCustomersMap,
+		referralCode,
+		redemption,
 	};
 }

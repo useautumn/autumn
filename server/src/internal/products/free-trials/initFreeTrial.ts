@@ -3,6 +3,7 @@ import {
 	CreateFreeTrialSchema,
 	type FreeTrial,
 } from "@autumn/shared";
+import type { FreeTrialParamsV0 } from "@shared/api/billing/common/freeTrial/freeTrialParamsV0";
 import { generateId } from "@/utils/genUtils";
 
 export const initFreeTrial = ({
@@ -10,7 +11,7 @@ export const initFreeTrial = ({
 	internalProductId,
 	isCustom = false,
 }: {
-	freeTrialParams: CreateFreeTrial;
+	freeTrialParams: CreateFreeTrial | FreeTrialParamsV0;
 	internalProductId: string;
 	isCustom?: boolean;
 }): FreeTrial => {

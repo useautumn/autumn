@@ -1,4 +1,4 @@
-import type { LineItem } from "../../../../models/billingModels/invoicingModels/lineItem";
+import type { LineItem } from "../../../../models/billingModels/lineItem/lineItem";
 import type { FullCustomerEntitlement } from "../../../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusProduct } from "../../../../models/cusProductModels/cusProductModels";
 import { cusPriceToCusEnt } from "../../../cusPriceUtils/convertCusPriceUtils";

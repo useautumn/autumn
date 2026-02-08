@@ -1,5 +1,12 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
+	unique,
+} from "drizzle-orm/pg-core";
 import { collatePgColumn, sqlNow } from "../../../db/utils.js";
 import { customers } from "../cusTable.js";
 import { entities } from "../entityModels/entityTable.js";
@@ -35,6 +42,7 @@ export const invoices = pgTable(
 			foreignColumns: [entities.internal_id],
 			name: "invoices_internal_entity_id_fkey",
 		}).onDelete("cascade"),
+		unique("invoices_stripe_id_key").on(table.stripe_id),
 	],
 );
 

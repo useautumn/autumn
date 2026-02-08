@@ -9,7 +9,7 @@ import {
 	isPrepaidPrice,
 	OnDecrease,
 	OnIncrease,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	type Price,
 	UsageModel,
 	type UsagePriceConfig,
@@ -84,7 +84,7 @@ const filterNoProratePrepaidItems = ({
 	attachParams,
 	curSameProduct,
 }: {
-	items: PreviewLineItem[];
+	items: LegacyPreviewLineItem[];
 	attachParams: AttachParams;
 	curSameProduct?: FullCusProduct;
 }) => {
@@ -187,7 +187,7 @@ export const getUpgradeProductPreview = async ({
 	});
 
 	let dueNextCycle:
-		| { line_items: PreviewLineItem[]; due_at: number }
+		| { line_items: LegacyPreviewLineItem[]; due_at: number }
 		| undefined;
 	if (!isFreeProduct(newProduct.prices)) {
 		const nextCycleAt = getNextCycleAt({
@@ -267,7 +267,7 @@ export const getUpgradeProductPreview = async ({
 
 	let dueToday:
 		| {
-				line_items: PreviewLineItem[];
+				line_items: LegacyPreviewLineItem[];
 				total: number;
 		  }
 		| undefined = {

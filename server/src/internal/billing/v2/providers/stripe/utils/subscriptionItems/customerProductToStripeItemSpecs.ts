@@ -1,5 +1,7 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
+	BillingVersion,
 	cusPriceToCusEnt,
 	cusProductToProduct,
 	entToOptions,
@@ -9,13 +11,12 @@ import {
 	InternalError,
 	isAllocatedCustomerEntitlement,
 	isOneOffPrice,
-	notNullish,
+	priceUtils,
 	type StripeItemSpec,
 } from "@autumn/shared";
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 
 /**
  * Convert a customer product to stripe item specs
@@ -55,16 +56,21 @@ export const customerProductToStripeItemSpecs = ({
 
 		let options: FeatureOptions | undefined;
 		let existingUsage: number | undefined;
+		const cusEntWithCusProduct = cusEnt
+			? addCusProductToCusEnt({
+					cusEnt,
+					cusProduct: customerProduct,
+				})
+			: undefined;
+
 		if (cusEnt) {
 			const ent = cusEnt.entitlement;
 			options = entToOptions({ ent, options: customerProduct.options ?? [] });
 
-			const cusEntWithCusProduct = addCusProductToCusEnt({
-				cusEnt,
-				cusProduct: customerProduct,
-			});
-
-			if (isAllocatedCustomerEntitlement(cusEntWithCusProduct)) {
+			if (
+				cusEntWithCusProduct &&
+				isAllocatedCustomerEntitlement(cusEntWithCusProduct)
+			) {
 				existingUsage = cusEntToInvoiceUsage({ cusEnt: cusEntWithCusProduct });
 			}
 		}
@@ -77,16 +83,18 @@ export const customerProductToStripeItemSpecs = ({
 			isCheckout: false, // TODO: Add this back in?
 			relatedEnt: ent,
 			existingUsage,
-			withEntity: notNullish(customerProduct.internal_entity_id),
+			// withEntity: notNullish(customerProduct.internal_entity_id),
+			withEntity: false,
 			apiVersion: ctx.apiVersion.value,
 			fromVercel,
+			isPrepaidPriceV2: billingContext?.billingVersion === BillingVersion.V2,
 		});
 
 		if (!stripeItem) continue;
 
 		const { lineItem } = stripeItem;
 
-		if (!lineItem.price) {
+		if (!lineItem.price && !priceUtils.isTieredOneOff({ price, product })) {
 			throw new InternalError({
 				message: `Autumn price ${formatPrice({ price })} has no stripe price id`,
 			});
@@ -94,15 +102,21 @@ export const customerProductToStripeItemSpecs = ({
 
 		if (isOneOffPrice(price)) {
 			oneOffItems.push({
-				stripePriceId: lineItem.price,
+				stripePriceId: lineItem.price ?? "",
 				quantity: lineItem?.quantity,
 				autumnPrice: price,
+				autumnEntitlement: ent,
+				autumnProduct: product,
+				autumnCusEnt: cusEntWithCusProduct,
 			});
 		} else {
 			recurringItems.push({
-				stripePriceId: lineItem.price,
+				stripePriceId: lineItem.price ?? "",
 				quantity: lineItem?.quantity,
 				autumnPrice: price,
+				autumnEntitlement: ent,
+				autumnProduct: product,
+				autumnCusEnt: cusEntWithCusProduct,
 			});
 		}
 	}

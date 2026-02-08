@@ -1,15 +1,15 @@
-import type { FullCusProduct } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	FullCusProduct,
+	StripeSubscriptionAction,
+	StripeSubscriptionScheduleAction,
+} from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
-import type {
-	AutumnBillingPlan,
-	StripeSubscriptionAction,
-	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionAction = ({
 	ctx,
@@ -39,6 +39,11 @@ export const buildStripeSubscriptionAction = ({
 		autumnBillingPlan,
 	});
 
+	const addInvoiceItems = oneOffItemSpecs.map((item) => ({
+		price: item.stripePriceId,
+		quantity: item.quantity,
+	}));
+
 	// Case 1: No subscription and sub items update is empty -> no action
 	if (!stripeSubscription && subItemsUpdate.length === 0) {
 		return undefined;
@@ -50,10 +55,7 @@ export const buildStripeSubscriptionAction = ({
 			ctx,
 			billingContext,
 			subItemsUpdate,
-			addInvoiceItems: oneOffItemSpecs.map((item) => ({
-				price: item.stripePriceId,
-				quantity: item.quantity,
-			})),
+			addInvoiceItems,
 			subscriptionCancelAt,
 		});
 	}

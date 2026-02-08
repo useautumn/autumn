@@ -5,7 +5,7 @@ import {
 	type FullCustomerEntitlement,
 	type FullEntitlement,
 	getFeatureInvoiceDescription,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	type Price,
 	shouldProrate,
 } from "@autumn/shared";
@@ -68,7 +68,7 @@ const getContUseNewItems = async ({
 			description,
 			usage_model: priceToUsageModel(price),
 			feature_id: ent.feature_id,
-		} as PreviewLineItem;
+		} as LegacyPreviewLineItem;
 	} else {
 		/* 
 			For example, free plan comes with 3 users, and usage is 3
@@ -112,7 +112,7 @@ const getContUseNewItems = async ({
 			amount,
 			usage_model: priceToUsageModel(price),
 			feature_id: ent.feature_id,
-		} as PreviewLineItem;
+		} as LegacyPreviewLineItem;
 	}
 };
 
@@ -139,8 +139,8 @@ export const getContUseInvoiceItems = async ({
 		: [];
 
 	const newEnts = product.entitlements;
-	const oldItems: PreviewLineItem[] = [];
-	const newItems: PreviewLineItem[] = [];
+	const oldItems: LegacyPreviewLineItem[] = [];
+	const newItems: LegacyPreviewLineItem[] = [];
 	const replaceables: AttachReplaceable[] = [];
 
 	for (const price of product.prices) {

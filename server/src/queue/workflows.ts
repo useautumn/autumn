@@ -27,6 +27,14 @@ type VerifyCacheConsistencyPayload = {
 	previousFullCustomer: string;
 };
 
+export type GrantCheckoutRewardPayload = {
+	orgId: string;
+	env: AppEnv;
+	customerId: string;
+	productId: string;
+	stripeSubscriptionId?: string;
+};
+
 // ============ Workflow Registry ============
 
 type WorkflowRunner = "sqs" | "hatchet";
@@ -52,6 +60,11 @@ const workflowRegistry = {
 		jobName: JobName.VerifyCacheConsistency,
 		runner: "hatchet",
 	} as WorkflowConfig<VerifyCacheConsistencyPayload>,
+
+	grantCheckoutReward: {
+		jobName: JobName.GrantCheckoutReward,
+		runner: "sqs",
+	} as WorkflowConfig<GrantCheckoutRewardPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -113,4 +126,9 @@ export const workflows = {
 		payload: VerifyCacheConsistencyPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "verifyCacheConsistency", payload, options }),
+
+	triggerGrantCheckoutReward: (
+		payload: GrantCheckoutRewardPayload,
+		options?: TriggerOptions,
+	) => triggerWorkflow({ name: "grantCheckoutReward", payload, options }),
 };

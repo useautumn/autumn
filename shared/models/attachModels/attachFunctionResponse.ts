@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 export const AttachFunctionResponseSchema = z.object({
-	checkout_url: z.string().optional(),
+	checkout_url: z.string().nullish(),
 	message: z.string().optional(),
 	code: z.string().optional(),
 

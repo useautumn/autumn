@@ -1,4 +1,5 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
@@ -64,6 +65,8 @@ export const CusProductSchema = z.object({
 	api_semver: z.enum(ApiVersion).nullable(),
 
 	is_custom: z.boolean().default(false),
+
+	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

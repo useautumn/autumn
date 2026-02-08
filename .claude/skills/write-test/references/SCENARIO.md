@@ -123,6 +123,36 @@ Remove all payment methods from customer.
 s.removePaymentMethod()
 ```
 
+### `s.resetFeature({ ... })`
+
+Reset a feature's usage cycle to simulate end-of-cycle rollover creation.
+**Use this for FREE products** (no Stripe subscription) to create rollovers.
+For PAID products, use `s.advanceToNextInvoice()` instead.
+
+```typescript
+s.resetFeature({
+  featureId: TestFeature.Messages,  // Required: feature to reset
+  productId?: "free",               // Optional: product ID (defaults to customerId as group)
+  timeout?: 2000,                   // Optional: wait time after reset (default: 2000ms)
+})
+```
+
+**Example - Creating rollovers on a free product:**
+```typescript
+const { autumnV1 } = await initScenario({
+  customerId,
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [free, pro] }),
+  ],
+  actions: [
+    s.billing.attach({ productId: free.id }),
+    s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+    s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }), // Creates rollover
+  ],
+});
+```
+
 ## Complete Example
 
 ```typescript

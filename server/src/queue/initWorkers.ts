@@ -13,6 +13,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -185,6 +186,17 @@ const processMessage = async ({
 				payload: job.data,
 			});
 		}
+
+		if (job.name === JobName.GrantCheckoutReward) {
+			if (!ctx) {
+				workerLogger.error("No context found for grant checkout reward job");
+				return;
+			}
+			await grantCheckoutReward({
+				ctx,
+				payload: job.data,
+			});
+		}
 	} catch (error) {
 		Sentry.captureException(error);
 		if (error instanceof Error) {
@@ -217,7 +229,9 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 	// Log stats every 60 seconds
 	const statsInterval = setInterval(() => {
 		const elapsed = ((Date.now() - lastStatsTime) / 1000).toFixed(0);
-		console.log(`[SQS Worker ${process.pid}] Processed ${messagesProcessed} messages in ${elapsed}s`);
+		console.log(
+			`[SQS Worker ${process.pid}] Processed ${messagesProcessed} messages in ${elapsed}s`,
+		);
 		messagesProcessed = 0;
 		lastStatsTime = Date.now();
 	}, 60000);
@@ -292,7 +306,9 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 							}),
 						);
 					} catch (deleteError: any) {
-						console.error(`[SQS Worker ${process.pid}] Batch delete failed: ${deleteError.message}`);
+						console.error(
+							`[SQS Worker ${process.pid}] Batch delete failed: ${deleteError.message}`,
+						);
 					}
 				}
 			}
@@ -303,7 +319,9 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 			}
 
 			if (isRunning) {
-				console.error(`[SQS Worker ${process.pid}] Polling error: ${error.message}`);
+				console.error(
+					`[SQS Worker ${process.pid}] Polling error: ${error.message}`,
+				);
 				await new Promise((resolve) => setTimeout(resolve, 5000));
 			}
 		}

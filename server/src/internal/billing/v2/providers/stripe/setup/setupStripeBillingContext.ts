@@ -1,4 +1,9 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import type {
+	BillingContextOverride,
+	FullCusProduct,
+	FullCustomer,
+	Product,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
@@ -8,30 +13,40 @@ import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling
 export const setupStripeBillingContext = async ({
 	ctx,
 	fullCustomer,
+	product,
 	targetCustomerProduct,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	targetCustomerProduct: FullCusProduct;
+	product?: Product;
+	targetCustomerProduct?: FullCusProduct;
+	contextOverride?: BillingContextOverride;
 }) => {
+	const { stripeBillingContext } = contextOverride;
+
+	if (stripeBillingContext) return stripeBillingContext;
+
+	// If no target customer product, skip subscription/schedule fetching
 	const stripeSubscription = await fetchStripeSubscriptionForBilling({
 		ctx,
 		fullCus: fullCustomer,
-		products: [],
-		targetCusProductId: targetCustomerProduct.id,
+		product,
+		targetCusProductId: targetCustomerProduct?.id,
 	});
 
-	const stripeSubscriptionSchedule =
-		await fetchStripeSubscriptionScheduleForBilling({
-			ctx,
-			fullCus: fullCustomer,
-			subscriptionScheduleId:
-				typeof stripeSubscription?.schedule === "string"
-					? stripeSubscription.schedule
-					: undefined,
-			products: [],
-			targetCusProductId: targetCustomerProduct.id,
-		});
+	const stripeSubscriptionSchedule = targetCustomerProduct
+		? await fetchStripeSubscriptionScheduleForBilling({
+				ctx,
+				fullCus: fullCustomer,
+				subscriptionScheduleId:
+					typeof stripeSubscription?.schedule === "string"
+						? stripeSubscription.schedule
+						: undefined,
+				products: [],
+				targetCusProductId: targetCustomerProduct.id,
+			})
+		: undefined;
 
 	const {
 		stripeCus: stripeCustomer,

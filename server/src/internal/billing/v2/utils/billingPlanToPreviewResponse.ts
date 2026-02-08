@@ -1,3 +1,4 @@
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	orgToCurrency,
@@ -5,9 +6,9 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
+import { lineItemToPreviewLineItem } from "./lineItems/lineItemToPreviewLineItem";
+import { logBillingPreview } from "./logs/logBillingPreview";
 
 export const billingPlanToPreviewResponse = ({
 	ctx,
@@ -21,17 +22,23 @@ export const billingPlanToPreviewResponse = ({
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
-	const planLineItems = autumnBillingPlan.lineItems ?? [];
+	const allLineItems = autumnBillingPlan.lineItems ?? [];
 
-	const previewImmediateLineItems = planLineItems
-		.filter((line) => line.chargeImmediately)
-		.map((line) => ({
-			description: line.description,
-			amount: line.finalAmount,
-		}));
+	const immediateLineItems = allLineItems.filter(
+		(line) => line.chargeImmediately,
+	);
+
+	const previewImmediateLineItems = immediateLineItems.map(
+		lineItemToPreviewLineItem,
+	);
+
+	// Exclude deferred items from total (they'll be charged after trial ends)
+	const chargeableItems = previewImmediateLineItems.filter(
+		(line) => !line.deferred_for_trial,
+	);
 
 	const total = new Decimal(
-		sumValues(previewImmediateLineItems.map((line) => line.amount)),
+		sumValues(chargeableItems.map((line) => line.amount)),
 	)
 		.toDP(2)
 		.toNumber();
@@ -39,17 +46,36 @@ export const billingPlanToPreviewResponse = ({
 	const currency = orgToCurrency({ org: ctx.org });
 
 	// Get next cycle object
-	const nextCycle = billingPlanToNextCyclePreview({
+	const { nextCycle, debug: nextCycleDebug } = billingPlanToNextCyclePreview({
 		ctx,
 		billingContext,
 		billingPlan,
 	});
+
+	logBillingPreview({
+		ctx,
+		allLineItems,
+		immediateLineItems,
+		total,
+		currency,
+		nextCycleDebug,
+		nextCycle,
+	});
+
+	// Extract billing period from first line item with a billing period
+	const firstLineWithPeriod = immediateLineItems.find(
+		(line) => line.context.billingPeriod,
+	);
+	const periodStart = firstLineWithPeriod?.context.billingPeriod?.start;
+	const periodEnd = firstLineWithPeriod?.context.billingPeriod?.end;
 
 	return {
 		customer_id: fullCustomer.id || "",
 		line_items: previewImmediateLineItems,
 		total,
 		currency,
+		period_start: periodStart,
+		period_end: periodEnd,
 		next_cycle: nextCycle,
 	} satisfies BillingPreviewResponse;
 };

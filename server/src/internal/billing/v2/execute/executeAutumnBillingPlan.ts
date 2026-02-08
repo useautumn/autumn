@@ -1,11 +1,13 @@
+import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
+import { SubService } from "@/internal/subscriptions/SubService";
 
 export const executeAutumnBillingPlan = async ({
 	ctx,
@@ -57,10 +59,7 @@ export const executeAutumnBillingPlan = async ({
 	// 3. Update customer product options
 	if (updateCustomerProduct) {
 		const { customerProduct, updates } = updateCustomerProduct;
-		ctx.logger.debug(
-			`[execAutumnPlan] updating customer product: ${customerProduct.id}, updates:`,
-			updates,
-		);
+
 		await CusProductService.update({
 			db,
 			cusProductId: customerProduct.id,
@@ -84,4 +83,20 @@ export const executeAutumnBillingPlan = async ({
 		ctx,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	// 6. Upsert subscription (if provided)
+	if (autumnBillingPlan.upsertSubscription) {
+		await SubService.upsertByStripeId({
+			db,
+			subscription: autumnBillingPlan.upsertSubscription,
+		});
+	}
+
+	// 7. Upsert invoice (if provided)
+	if (autumnBillingPlan.upsertInvoice) {
+		await InvoiceService.upsert({
+			db,
+			invoice: autumnBillingPlan.upsertInvoice,
+		});
+	}
 };

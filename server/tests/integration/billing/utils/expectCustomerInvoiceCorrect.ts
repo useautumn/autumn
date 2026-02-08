@@ -6,12 +6,18 @@ import { AutumnInt } from "@/external/autumn/autumnCli";
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 /**
- * Check customer invoice count and optionally the latest invoice details
+ * Check customer invoice count and optionally invoice details at a given index.
+ *
+ * Note: `latestTotal` uses approximate comparison (±0.01) to handle
+ * floating point precision differences in proration calculations.
+ *
+ * @param invoiceIndex - Which invoice to check (0 = latest, 1 = second latest, etc.). Defaults to 0.
  */
 export const expectCustomerInvoiceCorrect = async ({
 	customerId,
 	customer: providedCustomer,
 	count,
+	invoiceIndex = 0,
 	latestTotal,
 	latestStatus,
 	latestInvoiceProductId,
@@ -20,6 +26,7 @@ export const expectCustomerInvoiceCorrect = async ({
 	customerId?: string;
 	customer?: ApiCustomerV3;
 	count: number;
+	invoiceIndex?: number;
 	latestTotal?: number;
 	latestStatus?: "paid" | "draft" | "open" | "void";
 	latestInvoiceProductId?: string;
@@ -37,21 +44,32 @@ export const expectCustomerInvoiceCorrect = async ({
 
 	expect(invoices.length).toBe(count);
 
-	if (latestTotal !== undefined && invoices.length > 0) {
-		expect(invoices[0].total).toBe(latestTotal);
+	const invoice = invoices[invoiceIndex];
+	if (!invoice) return;
+
+	if (latestTotal !== undefined) {
+		const actualTotal = invoice.total;
+		const diff = Math.abs(actualTotal - latestTotal);
+		const tolerance = 0.01;
+
+		if (diff > tolerance) {
+			throw new Error(
+				`Invoice[${invoiceIndex}] total mismatch: expected $${latestTotal.toFixed(2)}, got $${actualTotal.toFixed(2)} (diff: $${diff.toFixed(2)}, tolerance: ±$${tolerance})`,
+			);
+		}
 	}
 
-	if (latestStatus !== undefined && invoices.length > 0) {
-		expect(invoices[0].status).toBe(latestStatus);
+	if (latestStatus !== undefined) {
+		expect(invoice.status).toBe(latestStatus);
 	}
 
-	if (latestInvoiceProductId !== undefined && invoices.length > 0) {
-		expect(invoices[0].product_ids).toContain(latestInvoiceProductId);
+	if (latestInvoiceProductId !== undefined) {
+		expect(invoice.product_ids).toContain(latestInvoiceProductId);
 	}
 
-	if (latestInvoiceProductIds !== undefined && invoices.length > 0) {
+	if (latestInvoiceProductIds !== undefined) {
 		for (const productId of latestInvoiceProductIds) {
-			expect(invoices[0].product_ids).toContain(productId);
+			expect(invoice.product_ids).toContain(productId);
 		}
 	}
 };

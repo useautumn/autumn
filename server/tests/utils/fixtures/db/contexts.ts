@@ -1,7 +1,9 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
+	BillingVersion,
 	type Feature,
 	type FullCusProduct,
 	type FullProduct,
@@ -9,7 +11,6 @@ import {
 import type Stripe from "stripe";
 import { logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { stripeCustomers } from "../stripe/customers";
 import { customers } from "./customers";
 
@@ -74,6 +75,7 @@ const createBilling = ({
 	customPrices: [],
 	customEnts: [],
 	isCustom: false,
+	billingVersion: BillingVersion.V2,
 });
 
 // ═══════════════════════════════════════════════════════════════════

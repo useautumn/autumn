@@ -4,5 +4,3 @@ export const FeatureQuantitySchema = z.object({
 	feature_id: z.string(),
 	quantity: z.number(),
 });
-
-type FeatureQuantity = z.infer<typeof FeatureQuantitySchema>;

@@ -1,3 +1,4 @@
+import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
 	cusPriceToCusEntWithCusProduct,
 	cusProductToPrices,
@@ -13,27 +14,31 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
-import type { BillingContext } from "../../billingContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({
 	ctx,
 	customerProduct,
 	billingContext,
-	filters,
-	updateNextResetAt,
+	filters = {},
+	options = {
+		includePeriodDescription: false,
+		updateNextResetAt: true,
+	},
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
-	filters: {
+	filters?: {
 		onlyV4Usage?: boolean;
 		/** Optional filter to skip specific entitlements (e.g., for multi-interval billing) */
 		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 	};
-	updateNextResetAt: boolean;
+	options?: {
+		includePeriodDescription?: boolean;
+		updateNextResetAt?: boolean;
+	};
 }): {
 	lineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
@@ -93,7 +98,7 @@ export const customerProductToArrearLineItems = ({
 		const lineItem = usagePriceToLineItem({
 			cusEnt,
 			context,
-			options: { includePeriodDescription: false },
+			options: { includePeriodDescription: options.includePeriodDescription },
 		});
 
 		// Only include line items with non-zero amounts
@@ -118,7 +123,7 @@ export const customerProductToArrearLineItems = ({
 			customerEntitlement: cusEnt,
 			updates: {
 				...resetBalancesUpdate,
-				next_reset_at: updateNextResetAt ? nextResetAt : undefined,
+				next_reset_at: options.updateNextResetAt ? nextResetAt : undefined,
 			},
 		});
 	}

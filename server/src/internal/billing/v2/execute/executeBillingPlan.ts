@@ -1,9 +1,11 @@
+import type {
+	BillingContext,
+	BillingPlan,
+	BillingResult,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 
 export const executeBillingPlan = async ({

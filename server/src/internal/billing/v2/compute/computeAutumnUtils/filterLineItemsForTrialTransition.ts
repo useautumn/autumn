@@ -1,17 +1,17 @@
+import type { BillingContext } from "@autumn/shared";
 import { isOneOffPrice, type LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 /**
- * Filters line items based on trial state transitions.
+ * Processes line items based on trial state transitions.
  *
  * Ending trial (isTrialing → !willBeTrialing):
  * - Excludes refund items (no refund for trial period)
  * - Excludes in_arrear positive items (no arrear charges for trial usage)
  *
  * Starting trial (!isTrialing → willBeTrialing):
- * - Excludes in_advance positive items (no charge for upcoming trial period)
+ * - Marks in_advance positive items as deferred (charged after trial ends)
  */
 export const filterLineItemsForTrialTransition = ({
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
@@ -27,7 +27,7 @@ export const filterLineItemsForTrialTransition = ({
 		billingContext,
 	});
 
-	// No filtering needed if no trial transition
+	// No processing needed if no trial transition
 	if (!isTrialing && !willBeTrialing) {
 		return lineItems;
 	}
