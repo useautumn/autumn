@@ -3,8 +3,8 @@
 import { AppEnv } from "@autumn/shared";
 import {
 	ChartBar,
-	CheckCircle,
 	CheckCircleIcon,
+	ClockIcon,
 	CreditCard,
 	CubeIcon,
 	SparkleIcon,
@@ -121,7 +121,7 @@ function StepCard({
 			animate={{ flex: isActive ? 4 : 1 }}
 			transition={STEP_CARD_ANIMATION}
 			className={cn(
-				"relative rounded-xl bg-t8/30 cursor-pointer h-28 overflow-hidden border border-t8/50",
+				"relative rounded-xl bg-t8/30 cursor-pointer h-21 overflow-hidden border border-t8/50",
 				isActive ? "cursor-default" : "hover:border-primary/20 hover:bg-t8/40",
 				isComplete && !isActive && "opacity-50",
 			)}
@@ -160,87 +160,87 @@ function StepCard({
 						initial={{ opacity: 0.5 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						className="absolute top-0 left-0 bottom-0 w-[500px] p-4 flex flex-col"
+						className="absolute top-0 left-0 bottom-0 w-[500px] px-4 flex gap-6"
 					>
-						<div className="flex items-center gap-2">
+						<div className="flex flex-col justify-center">
 							<h3 className="font-medium text-sm text-foreground mb-1">
 								{step.title}
 							</h3>
+							<p className="text-xs text-t2">{step.description}</p>
 						</div>
-						<p className="text-sm text-t2">{step.description}</p>
 
-						<div className="pt-4 flex items-center gap-2 w-full">
-							{/* Only show waiting indicator if step is not complete */}
+						<div className="flex flex-col gap-3 items-end justify-center">
 							{isComplete && (
-								<div className="flex items-center gap-2 text-xs text-green-600 mr-auto">
-									<CheckCircle size={14} weight="fill" />
+								<div className="flex items-center gap-2 text-xs text-green-600">
+									<CheckCircleIcon size={14} weight="fill" />
 									Complete
 								</div>
 							)}
 							{step.waitingFor && !isComplete && (
-								<div className="flex items-center gap-2 text-tiny text-t2 mr-auto">
+								<div className="flex items-center gap-2 text-tiny text-t8">
+									{step.waitingFor}
 									<span className="relative flex size-2">
 										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-500/60 opacity-75" />
 										<span className="relative inline-flex size-2 rounded-full bg-yellow-500" />
 									</span>
-									{step.waitingFor}
 								</div>
 							)}
-
-							{step.stepId && (
-								<CodeSheet
-									stepId={step.stepId}
-									title={step.title}
-									description={step.description}
-								/>
-							)}
-							{isPlansStep ? (
-								<>
-									<CreateProductSheet
-										open={createProductOpen}
-										onOpenChange={setCreateProductOpen}
+							<div className="flex items-center gap-2 w-full">
+								{step.stepId && (
+									<CodeSheet
+										stepId={step.stepId}
+										title={step.title}
+										description={step.description}
 									/>
-									<IconButton
+								)}
+								{isPlansStep ? (
+									<>
+										<CreateProductSheet
+											open={createProductOpen}
+											onOpenChange={setCreateProductOpen}
+										/>
+										<IconButton
+											variant="secondary"
+											className={cn("ml-auto gap-2", STEP_BUTTON_CLASSES)}
+											size="sm"
+											icon={<SparkleIcon size={14} />}
+											onClick={(e) => {
+												e.stopPropagation();
+												pushPage({
+													path: "/quickstart",
+													navigate,
+													preserveParams: false,
+												});
+											}}
+										>
+											AI chat
+										</IconButton>
+										<IconButton
+											variant="secondary"
+											className={cn("gap-2", STEP_BUTTON_CLASSES)}
+											size="sm"
+											icon={<CubeIcon size={14} />}
+											onClick={(e) => {
+												e.stopPropagation();
+												setCreateProductOpen(true);
+											}}
+										>
+											Create plan
+										</IconButton>
+									</>
+								) : (
+									<CopyButton
+										text={getPrompt({ stepId: step.id }) || ""}
 										variant="secondary"
-										className={cn("ml-auto gap-2", STEP_BUTTON_CLASSES)}
 										size="sm"
-										icon={<SparkleIcon size={14} />}
-										onClick={(e) => {
-											e.stopPropagation();
-											pushPage({
-												path: "/quickstart",
-												navigate,
-												preserveParams: false,
-											});
-										}}
+										iconOrientation="left"
+										className={STEP_BUTTON_CLASSES}
 									>
-										AI chat
-									</IconButton>
-									<IconButton
-										variant="secondary"
-										className={cn("gap-2", STEP_BUTTON_CLASSES)}
-										size="sm"
-										icon={<CubeIcon size={14} />}
-										onClick={(e) => {
-											e.stopPropagation();
-											setCreateProductOpen(true);
-										}}
-									>
-										Create plan
-									</IconButton>
-								</>
-							) : (
-								<CopyButton
-									text={getPrompt({ stepId: step.id }) || ""}
-									variant="secondary"
-									size="sm"
-									iconOrientation="left"
-									className={STEP_BUTTON_CLASSES}
-								>
-									Copy prompt
-								</CopyButton>
-							)}
-							{/* Show completed indicator when step is complete */}
+										Copy prompt
+									</CopyButton>
+								)}
+								{/* Show completed indicator when step is complete */}
+							</div>
 						</div>
 					</motion.div>
 				)}
@@ -251,7 +251,9 @@ function StepCard({
 
 export function OnboardingGuide({
 	collapseAll = false,
-}: { collapseAll?: boolean } = {}) {
+}: {
+	collapseAll?: boolean;
+} = {}) {
 	const env = useEnv();
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
@@ -278,18 +280,21 @@ export function OnboardingGuide({
 	if (isLoading) {
 		return (
 			// SKELETON
-			<div className="relative rounded-xl p-4 border border-dashed border-t8/50">
+			<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary">
 				{/* Header skeleton */}
-				<div className="mb-4 pr-8 h-10">
-					<Skeleton className="h-4 w-32 mb-1.5 bg-t8/30" />
-					<Skeleton className="h-3 w-64 bg-t8/30" />
+				<div className="mb-2 pr-8">
+					<div className="flex items-center gap-2 mb-1">
+						<Skeleton className="h-3.5 w-36 bg-t8/30" />
+						<Skeleton className="h-4 w-16 rounded-md bg-t8/30" />
+					</div>
+					<Skeleton className="h-3 w-72 bg-t8/30" />
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
 					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
 						<Skeleton
 							key={i}
-							className={cn("rounded-xl h-28 bg-t8/40", flexClass)}
+							className={cn("rounded-xl h-21 bg-t8/40", flexClass)}
 						/>
 					))}
 				</div>
@@ -298,7 +303,7 @@ export function OnboardingGuide({
 	}
 
 	return (
-		<div className="relative rounded-xl p-4 border border-dashed border-t8/50">
+		<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary shadow-sm">
 			{/* Dismiss button */}
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -318,14 +323,22 @@ export function OnboardingGuide({
 			</Tooltip>
 
 			{/* Header */}
-			<div className="mb-4 pr-8">
-				<h2 className="text-sm font-semibold text-foreground">
-					{allStepsComplete
-						? "All steps complete 🎉"
-						: "Get started with Autumn"}
-				</h2>
-				<p className="text-sm text-t3 mt-0.5">
-					{allStepsComplete ? (
+			<div className="mb-2 pr-8">
+				<div className="flex items-center gap-2">
+					<h2 className="text-xs text-foreground">
+						{allStepsComplete
+							? "All steps complete 🎉"
+							: "Get started with Autumn"}
+					</h2>
+					{!allStepsComplete && (
+						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-t3 text-[10px]">
+							<ClockIcon size={10} />
+							~30 mins
+						</span>
+					)}
+				</div>
+				<p className="text-xs text-t3 mt-0.5">
+					{allStepsComplete ?? (
 						<>
 							Read the{" "}
 							<a
@@ -338,8 +351,6 @@ export function OnboardingGuide({
 							</a>{" "}
 							to learn more about what you can do with Autumn
 						</>
-					) : (
-						"Monetize your application in under 30 minutes"
 					)}
 				</p>
 			</div>
