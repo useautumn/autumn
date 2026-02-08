@@ -106,11 +106,7 @@ export const QueryTopbar = () => {
 
 	return (
 		<div className="flex items-center py-0 h-full gap-2">
-			<CustomerComboBox
-				classNames={{
-					trigger: "h-full border-y-0 border-l border-r-0",
-				}}
-			/>
+			<CustomerComboBox />
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<IconButton
@@ -184,18 +180,9 @@ export const QueryTopbar = () => {
 						))}
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<SelectFeatureDropdown
-				classNames={{
-					trigger: "h-full border-y-0 border-l-0 border-r-0",
-				}}
-			/>
+			<SelectFeatureDropdown />
 			{propertyKeys && propertyKeys.length > 0 && (
-				<SelectGroupByDropdown
-					propertyKeys={propertyKeys}
-					classNames={{
-						trigger: "h-full border-y-0 border-l-0 border-r-1",
-					}}
-				/>
+				<SelectGroupByDropdown propertyKeys={propertyKeys} />
 			)}
 		</div>
 	);

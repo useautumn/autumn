@@ -38,6 +38,12 @@ export const AdditionalOptions = ({
 						product.planType === "free" ? "Limited-time trial" : "Free trial"
 					}
 					checked={notNullish(product.free_trial)}
+					disabledReason={
+						product.planType !== "free" &&
+						!product.items.some((item) => item.interval)
+							? "Add a recurring price to add a free trial"
+							: undefined
+					}
 					onCheckedChange={(checked) =>
 						setProduct({
 							...product,
@@ -55,8 +61,9 @@ export const AdditionalOptions = ({
 					disabledReason={
 						product.is_default
 							? "Cannot mark as add-on while auto-enable is active"
-							: !product.items.some((item) => item.interval)
-								? "You must add at least one recurring price before marking this plan as an add-on."
+							: product.planType !== "free" &&
+									!product.items.some((item) => item.interval)
+								? "Add a recurring price to this plan before marking it as an add-on."
 								: undefined
 					}
 					onCheckedChange={(checked) =>

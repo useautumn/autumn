@@ -1,6 +1,7 @@
 import {
 	CreateFeatureSchema,
 	type CreditSchemaItem,
+	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
@@ -21,6 +22,7 @@ import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeature
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
+import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
 import { getDefaultFeature } from "../utils/defaultFeature";
 
 function CreateFeatureSheet({
@@ -49,6 +51,15 @@ function CreateFeatureSheet({
 	const { refetch } = useFeaturesQuery();
 
 	const handleCreateFeature = async () => {
+		// Validate credit system specific fields first
+		if (feature.type === FeatureType.CreditSystem) {
+			const validationError = validateCreditSystem(feature);
+			if (validationError) {
+				toast.error(validationError);
+				return;
+			}
+		}
+
 		setLoading(true);
 		const result = CreateFeatureSchema.safeParse(feature);
 		if (result.error) {

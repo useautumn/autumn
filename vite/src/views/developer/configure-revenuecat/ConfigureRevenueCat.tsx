@@ -117,7 +117,7 @@ export const ConfigureRevenueCat = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="px-10 max-w-[600px] flex flex-col gap-4">
+			<div className="max-w-[600px] flex flex-col gap-4">
 				<RevenueCatConnectionCard
 					isLoading={isLoadingRevenueCatAccount}
 					statusDescription={statusDescription}

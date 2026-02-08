@@ -1,12 +1,8 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
-import {
-	useCurrentItem,
-	useProduct,
-	useSheet,
-} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useCurrentItem } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { useOpenAddFeatureSheet } from "../../hooks/useOpenAddFeatureSheet";
 
 interface AddFeatureRowProps {
 	disabled?: boolean;
@@ -14,18 +10,8 @@ interface AddFeatureRowProps {
 }
 
 export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
-	const { features } = useFeaturesQuery();
-	const { setSheet } = useSheet();
-	const { product } = useProduct();
 	const item = useCurrentItem();
-
-	const handleAddFeatureClick = () => {
-		if (features.length === 0) {
-			setSheet({ type: "new-feature", itemId: "new" });
-		} else {
-			setSheet({ type: "select-feature", itemId: "select" });
-		}
-	};
+	const openAddFeatureSheet = useOpenAddFeatureSheet();
 
 	return (
 		<Button
@@ -34,7 +20,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 			disabled={disabled}
 			onClick={() => {
 				if (!checkItemIsValid(item!)) return;
-				handleAddFeatureClick();
+				openAddFeatureSheet();
 			}}
 			aria-label="Add new feature"
 		>

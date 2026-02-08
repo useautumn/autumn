@@ -26,7 +26,7 @@ const RadioGroupItem = React.forwardRef<
 		<RadioGroupPrimitive.Item
 			ref={ref}
 			data-slot="radio-group-item"
-			style={{ cursor: "default", ...style }}
+			style={{ cursor: "pointer", ...style }}
 			className={cn(
 				"w-[13px] h-[13px] px-0.5 py-[3px] rounded-xl inline-flex flex-col justify-center items-center gap-2.5 overflow-hidden transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
 
