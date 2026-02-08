@@ -16,12 +16,8 @@ import { useAnalyticsContext } from "../AnalyticsContext";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
-	classNames,
 }: {
 	propertyKeys: string[];
-	classNames?: {
-		trigger?: string;
-	};
 }) => {
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
@@ -68,7 +64,7 @@ export const SelectGroupByDropdown = ({
 					size="default"
 					icon={<CaretDownIcon size={12} weight="bold" />}
 					iconOrientation="right"
-					className={cn(classNames?.trigger, open && "btn-secondary-active")}
+					className={cn(open && "btn-secondary-active")}
 				>
 					{currentGroupBy
 						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy}`

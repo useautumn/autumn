@@ -55,7 +55,7 @@ export const ApiKeysPage = () => {
 	}, []);
 
 	return (
-		<div className="h-fit max-h-full px-10">
+		<div className="h-fit max-h-full">
 			<CreateApiKeyDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}

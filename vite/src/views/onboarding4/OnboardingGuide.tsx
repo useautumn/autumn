@@ -18,6 +18,11 @@ import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -42,25 +47,32 @@ interface OnboardingStep {
 	waitingFor?: string;
 }
 
+// Animation timing that matches inline sheet animations
+const STEP_CARD_ANIMATION = {
+	duration: 0.45,
+	ease: [0.32, 0.72, 0, 1] as const,
+};
+
 const ONBOARDING_STEPS: OnboardingStep[] = [
 	{
 		id: "plans",
-		title: "Create your plans",
+		title: "Create your pricing plans",
 		shortTitle: "Plans",
-		icon: <CubeIcon size={20} weight="duotone" />,
+		icon: <CubeIcon size={16} weight="duotone" />,
 		description:
-			"Define your pricing plans and features your customers can access",
+			"Create a plan, set pricing, and add the features customers get with it",
 		link: "/quickstart",
 		linkText: "Go to Quickstart",
+		waitingFor: "Waiting for plan",
 	},
 	{
 		id: "customer",
 		stepId: "customer",
 		title: "Create a customer",
 		shortTitle: "Customer",
-		icon: <UserCircle size={20} weight="duotone" />,
+		icon: <UserCircle size={16} weight="duotone" />,
 		description:
-			"Create your first customer: a user or organization that can be billed",
+			"Start integrating your pricing by creating a customer from your app",
 		waitingFor: "Waiting for customer",
 	},
 	{
@@ -68,7 +80,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		stepId: "payments",
 		title: "Handle payments",
 		shortTitle: "Payments",
-		icon: <CreditCard size={20} weight="duotone" />,
+		icon: <CreditCard size={16} weight="duotone" />,
 		description: "Build your billing page and handle payments",
 		waitingFor: "Waiting for checkout",
 	},
@@ -77,11 +89,15 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		stepId: "usage",
 		title: "Limits and gating",
 		shortTitle: "Gating",
-		icon: <ChartBar size={20} weight="duotone" />,
-		description: "Record usage events and enforce feature limits",
+		icon: <ChartBar size={16} weight="duotone" />,
+		description:
+			"Give customers access to the features on their plan, and track usage",
 		waitingFor: "Waiting for event",
 	},
 ];
+
+const STEP_BUTTON_CLASSES =
+	"bg-t8/90 border-none hover:bg-t8 text-white! text-tiny";
 
 function StepCard({
 	step,
@@ -103,12 +119,10 @@ function StepCard({
 		<motion.div
 			initial={false}
 			animate={{ flex: isActive ? 4 : 1 }}
-			transition={{ duration: 0.3, ease: "easeInOut" }}
+			transition={STEP_CARD_ANIMATION}
 			className={cn(
-				"relative dark:border-none rounded-xl bg-card cursor-pointer h-29 overflow-hidden",
-				isActive
-					? ""
-					: "hover:border-primary/20 hover:bg-interactive-secondary-hover",
+				"relative rounded-xl bg-t8/30 cursor-pointer h-28 overflow-hidden border border-t8/50",
+				isActive ? "cursor-default" : "hover:border-primary/20 hover:bg-t8/40",
 				isComplete && !isActive && "opacity-50",
 			)}
 			onClick={onClick}
@@ -130,10 +144,12 @@ function StepCard({
 								className="absolute top-2 right-2 text-green-500"
 							/>
 						)}
-						<div className="text-primary/70">{step.icon}</div>
-						<span className="font-medium text-sm text-t2 whitespace-nowrap">
-							{step.shortTitle}
-						</span>
+						<div className="flex items-center gap-1.5">
+							<div className="text-t8">{step.icon}</div>
+							<span className="font-medium text-sm text-t8 whitespace-nowrap">
+								{step.shortTitle}
+							</span>
+						</div>
 					</motion.div>
 				)}
 
@@ -141,17 +157,17 @@ function StepCard({
 				{isActive && (
 					<motion.div
 						key="expanded"
-						initial={{ opacity: 0 }}
+						initial={{ opacity: 0.5 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						className="absolute top-0 left-0 bottom-0 w-[500px] p-4 pr-6 flex flex-col"
+						className="absolute top-0 left-0 bottom-0 w-[500px] p-4 flex flex-col"
 					>
 						<div className="flex items-center gap-2">
 							<h3 className="font-medium text-sm text-foreground mb-1">
 								{step.title}
 							</h3>
 						</div>
-						<p className="text-sm text-t3">{step.description}</p>
+						<p className="text-sm text-t2">{step.description}</p>
 
 						<div className="pt-4 flex items-center gap-2 w-full">
 							{/* Only show waiting indicator if step is not complete */}
@@ -162,10 +178,10 @@ function StepCard({
 								</div>
 							)}
 							{step.waitingFor && !isComplete && (
-								<div className="flex items-center gap-2 text-tiny text-t3 mr-auto">
+								<div className="flex items-center gap-2 text-tiny text-t2 mr-auto">
 									<span className="relative flex size-2">
-										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75" />
-										<span className="relative inline-flex size-2 rounded-full bg-primary/60" />
+										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-500/60 opacity-75" />
+										<span className="relative inline-flex size-2 rounded-full bg-yellow-500" />
 									</span>
 									{step.waitingFor}
 								</div>
@@ -186,7 +202,7 @@ function StepCard({
 									/>
 									<IconButton
 										variant="secondary"
-										className="ml-auto gap-2"
+										className={cn("ml-auto gap-2", STEP_BUTTON_CLASSES)}
 										size="sm"
 										icon={<SparkleIcon size={14} />}
 										onClick={(e) => {
@@ -202,7 +218,7 @@ function StepCard({
 									</IconButton>
 									<IconButton
 										variant="secondary"
-										className="gap-2"
+										className={cn("gap-2", STEP_BUTTON_CLASSES)}
 										size="sm"
 										icon={<CubeIcon size={14} />}
 										onClick={(e) => {
@@ -219,6 +235,7 @@ function StepCard({
 									variant="secondary"
 									size="sm"
 									iconOrientation="left"
+									className={STEP_BUTTON_CLASSES}
 								>
 									Copy prompt
 								</CopyButton>
@@ -232,14 +249,17 @@ function StepCard({
 	);
 }
 
-export function OnboardingGuide() {
+export function OnboardingGuide({
+	collapseAll = false,
+}: { collapseAll?: boolean } = {}) {
 	const env = useEnv();
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
 	const [activeStep, setActiveStep] = useState<string | null>(null);
 
 	// Don't render cards until activeStep is synced
-	const resolvedActiveStep = activeStep ?? currentStep;
+	// When collapseAll is true, all cards should be collapsed (no active step)
+	const resolvedActiveStep = collapseAll ? null : (activeStep ?? currentStep);
 
 	// Check if all steps are complete
 	const allStepsComplete = ONBOARDING_STEPS.every(
@@ -257,18 +277,19 @@ export function OnboardingGuide() {
 
 	if (isLoading) {
 		return (
-			<div className="relative rounded-xl border bg-interactive-secondary p-4 shadow-sm">
+			// SKELETON
+			<div className="relative rounded-xl p-4 border border-dashed border-t8/50">
 				{/* Header skeleton */}
-				<div className="mb-4 pr-8">
-					<Skeleton className="h-4 w-32 mb-1.5 bg-card/50" />
-					<Skeleton className="h-3 w-64 bg-card/50" />
+				<div className="mb-4 pr-8 h-10">
+					<Skeleton className="h-4 w-32 mb-1.5 bg-t8/30" />
+					<Skeleton className="h-3 w-64 bg-t8/30" />
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
 					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
 						<Skeleton
 							key={i}
-							className={cn("rounded-lg h-30 bg-card/70", flexClass)}
+							className={cn("rounded-xl h-28 bg-t8/40", flexClass)}
 						/>
 					))}
 				</div>
@@ -277,16 +298,24 @@ export function OnboardingGuide() {
 	}
 
 	return (
-		<div className="relative rounded-xl bg-t8/10 p-4 border border-t8/20">
+		<div className="relative rounded-xl p-4 border border-dashed border-t8/50">
 			{/* Dismiss button */}
-			<button
-				type="button"
-				onClick={dismiss}
-				className="absolute top-3 right-3 p-1 rounded-md text-t3 hover:text-foreground hover:bg-interactive-secondary-hover transition-colors"
-				aria-label="Dismiss onboarding guide"
-			>
-				<X className="size-4" />
-			</button>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<button
+						type="button"
+						onClick={dismiss}
+						className="absolute top-3 right-3 p-1 rounded-md text-t8 hover:text-foreground hover:bg-interactive-secondary-hover transition-colors"
+						aria-label="Dismiss onboarding guide"
+					>
+						<X className="size-4" />
+					</button>
+				</TooltipTrigger>
+				<TooltipContent side="left" className="max-w-56">
+					You can open the guide again by clicking on the "Need help" item in
+					the sidebar.
+				</TooltipContent>
+			</Tooltip>
 
 			{/* Header */}
 			<div className="mb-4 pr-8">
@@ -310,7 +339,7 @@ export function OnboardingGuide() {
 							to learn more about what you can do with Autumn
 						</>
 					) : (
-						"Setup billing and gating in your app in under 30 minutes"
+						"Monetize your application in under 30 minutes"
 					)}
 				</p>
 			</div>

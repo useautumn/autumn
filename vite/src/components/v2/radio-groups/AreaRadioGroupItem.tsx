@@ -1,6 +1,11 @@
 "use client";
 
 import { useId } from "react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { RadioGroupItem } from "./RadioGroup";
 
@@ -10,6 +15,7 @@ interface AreaRadioGroupItemProps {
 	label: string;
 	description?: string;
 	disabled?: boolean;
+	disabledReason?: string;
 }
 
 function AreaRadioGroupItem({
@@ -18,24 +24,27 @@ function AreaRadioGroupItem({
 	label,
 	description,
 	disabled = false,
+	disabledReason,
 }: AreaRadioGroupItemProps) {
 	const id = useId();
 
-	return (
+	const isDisabled = disabled || !!disabledReason;
+
+	const content = (
 		<div className={cn("flex items-start space-x-[6px]", className)}>
 			<RadioGroupItem
 				value={value}
 				id={id}
 				className="mt-[3px]"
-				disabled={disabled}
+				disabled={isDisabled}
 			/>
 			<div className="flex-1 space-y-1">
 				<div className="flex items-center gap-2">
 					<label
 						htmlFor={id}
 						className={cn(
-							"text-checkbox-label",
-							disabled && "cursor-not-allowed opacity-50",
+							"text-checkbox-label cursor-pointer",
+							isDisabled && "cursor-not-allowed opacity-50",
 						)}
 					>
 						{label}
@@ -47,6 +56,21 @@ function AreaRadioGroupItem({
 			</div>
 		</div>
 	);
+
+	if (disabledReason) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<div>{content}</div>
+				</TooltipTrigger>
+				<TooltipContent side="top" className="max-w-60">
+					{disabledReason}
+				</TooltipContent>
+			</Tooltip>
+		);
+	}
+
+	return content;
 }
 
 export { AreaRadioGroupItem };

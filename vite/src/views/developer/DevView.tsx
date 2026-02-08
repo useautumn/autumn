@@ -7,6 +7,7 @@ import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
+import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 import { ConfigureRevenueCat } from "./configure-revenuecat/ConfigureRevenueCat";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
@@ -23,8 +24,8 @@ export default function DevScreen() {
 	if (isLoading) return <LoadingScreen />;
 
 	return (
-		<div className="flex flex-col gap-4 h-fit relative max-w-5xl mx-auto text-sm pt-8">
-			{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1> */}
+		<div className="flex flex-col gap-4 h-fit relative w-full max-w-5xl mx-auto text-sm pt-8 pb-8 px-10">
+			<OnboardingGuide />
 
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">

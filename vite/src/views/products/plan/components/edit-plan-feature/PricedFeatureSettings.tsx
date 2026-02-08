@@ -1,4 +1,10 @@
-import { nullish, ProductItemInterval, UsageModel } from "@autumn/shared";
+import {
+	BillingInterval,
+	itemToBillingInterval,
+	nullish,
+	ProductItemInterval,
+	UsageModel,
+} from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
@@ -8,6 +14,8 @@ export function PricedFeatureSettings() {
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
+
+	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
 
 	const handleUsageModelChange = (value: string) => {
 		const usageModel = value as UsageModel;
@@ -33,6 +41,9 @@ export function PricedFeatureSettings() {
 					value={UsageModel.PayPerUse}
 					label="Usage-based"
 					description={"Bill for how much the customer uses"}
+					disabledReason={
+						isOneOff ? "Usage based prices must have an interval." : undefined
+					}
 				/>
 				<AreaRadioGroupItem
 					value={UsageModel.Prepaid}
