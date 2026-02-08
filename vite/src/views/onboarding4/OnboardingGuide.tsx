@@ -282,12 +282,11 @@ export function OnboardingGuide({
 			// SKELETON
 			<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary">
 				{/* Header skeleton */}
-				<div className="mb-2 pr-8">
+				<div className="mb-3 pr-8">
 					<div className="flex items-center gap-2 mb-1">
 						<Skeleton className="h-3.5 w-36 bg-t8/30" />
 						<Skeleton className="h-4 w-16 rounded-md bg-t8/30" />
 					</div>
-					<Skeleton className="h-3 w-72 bg-t8/30" />
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
@@ -337,22 +336,6 @@ export function OnboardingGuide({
 						</span>
 					)}
 				</div>
-				<p className="text-xs text-t3 mt-0.5">
-					{allStepsComplete ?? (
-						<>
-							Read the{" "}
-							<a
-								href="https://docs.useautumn.com/documentation/getting-started/display-billing"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-primary hover:underline"
-							>
-								docs
-							</a>{" "}
-							to learn more about what you can do with Autumn
-						</>
-					)}
-				</p>
 			</div>
 
 			{/* Steps container */}
