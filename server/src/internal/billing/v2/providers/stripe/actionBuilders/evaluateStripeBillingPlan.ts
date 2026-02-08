@@ -74,7 +74,7 @@ export const evaluateStripeBillingPlan = async ({
 		stripeCheckoutSessionAction = buildStripeCheckoutSessionAction({
 			ctx,
 			billingContext,
-			finalCustomerProducts: finalFullCustomer.customer_products,
+
 			autumnBillingPlan,
 		});
 	}
