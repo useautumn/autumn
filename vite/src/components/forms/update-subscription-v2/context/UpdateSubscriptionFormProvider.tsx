@@ -21,6 +21,7 @@ import {
 	useUpdateSubscriptionPreview,
 } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { useHasBillingChanges } from "@/hooks/stores/useProductStore";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
@@ -62,6 +63,7 @@ interface UpdateSubscriptionFormContextValue {
 	initialPrepaidOptions: Record<string, number>;
 	changedPrepaidOptions: Record<string, number> | undefined;
 	productWithFormItems: FrontendProduct | undefined;
+	isVersionReady: boolean;
 	hasChanges: boolean;
 	hasNoBillingChanges: boolean;
 
@@ -121,6 +123,23 @@ export function UpdateSubscriptionFormProvider({
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
 
+	// Fetch the target version's product data when version differs from current
+	const isVersionChanged = formValues.version !== currentVersion;
+	const versionProductQuery = useProductVersionQuery({
+		productId: product?.id,
+		version: formValues.version,
+		enabled: isVersionChanged,
+	});
+
+	// Use the target version's product when a different version is selected
+	const isVersionReady = isVersionChanged && !!versionProductQuery.data;
+	const effectiveProduct = useMemo((): ProductV2 | undefined => {
+		if (isVersionReady) {
+			return versionProductQuery.data?.product;
+		}
+		return product;
+	}, [product, isVersionReady, versionProductQuery.data]);
+
 	const defaultValues = form.options.defaultValues;
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
 
@@ -145,10 +164,10 @@ export function UpdateSubscriptionFormProvider({
 	}, [prepaidOptions, initialPrepaidOptions]);
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
+		if (!effectiveProduct) return undefined;
 
 		const baseFrontendProduct = productV2ToFrontendProduct({
-			product: product as ProductV2,
+			product: effectiveProduct as ProductV2,
 		});
 
 		if (formValues.items) {
@@ -159,7 +178,7 @@ export function UpdateSubscriptionFormProvider({
 		}
 
 		return baseFrontendProduct;
-	}, [product, formValues.items]);
+	}, [effectiveProduct, formValues.items]);
 
 	const baseProduct = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -167,9 +186,11 @@ export function UpdateSubscriptionFormProvider({
 	}, [product]);
 
 	const newProduct = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
+		if (!effectiveProduct) return undefined;
 
-		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
+		const base = productV2ToFrontendProduct({
+			product: effectiveProduct as ProductV2,
+		});
 
 		const freeTrial = getFreeTrial({
 			removeTrial: formValues.removeTrial,
@@ -186,7 +207,7 @@ export function UpdateSubscriptionFormProvider({
 			free_trial: freeTrialValue,
 		};
 	}, [
-		product,
+		effectiveProduct,
 		formValues.items,
 		formValues.removeTrial,
 		formValues.trialLength,
@@ -200,8 +221,12 @@ export function UpdateSubscriptionFormProvider({
 	});
 
 	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
+	const isVersionLoading = isVersionChanged && !isVersionReady;
 	const hasNoBillingChanges =
-		hasChanges && !hasBillingChanges && !hasPrepaidQuantityChanges;
+		hasChanges &&
+		!hasBillingChanges &&
+		!hasPrepaidQuantityChanges &&
+		!isVersionLoading;
 
 	const freeTrial = getFreeTrial({
 		removeTrial: formValues.removeTrial,
@@ -286,6 +311,7 @@ export function UpdateSubscriptionFormProvider({
 			initialPrepaidOptions,
 			changedPrepaidOptions,
 			productWithFormItems,
+			isVersionReady,
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
@@ -307,6 +333,7 @@ export function UpdateSubscriptionFormProvider({
 			initialPrepaidOptions,
 			changedPrepaidOptions,
 			productWithFormItems,
+			isVersionReady,
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
