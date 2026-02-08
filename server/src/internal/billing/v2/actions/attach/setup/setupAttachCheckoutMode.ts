@@ -59,6 +59,14 @@ export const setupAttachCheckoutMode = ({
 	const checkoutMode = getStripeCheckoutOrDirectBilling();
 
 	if (checkoutMode === null && redirectMode === "always") {
+		// 1. If it's one off product, return stripe_checkout
+		if (productIsOneOff) return "stripe_checkout";
+
+		// 2. If it's paid recurring and no subscription, return autumn_checkout
+		if (productIsPaidRecurring && !hasExistingSubscription) {
+			return "stripe_checkout";
+		}
+
 		return "autumn_checkout";
 	}
 

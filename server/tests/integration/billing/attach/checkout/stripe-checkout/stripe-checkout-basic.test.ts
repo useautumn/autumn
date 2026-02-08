@@ -18,10 +18,10 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -74,7 +74,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout form
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000); // Wait for webhook processing
 
 	// 4. Verify product is now attached
@@ -175,7 +175,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async 
 	expect(result.payment_url).toBeDefined();
 
 	// 4. Complete checkout
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// 5. Verify pro replaced free

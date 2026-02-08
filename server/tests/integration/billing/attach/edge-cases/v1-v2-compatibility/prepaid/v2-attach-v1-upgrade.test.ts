@@ -20,7 +20,12 @@
  */
 
 import { test } from "bun:test";
-import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingVersion,
+	OnDecrease,
+	OnIncrease,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -140,6 +145,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 upgrade: product upgrade (pro →
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	// Verify invoice: should have upgrade charges
@@ -261,6 +267,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 upgrade: product upgrade with inc
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await expectCustomerInvoiceCorrect({
@@ -379,6 +386,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 upgrade: single billing unit (use
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await expectCustomerInvoiceCorrect({

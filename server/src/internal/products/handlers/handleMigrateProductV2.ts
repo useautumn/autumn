@@ -48,24 +48,6 @@ export const handleMigrateProductV2 = createRoute({
 			version: to_version,
 		});
 
-		const currentMigrations = await MigrationService.getExistingJobs({
-			db,
-			orgId: org.id,
-			env,
-		});
-
-		if (
-			currentMigrations.find(
-				(m) =>
-					m.from_internal_product_id === fromProduct.internal_id &&
-					m.to_internal_product_id === toProduct.internal_id,
-			)
-		) {
-			throw new RecaseError({
-				message: "Another migration is ongoing, cannot create a new migration",
-			});
-		}
-
 		if (!fromProduct || !toProduct) {
 			throw new ProductNotFoundError({
 				productId: !fromProduct ? from_product_id : to_product_id,
@@ -136,14 +118,17 @@ export const handleMigrateProductV2 = createRoute({
 			toProduct,
 		});
 
-		ctx.logger.info(`CREATED MIGRATION JOB: ${migrationJob.id}`);
-
-		await MigrationService.createJob({
+		// Atomically check for existing migrations and create the job
+		await MigrationService.createJobIfNoExisting({
 			db,
+			orgId: org.id,
+			env,
+			fromProduct,
 			data: migrationJob,
 		});
 
 		// Add task to queue for processing
+		ctx.logger.info(`CREATED MIGRATION JOB: ${migrationJob.id}`);
 
 		await addTaskToQueue({
 			jobName: JobName.Migration,

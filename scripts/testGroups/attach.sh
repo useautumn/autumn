@@ -7,8 +7,15 @@ source "$(dirname "$0")/config.sh"
 set -e
 
 BUN_PARALLEL_V2 \
-  'attach/new-plan' \
+  'billing/attach/checkout' \
+  'attach/edge-cases' \
+  'attach/errors' \
+  'attach/free-trial' \
   'attach/immediate-switch' \
+  'attach/invoice' \
+  'attach/new-plan' \
+  'attach/params' \
   'attach/scheduled-switch' \
-  'attach/free-trial'
 
+
+  

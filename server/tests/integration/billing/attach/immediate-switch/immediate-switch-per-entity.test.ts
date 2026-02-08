@@ -304,7 +304,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-per-entity 2: upgrade wi
 		],
 		actions: [
 			// Attach per-entity product to customer
-			s.billing.attach({ productId: pro.id, timeout: 4000 }),
+			s.billing.attach({ productId: pro.id }),
 			// Track overage on entities
 			s.track({
 				featureId: TestFeature.Messages,

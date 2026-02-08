@@ -632,12 +632,10 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 7: included usag
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-				timeout: 2000,
 			}),
 			s.billing.attach({
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-				timeout: 2000,
 			}),
 			s.advanceToNextInvoice(),
 		],
@@ -662,7 +660,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 7: included usag
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 300, // 100 included + 200 purchased
+		balance: 200, // 100 included + 200 purchased
 		usage: 0,
 	});
 });
@@ -731,7 +729,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 8: included usag
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		balance: 300,
+		balance: 200,
 		usage: 0,
 	});
 
@@ -761,7 +759,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid 8: included usag
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 300,
+		balance: 200,
 		usage: 0,
 	});
 

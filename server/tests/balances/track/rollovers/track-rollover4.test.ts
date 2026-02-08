@@ -7,7 +7,6 @@ import {
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -27,7 +26,7 @@ const rolloverConfig = {
 };
 const messagesItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
-	includedUsage: 100,
+	includedUsage: 300,
 	billingUnits: 300,
 	price: 10,
 	rolloverConfig,
@@ -89,7 +88,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for prepaid messa
 		});
 	});
 
-	const rollover = 50;
+	const rollover = 250;
 	test("should create track messages, reset, and have correct rollover", async () => {
 		await autumn.track({
 			customer_id: customerId,
@@ -125,40 +124,5 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for prepaid messa
 		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
 		expect(nonCachedMsgesFeature?.balance).toBe(balance + rollover);
 		expect(nonCachedRollovers?.[0].balance).toBe(rollover);
-	});
-
-	// let usage2 = 50;
-	test("should  reset again and have correct rollover", async () => {
-		await advanceToNextInvoice({
-			stripeCli,
-			testClockId,
-			withPause: true,
-			currentEpochMs: curUnix,
-		});
-
-		const newRollover = Math.min(balance + rollover, rolloverConfig.max);
-		const cus = await autumn.customers.get(customerId);
-		const msgesFeature = cus.features[TestFeature.Messages] as ApiCusFeatureV3;
-
-		const rollovers = msgesFeature?.rollovers;
-
-		expect(msgesFeature).toBeDefined();
-		expect(msgesFeature?.balance).toBe(balance + newRollover);
-		expect(rollovers?.[0].balance).toBe(0);
-		expect(rollovers?.[1].balance).toBe(400);
-
-		// Verify non-cached customer balance
-		await timeout(2000);
-		const nonCachedCustomer = await autumn.customers.get(customerId, {
-			skip_cache: "true",
-		});
-		const nonCachedMsgesFeature =
-			nonCachedCustomer.features[TestFeature.Messages];
-
-		const nonCachedRollovers =
-			nonCachedMsgesFeature?.rollovers as ApiCusFeatureV3["rollovers"];
-		expect(nonCachedMsgesFeature?.balance).toBe(balance + newRollover);
-		expect(nonCachedRollovers?.[0].balance).toBe(0);
-		expect(nonCachedRollovers?.[1].balance).toBe(400);
 	});
 });

@@ -8,13 +8,14 @@
  * Uses Decimal.js for precision.
  */
 
+import { addInterval, BillingInterval } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { getBillingPeriod } from "./getBillingPeriod";
 
 export type CalculateCrossIntervalUpgradeParams = {
 	customerId: string;
 	advancedTo: number; // From initScenario
-	oldAmount: number; // Current subscription price (e.g., $20/month)
+	oldAmount?: number; // Current subscription price (e.g., $20/month). Optional - defaults to 0 (no credit)
 	newAmount: number; // New subscription price (e.g., $200/year)
 	oldInterval?: "month" | "year"; // Current interval (default: "month")
 };
@@ -43,7 +44,7 @@ export type CalculateCrossIntervalUpgradeParams = {
 export const calculateCrossIntervalUpgrade = async ({
 	customerId,
 	advancedTo,
-	oldAmount,
+	oldAmount = 0,
 	newAmount,
 	oldInterval = "month",
 }: CalculateCrossIntervalUpgradeParams): Promise<number> => {
@@ -65,11 +66,15 @@ export const calculateCrossIntervalUpgrade = async ({
 	const oldCredit = oldRatio.mul(oldAmount);
 
 	// 2. Calculate prorated new (annual) charge
-	// Annual period: now → 1 year from billing anchor
-	const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
-	const annualPeriodEnd = new Decimal(billingAnchorMs).plus(MS_PER_YEAR);
+	// Annual period: billing anchor → 1 calendar year from billing anchor
+	const annualPeriodEndMs = addInterval({
+		from: billingAnchorMs,
+		interval: BillingInterval.Year,
+	});
+	const annualPeriodEnd = new Decimal(annualPeriodEndMs);
+	const annualTotal = annualPeriodEnd.minus(new Decimal(billingAnchorMs));
 	const annualRemaining = annualPeriodEnd.minus(now);
-	const annualRatio = annualRemaining.div(MS_PER_YEAR);
+	const annualRatio = annualRemaining.div(annualTotal);
 	const annualCharge = annualRatio.mul(newAmount);
 
 	// Total = prorated annual - credit for remaining monthly

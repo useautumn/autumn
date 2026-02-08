@@ -429,7 +429,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-allocated 5: allocated o
 	});
 
 	// Wait for track to sync
-	await new Promise((r) => setTimeout(r, 2000));
+	await new Promise((r) => setTimeout(r, 4000));
 
 	// Verify over limit before upgrade
 	const customerBefore =

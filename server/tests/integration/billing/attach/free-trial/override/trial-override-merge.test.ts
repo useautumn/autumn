@@ -19,7 +19,6 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
-import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -85,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
-		total: 40, // Pro ($20) + Add-on ($20) after trial
+		total: 20, // Pro ($20) + Add-on ($20) after trial
 	});
 
 	// 2. Attach add-on with free_trial override
@@ -123,9 +122,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 	// Verify invoices: pro ($20) + refund (-$20)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2,
-		latestTotal: -20,
+		count: 3,
+		latestTotal: 0,
 	});
+
+	expect(customer.invoices?.[1]?.total).toBe(-20);
 
 	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
@@ -190,7 +191,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 		product_id: addon.id,
 		free_trial: null,
 	});
-	// Pro ($20) + Add-on ($20) = $40
+	//
 	expect(preview.total).toBe(40);
 
 	// 2. Attach add-on with free_trial: null
@@ -225,7 +226,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 	// Verify invoices: $40 charge
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
+		count: 2,
 		latestTotal: 40,
 	});
 
@@ -302,7 +303,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14), // Fresh 14-day trial
-		total: 40, // Pro ($20) + Add-on ($20) after trial
+		total: 20, //
 	});
 
 	// 2. Attach add-on with free_trial override

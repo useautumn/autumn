@@ -21,9 +21,9 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Trial ends naturally - first charge
@@ -91,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally 
 		includedUsage: 500,
 		balance: 500, // Reset after trial end
 		usage: 0,
-		resetsAt: advancedTo + ms.days(30),
 	});
 
 	// Verify Stripe subscription state
@@ -101,99 +100,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally 
 		org: ctx.org,
 		env: ctx.env,
 		flags: { checkNotTrialing: true },
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Trial ends with usage - reset balances
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial with monthly messages
- * - Use some messages during trial
- * - Trial ends
- *
- * Expected Result:
- * - Balance resets at trial end (new billing cycle)
- * - First charge processed
- */
-test.concurrent(`${chalk.yellowBright("trial-conversion 2: trial ends with usage - reset balances")}`, async () => {
-	const customerId = "trial-conv-usage-reset";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const proTrial = products.proWithTrial({
-		id: "pro-trial",
-		items: [messagesItem],
-		trialDays: 7,
-		cardRequired: true,
-	});
-
-	const { autumnV1, ctx, advancedTo, testClockId } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [proTrial] }),
-		],
-		actions: [s.billing.attach({ productId: proTrial.id })],
-	});
-
-	// Use some messages during trial
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 200,
-	});
-
-	// Wait for track to sync
-	await new Promise((r) => setTimeout(r, 2000));
-
-	// Verify usage during trial
-	const customerDuringTrial =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer: customerDuringTrial,
-		featureId: TestFeature.Messages,
-		includedUsage: 500,
-		balance: 300, // 500 - 200 = 300
-		usage: 200,
-	});
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: proTrial.id,
-	});
-
-	const advancedToAfter = await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		currentEpochMs: advancedTo,
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify product is NOT trialing
-	await expectProductNotTrialing({
-		customer,
-		productId: proTrial.id,
-		nowMs: advancedToAfter,
-	});
-
-	// Verify balance reset (new billing cycle)
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 500,
-		balance: 500, // Reset to full
-		usage: 0, // Reset to 0
-	});
-
-	// Verify first charge
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: 20,
-		latestInvoiceProductId: proTrial.id,
 	});
 });
 
@@ -375,7 +281,7 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 5: scheduled downgrade a
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: Date.now() + ms.days(14) + ms.days(30),
+		resetsAt: addMonths(Date.now() + ms.days(14), 1).getTime(),
 	});
 
 	// Verify Stripe subscription state

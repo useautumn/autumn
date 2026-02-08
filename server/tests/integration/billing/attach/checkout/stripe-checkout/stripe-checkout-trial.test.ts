@@ -18,10 +18,10 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -75,7 +75,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial card required")}`,
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// 4. Verify product is trialing
@@ -158,7 +158,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial subscription_data"
 	expect(result.payment_url).toBeDefined();
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// 4. Verify product is trialing with correct end date

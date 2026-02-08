@@ -112,11 +112,10 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: no PM + free product + r
 		redirect_mode: "always",
 	});
 
-	expect(result.checkout_url).toBeDefined();
-	expect(isAutumnCheckoutUrl(result.checkout_url!)).toBe(true);
+	expect(result.payment_url).toBeDefined();
+	expect(isAutumnCheckoutUrl(result.payment_url!)).toBe(true);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Future tests to implement once autumn checkout is built:
 // ═══════════════════════════════════════════════════════════════════════════════
 //

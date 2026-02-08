@@ -3,11 +3,7 @@ import type {
 	BillingContext,
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
-import {
-	type FullCusProduct,
-	msToSeconds,
-	orgToReturnUrl,
-} from "@autumn/shared";
+import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
@@ -15,12 +11,10 @@ import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
 	billingContext,
-	finalCustomerProducts,
 	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	finalCustomerProducts: FullCusProduct[];
 	autumnBillingPlan: AutumnBillingPlan;
 }): StripeCheckoutSessionAction => {
 	const { org, env } = ctx;

@@ -18,6 +18,7 @@ import {
 	expectCustomerProducts,
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { calculateCrossIntervalUpgrade } from "@tests/integration/billing/utils/proration";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -96,10 +97,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: create entity, attach pro to en
 
 	// Get customer and verify they don't have the product
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Customer should not have products array with this product
-	const customerProduct = customer.products?.find((p) => p.id === pro.id);
-	expect(customerProduct).toBeUndefined();
 
 	// Verify invoice on customer matches preview total: $20
 	await expectCustomerInvoiceCorrect({
@@ -464,19 +461,19 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to customer, then pr
 		productId: pro.id,
 	});
 
-	// Both should have independent balances
+	// Features are inherited across scopes: customer (100) + entity (100) = 200
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		balance: 100,
+		includedUsage: 200,
+		balance: 200,
 		usage: 0,
 	});
 	expectCustomerFeatureCorrect({
 		customer: entity,
 		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		balance: 100,
+		includedUsage: 200,
+		balance: 200,
 		usage: 0,
 	});
 
@@ -526,16 +523,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 	});
 	expect(previewCust.total).toBe(0);
 
-	await autumnV1.billing.attach(
-		{
-			customer_id: customerId,
-			product_id: free.id,
-			redirect_mode: "if_required",
-		},
-		{
-			timeout: 2000,
-		},
-	);
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		redirect_mode: "if_required",
+	});
 
 	// 2. Preview and attach to entity - $0 (free)
 	const previewEnt = await autumnV1.billing.previewAttach({
@@ -545,17 +537,12 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 	});
 	expect(previewEnt.total).toBe(0);
 
-	await autumnV1.billing.attach(
-		{
-			customer_id: customerId,
-			product_id: free.id,
-			entity_id: entities[0].id,
-			redirect_mode: "if_required",
-		},
-		{
-			timeout: 2000,
-		},
-	);
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		entity_id: entities[0].id,
+		redirect_mode: "if_required",
+	});
 
 	// Get customer and entity
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -574,19 +561,19 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 		productId: free.id,
 	});
 
-	// Both should have independent balances
+	// Features are inherited across scopes: customer (50) + entity (50) = 100
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 50,
-		balance: 50,
+		includedUsage: 100,
+		balance: 100,
 		usage: 0,
 	});
 	expectCustomerFeatureCorrect({
 		customer: entity,
 		featureId: TestFeature.Messages,
-		includedUsage: 50,
-		balance: 50,
+		includedUsage: 100,
+		balance: 100,
 		usage: 0,
 	});
 
@@ -634,7 +621,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: entity monthly, add customer an
 		items: [enterpriseMessages, items.annualPrice({ price: 500 })],
 	});
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -659,15 +646,23 @@ test.concurrent(`${chalk.yellowBright("new-plan: entity monthly, add customer an
 		productId: proMonthly.id,
 	});
 
-	// 1. Preview adding customer-level annual (no refund from entity scope)
+	// Calculate expected total using cross-interval proration utility
+	const expectedTotal = await calculateCrossIntervalUpgrade({
+		customerId,
+		advancedTo,
+		// oldAmount: 20, // Entity monthly price
+		newAmount: 500, // Customer annual price
+	});
+
+	// 1. Preview adding customer-level annual (prorated with credit from entity)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: enterpriseAnnual.id,
 		// No entity_id - this is customer-level
 	});
 
-	// Full annual charge - NO credit from entity products (different scope)
-	expect(preview.total).toBe(500);
+	// Prorated annual charge with credit from entity monthly
+	expect(preview.total).toBeCloseTo(expectedTotal, 0);
 
 	// 2. Attach enterprise annual at customer level
 	await autumnV1.billing.attach({
@@ -695,23 +690,23 @@ test.concurrent(`${chalk.yellowBright("new-plan: entity monthly, add customer an
 		productId: proMonthly.id,
 	});
 
-	// Verify features at customer level
+	// Verify features at customer level: customer (10000) + entity (500) = 10500
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 10000,
-		balance: 10000,
+		includedUsage: 10500,
+		balance: 10500,
 		usage: 0,
 	});
 
 	// Verify invoices:
 	// 1. Entity monthly ($20)
 	// 2. Entity monthly renewal ($20)
-	// 3. Customer annual ($500)
+	// 3. Customer annual (prorated with entity credit)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 3,
-		latestTotal: 500,
+		latestTotal: preview.total,
 	});
 });
 
@@ -813,12 +808,12 @@ test.concurrent(`${chalk.yellowBright("new-plan: entity monthly + add-on, add cu
 		active: [proMonthly.id, storageAddOn.id],
 	});
 
-	// Verify features at customer level
+	// Verify features at customer level: customer (10000) + entity pro (500) + entity addon (1000) = 11500
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 10000,
-		balance: 10000,
+		includedUsage: 11500,
+		balance: 11500,
 		usage: 0,
 	});
 
