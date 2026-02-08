@@ -321,6 +321,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(30),
+		toleranceMs: ms.hours(3),
 	});
 
 	await expectSubToBeCorrect({

@@ -20,7 +20,6 @@ import {
 	type EntityLegacyData,
 	enrichFullCustomerWithEntity,
 	findCustomerProductById,
-	InternalError,
 	type PlanLegacyData,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -38,7 +37,7 @@ export const sendProductsUpdated = async ({
 	ctx: AutumnContext;
 	payload: SendProductsUpdatedPayload;
 }) => {
-	const { db, org, env, features } = ctx;
+	const { db, org, env, features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
 
 	// Fetch FullCustomer
@@ -58,15 +57,15 @@ export const sendProductsUpdated = async ({
 	});
 
 	if (!fullCustomer) {
-		throw new InternalError({
-			message: `[sendProductsUpdated] Customer ${customerId ?? ""} not found`,
-		});
+		logger.warn(`[sendProductsUpdated] Customer ${customerId ?? ""} not found`);
+		return;
 	}
 
 	if (!customerProduct) {
-		throw new InternalError({
-			message: `[sendProductsUpdated] Customer product ${customerProductId} not found`,
-		});
+		logger.warn(
+			`[sendProductsUpdated] Customer product ${customerProductId} not found`,
+		);
+		return;
 	}
 
 	const fullProduct = cusProductToProduct({ cusProduct: customerProduct });

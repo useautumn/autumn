@@ -83,6 +83,17 @@ export const billingPlanToNextCyclePreview = ({
 		anchorMs,
 	};
 
+	if (billingCycleAnchorMs === "now") {
+		return {
+			nextCycle: undefined,
+			debug: {
+				...baseDebug,
+				nextCycleStart: null,
+				filteredCustomerProducts: [],
+			},
+		};
+	}
+
 	// Return undefined if there's no recurring interval (not a subscription)
 	if (!smallestInterval) {
 		return {
