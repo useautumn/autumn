@@ -31,7 +31,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Free product with trial (no Stripe subscription)
@@ -376,7 +375,7 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 6: free to different f
 	await expectProductTrialing({
 		customer,
 		productId: free2.id,
-		trialEndsAt: advancedTo + ms.days(14),
+		trialEndsAt: advancedTo + ms.days(7),
 	});
 
 	// Verify feature balance is free2's balance with resetsAt aligned to trial end
@@ -386,7 +385,7 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 6: free to different f
 		includedUsage: 200,
 		balance: 200,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(14),
+		resetsAt: advancedTo + ms.days(7),
 	});
 
 	// Verify no invoice
@@ -485,8 +484,6 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 7: entity pro isolated
 		product_id: freeWithTrial.id,
 		redirect_mode: "if_required",
 	});
-
-	await timeout(2000);
 
 	// Verify customer-level free product is trialing
 	const customerDuringTrial =

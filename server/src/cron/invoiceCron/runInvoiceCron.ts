@@ -1,11 +1,40 @@
+import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { type Metadata, MetadataType, metadata } from "@autumn/shared";
-
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
+import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
 import type { AttachParams } from "../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../internal/metadata/MetadataService";
 import type { CronContext } from "../utils/CronContext";
+
+const getOrgAndCustomerFromMetadata = async ({
+	ctx,
+	metadata,
+}: {
+	ctx: CronContext;
+	metadata: Metadata;
+}) => {
+	const { db } = ctx;
+	const data = metadata.data as AttachParams | DeferredAutumnBillingPlanData;
+	if ("org" in data) {
+		return { org: data.org, customer: data.customer };
+	} else if ("orgId" in data) {
+		const { orgId, env } = data;
+		const orgWithFeatures = await OrgService.getWithFeatures({
+			db,
+			orgId,
+			env,
+		});
+
+		return {
+			org: orgWithFeatures?.org,
+			customer: data.billingContext?.fullCustomer,
+		};
+	}
+
+	return { org: undefined, customer: undefined };
+};
 
 export const handleVoidInvoiceCron = async ({
 	ctx,
@@ -15,8 +44,13 @@ export const handleVoidInvoiceCron = async ({
 	metadata: Metadata;
 }) => {
 	const { logger, db } = ctx;
-	const data = metadata.data as AttachParams;
-	const { org, customer } = data;
+
+	const { org, customer } = await getOrgAndCustomerFromMetadata({
+		ctx,
+		metadata,
+	});
+	if (!org || !customer) return;
+
 	const stripeCli = createStripeCli({ org, env: customer.env });
 
 	if (!metadata.stripe_invoice_id) return;

@@ -66,4 +66,6 @@ export interface BillingContext {
 	cancelAction?: CancelAction;
 
 	billingVersion: BillingVersion;
+
+	checkoutQuantityAdjustable?: boolean;
 }

@@ -529,15 +529,16 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-edge-cases 4: prepaid + 
 		usage: 2,
 	});
 
-	// 1. Preview upgrade
-	const preview = await autumnV1.billing.previewAttach({
+	const updateParams = {
 		customer_id: customerId,
 		product_id: premium.id,
-	});
-	// Base price difference: $50 - $20 = $30
-	// Prepaid: old quantity (200) carries over but new allowance (500) covers it, so 0 prepaid packs needed
-	// Old prepaid pack refund: -$10 (prorated unused from old product)
-	// Total: $30 (base diff) - $10 (prepaid refund) = $20
+	};
+
+	// 1. Preview upgrade
+	const preview = await autumnV1.billing.previewAttach(updateParams);
+
+	// 1. Base price difference: $50 - $20 = $30
+	// 2. Prepaid refund: -$10 (prorated unused from old product, new product no paid units)
 	expect(preview.total).toBe(20);
 
 	// 2. Attach premium

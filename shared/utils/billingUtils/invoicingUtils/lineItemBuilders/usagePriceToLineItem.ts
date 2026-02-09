@@ -65,11 +65,11 @@ export const usagePriceToLineItem = ({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
 		});
+
 		usage = new Decimal(allowance).add(prepaidQuantity).toNumber();
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}
-
 
 	const lineItemContext: LineItemContext = {
 		...context,

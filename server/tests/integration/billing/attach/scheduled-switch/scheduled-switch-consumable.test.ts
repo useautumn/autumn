@@ -205,7 +205,11 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 2: pro with c
 		],
 		actions: [
 			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: usageAmount }),
+			s.track({
+				featureId: TestFeature.Messages,
+				value: usageAmount,
+				timeout: 2000,
+			}),
 			s.billing.attach({ productId: free.id }), // Schedule downgrade
 			s.advanceToNextInvoice({ withPause: true }),
 		],

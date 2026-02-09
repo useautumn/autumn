@@ -15,10 +15,7 @@ import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachPa
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import {
-	attachToInvoiceResponse,
-	insertInvoiceFromAttach,
-} from "@/internal/invoices/invoiceUtils.js";
+import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
@@ -95,9 +92,7 @@ export const handlePaidProduct = async ({
 			checkout_url: billingResponse?.payment_url ?? undefined,
 
 			invoice: attachParams.invoiceOnly
-				? attachToInvoiceResponse({
-						invoice: billingResult?.stripe?.stripeInvoice || undefined,
-					})
+				? billingResult?.stripe?.stripeInvoice
 				: undefined,
 		});
 

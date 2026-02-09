@@ -1,9 +1,9 @@
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import {
 	isCustomerProductExpired,
 	isCustomerProductScheduled,
 	RecaseError,
 } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 
 export const handleCurrentCustomerProductErrors = ({
 	billingContext,

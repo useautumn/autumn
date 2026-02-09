@@ -12,6 +12,10 @@ const cusPrefixedUrls = [
 		url: "/customers/:customer_id",
 	},
 	{
+		method: "PATCH",
+		url: "/customers/:customer_id",
+	},
+	{
 		method: "DELETE",
 		url: "/customers/:customer_id",
 	},

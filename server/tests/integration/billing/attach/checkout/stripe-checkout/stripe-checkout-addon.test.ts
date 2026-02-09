@@ -20,10 +20,10 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -88,7 +88,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-addon 1: one-off addon to
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// Complete checkout form
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// Verify both products are now active
@@ -179,7 +179,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-addon 2: recurring addon 
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// Complete checkout form
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// Verify both products are now active
@@ -270,7 +270,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-addon 3: pro via checkout
 	expect(proResult.payment_url).toContain("checkout.stripe.com");
 
 	// Complete checkout for Pro
-	await completeCheckoutForm(proResult.payment_url);
+	await completeStripeCheckoutForm({ url: proResult.payment_url });
 	await timeout(12000);
 
 	// Verify Pro is attached

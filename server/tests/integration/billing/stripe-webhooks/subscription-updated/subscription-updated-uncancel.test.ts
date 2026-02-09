@@ -221,11 +221,12 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel pro with add-on via
 		productId: pro.id,
 	});
 
+	await timeout(10000);
 	await ctx.stripeCli.subscriptions.update(subscriptionId, {
 		cancel_at_period_end: true,
 	});
 
-	await timeout(5000);
+	await timeout(10000);
 
 	// Verify pro is canceling, addon is active, free is scheduled
 	const customerAfterCancel =
@@ -250,7 +251,7 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel pro with add-on via
 	});
 
 	// Wait for webhook to process
-	await timeout(5000);
+	await timeout(10000);
 
 	// Verify pro is active (no longer canceling), addon still active
 	const customerAfterUncancel =

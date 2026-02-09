@@ -16,16 +16,17 @@ export const handleUpdateQuantityFunction = async ({
 	attachParams: AttachParams;
 	body: AttachBodyV0;
 }) => {
-	const { billingResponse } = await billingActions.legacy.updateQuantity({
-		ctx,
-		body,
-		attachParams,
-	});
+	const { billingResponse, billingResult } =
+		await billingActions.legacy.updateQuantity({
+			ctx,
+			body,
+			attachParams,
+		});
 
 	return AttachFunctionResponseSchema.parse({
 		code: SuccessCode.FeaturesUpdated,
 		message: `Successfully updated quantity for features`,
-		invoice: billingResponse?.invoice,
+		invoice: billingResult?.stripe?.stripeInvoice,
 		checkout_url: billingResponse?.payment_url,
 	});
 

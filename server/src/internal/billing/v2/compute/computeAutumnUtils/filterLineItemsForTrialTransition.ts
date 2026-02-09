@@ -32,33 +32,25 @@ export const filterLineItemsForTrialTransition = ({
 		return lineItems;
 	}
 
-	return lineItems
-		.map((lineItem) => {
-			const { billingTiming, direction, price } = lineItem.context;
-			const isPositive = lineItem.amount > 0;
-			const isRecurringPrice = !isOneOffPrice(price);
+	return lineItems.filter((lineItem) => {
+		const { billingTiming, direction, price } = lineItem.context;
+		const isPositive = lineItem.amount > 0;
+		const isRecurringPrice = !isOneOffPrice(price);
 
-			// Starting trial (!isTrialing → willBeTrialing):
-			// Mark in_advance positive recurring items as deferred (will be charged after trial)
-			if (willBeTrialing) {
-				if (billingTiming === "in_advance" && isPositive && isRecurringPrice) {
-					return { ...lineItem, deferredForTrial: true };
-				}
-			}
+		// Ending trial (isTrialing → !willBeTrialing):
+		// Filter out refunds and in_arrear positive items (no refund for trial period, no arrear charges)
+		if (isTrialing) {
+			if (direction === "refund") return false;
+			if (billingTiming === "in_arrear" && isPositive) return false;
+		}
 
-			return lineItem;
-		})
-		.filter((lineItem) => {
-			const { billingTiming, direction } = lineItem.context;
-			const isPositive = lineItem.amount > 0;
+		// Starting trial (!isTrialing → willBeTrialing):
+		// Filter out in_advance positive items (no charge for upcoming trial period)
+		if (willBeTrialing) {
+			if (billingTiming === "in_advance" && isPositive && isRecurringPrice)
+				return false;
+		}
 
-			// Ending trial (isTrialing → !willBeTrialing):
-			// Filter out refunds and in_arrear positive items (no refund for trial period, no arrear charges)
-			if (isTrialing) {
-				if (direction === "refund") return false;
-				if (billingTiming === "in_arrear" && isPositive) return false;
-			}
-
-			return true;
-		});
+		return true;
+	});
 };

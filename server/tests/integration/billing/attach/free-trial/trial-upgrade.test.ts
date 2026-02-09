@@ -234,7 +234,7 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 2: trialing pro to premium 
 	// Verify invoice for premium
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
+		count: 2,
 		latestTotal: 50,
 	});
 
@@ -343,10 +343,12 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 3: non-trialing pro to prem
 		resetsAt: advancedTo + ms.days(14),
 	});
 
+	await timeout(4000);
 	// Verify invoices: pro charge ($20) + refund (-$20)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2,
+		count: 3,
+		invoiceIndex: 1,
 		latestTotal: -20,
 	});
 

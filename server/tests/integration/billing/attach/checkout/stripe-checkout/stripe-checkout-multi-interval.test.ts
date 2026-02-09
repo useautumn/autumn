@@ -17,10 +17,10 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -77,8 +77,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with consumable m
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 
 	// 4. Verify product attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -183,7 +182,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with consumable +
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
 	// 4. Verify product attached
@@ -287,8 +286,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with allocated us
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 
 	// 4. Verify product attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -329,8 +327,10 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with allocated us
 
 	await timeout(4000);
 
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customer: customerAfter,
 		count: 2,
 		latestTotal: 10,
 		latestInvoiceProductId: proAnnual.id,

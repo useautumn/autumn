@@ -19,10 +19,12 @@ import { expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import {
+	completeInvoiceCheckout,
+	completeStripeCheckoutForm,
+} from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
-import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -210,7 +212,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		customerId,
 		setup: [
 			// No payment method — force_checkout will provide the payment page
-			s.customer({ testClock: true }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium, addOn] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
@@ -227,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		entity_id: entities[0].id,
 	});
 	expect(res1.checkout_url).toBeDefined();
-	await completeCheckoutForm(res1.checkout_url);
+	await completeStripeCheckoutForm({ url: res1.checkout_url });
 
 	// Attach Pro to entity 2 with force_checkout
 	const res2 = await autumnV1_2.attach({
@@ -237,7 +239,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		entity_id: entities[1].id,
 	});
 	expect(res2.checkout_url).toBeDefined();
-	await completeCheckoutForm(res2.checkout_url);
+	await completeStripeCheckoutForm({ url: res2.checkout_url });
 
 	// Verify different subscription IDs per entity
 	let fullCus = await CusService.getFull({
@@ -324,4 +326,4 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		env: ctx.env,
 		subId: entity2SubId,
 	});
-}, 120000);
+});

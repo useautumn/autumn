@@ -7,8 +7,10 @@ import type { BillingContext } from "@autumn/shared";
  */
 export const billingContextHasTrial = ({
 	billingContext,
+	isTrialing,
 }: {
 	billingContext: BillingContext;
+	isTrialing: boolean;
 }) => {
 	const { currentEpochMs, trialContext } = billingContext;
 
@@ -16,5 +18,9 @@ export const billingContextHasTrial = ({
 		return true;
 	}
 
-	return false;
+	if (trialContext?.trialEndsAt === null) {
+		return false;
+	}
+
+	return isTrialing;
 };

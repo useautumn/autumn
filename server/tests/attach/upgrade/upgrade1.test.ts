@@ -79,6 +79,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 
 	test("should attach premium product", async () => {
 		const wordsUsage = 100000;
+		await timeout(4000);
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,

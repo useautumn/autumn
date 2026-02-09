@@ -768,7 +768,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 5: premium to pro 
  * - Free active with messages usage RESET to 0
  * - Balance = 100 (scheduled switches always reset usage)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: pro to free with reset_usage_when_enabled: false (usage resets)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: pro to free (usage resets)")}`, async () => {
 	const customerId = "sched-switch-reset-usage-false-pro-to-free";
 
 	const proMessagesItem = items.monthlyMessages({

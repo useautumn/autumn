@@ -8,9 +8,10 @@
  * - Free → Paid migration should error
  * - One-off products cannot be migrated
  * - Prepaid feature mismatches should error
+ * - Concurrent migrations for same product should error
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -208,4 +209,79 @@ test.concurrent(`${chalk.yellowBright("migrate-errors-4: new product has prepaid
 			});
 		},
 	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Concurrent Migrations for Same Product (Error)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has pro v1
+ * - Update product to v2 and v3
+ * - Try to run two migrations concurrently (v1→v2 and v1→v3)
+ *
+ * Expected Result:
+ * - One should succeed, one should error with "migration is ongoing"
+ */
+test.concurrent(`${chalk.yellowBright("migrate-errors-5: concurrent migrations for same product should error")}`, async () => {
+	const customerId = "migrate-err-concurrent";
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: "pro" })],
+	});
+
+	// Update to v2
+	await autumnV1.products.update(pro.id, {
+		items: [
+			items.monthlyPrice({ price: 20 }),
+			items.monthlyMessages({ includedUsage: 600 }),
+		],
+	});
+
+	// Update to v3
+	await autumnV1.products.update(pro.id, {
+		items: [
+			items.monthlyPrice({ price: 25 }),
+			items.monthlyMessages({ includedUsage: 700 }),
+		],
+	});
+
+	// Try to run two migrations concurrently - one should fail
+	const migration1 = autumnV1.migrate({
+		from_product_id: pro.id,
+		to_product_id: pro.id,
+		from_version: 1,
+		to_version: 2,
+	});
+
+	const migration2 = autumnV1.migrate({
+		from_product_id: pro.id,
+		to_product_id: pro.id,
+		from_version: 1,
+		to_version: 2,
+	});
+
+	const results = await Promise.allSettled([migration1, migration2]);
+
+	// One should succeed, one should fail with the "migration is ongoing" error
+	const successes = results.filter((r) => r.status === "fulfilled");
+	const failures = results.filter((r) => r.status === "rejected");
+
+	expect(successes.length).toBe(1);
+	expect(failures.length).toBe(1);
+
+	// The failure should have the "migration is ongoing" message
+	const failedResult = failures[0] as PromiseRejectedResult;
+	expect(failedResult.reason.message).toInclude("Another migration is ongoing");
 });

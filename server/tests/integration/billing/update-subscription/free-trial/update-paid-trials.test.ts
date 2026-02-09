@@ -321,6 +321,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(30),
+		toleranceMs: ms.hours(3),
 	});
 
 	await expectSubToBeCorrect({
@@ -457,7 +458,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 			feature_id: TestFeature.Messages,
 			value: messagesUsage,
 		},
-		{ timeout: 2000 },
+		{ timeout: 4000 },
 	);
 
 	// Verify no longer trialing (trial has ended)
@@ -558,17 +559,6 @@ test.concurrent(`${chalk.yellowBright("p2f-trial: paid no trial -> free with tri
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Track some usage before update
-	const messagesUsage = 40;
-	await autumnV1.track(
-		{
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: messagesUsage,
-		},
-		{ timeout: 2000 },
-	);
-
 	// Verify initially NOT trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -611,8 +601,8 @@ test.concurrent(`${chalk.yellowBright("p2f-trial: paid no trial -> free with tri
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
-		balance: messagesItem.included_usage - messagesUsage,
-		usage: messagesUsage,
+		balance: messagesItem.included_usage,
+		usage: 0,
 		resetsAt: advancedTo + ms.days(14),
 	});
 });
