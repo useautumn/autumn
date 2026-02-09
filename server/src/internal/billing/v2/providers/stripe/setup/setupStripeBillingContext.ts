@@ -1,4 +1,5 @@
 import type {
+	AttachDiscount,
 	BillingContextOverride,
 	FullCusProduct,
 	FullCustomer,
@@ -6,9 +7,9 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
+import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
-import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling";
 
 export const setupStripeBillingContext = async ({
 	ctx,
@@ -16,12 +17,14 @@ export const setupStripeBillingContext = async ({
 	product,
 	targetCustomerProduct,
 	contextOverride = {},
+	paramDiscounts,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	product?: Product;
 	targetCustomerProduct?: FullCusProduct;
 	contextOverride?: BillingContextOverride;
+	paramDiscounts?: AttachDiscount[];
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
@@ -57,9 +60,12 @@ export const setupStripeBillingContext = async ({
 		fullCus: fullCustomer,
 	});
 
-	const stripeDiscounts = setupStripeDiscountsForBilling({
+	const stripeDiscounts = await fetchStripeDiscountsForBilling({
+		ctx,
+		fullCustomer,
 		stripeSubscription,
 		stripeCustomer,
+		paramDiscounts,
 	});
 
 	return {

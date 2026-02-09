@@ -19,7 +19,7 @@ import type {
 	StripeCustomerWithDiscount,
 	StripeSubscriptionWithDiscounts,
 } from "@/external/stripe/subscriptions";
-import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
+import { extractStripeDiscounts as setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 
 // ============ TESTS ============
 

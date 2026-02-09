@@ -16,7 +16,6 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
-import { setupAttachDiscounts } from "./setupAttachDiscounts";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
@@ -73,13 +72,7 @@ export const setupAttachBillingContext = async ({
 		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
-	});
-
-	const mergedDiscounts = await setupAttachDiscounts({
-		ctx,
-		params,
-		fullCustomer,
-		stripeDiscounts,
+		paramDiscounts: params.discounts,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -167,7 +160,7 @@ export const setupAttachBillingContext = async ({
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-		stripeDiscounts: mergedDiscounts,
+		stripeDiscounts,
 		paymentMethod,
 
 		currentEpochMs,
