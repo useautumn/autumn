@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiPlan,
+	type ApiPlanV1,
 	ApiVersion,
 	ApiVersionClass,
 	apiPlan,
@@ -236,7 +236,7 @@ export const handleUpdatePlan = createRoute({
 			features,
 		});
 
-		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+		const versionedResponse = applyResponseVersionChanges<ApiPlanV1>({
 			input: planResponse,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Product,

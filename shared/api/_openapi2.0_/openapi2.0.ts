@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { ApiPlanItemV0WithMeta } from "@api/products/items/apiPlanItemV0.js";
+import { ApiPlanItemV0WithMeta } from "@api/products/items/previousVersions/apiPlanItemV0.js";
 import yaml from "yaml";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../common/customerData.js";
