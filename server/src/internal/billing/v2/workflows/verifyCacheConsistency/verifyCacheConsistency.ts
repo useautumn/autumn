@@ -1,4 +1,4 @@
-import { type ApiCustomer, type AppEnv, CusExpand } from "@autumn/shared";
+import { type ApiCustomerV5, type AppEnv, CusExpand } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
@@ -44,8 +44,8 @@ const checkSubscriptionsMatch = ({
 	cachedCustomer,
 }: {
 	ctx: AutumnContext;
-	dbCustomer: ApiCustomer;
-	cachedCustomer: ApiCustomer;
+	dbCustomer: ApiCustomerV5;
+	cachedCustomer: ApiCustomerV5;
 }): { success: boolean; message: string } => {
 	for (const subscription of dbCustomer.subscriptions) {
 		const cachedSubscription = cachedCustomer.subscriptions.find(
@@ -56,19 +56,6 @@ const checkSubscriptionsMatch = ({
 			return {
 				success: false,
 				message: `Subscription ${subscription.plan_id} not found in cached customer`,
-			};
-		}
-	}
-
-	for (const scheduledSubscription of dbCustomer.scheduled_subscriptions) {
-		const cachedScheduledSubscription =
-			cachedCustomer.scheduled_subscriptions.find(
-				(s) => s.plan_id === scheduledSubscription.plan_id,
-			);
-		if (!cachedScheduledSubscription) {
-			return {
-				success: false,
-				message: `Scheduled subscription ${scheduledSubscription.plan_id} not found in cached customer`,
 			};
 		}
 	}

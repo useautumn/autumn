@@ -86,8 +86,6 @@ export const V1_2_ProductChanges = defineVersionChange({
 			}
 		});
 
-		console.log(productItems);
-
 		const productV2 = {
 			id: input.id,
 			name: input.name,

@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiCustomer,
+	type ApiCustomerV5,
 	ApiVersion,
 	addToExpand,
 	applyResponseVersionChanges,
@@ -22,12 +22,12 @@ const cleanApiCustomer = ({
 	legacyData,
 }: {
 	ctx: AutumnContext;
-	apiCustomer: ApiCustomer;
+	apiCustomer: ApiCustomerV5;
 	legacyData: CustomerLegacyData;
 }) => {
 	const { autumn_id: _autumn_id, invoices: _invoices, ...rest } = apiCustomer;
-	const cleanedApiCustomer: ApiCustomer = rest;
-	return applyResponseVersionChanges({
+	const cleanedApiCustomer: ApiCustomerV5 = rest;
+	return applyResponseVersionChanges<ApiCustomerV5, CustomerLegacyData>({
 		input: cleanedApiCustomer,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
