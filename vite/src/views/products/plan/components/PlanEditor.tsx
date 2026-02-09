@@ -25,7 +25,7 @@ export const PlanEditor = () => {
 			>
 				<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-20">
 					<div className="w-full max-w-5xl mx-auto pt-8 px-10">
-						<OnboardingGuide collapseAll={isSheetOpen} />
+						<OnboardingGuide />
 					</div>
 					<div onClick={(e) => e.stopPropagation()}>
 						<EditPlanHeader />
