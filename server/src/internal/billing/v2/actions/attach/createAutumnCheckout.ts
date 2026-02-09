@@ -38,6 +38,5 @@ export async function createAutumnCheckout({
 			stripe: {},
 			autumn: { checkout },
 		},
-		checkoutUrl,
 	};
 }

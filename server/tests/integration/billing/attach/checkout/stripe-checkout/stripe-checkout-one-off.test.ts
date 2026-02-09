@@ -432,7 +432,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: one-off with checkout_mo
 		customer_id: customerId,
 		product_id: oneOffCredits.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-		checkout_mode: "always",
+		redirect_mode: "always",
 	});
 
 	// Should return checkout URL even though customer has payment method

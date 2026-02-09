@@ -12,7 +12,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, type AttachPreview, ms } from "@autumn/shared";
+import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -63,7 +63,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial card required")}`,
 		customer_id: customerId,
 		product_id: proTrial.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(0);
+	expect(preview.total).toBe(0);
 
 	// 2. Attempt attach - should return payment_url
 	const result = await autumnV1.billing.attach({
@@ -147,7 +147,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial subscription_data"
 		customer_id: customerId,
 		product_id: proTrial.id,
 	});
-	expect((preview as AttachPreview).due_today.total).toBe(0);
+	expect(preview.total).toBe(0);
 
 	// 2. Attempt attach - should return payment_url
 	const result = await autumnV1.billing.attach({

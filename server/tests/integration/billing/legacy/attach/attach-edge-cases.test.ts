@@ -4,10 +4,11 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer.js";
 
-test.concurrent("should attach product with alipay payment method and complete invoice", async () => {
+test.concurrent(`${chalk.yellowBright("attach: alipay payment method returns checkout_url")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -34,7 +35,7 @@ test.concurrent("should attach product with alipay payment method and complete i
 	expect(res.checkout_url).toContain("checkout.stripe.com");
 });
 
-test.concurrent("should attach pro, switch to alipay, add premium addon, and complete invoice", async () => {
+test.concurrent(`${chalk.yellowBright("attach: pro then switch to alipay, add premium addon")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({

@@ -148,7 +148,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: extending trial is allow
 		free_trial: {
 			length: 14,
 			duration: FreeTrialDuration.Day,
-			unique_fingerprint: false,
 			card_required: true,
 		},
 		billing_behavior: "next_cycle_only",

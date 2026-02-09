@@ -5,6 +5,7 @@ import type {
 	FreeTrial,
 	Price,
 } from "@autumn/shared";
+import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -37,6 +38,7 @@ export interface BillingContext {
 	fullProducts: FullProduct[];
 
 	featureQuantities: FeatureOptions[];
+	transitionConfigs?: TransitionConfig[];
 	invoiceMode?: InvoiceMode;
 
 	// Timestamps...

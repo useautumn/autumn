@@ -1,4 +1,7 @@
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import type {
+	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionBillingContextOverride,
+} from "@autumn/shared";
 import {
 	BillingVersion,
 	notNullish,
@@ -25,9 +28,11 @@ import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTr
 export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV0Params;
+	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<UpdateSubscriptionBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -39,6 +44,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			ctx,
 			fullCustomer,
 			params,
+			contextOverride,
 		});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -46,6 +52,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		featureQuantitiesParams: params,
 		fullProduct,
 		currentCustomerProduct: customerProduct,
+		contextOverride,
 	});
 
 	const {
@@ -59,6 +66,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		ctx,
 		fullCustomer,
 		targetCustomerProduct: customerProduct,
+		contextOverride,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -127,6 +135,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		trialContext,
 		isCustom,
 
-		billingVersion: BillingVersion.V2,
+		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 	};
 };

@@ -5,8 +5,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
-import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
-import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { productActions } from "@/internal/products/actions";
 
@@ -43,20 +41,15 @@ export const activateFreeDefaultProduct = async ({
 			fullProduct: freeDefaultProduct,
 			currentEpochMs: Date.now(),
 			featureQuantities: [],
+
+			existingUsagesConfig: {
+				fromCustomerProduct: customerProduct,
+			},
+
+			existingRolloversConfig: {
+				fromCustomerProduct: customerProduct,
+			},
 		},
-	});
-
-	const existingUsages = cusProductToExistingUsages({
-		cusProduct: customerProduct,
-		entityId: fullCustomer.entity?.id,
-		featureIds: [], // reset all consumable features
-	});
-
-	applyExistingUsages({
-		ctx,
-		customerProduct: newCustomerProduct,
-		existingUsages,
-		entities: fullCustomer.entities,
 	});
 
 	// 3. Execute autumn billing plan

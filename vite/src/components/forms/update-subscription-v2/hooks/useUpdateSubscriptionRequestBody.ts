@@ -64,6 +64,8 @@ export function useUpdateSubscriptionRequestBody({
 				const inputQuantity = prepaidOptions[featureId];
 				const initialQuantity = initialPrepaidOptions[featureId];
 				const billingUnits = item.billing_units ?? 1;
+				const includedUsage =
+					typeof item.included_usage === "number" ? item.included_usage : 0;
 
 				if (
 					inputQuantity !== undefined &&
@@ -73,7 +75,7 @@ export function useUpdateSubscriptionRequestBody({
 				) {
 					return {
 						feature_id: featureId,
-						quantity: inputQuantity * billingUnits,
+						quantity: inputQuantity * billingUnits + includedUsage,
 					};
 				}
 				return null;
@@ -91,11 +93,13 @@ export function useUpdateSubscriptionRequestBody({
 				) {
 					const inputQuantity = prepaidOptions[item.feature_id];
 					const billingUnits = item.billing_units ?? 1;
+					const includedUsage =
+						typeof item.included_usage === "number" ? item.included_usage : 0;
 
 					if (inputQuantity !== undefined && inputQuantity !== null) {
 						options.push({
 							feature_id: item.feature_id,
-							quantity: inputQuantity * billingUnits,
+							quantity: inputQuantity * billingUnits + includedUsage,
 						});
 					}
 				}

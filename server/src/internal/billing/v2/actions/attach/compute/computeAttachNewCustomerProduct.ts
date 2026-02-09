@@ -5,8 +5,6 @@ import {
 	type FullCusProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
-import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 /**
@@ -36,6 +34,7 @@ export const computeAttachNewCustomerProduct = ({
 		trialContext,
 		isCustom,
 		billingVersion,
+		transitionConfigs,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -49,24 +48,23 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	// Get existing usages/rollovers if transitioning from an existing product
-	const existingUsages = cusProductToExistingUsages({
-		cusProduct: currentCustomerProduct,
-		entityId: fullCustomer.entity?.id,
-		featureIds: featuresToCarryUsagesFor,
-	});
-
-	const existingRollovers = cusProductToExistingRollovers({
-		cusProduct: currentCustomerProduct,
-	});
-
-	ctx.logger.debug(
-		`[computeAttachNewCustomerProduct] existing usages:`,
-		existingUsages,
-	);
-
 	// Determine if this is a scheduled product (downgrade)
 	const isScheduled = planTiming === "end_of_cycle";
+
+	const existingUsagesConfig =
+		!isScheduled && currentCustomerProduct
+			? {
+					fromCustomerProduct: currentCustomerProduct,
+					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
+				}
+			: undefined;
+
+	const existingRolloversConfig =
+		!isScheduled && currentCustomerProduct
+			? {
+					fromCustomerProduct: currentCustomerProduct,
+				}
+			: undefined;
 
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -74,13 +72,17 @@ export const computeAttachNewCustomerProduct = ({
 			fullCustomer,
 			fullProduct: attachProduct,
 			featureQuantities,
-			existingUsages: isScheduled ? undefined : existingUsages,
-			existingRollovers,
+			// existingUsages: isScheduled ? undefined : existingUsages,
+			// existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 			billingVersion: billingVersion,
+
+			existingUsagesConfig,
+			existingRolloversConfig,
+			transitionConfigs,
 		},
 		initOptions: {
 			isCustom,

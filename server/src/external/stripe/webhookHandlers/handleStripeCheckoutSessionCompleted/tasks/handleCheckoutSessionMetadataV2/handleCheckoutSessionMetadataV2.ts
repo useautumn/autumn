@@ -1,7 +1,5 @@
 import {
-	type Customer,
 	type DeferredAutumnBillingPlanData,
-	type FullProduct,
 	MetadataType,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
@@ -11,12 +9,8 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { MetadataService } from "@/internal/metadata/MetadataService";
+import { workflows } from "@/queue/workflows";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-
-export interface CheckoutSessionV2Result {
-	customer: Customer;
-	products: FullProduct[];
-}
 
 export const handleCheckoutSessionMetadataV2 = async ({
 	ctx,
@@ -24,10 +18,10 @@ export const handleCheckoutSessionMetadataV2 = async ({
 }: {
 	ctx: StripeWebhookContext;
 	checkoutContext: CheckoutSessionCompletedContext;
-}): Promise<CheckoutSessionV2Result | null> => {
+}): Promise<void> => {
 	const { metadata } = checkoutContext;
 
-	if (metadata?.type !== MetadataType.CheckoutSessionV2) return null;
+	if (metadata?.type !== MetadataType.CheckoutSessionV2) return;
 
 	ctx.logger.info(
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
@@ -68,21 +62,21 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 	});
 
-	// // 3. Execute deferred billing plan (customer products, subscription upsert, invoice upsert)
-	// await executeDeferredBillingPlanFromCheckout({
-	// 	ctx,
-	// 	metadata,
-	// 	deferredData,
-	// });
-
 	// Delete metadata after successful execution
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
-	// Return data needed for reward and customer update tasks
-	return {
-		customer: updatedDeferredData.billingContext.fullCustomer,
-		products: updatedDeferredData.billingPlan.autumn.insertCustomerProducts.map(
-			(cp) => cp.product,
-		),
-	};
+	const newCustomerProducts =
+		updatedDeferredData.billingPlan.autumn.insertCustomerProducts;
+
+	const customerId = ctx.fullCustomer?.id ?? "";
+
+	for (const product of newCustomerProducts) {
+		await workflows.triggerGrantCheckoutReward({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			productId: product.product.id,
+			stripeSubscriptionId: checkoutContext.stripeSubscription?.id,
+		});
+	}
 };

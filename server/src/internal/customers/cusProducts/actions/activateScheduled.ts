@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
@@ -42,6 +43,13 @@ export const activateScheduledCustomerProduct = async ({
 	);
 
 	await reapplyExistingUsagesToCustomerProduct({
+		ctx,
+		fromCustomerProduct,
+		customerProduct,
+		fullCustomer,
+	});
+
+	await reapplyExistingRolloversToCustomerProduct({
 		ctx,
 		fromCustomerProduct,
 		customerProduct,

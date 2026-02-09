@@ -1,10 +1,11 @@
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { BillingBehaviorSchema } from "../common/billingBehavior.js";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 import { AttachDiscountSchema } from "./attachDiscount.js";
 
-export const RedirectModeSchema = z.enum(["always", "if_required"]);
+export const RedirectModeSchema = z.enum(["always", "if_required", "never"]);
 export type RedirectMode = z.infer<typeof RedirectModeSchema>;
 
 export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
@@ -16,22 +17,20 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
-	// Product config
-
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),
 
-	// Plan schedule override
-	// - undefined: use default behavior (upgrade=immediate, downgrade=end_of_cycle)
-	// - "immediate": force immediate activation (prorated credit on downgrade)
-	// - "end_of_cycle": schedule for next billing cycle
 	plan_schedule: PlanTimingSchema.optional(),
 
 	// Discounts to apply (Stripe coupon IDs or human-readable promo code strings)
 	discounts: z.array(AttachDiscountSchema).optional(),
+	// Billing behavior for attach operations (product transitions):
+	// - 'prorate_immediately' (default): Invoice line items are charged immediately
+	// - 'next_cycle_only': Do NOT create any charges due to the attach
+	billing_behavior: BillingBehaviorSchema.optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({

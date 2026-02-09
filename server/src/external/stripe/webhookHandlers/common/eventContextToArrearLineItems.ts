@@ -1,9 +1,12 @@
-import type { FullCusEntWithFullCusProduct, LineItem } from "@autumn/shared";
+import type {
+	BillingContext,
+	FullCusEntWithFullCusProduct,
+	LineItem,
+	UpdateCustomerEntitlement,
+} from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import type { BillingContext } from "@autumn/shared";
 import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
-import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import {
 	type BaseWebhookEventContext,
@@ -57,7 +60,7 @@ export const eventContextToArrearLineItems = ({
 			customerProduct,
 			billingContext,
 			filters: { cusEntFilter },
-			updateNextResetAt: true,
+			options: { updateNextResetAt: true },
 		});
 		lineItems.push(...productLineItems);
 		updateCustomerEntitlements.push(...productUpdates);

@@ -8,6 +8,51 @@ Quick reference for common mistakes. Each gotcha follows the format:
 
 ## Setup & Initialization
 
+### NEVER Call `initScenario` Twice - Use Single Scenario for Multiple Customers
+
+**CRITICAL:** When testing scenarios with multiple customers, **NEVER** call `initScenario` multiple times. Instead, use a single `initScenario` call and create additional customers using the autumn client directly.
+
+```typescript
+// ❌ WRONG - Calling initScenario twice
+const { autumnV1: autumnA } = await initScenario({
+  customerId: customerIdA,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro] })],
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+const { autumnV1: autumnB } = await initScenario({
+  customerId: customerIdB,
+  setup: [s.customer({ paymentMethod: "success" })],  // DON'T DO THIS!
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+// ✅ RIGHT - Single initScenario, create additional customers manually
+const { autumnV1, ctx } = await initScenario({
+  customerId: customerIdA,
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+  ],
+  actions: [
+    s.billing.attach({ productId: "pro" }),
+    s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
+  ],
+});
+
+// Create second customer using the autumn client
+await autumnV1.customers.create(customerIdB, { ... });
+await autumnV1.attach({
+  customer_id: customerIdB,
+  product_id: pro.id,
+});
+```
+
+**Why?**
+- `initScenario` creates test context, Stripe test clocks, and products with prefixes
+- Calling it twice can cause conflicts with product IDs, test clocks, and org state
+- The second call may try to recreate products that already exist
+- Use the autumn client from the first `initScenario` to manage additional customers
+
 ### Payment Method Required for Paid Features
 ```typescript
 // WRONG
@@ -389,6 +434,48 @@ const expectedTotal = (quantity / billingUnits) * price;
 expectPreviewNextCycleCorrect({ preview, total: expectedTotal });
 ```
 For prepaid features, `next_cycle.total` reflects the price for the quantity that will be purchased.
+
+---
+
+---
+
+## Resetting Feature Usage (Rollovers)
+
+### Free Features vs Paid Features Reset Differently
+
+**Free features (no price):** Use `s.resetFeature()` - simulates cycle reset without advancing test clock:
+```typescript
+// Free product with rollover
+const free = products.base({ id: "free", items: [freeMessagesWithRollover] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: free.id }),
+    s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+    s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }),
+  ],
+});
+```
+
+**Paid features (consumable, prepaid, base price):** Use `s.advanceToNextInvoice()` - advances test clock and triggers Stripe subscription renewal:
+```typescript
+// Paid product with consumable or prepaid
+const pro = products.pro({ id: "pro", items: [consumableMessages] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: pro.id }),
+    s.advanceToNextInvoice(),  // Triggers Stripe renewal → resets usage
+  ],
+});
+```
+
+### Why the Difference?
+
+- **Free products**: No Stripe subscription exists. Usage must be reset manually via `s.resetFeature()` which simulates the cron job.
+- **Paid products**: Stripe subscription exists. Advancing the test clock triggers `invoice.paid` webhook which resets usage.
 
 ---
 

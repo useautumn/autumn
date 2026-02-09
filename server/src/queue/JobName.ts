@@ -6,6 +6,7 @@ export enum JobName {
 	RewardMigration = "reward-migration",
 
 	TriggerCheckoutReward = "trigger-checkout-reward",
+	GrantCheckoutReward = "grant-checkout-reward",
 	GenerateFeatureDisplay = "generate-feature-display",
 	DetectBaseVariant = "detect-base-variant",
 

@@ -610,7 +610,196 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 4: mixed products af
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Non-trialing entity upgrade to trial product
+// TEST 5: Both entities upgrade from proTrial to premiumTrial sequentially
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Entity-1 has proWithTrial (7-day trial, trialing)
+ * - Entity-2 has proWithTrial (7-day trial, trialing, shared subscription)
+ * - Entity-1 upgrades to premiumWithTrial (14-day trial) → fresh trial for ALL
+ * - Entity-2 upgrades to premiumWithTrial → both on premium, still trialing
+ *
+ * Expected Result:
+ * - After entity-1 upgrade: entity-1 has premium (14-day trial), entity-2 has pro (inherited 14-day trial)
+ * - After entity-2 upgrade: both entities have premium, both trialing with same trial end
+ * - All invoices $0 during trial
+ */
+test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: both entities upgrade proTrial → premiumTrial")}`, async () => {
+	const customerId = "trial-ent-both-upgrade";
+
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const proTrial = products.proWithTrial({
+		id: "pro-trial",
+		items: [proMessagesItem],
+		trialDays: 7,
+		cardRequired: true,
+	});
+
+	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const premiumTrial = products.premiumWithTrial({
+		id: "premium-trial",
+		items: [premiumMessagesItem],
+		trialDays: 14,
+		cardRequired: true,
+	});
+
+	const { autumnV1, ctx, advancedTo, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proTrial, premiumTrial] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: proTrial.id, entityIndex: 0 }),
+			s.billing.attach({ productId: proTrial.id, entityIndex: 1 }),
+		],
+	});
+
+	const entity1Id = entities[0].id;
+	const entity2Id = entities[1].id;
+
+	// Verify initial state - both entities trialing with 7-day trial
+	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity1Id,
+	);
+	await expectProductTrialing({
+		customer: entity1Before,
+		productId: proTrial.id,
+		trialEndsAt: advancedTo + ms.days(7),
+	});
+
+	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity2Id,
+	);
+	await expectProductTrialing({
+		customer: entity2Before,
+		productId: proTrial.id,
+		trialEndsAt: advancedTo + ms.days(7),
+	});
+
+	// ═══════════════════════════════════════════════════════════════════════════
+	// STEP 1: Upgrade entity-1 to premiumTrial
+	// ═══════════════════════════════════════════════════════════════════════════
+
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: premiumTrial.id,
+		entity_id: entity1Id,
+	});
+	expect(preview1.total).toBe(0); // Trial → trial = $0
+	expectPreviewNextCycleCorrect({
+		preview: preview1,
+		startsAt: advancedTo + ms.days(14), // Fresh 14-day trial
+		total: 50, // Premium ($50) only entity-1 upgraded so far
+	});
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premiumTrial.id,
+		entity_id: entity1Id,
+		redirect_mode: "if_required",
+	});
+	await timeout(4000);
+
+	// Entity-1: premium with fresh 14-day trial
+	const entity1Mid = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity1Id,
+	);
+	await expectProductActive({
+		customer: entity1Mid,
+		productId: premiumTrial.id,
+	});
+	await expectProductTrialing({
+		customer: entity1Mid,
+		productId: premiumTrial.id,
+		trialEndsAt: advancedTo + ms.days(14),
+	});
+
+	// Entity-2: still on pro, but inherited 14-day trial end
+	const entity2Mid = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity2Id,
+	);
+	await expectProductTrialing({
+		customer: entity2Mid,
+		productId: proTrial.id,
+		trialEndsAt: advancedTo + ms.days(14),
+	});
+
+	// ═══════════════════════════════════════════════════════════════════════════
+	// STEP 2: Upgrade entity-2 to premiumTrial
+	// ═══════════════════════════════════════════════════════════════════════════
+
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: premiumTrial.id,
+		entity_id: entity2Id,
+	});
+	expect(preview2.total).toBe(0); // Trial → trial = $0
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premiumTrial.id,
+		entity_id: entity2Id,
+		redirect_mode: "if_required",
+	});
+	await timeout(4000);
+
+	// Entity-1: still premium, still trialing
+	const entity1After = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity1Id,
+	);
+	await expectProductActive({
+		customer: entity1After,
+		productId: premiumTrial.id,
+	});
+	await expectProductTrialing({
+		customer: entity1After,
+		productId: premiumTrial.id,
+		trialEndsAt: advancedTo + ms.days(14),
+	});
+
+	// Entity-2: now premium, trialing with same trial end
+	const entity2After = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entity2Id,
+	);
+	await expectProductActive({
+		customer: entity2After,
+		productId: premiumTrial.id,
+	});
+	await expectProductTrialing({
+		customer: entity2After,
+		productId: premiumTrial.id,
+		trialEndsAt: advancedTo + ms.days(14),
+	});
+
+	// All invoices should be $0 during trial
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 4,
+		latestTotal: 0,
+	});
+
+	// Verify Stripe subscription state
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		flags: { checkTrialing: true },
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Non-trialing entity upgrade to trial product
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -623,7 +812,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 4: mixed products af
  * - Fresh trial starts for entity-1's premium
  * - Entity-2's pro gets refunded (subscription moved to trial)
  */
-test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: non-trialing upgrade to trial product")}`, async () => {
+test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 6: non-trialing upgrade to trial product")}`, async () => {
 	const customerId = "trial-ent-notrial-to-trial";
 
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });

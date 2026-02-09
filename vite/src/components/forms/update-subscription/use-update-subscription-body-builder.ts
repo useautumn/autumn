@@ -96,10 +96,16 @@ export function useUpdateSubscriptionBodyBuilder(
 								};
 							}
 
+							const includedUsage =
+								typeof prepaidItem.included_usage === "number"
+									? prepaidItem.included_usage
+									: 0;
+
 							return {
 								feature_id: featureId,
 								quantity: new Decimal(quantity || 0)
 									.mul(prepaidItem.billing_units || 1)
+									.add(includedUsage)
 									.toNumber(),
 							};
 						},

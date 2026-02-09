@@ -59,10 +59,7 @@ export const executeAutumnBillingPlan = async ({
 	// 3. Update customer product options
 	if (updateCustomerProduct) {
 		const { customerProduct, updates } = updateCustomerProduct;
-		ctx.logger.debug(
-			`[execAutumnPlan] updating customer product: ${customerProduct.id}, updates:`,
-			updates,
-		);
+
 		await CusProductService.update({
 			db,
 			cusProductId: customerProduct.id,
@@ -89,7 +86,7 @@ export const executeAutumnBillingPlan = async ({
 
 	// 6. Upsert subscription (if provided)
 	if (autumnBillingPlan.upsertSubscription) {
-		await SubService.upsert({
+		await SubService.upsertByStripeId({
 			db,
 			subscription: autumnBillingPlan.upsertSubscription,
 		});

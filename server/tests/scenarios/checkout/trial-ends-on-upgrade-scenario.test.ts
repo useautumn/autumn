@@ -1,4 +1,8 @@
 import { test } from "bun:test";
+import {
+	expectProductNotTrialing,
+	expectProductTrialing,
+} from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -44,33 +48,30 @@ test(`${chalk.yellowBright("autumn-checkout: pro trial → premium (no trial) - 
 		actions: [s.attach({ productId: "pro-trial" })],
 	});
 
-	// Get customer state while trialing
-	const customerBefore = await autumnV1.customers.get(customerId);
-	console.log("customer during trial:", {
-		products: customerBefore.products?.map(
-			(p: { id: string; name: string | null; status?: string; trial_ends_at?: string | null }) => ({
-				id: p.id,
-				name: p.name,
-				status: p.status,
-				trial_ends_at: p.trial_ends_at,
-			}),
-		),
+	// Verify pro-trial is trialing before upgrade
+	await expectProductTrialing({
+		customerId,
+		productId: proTrial.id,
 	});
 
 	// 1. Preview the upgrade from trial to non-trial
-	const upgradePreview = await autumnV1.billing.previewAttach({
+	await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
 		redirect_mode: "always",
 	});
-	console.log("upgrade from trial preview:", upgradePreview);
 
 	// 2. Perform the upgrade with redirect_mode: "always" (Autumn checkout URL)
 	// This should end the trial and start billing immediately
-	const upgradeResult = await autumnV1.billing.attach({
+	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
 		redirect_mode: "always",
 	});
-	console.log("upgrade from trial result:", upgradeResult);
+
+	// Verify premium is active and not trialing after upgrade
+	await expectProductNotTrialing({
+		customerId,
+		productId: premium.id,
+	});
 });

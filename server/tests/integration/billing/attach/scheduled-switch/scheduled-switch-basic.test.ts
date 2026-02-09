@@ -666,7 +666,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 5: premium to pro 
 			s.products({ list: [premium, pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: premium.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
 		],
 	});
@@ -796,7 +796,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 6: pro to free wit
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
-			s.billing.attach({ productId: pro.id }),
+			s.billing.attach({ productId: pro.id, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Messages, value: 200, timeout: 2000 }),
 		],
 	});

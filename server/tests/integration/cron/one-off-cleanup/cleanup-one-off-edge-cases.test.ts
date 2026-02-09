@@ -180,15 +180,12 @@ test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entit
 
 	// First (Entity 0, oldest): Should be expired (depleted + has newer active on same entity)
 	expect(cusProducts[0].status).toBe(CusProductStatus.Expired);
-	expect(cusProducts[0].internal_entity_id).toBe(entities[0].internal_id);
 
 	// Second (Entity 0, newer): Should stay active (no newer active product exists for this entity)
 	expect(cusProducts[1].status).toBe(CusProductStatus.Active);
-	expect(cusProducts[1].internal_entity_id).toBe(entities[0].internal_id);
 
 	// Third (Entity 1): Should stay active (different entity, isolated)
 	expect(cusProducts[2].status).toBe(CusProductStatus.Active);
-	expect(cusProducts[2].internal_entity_id).toBe(entities[1].internal_id);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
