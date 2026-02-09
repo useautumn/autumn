@@ -54,7 +54,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		({
 			...discount,
 			coupon: normalizeStripeCouponAppliesTo(discount.source.coupon),
-		}) as StripeCustomerWithDiscount["discount"];
+		}) as unknown as StripeCustomerWithDiscount["discount"];
 
 	const createStripeSubscription = (params: {
 		id: string;

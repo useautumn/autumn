@@ -1,15 +1,18 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import {
 	cusProductToPrices,
 	ErrCode,
 	isPrepaidPrice,
+	nullish,
 	priceToFeature,
 	RecaseError,
 	type UpdateSubscriptionV0Params,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { billingPlanToNewActiveCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToNewActiveCustomerProduct";
 
 const checkInputFeatureQuantitiesAreValid = ({
@@ -35,6 +38,8 @@ const checkInputFeatureQuantitiesAreValid = ({
 	}).filter(isPrepaidPrice);
 
 	for (const option of params.options ?? []) {
+		if (nullish(option.quantity)) continue;
+
 		const targetPrepaidPrice = prepaidPrices.find((p) => {
 			const priceFeature = priceToFeature({
 				price: p,

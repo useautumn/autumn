@@ -1,4 +1,4 @@
-import type { AttachParamsV0 } from "@autumn/shared";
+import type { AttachParamsV0, BillingContextOverride } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
@@ -9,10 +9,15 @@ import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 export const setupAttachProductContext = async ({
 	ctx,
 	params,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV0;
+	contextOverride?: BillingContextOverride;
 }) => {
+	const { productContext } = contextOverride;
+	if (productContext) return productContext;
+
 	const { db, org, env } = ctx;
 
 	// 1. Fetch the product being attached
@@ -26,7 +31,7 @@ export const setupAttachProductContext = async ({
 
 	// 2. Handle custom items if provided
 	const {
-		fullProduct: attachProduct,
+		fullProduct: customFullProduct,
 		customPrices,
 		customEnts,
 	} = await setupCustomFullProduct({
@@ -36,7 +41,7 @@ export const setupAttachProductContext = async ({
 	});
 
 	return {
-		attachProduct,
+		fullProduct: customFullProduct,
 		customPrices,
 		customEnts,
 	};

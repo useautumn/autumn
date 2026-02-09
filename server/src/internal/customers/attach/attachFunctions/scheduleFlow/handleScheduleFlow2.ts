@@ -1,5 +1,5 @@
 import {
-	type AttachConfig,
+	type AttachBodyV0,
 	AttachFunctionResponseSchema,
 	SuccessCode,
 } from "@autumn/shared";
@@ -10,13 +10,11 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 export const handleScheduleFunction2 = async ({
 	ctx,
 	attachParams,
-	config,
-	skipInsertCusProduct = false,
+	body,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	config: AttachConfig;
-	skipInsertCusProduct?: boolean;
+	body: AttachBodyV0;
 }) => {
 	// const { logger, db } = ctx;
 	// const product = attachParams.products[0];
@@ -204,9 +202,10 @@ export const handleScheduleFunction2 = async ({
 	// 	}
 	// }
 
-	const { billingContext } = await billingActions.legacy.downgrade({
+	const { billingContext } = await billingActions.legacy.attach({
 		ctx,
 		attachParams,
+		planTiming: "end_of_cycle",
 	});
 
 	const curCusProduct = billingContext.currentCustomerProduct;

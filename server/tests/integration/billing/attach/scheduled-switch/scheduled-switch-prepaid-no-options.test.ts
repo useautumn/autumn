@@ -357,8 +357,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 4: in
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 2000,
 			}),
-			s.billing.attach({ productId: pro.id }), // NO options
+			s.billing.attach({ productId: pro.id, timeout: 2000 }), // NO options
 			s.advanceToNextInvoice(),
 		],
 	});
@@ -439,8 +440,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 5: al
 			s.billing.attach({
 				productId: premium.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
+				timeout: 2000,
 			}),
-			s.billing.attach({ productId: pro.id }), // NO options
+			s.billing.attach({ productId: pro.id, timeout: 2000 }), // NO options
 			s.advanceToNextInvoice(),
 		],
 	});

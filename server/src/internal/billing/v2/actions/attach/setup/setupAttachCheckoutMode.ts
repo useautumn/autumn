@@ -35,6 +35,10 @@ export const setupAttachCheckoutMode = ({
 	const productIsFree = isFreeProduct({ prices });
 	const productIsPaidRecurring = !productIsOneOff && !productIsFree;
 
+	if (redirectMode === "never") {
+		return null;
+	}
+
 	const getStripeCheckoutOrDirectBilling = () => {
 		// A. if no payment method
 		if (hasPaymentMethod) return null;

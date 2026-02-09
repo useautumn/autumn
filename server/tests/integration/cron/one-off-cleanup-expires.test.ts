@@ -11,6 +11,10 @@
 
 import { test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
+import {
+	expectProductStatusesByOrder,
+	getFullCustomerWithExpired,
+} from "@tests/integration/cron/one-off-cleanup/utils/oneOffCleanupTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -19,10 +23,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/actions/cleanupOneOff/cleanupOneOff.js";
-import {
-	expectProductStatusesByOrder,
-	getFullCustomerWithExpired,
-} from "./utils/oneOffCleanupTestUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Two one-time prepaid, both track to 0, cleanup - first expired

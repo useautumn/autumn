@@ -1,6 +1,7 @@
 import type {
 	AttachBillingContext,
 	AttachParamsV0,
+	BillingContextOverride,
 	BillingPlan,
 	BillingResult,
 } from "@autumn/shared";
@@ -19,8 +20,7 @@ import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumn
 export interface AttachResult {
 	billingContext: AttachBillingContext;
 	billingPlan?: BillingPlan;
-	billingResult?: BillingResult | null;
-	checkoutUrl?: string;
+	billingResult?: BillingResult;
 }
 
 export async function attach({
@@ -28,16 +28,19 @@ export async function attach({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	contextOverride,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV0;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	contextOverride?: BillingContextOverride;
 }): Promise<AttachResult> {
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
 		params,
+		contextOverride,
 	});
 
 	logAttachContext({ ctx, billingContext });
@@ -46,6 +49,7 @@ export async function attach({
 	const autumnBillingPlan = computeAttachPlan({
 		ctx,
 		attachBillingContext: billingContext,
+		params,
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
@@ -55,6 +59,7 @@ export async function attach({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
+		params,
 	});
 
 	// 4. Evaluate Stripe billing plan (handles checkout mode internally)
@@ -76,7 +81,6 @@ export async function attach({
 		return {
 			billingContext,
 			billingPlan,
-			billingResult: null,
 		};
 	}
 
@@ -107,6 +111,5 @@ export async function attach({
 		billingContext,
 		billingPlan,
 		billingResult,
-		checkoutUrl: billingResult.stripe.stripeCheckoutSession?.url ?? undefined,
 	};
 }

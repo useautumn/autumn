@@ -5,8 +5,6 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCancelFields } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelFields";
-import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
-import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 export const computeCustomPlanNewCustomerProduct = ({
@@ -33,24 +31,19 @@ export const computeCustomPlanNewCustomerProduct = ({
 		billingVersion,
 	} = updateSubscriptionContext;
 
-	const existingUsages = cusProductToExistingUsages({
-		cusProduct: customerProduct,
-		entityId: fullCustomer.entity?.id,
-	});
-
-	const existingRollovers = cusProductToExistingRollovers({
-		cusProduct: customerProduct,
-	});
-
-	ctx.logger.debug(
-		`[computeNewCustomerProduct] existing usages:`,
-		existingUsages,
-	);
-
 	const cancelFields = computeCancelFields({
 		cancelAction,
 		currentCustomerProduct,
 	});
+
+	// const existingUsages = cusProductToExistingUsages({
+	// 	cusProduct: customerProduct,
+	// 	entityId: fullCustomer.entity?.id,
+	// });
+
+	// const existingRollovers = cusProductToExistingRollovers({
+	// 	cusProduct: customerProduct,
+	// });
 
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
@@ -60,14 +53,23 @@ export const computeCustomPlanNewCustomerProduct = ({
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
-			existingUsages,
-			existingRollovers,
+			// existingUsages,
+			// existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 			billingVersion: billingVersion,
+
+			existingUsagesConfig: {
+				fromCustomerProduct: customerProduct,
+				carryAllConsumableFeatures: true,
+			},
+
+			existingRolloversConfig: {
+				fromCustomerProduct: customerProduct,
+			},
 		},
 
 		initOptions: {

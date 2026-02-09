@@ -8,13 +8,13 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext.js";
-import { handleStandaloneSetupCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleLegacyCheckoutSessionMetadata.ts/handleStandaloneSetupCheckout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { workflows } from "@/queue/workflows.js";
 import { getOptionsFromCheckoutSession } from "./getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleRemainingSets.js";
@@ -38,17 +38,8 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 		checkoutContext;
 
 	if (!metadata) {
-		if (checkoutContext.stripeCheckoutSession.mode === "setup") {
-			logger.info(
-				"checkout.completed: setup mode without metadata, handling standalone setup",
-			);
-			await handleStandaloneSetupCheckout({
-				ctx,
-				checkoutSession: checkoutContext.stripeCheckoutSession,
-			});
-			return null;
-		}
-		logger.info("checkout.completed: metadata not found, skipping");
+		// Standalone setup checkout (setup mode without metadata) is handled at top level
+		logger.info("checkout.completed: metadata not found, skipping legacy flow");
 		return null;
 	}
 
@@ -182,6 +173,17 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 				logger,
 			}),
 		);
+	}
+
+	for (const product of attachParams.products) {
+		logger.info("Adding task to queue for trigger checkout reward");
+		await workflows.triggerGrantCheckoutReward({
+			orgId: org.id,
+			env: attachParams.customer.env,
+			customerId: attachParams.customer.id ?? "",
+			productId: product.id,
+			stripeSubscriptionId: stripeSubscription?.id,
+		});
 	}
 
 	await Promise.all(batchInsertInvoice);

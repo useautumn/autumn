@@ -3,14 +3,11 @@ import {
 	type EntitlementWithFeature,
 	type FullProduct,
 	type Price,
+	priceUtils,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
-import {
-	getBillingType,
-	getPriceEntitlement,
-	priceIsOneOffAndTiered,
-} from "@server/internal/products/prices/priceUtils";
+import { getBillingType } from "@server/internal/products/prices/priceUtils";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/createStripePrepaidPriceV2.js";
@@ -135,8 +132,7 @@ export const createStripePriceIFNotExist = async ({
 	config.stripe_price_id = stripePrice?.id;
 	config.stripe_product_id = stripeProd?.id;
 
-	const relatedEnt = getPriceEntitlement(price, entitlements);
-	const isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
+	const isOneOffAndTiered = priceUtils.isTieredOneOff({ price, product });
 
 	// 1. If fixed price, just create price
 	if (

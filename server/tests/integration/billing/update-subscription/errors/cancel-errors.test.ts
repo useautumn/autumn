@@ -221,7 +221,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 				free_trial: {
 					length: 7,
 					duration: FreeTrialDuration.Day,
-					unique_fingerprint: false,
 					card_required: true,
 				},
 			});
@@ -356,7 +355,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass free_trial when cancel
 					length: 14,
 					duration: FreeTrialDuration.Day,
 					card_required: true,
-					unique_fingerprint: false,
 				},
 			});
 		},

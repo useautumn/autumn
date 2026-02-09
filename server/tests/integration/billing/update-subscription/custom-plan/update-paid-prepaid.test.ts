@@ -449,7 +449,7 @@ test.concurrent(`${chalk.yellowBright("prepaid: add included usage")}`, async ()
 	);
 
 	// Add 50 included usage (free units)
-	const includedUsage = 50;
+	const includedUsage = 100;
 	const newPrepaidItem = items.prepaidMessages({
 		includedUsage,
 		billingUnits,
@@ -460,13 +460,12 @@ test.concurrent(`${chalk.yellowBright("prepaid: add included usage")}`, async ()
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [newPrepaidItem, priceItem],
-		options: [{ feature_id: TestFeature.Messages, quantity }],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
 	// Adding included usage doesn't change prepaid charge (same packs)
-	expect(preview.total).toBe(0);
+	expect(preview.total).toBe(-10);
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -477,8 +476,8 @@ test.concurrent(`${chalk.yellowBright("prepaid: add included usage")}`, async ()
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: includedUsage + quantity,
-		balance: includedUsage + quantity - messagesUsed,
+		includedUsage: quantity,
+		balance: quantity - messagesUsed,
 		usage: messagesUsed,
 	});
 
@@ -751,20 +750,20 @@ test.concurrent(`${chalk.yellowBright("prepaid: change price, billing units, and
 	// New: 200 / 50 = 4 packs * $5 = $20
 	// Total: $20 - $20 = $0
 	const oldPacks = Math.ceil(quantity / oldBillingUnits);
-	const newPacks = Math.ceil(quantity / newBillingUnits);
+	const newPacks = Math.ceil((quantity - newIncludedUsage) / newBillingUnits);
 	expect(preview.total).toBe(newPacks * newPrice - oldPacks * oldPrice);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance = newIncludedUsage + quantity - messagesUsed = 100 + 200 - 50 = 250
-	// Customer's included_usage = newIncludedUsage + quantity = 100 + 200 = 300
+	// Balance = quantity - messagesUsed = 200 - 50 = 150
+	// Customer's included_usage = quantity = 200
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: newIncludedUsage + quantity,
-		balance: newIncludedUsage + quantity - messagesUsed,
+		includedUsage: quantity,
+		balance: quantity - messagesUsed,
 		usage: messagesUsed,
 	});
 

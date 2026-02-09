@@ -325,7 +325,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 		customer_id: customerId,
 		product_id: free.id,
 		items: [prepaidPerEntity],
-		options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+		options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
