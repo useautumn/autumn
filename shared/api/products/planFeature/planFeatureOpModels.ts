@@ -12,6 +12,9 @@ import {
 export const UpdatePlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
+		entity_feature_id: z.string().nullish().meta({
+			description: "The entity feature ID of the product item if applicable.",
+		}),
 		granted_balance: z.number().optional(),
 		unlimited: z.boolean().optional(),
 

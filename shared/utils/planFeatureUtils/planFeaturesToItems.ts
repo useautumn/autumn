@@ -140,7 +140,7 @@ export const planFeaturesToItems = ({
 			interval,
 			interval_count: planFeature.reset?.interval_count,
 
-			entity_feature_id: null,
+			entity_feature_id: planFeature.entity_feature_id ?? null,
 
 			price: planFeature.price?.amount,
 

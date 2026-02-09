@@ -15,6 +15,9 @@ export const ApiPlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
 		feature: ApiFeatureV0Schema.optional(),
+		entity_feature_id: z.string().nullish().meta({
+			description: "The entity feature ID of the product item if applicable.",
+		}),
 
 		granted_balance: z.number(),
 		unlimited: z.boolean(),

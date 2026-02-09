@@ -163,8 +163,7 @@ export const itemsToPlanFeatures = ({
 
 			display: getProductItemDisplay({ item, features }),
 
-			// Other fields
-			// entity_feature_id: item.entity_feature_id,
+			entity_feature_id: item.entity_feature_id,
 		} satisfies ApiPlanFeature);
 	});
 };
