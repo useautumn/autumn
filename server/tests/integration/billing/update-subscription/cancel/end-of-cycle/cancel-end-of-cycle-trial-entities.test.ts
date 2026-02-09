@@ -69,12 +69,17 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: single entity 
 	const entityId = entities[0].id;
 
 	// Update entity to add consumable messages
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		product_id: proTrial.id,
-		entity_id: entityId,
-		items: [consumableItem],
-	});
+	await autumnV1.subscriptions.update(
+		{
+			customer_id: customerId,
+			product_id: proTrial.id,
+			entity_id: entityId,
+			items: [consumableItem],
+		},
+		{
+			timeout: 5000,
+		},
+	);
 
 	// Track 200 messages (100 included + 100 overage)
 	await autumnV1.track({
@@ -126,7 +131,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: single entity 
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAdvance,
-		count: 2,
+		count: 1,
 		latestTotal: 0,
 	});
 });

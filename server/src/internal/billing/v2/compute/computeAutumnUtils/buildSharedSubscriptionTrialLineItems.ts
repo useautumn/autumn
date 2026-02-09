@@ -1,9 +1,13 @@
-import { cp, type FullCusProduct, type LineItem } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
+import {
+	type BillingContext,
+	cp,
+	type FullCusProduct,
+	type LineItem,
+} from "@autumn/shared";
 import chalk from "chalk";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
@@ -100,11 +104,11 @@ export const buildSharedSubscriptionTrialLineItems = ({
 	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionBillingContext;
+	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): LineItem[] => {
 	const { logger } = ctx;
-	const { fullCustomer, stripeSubscription } = billingContext;
+	const { fullCustomer, stripeSubscription, trialContext } = billingContext;
 
 	if (!stripeSubscription) return [];
 
@@ -120,6 +124,7 @@ export const buildSharedSubscriptionTrialLineItems = ({
 		direction = "refund"; // Starting trial → refund sibling products
 	}
 
+	if (!trialContext?.appliesToBilling) return [];
 	if (!direction) return [];
 
 	const siblingCustomerProducts = getSiblingCustomerProducts({

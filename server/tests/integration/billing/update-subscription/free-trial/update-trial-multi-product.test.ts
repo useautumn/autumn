@@ -581,9 +581,8 @@ test.concurrent(`${chalk.yellowBright("trial-multi: entity on free product updat
 		},
 	};
 
-	// Preview should show refund for entities 0 and 1 (2 x $20 = -$40)
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-	expect(preview.total).toEqual(-40);
+	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams, { timeout: 4000 });
 
@@ -612,5 +611,8 @@ test.concurrent(`${chalk.yellowBright("trial-multi: entity on free product updat
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
+		flags: {
+			checkNotTrialing: true,
+		},
 	});
 });

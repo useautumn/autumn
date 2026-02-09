@@ -47,11 +47,8 @@ export const handleCreateCoupon = createRoute({
 			]);
 
 			await initRewardStripePrices({
-				db,
+				ctx,
 				prices,
-				org,
-				env,
-				logger,
 			});
 
 			await createStripeCoupon({

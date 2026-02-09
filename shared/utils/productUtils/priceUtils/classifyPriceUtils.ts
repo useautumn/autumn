@@ -1,6 +1,11 @@
+import type { Feature } from "@models/featureModels/featureModels";
+import { Infinite } from "@models/productModels/productEnums";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
-import type { UsagePriceConfig } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
+import type {
+	UsagePriceConfig,
+	UsageTier,
+} from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums";
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
 import { getBillingType } from "../priceUtils";
@@ -72,4 +77,29 @@ export const isPrepaidPrice = (
 ): price is Price & { config: UsagePriceConfig } => {
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.UsageInAdvance;
+};
+
+export const isFinalTier = (
+	tier: UsageTier,
+): tier is UsageTier & { to: typeof Infinite | -1 } => {
+	return tier.to === -1 || tier.to === Infinite;
+};
+
+export const isNotFinalTier = (
+	tier: UsageTier,
+): tier is UsageTier & { to: number } => {
+	return tier.to !== -1 && tier.to !== Infinite;
+};
+
+export const priceOnFeature = ({
+	price,
+	feature,
+}: {
+	price: Price;
+	feature: Feature;
+}) => {
+	return (
+		price.config.internal_feature_id === feature.internal_id ||
+		price.config.feature_id === feature.id
+	);
 };

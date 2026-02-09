@@ -5,6 +5,9 @@ export type Proration = {
 	end: number;
 };
 
+/**
+ * @deprecated Use `applyProration` from `@shared/utils/billingUtils/invoicingUtils/prorationUtils/applyProration` instead
+ */
 export const calculateProrationAmount = ({
 	periodEnd,
 	periodStart,

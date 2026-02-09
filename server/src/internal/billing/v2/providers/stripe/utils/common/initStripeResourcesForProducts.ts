@@ -1,9 +1,7 @@
+import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import { cusProductToProduct } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
 export const initStripeResourcesForBillingPlan = async ({
@@ -41,24 +39,16 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const batchPriceUpdates = [];
 
-	const stripeCli = createStripeCli({
-		org,
-		env,
-	});
-
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	for (const product of newProducts) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({
-					db,
-					stripeCli,
+					ctx,
 					price,
 					entitlements: product.entitlements,
 					product,
-					org,
-					logger,
 					internalEntityId,
 					useCheckout: false,
 				}),

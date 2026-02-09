@@ -1,0 +1,78 @@
+import type {
+	AttachBillingContext,
+	AttachParamsV0,
+	AutumnBillingPlan,
+} from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
+import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
+import { finalizeAttachPlan } from "./finalizeAttachPlan";
+
+/**
+ * Computes the billing plan for attaching a product.
+ *
+ * Scenarios:
+ * - Add-on/One-time (no currentCustomerProduct): Just insert new product
+ * - First main product (no currentCustomerProduct): Just insert new product
+ * - Upgrade (currentCustomerProduct exists, planTiming=immediate): Expire current, insert new active
+ * - Downgrade (currentCustomerProduct exists, planTiming=end_of_cycle): Cancel current at end of cycle, insert new scheduled
+ */
+export const computeAttachPlan = ({
+	ctx,
+	attachBillingContext,
+	params,
+}: {
+	ctx: AutumnContext;
+	attachBillingContext: AttachBillingContext;
+	params: AttachParamsV0;
+}): AutumnBillingPlan => {
+	const {
+		currentCustomerProduct,
+		scheduledCustomerProduct,
+		planTiming,
+		customPrices,
+		customEnts,
+		trialContext,
+	} = attachBillingContext;
+
+	const newCustomerProduct = computeAttachNewCustomerProduct({
+		ctx,
+		attachBillingContext,
+	});
+
+	const updateCustomerProduct = computeAttachTransitionUpdates({
+		attachBillingContext,
+	});
+
+	const { allLineItems: lineItems, updateCustomerEntitlements } =
+		planTiming === "immediate"
+			? buildAutumnLineItems({
+					ctx,
+					newCustomerProducts: [newCustomerProduct],
+					deletedCustomerProduct: currentCustomerProduct,
+					billingContext: attachBillingContext,
+					includeArrearLineItems: true,
+				})
+			: { allLineItems: [], updateCustomerEntitlements: [] };
+
+	let plan: AutumnBillingPlan = {
+		insertCustomerProducts: [newCustomerProduct],
+		updateCustomerProduct,
+		deleteCustomerProduct: scheduledCustomerProduct,
+		customPrices,
+		customEntitlements: customEnts,
+		customFreeTrial: trialContext?.customFreeTrial,
+		lineItems,
+		updateCustomerEntitlements,
+	};
+
+	plan = finalizeAttachPlan({
+		ctx,
+		plan,
+		attachBillingContext,
+		params,
+	});
+
+	return plan;
+};

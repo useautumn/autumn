@@ -10,6 +10,7 @@ export type SheetType =
 	| "new-feature"
 	| "select-feature"
 	| "attach-product"
+	| "attach-product-v2"
 	| "subscription-detail"
 	| "subscription-update"
 	| "subscription-update-v2"

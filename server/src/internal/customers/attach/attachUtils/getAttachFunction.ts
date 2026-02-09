@@ -36,12 +36,10 @@ import {
 export const getAttachFunction = async ({
 	branch,
 	attachParams,
-	attachBody,
 	config,
 }: {
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	attachBody: AttachBodyV0;
 	config: AttachConfig;
 }) => {
 	const { onlyCheckout } = config;
@@ -128,7 +126,6 @@ export const runAttachFunction = async ({
 	const attachFunction = await getAttachFunction({
 		branch,
 		attachParams,
-		attachBody,
 		config,
 	});
 
@@ -176,7 +173,7 @@ export const runAttachFunction = async ({
 		return await handleRenewProduct({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 
@@ -247,7 +244,7 @@ export const runAttachFunction = async ({
 		return await handleScheduleFunction2({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 
@@ -258,8 +255,6 @@ export const runAttachFunction = async ({
 		return await handleUpgradeFlow({
 			ctx,
 			attachParams,
-			config,
-			branch,
 		});
 	}
 
@@ -267,7 +262,7 @@ export const runAttachFunction = async ({
 		return await handleUpdateQuantityFunction({
 			ctx,
 			attachParams,
-			config,
+			body: attachBody,
 		});
 	}
 

@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	type ApiVersion,
+	BillingVersion,
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
@@ -151,6 +152,7 @@ const initCusProduct = ({
 		internal_entity_id: internalEntityId,
 		entity_id: entityId,
 		api_semver: apiVersion || null,
+		billing_version: BillingVersion.V1,
 	};
 };
 

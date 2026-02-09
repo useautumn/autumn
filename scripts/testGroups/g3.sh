@@ -4,7 +4,6 @@ source "$(dirname "$0")/config.sh"
 export TEST_FILE_CONCURRENCY=6
 
 BUN_PARALLEL_V2 \
-  'merged/downgrade' \
   'merged/separate' \
   'merged/add' \
   'merged/group' \

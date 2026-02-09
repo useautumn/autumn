@@ -73,6 +73,5 @@ export const handleStripeSubscriptionUpdated = async ({
 	logCustomerProductUpdates({
 		ctx,
 		eventContext: subscriptionUpdatedContext,
-		logPrefix: "[sub.updated]",
 	});
 };

@@ -5,7 +5,7 @@ import {
 	formatAmount,
 	getFeatureInvoiceDescription,
 	InternalError,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	priceToFeature,
 	stripeToAtmnAmount,
 	type UsagePriceConfig,
@@ -40,7 +40,7 @@ export const getCurContUseItems = async ({
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 	const curEnts = cusProductToEnts({ cusProduct: curCusProduct });
 
-	const items: PreviewLineItem[] = [];
+	const items: LegacyPreviewLineItem[] = [];
 	const now = attachParams.now || Date.now();
 
 	for (const item of sub.items.data) {

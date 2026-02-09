@@ -10,6 +10,7 @@ COPY server/package.json ./server/package.json
 COPY shared/package.json ./shared/package.json
 COPY vite/package.json ./vite/package.json
 COPY scripts/package.json ./scripts/package.json
+COPY apps/checkout/package.json ./apps/checkout/package.json
 
 # Install dependencies
 RUN bun install --ignore-scripts

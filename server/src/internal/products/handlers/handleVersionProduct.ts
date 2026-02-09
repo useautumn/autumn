@@ -125,15 +125,12 @@ export const handleVersionProductV2 = async ({
 	}
 
 	await initProductInStripe({
-		db,
+		ctx,
 		product: {
 			...newProduct,
 			prices: customPrices,
 			entitlements: getEntsWithFeature({ ents: customEnts, features }),
 		} as FullProduct,
-		org,
-		env,
-		logger: ctx.logger,
 	});
 
 	await addTaskToQueue({

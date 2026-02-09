@@ -78,12 +78,14 @@ export const getPlanResponse = async ({
 	fullCus,
 	db,
 	currency = "usd",
+	expand = [],
 }: {
 	product: FullProduct;
 	features: Feature[];
 	fullCus?: FullCustomer;
 	db?: DrizzleCli;
 	currency?: string;
+	expand?: string[];
 }): Promise<ApiPlan> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -126,6 +128,7 @@ export const getPlanResponse = async ({
 	let planFeatures = itemsToPlanFeatures({
 		items: featureItems,
 		features,
+		expand,
 	});
 
 	planFeatures = planFeatures.map((pf) => ({ ...pf, proration: undefined }));

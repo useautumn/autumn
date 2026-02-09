@@ -9,7 +9,9 @@ import {
 	type ApiCusProductV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
+	type AttachParamsV0Input,
 	type BalancesUpdateParams,
+	type BillingPreviewResponse,
 	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
@@ -22,6 +24,7 @@ import {
 	ErrCode,
 	type LegacyVersion,
 	type OrgConfig,
+	type ProductItem,
 	type RewardRedemption,
 	type SetupPaymentParams,
 	type TrackParams,
@@ -834,8 +837,52 @@ export class AutumnInt {
 		},
 	};
 
-	setupPayment = async (params: SetupPaymentParams) => {
-		const data = await this.post(`/setup_payment`, params);
-		return data;
+	billing = {
+		attach: async (
+			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
+			{
+				skipWebhooks,
+				idempotencyKey,
+				timeout = 2000,
+			}: {
+				skipWebhooks?: boolean;
+				idempotencyKey?: string;
+				timeout?: number;
+			} = {},
+		) => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+			if (idempotencyKey !== undefined) {
+				headers["idempotency-key"] = idempotencyKey;
+			}
+
+			const data = await this.post(
+				`/billing/attach`,
+				{ redirect_mode: "if_required", ...params },
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			if (timeout) {
+				await new Promise((resolve) => setTimeout(resolve, timeout));
+			}
+			return data;
+		},
+
+		previewAttach: async (
+			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
+		): Promise<BillingPreviewResponse> => {
+			const data = await this.post(`/billing/preview_attach`, {
+				...params,
+				redirect_mode: "if_required",
+			});
+			return data;
+		},
+
+		setupPayment: async (params: SetupPaymentParams) => {
+			const data = await this.post(`/setup_payment`, params);
+			return data;
+		},
 	};
 }

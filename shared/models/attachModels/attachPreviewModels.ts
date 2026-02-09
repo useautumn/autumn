@@ -4,7 +4,7 @@ import type { UsageModel } from "../productV2Models/productItemModels/productIte
 import type { AttachBranch } from "./attachEnums/AttachBranch.js";
 import type { AttachFunction } from "./attachEnums/AttachFunction.js";
 
-export interface PreviewLineItem {
+export interface LegacyPreviewLineItem {
 	amount?: number | undefined;
 	description: string;
 	price: string;
@@ -19,11 +19,11 @@ export interface AttachPreview {
 	options: any;
 	new_items: any;
 	due_today: {
-		line_items: PreviewLineItem[];
+		line_items: LegacyPreviewLineItem[];
 		total: number;
 	};
 	due_next_cycle: {
-		line_items: PreviewLineItem[];
+		line_items: LegacyPreviewLineItem[];
 		due_at: number;
 	};
 	free_trial?: FreeTrial | null;

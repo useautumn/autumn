@@ -1,11 +1,14 @@
 import { expect } from "bun:test";
 import {
 	type AppEnv,
+	BillingVersion,
 	CusProductStatus,
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
 	type FullCustomer,
+	isConsumablePrice,
+	isOneOffPrice,
 	type Organization,
 } from "@autumn/shared";
 import { notNullish } from "@shared/utils/utils.js";
@@ -34,7 +37,6 @@ import {
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
 import type { TestContext } from "../../utils/testInitUtils/createTestContext.js";
-import { cusProductToSubIds } from "../mergeUtils.test.js";
 
 const compareActualItems = async ({
 	actualItems,
@@ -52,20 +54,37 @@ const compareActualItems = async ({
 	db: DrizzleCli;
 }) => {
 	for (const expectedItem of expectedItems) {
-		const actualItem = actualItems.find(
-			(item: any) => item.price === (expectedItem as any).price,
+		let actualItem = actualItems.find(
+			(item) => item.price === expectedItem.price,
 		);
 
 		if (!actualItem) {
+			const autumnPrice = await PriceService.getByStripeId({
+				db,
+				stripePriceId: expectedItem.price,
+			});
+
+			if (autumnPrice && isConsumablePrice(autumnPrice)) {
+				const config = autumnPrice.config;
+				// Try the other price ID (if expected was empty_price, try stripe_price and vice versa)
+				const alternatePriceId =
+					expectedItem.price === config.stripe_price_id
+						? config.stripe_empty_price_id
+						: config.stripe_price_id;
+
+				if (alternatePriceId) {
+					actualItem = actualItems.find((i) => i.price === alternatePriceId);
+				}
+			}
+		}
+
+		if (!actualItem) {
 			// Search for price by stripe id
-			const price = await PriceService.getByStripeId({
+			await PriceService.getByStripeId({
 				db,
 				stripePriceId: expectedItem.price,
 			});
 			console.log(`(${type}) Missing item:`, expectedItem);
-			// if (price) {
-			//   console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
-			// }
 
 			// Actual items
 			console.log(`(${type}) Actual items (${actualItems.length}):`);
@@ -139,6 +158,7 @@ export const expectSubToBeCorrect = async ({
 	subId,
 	rewards,
 	subCount,
+	billingVersion,
 }: {
 	db: DrizzleCli;
 	customerId: string;
@@ -150,10 +170,12 @@ export const expectSubToBeCorrect = async ({
 	shouldBeTrialing?: boolean;
 	flags?: {
 		checkNotTrialing?: boolean;
+		checkTrialing?: boolean;
 	};
 	subId?: string;
 	rewards?: string[];
 	subCount?: number;
+	billingVersion?: BillingVersion;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
@@ -180,7 +202,9 @@ export const expectSubToBeCorrect = async ({
 	let cusProducts = fullCus.customer_products;
 
 	if (!subId) {
-		const subIds = cusProductToSubIds({ cusProducts });
+		const subIds = [
+			...new Set(cusProducts.flatMap((cp) => cp.subscription_ids || [])),
+		];
 		subId = subIds[0];
 		expect(subIds.length).toBe(1);
 	} else {
@@ -315,6 +339,8 @@ export const expectSubToBeCorrect = async ({
 				internalEntityId: cusProduct.internal_entity_id || undefined,
 			});
 
+			if (isOneOffPrice(price)) continue; // One-off prices are not in the subscription
+
 			const res = priceToStripeItem({
 				price,
 				relatedEnt,
@@ -325,14 +351,14 @@ export const expectSubToBeCorrect = async ({
 				withEntity: Boolean(cusProduct.internal_entity_id),
 				isCheckout: false,
 				apiVersion,
+				isPrepaidPriceV2:
+					(billingVersion ?? cusProduct.billing_version) === BillingVersion.V2,
 			});
 
 			if (res?.lineItem && nullish(res.lineItem.quantity)) {
 				res.lineItem.quantity = 0;
 			}
 
-			// console.log("API VERSION:", apiVersion);
-			// console.log("LINE ITEM:", res?.lineItem);
 			if (options?.upcoming_quantity && res?.lineItem) {
 				res.lineItem.quantity = options.upcoming_quantity;
 			}
@@ -409,6 +435,10 @@ export const expectSubToBeCorrect = async ({
 
 	if (flags?.checkNotTrialing) {
 		expect(sub.status).not.toBe("trialing");
+	}
+
+	if (flags?.checkTrialing) {
+		expect(sub.status).toBe("trialing");
 	}
 
 	// Should be canceled

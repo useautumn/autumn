@@ -15,7 +15,7 @@ import {
 	isPrepaidPrice,
 	isUsagePrice,
 	type Organization,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	type Price,
 	priceToFeature,
 	priceToInvoiceAmount,
@@ -179,7 +179,7 @@ export const getItemsForNewProduct = async ({
 	const { org, features } = attachParams;
 	const now = attachParams.now || Date.now();
 
-	const items: PreviewLineItem[] = [];
+	const items: LegacyPreviewLineItem[] = [];
 
 	sortPricesByType(newProduct.prices);
 

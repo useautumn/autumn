@@ -20,7 +20,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { createTestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 
-const SEED_PREFIX = "seed-cancel-test";
+const SEED_PREFIX = "seed";
 
 async function seedScenarios() {
 	// Clear and setup org first
@@ -40,7 +40,7 @@ async function seedScenarios() {
 			items.consumableWords({ includedUsage: 100 }), // 100 free words, then $0.05/word overage
 			items.allocatedWorkflows({ includedUsage: 3 }), // 3 free workflows, $10/workflow overage
 			items.prepaidMessages({
-				includedUsage: 50,
+				includedUsage: 100,
 				billingUnits: 100,
 				price: 10,
 			}), // 50 free messages, $10/100 pack
@@ -83,12 +83,26 @@ async function seedScenarios() {
 		],
 	});
 
+	const growthProduct = products.growth({
+		id: "growth",
+		items: [
+			items.consumableWords({ includedUsage: 1000 }),
+			items.allocatedWorkflows({ includedUsage: 10 }),
+			items.prepaidMessages({
+				includedUsage: 200,
+				billingUnits: 100,
+				price: 6,
+			}), // 200 free messages, $8/100 pack
+		],
+	});
+
 	const allProducts = [
 		proProduct,
 		recurringAddOn,
 		freeProduct,
 		oneTimeProduct,
 		premiumProduct,
+		growthProduct,
 	];
 
 	// ═══════════════════════════════════════════════════════════════════

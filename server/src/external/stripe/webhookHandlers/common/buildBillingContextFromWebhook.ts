@@ -1,4 +1,6 @@
+import type { BillingContext } from "@autumn/shared";
 import {
+	BillingVersion,
 	type FullCusProduct,
 	type FullCustomer,
 	ms,
@@ -7,7 +9,6 @@ import {
 import type Stripe from "stripe";
 import type { ExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
 
 /**
  * Common fields between InvoiceCreatedContext and StripeSubscriptionDeletedContext.
@@ -93,5 +94,7 @@ export const buildBillingContextForArrearInvoice = ({
 		stripeCustomer: stripeSubscription.customer,
 		stripeSubscription,
 		paymentMethod: paymentMethod ?? undefined,
+
+		billingVersion: BillingVersion.V2,
 	};
 };

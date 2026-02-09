@@ -12,32 +12,43 @@ export const initCustomerV3 = async ({
 	customerData,
 	attachPm,
 	withTestClock = true,
+	existingTestClockId,
 	withDefault = false,
 	defaultGroup = customerId,
 	skipWebhooks,
 	sendEmailReceipts,
+	nameOverride,
+	emailOverride,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	attachPm?: "success" | "fail" | "authenticate" | "alipay";
 	customerData?: CustomerData;
 	withTestClock?: boolean;
+	existingTestClockId?: string;
 	withDefault?: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
 	sendEmailReceipts?: boolean;
+	nameOverride?: string | null;
+	emailOverride?: string | null;
 }) => {
-	const name = customerId;
-	const email = `${customerId}@example.com`;
+	// Use override if provided (including null), otherwise default to customerId-based values
+	const name =
+		nameOverride !== undefined ? (nameOverride ?? undefined) : customerId;
+	const email =
+		emailOverride !== undefined
+			? (emailOverride ?? undefined)
+			: `${customerId}@example.com`;
 	const { stripeCli } = ctx;
 	const autumn = new AutumnInt({
 		version: ApiVersion.V1_2,
 		secretKey: ctx.orgSecretKey,
 	});
 
-	let testClockId: string | undefined;
+	let testClockId: string | undefined = existingTestClockId;
 
-	if (withTestClock) {
+	if (withTestClock && !existingTestClockId) {
 		const testClock = await stripeCli.testHelpers.testClocks.create({
 			frozen_time: Math.floor(Date.now() / 1000),
 		});

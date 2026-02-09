@@ -16,13 +16,16 @@ Should Autumn create a manual invoice?
 1. Is this a subscription CREATE action?
    └── YES → NO manual invoice (Stripe creates one automatically)
 
-2. Is this a subscription UPDATE that removes a trial?
+2. No subscription AND no subscription action? (one-time product)
+   └── YES → Create standalone invoice
+
+3. Is this a subscription UPDATE that removes a trial?
    └── YES → NO manual invoice (Stripe creates one automatically)
 
-3. Is there an existing subscription being updated?
-   └── NO → NO manual invoice (nothing to invoice against)
+4. Is there an existing subscription being updated?
+   └── NO → NO manual invoice (edge case guard)
 
-4. Otherwise:
+5. Otherwise:
    └── YES → Create manual invoice
 ```
 
@@ -46,18 +49,24 @@ export const shouldCreateManualStripeInvoice = ({
   const isCreateAction = stripeSubscriptionAction?.type === "create";
   if (isCreateAction) return false;
 
-  // Case 2: No subscription exists → Nothing to invoice against
   const { stripeSubscription } = billingContext;
+
+  // Case 2: No subscription and no subscription action → create standalone invoice for one-time products
+  if (!stripeSubscription && !stripeSubscriptionAction) {
+    return true;
+  }
+
+  // Case 3: No subscription but has subscription action (shouldn't happen, but guard)
   if (!stripeSubscription) return false;
 
-  // Case 3: Update removes trial → Stripe handles invoice
+  // Case 4: Update removes trial → Stripe handles invoice
   const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
     billingContext,
     stripeSubscriptionAction,
   });
   if (updateWillCreateInvoice) return false;
 
-  // Case 4: Otherwise → We create manual invoice
+  // Case 5: Otherwise → We create manual invoice
   return true;
 };
 ```

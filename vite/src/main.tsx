@@ -1,8 +1,3 @@
-// Buffer polyfill for @owpz/ksuid browser compatibility
-import { Buffer } from "buffer";
-
-globalThis.Buffer = Buffer;
-
 import "./index.css";
 import "./styles/button.css";
 

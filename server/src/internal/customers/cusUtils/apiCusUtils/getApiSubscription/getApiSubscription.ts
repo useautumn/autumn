@@ -100,6 +100,11 @@ export const getApiSubscription = async ({
 		quantity: cusProduct.quantity,
 		current_period_start: stripeSubData?.current_period_start || null,
 		current_period_end: stripeSubData?.current_period_end || null,
+		feature_quantities: cusProduct.options.map((option) => ({
+			feature_id: option.feature_id,
+			quantity: option.quantity,
+			upcoming_quantity: option.upcoming_quantity,
+		})),
 	});
 
 	return {

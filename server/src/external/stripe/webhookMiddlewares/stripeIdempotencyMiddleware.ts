@@ -16,6 +16,11 @@ export const stripeIdempotencyMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,
 ) => {
+	if (process.env.NODE_ENV === "development") {
+		await next();
+		return;
+	}
+
 	const ctx = c.get("ctx");
 	const { stripeEvent, org, env } = ctx;
 

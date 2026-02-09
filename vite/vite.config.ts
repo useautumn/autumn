@@ -24,8 +24,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
-			// Buffer polyfill for browser compatibility
-			buffer: "buffer",
 
 			// Hide Radix UI imports with cleaner aliases
 			"@radix/accordion": "@radix-ui/react-accordion",
@@ -45,8 +43,6 @@ export default defineConfig({
 	},
 
 	optimizeDeps: {
-		// Force pre-bundle @owpz/ksuid for proper ESM handling
-		include: ["@owpz/ksuid", "buffer"],
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",
@@ -58,6 +54,7 @@ export default defineConfig({
 			"drizzle-orm",
 			"@date-fns/utc",
 			"date-fns",
+			"@orpc/contract",
 		],
 	},
 

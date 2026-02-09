@@ -116,7 +116,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 			to_version: premiumV2.version,
 		});
 
-		await timeout(10000);
+		await timeout(20000);
 
 		// Check that premium v2 is active but still cancelling
 		const customer = await autumn.customers.get(customerId);

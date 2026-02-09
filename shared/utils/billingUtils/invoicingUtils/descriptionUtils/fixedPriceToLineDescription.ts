@@ -1,4 +1,4 @@
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItemContext } from "@models/billingModels/lineItem/lineItemContext";
 import type { FixedPriceConfig } from "../../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { formatAmount } from "../../../common/formatUtils/formatAmount";

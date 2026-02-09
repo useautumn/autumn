@@ -2,7 +2,7 @@ import {
 	cusProductsToCusPrices,
 	type FullCustomerEntitlement,
 	type FullEntitlement,
-	type PreviewLineItem,
+	type LegacyPreviewLineItem,
 	type Price,
 	shouldProrate,
 } from "@autumn/shared";
@@ -36,7 +36,7 @@ export const priceToContUseItem = async ({
 	attachParams: AttachParams;
 	sub: Stripe.Subscription | undefined;
 	logger: any;
-	curItem: PreviewLineItem;
+	curItem: LegacyPreviewLineItem;
 }) => {
 	const { cusProducts, entities, internalEntityId, now } = attachParams;
 	const product = attachParamsToProduct({ attachParams });
@@ -140,7 +140,7 @@ export const priceToContUseItem = async ({
 			oldItem: null,
 			newItems: [res.newUsageItem].filter((item) =>
 				notNullish(item),
-			) as PreviewLineItem[],
+			) as LegacyPreviewLineItem[],
 			replaceables: res.replaceables,
 		};
 	} else {
@@ -148,7 +148,7 @@ export const priceToContUseItem = async ({
 			oldItem: res.oldItem,
 			newItems: [res.newItem, res.newUsageItem].filter((item) =>
 				notNullish(item),
-			) as PreviewLineItem[],
+			) as LegacyPreviewLineItem[],
 			replaceables: res.replaceables,
 		};
 	}

@@ -8,10 +8,10 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
-import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
+import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
@@ -82,14 +82,7 @@ export const handleStripeWebhookEvent = async (
 				break;
 
 			case "checkout.session.completed": {
-				const checkoutSession = event.data.object;
-				await handleCheckoutSessionCompleted({
-					ctx,
-					db,
-					data: checkoutSession,
-					org,
-					env,
-				});
+				await handleStripeCheckoutSessionCompleted({ ctx, event });
 				break;
 			}
 		}

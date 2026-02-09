@@ -227,13 +227,13 @@ const defaultTrial = ({
 });
 
 /**
- * One-off product - one-time purchase with $10 base price
+ * Premium product - $50/month base price
  * @param items - Product items (features)
- * @param id - Product ID (default: "one-off")
+ * @param id - Product ID (default: "premium")
  */
-const oneOff = ({
+const premium = ({
 	items,
-	id = "one-off",
+	id = "premium",
 }: {
 	items: ProductItem[];
 	id?: string;
@@ -241,8 +241,72 @@ const oneOff = ({
 	constructProduct({
 		id,
 		items: [...items],
+		type: "premium",
+		isDefault: false,
+	});
+
+/**
+ * Growth product - $100/month base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "growth")
+ */
+const growth = ({
+	items,
+	id = "growth",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "growth",
+		isDefault: false,
+	});
+
+/**
+ * Ultra product - $200/month base price (uses base with custom price)
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "ultra")
+ */
+const ultra = ({
+	items,
+	id = "ultra",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 => ({
+	...constructRawProduct({
+		id,
+		items: [
+			...items,
+			constructPriceItem({ price: 200, interval: BillingInterval.Month }),
+		],
+	}),
+	is_default: false,
+});
+
+/**
+ * One-off product - one-time purchase with $10 base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "one-off")
+ * @param isAddOn - Whether this is an add-on product (default: false)
+ */
+const oneOff = ({
+	items,
+	id = "one-off",
+	isAddOn = false,
+}: {
+	items: ProductItem[];
+	id?: string;
+	isAddOn?: boolean;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
 		type: "one_off",
 		isDefault: false,
+		isAddOn,
 	});
 
 /**
@@ -265,6 +329,26 @@ const recurringAddOn = ({
 		isAddOn: true,
 	});
 
+/**
+ * One-off add-on product - $10 base price (one-time), is_add_on: true
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "one-off-addon")
+ */
+const oneOffAddOn = ({
+	items,
+	id = "one-off-addon",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "one_off",
+		isDefault: false,
+		isAddOn: true,
+	});
+
 export const products = {
 	base,
 	baseWithTrial,
@@ -272,7 +356,11 @@ export const products = {
 	pro,
 	proAnnual,
 	proWithTrial,
+	premium,
 	premiumWithTrial,
+	growth,
+	ultra,
 	oneOff,
 	recurringAddOn,
+	oneOffAddOn,
 } as const;

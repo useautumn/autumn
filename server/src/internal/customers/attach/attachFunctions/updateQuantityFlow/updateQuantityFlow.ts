@@ -1,81 +1,95 @@
 import {
-	type AttachConfig,
+	type AttachBodyV0,
 	AttachFunctionResponseSchema,
 	SuccessCode,
 } from "@autumn/shared";
-import type Stripe from "stripe";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
-import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
-import { handleUpdateFeatureQuantity } from "./updateFeatureQuantity.js";
 
 export const handleUpdateQuantityFunction = async ({
 	ctx,
 	attachParams,
-	config,
+	body,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	config: AttachConfig;
+	body: AttachBodyV0;
 }) => {
-	const { db } = ctx;
-
-	// Update quantities
-	const optionsToUpdate = attachParams.optionsToUpdate!;
-	const { curSameProduct } = attachParamToCusProducts({ attachParams });
-
-	// Check balance of each option to update...?
-	const stripeCli = attachParams.stripeCli;
-	const cusProduct = curSameProduct!;
-	const stripeSubs = await getStripeSubs({
-		stripeCli: stripeCli,
-		subIds: cusProduct.subscription_ids || [],
-	});
-
-	const invoices: Stripe.Invoice[] = [];
-
-	for (const options of optionsToUpdate) {
-		const result = await handleUpdateFeatureQuantity({
+	const { billingResponse, billingResult } =
+		await billingActions.legacy.updateQuantity({
 			ctx,
+			body,
 			attachParams,
-			attachConfig: config,
-			cusProduct,
-			stripeSubs,
-			oldOptions: options.old,
-			newOptions: options.new,
 		});
-
-		if (result?.invoice) {
-			invoices.push(result.invoice);
-		}
-	}
-
-	for (const stripeSub of stripeSubs) {
-		if (isStripeSubscriptionCanceling(stripeSub)) {
-			await stripeCli.subscriptions.update(stripeSub.id, {
-				cancel_at: null,
-			});
-		}
-	}
-
-	await CusProductService.update({
-		db,
-		cusProductId: cusProduct.id,
-		updates: {
-			options: optionsToUpdate.map((o) => o.new),
-			canceled_at: null,
-			canceled: false,
-			ended_at: null,
-		},
-	});
 
 	return AttachFunctionResponseSchema.parse({
 		code: SuccessCode.FeaturesUpdated,
-		message: `Successfully updated quantity for features: ${optionsToUpdate.map((o) => o.new.feature_id).join(", ")}`,
-		invoice:
-			config.invoiceOnly && invoices.length > 0 ? invoices[0] : undefined,
+		message: `Successfully updated quantity for features`,
+		invoice: billingResult?.stripe?.stripeInvoice,
+		checkout_url: billingResponse?.payment_url,
 	});
+
+	// return AttachFunctionResponseSchema.parse({
+	// 	code: SuccessCode.FeaturesUpdated,
+	// 	message: `Successfully updated quantity for features: ${optionsToUpdate.map((o) => o.new.feature_id).join(", ")}`,
+	// 	invoice:
+	// 		config.invoiceOnly && response.invoice ? response.invoice : undefined,
+	// });
+
+	// // Update quantities
+	// const optionsToUpdate = attachParams.optionsToUpdate!;
+	// const { curSameProduct } = attachParamToCusProducts({ attachParams });
+
+	// // Check balance of each option to update...?
+	// const stripeCli = attachParams.stripeCli;
+	// const cusProduct = curSameProduct!;
+	// const stripeSubs = await getStripeSubs({
+	// 	stripeCli: stripeCli,
+	// 	subIds: cusProduct.subscription_ids || [],
+	// });
+
+	// const invoices: Stripe.Invoice[] = [];
+
+	// for (const options of optionsToUpdate) {
+	// 	const result = await handleUpdateFeatureQuantity({
+	// 		ctx,
+	// 		attachParams,
+	// 		attachConfig: config,
+	// 		cusProduct,
+	// 		stripeSubs,
+	// 		oldOptions: options.old,
+	// 		newOptions: options.new,
+	// 	});
+
+	// 	if (result?.invoice) {
+	// 		invoices.push(result.invoice);
+	// 	}
+	// }
+
+	// for (const stripeSub of stripeSubs) {
+	// 	if (isStripeSubscriptionCanceling(stripeSub)) {
+	// 		await stripeCli.subscriptions.update(stripeSub.id, {
+	// 			cancel_at: null,
+	// 		});
+	// 	}
+	// }
+
+	// await CusProductService.update({
+	// 	db,
+	// 	cusProductId: cusProduct.id,
+	// 	updates: {
+	// 		options: optionsToUpdate.map((o) => o.new),
+	// 		canceled_at: null,
+	// 		canceled: false,
+	// 		ended_at: null,
+	// 	},
+	// });
+
+	// return AttachFunctionResponseSchema.parse({
+	// 	code: SuccessCode.FeaturesUpdated,
+	// 	message: `Successfully updated quantity for features: ${optionsToUpdate.map((o) => o.new.feature_id).join(", ")}`,
+	// 	invoice:
+	// 		config.invoiceOnly && invoices.length > 0 ? invoices[0] : undefined,
+	// });
 };

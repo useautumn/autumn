@@ -31,6 +31,7 @@ export const getEventById = async ({
 		WHERE org_id = {org_id:String}
 			AND env = {env:String}
 			AND id = {event_id:String}
+			AND timestamp > NOW() - INTERVAL '1 minute'
 		LIMIT 1
 	`;
 
