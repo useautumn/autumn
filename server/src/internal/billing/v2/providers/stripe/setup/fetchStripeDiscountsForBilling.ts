@@ -1,8 +1,4 @@
-import type {
-	AttachDiscount,
-	FullCustomer,
-	StripeDiscountWithCoupon,
-} from "@autumn/shared";
+import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
 	StripeCustomerWithDiscount,
@@ -52,13 +48,11 @@ export const extractStripeDiscounts = ({
  */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
-	fullCustomer,
 	stripeSubscription,
 	stripeCustomer,
 	paramDiscounts,
 }: {
 	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer: StripeCustomerWithDiscount;
 	paramDiscounts?: AttachDiscount[];
@@ -72,7 +66,7 @@ export const fetchStripeDiscountsForBilling = async ({
 		return existingDiscounts;
 	}
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: fullCustomer.env });
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const resolvedParamDiscounts = await resolveParamDiscounts({
 		stripeCli,
 		discounts: paramDiscounts,
@@ -88,7 +82,3 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	return [...existingDiscounts, ...newDiscounts];
 };
-
-// Legacy alias for backward compatibility - use extractStripeDiscounts for sync extraction
-// or fetchStripeDiscountsForBilling for async with param discount support
-export const setupStripeDiscountsForBilling = extractStripeDiscounts;
