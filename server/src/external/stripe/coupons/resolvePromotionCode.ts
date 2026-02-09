@@ -1,5 +1,5 @@
+import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import { RecaseError } from "@autumn/shared";
-import type { StripeDiscountWithCoupon } from "@shared/models/billingModels/stripe/stripeDiscountWithCoupon";
 import type Stripe from "stripe";
 
 /**
