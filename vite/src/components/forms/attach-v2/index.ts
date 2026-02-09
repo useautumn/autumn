@@ -2,6 +2,7 @@
 
 // Types
 export * from "./attachFormSchema";
+export * from "./components/AttachAdvancedSection";
 export * from "./components/AttachFooter";
 export * from "./components/AttachPlanSection";
 export * from "./components/AttachPreviewSection";

@@ -7,7 +7,6 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { AttachSettingsPopover } from "./AttachSettingsPopover";
 
 export function AttachSectionTitle() {
 	const { hasCustomizations, form, formValues } = useAttachFormContext();
@@ -35,36 +34,33 @@ export function AttachSectionTitle() {
 					</Tooltip>
 				)}
 			</span>
-			<span className="flex items-center gap-2">
-				<AttachSettingsPopover />
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<IconButton
-							icon={
-								<TimerIcon
-									size={14}
-									weight={trialIsActive ? "fill" : "regular"}
-								/>
-							}
-							variant="secondary"
-							className={cn(
-								"h-7 whitespace-nowrap",
-								trialIsActive &&
-									"text-purple-400! border-purple-500/50 bg-purple-500/10",
-								trialEnabled && !trialIsActive && "border-primary",
-							)}
-							onClick={() => form.setFieldValue("trialEnabled", !trialEnabled)}
-						>
-							Free Trial
-						</IconButton>
-					</TooltipTrigger>
-					<TooltipContent side="top">
-						{trialIsActive
-							? "Trial configured - click to edit"
-							: "Add a free trial"}
-					</TooltipContent>
-				</Tooltip>
-			</span>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<IconButton
+						icon={
+							<TimerIcon
+								size={14}
+								weight={trialIsActive ? "fill" : "regular"}
+							/>
+						}
+						variant="secondary"
+						className={cn(
+							"h-7 whitespace-nowrap",
+							trialIsActive &&
+								"text-purple-400! border-purple-500/50 bg-purple-500/10",
+							trialEnabled && !trialIsActive && "border-primary",
+						)}
+						onClick={() => form.setFieldValue("trialEnabled", !trialEnabled)}
+					>
+						Free Trial
+					</IconButton>
+				</TooltipTrigger>
+				<TooltipContent side="top">
+					{trialIsActive
+						? "Trial configured - click to edit"
+						: "Add a free trial"}
+				</TooltipContent>
+			</Tooltip>
 		</span>
 	);
 }

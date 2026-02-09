@@ -1,5 +1,6 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
 import {
+	AttachAdvancedSection,
 	AttachFooter,
 	AttachFormProvider,
 	AttachPlanSection,
@@ -75,8 +76,9 @@ function SheetContent() {
 
 				{hasProductSelected && (
 					<>
-						<AttachUpdatesSection />
 						<AttachPlanSection />
+						<AttachAdvancedSection />
+						<AttachUpdatesSection />
 						<AttachPreviewSection />
 						<AttachFooter />
 					</>

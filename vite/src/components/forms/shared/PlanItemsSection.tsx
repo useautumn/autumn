@@ -18,13 +18,14 @@ import { TrialEditorRow } from "@/components/forms/update-subscription-v2/compon
 import { VersionChangeRow } from "@/components/forms/update-subscription-v2/components/VersionChangeRow";
 import {
 	FAST_TRANSITION,
-	LAYOUT_TRANSITION,
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
+	STAGGER_ITEM_LAYOUT,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import type { UseTrialStateReturn } from "@/components/forms/update-subscription-v2/hooks/useTrialState";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { Button } from "@/components/v2/buttons/Button";
+import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
 interface PriceChange {
 	oldPrice: string;
@@ -197,9 +198,9 @@ export function PlanItemsSection({
 		return (
 			<motion.div
 				key={featureId || item.price_id || index}
-				layout
-				variants={useStaggerAnimation ? STAGGER_ITEM : undefined}
-				transition={LAYOUT_TRANSITION}
+				layout="position"
+				variants={useStaggerAnimation ? STAGGER_ITEM_LAYOUT : undefined}
+				transition={{ layout: LAYOUT_TRANSITION }}
 			>
 				<SubscriptionItemRow
 					item={item}
@@ -216,9 +217,9 @@ export function PlanItemsSection({
 	const renderDeletedItemRow = (item: ProductItem, index: number) => (
 		<motion.div
 			key={`deleted-${item.feature_id || index}`}
-			layout
-			variants={useStaggerAnimation ? STAGGER_ITEM : undefined}
-			transition={LAYOUT_TRANSITION}
+			layout="position"
+			variants={useStaggerAnimation ? STAGGER_ITEM_LAYOUT : undefined}
+			transition={{ layout: LAYOUT_TRANSITION }}
 		>
 			<SubscriptionItemRow item={item} isDeleted />
 		</motion.div>
@@ -229,9 +230,9 @@ export function PlanItemsSection({
 		return (
 			<motion.div
 				key="version-change"
-				layout
-				variants={useStaggerAnimation ? STAGGER_ITEM : undefined}
-				transition={LAYOUT_TRANSITION}
+				layout="position"
+				variants={useStaggerAnimation ? STAGGER_ITEM_LAYOUT : undefined}
+				transition={{ layout: LAYOUT_TRANSITION }}
 			>
 				<VersionChangeRow
 					currentVersion={versionChange.currentVersion}
@@ -250,7 +251,7 @@ export function PlanItemsSection({
 				<motion.div
 					key="trial-editor"
 					layout
-					transition={LAYOUT_TRANSITION}
+					transition={{ layout: LAYOUT_TRANSITION }}
 					variants={useStaggerAnimation ? STAGGER_ITEM : undefined}
 				>
 					<TrialEditorRow
@@ -284,7 +285,7 @@ export function PlanItemsSection({
 							y: -8,
 							transition: FAST_TRANSITION,
 						}}
-						transition={LAYOUT_TRANSITION}
+						transition={{ layout: LAYOUT_TRANSITION }}
 					>
 						<TrialEditorRow
 							form={form}
@@ -298,9 +299,7 @@ export function PlanItemsSection({
 
 	const renderEditButton = () => (
 		<motion.div
-			layout
-			variants={useStaggerAnimation ? STAGGER_ITEM : undefined}
-			transition={LAYOUT_TRANSITION}
+			variants={useStaggerAnimation ? STAGGER_ITEM_LAYOUT : undefined}
 		>
 			<Button variant="secondary" onClick={onEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
@@ -314,12 +313,16 @@ export function PlanItemsSection({
 			<LayoutGroup>
 				<motion.div
 					className="space-y-2"
+					layout
+					transition={{ layout: LAYOUT_TRANSITION }}
 					initial="hidden"
 					animate="visible"
 					variants={STAGGER_CONTAINER}
 				>
 					<motion.div
-						variants={STAGGER_ITEM}
+						layout="position"
+						transition={{ layout: LAYOUT_TRANSITION }}
+						variants={STAGGER_ITEM_LAYOUT}
 						className="flex gap-2 justify-between items-center"
 					>
 						{renderPriceDisplay()}
@@ -339,13 +342,17 @@ export function PlanItemsSection({
 				{renderPriceDisplay()}
 			</div>
 			<LayoutGroup>
-				<div className="space-y-2">
+				<motion.div
+					className="space-y-2"
+					layout
+					transition={{ layout: LAYOUT_TRANSITION }}
+				>
 					{product?.items?.map(renderItemRow)}
 					{deletedItems.map(renderDeletedItemRow)}
 					{renderVersionChangeRow()}
 					{renderTrialEditor()}
 					{renderEditButton()}
-				</div>
+				</motion.div>
 			</LayoutGroup>
 		</>
 	);
