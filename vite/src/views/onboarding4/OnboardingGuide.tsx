@@ -157,7 +157,7 @@ function StepCard({
 				{isActive && (
 					<motion.div
 						key="expanded"
-						initial={{ opacity: 0.5 }}
+						initial={{ opacity: 0 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
 						className="absolute top-0 left-0 bottom-0 w-[500px] px-4 flex gap-6"
@@ -249,19 +249,14 @@ function StepCard({
 	);
 }
 
-export function OnboardingGuide({
-	collapseAll = false,
-}: {
-	collapseAll?: boolean;
-} = {}) {
+export function OnboardingGuide() {
 	const env = useEnv();
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
 	const [activeStep, setActiveStep] = useState<string | null>(null);
 
 	// Don't render cards until activeStep is synced
-	// When collapseAll is true, all cards should be collapsed (no active step)
-	const resolvedActiveStep = collapseAll ? null : (activeStep ?? currentStep);
+	const resolvedActiveStep = activeStep ?? currentStep;
 
 	// Check if all steps are complete
 	const allStepsComplete = ONBOARDING_STEPS.every(
@@ -302,7 +297,7 @@ export function OnboardingGuide({
 	}
 
 	return (
-		<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary shadow-sm">
+		<div className="relative rounded-xl p-4 border border-t8/50 shadow-sm overflow-hidden">
 			{/* Dismiss button */}
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -338,8 +333,8 @@ export function OnboardingGuide({
 				</div>
 			</div>
 
-			{/* Steps container */}
-			<div className="flex gap-3 items-start">
+			{/* Steps container - min-width prevents cards from shrinking when parent shrinks */}
+			<div className="flex gap-3 items-start min-w-[700px]">
 				{ONBOARDING_STEPS.map((step) => (
 					<StepCard
 						key={step.id}
