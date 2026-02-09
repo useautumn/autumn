@@ -19,7 +19,7 @@ import type {
 	StripeCustomerWithDiscount,
 	StripeSubscriptionWithDiscounts,
 } from "@/external/stripe/subscriptions";
-import { extractStripeDiscounts as setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
+import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
 
 // ============ TESTS ============
 
@@ -54,7 +54,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		({
 			...discount,
 			coupon: normalizeStripeCouponAppliesTo(discount.source.coupon),
-		}) as unknown as StripeCustomerWithDiscount["discount"];
+		}) as StripeCustomerWithDiscount["discount"];
 
 	const createStripeSubscription = (params: {
 		id: string;
