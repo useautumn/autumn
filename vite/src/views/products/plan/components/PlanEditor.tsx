@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
 import { useIsCusPlanEditor } from "@/hooks/stores/useProductStore";
-import { useIsSheetOpen } from "@/hooks/stores/useSheetStore";
 import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
@@ -12,7 +12,8 @@ import PlanCard from "./plan-card/PlanCard";
 import { SaveChangesBar } from "./SaveChangesBar";
 
 export const PlanEditor = () => {
-	const isSheetOpen = useIsSheetOpen();
+	const { sheetType } = useSheet();
+	const isSheetOpen = sheetType !== null;
 
 	return (
 		<div className="flex w-full h-full overflow-hidden relative">
