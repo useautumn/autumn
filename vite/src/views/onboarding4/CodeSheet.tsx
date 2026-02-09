@@ -150,7 +150,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 			<Button
 				variant="secondary"
 				size="sm"
-				className="bg-t8/90 border-none hover:bg-t8 text-white! text-tiny"
+				className=""
 				onClick={(e) => {
 					e.stopPropagation();
 					setOpen(true);
