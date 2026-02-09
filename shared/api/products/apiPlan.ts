@@ -4,7 +4,7 @@ import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTri
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { z } from "zod/v4";
 import { DisplaySchema } from "./components/display.js";
-import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
+import { ApiPlanItemV0Schema } from "./items/apiPlanItemV0.js";
 
 export const ApiFreeTrialV2Schema = z.object({
 	duration_type: z.enum(FreeTrialDuration),
@@ -34,7 +34,7 @@ export const ApiPlanSchema = z.object({
 		})
 		.nullable(),
 
-	features: z.array(ApiPlanFeatureSchema),
+	features: z.array(ApiPlanItemV0Schema),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 
 	// Misc

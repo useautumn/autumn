@@ -11,7 +11,7 @@ import {
 import { ApiFeatureV0Schema } from "../../features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "../components/display.js";
 
-export const ApiPlanFeatureSchema = z
+export const ApiPlanItemV0Schema = z
 	.object({
 		feature_id: z.string(),
 		feature: ApiFeatureV0Schema.optional(),
@@ -89,9 +89,9 @@ export const ApiPlanFeatureSchema = z
 		}
 	});
 
-export type ApiPlanFeature = z.infer<typeof ApiPlanFeatureSchema>;
+export type ApiPlanItemV0 = z.infer<typeof ApiPlanItemV0Schema>;
 
-export const ApiPlanFeatureWithMeta = ApiPlanFeatureSchema.meta({
+export const ApiPlanItemV0WithMeta = ApiPlanItemV0Schema.meta({
 	id: "PlanFeature",
 	description: "Plan feature object returned by the API",
 	example: {

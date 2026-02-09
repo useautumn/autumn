@@ -1,12 +1,12 @@
+import { CreatePlanItemParamsV0Schema } from "@api/products/items/crud/createPlanItemV0Params.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "../../models.js";
-import { UpdatePlanFeatureSchema } from "../../products/planFeature/planFeatureOpModels.js";
-import { PlanPriceSchema } from "../../products/planOpModels.js";
+import { PlanPriceSchema } from "../../products/crud/planOpModels.js";
 
 export const PlanOverrideSchema = z
 	.object({
 		price: PlanPriceSchema.optional(),
-		features: z.array(UpdatePlanFeatureSchema).optional(),
+		features: z.array(CreatePlanItemParamsV0Schema).optional(),
 		free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 	})
 	.refine(

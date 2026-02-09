@@ -14,7 +14,7 @@ import {
 } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 
-export const ApiProductItemSchema = z
+export const ApiProductItemV0Schema = z
 	.object({
 		// Feature stuff
 		type: z
@@ -118,4 +118,4 @@ export const ApiProductItemSchema = z
 		description: "Product item defining features and pricing within a product",
 	});
 
-export type ApiProductItem = z.infer<typeof ApiProductItemSchema>;
+export type ApiProductItem = z.infer<typeof ApiProductItemV0Schema>;

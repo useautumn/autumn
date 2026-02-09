@@ -33,6 +33,7 @@ export const handleGetFeature = createRoute({
 		}
 
 		const apiFeature = dbToApiFeatureV1({
+			ctx,
 			dbFeature: feature,
 			targetVersion: ctx.apiVersion,
 		});

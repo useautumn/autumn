@@ -65,6 +65,7 @@ export const handleUpdateFeature = createRoute({
 
 		return c.json(
 			dbToApiFeatureV1({
+				ctx,
 				dbFeature: updatedFeature,
 				targetVersion: ctx.apiVersion,
 			}),

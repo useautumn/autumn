@@ -19,7 +19,9 @@ import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js"
 import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange.js";
 // Import invoice changes
 import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange.js";
+
 // Import product changes
+
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";

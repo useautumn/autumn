@@ -93,6 +93,7 @@ const handleAllowanceUsed = async ({
 					legacyData: newLegacyData,
 				}),
 				feature: dbToApiFeatureV1({
+					ctx,
 					dbFeature: feature,
 					targetVersion: ctx.apiVersion,
 				}),
@@ -157,6 +158,7 @@ export const handleThresholdReached = async ({
 						legacyData: newLegacyData,
 					}),
 					feature: dbToApiFeatureV1({
+						ctx,
 						dbFeature: feature,
 						targetVersion: ctx.apiVersion,
 					}),

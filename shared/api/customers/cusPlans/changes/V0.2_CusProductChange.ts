@@ -1,4 +1,4 @@
-import type { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import type { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -25,7 +25,7 @@ import { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
 const transformItemToPrice = ({
 	item,
 }: {
-	item: z.infer<typeof ApiProductItemSchema>;
+	item: z.infer<typeof ApiProductItemV0Schema>;
 }) => {
 	const singleTier =
 		isPriceItem(item) ||
