@@ -96,9 +96,6 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 	},
 ];
 
-const STEP_BUTTON_CLASSES =
-	"bg-t8/90 border-none hover:bg-t8 text-white! text-tiny";
-
 function StepCard({
 	step,
 	isActive,
@@ -121,8 +118,8 @@ function StepCard({
 			animate={{ flex: isActive ? 4 : 1 }}
 			transition={STEP_CARD_ANIMATION}
 			className={cn(
-				"relative rounded-xl bg-t8/30 cursor-pointer h-21 overflow-hidden border border-t8/50",
-				isActive ? "cursor-default" : "hover:border-primary/20 hover:bg-t8/40",
+				"relative rounded-xl bg-muted dark:bg-card border cursor-pointer h-21 overflow-hidden",
+				isActive ? "cursor-default" : "hover:border-primary/20",
 				isComplete && !isActive && "opacity-50",
 			)}
 			onClick={onClick}
@@ -145,8 +142,8 @@ function StepCard({
 							/>
 						)}
 						<div className="flex items-center gap-1.5">
-							<div className="text-t8">{step.icon}</div>
-							<span className="font-medium text-sm text-t8 whitespace-nowrap">
+							<div className="text-primary">{step.icon}</div>
+							<span className="font-medium text-sm text-t2 whitespace-nowrap">
 								{step.shortTitle}
 							</span>
 						</div>
@@ -157,10 +154,10 @@ function StepCard({
 				{isActive && (
 					<motion.div
 						key="expanded"
-						initial={{ opacity: 0.5 }}
+						initial={{ opacity: 0 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						className="absolute top-0 left-0 bottom-0 w-[500px] px-4 flex gap-6"
+						className="absolute top-0 left-0 bottom-0 w-[515px] px-4 flex gap-6"
 					>
 						<div className="flex flex-col justify-center">
 							<h3 className="font-medium text-sm text-foreground mb-1">
@@ -177,7 +174,7 @@ function StepCard({
 								</div>
 							)}
 							{step.waitingFor && !isComplete && (
-								<div className="flex items-center gap-2 text-tiny text-t8">
+								<div className="flex items-center gap-2 text-tiny text-t4">
 									{step.waitingFor}
 									<span className="relative flex size-2">
 										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-500/60 opacity-75" />
@@ -201,7 +198,7 @@ function StepCard({
 										/>
 										<IconButton
 											variant="secondary"
-											className={cn("ml-auto gap-2", STEP_BUTTON_CLASSES)}
+											className="ml-auto gap-2"
 											size="sm"
 											icon={<SparkleIcon size={14} />}
 											onClick={(e) => {
@@ -217,7 +214,7 @@ function StepCard({
 										</IconButton>
 										<IconButton
 											variant="secondary"
-											className={cn("gap-2", STEP_BUTTON_CLASSES)}
+											className="gap-2"
 											size="sm"
 											icon={<CubeIcon size={14} />}
 											onClick={(e) => {
@@ -234,7 +231,7 @@ function StepCard({
 										variant="secondary"
 										size="sm"
 										iconOrientation="left"
-										className={STEP_BUTTON_CLASSES}
+										className="gap-2"
 									>
 										Copy prompt
 									</CopyButton>
@@ -249,19 +246,14 @@ function StepCard({
 	);
 }
 
-export function OnboardingGuide({
-	collapseAll = false,
-}: {
-	collapseAll?: boolean;
-} = {}) {
+export function OnboardingGuide() {
 	const env = useEnv();
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
 	const [activeStep, setActiveStep] = useState<string | null>(null);
 
 	// Don't render cards until activeStep is synced
-	// When collapseAll is true, all cards should be collapsed (no active step)
-	const resolvedActiveStep = collapseAll ? null : (activeStep ?? currentStep);
+	const resolvedActiveStep = activeStep ?? currentStep;
 
 	// Check if all steps are complete
 	const allStepsComplete = ONBOARDING_STEPS.every(
@@ -279,22 +271,18 @@ export function OnboardingGuide({
 
 	if (isLoading) {
 		return (
-			// SKELETON
-			<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary">
+			<div className="relative overflow-hidden border-dashed border-b pb-4">
 				{/* Header skeleton */}
 				<div className="mb-3 pr-8">
-					<div className="flex items-center gap-2 mb-1">
-						<Skeleton className="h-3.5 w-36 bg-t8/30" />
-						<Skeleton className="h-4 w-16 rounded-md bg-t8/30" />
+					<div className="flex items-center gap-2">
+						<Skeleton className="h-3.5 w-36" />
+						<Skeleton className="h-4 w-16 rounded-md" />
 					</div>
 				</div>
 				{/* Steps skeleton - 4 cards */}
-				<div className="flex gap-3 items-start">
+				<div className="flex gap-3 items-start min-w-[700px]">
 					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
-						<Skeleton
-							key={i}
-							className={cn("rounded-xl h-21 bg-t8/40", flexClass)}
-						/>
+						<Skeleton key={i} className={cn("rounded-xl h-21", flexClass)} />
 					))}
 				</div>
 			</div>
@@ -302,17 +290,17 @@ export function OnboardingGuide({
 	}
 
 	return (
-		<div className="relative rounded-xl p-4 border border-dashed border-t8/50 bg-interactive-secondary shadow-sm">
+		<div className="relative overflow-hidden border-dashed border-b pb-4 mb-2">
 			{/* Dismiss button */}
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<button
 						type="button"
 						onClick={dismiss}
-						className="absolute top-3 right-3 p-1 rounded-md text-t8 hover:text-foreground hover:bg-interactive-secondary-hover transition-colors"
+						className="absolute top-0 right-0 rounded-md hover:text-foreground hover:bg-interactive-secondary-hover transition-colors"
 						aria-label="Dismiss onboarding guide"
 					>
-						<X className="size-4" />
+						<X className="size-3.5" />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="left" className="max-w-56">
@@ -338,8 +326,8 @@ export function OnboardingGuide({
 				</div>
 			</div>
 
-			{/* Steps container */}
-			<div className="flex gap-3 items-start">
+			{/* Steps container - min-width prevents cards from shrinking when parent shrinks */}
+			<div className="flex gap-3 items-start min-w-[700px]">
 				{ONBOARDING_STEPS.map((step) => (
 					<StepCard
 						key={step.id}

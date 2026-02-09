@@ -32,7 +32,7 @@ function CustomersPage() {
 				customers,
 			}}
 		>
-			<div className="px-10 flex flex-col relative w-full pb-8 max-w-5xl mx-auto pt-8 gap-4">
+			<div className="px-10 flex flex-col relative w-full pb-8 max-w-5xl mx-auto pt-8 gap-8">
 				<OnboardingGuide />
 				<CustomerListTable customers={customers} isLoading={customersLoading} />
 			</div>

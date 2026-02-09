@@ -5,7 +5,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
-import { useIsSheetOpen, useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -34,7 +34,6 @@ export default function CustomerView2() {
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
-	const isSheetOpen = useIsSheetOpen();
 	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
@@ -75,8 +74,8 @@ export default function CustomerView2() {
 					transition={SHEET_ANIMATION}
 				>
 					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">
-						<div className="w-full max-w-5xl mx-auto pt-8 px-10">
-							<OnboardingGuide collapseAll={isSheetOpen} />
+						<div className="w-full max-w-5xl mx-auto pt-8 pb-6 px-10">
+							<OnboardingGuide />
 						</div>
 						{/* Rest of content shrinks normally with the container */}
 						<div className="flex flex-col gap-4 w-full max-w-5xl mx-auto pt-4 px-10">
