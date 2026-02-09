@@ -72,6 +72,7 @@ export const setupAttachBillingContext = async ({
 		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
+		paramDiscounts: params.discounts,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
