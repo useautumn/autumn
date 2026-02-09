@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiCustomer,
+	type ApiCustomerV5,
 	ApiVersion,
 	addToExpand,
 	applyResponseVersionChanges,
@@ -22,11 +22,11 @@ const cleanApiCustomer = ({
 	legacyData,
 }: {
 	ctx: AutumnContext;
-	apiCustomer: ApiCustomer;
+	apiCustomer: ApiCustomerV5;
 	legacyData: CustomerLegacyData;
 }) => {
 	const { autumn_id: _autumn_id, invoices: _invoices, ...rest } = apiCustomer;
-	const cleanedApiCustomer: ApiCustomer = rest;
+	const cleanedApiCustomer: ApiCustomerV5 = rest;
 	return applyResponseVersionChanges({
 		input: cleanedApiCustomer,
 		targetVersion: ctx.apiVersion,
@@ -93,6 +93,7 @@ const handleAllowanceUsed = async ({
 					legacyData: newLegacyData,
 				}),
 				feature: dbToApiFeatureV1({
+					ctx,
 					dbFeature: feature,
 					targetVersion: ctx.apiVersion,
 				}),
@@ -157,6 +158,7 @@ export const handleThresholdReached = async ({
 						legacyData: newLegacyData,
 					}),
 					feature: dbToApiFeatureV1({
+						ctx,
 						dbFeature: feature,
 						targetVersion: ctx.apiVersion,
 					}),

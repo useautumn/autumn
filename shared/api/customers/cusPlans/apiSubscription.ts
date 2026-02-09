@@ -1,8 +1,8 @@
-import { ApiPlanSchema } from "@api/products/apiPlan.js";
+import { ApiPlanV0Schema } from "@api/products/previousVersions/apiPlanV0";
 import { z } from "zod/v4";
 
 export const ApiSubscriptionSchema = z.object({
-	plan: ApiPlanSchema.optional(),
+	plan: ApiPlanV0Schema.optional(),
 	plan_id: z.string(),
 
 	default: z.boolean(),
@@ -19,14 +19,6 @@ export const ApiSubscriptionSchema = z.object({
 	current_period_start: z.number().nullable(),
 	current_period_end: z.number().nullable(),
 	quantity: z.number(),
-
-	// feature_quantities: z.array(
-	// 	z.object({
-	// 		feature_id: z.string(),
-	// 		quantity: z.number(),
-	// 		upcoming_quantity: z.number().nullable(),
-	// 	}),
-	// ),
 });
 
 export type ApiSubscription = z.infer<typeof ApiSubscriptionSchema>;

@@ -37,7 +37,7 @@ export const handleCreateFeature = createRoute({
 		}
 
 		return c.json(
-			dbToApiFeatureV1({ dbFeature, targetVersion: ctx.apiVersion }),
+			dbToApiFeatureV1({ ctx, dbFeature, targetVersion: ctx.apiVersion }),
 		);
 	},
 });

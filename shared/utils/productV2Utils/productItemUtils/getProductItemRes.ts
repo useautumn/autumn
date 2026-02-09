@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
 import {
@@ -140,7 +140,7 @@ export const getProductItemResponse = ({
 	}
 
 	const feature = features.find((f) => f.id === item.feature_id);
-	return ApiProductItemSchema.parse({
+	return ApiProductItemV0Schema.parse({
 		type,
 		...item,
 		feature: feature ? toApiFeature({ feature }) : null,

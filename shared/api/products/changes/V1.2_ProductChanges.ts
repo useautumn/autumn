@@ -1,3 +1,4 @@
+import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -5,13 +6,13 @@ import {
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { PriceItem } from "@models/productV2Models/productItemModels/priceItem.js";
 import { isPriceItem } from "@utils/index.js";
-import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { productV2ToProperties } from "../../../utils/productV2Utils/productV2ToProperties.js";
-import { type ApiPlan, ApiPlanSchema } from "../apiPlan.js";
+import { PlanLegacyDataSchema } from "../planLegacyData.js";
 import {
-	type PlanLegacyData,
-	PlanLegacyDataSchema,
-} from "../planLegacyData.js";
+	type ApiPlan,
+	ApiPlanV0Schema,
+} from "../previousVersions/apiPlanV0.js";
 import {
 	type ApiProduct,
 	ApiProductSchema,
@@ -55,7 +56,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 		"Boolean fields renamed (add_on <- is_add_on, default <- is_default)",
 	],
 	affectedResources: [AffectedResource.Product],
-	newSchema: ApiPlanSchema,
+	newSchema: ApiPlanV0Schema,
 	oldSchema: ApiProductSchema,
 	legacyDataSchema: PlanLegacyDataSchema,
 
@@ -65,17 +66,17 @@ export const V1_2_ProductChanges = defineVersionChange({
 
 	// Response: V2 Plan -> V1.2 ProductV2
 	transformResponse: ({
+		ctx,
 		input,
-		legacyData,
 	}: {
+		ctx: SharedContext;
 		input: ApiPlan;
-		legacyData?: PlanLegacyData;
 	}): ApiProduct => {
 		// Convert plan to items using shared utility (handles base price + features)
 
-		const items = convertPlanToItems({
+		const productItems = planV0ToProductItems({
+			ctx,
 			plan: input,
-			features: legacyData?.features || [],
 		}).filter((x) => {
 			if (isPriceItem(x)) {
 				const y: PriceItem = x as unknown as PriceItem;
@@ -96,7 +97,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 			archived: input.archived,
 			version: input.version,
 			created_at: input.created_at,
-			items: items, // Already includes base price and features
+			items: productItems, // Already includes base price and features
 			free_trial: input.free_trial
 				? {
 						duration: input.free_trial.duration_type,

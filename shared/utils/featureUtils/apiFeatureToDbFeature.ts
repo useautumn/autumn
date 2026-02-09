@@ -21,6 +21,7 @@ import {
 	LATEST_VERSION,
 } from "../../api/versionUtils/versionUtils.js";
 import type { CreditSchemaItem } from "../../models/featureModels/featureConfig/creditConfig.js";
+import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
 
 export const apiFeatureToDbFeature = ({
@@ -177,9 +178,11 @@ export const featureV1ToDbFeature = ({
  * - For API version V1_Beta and older, responses are automatically converted to ApiFeatureV0 format
  */
 export const dbToApiFeatureV1 = ({
+	ctx,
 	dbFeature,
 	targetVersion,
 }: {
+	ctx: SharedContext;
 	dbFeature: Feature;
 	targetVersion?: ApiVersionClass;
 }) => {
@@ -212,9 +215,7 @@ export const dbToApiFeatureV1 = ({
 		input: result,
 		targetVersion: targetVersion ?? new ApiVersionClass(LATEST_VERSION),
 		resource: AffectedResource.Feature,
-		ctx: {
-			features: [dbFeature],
-		},
+		ctx,
 	});
 };
 
