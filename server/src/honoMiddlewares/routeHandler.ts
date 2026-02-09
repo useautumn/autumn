@@ -1,5 +1,6 @@
 import type { AffectedResource, ApiVersion } from "@autumn/shared";
-import type { Context, Env, Handler, MiddlewareHandler } from "hono";
+import type { Context, Env } from "hono";
+import type { H } from "hono/types";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
@@ -107,8 +108,8 @@ export function createRoute<
 		/** Error message to show when lock is already held */
 		errorMessage?: string;
 	};
-}) {
-	const middlewares: MiddlewareHandler[] = [];
+}): [H, ...H[]] {
+	const middlewares: H[] = [];
 
 	// Use versioned validator if versionedBody provided
 	if (opts.versionedBody && opts.resource) {
@@ -187,5 +188,5 @@ export function createRoute<
 		}
 	};
 
-	return [...middlewares, wrappedHandler as Handler] as const;
+	return [...middlewares, wrappedHandler as H] as unknown as [H, ...H[]];
 }
