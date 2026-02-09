@@ -1,29 +1,28 @@
+import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
+import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { DisplaySchema } from "@api/products/components/display.js";
+import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { z } from "zod/v4";
-import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
-import { BillingInterval } from "../../../models/productModels/intervals/billingInterval.js";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
-import { ApiFeatureV0Schema } from "../../features/prevVersions/apiFeatureV0.js";
-import { DisplaySchema } from "../components/display.js";
+} from "@models/productV2Models/productItemModels/productItemEnums.js";
+import { z } from "zod/v4";
 
-export const ApiPlanItemV0Schema = z
+export const ApiPlanItemV1Schema = z
 	.object({
 		feature_id: z.string(),
 		feature: ApiFeatureV0Schema.optional(),
 
-		granted_balance: z.number(),
+		included: z.number(),
 		unlimited: z.boolean(),
 
 		reset: z
 			.object({
 				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
-				reset_when_enabled: z.boolean(),
 			})
 			.nullable(),
 
@@ -36,7 +35,7 @@ export const ApiPlanItemV0Schema = z
 				interval_count: z.number().optional(),
 
 				billing_units: z.number(),
-				usage_model: z.enum(UsageModel),
+				billing_method: z.enum(BillingMethod),
 				max_purchase: z.number().nullable(),
 			})
 			.nullable(),
@@ -74,7 +73,11 @@ export const ApiPlanItemV0Schema = z
 			});
 		}
 
-		if (ctx.value.price) {
+		if (
+			ctx.value !== undefined &&
+			ctx.value.price !== undefined &&
+			ctx.value.price !== null
+		) {
 			if (
 				ctx.value.price.amount &&
 				ctx.value.price.tiers &&
@@ -89,14 +92,14 @@ export const ApiPlanItemV0Schema = z
 		}
 	});
 
-export type ApiPlanItemV0 = z.infer<typeof ApiPlanItemV0Schema>;
+export type ApiPlanItemV1 = z.infer<typeof ApiPlanItemV1Schema>;
 
-export const ApiPlanItemV0WithMeta = ApiPlanItemV0Schema.meta({
-	id: "PlanFeature",
-	description: "Plan feature object returned by the API",
+export const ApiPlanItemV1WithMeta = ApiPlanItemV1Schema.meta({
+	id: "PlanFeatureV1",
+	description: "Plan feature object returned by the API (V1/latest)",
 	example: {
 		feature_id: "123",
-		granted_balance: 100,
+		included: 100,
 		unlimited: false,
 		price: null,
 	},

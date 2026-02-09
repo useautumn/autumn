@@ -580,6 +580,11 @@ export class AutumnInt {
 			return data;
 		},
 
+		list: async <T = any[]>(): Promise<{ list: T }> => {
+			const data = await this.get(`/products`);
+			return data as { list: T };
+		},
+
 		create: async (product: any) => {
 			const data = await this.post(`/products`, product);
 			return data;

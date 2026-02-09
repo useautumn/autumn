@@ -1,9 +1,9 @@
-import type { ApiPlan } from "@api/products/apiPlan";
 import type {
 	CreatePlanParams,
 	UpdatePlanParams,
 } from "@api/products/crud/planOpModels";
 import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
+import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import type {
 	CreateProductV2Params,
 	UpdateProductV2Params,

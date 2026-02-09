@@ -1,13 +1,13 @@
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
-import { ApiPlanSchema } from "../products/apiPlan.js";
 import {
 	CreatePlanParamsSchema,
 	ListPlansQuerySchema,
 	UpdatePlanParamsSchema,
 } from "../products/crud/planOpModels.js";
+import { ApiPlanV0Schema } from "../products/previousVersions/apiPlanV0.js";
 
-export const ApiPlanWithMeta = ApiPlanSchema.meta({
+export const ApiPlanWithMeta = ApiPlanV0Schema.meta({
 	id: "Plan",
 	// examples: [PLAN_EXAMPLE],
 });

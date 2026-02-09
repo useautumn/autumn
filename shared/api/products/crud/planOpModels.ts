@@ -1,8 +1,8 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
-import { ApiFreeTrialV2Schema } from "../apiPlan.js";
 import { CreatePlanItemParamsV0Schema } from "../items/crud/createPlanItemV0Params.js";
+import { ApiFreeTrialV2Schema } from "../previousVersions/apiPlanV0.js";
 
 export const PlanPriceSchema = z.object({
 	amount: z.number(),

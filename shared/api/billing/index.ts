@@ -1,11 +1,11 @@
 // Attach
-export * from "./attach/attachBodyV1.js";
+
 export * from "./attach/prevVersions/attachBodyV0.js";
 export * from "./attach/prevVersions/attachResponseV1.js";
 // Attach V2
 export * from "./attachV2/attachParamsV0.js";
 // Checkout
-export * from "./checkout/checkoutParamsV1.js";
+
 export * from "./checkout/prevVersions/checkoutParamsV0.js";
 export * from "./checkout/prevVersions/checkoutResponseV0.js";
 // Common
