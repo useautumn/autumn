@@ -65,8 +65,6 @@ export const getApiSubscriptions = async ({
 		});
 
 		apiSubs.push(processed.data);
-
-		apiSubs.push(processed.data);
 		legacyData[processed.data.plan_id] = processed.legacyData;
 	}
 
