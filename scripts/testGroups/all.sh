@@ -10,6 +10,7 @@ BUN_PARALLEL_V2 \
   'integration/billing/migrations' \
   'integration/billing/cron' \
   'integration/crud/customers' \
+  'integration/crud/plans' \
   'integration/billing/attach' \
 
 

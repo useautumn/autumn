@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import { ApiProductSchema } from "@api/products/previousVersions/apiProduct.js";
 import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
 import { z } from "zod/v4";
@@ -7,7 +7,7 @@ import { z } from "zod/v4";
 export const CheckoutLineV0Schema = z.object({
 	description: z.string(),
 	amount: z.number(),
-	item: ApiProductItemSchema.nullish(),
+	item: ApiProductItemV0Schema.nullish(),
 });
 
 export const CheckoutResponseV0Schema = z.object({

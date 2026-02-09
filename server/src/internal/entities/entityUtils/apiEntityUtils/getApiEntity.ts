@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiEntityV1,
+	type ApiEntityV2,
 	applyResponseVersionChanges,
 	type EntityLegacyData,
 	EntityNotFoundError,
@@ -26,7 +26,7 @@ export const getApiEntity = async ({
 	entityId: string;
 	fullCus?: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<ApiEntityV1> => {
+}): Promise<ApiEntityV2> => {
 	const fullCustomer =
 		fullCus ??
 		(await getOrSetCachedFullCustomer({
@@ -69,7 +69,7 @@ export const getApiEntity = async ({
 		...apiEntityExpand,
 	};
 
-	return applyResponseVersionChanges<ApiEntityV1, EntityLegacyData>({
+	return applyResponseVersionChanges<ApiEntityV2, EntityLegacyData>({
 		input: apiEntity,
 		legacyData: entityLegacyData,
 		targetVersion: ctx.apiVersion,

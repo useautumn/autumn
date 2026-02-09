@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiCustomer,
+	type ApiCustomerV5,
 	applyResponseVersionChanges,
 	CusExpand,
 	type CustomerLegacyData,
@@ -21,7 +21,7 @@ export const getApiCustomer = async ({
 	ctx: RequestContext;
 	fullCustomer: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<ApiCustomer> => {
+}): Promise<ApiCustomerV5> => {
 	// Get base ApiCustomer (subscriptions, balances, invoices)
 	const { apiCustomer: baseCustomer, legacyData: customerLegacyData } =
 		await getApiCustomerBase({
@@ -31,7 +31,7 @@ export const getApiCustomer = async ({
 		});
 
 	// Clean base customer (remove entities from base, handle expand)
-	const cleanedBaseCustomer: ApiCustomer = {
+	const cleanedBaseCustomer: ApiCustomerV5 = {
 		...baseCustomer,
 		entities: undefined,
 		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
@@ -47,13 +47,13 @@ export const getApiCustomer = async ({
 		fullCus: fullCustomer,
 	});
 
-	const apiCustomer: ApiCustomer = {
+	const apiCustomer: ApiCustomerV5 = {
 		...cleanedBaseCustomer,
 		...apiCustomerExpand,
 	};
 
 	// Apply version transformations based on API version
-	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
+	return applyResponseVersionChanges<ApiCustomerV5, CustomerLegacyData>({
 		input: apiCustomer,
 		legacyData: customerLegacyData,
 		targetVersion: ctx.apiVersion,

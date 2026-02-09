@@ -1,5 +1,7 @@
 import {
-	ApiSubscriptionSchema,
+	type ApiPlanV1,
+	type ApiSubscriptionV1,
+	ApiSubscriptionV1Schema,
 	CusExpand,
 	type CusProductLegacyData,
 	CusProductStatus,
@@ -14,15 +16,29 @@ import {
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
-export const getApiSubscription = async ({
+type SubscriptionExpandParams = { plan?: boolean };
+
+type ApiSubscriptionResult<T extends SubscriptionExpandParams> = {
+	data: T["plan"] extends true
+		? ApiSubscriptionV1 & { plan: ApiPlanV1 }
+		: ApiSubscriptionV1;
+	legacyData: CusProductLegacyData;
+};
+
+export const getApiSubscription = async <
+	// biome-ignore lint/complexity/noBannedTypes: required for type inference
+	T extends SubscriptionExpandParams = {},
+>({
 	ctx,
 	fullCus,
 	cusProduct,
+	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
-}) => {
+	expandParams?: T;
+}): Promise<ApiSubscriptionResult<T>> => {
 	const trialing =
 		cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
@@ -62,9 +78,10 @@ export const getApiSubscription = async ({
 	const status = cusProductToPlanStatus({ status: cusProduct.status });
 
 	// Check if we should expand the plan object
-
+	// Use expandParams.plan if provided, otherwise fall back to ctx.expand
 	const shouldExpandPlan =
-		status === "scheduled"
+		expandParams?.plan ??
+		(status === "scheduled"
 			? expandIncludes({
 					expand: ctx.expand,
 					includes: [CusExpand.ScheduledSubscriptionsPlan],
@@ -72,7 +89,7 @@ export const getApiSubscription = async ({
 			: expandIncludes({
 					expand: ctx.expand,
 					includes: [CusExpand.SubscriptionsPlan],
-				});
+				}));
 
 	const apiPlan = shouldExpandPlan
 		? await getPlanResponse({
@@ -81,12 +98,12 @@ export const getApiSubscription = async ({
 			})
 		: undefined;
 
-	const apiSubscription = ApiSubscriptionSchema.parse({
+	const apiSubscription = ApiSubscriptionV1Schema.parse({
 		plan: apiPlan,
 
 		plan_id: fullProduct.id,
 		add_on: fullProduct.is_add_on,
-		default: fullProduct.is_default,
+		auto_enable: fullProduct.is_default,
 
 		status,
 		past_due: cusProduct.status === CusProductStatus.PastDue,
@@ -94,25 +111,19 @@ export const getApiSubscription = async ({
 		expires_at: cusProduct.ended_at || null,
 
 		trial_ends_at: isCustomerProductTrialing(cusProduct)
-			? cusProduct.trial_ends_at
+			? (cusProduct.trial_ends_at ?? null)
 			: null,
 		started_at: cusProduct.starts_at,
 		quantity: cusProduct.quantity,
 		current_period_start: stripeSubData?.current_period_start || null,
 		current_period_end: stripeSubData?.current_period_end || null,
-		feature_quantities: cusProduct.options.map((option) => ({
-			feature_id: option.feature_id,
-			quantity: option.quantity,
-			upcoming_quantity: option.upcoming_quantity,
-		})),
-	});
+	} satisfies ApiSubscriptionV1);
 
 	return {
 		data: apiSubscription,
 		legacyData: {
 			subscription_id: subId || undefined,
 			options: cusProduct.options,
-			// features: ctx.features,
 		} satisfies CusProductLegacyData,
-	};
+	} as ApiSubscriptionResult<T>;
 };

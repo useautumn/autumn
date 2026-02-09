@@ -33,7 +33,6 @@ export {
 	AffectedResource,
 	VersionChange,
 	type VersionChangeConstructor,
-	type VersionContext,
 } from "./versionChangeUtils/VersionChange.js";
 export { VersionChangeRegistryClass } from "./versionChangeUtils/VersionChangeRegistryClass.js";
 // Version registry
