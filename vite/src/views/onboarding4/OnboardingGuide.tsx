@@ -119,7 +119,9 @@ function StepCard({
 			transition={STEP_CARD_ANIMATION}
 			className={cn(
 				"relative rounded-xl bg-muted dark:bg-card border cursor-pointer h-21 overflow-hidden",
-				isActive ? "cursor-default" : "hover:border-primary/20",
+				isActive
+					? "cursor-default min-w-[515px]"
+					: "hover:border-primary/20 min-w-[120px]",
 				isComplete && !isActive && "opacity-50",
 			)}
 			onClick={onClick}
@@ -157,7 +159,7 @@ function StepCard({
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						className="absolute top-0 left-0 bottom-0 w-[515px] px-4 flex gap-6"
+						className="absolute top-0 left-0 bottom-0 w-[515px] px-4 flex gap-6 shrink-0!"
 					>
 						<div className="flex flex-col justify-center">
 							<h3 className="font-medium text-sm text-foreground mb-1">
@@ -271,16 +273,16 @@ export function OnboardingGuide() {
 
 	if (isLoading) {
 		return (
-			<div className="relative overflow-hidden border-dashed border-b pb-4">
+			<div className="relative overflow-hidden border-dashed border-b pb-4 mb-2">
 				{/* Header skeleton */}
-				<div className="mb-3 pr-8">
+				<div className="pr-8 mb-2.75">
 					<div className="flex items-center gap-2">
 						<Skeleton className="h-3.5 w-36" />
 						<Skeleton className="h-4 w-16 rounded-md" />
 					</div>
 				</div>
 				{/* Steps skeleton - 4 cards */}
-				<div className="flex gap-3 items-start min-w-[700px]">
+				<div className="flex gap-3 items-start w-[700px] shrink-0">
 					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
 						<Skeleton key={i} className={cn("rounded-xl h-21", flexClass)} />
 					))}
