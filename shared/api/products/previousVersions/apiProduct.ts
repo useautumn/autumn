@@ -2,7 +2,7 @@ import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialSchema } from "../apiFreeTrial.js";
-import { ApiProductItemSchema } from "../planFeature/previousVersions/apiProductItem.js";
+import { ApiProductItemV0Schema } from "../items/previousVersions/apiProductItemV0.js";
 
 export const PRODUCT_EXAMPLE = {
 	id: "Pro Product",
@@ -167,7 +167,7 @@ export const ApiProductSchema = z.object({
 		),
 
 	items: z
-		.array(ApiProductItemSchema)
+		.array(ApiProductItemV0Schema)
 		.describe(
 			"Array of product items that define the product's features and pricing",
 		),
