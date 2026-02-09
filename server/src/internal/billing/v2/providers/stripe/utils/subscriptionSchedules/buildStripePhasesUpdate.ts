@@ -7,7 +7,6 @@ import {
 import type Stripe from "stripe";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
@@ -120,12 +119,6 @@ export const buildStripePhasesUpdate = ({
 		});
 	}
 
-	const discounts = billingContext.stripeDiscounts?.length
-		? stripeDiscountsToParams({
-				stripeDiscounts: billingContext.stripeDiscounts,
-			})
-		: undefined;
-
 	let startMs = nowMs;
 
 	const phases: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [];
@@ -174,7 +167,6 @@ export const buildStripePhasesUpdate = ({
 			start_date: msToSeconds(startMs),
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),
-			discounts,
 		};
 
 		// Log phase details

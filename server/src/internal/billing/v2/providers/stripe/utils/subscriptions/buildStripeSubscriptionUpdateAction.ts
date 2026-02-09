@@ -1,13 +1,12 @@
-import type {
-	BillingContext,
-	StripeSubscriptionAction,
-	StripeSubscriptionScheduleAction,
-} from "@autumn/shared";
 import { msToSeconds } from "@shared/utils/common/unixUtils";
 import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import type { BillingContext } from "@autumn/shared";
+import type {
+	StripeSubscriptionAction,
+	StripeSubscriptionScheduleAction,
+} from "@autumn/shared";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
@@ -23,8 +22,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number;
 }): StripeSubscriptionAction | undefined => {
-	const { stripeSubscription, trialContext, cancelAction, stripeDiscounts } =
-		billingContext;
+	const { stripeSubscription, trialContext, cancelAction } = billingContext;
 
 	if (!stripeSubscription) {
 		throw new Error(
@@ -74,18 +72,11 @@ export const buildStripeSubscriptionUpdateAction = ({
 				? subscriptionCancelAt
 				: undefined,
 		proration_behavior: "none",
-
-		...(stripeDiscounts?.length && {
-			discounts: stripeDiscountsToParams({ stripeDiscounts }),
-		}),
 	};
 
-	const hasNoUpdates = [
-		params.items,
-		params.trial_end,
-		params.cancel_at,
-		params.discounts,
-	].every((field) => field === undefined);
+	const hasNoUpdates = [params.items, params.trial_end, params.cancel_at].every(
+		(field) => field === undefined,
+	);
 
 	if (hasNoUpdates) {
 		return undefined;

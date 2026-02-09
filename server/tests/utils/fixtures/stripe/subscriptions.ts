@@ -1,4 +1,3 @@
-import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 
 /**
@@ -37,7 +36,7 @@ const create = ({
 }: {
 	id: string;
 	items?: { id: string; priceId: string; quantity: number }[];
-	discounts?: (Stripe.Discount | string | StripeDiscountWithCoupon)[];
+	discounts?: (Stripe.Discount | string)[];
 }): Stripe.Subscription => {
 	const subscriptionItems = items.map((item) =>
 		createItem({
