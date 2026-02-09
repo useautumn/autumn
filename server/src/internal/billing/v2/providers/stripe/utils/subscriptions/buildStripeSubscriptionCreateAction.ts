@@ -1,8 +1,7 @@
-import type { BillingContext } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import type { BillingContext } from "@autumn/shared";
 
 export const buildStripeSubscriptionCreateAction = ({
 	ctx,
@@ -17,8 +16,7 @@ export const buildStripeSubscriptionCreateAction = ({
 	addInvoiceItems: Stripe.SubscriptionCreateParams.AddInvoiceItem[];
 	subscriptionCancelAt?: number;
 }) => {
-	const { stripeCustomer, paymentMethod, trialContext, stripeDiscounts } =
-		billingContext;
+	const { stripeCustomer, paymentMethod, trialContext } = billingContext;
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
@@ -45,10 +43,6 @@ export const buildStripeSubscriptionCreateAction = ({
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
 
 		cancel_at: subscriptionCancelAt,
-
-		...(stripeDiscounts?.length && {
-			discounts: stripeDiscountsToParams({ stripeDiscounts }),
-		}),
 
 		...(freeTrialNoCardRequired && {
 			trial_settings: {

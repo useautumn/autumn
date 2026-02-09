@@ -5,9 +5,9 @@ import {
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionScheduleForBilling";
+import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
 
 export const attachParamsToStripeBillingContext = async ({
@@ -37,7 +37,7 @@ export const attachParamsToStripeBillingContext = async ({
 
 	const stripeCustomer = attachParams.stripeCus as StripeCustomerWithDiscount;
 
-	const stripeDiscounts = extractStripeDiscounts({
+	const stripeDiscounts = setupStripeDiscountsForBilling({
 		stripeSubscription,
 		stripeCustomer,
 	});
