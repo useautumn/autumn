@@ -26,6 +26,7 @@ export const applyExistingStatesToCustomerProduct = ({
 	existingRolloversConfig?: ExistingRolloversConfig;
 }) => {
 	let existingUsages: ExistingUsages = {};
+
 	if (existingUsagesConfig) {
 		const { fromCustomerProduct } = existingUsagesConfig;
 
