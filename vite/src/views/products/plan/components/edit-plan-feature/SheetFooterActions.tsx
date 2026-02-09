@@ -4,7 +4,7 @@ import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorCo
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-export function SheetFooterActions() {
+export function SheetFooterActions({ hasChanges }: { hasChanges: boolean }) {
 	const { setItem } = useProductItemContext();
 	const { closeSheet, initialItem } = useSheet();
 
@@ -21,16 +21,17 @@ export function SheetFooterActions() {
 	return (
 		<div
 			className={cn(
-				"shrink-0 p-4 border-t border-border/40 transition-all animate-in slide-in-from-bottom-2 duration-200 ease-in fade-in",
+				"shrink-0 p-4 border-t border-border/40",
 			)}
 		>
 			<div className="flex gap-2 w-full">
-				<Button variant="secondary" onClick={handleDiscard} className="flex-1">
+				<Button variant="secondary" onClick={handleDiscard} disabled={!hasChanges} className="flex-1">
 					Discard
 				</Button>
 				<ShortcutButton
 					metaShortcut="enter"
 					onClick={handleUpdateItem}
+					disabled={!hasChanges}
 					className="flex-1"
 				>
 					Update Plan Feature

@@ -6,6 +6,7 @@ import {
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { CreditSystemSchema } from "@/views/products/features/credit-systems/components/CreditSystemSchema";
 
 export function NewFeatureBehaviour({
 	feature,
@@ -14,7 +15,13 @@ export function NewFeatureBehaviour({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
-	if (feature.type && feature.type !== FeatureType.Boolean) {
+	if (feature.type === FeatureType.CreditSystem) {
+		return (
+			<CreditSystemSchema creditSystem={feature} setCreditSystem={setFeature} />
+		);
+	}
+
+	if (feature.type === FeatureType.Metered) {
 		return (
 			<SheetSection>
 				<RadioGroup

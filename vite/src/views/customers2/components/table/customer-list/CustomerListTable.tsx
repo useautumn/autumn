@@ -37,7 +37,7 @@ export function CustomerListTable({
 
 	// Account for sandbox banner height (40px) in table container height
 	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 164px)" : "calc(100vh - 124px)";
+		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
 
 	const { features } = useFeaturesQuery();
 	const { queryStates } = useCustomersQueryStates();
@@ -192,33 +192,34 @@ export function CustomerListTable({
 				},
 			}}
 		>
-			<div className="flex w-full items-center h-10 pb-4 gap-4">
-				<div className="flex items-center gap-2">
-					<Table.ColumnVisibility />
-					<CustomerListFilterButton />
-					<CustomerListSearchBar />
+			<div>
+				<div className="flex w-full items-center h-10 pb-4 gap-5">
+					<div className="flex items-center gap-2">
+						<CustomerListSearchBar />
+						<CustomerListFilterButton />
+						<Table.ColumnVisibility />
+					</div>
+					<div className="flex items-center gap-2">
+						<CustomerListPagination />
+						<CustomerListPageSizeSelector />
+					</div>
+					<div className="flex items-center gap-2 ml-auto">
+						<CustomerListCreateButton />
+					</div>
 				</div>
-				<div className="flex items-center gap-2">
-					<CustomerListPagination />
-					<CustomerListPageSizeSelector />
-				</div>
-				<div className="flex items-center gap-2 ml-auto">
-					<CustomerListCreateButton />
-				</div>
+				{!hasRows && hasActiveFiltersOrSearch ? (
+					<EmptyState
+						type="no-customers-found"
+						actionButton={<CustomerListCreateButton />}
+					/>
+				) : (
+					<Table.Container>
+						<Table.VirtualizedContent>
+							<Table.VirtualizedBody />
+						</Table.VirtualizedContent>
+					</Table.Container>
+				)}
 			</div>
-
-			{!hasRows && hasActiveFiltersOrSearch ? (
-				<EmptyState
-					type="no-customers-found"
-					actionButton={<CustomerListCreateButton />}
-				/>
-			) : (
-				<Table.Container>
-					<Table.VirtualizedContent>
-						<Table.VirtualizedBody />
-					</Table.VirtualizedContent>
-				</Table.Container>
-			)}
 		</Table.Provider>
 	);
 }
