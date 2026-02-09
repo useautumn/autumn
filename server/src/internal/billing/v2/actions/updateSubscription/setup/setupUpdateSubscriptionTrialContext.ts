@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import { isProductPaidAndRecurring } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import {
 	handleFreeTrialParam,
 	inheritTrialFromCustomerProduct,
@@ -46,8 +47,14 @@ export const setupUpdateSubscriptionTrialContext = ({
 	}
 
 	// Inherit from stripe subscription (paid product case)
-	if (isProductPaidAndRecurring(fullProduct) && stripeSubscription) {
-		return inheritTrialFromSubscription({ stripeSubscription });
+	if (isProductPaidAndRecurring(fullProduct)) {
+		if (
+			stripeSubscription &&
+			isStripeSubscriptionTrialing(stripeSubscription)
+		) {
+			return inheritTrialFromSubscription({ stripeSubscription });
+		}
+		return undefined;
 	}
 
 	// Inherit from customer product (free product case)

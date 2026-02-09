@@ -181,25 +181,25 @@ export const createStripeInArrearPrice = async ({
 	});
 	const feature = relatedEnt?.feature;
 
-	// 1. If internal entity ID and not curStripe product, create product
-	if (internalEntityId && !useCheckout) {
-		if (!curStripeProduct) {
-			logger.info(
-				`Creating stripe in arrear product for ${relatedEnt?.feature.name} (internal entity ID exists!)`,
-			);
-			const stripeProduct = await stripeCli.products.create({
-				name: `${product.name} - ${feature!.name}`,
-			});
-			config.stripe_product_id = stripeProduct.id;
+	// // 1. If internal entity ID and not curStripe product, create product
+	// if (internalEntityId && !useCheckout) {
+	// 	if (!curStripeProduct) {
+	// 		logger.info(
+	// 			`Creating stripe in arrear product for ${relatedEnt?.feature.name} (internal entity ID exists!)`,
+	// 		);
+	// 		const stripeProduct = await stripeCli.products.create({
+	// 			name: `${product.name} - ${feature!.name}`,
+	// 		});
+	// 		config.stripe_product_id = stripeProduct.id;
 
-			await PriceService.update({
-				db,
-				id: price.id,
-				update: { config },
-			});
-		}
-		return;
-	}
+	// 		await PriceService.update({
+	// 			db,
+	// 			id: price.id,
+	// 			update: { config },
+	// 		});
+	// 	}
+	// 	return;
+	// }
 
 	// 2. If no internal entity ID, create Stripe price if not exists...
 	if (curStripePrice) {
@@ -249,9 +249,10 @@ export const createStripeInArrearPrice = async ({
 	}
 
 	let productData = {};
-	if (config.stripe_product_id) {
+	const stripeProductId = curStripeProduct?.id || config.stripe_product_id;
+	if (stripeProductId) {
 		productData = {
-			product: config.stripe_product_id,
+			product: stripeProductId,
 		};
 	} else {
 		productData = {

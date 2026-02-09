@@ -229,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("trial-features 2: allocated seats during 
 		feature_id: TestFeature.Users,
 		value: 5,
 	});
-	await new Promise((r) => setTimeout(r, 2000));
+	await new Promise((r) => setTimeout(r, 5000));
 
 	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -274,7 +274,7 @@ test.concurrent(`${chalk.yellowBright("trial-features 2: allocated seats during 
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 3,
-		latestTotal: 10 + 2 * 10, // Base price + 2 seats x $10/seat
+		latestTotal: 20 + 2 * 10, // Base price + 2 seats x $10/seat
 	});
 
 	expectCustomerFeatureCorrect({

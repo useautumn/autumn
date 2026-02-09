@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 
 			expect(res.checkout_url).toBeDefined();
 
-			await completeCheckoutForm(res.checkout_url);
+			await completeStripeCheckoutForm({ url: res.checkout_url });
 		}
 
 		const fullCus = await CusService.getFull({

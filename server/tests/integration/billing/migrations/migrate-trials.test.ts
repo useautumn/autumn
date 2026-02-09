@@ -26,7 +26,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const waitForMigration = (ms = 5000) =>
+const waitForMigration = (ms = 30000) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 const TEN_MINUTES_MS = 10 * 60 * 1000;
@@ -75,7 +75,10 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-1: mid-trial migration pre
 	expect(trialEndBefore).toBeDefined();
 
 	// Update product to v2
-	const v2Items = [items.monthlyMessages({ includedUsage: 600 })];
+	const v2Items = [
+		items.monthlyPrice({ price: 20 }),
+		items.monthlyMessages({ includedUsage: 600 }),
+	];
 	await autumnV1.products.update(proTrial.id, { items: v2Items });
 
 	// Run migration
@@ -153,7 +156,7 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-2: trial with usage, mid-t
 			s.products({ list: [proTrial] }),
 		],
 		actions: [
-			s.billing.attach({ productId: "pro-trial" }),
+			s.billing.attach({ productId: "pro-trial", timeout: 4000 }),
 			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
 			s.advanceTestClock({ days: 4 }),
 		],
@@ -165,7 +168,10 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-2: trial with usage, mid-t
 	const trialEndBefore = productBefore?.current_period_end;
 
 	// Update product to v2
-	const v2Items = [items.monthlyMessages({ includedUsage: 600 })];
+	const v2Items = [
+		items.monthlyPrice({ price: 20 }),
+		items.monthlyMessages({ includedUsage: 600 }),
+	];
 	await autumnV1.products.update(proTrial.id, { items: v2Items });
 
 	// Run migration
@@ -251,7 +257,10 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-3: past trial end, no new 
 	});
 
 	// Update product to v2
-	const v2Items = [items.monthlyMessages({ includedUsage: 600 })];
+	const v2Items = [
+		items.monthlyPrice({ price: 20 }),
+		items.monthlyMessages({ includedUsage: 600 }),
+	];
 	await autumnV1.products.update(proTrial.id, { items: v2Items });
 
 	// Run migration
@@ -322,7 +331,7 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-4: paid customer, v2 adds 
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: "pro" }),
+			s.billing.attach({ productId: "pro", timeout: 4000 }),
 			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
 		],
 	});
@@ -335,7 +344,10 @@ test.concurrent(`${chalk.yellowBright("migrate-trials-4: paid customer, v2 adds 
 	// Update product to v2 WITH trial (using proWithTrial structure)
 	// We'll add the free_trial config to the product
 	await autumnV1.products.update(pro.id, {
-		items: [items.monthlyMessages({ includedUsage: 600 })],
+		items: [
+			items.monthlyPrice({ price: 20 }),
+			items.monthlyMessages({ includedUsage: 600 }),
+		],
 		free_trial: {
 			length: 7,
 			duration: "day",

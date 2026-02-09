@@ -843,7 +843,7 @@ export class AutumnInt {
 			{
 				skipWebhooks,
 				idempotencyKey,
-				timeout,
+				timeout = 2000,
 			}: {
 				skipWebhooks?: boolean;
 				idempotencyKey?: string;

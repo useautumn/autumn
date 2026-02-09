@@ -12,7 +12,8 @@ import { Decimal } from "decimal.js";
 import { cusProductToFeatureOptions } from "./cusProductToFeatureOptions";
 
 /**
- * Get the feature options from a customer product, converted to new price billing units
+ * Converts purchased packs from an old customer product to packs in new billing units.
+ * Allowance (included usage) is NOT factored in here — it's handled by getStartingBalance.
  */
 export const cusProductToConvertedFeatureOptions = ({
 	cusProduct,
@@ -33,8 +34,9 @@ export const cusProductToConvertedFeatureOptions = ({
 		feature,
 	});
 
-	// If no old price found, we can't interpret the stored quantity
-	if (!oldCusPrice) return undefined;
+	if (!oldCusPrice)
+		// If no old price found, we can't interpret the stored quantity
+		return undefined;
 
 	const oldCustomerEntitlement = cusPriceToCusEnt({
 		cusPrice: oldCusPrice,
@@ -63,9 +65,10 @@ export const cusProductToConvertedFeatureOptions = ({
 
 	// 4. Subtract new allowance
 	const newAllowance = entitlement.allowance ?? 0;
-	const quantityWithoutNewAllowance = new Decimal(quantityWithOldAllowance)
-		.sub(newAllowance)
-		.toNumber();
+	const quantityWithoutNewAllowance = Math.max(
+		0,
+		new Decimal(quantityWithOldAllowance).sub(newAllowance).toNumber(),
+	);
 
 	// 5. Round to nearest new billing unit
 	const roundedQuantityWithoutNewAllowance = roundUsageToNearestBillingUnit({

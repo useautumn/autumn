@@ -57,6 +57,7 @@ test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after ad
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 18,
+		waitForSeconds: 30,
 	});
 
 	// Verify all invoices are paid

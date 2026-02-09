@@ -20,7 +20,7 @@ export const buildAutumnLineItems = ({
 	const { logger } = ctx;
 
 	// For now, update subscription doesn't charge for existing usage.
-	const { lineItems: arrearLineItems, updateCustomerEntitlements } =
+	let { lineItems: arrearLineItems, updateCustomerEntitlements } =
 		deletedCustomerProduct && includeArrearLineItems
 			? customerProductToArrearLineItems({
 					ctx,
@@ -32,6 +32,8 @@ export const buildAutumnLineItems = ({
 					},
 				})
 			: { lineItems: [], updateCustomerEntitlements: [] };
+
+	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
 	// Get line items for ongoing cus product
 	const deletedLineItems = deletedCustomerProduct

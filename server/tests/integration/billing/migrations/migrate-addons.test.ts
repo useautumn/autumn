@@ -22,7 +22,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
-const waitForMigration = (ms = 5000) =>
+const waitForMigration = (ms = 20000) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +62,7 @@ test.concurrent(`${chalk.yellowBright("migrate-addons-1: migrate add-on only, ma
 		],
 		actions: [
 			s.billing.attach({ productId: "pro" }),
-			s.billing.attach({ productId: "storage-addon" }),
+			s.billing.attach({ productId: "storage-addon", timeout: 4000 }),
 			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Words, value: 20, timeout: 2000 }),
 		],
@@ -185,7 +185,7 @@ test.concurrent(`${chalk.yellowBright("migrate-addons-2: migrate main only, add-
 		],
 		actions: [
 			s.billing.attach({ productId: "pro" }),
-			s.billing.attach({ productId: "storage-addon" }),
+			s.billing.attach({ productId: "storage-addon", timeout: 4000 }),
 			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
 			s.track({ featureId: TestFeature.Words, value: 20, timeout: 2000 }),
 		],

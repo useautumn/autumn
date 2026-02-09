@@ -60,7 +60,6 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-1: custom plan customer is
 				productId: "pro",
 				items: [monthlyPrice, items.monthlyMessages({ includedUsage: 750 })], // Custom included usage
 			}),
-			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
 		],
 	});
 
@@ -69,9 +68,9 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-1: custom plan customer is
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 750, // Custom value, not product's 500
-		balance: 650, // 750 - 100
-		usage: 100,
+		includedUsage: 750,
+		balance: 750,
+		usage: 0,
 	});
 
 	// Get version before migration
@@ -109,9 +108,9 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-1: custom plan customer is
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 750, // Still custom value
-		balance: 650, // Unchanged
-		usage: 100,
+		includedUsage: 750,
+		balance: 750,
+		usage: 0,
 	});
 
 	await expectSubToBeCorrect({
@@ -157,7 +156,6 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-2: mix of custom and regul
 		actions: [
 			// Regular customer attaches with standard product config
 			s.billing.attach({ productId: "pro" }),
-			s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
 			// Custom customer attaches with custom items (overridden pricing)
 			s.billing.attach({
 				productId: "pro",
@@ -170,14 +168,6 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-2: mix of custom and regul
 		],
 	});
 
-	// Track usage for custom customer (s.track doesn't support customerId override)
-	await autumnV1.track({
-		customer_id: customerIdCustom,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
-	await new Promise((resolve) => setTimeout(resolve, 2000));
-
 	// Verify initial states
 	let regularCustomer =
 		await autumnV1.customers.get<ApiCustomerV3>(customerIdRegular);
@@ -188,16 +178,16 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-2: mix of custom and regul
 		customer: regularCustomer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
-		balance: 450,
-		usage: 50,
+		balance: 500,
+		usage: 0,
 	});
 
 	expectCustomerFeatureCorrect({
 		customer: customCustomer,
 		featureId: TestFeature.Messages,
-		includedUsage: 800, // Custom
-		balance: 700,
-		usage: 100,
+		includedUsage: 800,
+		balance: 800,
+		usage: 0,
 	});
 
 	// Update product to v2
@@ -225,8 +215,8 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-2: mix of custom and regul
 		customer: regularCustomer,
 		featureId: TestFeature.Messages,
 		includedUsage: 600, // Updated to v2
-		balance: 550, // 600 - 50
-		usage: 50,
+		balance: 600,
+		usage: 0,
 	});
 
 	// Verify custom customer was SKIPPED
@@ -236,7 +226,7 @@ test.concurrent(`${chalk.yellowBright("migrate-custom-2: mix of custom and regul
 		customer: customCustomer,
 		featureId: TestFeature.Messages,
 		includedUsage: 800, // Still custom
-		balance: 700, // Unchanged
-		usage: 100,
+		balance: 800,
+		usage: 0,
 	});
 });

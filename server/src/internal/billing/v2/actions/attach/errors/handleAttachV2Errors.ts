@@ -6,6 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleAttachBillingBehaviorErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachBillingBehaviorErrors";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
+import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
@@ -30,6 +31,9 @@ export const handleAttachV2Errors = ({
 		customerProduct: billingContext.currentCustomerProduct,
 		action: "attach",
 	});
+
+	// 2. Current customer product errors (same product)
+	handleCurrentCustomerProductErrors({ billingContext });
 
 	// 2. Stripe checkout errors (multi-interval)
 	handleStripeCheckoutErrors({ billingContext, autumnBillingPlan });

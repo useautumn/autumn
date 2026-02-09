@@ -228,55 +228,21 @@ test.concurrent(`${chalk.yellowBright("cleanup: boolean-coverage-newer-missing-f
 	});
 
 	// Attach first product (with both dashboard + adminRights), deplete messages
-	await autumnV1.billing.attach(
-		{
-			customer_id: customerId,
-			product_id: oneOff.id,
-			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
-
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
-
-	await timeout(2000);
-
-	// Attach second product (same product, so initially has both booleans)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
-	await timeout(2000);
-
-	// Simulate product versioning: delete the adminRights entitlement from the NEWER customer_product
+	// Attach second product with custom items that exclude adminRights
 	// This simulates a scenario where the product was updated to remove a boolean feature
 	// between the two attaches
-	const fullCusBefore = await getFullCustomerWithExpired(customerId);
-	const cusProducts = fullCusBefore.customer_products
-		.filter((cp) => cp.product.id === oneOff.id)
-		.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-
-	// Get the newer customer_product (second one)
-	const newerCusProduct = cusProducts[1];
-
-	// Find the adminRights entitlement in the newer customer_product
-	const adminRightsEnt = newerCusProduct.customer_entitlements?.find(
-		(ce) => ce.entitlement?.feature?.id === TestFeature.AdminRights,
-	);
-
-	if (adminRightsEnt) {
-		// Delete the adminRights customer_entitlement from the newer product
-		await ctx.db.execute(`
-			DELETE FROM customer_entitlements 
-			WHERE id = '${adminRightsEnt.id}'
-		`);
-	}
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		items: [oneOffMessagesItem, dashboardItem], // No adminRights
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
 
 	// Run cleanup
 	await cleanupOneOffCustomerProducts({ ctx });

@@ -15,10 +15,9 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -75,8 +74,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: allow_promotion_codes")}
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout (without promo code for this test)
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 
 	// 4. Verify product attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -157,8 +155,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: discounted checkout")}`,
 	expect(result.payment_url).toBeDefined();
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 
 	// 4. Verify product attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

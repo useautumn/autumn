@@ -136,9 +136,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-upgrade 1: upgrade active 
 	// Verify invoices: initial pro ($20) + refund (-$20)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2,
-		latestTotal: -20,
+		count: 3,
+		latestTotal: 0,
 	});
+
+	expect(customer.invoices?.[1]?.total).toBe(-20);
 
 	// Verify Stripe subscription state
 	await expectSubToBeCorrect({

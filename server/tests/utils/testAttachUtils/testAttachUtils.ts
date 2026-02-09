@@ -141,8 +141,15 @@ export const getAttachTotal = ({
 	return dueTodayTotal.toDecimalPlaces(2).toNumber();
 };
 
+const isParallelRun = () => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	return concurrency > 1;
+};
+
 /**
  * Advances the test clock to the next invoice (1 month from current time).
+ * Waits longer when running in parallel (TEST_FILE_CONCURRENCY > 1) to
+ * account for increased Stripe webhook processing time.
  *
  * @param stripeCli - Stripe client
  * @param testClockId - Test clock ID
@@ -162,13 +169,14 @@ export const advanceToNextInvoice = async ({
 	withPause?: boolean;
 }): Promise<number> => {
 	const baseTime = currentEpochMs ? new Date(currentEpochMs) : new Date();
+	const parallel = isParallelRun();
 
 	if (withPause) {
 		const newUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(baseTime, 1).getTime(),
-			waitForSeconds: 30,
+			waitForSeconds: parallel ? 60 : 30,
 		});
 
 		await advanceTestClock({

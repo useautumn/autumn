@@ -41,14 +41,6 @@
 - `server/tests/merged/group/mergedGroup1.test.ts`
 - `server/tests/merged/group/mergedGroup2.test.ts`
 
-## Merged Trial Tests → legacy/attach/trial/legacy-trial-merged.test.ts
-- `server/tests/merged/trial/mergedTrial1.test.ts`
-- `server/tests/merged/trial/mergedTrial2.test.ts`
-- `server/tests/merged/trial/mergedTrial3.test.ts`
-
-## Trial Tests → legacy/attach/trial/legacy-trial.test.ts
-- `server/tests/merged/trial/trial1.test.ts`
-- `server/tests/merged/trial/trial2.test.ts`
 
 ## Separate Subscription Tests → legacy/attach/separate/legacy-separate.test.ts
 - `server/tests/merged/separate/separate1.test.ts`

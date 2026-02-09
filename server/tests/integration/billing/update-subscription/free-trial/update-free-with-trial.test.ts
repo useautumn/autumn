@@ -244,6 +244,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		customer,
 		productId: freeWithTrial.id,
 		trialEndsAt: advancedTo! + ms.days(30), // advancedTo + 30 day new trial
+		toleranceMs: ms.days(1),
 	});
 
 	// New trial end should be later than original

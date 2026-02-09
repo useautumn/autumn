@@ -12,10 +12,10 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -68,7 +68,7 @@ test(`${chalk.yellowBright("update-customer-details: name and email synced from 
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout form (fills in name and email)
-	await completeCheckoutForm(result.payment_url);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000); // Wait for webhook processing
 
 	// 4. Verify product is attached
@@ -79,9 +79,9 @@ test(`${chalk.yellowBright("update-customer-details: name and email synced from 
 	});
 
 	// 5. Verify customer details were updated from checkout
-	// Name should be "Test Customer" (from completeCheckoutForm)
+	// Name should be "Test Customer" (from completeStripeCheckoutForm)
 	expect(customerAfter.name).toBe("Test Customer");
 
-	// Email should be "test@example.com" (from completeCheckoutForm)
+	// Email should be "test@example.com" (from completeStripeCheckoutForm)
 	expect(customerAfter.email).toBe("test@example.com");
 });

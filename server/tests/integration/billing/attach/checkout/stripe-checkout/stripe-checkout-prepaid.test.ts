@@ -18,10 +18,10 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -80,8 +80,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity")}`, as
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	// 3. Complete checkout
-	await completeCheckoutForm(result.payment_url);
-	await timeout(12000);
+	await completeStripeCheckoutForm({ url: result.payment_url });
 
 	// 4. Verify product attached and prepaid credits granted
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -164,6 +163,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity updated
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
+		adjustable_quantity: true,
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -173,7 +173,10 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity updated
 	const checkoutTotalUnits = 500;
 	const checkoutStripePacks = checkoutTotalUnits / billingUnits; // 5 packs on Stripe
 	const paidPacks = (checkoutTotalUnits - includedUsage) / billingUnits; // 4 paid packs
-	await completeCheckoutForm(result.payment_url, checkoutStripePacks);
+	await completeStripeCheckoutForm({
+		url: result.payment_url,
+		overrideQuantity: checkoutStripePacks,
+	});
 	await timeout(12000);
 
 	// 3. Verify product attached with checkout quantity (not attach quantity)
@@ -219,7 +222,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity updated
  * - Attach pro with prepaid messages AND prepaid words
  * - On Stripe checkout page, update quantity (messages line item)
  *
- * Note: completeCheckoutForm only adjusts the first adjustable line item.
+ * Note: completeStripeCheckoutForm only adjusts the first adjustable line item.
  * Words quantity remains as originally set.
  *
  * Expected Result:
@@ -258,10 +261,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
-		setup: [
-			s.customer({ testClock: true }),
-			s.products({ list: [pro] }),
-		],
+		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 		actions: [],
 	});
 
@@ -275,6 +275,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
 			{ feature_id: TestFeature.Messages, quantity: initialMessagesQty },
 			{ feature_id: TestFeature.Words, quantity: initialWordsQty },
 		],
+		adjustable_quantity: true,
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -282,7 +283,10 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
 	// 2. Complete checkout with updated messages quantity (5 packs = 500 total)
 	const checkoutMessagesTotalUnits = 500;
 	const checkoutMessagesStripePacks = checkoutMessagesTotalUnits / billingUnits; // 5 packs
-	await completeCheckoutForm(result.payment_url, checkoutMessagesStripePacks);
+	await completeStripeCheckoutForm({
+		url: result.payment_url,
+		overrideQuantity: checkoutMessagesStripePacks,
+	});
 	await timeout(12000);
 
 	// 3. Verify both features
@@ -313,7 +317,8 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
 	});
 
 	// 4. Verify invoice
-	const messagesPaidPacks = (checkoutMessagesTotalUnits - messagesIncluded) / billingUnits; // 4
+	const messagesPaidPacks =
+		(checkoutMessagesTotalUnits - messagesIncluded) / billingUnits; // 4
 	const wordsPaidPacks = (wordsRoundedQty - wordsIncluded) / billingUnits; // (300 - 200) / 100 = 1
 	const expectedTotal =
 		basePrice +
@@ -353,7 +358,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
  */
 test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity set to 0")}`, async () => {
 	const customerId = "stripe-checkout-prepaid-qty-zero";
-	const includedUsage = 100;
+	const includedUsage = 0;
 	const billingUnits = 100;
 	const pricePerPack = 10;
 	const basePrice = 20;
@@ -371,10 +376,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity set to 
 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
-		setup: [
-			s.customer({ testClock: true }),
-			s.products({ list: [pro] }),
-		],
+		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 		actions: [],
 	});
 
@@ -384,13 +386,16 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity set to 
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
+		adjustable_quantity: true,
 	});
 
 	expect(result.payment_url).toBeDefined();
 
 	// 2. Complete checkout with quantity 0 (line item removed)
-	await completeCheckoutForm(result.payment_url, 0);
-	await timeout(12000);
+	await completeStripeCheckoutForm({
+		url: result.payment_url,
+		overrideQuantity: 0,
+	});
 
 	// 3. Verify customer only gets included usage
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -403,8 +408,8 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity set to 
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: includedUsage, // Only 100, not 300
-		balance: includedUsage,
+		includedUsage: 0, // Only 100, not 300
+		balance: 0,
 		usage: 0,
 	});
 
@@ -466,10 +471,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: tiered prepaid with quan
 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
-		setup: [
-			s.customer({ testClock: true }),
-			s.products({ list: [pro] }),
-		],
+		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 		actions: [],
 	});
 
@@ -479,6 +481,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: tiered prepaid with quan
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
+		adjustable_quantity: true,
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -487,7 +490,10 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: tiered prepaid with quan
 	// 2. Complete checkout with 8 packs (800 units, spans both tiers)
 	const checkoutTotalUnits = 800;
 	const checkoutStripePacks = checkoutTotalUnits / billingUnits; // 8 packs
-	await completeCheckoutForm(result.payment_url, checkoutStripePacks);
+	await completeStripeCheckoutForm({
+		url: result.payment_url,
+		overrideQuantity: checkoutStripePacks,
+	});
 	await timeout(12000);
 
 	// 3. Verify product attached with checkout quantity
