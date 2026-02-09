@@ -1,9 +1,9 @@
 import {
+	apiPlanItem,
 	type CreateBalanceParams,
 	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
-	planFeaturesToItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initCusEntitlement } from "@/internal/customers/add-product/initCusEnt";
@@ -21,13 +21,13 @@ export const prepareNewBalanceForInsertion = async ({
 	fullCustomer: FullCustomer;
 	params: CreateBalanceParams;
 }) => {
-	const inputAsItem = planFeaturesToItems({
-		features: [feature],
-		planFeatures: [params],
+	const inputAsItem = apiPlanItem.map.v0ToProductItem({
+		ctx,
+		planItem: params,
 	});
 
 	const { ent: newEntitlement } = toFeature({
-		item: inputAsItem[0],
+		item: inputAsItem,
 		orgId: ctx.org.id,
 		isCustom: true,
 		internalFeatureId: feature.internal_id!,

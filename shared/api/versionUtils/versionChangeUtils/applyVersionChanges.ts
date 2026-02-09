@@ -1,3 +1,4 @@
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { type ApiVersion, LATEST_VERSION } from "../ApiVersion.js";
 import { ApiVersionClass } from "../ApiVersionClass.js";
 import {
@@ -8,7 +9,6 @@ import type {
 	AffectedResource,
 	VersionChange,
 	VersionChangeConstructor,
-	VersionContext,
 } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
@@ -39,7 +39,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
-	ctx: VersionContext;
+	ctx: SharedContext;
 }): T {
 	// Default currentVersion to latest if not provided
 	const _currentVersion = currentVersion || new ApiVersionClass(LATEST_VERSION);
@@ -253,7 +253,7 @@ export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
-	ctx: VersionContext;
+	ctx: SharedContext;
 }): T[] {
 	return inputArray.map((item) =>
 		applyResponseVersionChanges({

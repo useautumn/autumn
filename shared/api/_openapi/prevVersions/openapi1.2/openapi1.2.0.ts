@@ -7,7 +7,7 @@ import { EntityDataSchema } from "../../../common/entityData.js";
 import { ApiCusProductV3Schema } from "../../../customers/cusPlans/previousVersions/apiCusProductV3.js";
 import {
 	ApiCusFeatureV3Schema,
-	ApiProductItemSchema,
+	ApiProductItemV0Schema,
 } from "../../../models.js";
 import { balancesOpenApi } from "./balancesOpenApi1.2.0.js";
 import { coreOpenApi } from "./coreOpenApi.js";
@@ -54,7 +54,7 @@ const OPENAPI_1_2_0 = createDocument(
 					description: "Customer feature object returned by the API",
 				}),
 				Product: ApiProductWithMeta,
-				ProductItem: ApiProductItemSchema,
+				ProductItem: ApiProductItemV0Schema,
 				Feature: ApiFeatureWithMeta,
 				Entity: ApiEntityWithMeta,
 			},

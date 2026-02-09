@@ -1,13 +1,13 @@
 import type { ZodType, z } from "zod/v4";
-import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import type { ApiVersion } from "../ApiVersion.js";
 
-/**
- * Context passed to version transforms for accessing runtime data
- */
-export interface VersionContext {
-	features: Feature[];
-}
+// /**
+//  * Context passed to version transforms for accessing runtime data
+//  */
+// export interface VersionContext {
+// 	features: Feature[];
+// }
 
 /**
  * Resources that can be affected by version changes
@@ -157,7 +157,7 @@ export abstract class VersionChange<
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
-		ctx?: VersionContext;
+		ctx?: SharedContext;
 	}): z.infer<TOldSchema> {
 		// Default: no-op (override if change affects responses)
 		return input as unknown as z.infer<TOldSchema>;
@@ -256,7 +256,7 @@ export interface VersionChangeConfig<
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
-		ctx: VersionContext;
+		ctx: SharedContext;
 	}) => z.infer<TOldSchema>;
 }
 
@@ -325,7 +325,7 @@ export function defineVersionChange<
 			legacyData?: TLegacyDataSchema extends ZodType
 				? z.infer<TLegacyDataSchema>
 				: never;
-			ctx: VersionContext;
+			ctx: SharedContext;
 		}): z.infer<TOldSchema> {
 			if (config.transformResponse) {
 				const result = config.transformResponse(

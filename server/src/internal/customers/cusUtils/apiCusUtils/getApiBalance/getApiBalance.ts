@@ -135,7 +135,7 @@ export const getApiBalance = ({
 		expand: ctx.expand,
 		includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
 	})
-		? dbToApiFeatureV1({ dbFeature: feature })
+		? dbToApiFeatureV1({ ctx, dbFeature: feature })
 		: undefined;
 
 	// 1. If feature is boolean
