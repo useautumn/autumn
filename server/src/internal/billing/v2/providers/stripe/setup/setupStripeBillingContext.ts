@@ -62,7 +62,6 @@ export const setupStripeBillingContext = async ({
 
 	const stripeDiscounts = await fetchStripeDiscountsForBilling({
 		ctx,
-		fullCustomer,
 		stripeSubscription,
 		stripeCustomer,
 		paramDiscounts,
