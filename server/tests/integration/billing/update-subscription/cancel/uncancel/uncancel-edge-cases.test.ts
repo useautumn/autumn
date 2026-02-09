@@ -182,7 +182,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 			length: trialDays,
 			duration: FreeTrialDuration.Day,
 			card_required: true,
-			unique_fingerprint: false,
 		},
 	});
 
@@ -205,7 +204,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 			length: trialDays,
 			duration: FreeTrialDuration.Day,
 			card_required: true,
-			unique_fingerprint: false,
 		},
 	});
 

@@ -30,7 +30,7 @@ export class RolloverService {
 	}
 
 	static async upsert({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
-		if (Array.isArray(rows) && rows.length == 0) return;
+		if (Array.isArray(rows) && rows.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(rollovers, ["id"]);
 		await db

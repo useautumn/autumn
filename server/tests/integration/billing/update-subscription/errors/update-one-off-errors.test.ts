@@ -237,7 +237,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off adding free trial")}`, asy
 				free_trial: {
 					length: 7,
 					duration: FreeTrialDuration.Day,
-					unique_fingerprint: false,
 					card_required: true,
 				},
 			});

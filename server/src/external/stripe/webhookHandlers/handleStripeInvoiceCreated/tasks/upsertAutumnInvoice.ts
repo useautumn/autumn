@@ -47,7 +47,7 @@ export const upsertAutumnInvoice = async ({
 					stripeSubscriptionId: stripeSubscription.id,
 				})
 				.or.onStripeSchedule({
-					stripeSubscriptionScheduleId: scheduleId,
+					stripeSubscriptionScheduleId: scheduleId ?? undefined,
 				})
 				.scheduled()
 				.hasStarted({ nowMs: eventContext.nowMs });

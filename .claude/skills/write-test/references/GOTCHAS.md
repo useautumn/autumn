@@ -8,6 +8,51 @@ Quick reference for common mistakes. Each gotcha follows the format:
 
 ## Setup & Initialization
 
+### NEVER Call `initScenario` Twice - Use Single Scenario for Multiple Customers
+
+**CRITICAL:** When testing scenarios with multiple customers, **NEVER** call `initScenario` multiple times. Instead, use a single `initScenario` call and create additional customers using the autumn client directly.
+
+```typescript
+// ❌ WRONG - Calling initScenario twice
+const { autumnV1: autumnA } = await initScenario({
+  customerId: customerIdA,
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro] })],
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+const { autumnV1: autumnB } = await initScenario({
+  customerId: customerIdB,
+  setup: [s.customer({ paymentMethod: "success" })],  // DON'T DO THIS!
+  actions: [s.billing.attach({ productId: "pro" })],
+});
+
+// ✅ RIGHT - Single initScenario, create additional customers manually
+const { autumnV1, ctx } = await initScenario({
+  customerId: customerIdA,
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+  ],
+  actions: [
+    s.billing.attach({ productId: "pro" }),
+    s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
+  ],
+});
+
+// Create second customer using the autumn client
+await autumnV1.customers.create(customerIdB, { ... });
+await autumnV1.attach({
+  customer_id: customerIdB,
+  product_id: pro.id,
+});
+```
+
+**Why?**
+- `initScenario` creates test context, Stripe test clocks, and products with prefixes
+- Calling it twice can cause conflicts with product IDs, test clocks, and org state
+- The second call may try to recreate products that already exist
+- Use the autumn client from the first `initScenario` to manage additional customers
+
 ### Payment Method Required for Paid Features
 ```typescript
 // WRONG
@@ -27,6 +72,22 @@ s.attach({ productId: "pro" })
 s.attach({ productId: pro.id })
 ```
 Products are prefixed by `initScenario`. Always use `product.id`.
+
+### Product IDs in Expectations - Just Use `product.id`
+```typescript
+// WRONG - Double prefix (initScenario already adds customerId prefix)
+expectProductActive({
+  customer,
+  productId: `${pro.id}_${customerId}`,  // Will fail!
+});
+
+// RIGHT - Just use product.id directly
+expectProductActive({
+  customer,
+  productId: pro.id,
+});
+```
+`initScenario` already prefixes product IDs with `customerId`. When verifying products, just use `product.id` directly.
 
 ### Multiple Products Need Unique IDs
 ```typescript
@@ -136,6 +197,26 @@ const fromDb = await autumnV1.customers.get(customerId, { skip_cache: "true" });
 
 ## Prepaid Features
 
+### includedUsage Must Be Multiple of billingUnits
+```typescript
+// WRONG - 50 / 100 = 0.5, invalid for Stripe tiers
+const invalidItem = constructPrepaidItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 50,  // NOT a multiple of billingUnits!
+  billingUnits: 100,
+  price: 10,
+});
+
+// RIGHT - 0, 100, 200, etc. are valid
+const validItem = constructPrepaidItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 200,  // 200 / 100 = 2, valid integer
+  billingUnits: 100,
+  price: 10,
+});
+```
+When Stripe tiered pricing is created, `up_to` for the first tier = `includedUsage / billingUnits`. Stripe requires `up_to` to be a positive integer or "inf". If this results in a decimal (e.g., 50/100=0.5), Stripe rejects it with: `Invalid tiers[0][up_to]: must be one of inf`.
+
 ### Quantity Required on Attach
 ```typescript
 // WRONG
@@ -192,6 +273,33 @@ expectCustomerFeatureCorrect({
 ---
 
 ## Billing & Invoices
+
+### Trial Invoice Count
+When a Stripe subscription is created (even with a trial), Stripe generates a $0 invoice:
+```typescript
+// WRONG - Trial subscription DOES create an invoice
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 0,  // Wrong! Trial creates $0 invoice
+});
+
+// RIGHT - Trial subscription creates 1 invoice with $0 total
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 1,
+  latestTotal: 0,
+});
+
+// RIGHT - Free product (no Stripe subscription) has no invoice
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 0,  // Correct for free products
+});
+```
+Rules:
+- **Stripe subscription created (even trialing)**: `count: 1, latestTotal: 0`
+- **Subscription updated while trialing**: Invoice count increases by 1 (still `latestTotal: 0`)
+- **Free product (no Stripe subscription)**: `count: 0` is correct
 
 ### Consumable Overage: Not Charged on Update
 ```typescript
@@ -266,6 +374,108 @@ expect(balance).toBe(100 - 23.47);
 // RIGHT
 expect(balance).toBe(new Decimal(100).sub(23.47).toNumber());
 ```
+
+---
+
+## Preview & Next Cycle
+
+### Use `expectPreviewNextCycleCorrect` with Exact `startsAt`
+```typescript
+// WRONG - Approximate timing
+expectPreviewNextCycleCorrect({
+  preview,
+  total: 20,
+  startsAt: Date.now() + ms.months(1),  // Wrong base time!
+});
+
+// RIGHT - Use advancedTo from initScenario + addMonths
+const { advancedTo } = await initScenario({ ... });
+expectPreviewNextCycleCorrect({
+  preview,
+  total: 20,
+  startsAt: addMonths(advancedTo, 1).getTime(),  // Exact next cycle start
+});
+```
+`advancedTo` is the test clock time after initScenario completes. Use `addMonths(advancedTo, 1)` for next month's cycle start.
+
+### Do NOT Create New `initScenario` to Advance Test Clock
+```typescript
+// WRONG - Creating new initScenario loses test context
+const { autumnV1 } = await initScenario({ customerId, ... });
+// ... do some tests ...
+const { autumnV1: autumnV1After } = await initScenario({
+  customerId,
+  actions: [s.billing.attach(...), s.advanceToNextInvoice()],  // BAD!
+});
+
+// RIGHT - Use helpers on existing ctx, or include all actions in single initScenario
+const { autumnV1, ctx } = await initScenario({
+  customerId,
+  setup: [...],
+  actions: [
+    s.billing.attach({ productId: pro.id }),
+    s.billing.attach({ productId: free.id }),  // Schedule downgrade
+    s.advanceToNextInvoice(),
+  ],
+});
+```
+Creating a new `initScenario` with the same `customerId` may cause issues because it tries to recreate the customer/products.
+
+### Prepaid `next_cycle.total` Depends on Quantity
+```typescript
+// If prepaid billingUnits: 100, price: 10, quantity: 200
+// next_cycle.total = (200 / 100) * 10 = $20
+
+// WRONG - Assuming fixed price
+expectPreviewNextCycleCorrect({ preview, total: 10 });
+
+// RIGHT - Calculate based on quantity
+const expectedTotal = (quantity / billingUnits) * price;
+expectPreviewNextCycleCorrect({ preview, total: expectedTotal });
+```
+For prepaid features, `next_cycle.total` reflects the price for the quantity that will be purchased.
+
+---
+
+---
+
+## Resetting Feature Usage (Rollovers)
+
+### Free Features vs Paid Features Reset Differently
+
+**Free features (no price):** Use `s.resetFeature()` - simulates cycle reset without advancing test clock:
+```typescript
+// Free product with rollover
+const free = products.base({ id: "free", items: [freeMessagesWithRollover] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: free.id }),
+    s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+    s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }),
+  ],
+});
+```
+
+**Paid features (consumable, prepaid, base price):** Use `s.advanceToNextInvoice()` - advances test clock and triggers Stripe subscription renewal:
+```typescript
+// Paid product with consumable or prepaid
+const pro = products.pro({ id: "pro", items: [consumableMessages] });
+
+const { autumnV1 } = await initScenario({
+  customerId,
+  actions: [
+    s.billing.attach({ productId: pro.id }),
+    s.advanceToNextInvoice(),  // Triggers Stripe renewal → resets usage
+  ],
+});
+```
+
+### Why the Difference?
+
+- **Free products**: No Stripe subscription exists. Usage must be reset manually via `s.resetFeature()` which simulates the cron job.
+- **Paid products**: Stripe subscription exists. Advancing the test clock triggers `invoice.paid` webhook which resets usage.
 
 ---
 

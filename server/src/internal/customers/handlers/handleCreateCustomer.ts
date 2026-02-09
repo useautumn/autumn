@@ -24,8 +24,6 @@ export const initStripeCusAndProducts = async ({
 	customer: Customer;
 	products: FullProduct[];
 }) => {
-	const { db, org, env, logger } = ctx;
-
 	const batchInit: Promise<Stripe.Customer | undefined>[] = [
 		getOrCreateStripeCustomer({
 			ctx,
@@ -36,10 +34,7 @@ export const initStripeCusAndProducts = async ({
 	for (const product of products) {
 		batchInit.push(
 			initProductInStripe({
-				db,
-				org,
-				env,
-				logger,
+				ctx,
 				product,
 			}),
 		);

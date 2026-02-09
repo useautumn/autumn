@@ -8,9 +8,7 @@ export enum MetadataType {
 	CheckoutSessionCompleted = "checkout_session_completed",
 
 	DeferredInvoice = "deferred_invoice",
-
-	// InvoiceActionRequiredV2 = "invoice_action_required_v2",
-	// InvoiceCheckoutV2 = "invoice_checkout_v2",
+	CheckoutSessionV2 = "checkout_session_v2",
 }
 
 export const metadata = pgTable("metadata", {
@@ -20,6 +18,7 @@ export const metadata = pgTable("metadata", {
 	data: jsonb(),
 	type: text("type").$type<MetadataType>(),
 	stripe_invoice_id: text("stripe_invoice_id"),
+	stripe_checkout_session_id: text("stripe_checkout_session_id"),
 });
 
 export type Metadata = InferSelectModel<typeof metadata>;

@@ -1,3 +1,4 @@
+import { _legacyListRawEvents } from "@/internal/analytics/actions/_legacyListRawEvents";
 import { aggregate } from "./aggregate";
 import { getCountAndSum } from "./getCountAndSum.js";
 import { getEventById } from "./getEventById.js";
@@ -5,7 +6,6 @@ import { getTopEventNames } from "./getTopEventNames.js";
 import { listEventNames } from "./listEventNames.js";
 import { listEvents } from "./listEvents.js";
 import { listRawEvents } from "./listRawEvents.js";
-import { _legacyListRawEvents } from "./_legacyListRawEvents.js";
 
 export const eventActions = {
 	aggregate,

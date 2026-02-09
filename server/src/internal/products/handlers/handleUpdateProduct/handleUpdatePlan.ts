@@ -206,11 +206,8 @@ export const handleUpdatePlan = createRoute({
 		// New full product
 
 		await initProductInStripe({
-			db,
+			ctx,
 			product: newFullProduct,
-			org,
-			env,
-			logger,
 		});
 
 		logger.info("Adding task to queue to detect base variant");

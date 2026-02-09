@@ -1,8 +1,8 @@
-import { InternalError } from "../../../../api/errors";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
-import { isOneOffPrice } from "../../../productUtils/priceUtils/classifyPriceUtils";
-import { featureUsageToDescription } from "./featureUsageToDescription";
-import { lineItemToPeriodDescription } from "./lineItemToPeriodDescription";
+import { InternalError } from "@api/errors";
+import type { LineItemContext } from "@models/billingModels/lineItem/lineItemContext";
+import { featureUsageToDescription } from "@utils/billingUtils/invoicingUtils/descriptionUtils/featureUsageToDescription";
+import { lineItemToPeriodDescription } from "@utils/billingUtils/invoicingUtils/descriptionUtils/lineItemToPeriodDescription";
+import { isOneOffPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 
 export const usagePriceToLineDescription = ({
 	usage,
@@ -43,10 +43,6 @@ export const usagePriceToLineDescription = ({
 	if (context.direction === "refund") {
 		description = `Unused ${description}`;
 	}
-
-	// if (billingPeriod) {
-	// 	description = `${description} (${billingPeriodToDescription(billingPeriod)})`;
-	// }
 
 	return description;
 };

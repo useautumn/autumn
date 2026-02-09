@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, BillingVersion } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -144,6 +144,7 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`
 		org: ctx.org,
 		env: ctx.env,
 		subCount: 1,
+		billingVersion: BillingVersion.V2,
 	});
 });
 

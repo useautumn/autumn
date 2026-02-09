@@ -1,0 +1,73 @@
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
+import { applyUncancelToPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/applyUncancelToPlan";
+import { applyCancelPlan } from "./applyCancelPlan";
+import { computeCancelLineItems } from "./computeCancelLineItems";
+import { computeCancelUpdates } from "./computeCancelUpdates";
+import { computeCustomerProductToDelete } from "./computeCustomerProductToDelete";
+import { computeDefaultCustomerProduct } from "./computeDefaultCustomerProduct";
+import { computeEndOfCycleMs } from "./computeEndOfCycleMs";
+
+/**
+ * Computes and applies the cancel plan for a subscription.
+ *
+ * Handles two cancel actions:
+ * - 'cancel_end_of_cycle': Schedule cancellation at cycle end, insert scheduled default product
+ * - 'cancel_immediately': Cancel now, insert active default product
+ */
+export const computeCancelPlan = ({
+	ctx,
+	billingContext,
+	plan,
+}: {
+	ctx: AutumnContext;
+	billingContext: UpdateSubscriptionBillingContext;
+	plan: AutumnBillingPlan;
+}): AutumnBillingPlan => {
+	if (!billingContext.cancelAction) return plan;
+
+	if (billingContext.cancelAction === "uncancel") {
+		return applyUncancelToPlan({
+			billingContext,
+			plan,
+		});
+	}
+
+	// Step 1: Calculate when the subscription ends
+	const endOfCycleMs = computeEndOfCycleMs({ billingContext });
+
+	ctx.logger.debug(
+		`[computeCancelPlan] ${billingContext.cancelAction}: end of cycle at ${endOfCycleMs}`,
+	);
+
+	// Step 2: Build cancel updates for customer product
+	const cancelUpdates = computeCancelUpdates({ billingContext, endOfCycleMs });
+
+	// Step 3: Create default product (if applicable)
+	const defaultCustomerProduct = computeDefaultCustomerProduct({
+		ctx,
+		billingContext,
+		endOfCycleMs,
+	});
+
+	ctx.logger.debug(
+		`[computeCancelPlan] default customer product: ${defaultCustomerProduct?.product.name}`,
+	);
+
+	// Step 4: Find existing scheduled product to delete
+	const productToDelete = computeCustomerProductToDelete({ billingContext });
+
+	// Step 5: Compute prorated refund line items for immediate cancellation
+	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });
+
+	// Apply all computed values to the plan
+	return applyCancelPlan({
+		plan,
+		cancelUpdates,
+		defaultCustomerProduct,
+		productToDelete,
+		cancelLineItems,
+		existingCustomerProduct: billingContext.customerProduct,
+	});
+};

@@ -8,6 +8,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -349,7 +350,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None cr
 	const initialQuantity2 = 3 * billingUnits; // 300
 	const newQuantity1 = 2 * billingUnits; // 200 (decrease)
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -396,12 +397,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None cr
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity1 }],
 	});
 
-	// Balance is updated immediately with OnDecrease.None
+	// Balance is updated AFTER the next cycle with OnDecrease.None
 	const entity1After = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectCustomerFeatureCorrect({
+	expectCustomerFeatureCorrect({
 		customer: entity1After,
 		featureId: TestFeature.Messages,
-		balance: newQuantity1,
+		balance: initialQuantity1,
 	});
 
 	// No new invoice should be created (the key behavior of OnDecrease.None)
@@ -413,10 +414,22 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None cr
 
 	// Entity 2 should be unchanged
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectCustomerFeatureCorrect({
+	expectCustomerFeatureCorrect({
 		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: initialQuantity2,
+	});
+
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	const afterAdvance = await autumnV1.entities.get(customerId, entities[0].id);
+	expectCustomerFeatureCorrect({
+		customer: afterAdvance,
+		featureId: TestFeature.Messages,
+		balance: newQuantity1,
 	});
 });
 

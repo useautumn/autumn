@@ -62,6 +62,7 @@ html {
 	--t6: #aaa;
 	--t7: #666666;
 	--t8: #0f9bff;
+	--sandbox: #0f9bff;
 	--t9: #121212;
 	--t10: #d1d1d1;
 	--t11: #e3e3e3;
@@ -166,6 +167,7 @@ html {
 	--t1: #ddd;
 	--t2: #ccc;
 	--t3: #999;
+	--sandbox: #0f9bff;
 
 	--card: #121212;
 
@@ -216,6 +218,7 @@ html {
 	--color-t6: var(--t6);
 	--color-t7: var(--t7);
 	--color-t8: var(--t8);
+	--color-sandbox: var(--sandbox);
 	--color-t9: var(--t9);
 	--color-t10: var(--t10);
 	--color-t11: var(--t11);

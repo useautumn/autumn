@@ -13,7 +13,7 @@ import chalk from "chalk";
 import {
 	computeUpdateSubscriptionIntent,
 	UpdateSubscriptionIntent,
-} from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionIntent";
+} from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionIntent";
 
 const baseParams: UpdateSubscriptionV0Params = {
 	customer_id: "cus_test",

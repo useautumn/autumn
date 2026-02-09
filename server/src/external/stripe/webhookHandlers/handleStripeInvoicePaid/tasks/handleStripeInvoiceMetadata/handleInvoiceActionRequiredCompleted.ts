@@ -4,7 +4,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetUsageBalances } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoiceItems.js";
-import { handleUpgradeFlow } from "@/internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
+import { handleLegacyUpgradeFlow } from "@/internal/customers/attach/attachFunctions/upgradeFlow/handleLegacyUpgradeFlow";
 import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -43,7 +43,7 @@ export const handleInvoiceActionRequiredCompleted = async ({
 
 	ctx.logger.info(`handling upgrade flow for invoice ${stripeInvoice.id}`);
 
-	await handleUpgradeFlow({
+	await handleLegacyUpgradeFlow({
 		ctx,
 		attachParams,
 		config: attachConfig,

@@ -5,13 +5,13 @@ import {
 	type MigrationJob,
 	ProcessorType,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { CusProductService } from "../../customers/cusProducts/CusProductService.js";
 import { createMigrationCustomerLogger } from "../migrationUtils/createMigrationCustomerLogger.js";
 import { migrateRevenueCatCustomer } from "./migrateRevenuecatCustomer.js";
-import { migrateStripeCustomer } from "./migrateStripeCustomer.js";
 
 export const migrateCustomer = async ({
 	ctx,
@@ -38,7 +38,6 @@ export const migrateCustomer = async ({
 	const customerCtx: AutumnContext = { ...ctx, logger: customerLogger };
 
 	try {
-		const stripeCli = createStripeCli({ org, env });
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customerId,
@@ -69,15 +68,21 @@ export const migrateCustomer = async ({
 					customerId,
 				});
 			} else {
-				await migrateStripeCustomer({
+				await billingActions.migrate({
 					ctx: customerCtx,
-					stripeCli,
-					fullCus,
-					cusProduct,
-					toProduct,
-					fromProduct,
-					customerId,
+					fullCustomer: fullCus,
+					currentCustomerProduct: cusProduct,
+					newProduct: toProduct,
 				});
+				// await migrateStripeCustomer({
+				// 	ctx: customerCtx,
+				// 	stripeCli,
+				// 	fullCus,
+				// 	cusProduct,
+				// 	toProduct,
+				// 	fromProduct,
+				// 	customerId,
+				// });
 			}
 
 			// If not last, refresh full customer with new cusProducts
@@ -90,6 +95,11 @@ export const migrateCustomer = async ({
 
 				fullCus.customer_products = latestCusProducts;
 			}
+
+			await deleteCachedApiCustomer({
+				customerId: fullCus.id ?? "",
+				ctx,
+			});
 		}
 
 		return true;

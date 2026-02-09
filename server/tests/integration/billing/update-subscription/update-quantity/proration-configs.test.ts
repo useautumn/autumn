@@ -437,7 +437,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: no prorations on downgra
 		count: invoiceCountBefore,
 	});
 
-	// Balance should be reduced immediately (no credit, but balance updated)
+	// Balance should be reduced NEXT CYCLE
 	const feature = afterUpdate.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(10 * billingUnits);
+	expect(feature?.balance).toBe(20 * billingUnits);
 });

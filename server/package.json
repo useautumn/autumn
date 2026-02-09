@@ -27,6 +27,7 @@
 		"cm": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMaster.ts",
 		"ts": "bunx tsgo --build --noEmit",
 		"test:integration": "ENV_FILE=.env infisical run --env=dev -- bun test --timeout 0 --preload ./tests/setup-integration-tests.ts"
+
 	},
 	"mocha": {
 		"node-option": [

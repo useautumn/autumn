@@ -15,4 +15,5 @@ export enum CusExpand {
 	SubscriptionsPlan = "subscriptions.plan",
 	ScheduledSubscriptionsPlan = "scheduled_subscriptions.plan",
 	BalancesFeature = "balances.feature",
+	PlanFeaturesFeature = "plan.features.feature",
 }

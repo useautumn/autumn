@@ -1,4 +1,9 @@
-import type { ExistingRollover, FullCusProduct } from "@autumn/shared";
+import {
+	customerEntitlementAllowsRollovers,
+	type ExistingRollover,
+	type FullCusProduct,
+} from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 
 export const applyExistingRollovers = ({
 	customerProduct,
@@ -19,7 +24,8 @@ export const applyExistingRollovers = ({
 		const targetCusEnt = customerProduct.customer_entitlements.find(
 			(cusEnt) =>
 				cusEnt.entitlement.internal_feature_id ===
-				existingRollover.internal_feature_id,
+					existingRollover.internal_feature_id &&
+				customerEntitlementAllowsRollovers(cusEnt),
 		);
 
 		if (!targetCusEnt) continue;
@@ -27,6 +33,7 @@ export const applyExistingRollovers = ({
 		if (targetCusEnt) {
 			targetCusEnt.rollovers.push({
 				...existingRollover,
+				id: generateId("roll"),
 				cus_ent_id: targetCusEnt.id,
 			});
 			console.log(
