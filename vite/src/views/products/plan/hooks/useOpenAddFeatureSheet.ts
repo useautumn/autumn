@@ -1,6 +1,6 @@
 import { useCallback } from "react";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
 /**
  * Hook to open the appropriate "add feature" sheet.
@@ -8,7 +8,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
  */
 export const useOpenAddFeatureSheet = () => {
 	const { features } = useFeaturesQuery();
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { setSheet } = useSheet();
 
 	return useCallback(() => {
 		if (features.length === 0) {

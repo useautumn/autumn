@@ -1,14 +1,15 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 export const useFeatureNavigation = () => {
-	const product = useProductStore((s) => s.product);
-	const itemId = useSheetStore((s) => s.itemId);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { product } = useProduct();
+	const { itemId, setSheet } = useSheet();
 	const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
 	// Get filtered items (non-price items)
