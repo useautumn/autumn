@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiPlan,
+	type ApiPlanV1,
 	ApiVersion,
 	apiPlan,
 	applyResponseVersionChanges,
@@ -147,7 +147,7 @@ export const handleCreatePlan = createRoute({
 		});
 
 		// Apply version transformations for client
-		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+		const versionedResponse = applyResponseVersionChanges<ApiPlanV1>({
 			input: planResponse,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Product,

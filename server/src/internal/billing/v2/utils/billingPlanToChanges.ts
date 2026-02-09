@@ -1,10 +1,8 @@
 import {
-	addToExpand,
 	type BillingContext,
 	type BillingPeriod,
 	type BillingPlan,
 	type CheckoutChange,
-	CusExpand,
 	CusProductStatus,
 	type FullCusProduct,
 	isPrepaidPrice,
@@ -12,7 +10,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/cusProductToBalances.js";
-import { getApiSubscriptionForCheckout } from "./getApiSubscriptionForCheckout.js";
+import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription.js";
 
 /**
  * Convert cusProduct.options to feature_quantities with actual quantities
@@ -87,19 +85,16 @@ export const billingPlanToChanges = async ({
 	const outgoing: CheckoutChange[] = [];
 	const { autumn } = billingPlan;
 	const { fullCustomer } = billingContext;
-	const ctxWithExpand = addToExpand({
-		ctx,
-		add: [CusExpand.SubscriptionsPlan],
-	});
 
 	const lineItems = autumn.lineItems ?? [];
 
 	// 1. Products being added (incoming)
 	for (const cusProduct of autumn.insertCustomerProducts) {
-		const subscription = await getApiSubscriptionForCheckout({
-			ctx: ctxWithExpand,
+		const { data: subscription } = await getApiSubscription({
+			ctx,
 			cusProduct,
-			billingContext,
+			fullCus: fullCustomer,
+			expandParams: { plan: true },
 		});
 
 		const balances = cusProductToBalances({
@@ -132,10 +127,11 @@ export const billingPlanToChanges = async ({
 			updates.ended_at ||
 			updates.status === CusProductStatus.Expired
 		) {
-			const subscription = await getApiSubscriptionForCheckout({
+			const { data: subscription } = await getApiSubscription({
 				ctx,
 				cusProduct: customerProduct,
-				billingContext,
+				fullCus: fullCustomer,
+				expandParams: { plan: true },
 			});
 
 			const balances = cusProductToBalances({
@@ -165,10 +161,11 @@ export const billingPlanToChanges = async ({
 	if (autumn.deleteCustomerProduct) {
 		const cusProduct = autumn.deleteCustomerProduct;
 
-		const subscription = await getApiSubscriptionForCheckout({
+		const { data: subscription } = await getApiSubscription({
 			ctx,
 			cusProduct,
-			billingContext,
+			fullCus: fullCustomer,
+			expandParams: { plan: true },
 		});
 
 		const balances = cusProductToBalances({

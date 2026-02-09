@@ -8,8 +8,11 @@ import type { PriceItem } from "@models/productV2Models/productItemModels/priceI
 import { isPriceItem } from "@utils/index.js";
 import type { SharedContext } from "../../../types/sharedContext.js";
 import { productV2ToProperties } from "../../../utils/productV2Utils/productV2ToProperties.js";
-import { type ApiPlan, ApiPlanSchema } from "../apiPlan.js";
 import { PlanLegacyDataSchema } from "../planLegacyData.js";
+import {
+	type ApiPlan,
+	ApiPlanV0Schema,
+} from "../previousVersions/apiPlanV0.js";
 import {
 	type ApiProduct,
 	ApiProductSchema,
@@ -53,7 +56,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 		"Boolean fields renamed (add_on <- is_add_on, default <- is_default)",
 	],
 	affectedResources: [AffectedResource.Product],
-	newSchema: ApiPlanSchema,
+	newSchema: ApiPlanV0Schema,
 	oldSchema: ApiProductSchema,
 	legacyDataSchema: PlanLegacyDataSchema,
 
@@ -74,15 +77,16 @@ export const V1_2_ProductChanges = defineVersionChange({
 		const productItems = planV0ToProductItems({
 			ctx,
 			plan: input,
-		})
-			.filter((x) => {
-				if (isPriceItem(x)) {
-					const y: PriceItem = x as unknown as PriceItem;
-					return y.price > 0;
-				} else {
-					return true;
-				}
-			});
+		}).filter((x) => {
+			if (isPriceItem(x)) {
+				const y: PriceItem = x as unknown as PriceItem;
+				return y.price > 0;
+			} else {
+				return true;
+			}
+		});
+
+		console.log(productItems);
 
 		const productV2 = {
 			id: input.id,

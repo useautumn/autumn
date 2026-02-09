@@ -2,12 +2,15 @@ import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems
 import { planV0ToProductV2 } from "@api/products/mappers/planV0ToProductV2.js";
 
 export * from "./apiFreeTrial.js";
-export * from "./apiPlan.js";
+export * from "./apiPlanV1.js";
+export * from "./components/apiFreeTrialV2.js";
+export * from "./components/billingMethod.js";
 export * from "./components/display.js";
 export * from "./crud/planOpModels.js";
 export * from "./items/index.js";
 export * from "./mappers/index.js";
 export * from "./planLegacyData.js";
+export * from "./previousVersions/apiPlanV0.js";
 export * from "./previousVersions/apiProduct.js";
 export * from "./productOpModels.js";
 export * from "./productsOpenApi.js";

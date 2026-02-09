@@ -5,10 +5,10 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
-import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
 import { sumValues } from "../../../../utils/utils.js";
 import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
 import {

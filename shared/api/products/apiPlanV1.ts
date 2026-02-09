@@ -1,20 +1,12 @@
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
-import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { z } from "zod/v4";
+import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { DisplaySchema } from "./components/display.js";
-import { ApiPlanItemV0Schema } from "./items/apiPlanItemV0.js";
+import { ApiPlanItemV1Schema } from "./items/apiPlanItemV1.js";
 
-export const ApiFreeTrialV2Schema = z.object({
-	duration_type: z.enum(FreeTrialDuration),
-	duration_length: z.number(),
-	card_required: z.boolean(),
-});
-
-export type ApiFreeTrialV2 = z.infer<typeof ApiFreeTrialV2Schema>;
-
-export const ApiPlanSchema = z.object({
+export const ApiPlanV1Schema = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
@@ -22,9 +14,8 @@ export const ApiPlanSchema = z.object({
 
 	version: z.number(),
 	add_on: z.boolean(),
-	default: z.boolean(),
+	auto_enable: z.boolean(),
 
-	// Change
 	price: z
 		.object({
 			amount: z.number(),
@@ -34,8 +25,8 @@ export const ApiPlanSchema = z.object({
 		})
 		.nullable(),
 
-	features: z.array(ApiPlanItemV0Schema),
-	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
+	items: z.array(ApiPlanItemV1Schema),
+	free_trial: ApiFreeTrialV2Schema.optional(),
 
 	// Misc
 	created_at: z.number(),
@@ -51,4 +42,4 @@ export const ApiPlanSchema = z.object({
 		.optional(),
 });
 
-export type ApiPlan = z.infer<typeof ApiPlanSchema>;
+export type ApiPlanV1 = z.infer<typeof ApiPlanV1Schema>;
