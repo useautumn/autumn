@@ -13,6 +13,7 @@ import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
 // Import entity changes
 import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange.js";
+import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange.js";
 import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange.js";
 // Import feature changes
 import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js";
@@ -22,7 +23,9 @@ import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceC
 
 // Import product changes
 
+import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange.js";
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
+import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
@@ -33,6 +36,12 @@ import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChang
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
+
+export const V2_1_CHANGES: VersionChangeConstructor[] = [
+	V2_0_PlanChanges, // Transforms Plan TO V2.1 format from V2.0 format
+	V2_0_CustomerChange, // Transforms Customer TO V2.1 format from V2.0 format
+	V2_0_EntityChange, // Transforms Entity TO V2.1 format from V2.0 format
+];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_CustomerChange, // Transforms Customer TO V1.2 format from V2 format
@@ -73,6 +82,10 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_1,
+		changes: V2_1_CHANGES,
+	});
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_0,
 		changes: V2_CHANGES,

@@ -3,8 +3,8 @@ import {
 	type CreatePlanParams,
 	type UpdatePlanParams,
 } from "@api/models";
-import type { ApiPlan } from "@api/products/apiPlan";
 import { planV0ToBasePriceProductItem } from "@api/products/mappers/planV0ToBasePriceProductItem";
+import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels";
 import type { SharedContext } from "../../../types";
 

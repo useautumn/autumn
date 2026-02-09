@@ -1,4 +1,4 @@
-import type { ApiPlanItemV0 } from "@api/products/items/apiPlanItemV0.js";
+import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
 import type { ProrationConfig } from "@models/productModels/priceModels/priceModels.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
@@ -15,7 +15,7 @@ import {
 import { dbToApiFeatureV1 } from "@utils/featureUtils/apiFeatureToDbFeature.js";
 import { featureToItemFeatureType } from "@utils/featureUtils/convertFeatureUtils.js";
 
-import { resetIntvToItemIntv } from "@utils/planFeatureUtils/planFeatureIntervals.js";
+import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import type { SharedContext } from "../../../../types/sharedContext.js";
 import {

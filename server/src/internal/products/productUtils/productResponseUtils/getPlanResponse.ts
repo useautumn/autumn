@@ -1,15 +1,15 @@
 import {
 	type ApiFreeTrialV2,
 	ApiFreeTrialV2Schema,
-	type ApiPlan,
-	ApiPlanSchema,
+	type ApiPlanV1,
+	ApiPlanV1Schema,
 	AttachScenario,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
 	getProductItemDisplay,
-	itemsToPlanFeatures,
 	itemToBillingInterval,
+	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 	sortProductItems,
@@ -70,7 +70,7 @@ const getTrialAvailable = async ({
 };
 
 /**
- * Convert FullProduct (DB format) to Plan API response format
+ * Convert FullProduct (DB format) to Plan API response format (V1/latest)
  */
 export const getPlanResponse = async ({
 	product,
@@ -86,7 +86,7 @@ export const getPlanResponse = async ({
 	db?: DrizzleCli;
 	currency?: string;
 	expand?: string[];
-}): Promise<ApiPlan> => {
+}): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
 		prices: product.prices,
@@ -102,7 +102,7 @@ export const getPlanResponse = async ({
 
 	// 4. Extract base price using existing helper
 	const basePriceItem = productV2ToBasePrice({ product: productV2 as any });
-	const basePrice: ApiPlan["price"] | null = basePriceItem
+	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
 				interval: itemToBillingInterval({ item: basePriceItem }),
@@ -125,13 +125,13 @@ export const getPlanResponse = async ({
 	});
 
 	// 6. Convert items to plan features
-	let planFeatures = itemsToPlanFeatures({
+	let planItems = productItemsToPlanItemsV1({
 		items: featureItems,
 		features,
 		expand,
 	});
 
-	planFeatures = planFeatures.map((pf) => ({ ...pf, proration: undefined }));
+	planItems = planItems.map((item) => ({ ...item, proration: undefined }));
 
 	// 7. Get attach scenario for customer context
 	const attachScenario = getAttachScenario({
@@ -152,23 +152,23 @@ export const getPlanResponse = async ({
 	});
 
 	// 9. Build Plan response
-	return ApiPlanSchema.parse({
+	return ApiPlanV1Schema.parse({
 		// Basic fields
 		id: product.id,
-		name: product.name || null,
-		description: product.description || null, // Products don't have descriptions
+		name: product.name || "",
+		description: product.description || null,
 		group: product.group || null,
 		version: product.version,
 
 		// Boolean flags
 		add_on: product.is_add_on,
-		default: product.is_default,
+		auto_enable: product.is_default,
 
 		// Price field (optional - only for products with base price)
 		price: basePrice,
 
-		// Features array
-		features: planFeatures ?? [],
+		// Items array (V1 uses "items" not "features")
+		items: planItems ?? [],
 
 		// Free trial
 		free_trial: freeTrial,
@@ -186,5 +186,5 @@ export const getPlanResponse = async ({
 					scenario: attachScenario,
 				}
 			: undefined,
-	});
+	} satisfies ApiPlanV1);
 };

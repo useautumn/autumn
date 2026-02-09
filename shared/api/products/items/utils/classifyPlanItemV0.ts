@@ -1,5 +1,5 @@
-import type { ApiPlanItemV0 } from "@api/products/items/apiPlanItemV0.js";
 import type { CreatePlanItemParamsV0 } from "@api/products/items/crud/createPlanItemV0Params.js";
+import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
 import { notNullish } from "@utils/utils.js";
 
 type PlanFeatureWithReset = (ApiPlanItemV0 | CreatePlanItemParamsV0) & {

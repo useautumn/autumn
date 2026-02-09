@@ -2,41 +2,19 @@
 
 // NOTE: coreOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./core/coreOpModels.js";
-
-// Helpers
-export * from "./utils/openApiHelpers.js";
-export * from "./utils/zodToJSDoc.js";
-
 // Customers
-
-export * from "./customers/apiCustomer.js";
-export * from "./customers/components/apiCusReferral.js";
-export * from "./customers/components/apiCusUpcomingInvoice.js";
-export * from "./customers/createCustomerParams.js";
-export * from "./customers/cusFeatures/apiBalance.js";
-export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
-export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";
-export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
-export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
-export * from "./customers/cusPlans/apiSubscription.js";
-export * from "./customers/cusPlans/cusProductLegacyData.js";
-export * from "./customers/customerLegacyData.js";
-export * from "./customers/customerOpModels.js";
-export * from "./customers/previousVersions/apiCustomerV2.js";
-export * from "./customers/previousVersions/apiCustomerV3.js";
-
+export * from "./customers/index.js";
 // Entities
 export * from "./entities/apiEntity.js";
+export * from "./entities/apiEntityV2.js";
 export * from "./entities/entityLegacyData.js";
 export * from "./entities/entityOpModels.js";
 export * from "./entities/prevVersions/apiEntityV0.js";
 export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
-
 // Features
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
-
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
@@ -45,6 +23,9 @@ export * from "./products/index.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/referralOpModels.js";
+// Helpers
+export * from "./utils/openApiHelpers.js";
+export * from "./utils/zodToJSDoc.js";
 
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
@@ -70,9 +51,6 @@ export * from "./billing/index.js";
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 export * from "./common/pagePaginationSchemas.js";
-export * from "./customers/crud/listCustomersParamsV2.js";
-export * from "./customers/cusFeatures/cusFeatureLegacyData.js";
-export * from "./customers/cusPlans/previousVersions/apiCusProductV3.js";
 export * from "./entities/apiBaseEntity.js";
 // Errors
 export * from "./errors/index.js";

@@ -1,8 +1,8 @@
-import type { ApiPlan } from "@api/products/apiPlan";
 import type {
 	CreatePlanParams,
 	UpdatePlanParams,
 } from "@api/products/crud/planOpModels";
+import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import {
 	type ProductItem,
