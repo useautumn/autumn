@@ -137,8 +137,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		billingVersion: contextOverride.billingVersion
 			? contextOverride.billingVersion
-			: contextOverride.inheritBillingVersion
-				? customerProduct.billing_version
-				: BillingVersion.V2,
+			: (customerProduct.billing_version ?? BillingVersion.V2),
 	};
 };
