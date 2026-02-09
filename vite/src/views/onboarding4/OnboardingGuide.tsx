@@ -119,9 +119,7 @@ function StepCard({
 			transition={STEP_CARD_ANIMATION}
 			className={cn(
 				"relative rounded-xl bg-muted dark:bg-card border cursor-pointer h-21 overflow-hidden",
-				isActive
-					? "cursor-default min-w-[515px]"
-					: "hover:border-primary/20 min-w-[120px]",
+				isActive ? "cursor-default" : "hover:border-primary/20",
 				isComplete && !isActive && "opacity-50",
 			)}
 			onClick={onClick}
@@ -329,7 +327,7 @@ export function OnboardingGuide() {
 			</div>
 
 			{/* Steps container - min-width prevents cards from shrinking when parent shrinks */}
-			<div className="flex gap-3 items-start min-w-[700px]">
+			<div className="flex gap-3 items-start min-w-[940px]">
 				{ONBOARDING_STEPS.map((step) => (
 					<StepCard
 						key={step.id}
