@@ -45,10 +45,12 @@ export const handleConnectStripe = createRoute({
 
 			if (env === AppEnv.Sandbox) {
 				configUpdates.test_api_key = result.test_api_key;
-				configUpdates.test_webhook_secret = result.test_webhook_secret;
+				configUpdates.test_webhook_secret =
+					result.test_webhook_secret ?? undefined;
 			} else {
 				configUpdates.live_api_key = result.live_api_key;
-				configUpdates.live_webhook_secret = result.live_webhook_secret;
+				configUpdates.live_webhook_secret =
+					result.live_webhook_secret ?? undefined;
 			}
 		}
 
