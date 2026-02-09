@@ -150,6 +150,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 			<Button
 				variant="secondary"
 				size="sm"
+				className=""
 				onClick={(e) => {
 					e.stopPropagation();
 					setOpen(true);

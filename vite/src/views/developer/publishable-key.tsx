@@ -8,7 +8,7 @@ export const PublishableKeySection = () => {
 	const env = useEnv();
 	return (
 		<div>
-			<div className="px-10 py-4 flex flex-col gap-6">
+			<div className="py-4 flex flex-col gap-6">
 				<p className="text-sm text-t3">
 					You can safely use this from your frontend with certain endpoints,
 					such as <span className="font-mono text-red-500">/attach</span> and{" "}

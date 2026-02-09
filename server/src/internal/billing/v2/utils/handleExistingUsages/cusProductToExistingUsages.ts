@@ -38,7 +38,7 @@ export const cusProductToExistingUsages = ({
 	for (const cusEnt of cusEnts) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
-		if (cusEnts.some(isUnlimitedCusEnt)) continue;
+		if (isUnlimitedCusEnt(cusEnt)) continue;
 
 		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
 

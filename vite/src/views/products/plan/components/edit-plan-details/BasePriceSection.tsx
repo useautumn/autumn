@@ -23,7 +23,6 @@ import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupI
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = ({
@@ -210,85 +209,79 @@ export const BasePriceSection = ({
 					</RadioGroup>
 				</div>
 
-				{isPerUnitOnly ? (
-					<InfoBox variant="note">
-						This plan has no base price. You can add per unit prices, such as
-						per "seat" or "credit", when adding features.
-					</InfoBox>
-				) : (
-					<>
-						<div className="space-y-2">
-							<GroupedTabButton
-								value={billingType}
-								className="w-full"
-								onValueChange={handleBillingTypeChange}
-								options={[
-									{
-										value: "recurring",
-										label: "Recurring",
-										icon: (
-											<ArrowsClockwiseIcon
-												className="size-[14px]"
-												weight="regular"
-											/>
-										),
-									},
-									{
-										value: "one-off",
-										label: "One-off",
-										icon: (
-											<CheckCircleIcon
-												className="size-[14px]"
-												weight="regular"
-											/>
-										),
-									},
-								]}
+
+				<div className="space-y-2">
+					<GroupedTabButton
+						value={billingType}
+						className="w-full"
+						onValueChange={handleBillingTypeChange}
+						disabled={isPerUnitOnly}
+						options={[
+							{
+								value: "recurring",
+								label: "Recurring",
+								icon: (
+									<ArrowsClockwiseIcon
+										className="size-[14px]"
+										weight="regular"
+									/>
+								),
+							},
+							{
+								value: "one-off",
+								label: "One-off",
+								icon: (
+									<CheckCircleIcon
+										className="size-[14px]"
+										weight="regular"
+									/>
+								),
+							},
+						]}
+					/>
+				</div>
+				<div className="flex gap-2">
+					<div className="w-full">
+						<FormLabel disabled={disabled || isPerUnitOnly}>Price</FormLabel>
+					<InputGroup data-disabled={isPerUnitOnly}>
+						<InputGroupInput
+							type="number"
+							placeholder="eg. 100"
+							disabled={isPerUnitOnly}
+							value={isPerUnitOnly ? "" : (basePrice?.price ?? "")}
+							onKeyDown={(e) => {
+								// Prevent typing minus sign
+								if (e.key === "-" || e.key === "Minus") {
+									e.preventDefault();
+								}
+							}}
+							onChange={(e) => {
+								// extra guard in case value changes programmatically
+								const cleanedValue = e.target.value.replace(/-/g, "");
+								if (Number(cleanedValue) >= 0) {
+									handleUpdateBasePrice({
+										amount: cleanedValue,
+									});
+								}
+							}}
+						/>
+						<InputGroupAddon align="inline-end">
+							<span className="text-t3 text-xs">{defaultCurrency}</span>
+						</InputGroupAddon>
+					</InputGroup>
+					</div>
+					{billingType === "recurring" && (
+						<div className="w-full">
+							<SelectBillingCycle
+								item={basePrice}
+								setItem={setItem}
+								disabled={disabled || isPerUnitOnly}
+								filterOneOff={billingType === "recurring"}
 							/>
 						</div>
-						<div className="flex gap-2">
-							<div className="w-full">
-								<FormLabel disabled={disabled}>Price</FormLabel>
-								<InputGroup>
-									<InputGroupInput
-										type="number"
-										placeholder="eg. 100"
-										disabled={disabled}
-										value={basePrice?.price ?? ""}
-										onKeyDown={(e) => {
-											// Prevent typing minus sign
-											if (e.key === "-" || e.key === "Minus") {
-												e.preventDefault();
-											}
-										}}
-										onChange={(e) => {
-											// extra guard in case value changes programmatically
-											const cleanedValue = e.target.value.replace(/-/g, "");
-											if (Number(cleanedValue) >= 0) {
-												handleUpdateBasePrice({
-													amount: cleanedValue,
-												});
-											}
-										}}
-									/>
-									<InputGroupAddon align="inline-end">
-										<span className="text-t3 text-xs">{defaultCurrency}</span>
-									</InputGroupAddon>
-								</InputGroup>
-							</div>
-							{billingType === "recurring" && (
-								<div className="w-full">
-									<SelectBillingCycle
-										item={basePrice}
-										setItem={setItem}
-										disabled={disabled}
-										filterOneOff={billingType === "recurring"}
-									/>
-								</div>
-							)}
-						</div>
-					</>
-				)}
+					)}
+				</div>
+
 			</div>
 		</SheetSection>
 	);

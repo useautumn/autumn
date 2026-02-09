@@ -1,5 +1,7 @@
 import {
 	CreateFeatureSchema,
+	type CreditSchemaItem,
+	FeatureType,
 	FeatureUsageType,
 	featureV1ToDbFeature,
 } from "@autumn/shared";
@@ -18,6 +20,7 @@ import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { validateCreditSystem } from "@/views/products/features/credit-systems/utils/validateCreditSystem";
 import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { getDefaultItem } from "../../utils/getDefaultItem";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
@@ -39,6 +42,15 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const [isCreating, setIsCreating] = useState(false);
 
 	const handleCreateFeature = async () => {
+		// Validate credit system specific fields first
+		if (feature.type === FeatureType.CreditSystem) {
+			const validationError = validateCreditSystem(feature);
+			if (validationError) {
+				toast.error(validationError);
+				return;
+			}
+		}
+
 		setIsCreating(true);
 		const result = CreateFeatureSchema.safeParse(feature);
 		if (result.error) {
@@ -56,6 +68,12 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 						id: feature.id,
 						type: feature.type,
 						consumable: feature.config?.usage_type === FeatureUsageType.Single,
+						credit_schema: feature.config?.schema?.map(
+							(x: CreditSchemaItem) => ({
+								metered_feature_id: x.metered_feature_id,
+								credit_cost: x.credit_amount,
+							}),
+						),
 						event_names: feature.event_names,
 					},
 				);
@@ -104,7 +122,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			{!isOnboarding && (
 				<SheetHeader
 					title="New Feature"
-					description="Create a feature for a part of your product you want to gate behind specific plans. Then, add it to a plan."
+					description="Create a feature to represent what customers on this plan can use. After, you can configure its limits and prices for each plan."
 				/>
 			)}
 

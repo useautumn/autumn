@@ -1,4 +1,4 @@
-import type { FullCustomer } from "@autumn/shared";
+import type { FullCustomer, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { create } from "zustand";
@@ -58,7 +58,7 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 
 	// Products query
 	const { data: productsData, isLoading: productsLoading } = useQuery<{
-		products: unknown[];
+		products: ProductV2[];
 	}>({
 		queryKey: ["onboarding-products"],
 		queryFn: async () => {
@@ -66,8 +66,13 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			return data;
 		},
 		refetchInterval: (query) => {
-			const hasProducts = (query.state.data?.products?.length ?? 0) > 0;
-			return hasProducts ? false : REFETCH_INTERVAL;
+			const hasValidProduct = query.state.data?.products?.some((p) => {
+				const items = p.items ?? [];
+				const hasPrice = items.some((i) => i.price != null || i.tiers != null);
+				const hasFeature = items.some((i) => i.feature_id != null);
+				return hasPrice && hasFeature;
+			});
+			return hasValidProduct ? false : REFETCH_INTERVAL;
 		},
 	});
 
@@ -130,7 +135,15 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 	// Compute completion status directly from query data
 	const completedSteps = useMemo(
 		() => ({
-			plans: (productsData?.products?.length ?? 0) > 0,
+			plans:
+				productsData?.products?.some((p) => {
+					const items = p.items ?? [];
+					const hasPrice = items.some(
+						(i) => i.price != null || i.tiers != null,
+					);
+					const hasFeature = items.some((i) => i.feature_id != null);
+					return hasPrice && hasFeature;
+				}) ?? false,
 			customer: (customersData?.fullCustomers?.length ?? 0) > 0,
 			payments:
 				paymentsData?.fullCustomers?.some((c) => c.processor?.id) ?? false,

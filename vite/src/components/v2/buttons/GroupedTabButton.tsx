@@ -10,6 +10,7 @@ interface GroupedTabButtonProps {
 		icon?: React.ReactNode;
 	}>;
 	className?: string;
+	disabled?: boolean;
 }
 
 export const GroupedTabButton = ({
@@ -17,9 +18,8 @@ export const GroupedTabButton = ({
 	onValueChange,
 	options,
 	className,
+	disabled,
 }: GroupedTabButtonProps) => {
-	// const isTwoTab = options.length === 2;
-
 	return (
 		<div className={cn("flex items-center", className)}>
 			{options.map((option, index) => {
@@ -31,10 +31,12 @@ export const GroupedTabButton = ({
 					<button
 						key={option.value}
 						type="button"
+						disabled={disabled}
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap !bg-interactive-secondary",
+							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap !bg-interactive-secondary cursor-pointer",
 							"hover:text-primary focus-visible:text-primary",
+							"disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
 							isActive &&
 								" text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							!isActive &&
