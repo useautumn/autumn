@@ -31,6 +31,12 @@ export const handleMigrateProductV2 = createRoute({
 		const { org, env, db, features } = ctx;
 		const { from_product_id, from_version, to_product_id, to_version } = body;
 
+		throw new RecaseError({
+			message: "Migrations are unavailable at the moment",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+
 		// Get both products
 		const fromProduct = await ProductService.getFull({
 			db,
