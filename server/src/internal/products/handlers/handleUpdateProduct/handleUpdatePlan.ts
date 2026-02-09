@@ -3,13 +3,13 @@ import {
 	type ApiPlan,
 	ApiVersion,
 	ApiVersionClass,
+	apiPlan,
 	applyResponseVersionChanges,
 	type FreeTrial,
 	mapToProductV2,
 	notNullish,
 	ProductNotFoundError,
 	type ProductV2,
-	planToProductV2,
 	productsAreSame,
 	RecaseError,
 	UpdatePlanParamsSchema,
@@ -59,7 +59,10 @@ export const handleUpdatePlan = createRoute({
 		// V1.2 clients already send ProductV2, no conversion needed
 
 		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2_0))
-			? planToProductV2({ plan: body as ApiPlan, features: ctx.features })
+			? (apiPlan.map.v0ToProductV2({
+					ctx,
+					plan: body,
+				}) as UpdateProductV2Params)
 			: (body as UpdateProductV2Params);
 
 		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([

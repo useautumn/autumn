@@ -41,13 +41,7 @@ export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
-export * from "./products/apiFreeTrial.js";
-export * from "./products/apiPlan.js";
-export * from "./products/planFeature/previousVersions/apiProductItem.js";
-export * from "./products/planOpModels.js";
-export * from "./products/previousVersions/apiProduct.js";
-export * from "./products/productOpModels.js";
-export * from "./products/productsOpenApi.js";
+export * from "./products/index.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/referralOpModels.js";
@@ -100,4 +94,3 @@ export * from "./others/apiInvoice/apiInvoiceItem.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Models
 export * from "./platform/platformModels.js";
-export * from "./products/planLegacyData.js";

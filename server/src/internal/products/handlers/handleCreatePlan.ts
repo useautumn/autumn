@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	type ApiPlan,
 	ApiVersion,
+	apiPlan,
 	applyResponseVersionChanges,
 	CreatePlanParamsSchema,
 	type CreateProductV2Params,
@@ -11,7 +12,6 @@ import {
 	type FullProduct,
 	type Price,
 	ProductAlreadyExistsError,
-	planToProductV2,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -23,6 +23,7 @@ import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "../free-trials/freeTrialUtils.js";
+
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
@@ -45,7 +46,7 @@ export const handleCreatePlan = createRoute({
 
 		const v1_2Body = (
 			ctx.apiVersion.gte(ApiVersion.V2_0)
-				? planToProductV2({ plan: body, features: ctx.features })
+				? apiPlan.map.v0ToProductV2({ ctx, plan: body })
 				: body
 		) as CreateProductV2Params;
 

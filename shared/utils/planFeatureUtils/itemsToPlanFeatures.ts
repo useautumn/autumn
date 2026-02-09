@@ -1,7 +1,7 @@
 import {
-	type ApiPlanFeature,
-	ApiPlanFeatureSchema,
-} from "@api/products/planFeature/apiPlanFeature.js";
+	type ApiPlanItemV0,
+	ApiPlanItemV0Schema,
+} from "@api/products/items/apiPlanItemV0.js";
 import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
@@ -63,7 +63,7 @@ const itemToReset = ({
 				? item.interval_count
 				: undefined,
 		reset_when_enabled: item.reset_usage_when_enabled ?? false,
-	} satisfies ApiPlanFeature["reset"];
+	} satisfies ApiPlanItemV0["reset"];
 };
 
 const itemToPlanFeaturePrice = ({ item }: { item: ProductItem }) => {
@@ -101,7 +101,7 @@ const itemToPlanFeaturePrice = ({ item }: { item: ProductItem }) => {
 		billing_units: item.billing_units ?? 1,
 		usage_model: item.usage_model || UsageModel.PayPerUse,
 		max_purchase: maxPurchase,
-	} satisfies ApiPlanFeature["price"];
+	} satisfies ApiPlanItemV0["price"];
 };
 
 const itemToPlanFeatureRollover = ({ item }: { item: ProductItem }) => {
@@ -111,7 +111,7 @@ const itemToPlanFeatureRollover = ({ item }: { item: ProductItem }) => {
 		max: item.config.rollover.max ?? null,
 		expiry_duration_type: item.config.rollover.duration,
 		expiry_duration_length: item.config.rollover.length,
-	} satisfies ApiPlanFeature["rollover"];
+	} satisfies ApiPlanItemV0["rollover"];
 };
 
 const itemToPlanFeatureProration = ({ item }: { item: ProductItem }) => {
@@ -122,7 +122,7 @@ const itemToPlanFeatureProration = ({ item }: { item: ProductItem }) => {
 	return {
 		on_increase: item.config.on_increase,
 		on_decrease: item.config.on_decrease,
-	} satisfies ApiPlanFeature["proration"];
+	} satisfies ApiPlanItemV0["proration"];
 };
 
 export const itemsToPlanFeatures = ({
@@ -133,7 +133,7 @@ export const itemsToPlanFeatures = ({
 	items: ProductItem[];
 	features: Feature[];
 	expand?: string[];
-}): ApiPlanFeature[] => {
+}): ApiPlanItemV0[] => {
 	if (!items) return [];
 
 	const shouldExpandFeature = expandIncludes({
@@ -164,7 +164,7 @@ export const itemsToPlanFeatures = ({
 			? toApiFeature({ feature })
 			: undefined;
 
-		return ApiPlanFeatureSchema.parse({
+		return ApiPlanItemV0Schema.parse({
 			feature_id: item.feature_id,
 			feature: apiFeature,
 			granted_balance: grantedBalance,
@@ -180,7 +180,7 @@ export const itemsToPlanFeatures = ({
 
 			// Other fields
 			// entity_feature_id: item.entity_feature_id,
-		} satisfies ApiPlanFeature);
+		} satisfies ApiPlanItemV0);
 	});
 };
 

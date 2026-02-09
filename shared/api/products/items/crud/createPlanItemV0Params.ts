@@ -1,15 +1,15 @@
-import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { z } from "zod/v4";
-import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
+import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
+import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
+} from "@models/productV2Models/productItemModels/productItemEnums";
+import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels";
+import { z } from "zod/v4";
 
-export const UpdatePlanFeatureSchema = z
+export const CreatePlanItemParamsV0Schema = z
 	.object({
 		feature_id: z.string(),
 		granted_balance: z.number().optional(),
@@ -91,5 +91,6 @@ export const UpdatePlanFeatureSchema = z
 			}
 		}
 	});
-
-export type UpdatePlanFeatureParams = z.infer<typeof UpdatePlanFeatureSchema>;
+export type CreatePlanItemParamsV0 = z.infer<
+	typeof CreatePlanItemParamsV0Schema
+>;

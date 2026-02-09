@@ -1,14 +1,13 @@
-import type { ApiProductItem } from "@api/models.js";
+import { type ApiProductItem, apiPlan } from "@api/models.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
 	defineVersionChange,
-	type VersionContext,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
-import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
 import { getProductItemResponse } from "@utils/productV2Utils/productItemUtils/getProductItemRes.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../../types/sharedContext.js";
 import {
 	type ApiSubscription,
 	ApiSubscriptionSchema,
@@ -27,7 +26,7 @@ export function transformSubscriptionToCusProductV3({
 }: {
 	input: z.infer<typeof ApiSubscriptionSchema>;
 	legacyData?: z.infer<typeof CusProductLegacyDataSchema>;
-	ctx: VersionContext;
+	ctx: SharedContext;
 }): z.infer<typeof ApiCusProductV3Schema> {
 	const cusPlanToCusProductV3Status = (plan: ApiSubscription) => {
 		if (plan.status === CusProductStatus.Active) {
@@ -46,13 +45,10 @@ export function transformSubscriptionToCusProductV3({
 
 	let items: ApiProductItem[] | null = null;
 
-	// Get features
-
-	// console.log("Features:", ctx.features);
 	if (input.plan && ctx.features) {
-		const productItems = convertPlanToItems({
+		const productItems = apiPlan.map.v0ToProductItems({
+			ctx,
 			plan: input.plan,
-			features: ctx.features,
 		});
 
 		const itemResponses = productItems.map((item) =>

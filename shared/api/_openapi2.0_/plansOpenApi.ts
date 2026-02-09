@@ -5,7 +5,7 @@ import {
 	CreatePlanParamsSchema,
 	ListPlansQuerySchema,
 	UpdatePlanParamsSchema,
-} from "../products/planOpModels.js";
+} from "../products/crud/planOpModels.js";
 
 export const ApiPlanWithMeta = ApiPlanSchema.meta({
 	id: "Plan",

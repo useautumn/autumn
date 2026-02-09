@@ -1,8 +1,8 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
-import { ApiFreeTrialV2Schema } from "./apiPlan.js";
-import { UpdatePlanFeatureSchema } from "./planFeature/planFeatureOpModels.js";
+import { ApiFreeTrialV2Schema } from "../apiPlan.js";
+import { CreatePlanItemParamsV0Schema } from "../items/crud/createPlanItemV0Params.js";
 
 export const PlanPriceSchema = z.object({
 	amount: z.number(),
@@ -25,40 +25,17 @@ export const CreatePlanParamsSchema = z.object({
 		.object({
 			amount: z.number(),
 			interval: z.enum(BillingInterval),
+			interval_count: z.number().optional(),
 		})
 		.optional(),
 
-	features: z.array(UpdatePlanFeatureSchema).optional(),
+	features: z.array(CreatePlanItemParamsV0Schema).optional(),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 });
 
-export const UpdatePlanParamsSchema = z.object({
-	id: z.string().nonempty().regex(idRegex).optional(),
-	group: z.string().default("").optional(),
-
-	name: z
-		.string()
-		.refine((val) => val.length > 0, {
-			message: "name must be a non-empty string",
-		})
-		.optional(),
-	description: z.string().nullable().optional(),
-
+export const UpdatePlanParamsSchema = CreatePlanParamsSchema.partial().extend({
 	version: z.number().optional(),
-
-	add_on: z.boolean().default(false).optional(),
-	default: z.boolean().default(false).optional(),
 	archived: z.boolean().default(false).optional(),
-
-	price: z
-		.object({
-			amount: z.number().optional(),
-			interval: z.enum(BillingInterval).optional(),
-		})
-		.optional(),
-
-	features: z.array(UpdatePlanFeatureSchema).optional(),
-	free_trial: ApiFreeTrialV2Schema.nullish(),
 });
 
 export const UpdatePlanQuerySchema = z.object({
