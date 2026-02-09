@@ -155,7 +155,7 @@ export const handleLegacyPlatformExchange = createRoute({
 				finalStripeConfig = {
 					...finalStripeConfig,
 					test_api_key,
-					test_webhook_secret,
+					test_webhook_secret: test_webhook_secret ?? undefined,
 				};
 
 				if (!defaultCurrency) {
@@ -196,7 +196,7 @@ export const handleLegacyPlatformExchange = createRoute({
 				finalStripeConfig = {
 					...finalStripeConfig,
 					live_api_key,
-					live_webhook_secret,
+					live_webhook_secret: live_webhook_secret ?? undefined,
 				};
 
 				if (!defaultCurrency) {
