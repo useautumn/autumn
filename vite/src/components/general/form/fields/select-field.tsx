@@ -22,6 +22,7 @@ export function SelectField<T extends string | number = string>({
 	searchable = false,
 	searchPlaceholder = "Search...",
 	emptyText = "No results found",
+	defaultOpen = false,
 }: {
 	label: string;
 	options: SelectFieldOption<T>[];
@@ -34,6 +35,7 @@ export function SelectField<T extends string | number = string>({
 	searchable?: boolean;
 	searchPlaceholder?: string;
 	emptyText?: string;
+	defaultOpen?: boolean;
 }) {
 	const field = useFieldContext<T>();
 	const stringValue = String(field.state.value);
@@ -60,6 +62,7 @@ export function SelectField<T extends string | number = string>({
 				searchPlaceholder={searchPlaceholder}
 				emptyText={emptyText}
 				disabled={disabled}
+				defaultOpen={defaultOpen}
 				renderValue={(opt) => (
 					<>
 						<span className={!opt ? "text-t3" : undefined}>
