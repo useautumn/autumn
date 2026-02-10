@@ -82,6 +82,8 @@ export function CustomerUsageAnalyticsTable() {
 		},
 	});
 
+	console.log("Raw Events", rawEvents);
+
 	const handleRowClick = (event: Event) => {
 		setSelectedEvent(event);
 		setEventDialogOpen(true);

@@ -68,6 +68,7 @@ export const computeUpdateQuantityDetails = ({
 	const previousOptions = findFeatureOptionsByFeature({
 		featureOptions: customerProduct.options,
 		feature,
+		logger: ctx.logger,
 	});
 
 	const quantityDifferences = calculateUpdateQuantityDifferences({
