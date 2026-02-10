@@ -21,6 +21,7 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: free default then pro with 
 		id: "premium",
 		items: [items.monthlyMessages({ includedUsage: 100 }), users],
 	});
+
 	const { autumnV1 } = await initScenario({
 		customerId: "test",
 		setup: [

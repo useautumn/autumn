@@ -1,8 +1,8 @@
 import {
 	cusProductToProduct,
 	type FullCustomer,
-	InternalError,
 	notNullish,
+	RecaseError,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
@@ -32,8 +32,8 @@ export const setupUpdateSubscriptionProductContext = async ({
 	});
 
 	if (!targetCustomerProduct) {
-		throw new InternalError({
-			message: `[API Subscription Update] Target customer product not found: ${params.product_id}`,
+		throw new RecaseError({
+			message: `Customer ${fullCustomer.id} does not have the product ${params.product_id}.`,
 		});
 	}
 
