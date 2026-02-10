@@ -241,15 +241,20 @@ export class CusService {
 	}
 
 	/**
-	 * Upsert a customer using the email + null ID constraint.
+	 * Insert a new customer, or claim an existing null-ID customer by email.
 	 *
-	 * If a customer with the same (org_id, env, email) exists with id = NULL,
-	 * update that row with the new customer data (including the new ID).
-	 * Otherwise, insert a new row.
+	 * Behavior:
+	 * - If customer with same ID exists: return existing (no update)
+	 * - If customer with same email exists with id=NULL and new request has ID: claim it (set ID only)
+	 * - If customer with same email exists with id=NULL and new request has id=NULL: return existing
+	 * - Otherwise: insert new customer
 	 *
-	 * Returns { customer, wasUpdate } to indicate if an existing row was updated.
+	 * IMPORTANT: Only updates the `id` field when claiming. Does NOT update any other fields.
+	 * This prevents race conditions where concurrent requests could overwrite data.
+	 *
+	 * Returns { customer, wasUpdate } where wasUpdate=true if customer already existed.
 	 */
-	static async upsert({
+	static async insertOrClaimEmail({
 		db,
 		data,
 	}: {
@@ -257,12 +262,12 @@ export class CusService {
 		data: Customer;
 	}): Promise<{ customer: Customer; wasUpdate: boolean }> {
 		const columns = getTableColumns(customers);
-		const columnNames = Object.values(columns).map((col) => col.name);
+		const columnEntries = Object.entries(columns);
+		const columnNames = columnEntries.map(([_, col]) => col.name);
 
-		// Build values array, handling jsonb columns specially
-		const values = Object.entries(columns).map(([key, col]) => {
+		// Build values array in same order as columnNames
+		const values = columnEntries.map(([key, col]) => {
 			const value = data[key as keyof Customer];
-			// jsonb columns need JSON.stringify
 			if (col.dataType === "json") {
 				const jsonValue =
 					value !== undefined && value !== null
@@ -275,31 +280,6 @@ export class CusService {
 			return sql`${value ?? null}`;
 		});
 
-		// Build UPDATE SET clauses
-		const excludeFromUpdate = ["internal_id", "org_id", "env", "created_at"];
-
-		// For ON CONFLICT - uses EXCLUDED.column_name
-		const updateColsExcluded = Object.values(columns)
-			.filter((col) => !excludeFromUpdate.includes(col.name))
-			.map((col) => sql.raw(`${col.name} = EXCLUDED.${col.name}`));
-
-		// For CTE claim UPDATE - uses direct values
-		const updateColsValues = Object.entries(columns)
-			.filter(([_, col]) => !excludeFromUpdate.includes(col.name))
-			.map(([key, col]) => {
-				const value = data[key as keyof Customer];
-				if (col.dataType === "json") {
-					const jsonValue =
-						value !== undefined && value !== null
-							? JSON.stringify(value)
-							: col.default !== undefined
-								? "{}"
-								: "null";
-					return sql`${sql.raw(col.name)} = ${jsonValue}::jsonb`;
-				}
-				return sql`${sql.raw(col.name)} = ${value ?? null}`;
-			});
-
 		// Conflict target differs based on incoming id:
 		// - id != NULL: Use cus_id_constraint (handles ID collisions)
 		// - id = NULL: Use partial index (handles email collisions for null-id rows)
@@ -309,18 +289,19 @@ export class CusService {
 				: sql`ON CONFLICT (org_id, env, lower(email)) WHERE id IS NULL AND email IS NOT NULL AND email != ''`;
 
 		// CTE handles all cases:
-		// - Case A (id=NULL → id=NULL same email): claim updates existing
-		// - Case B (id=x → id=x): insert_new conflicts on cus_id_constraint, upserts
-		// - Case C (id=NULL → id=y same email): claim updates existing, sets new id
+		// - Claim: If email exists with id=NULL and new request has ID, set the ID (claim the customer)
+		// - Insert: If no claim happened, try to insert
+		// - On conflict: Do nothing (customer already exists), xmax will indicate it was an update
 		const results = await db.execute<
 			Customer & { xmax: string; was_claim: boolean }
 		>(sql`
 			WITH claim AS (
 				UPDATE customers
-				SET ${sql.join(updateColsValues, sql`, `)}
+				SET id = ${data.id}
 				WHERE org_id = ${data.org_id}
 					AND env = ${data.env}
 					AND id IS NULL
+					AND ${data.id}::text IS NOT NULL
 					AND email IS NOT NULL
 					AND lower(email) = lower(${data.email ?? ""})
 				RETURNING *, xmax::text, true as was_claim
@@ -330,7 +311,7 @@ export class CusService {
 				SELECT ${sql.join(values, sql`, `)}
 				WHERE NOT EXISTS (SELECT 1 FROM claim)
 				${conflictClause}
-				DO UPDATE SET ${sql.join(updateColsExcluded, sql`, `)}
+				DO UPDATE SET id = customers.id
 				RETURNING *, xmax::text, false as was_claim
 			)
 			SELECT * FROM claim
@@ -340,7 +321,7 @@ export class CusService {
 
 		if (results && results.length > 0) {
 			const { xmax, was_claim, ...customer } = results[0];
-			// wasUpdate if: claimed existing row OR xmax indicates update
+			// wasUpdate if: claimed existing row OR xmax indicates update (conflict happened)
 			const wasUpdate = was_claim || xmax !== "0";
 			return { customer: customer as Customer, wasUpdate };
 		}
