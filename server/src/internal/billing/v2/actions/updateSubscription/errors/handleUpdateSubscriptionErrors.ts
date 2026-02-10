@@ -1,12 +1,12 @@
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import type {
-	AutumnBillingPlan,
+	BillingPlan,
 	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
+import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
@@ -22,15 +22,17 @@ import { handleUncancelErrors } from "./handleUncancelErrors";
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
 	billingContext,
-	autumnBillingPlan,
+	billingPlan,
 	params,
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
-	autumnBillingPlan: AutumnBillingPlan;
+	billingPlan: BillingPlan;
 	params: UpdateSubscriptionV0Params;
 }) => {
 	const { customerProduct } = billingContext;
+
+	const { autumn: autumnBillingPlan } = billingPlan;
 
 	// 1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
@@ -62,7 +64,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	checkTrialRemovalWithOneOffItems({ billingContext, autumnBillingPlan });
 
 	// 7. Cancel end of cycle errors
-	handleCancelEndOfCycleErrors({ billingContext, params });
+	handleCancelEndOfCycleErrors({ billingContext, billingPlan });
 
 	// 8. Uncancel validation errors
 	handleUncancelErrors({ billingContext });
@@ -70,7 +72,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 9. Billing behavior errors
 	handleBillingBehaviorErrors({
 		billingContext,
-		autumnBillingPlan,
+		billingPlan,
 		params,
 	});
 
