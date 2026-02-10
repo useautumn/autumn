@@ -27,7 +27,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 			const event = row.original;
 			return (
 				<div className="text-t3 text-tiny truncate">
-					{event.value || event.properties?.value || 1}
+					{event.value ?? event.properties?.value ?? 1}
 				</div>
 			);
 		},
