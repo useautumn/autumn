@@ -27,7 +27,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 			const event = row.original;
 			return (
 				<div className="text-t3 text-tiny truncate">
-					{event.value || event.properties?.value || 1}
+					{event.value ?? event.properties?.value ?? 1}
 				</div>
 			);
 		},
@@ -38,13 +38,18 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 		accessorKey: "timestamp",
 		minSize: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
-			// type is Date but actually comes as a string
-			const dateObj = new Date(row.original.timestamp as unknown as string);
-			const dateAsNumber = dateObj.getTime();
+			// Timestamp comes from backend in UTC without timezone designator (e.g., "2025-02-09 14:25:47")
+			// Append 'Z' to parse as UTC, then format displays in user's local timezone
+			let timestampStr = String(row.original.timestamp);
+			const hasTimezone = /Z|[+-]\d{2}:\d{2}$/.test(timestampStr);
+			if (!hasTimezone) {
+				timestampStr = timestampStr.replace(" ", "T") + "Z";
+			}
+			const dateObj = new Date(timestampStr);
 
 			return (
 				<div className="text-tiny text-t3 font-mono truncate">
-					{format(new Date(dateAsNumber), "d MMM HH:mm:ss")}
+					{format(dateObj, "d MMM HH:mm:ss")}
 				</div>
 			);
 		},

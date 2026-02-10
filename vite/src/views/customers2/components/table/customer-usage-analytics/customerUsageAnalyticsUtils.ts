@@ -40,9 +40,13 @@ export function prepareTimeseriesChartData({
 	});
 
 	// Transform timeseries data to chart format
-	// Period is aggregated by user's local timezone on the backend
+	// Period comes as a date string (e.g., "2025-02-09") representing a calendar day bucket
+	// Parse it directly to avoid timezone conversion issues
 	const chartData = timeseriesEvents.data.map((row) => {
-		const date = new Date(row.period);
+		const periodStr = String(row.period);
+		// Extract date parts directly from the string to avoid timezone shifts
+		const [year, month, day] = periodStr.slice(0, 10).split("-").map(Number);
+		const date = new Date(year, month - 1, day);
 		const dayKey = date.toLocaleDateString("en-US", {
 			month: "short",
 			day: "numeric",
