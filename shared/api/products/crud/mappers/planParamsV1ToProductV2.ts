@@ -2,18 +2,13 @@ import type { CreatePlanParams } from "@api/products/crud/createPlanParamsV0";
 import type { UpdatePlanParams } from "@api/products/crud/updatePlanParamsV0";
 import { planItemParamsV1ToPlanItemV0 } from "@api/products/items/mappers/planItemParamsV1ToPlanItemV0";
 import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
-import { AppEnv } from "@models/genModels/genEnums";
+import type { AppEnv } from "@models/genModels/genEnums";
 import type { ProductV2 } from "@models/productV2Models/productV2Models";
 import type { SharedContext } from "../../../../types/sharedContext";
 
 export function planParamsV1ToProductV2({
 	ctx,
 	params,
-	overrides = {
-		version: 1,
-		env: AppEnv.Sandbox,
-		created_at: Date.now(),
-	},
 }: {
 	ctx: SharedContext;
 	params: CreatePlanParams | UpdatePlanParams;
@@ -61,7 +56,5 @@ export function planParamsV1ToProductV2({
 				}
 			: null,
 		...(archived !== undefined && { archived }),
-
-		...overrides,
 	};
 }
