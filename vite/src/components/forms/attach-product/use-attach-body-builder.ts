@@ -1,6 +1,7 @@
 import { AppEnv, type ProductV2, UsageModel } from "@autumn/shared";
 import Decimal from "decimal.js";
 import { useMemo } from "react";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
@@ -17,6 +18,7 @@ interface AttachBodyBuilderParams {
 	version?: number;
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
+	successUrl?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 	const storeProduct = useProductStore((s) => s.product);
 	const { entityId: storeEntityId } = useEntity();
 	const env = useEnv();
+	const { org, isLoading: isOrgLoading, error: orgError } = useOrg();
 
 	// Memoized builder function that can be called with runtime params
 	const buildAttachBody = useMemo(
@@ -94,12 +97,26 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 				useInvoice: mergedParams.useInvoice,
 				enableProductImmediately: mergedParams.enableProductImmediately,
 				successUrl:
-					env === AppEnv.Sandbox
-						? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
-						: undefined,
+					// env === AppEnv.Sandbox
+					// 	? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
+					// 	: undefined,
+					org?.success_url && !isOrgLoading && !orgError
+						? org.success_url
+						: env === AppEnv.Sandbox
+							? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
+							: undefined,
 			});
 		},
-		[products, hasChanges, storeProduct, storeEntityId, params],
+		[
+			products,
+			hasChanges,
+			storeProduct,
+			storeEntityId,
+			params,
+			org,
+			isOrgLoading,
+			orgError,
+		],
 	);
 
 	// For simple usage, return the built body with current params
