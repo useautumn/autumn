@@ -66,8 +66,6 @@ export const createStripePrepaidPriceV2 = async ({
 		currentStripeProduct,
 	});
 
-	console.log("stripeCreatePriceParams", stripeCreatePriceParams);
-
 	const stripeCli = createStripeCli({ org, env });
 
 	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams);
