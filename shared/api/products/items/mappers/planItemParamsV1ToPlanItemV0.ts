@@ -6,7 +6,7 @@ import { featureUtils } from "@utils/index";
 import type { SharedContext } from "../../../../types/sharedContext.js";
 
 /**
- * Converts V1 plan item params (CreatePlanItemParamsV0) to V0 response format (ApiPlanItemV0)
+ * Converts V1 plan item params (CreatePlanItemParamsV1) to V0 response format (ApiPlanItemV0)
  */
 export function planItemParamsV1ToPlanItemV0({
 	ctx,
