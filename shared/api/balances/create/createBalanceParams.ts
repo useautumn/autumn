@@ -47,21 +47,19 @@ export const ValidateCreateBalanceParamsSchema =
 			return false;
 		}
 
+		const included = data.included ?? data.granted_balance;
+
 		if (data.feature.type === FeatureType.Boolean) {
-			if (
-				data.included !== undefined ||
-				data.unlimited ||
-				data.reset?.interval
-			) {
+			if (included !== undefined || data.unlimited || data.reset?.interval) {
 				return false;
 			}
 		}
 
 		if (data.feature.type === FeatureType.Metered) {
-			if (data.included === undefined && !data.unlimited) {
+			if (included === undefined && !data.unlimited) {
 				return false;
 			}
-			if (data.included !== undefined && data.unlimited) {
+			if (included !== undefined && data.unlimited) {
 				return false;
 			}
 			if (data.unlimited && data.reset?.interval) {
