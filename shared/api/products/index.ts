@@ -1,12 +1,12 @@
+import { planParamsV1ToProductV2 } from "@api/products/crud/mappers/planParamsV1ToProductV2.js";
 import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems.js";
-import { planV0ToProductV2 } from "@api/products/mappers/planV0ToProductV2.js";
 
 export * from "./apiFreeTrial.js";
 export * from "./apiPlanV1.js";
 export * from "./components/apiFreeTrialV2.js";
 export * from "./components/billingMethod.js";
 export * from "./components/display.js";
-export * from "./crud/planOpModels.js";
+export * from "./crud/index.js";
 export * from "./items/index.js";
 export * from "./mappers/index.js";
 export * from "./planLegacyData.js";
@@ -20,6 +20,6 @@ export * from "./productsOpenApi.js";
 export const apiPlan = {
 	map: {
 		v0ToProductItems: planV0ToProductItems,
-		v0ToProductV2: planV0ToProductV2,
+		paramsV1ToProductV2: planParamsV1ToProductV2,
 	},
 };

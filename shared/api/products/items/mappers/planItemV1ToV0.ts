@@ -1,16 +1,6 @@
-import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel.js";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
 import type { ApiPlanItemV1 } from "../apiPlanItemV1.js";
-
-/** Convert billing_method (V1) to usage_model (V0) */
-export function billingMethodToUsageModel(
-	billingMethod: BillingMethod,
-): UsageModel {
-	return billingMethod === BillingMethod.Prepaid
-		? UsageModel.Prepaid
-		: UsageModel.PayPerUse;
-}
 
 /** Transform ApiPlanItemV1 to ApiPlanItemV0 */
 export function planItemV1ToV0(item: ApiPlanItemV1): ApiPlanItemV0 {

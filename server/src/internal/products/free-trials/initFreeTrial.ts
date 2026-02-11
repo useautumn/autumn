@@ -3,7 +3,7 @@ import {
 	CreateFreeTrialSchema,
 	type FreeTrial,
 } from "@autumn/shared";
-import type { FreeTrialParamsV0 } from "@shared/api/billing/common/freeTrial/freeTrialParamsV0";
+import type { FreeTrialParamsV0 } from "@shared/api/common/freeTrial/freeTrialParamsV0";
 import { generateId } from "@/utils/genUtils";
 
 export const initFreeTrial = ({

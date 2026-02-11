@@ -2,8 +2,8 @@ import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTri
 import { z } from "zod/v4";
 
 export const ApiFreeTrialV2Schema = z.object({
-	duration_type: z.enum(FreeTrialDuration),
 	duration_length: z.number(),
+	duration_type: z.enum(FreeTrialDuration),
 	card_required: z.boolean(),
 });
 

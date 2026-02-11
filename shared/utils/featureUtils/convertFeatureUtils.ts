@@ -4,6 +4,7 @@ import {
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { ProductItemFeatureType } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { featureUtils } from "@utils/featureUtils/index.js";
 import { ApiFeatureType } from "../../api/models.js";
 import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
 
@@ -77,4 +78,14 @@ export const featureToOptions = ({
 	if (option2) return option2;
 
 	return;
+};
+
+export const featureToResetWhenEnabled = ({
+	feature,
+}: {
+	feature?: Feature;
+}) => {
+	if (!feature) return false;
+
+	return !featureUtils.isAllocated(feature);
 };
