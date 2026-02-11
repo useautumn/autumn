@@ -83,7 +83,7 @@ const checkCurStripePrice = async ({
 	}
 
 	let stripePrepaidPriceV2: Stripe.Price | undefined;
-	if (config.stripe_prepaid_price_v2_id) {
+	if (!config.stripe_prepaid_price_v2_id) {
 		stripePrepaidPriceV2 = undefined;
 	} else {
 		stripePrepaidPriceV2 = await getStripePrice({
