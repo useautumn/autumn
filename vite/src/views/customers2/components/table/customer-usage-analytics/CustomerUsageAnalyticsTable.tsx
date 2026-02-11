@@ -6,7 +6,6 @@ import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
-import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -110,6 +109,12 @@ export function CustomerUsageAnalyticsTable() {
 					flexibleTableColumns: true,
 					enableColumnVisibility: true,
 					columnVisibilityStorageKey: "customer-usage-analytics",
+					columnVisibilityClassName: "right-3",
+					virtualization: {
+						containerHeight: "250px",
+						rowHeight: 32,
+						overscan: 15,
+					},
 				}}
 			>
 				<Table.Container>
@@ -126,21 +131,18 @@ export function CustomerUsageAnalyticsTable() {
 							<CustomerUsageAnalyticsFullButton />
 						</Table.Actions>
 					</Table.Toolbar>
-					<div className="flex w-full gap-2 ">
+					<div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-2">
 						{isLoading ? (
 							<EmptyState text={<LoadingShimmerText text="Loading events" />} />
 						) : hasEvents ? (
 							<>
-								<Table.Content
-									className={cn(
-										"rounded-lg bg-card w-full max-w-1/2 h-[250px]",
-									)}
-								>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
+								<div className="w-full lg:max-w-1/2">
+									<Table.VirtualizedContent className="rounded-lg bg-card w-full max-h-[250px]">
+										<Table.VirtualizedBody />
+									</Table.VirtualizedContent>
+								</div>
 
-								<div className="flex max-w-1/2 w-full min-w-0 h-[250px]">
+								<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
 									<CustomerUsageAnalyticsChart
 										timeseriesEvents={timeseriesEvents}
 										daysToShow={selectedDays ?? 7}

@@ -19,6 +19,7 @@ export function TableContentVirtualized({
 		flexibleTableColumns,
 		enableColumnVisibility,
 		columnVisibilityInToolbar,
+		columnVisibilityClassName,
 		table,
 		virtualization,
 	} = context;
@@ -49,9 +50,17 @@ export function TableContentVirtualized({
 
 	// minHeight ensures usability on small screens, but only when content would exceed it
 	// This allows small tables to be exactly as tall as their content
+	// Skip minHeight if containerHeight is explicitly set to a small value
 	const MIN_TABLE_HEIGHT = 400;
+	const containerHeightPx = virtualization?.containerHeight
+		? Number.parseInt(virtualization.containerHeight, 10)
+		: undefined;
 	const minHeight =
-		contentHeight > MIN_TABLE_HEIGHT ? MIN_TABLE_HEIGHT : undefined;
+		containerHeightPx && containerHeightPx < MIN_TABLE_HEIGHT
+			? undefined
+			: contentHeight > MIN_TABLE_HEIGHT
+				? MIN_TABLE_HEIGHT
+				: undefined;
 
 	// Calculate total width from visible columns to sync header and body tables
 	const visibleColumns = table.getVisibleLeafColumns();
@@ -105,7 +114,12 @@ export function TableContentVirtualized({
 					>
 						{/* Column visibility toggle - only render if not in toolbar */}
 						{enableColumnVisibility && !columnVisibilityInToolbar && (
-							<div className="absolute right-7 top-1 z-45">
+							<div
+								className={cn(
+									"absolute right-7 top-1 z-45",
+									columnVisibilityClassName,
+								)}
+							>
 								<TableColumnVisibility />
 							</div>
 						)}
