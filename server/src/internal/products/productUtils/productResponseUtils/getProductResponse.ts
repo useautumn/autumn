@@ -1,7 +1,7 @@
 import {
 	type ApiFreeTrial,
 	ApiFreeTrialSchema,
-	ApiProductItemSchema,
+	ApiProductItemV0Schema,
 	ApiProductPropertiesSchema,
 	ApiProductSchema,
 	AttachScenario,
@@ -71,7 +71,7 @@ export const getProductItemResponse = ({
 	}
 
 	const feature = features.find((f) => f.id === item.feature_id);
-	return ApiProductItemSchema.parse({
+	return ApiProductItemV0Schema.parse({
 		type,
 		...item,
 		feature: feature ? toApiFeature({ feature }) : null,

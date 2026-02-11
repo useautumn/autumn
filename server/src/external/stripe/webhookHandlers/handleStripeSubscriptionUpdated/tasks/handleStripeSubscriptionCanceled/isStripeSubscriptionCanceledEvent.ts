@@ -33,14 +33,19 @@ export const isStripeSubscriptionCanceledEvent = ({
 
 	// Check if this event represents a new cancellation
 	const cancelAtPeriodEndChanged =
+		"cancel_at_period_end" in previousAttributes &&
 		!previousAttributes.cancel_at_period_end &&
 		stripeSubscription.cancel_at_period_end;
 
 	const cancelAtChanged =
-		nullish(previousAttributes.cancel_at) && stripeSubscription.cancel_at;
+		"cancel_at" in previousAttributes &&
+		nullish(previousAttributes.cancel_at) &&
+		stripeSubscription.cancel_at;
 
 	const canceledAtChanged =
-		nullish(previousAttributes.canceled_at) && stripeSubscription.canceled_at;
+		"canceled_at" in previousAttributes &&
+		nullish(previousAttributes.canceled_at) &&
+		stripeSubscription.canceled_at;
 
 	const canceled =
 		cancelAtPeriodEndChanged || cancelAtChanged || canceledAtChanged;

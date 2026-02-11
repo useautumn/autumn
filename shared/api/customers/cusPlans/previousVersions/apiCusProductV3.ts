@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import { z } from "zod/v4";
 
 export const ApiCusProductV3Schema = z.object({
@@ -62,7 +62,7 @@ export const ApiCusProductV3Schema = z.object({
 		example: "entity_1234abcd",
 	}),
 	items: z
-		.array(ApiProductItemSchema)
+		.array(ApiProductItemV0Schema)
 		.nullish()
 		.meta({
 			description: "Array of product items defining the features and pricing",

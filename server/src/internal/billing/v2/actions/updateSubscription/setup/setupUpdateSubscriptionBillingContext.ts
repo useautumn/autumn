@@ -135,6 +135,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		trialContext,
 		isCustom,
 
-		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
+		billingVersion: contextOverride.billingVersion
+			? contextOverride.billingVersion
+			: (customerProduct.billing_version ?? BillingVersion.V2),
 	};
 };

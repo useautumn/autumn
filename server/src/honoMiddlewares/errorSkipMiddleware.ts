@@ -56,6 +56,14 @@ const ROUTE_SPECIFIC_RULES: Array<{
 /** Stripe-specific error handling rules */
 const STRIPE_RULES = [
 	{
+		name: "Stripe rate limit exceeded",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			(err.type === "StripeRateLimitError" || err.statusCode === 429),
+		statusCode: 429,
+		code: "stripe_rate_limit_exceeded",
+	},
+	{
 		name: "Exchange router invalid API key",
 		match: (err: Error, c: Context<HonoEnv>) =>
 			err instanceof Stripe.errors.StripeError &&

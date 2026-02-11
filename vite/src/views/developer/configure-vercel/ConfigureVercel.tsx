@@ -130,7 +130,7 @@ export const ConfigureVercel = () => {
 
 	return !isLoading ? (
 		<div className="flex flex-col gap-4 pb-10">
-			<div className="px-10 flex flex-col gap-4">
+			<div className="flex flex-col gap-4">
 				<Card className="shadow-none bg-interactive-secondary">
 					<CardHeader>
 						<CardTitle>

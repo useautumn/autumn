@@ -1,9 +1,8 @@
+import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
 import { z } from "zod/v4";
 import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse.js";
 import { ApiBalanceSchema } from "../../api/customers/cusFeatures/apiBalance.js";
-import { ApiSubscriptionSchema } from "../../api/customers/cusPlans/apiSubscription.js";
-import { ApiPlanSchema } from "../../api/products/apiPlan.js";
 
 /**
  * Org branding for checkout display
@@ -30,18 +29,18 @@ export const CheckoutEntitySchema = z.object({
 	name: z.string().nullable(),
 });
 
-/**
- * Subscription with required plan (always expanded for checkout)
- */
-export const CheckoutSubscriptionSchema = ApiSubscriptionSchema.extend({
-	plan: ApiPlanSchema,
-});
+// /**
+//  * Subscription with required plan (always expanded for checkout)
+//  */
+// export const CheckoutSubscriptionSchema = ApiSubscriptionSchema.extend({
+// 	plan: ApiPlanV0Schema,
+// });
 
 /**
  * A change in the checkout (product being added, canceled, or expiring)
  */
 export const CheckoutChangeSchema = z.object({
-	plan: ApiPlanSchema,
+	plan: ApiPlanV1Schema,
 	feature_quantities: z.array(
 		FeatureOptionsSchema.pick({
 			feature_id: true,
@@ -80,7 +79,7 @@ export const ConfirmCheckoutResponseSchema = z.object({
 export type CheckoutOrg = z.infer<typeof CheckoutOrgSchema>;
 export type CheckoutCustomer = z.infer<typeof CheckoutCustomerSchema>;
 export type CheckoutEntity = z.infer<typeof CheckoutEntitySchema>;
-export type CheckoutSubscription = z.infer<typeof CheckoutSubscriptionSchema>;
+// export type CheckoutSubscription = z.infer<typeof CheckoutSubscriptionSchema>;
 export type CheckoutChange = z.infer<typeof CheckoutChangeSchema>;
 export type GetCheckoutResponse = z.infer<typeof GetCheckoutResponseSchema>;
 export type ConfirmCheckoutResponse = z.infer<

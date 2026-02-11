@@ -1,13 +1,13 @@
 import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
-import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
-import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
+import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
+import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
+import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export const handleCancelV2 = createRoute({
@@ -40,6 +40,9 @@ export const handleCancelV2 = createRoute({
 		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,
 			params: updateSubscriptionBody,
+			contextOverride: {
+				inheritBillingVersion: true,
+			},
 		});
 		logUpdateSubscriptionContext({ ctx, billingContext });
 
@@ -50,19 +53,24 @@ export const handleCancelV2 = createRoute({
 		});
 		logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
-		await handleUpdateSubscriptionErrors({
-			ctx,
-			billingContext,
-			autumnBillingPlan,
-			params: updateSubscriptionBody,
-		});
-
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
 			ctx,
 			billingContext,
 			autumnBillingPlan,
 		});
 		logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
+
+		const billingPlan = {
+			autumn: autumnBillingPlan,
+			stripe: stripeBillingPlan,
+		};
+
+		await handleUpdateSubscriptionErrors({
+			ctx,
+			billingContext,
+			billingPlan,
+			params: updateSubscriptionBody,
+		});
 
 		const billingResult = await executeBillingPlan({
 			ctx,

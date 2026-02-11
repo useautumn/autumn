@@ -7,9 +7,9 @@
 
 import {
 	AffectedResource,
-	type ApiCustomer,
-	type ApiEntityV1,
-	type ApiPlan,
+	type ApiCustomerV5,
+	type ApiEntityV2,
+	type ApiPlanV1,
 	ApiVersion,
 	ApiVersionClass,
 	addToExpand,
@@ -94,7 +94,7 @@ export const sendProductsUpdated = async ({
 	});
 
 	const versionedCustomer = applyResponseVersionChanges<
-		ApiCustomer,
+		ApiCustomerV5,
 		CustomerLegacyData
 	>({
 		input: apiCustomer,
@@ -109,7 +109,7 @@ export const sendProductsUpdated = async ({
 		features,
 	});
 
-	const versionedPlan = applyResponseVersionChanges<ApiPlan, PlanLegacyData>({
+	const versionedPlan = applyResponseVersionChanges<ApiPlanV1, PlanLegacyData>({
 		input: apiPlan,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Product,
@@ -127,7 +127,7 @@ export const sendProductsUpdated = async ({
 			fullCus: fullCustomer,
 		});
 
-		entity = applyResponseVersionChanges<ApiEntityV1, EntityLegacyData>({
+		entity = applyResponseVersionChanges<ApiEntityV2, EntityLegacyData>({
 			input: apiEntity,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Entity,

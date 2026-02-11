@@ -21,7 +21,7 @@ export function PanelButton({
 			data-state={isSelected ? "open" : "closed"}
 			className={cn(
 				// Fixed dimensions
-				"w-[144px] h-[72px] relative flex items-center justify-center overflow-hidden flex-shrink-0 ",
+				"w-[144px] h-[72px] relative flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer ",
 
 				// Thicker border for panel effect
 				"!rounded-[0.5rem] !border-[0.09375rem]",

@@ -11,7 +11,6 @@ import { useProductTable } from "@/views/products/hooks/useProductTable";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
 import { createCreditListColumns } from "./CreditListColumns";
-import { CreditListCreateButton } from "./CreditListCreateButton";
 import { createFeatureListColumns } from "./FeatureListColumns";
 import { FeatureListCreateButton } from "./FeatureListCreateButton";
 import { FeatureListMenuButton } from "./FeatureListMenuButton";
@@ -97,8 +96,8 @@ export function FeatureListTable() {
 		"You haven't archived any credit systems yet."
 	) : (
 		<>
-			Credit systems let you assign different credit costs to features, and draw
-			usage from a common balance
+			Assign credit costs to metered features, and deduct usage from a single
+			shared balance
 			{env === AppEnv.Sandbox && (
 				<IconButton
 					variant="muted"
@@ -211,9 +210,6 @@ export function FeatureListTable() {
 										<div className="flex w-full justify-between items-center">
 											<div className="flex items-center gap-2">
 												{/* Add search and other filters here in the future if needed */}
-											</div>
-											<div className="flex items-center gap-2">
-												<CreditListCreateButton />
 											</div>
 										</div>
 									</Table.Actions>

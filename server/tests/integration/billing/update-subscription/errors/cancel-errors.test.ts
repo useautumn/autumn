@@ -313,7 +313,104 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product wit
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Cannot pass free_trial when cancel is end_of_cycle
+// TEST 6: Cannot pass items when cancel is end_of_cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User is on Pro ($20/mo)
+ * - User tries to cancel at end of cycle while also passing items
+ *
+ * Expected Result:
+ * - Should return an error - cannot combine cancel_end_of_cycle with items
+ */
+test.concurrent(`${chalk.yellowBright("error: cannot pass items when cancel is end_of_cycle")}`, async () => {
+	const customerId = "err-cancel-eoc-with-items";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Try to cancel end_of_cycle while also passing items - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: pro.id,
+				cancel_action: "cancel_end_of_cycle",
+				items: [items.monthlyMessages({ includedUsage: 200 })],
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Cannot pass options when cancel is end_of_cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User is on Pro with prepaid messages
+ * - User tries to cancel at end of cycle while also passing options
+ *
+ * Expected Result:
+ * - Should return an error - cannot combine cancel_end_of_cycle with options
+ */
+test.concurrent(`${chalk.yellowBright("error: cannot pass options when cancel is end_of_cycle")}`, async () => {
+	const customerId = "err-cancel-eoc-with-options";
+
+	const prepaidItem = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [prepaidItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.attach({
+				productId: pro.id,
+				options: [{ feature_id: "messages", quantity: 300 }],
+			}),
+		],
+	});
+
+	// Try to cancel end_of_cycle while also passing options - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: pro.id,
+				cancel_action: "cancel_end_of_cycle",
+				options: [{ feature_id: "messages", quantity: 500 }],
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 8: Cannot pass free_trial when cancel is end_of_cycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**

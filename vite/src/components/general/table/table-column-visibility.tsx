@@ -220,13 +220,7 @@ export function TableColumnVisibility() {
 					<IconButton
 						variant="secondary"
 						className={cn(isOpen && "btn-secondary-active")}
-						icon={
-							<FadersHorizontalIcon
-								size={14}
-								weight="bold"
-								className="text-t3"
-							/>
-						}
+						icon={<FadersHorizontalIcon size={14} className="text-t3" />}
 					>
 						Display
 					</IconButton>

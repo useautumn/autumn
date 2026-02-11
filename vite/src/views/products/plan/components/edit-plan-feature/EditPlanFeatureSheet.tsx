@@ -57,7 +57,7 @@ export function EditPlanFeatureSheet({
 		item.tiers[0].amount === 0 &&
 		!item.included_usage;
 
-	const showFooter = hasItemChanges && !emptyPriceItem;
+	const hasChanges = hasItemChanges && !emptyPriceItem;
 
 	if (!item) {
 		return null;
@@ -132,7 +132,7 @@ export function EditPlanFeatureSheet({
 			</div>
 
 			{/* Footer stays at bottom */}
-			{showFooter && <SheetFooterActions />}
+			<SheetFooterActions hasChanges={hasChanges} />
 
 			{/* Edit Feature Sheet */}
 			{feature?.type === FeatureType.CreditSystem ? (

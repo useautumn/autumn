@@ -57,7 +57,7 @@ export const useSheetStore = create<SheetState>((set) => ({
 	...initialState,
 
 	// Set the sheet type and optional itemId
-	setSheet: ({ type, itemId = null, data = null }) => {
+	setSheet: ({ type, itemId = null, data = null }) =>
 		set((state) => ({
 			previousType: state.type,
 			type,
@@ -65,22 +65,20 @@ export const useSheetStore = create<SheetState>((set) => ({
 			data,
 			// Clear initialItem when sheet changes
 			initialItem: null,
-		}));
-	},
+		})),
 
 	// Set the initial item state for change detection
 	setInitialItem: (item) => set({ initialItem: item }),
 
 	// Close the sheet
-	closeSheet: () => {
+	closeSheet: () =>
 		set((state) => ({
 			previousType: state.type,
 			type: null,
 			itemId: null,
 			data: null,
 			initialItem: null,
-		}));
-	},
+		})),
 
 	// Reset to initial state
 	reset: () => set(initialState),

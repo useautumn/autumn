@@ -15,12 +15,17 @@ const getPlaceholders = ({
 	feature: CreateFeature;
 }): { name: string; id: string } => {
 	const isBoolean = feature.type === FeatureType.Boolean;
+	const isCreditSystem = feature.type === FeatureType.CreditSystem;
 	const isNonConsumable =
 		feature.type === FeatureType.Metered &&
 		feature.config?.usage_type === FeatureUsageType.Continuous;
 
 	if (isBoolean) {
 		return { name: "eg, Premium Analytics", id: "premium_analytics" };
+	}
+
+	if (isCreditSystem) {
+		return { name: "eg, AI Credits", id: "ai_credits" };
 	}
 
 	if (isNonConsumable) {

@@ -20,14 +20,14 @@ export const TextCheckbox = ({
 			htmlFor={id}
 			className={cn(
 				"flex items-center gap-2 w-fit whitespace-nowrap",
-				disabled ? "cursor-not-allowed opacity-50" : "cursor-default",
+				disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
 			)}
 		>
 			<Checkbox id={id} disabled={disabled} {...checkboxProps} />
 			<div
 				className={cn(
-					"text-checkbox-label",
-					disabled && "text-muted-foreground",
+					"text-checkbox-label cursor-pointer",
+					disabled && "text-muted-foreground cursor-not-allowed",
 				)}
 			>
 				{children}

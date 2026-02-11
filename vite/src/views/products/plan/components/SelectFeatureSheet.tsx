@@ -1,10 +1,15 @@
-import type { Feature } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureType,
+	type ProductItem,
+} from "@autumn/shared";
 import {
 	CaretDownIcon,
 	MagnifyingGlassIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
@@ -23,6 +28,35 @@ import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { getDefaultItem } from "../utils/getDefaultItem";
+
+/** Get all feature IDs already in the plan, including underlying features from credit systems */
+const getFeaturesAlreadyInPlan = ({
+	items,
+	features,
+}: {
+	items: ProductItem[];
+	features: Feature[];
+}): Set<string> => {
+	const featureIds = new Set<string>();
+
+	for (const item of items) {
+		if (!item.feature_id) continue;
+
+		featureIds.add(item.feature_id);
+
+		// If this feature is a credit system, also add all its underlying metered features
+		const feature = features.find((f) => f.id === item.feature_id);
+		if (feature?.type === FeatureType.CreditSystem && feature.config?.schema) {
+			for (const schemaItem of feature.config.schema as CreditSchemaItem[]) {
+				if (schemaItem.metered_feature_id) {
+					featureIds.add(schemaItem.metered_feature_id);
+				}
+			}
+		}
+	}
+
+	return featureIds;
+};
 
 export function SelectFeatureSheet({
 	isOnboarding,
@@ -54,6 +88,16 @@ export function SelectFeatureSheet({
 		(feature: Feature) =>
 			!feature.archived &&
 			feature.name.toLowerCase().includes(searchValue.toLowerCase()),
+	);
+
+	// Get features already in the plan (for showing "Already in plan" tag)
+	const featuresInPlan = useMemo(
+		() =>
+			getFeaturesAlreadyInPlan({
+				items: product?.items ?? [],
+				features,
+			}),
+		[product?.items, features],
 	);
 
 	const handleFeatureSelect = (featureId: string) => {
@@ -140,11 +184,16 @@ export function SelectFeatureSheet({
 											onClick={() => handleFeatureSelect(feature.id)}
 											className="py-2 px-2.5"
 										>
-											<div className="flex items-center gap-2">
+											<div className="flex items-center gap-2 w-full">
 												<div className="shrink-0">
 													{getFeatureIcon({ feature })}
 												</div>
-												<span className="truncate">{feature.name}</span>
+												<span className="truncate flex-1">{feature.name}</span>
+												{featuresInPlan.has(feature.id) && (
+													<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+														Already in plan
+													</span>
+												)}
 											</div>
 										</DropdownMenuItem>
 									))

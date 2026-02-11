@@ -85,8 +85,8 @@ export * from "./models/featureModels/featureModels.js";
 
 // export * from "./models/featureModels/featureResModels.js";
 
-export * from "./api/products/planFeature/apiPlanFeature.js";
-export * from "./api/products/planOpModels.js";
+export * from "./api/products/crud/planOpModels.js";
+export * from "./api/products/items/previousVersions/apiPlanItemV0.js";
 
 // 2. Feature Models
 export * from "./models/featureModels/featureTable.js";
@@ -96,12 +96,12 @@ export * from "./models/genModels/processorSchemas.js";
 
 // Idempotency Models
 
+export * from "./api/products/items/mappers/planItemV0ToProductItem.js";
+export * from "./api/products/items/mappers/planItemV0ToProductItem.js";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
-
 // Billing Models (all from single index)
 export * from "./models/billingModels/index.js";
-
 // Checkout Models
 export * from "./models/checkouts/index.js";
 export * from "./models/cusProductModels/cusPriceModels/customerPriceWithCustomerProduct.js";
@@ -173,6 +173,7 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels.js"
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 export * from "./models/subModels/subModels.js";
 export * from "./models/subModels/subTable.js";
+export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes.js";
 export * from "./utils/billingUtils/index.js";
@@ -188,16 +189,7 @@ export * from "./utils/cusEntUtils/index";
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
 export * from "./utils/intervalUtils.js";
-export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
-export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
-export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
-export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
-export * from "./utils/planFeatureUtils/planFeaturesToItems.js";
-export * from "./utils/planFeatureUtils/planFeaturesToItems.js";
 export * from "./utils/planFeatureUtils/planToDbFreeTrial.js";
-export * from "./utils/planFeatureUtils/planToItems.js";
-export * from "./utils/planFeatureUtils/planToItems.js";
-export * from "./utils/planFeatureUtils/planToProductV2.js";
 export * from "./utils/productDisplayUtils/sortProductItems.js";
 export * from "./utils/productDisplayUtils.js";
 export * from "./utils/productUtils/convertProductUtils.js";
@@ -212,6 +204,8 @@ export * from "./utils/productV2Utils/compareProductUtils/generateTrialChanges.j
 export * from "./utils/productV2Utils/compareProductUtils/generateVersionChanges.js";
 export * from "./utils/productV2Utils/compareProductUtils/itemEditTypes.js";
 export * from "./utils/productV2Utils/productItemUtils/convertItemUtils.js";
+export * from "./utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
+export * from "./utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1.js";
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
