@@ -30,7 +30,7 @@ export type StripeCustomerExpandedDiscount = Omit<Stripe.Discount, "source"> & {
 
 /**
  * Stripe subscription with discounts expanded.
- * Compatible type for setupStripeDiscountsForBilling.
+ * Compatible type for extractStripeDiscounts / fetchStripeDiscountsForBilling.
  */
 export type StripeSubscriptionWithDiscounts = Stripe.Subscription & {
 	discounts: StripeExpandedDiscount[];
@@ -38,7 +38,7 @@ export type StripeSubscriptionWithDiscounts = Stripe.Subscription & {
 
 /**
  * Stripe customer with discount expanded.
- * Compatible type for setupStripeDiscountsForBilling.
+ * Compatible type for extractStripeDiscounts / fetchStripeDiscountsForBilling.
  */
 export type StripeCustomerWithDiscount = Stripe.Customer & {
 	discount: StripeCustomerExpandedDiscount | null;
