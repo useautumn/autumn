@@ -1,15 +1,12 @@
 import {
-	type CreateBalanceParams,
-	ErrCode,
+	type CreateBalanceParamsV0,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
 	RecaseError,
 	ValidateCreateBalanceParamsSchema,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase";
 
 export const validateCreateBalanceParams = async ({
@@ -19,7 +16,7 @@ export const validateCreateBalanceParams = async ({
 	fullCustomer,
 }: {
 	ctx: AutumnContext;
-	params: CreateBalanceParams;
+	params: CreateBalanceParamsV0;
 	feature: Feature;
 	fullCustomer: FullCustomer;
 }) => {

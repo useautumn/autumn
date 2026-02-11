@@ -13,7 +13,7 @@ const DeleteProductParamsSchema = z.object({
 });
 
 const DeleteProductQuerySchema = z.object({
-	all_versions: z.boolean(),
+	all_versions: z.boolean().default(false),
 });
 
 export const handleDeleteProduct = createRoute({
