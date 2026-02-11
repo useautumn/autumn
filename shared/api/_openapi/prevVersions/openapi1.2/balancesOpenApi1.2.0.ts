@@ -1,6 +1,6 @@
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { SuccessResponseSchema } from "../../../common/commonResponses.js";
-import { CreateBalanceParamsSchema } from "../../../models.js";
+import { CreateBalanceParamsV0Schema } from "../../../models.js";
 import { xCodeSamplesLegacy } from "../../../utils/xCodeSamplesLegacy.js";
 
 export const balancesOpenApi: ZodOpenApiPathsObject = {
@@ -13,7 +13,7 @@ export const balancesOpenApi: ZodOpenApiPathsObject = {
 			requestBody: {
 				content: {
 					"application/json": {
-						schema: CreateBalanceParamsSchema,
+						schema: CreateBalanceParamsV0Schema,
 					},
 				},
 			},

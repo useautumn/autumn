@@ -1,4 +1,5 @@
-import { type ApiProductItem, apiPlan } from "@api/models.js";
+import { type ApiProductItem } from "@api/models.js";
+import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -46,7 +47,7 @@ export function transformSubscriptionToCusProductV3({
 	let items: ApiProductItem[] | null = null;
 
 	if (input.plan && ctx.features) {
-		const productItems = apiPlan.map.v0ToProductItems({
+		const productItems = planV0ToProductItems({
 			ctx,
 			plan: input.plan,
 		});

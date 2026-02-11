@@ -1,25 +1,24 @@
-import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
-import { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
+import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels";
+} from "@models/productV2Models/productItemModels/productItemEnums.js";
 import { z } from "zod/v4";
 
-export const CreatePlanItemParamsV0Schema = z
+export const CreatePlanItemParamsV1Schema = z
 	.object({
 		feature_id: z.string(),
-		granted_balance: z.number().optional(),
+		included: z.number().optional(),
 		unlimited: z.boolean().optional(),
 
 		reset: z
 			.object({
 				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
-				reset_when_enabled: z.boolean().optional(),
 			})
 			.optional(),
 
@@ -32,7 +31,7 @@ export const CreatePlanItemParamsV0Schema = z
 				interval_count: z.number().default(1).optional(),
 
 				billing_units: z.number().default(1).optional(),
-				usage_model: z.enum(UsageModel),
+				billing_method: z.enum(BillingMethod),
 				max_purchase: z.number().optional(),
 			})
 			.optional(),
@@ -91,6 +90,6 @@ export const CreatePlanItemParamsV0Schema = z
 			}
 		}
 	});
-export type CreatePlanItemParamsV0 = z.infer<
-	typeof CreatePlanItemParamsV0Schema
+export type CreatePlanItemParamsV1 = z.infer<
+	typeof CreatePlanItemParamsV1Schema
 >;
