@@ -6,15 +6,9 @@ import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureSelectDropdown } from "@/views/products/features/credit-systems/components/FeatureSelectDropdown";
 
 interface CreditSystemSchemaProps {
 	creditSystem: CreateFeature;
@@ -70,12 +64,16 @@ export function CreditSystemSchema({
 		});
 	};
 
-	const availableMeteredFeatures = features.filter(
+	const allMeteredFeatures = features.filter(
 		(feature: Feature) => feature.type === FeatureType.Metered,
 	);
 
 	return (
-		<SheetSection title="Credit Schema" withSeparator={false}>
+		<SheetSection
+			title="Credit Schema"
+			withSeparator={false}
+			description="When you track usage for these features, the value will be multiplied by the credit cost, then deducted from the balance"
+		>
 			<div className="flex flex-col gap-0">
 				<div className="grid grid-cols-2 gap-2">
 					<FormLabel>Metered Feature</FormLabel>
@@ -83,69 +81,60 @@ export function CreditSystemSchema({
 				</div>
 
 				<div className="flex flex-col gap-2">
-					{schema.map((item: CreditSchemaItem, index: number) => (
-						<div key={index} className="grid grid-cols-2 gap-2">
-							<Select
-								value={item.metered_feature_id}
-								onValueChange={(value) =>
-									handleSchemaChange(index, "metered_feature_id", value)
-								}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select feature" />
-								</SelectTrigger>
-								<SelectContent>
-									{availableMeteredFeatures
-										.filter(
-											(feature: Feature) =>
-												!schema.some(
-													(schemaItem: CreditSchemaItem) =>
-														feature.id !== item.metered_feature_id &&
-														schemaItem.metered_feature_id === feature.id,
-												),
-										)
-										.map((feature: Feature) => (
-											<SelectItem key={feature.id} value={feature.id || ""}>
-												<span className="block truncate max-w-40">
-													{feature.name}
-												</span>
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
+					{schema.map((item: CreditSchemaItem, index: number) => {
+						const availableFeatures = allMeteredFeatures.filter(
+							(feature: Feature) =>
+								!schema.some(
+									(schemaItem: CreditSchemaItem) =>
+										feature.id !== item.metered_feature_id &&
+										schemaItem.metered_feature_id === feature.id,
+								),
+						);
 
-							<div className="flex gap-1">
-								<Input
-									type="number"
-									lang="en"
-									value={item.credit_amount || ""}
-									onChange={(e) =>
-										handleSchemaChange(index, "credit_amount", e.target.value)
+						return (
+							<div key={index} className="grid grid-cols-2 gap-2">
+								<FeatureSelectDropdown
+									value={item.metered_feature_id}
+									onValueChange={(featureId) =>
+										handleSchemaChange(index, "metered_feature_id", featureId)
 									}
-									onBlur={(e) =>
-										handleSchemaChange(
-											index,
-											"credit_amount",
-											Number(e.target.value) || 0,
-										)
-									}
-									placeholder="eg. 10"
+									availableFeatures={availableFeatures}
+									allFeatures={allMeteredFeatures}
 								/>
-								<IconButton
-									variant="skeleton"
-									iconOrientation="center"
-									icon={<X />}
-									onClick={() => removeSchemaItem(index)}
-								/>
+
+								<div className="flex gap-1">
+									<Input
+										type="number"
+										lang="en"
+										value={item.credit_amount || ""}
+										onChange={(e) =>
+											handleSchemaChange(index, "credit_amount", e.target.value)
+										}
+										onBlur={(e) =>
+											handleSchemaChange(
+												index,
+												"credit_amount",
+												Number(e.target.value) || 0,
+											)
+										}
+										placeholder="eg. 10"
+									/>
+									<IconButton
+										variant="skeleton"
+										iconOrientation="center"
+										icon={<X />}
+										onClick={() => removeSchemaItem(index)}
+									/>
+								</div>
 							</div>
-						</div>
-					))}
+						);
+					})}
 				</div>
 
 				<IconButton
 					variant="muted"
 					onClick={addSchemaItem}
-					disabled={schema.length >= availableMeteredFeatures.length}
+					disabled={schema.length >= allMeteredFeatures.length}
 					className="w-fit mt-4"
 					icon={<PlusIcon />}
 				>

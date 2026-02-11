@@ -182,7 +182,7 @@ export const createStripePriceIFNotExist = async ({
 				ctx,
 				price,
 				product,
-				currentStripeProduct: stripePrepaidPriceV2,
+				currentStripeProduct: stripeProd ?? undefined,
 			});
 		}
 	}

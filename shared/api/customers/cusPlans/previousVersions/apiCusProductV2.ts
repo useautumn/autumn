@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import { z } from "zod/v4";
 
 /**
@@ -26,7 +26,7 @@ export const ApiCusProductV2Schema = z.object({
 
 	entity_id: z.string().nullish(),
 
-	items: z.array(ApiProductItemSchema).nullish(),
+	items: z.array(ApiProductItemV0Schema).nullish(),
 
 	quantity: z.number().optional(),
 });

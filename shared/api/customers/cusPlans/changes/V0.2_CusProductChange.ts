@@ -1,9 +1,4 @@
-import type { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
-import {
-	AffectedResource,
-	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+import type { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
 import { TierInfinite } from "@models/productV2Models/productItemModels/productItemModels.js";
 import {
 	isFeatureItem,
@@ -11,12 +6,9 @@ import {
 } from "@utils/productV2Utils/productItemUtils/getItemType.js";
 import { notNullish } from "@utils/utils.js";
 import type { z } from "zod/v4";
-import {
-	type CusProductLegacyData,
-	CusProductLegacyDataSchema,
-} from "../cusProductLegacyData.js";
-import { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1.js";
-import { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
+import type { CusProductLegacyData } from "../cusProductLegacyData.js";
+import type { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1.js";
+import type { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
 
 /**
  * Transform product from V2 format to V1 format
@@ -25,7 +17,7 @@ import { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
 const transformItemToPrice = ({
 	item,
 }: {
-	item: z.infer<typeof ApiProductItemSchema>;
+	item: z.infer<typeof ApiProductItemV0Schema>;
 }) => {
 	const singleTier =
 		isPriceItem(item) ||
@@ -134,17 +126,3 @@ export function transformCusProductV2ToV1({
 
 	return v1CusProduct;
 }
-
-const V0_2_CusProductChange = defineVersionChange({
-	newVersion: ApiVersion.V1_1, // Breaking change introduced in V1_1
-	oldVersion: ApiVersion.V0_2, // Applied when targetVersion <= V0_2
-	description: ["Customer product response revamped to fit ProductV2 schema"],
-
-	affectedResources: [AffectedResource.CusProduct],
-	newSchema: ApiCusProductV2Schema,
-	oldSchema: ApiCusProductV1Schema,
-	legacyDataSchema: CusProductLegacyDataSchema,
-
-	// Response: V1.1+ (V2) → V0_2 (V1)
-	transformResponse: transformCusProductV2ToV1,
-});

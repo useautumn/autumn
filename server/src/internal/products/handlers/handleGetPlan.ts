@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiPlan,
+	type ApiPlanV1,
 	applyResponseVersionChanges,
 	ErrCode,
 	ProductNotFoundError,
@@ -57,7 +57,7 @@ export const handleGetPlan = createRoute({
 			features,
 		});
 
-		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+		const versionedResponse = applyResponseVersionChanges<ApiPlanV1>({
 			input: planResponse,
 			targetVersion: apiVersion,
 			resource: AffectedResource.Product,

@@ -11,7 +11,7 @@ import {
  * Provides consistent table setup across all customer-related tables.
  */
 export function useCustomerTable<
-	TData extends { id?: string; internal_id?: string },
+	TData extends { id?: string | null; internal_id?: string },
 >({
 	data,
 	columns,

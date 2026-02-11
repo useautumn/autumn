@@ -1,21 +1,29 @@
+import type {
+	BillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import {
+	ErrCode,
 	isCustomerProductFree,
 	isCustomerProductOneOff,
 	RecaseError,
-	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import {
+	billingPlanWillCharge,
+	getChargeReasonMessage,
+} from "@/internal/billing/v2/utils/billingPlan/billingPlanWillCharge";
 
 /**
  * Validates cancel: 'end_of_cycle' requests.
- * Throws error if trying to cancel a free or one-off product at end of cycle.
+ * Throws error if trying to cancel a free or one-off product at end of cycle,
+ * or if the billing plan would result in a charge.
  */
 export const handleCancelEndOfCycleErrors = ({
 	billingContext,
-	params,
+	billingPlan,
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV0Params;
+	billingPlan: BillingPlan;
 }) => {
 	if (billingContext.cancelAction !== "cancel_end_of_cycle") return;
 
@@ -32,6 +40,17 @@ export const handleCancelEndOfCycleErrors = ({
 		throw new RecaseError({
 			message:
 				"Cannot use cancel: 'end_of_cycle' for one-off products. Use cancel: 'immediately' instead.",
+		});
+	}
+
+	// Block any operations that would result in a charge
+	const chargeResult = billingPlanWillCharge({ billingPlan });
+
+	if (chargeResult.willCharge) {
+		throw new RecaseError({
+			message: `Cannot use cancel: 'end_of_cycle' when ${getChargeReasonMessage(chargeResult.reason)}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 		});
 	}
 };

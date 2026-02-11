@@ -1,6 +1,6 @@
-import { InternalError } from "@api/errors";
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels";
 import type { Feature } from "@models/featureModels/featureModels";
+import type { AutumnLogger } from "../../../types";
 
 /**
  * Find the feature options for a feature
@@ -11,9 +11,11 @@ import type { Feature } from "@models/featureModels/featureModels";
 export const findFeatureOptionsByFeature = ({
 	featureOptions,
 	feature,
+	logger,
 }: {
 	featureOptions: FeatureOptions[];
 	feature: Feature;
+	logger: AutumnLogger;
 }) => {
 	const options = featureOptions.find(
 		(oldOption) =>
@@ -22,9 +24,15 @@ export const findFeatureOptionsByFeature = ({
 	);
 
 	if (!options) {
-		throw new InternalError({
-			message: `[Find Feature Options By Feature] Cannot find feature options for feature: ${feature.id}.`,
-		});
+		logger.warn(
+			`[Find Feature Options By Feature] Cannot find feature options for feature: ${feature.id}.`,
+		);
 	}
-	return options;
+	return (
+		options ?? {
+			feature_id: feature.id,
+			internal_feature_id: feature.internal_id,
+			quantity: 0,
+		}
+	);
 };

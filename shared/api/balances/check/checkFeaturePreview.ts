@@ -1,5 +1,5 @@
+import { ApiProductSchema } from "@api/products/previousVersions/apiProduct";
 import { z } from "zod/v4";
-import { ApiProductSchema } from "../../models.js";
 
 // Check Feature Preview Schemas
 export const CheckFeaturePreviewSchema = z.object({

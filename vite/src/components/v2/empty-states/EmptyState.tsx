@@ -24,7 +24,7 @@ export const EmptyState = ({
 		switch (type) {
 			case "plans":
 				return {
-					title: "Create your first Plan",
+					title: "Create your plans",
 					description:
 						"Plans define your pricing tiers, usage limits and feature permissions",
 					svg: plansSvg,

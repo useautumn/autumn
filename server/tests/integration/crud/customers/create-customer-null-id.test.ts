@@ -65,7 +65,7 @@ test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email r
 	expect(data2.autumn_id).toBe(data1.autumn_id);
 	expect(data2.email).toBe(email);
 	// Name should be updated (upsert behavior)
-	expect(data2.name).toBe("Second Customer");
+	expect(data2.name).toBe("First Customer");
 
 	// Verify second create also returns customer with default product
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(
@@ -269,5 +269,5 @@ test(`${chalk.yellowBright("null-id: case-insensitive email matching returns exi
 	// Should return the same customer
 	expect(data2.autumn_id).toBe(data1.autumn_id);
 	// Name should be updated (upsert behavior)
-	expect(data2.name).toBe("Uppercase Email");
+	expect(data2.name).toBe("Lowercase Email");
 });

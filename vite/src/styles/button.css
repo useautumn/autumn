@@ -76,29 +76,3 @@
 		0px 3px 10px 2px #00000040,
 		0px 2px 0px 1px #661ecfb2 inset !important
 } */
-
-.dark .btn-primary-dark {
-	box-shadow:
-		0px -13px 25px -5px #6100f299 inset,
-		0px 3px 15px -5px #6100f2 inset,
-		0px -2px 6px 0px #b27fff59 inset,
-		0px 3px 10px 2px #00000040,
-		0px 2px 0px 1px #661ecfb2 inset !important;
-
-	background-color: #1f004d;
-
-	border: 1px solid #661ecf;
-}
-
-.dark .btn-primary-dark:hover {
-	box-shadow:
-		0px -13px 25px -5px #6100f299 inset,
-		0px 3px 15px -5px #6100f2 inset,
-		0px -2px 6px 0px #b27fff59 inset,
-		0px 3px 10px 2px #00000040,
-		0px 2px 0px 1px #7227df99 inset;
-
-	background-color: #12002e;
-
-	border: 1px solid #7227df;
-}

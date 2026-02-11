@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiCustomer,
+	type ApiCustomerV5,
 	type AppEnv,
 	applyResponseVersionChanges,
 	CusExpand,
@@ -92,7 +92,7 @@ export class CusBatchService {
 
 				// Apply version changes
 				const versionedCustomer = applyResponseVersionChanges<
-					ApiCustomer,
+					ApiCustomerV5,
 					CustomerLegacyData
 				>({
 					input: baseCustomer,

@@ -52,15 +52,7 @@ export async function updateSubscription({
 	});
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
-	// 3. Errors
-	await handleUpdateSubscriptionErrors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		params,
-	});
-
-	// 4. Evaluate Stripe billing plan
+	// 3. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -72,6 +64,14 @@ export async function updateSubscription({
 		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
+
+	// 4. Errors
+	await handleUpdateSubscriptionErrors({
+		ctx,
+		billingContext,
+		billingPlan,
+		params,
+	});
 
 	if (preview) {
 		return {

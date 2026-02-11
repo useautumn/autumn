@@ -104,7 +104,7 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 		count: 3,
 		latestTotal: 20,
 	});
-}, 120000);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Entities with new_billing_subscription (separate subs per entity)

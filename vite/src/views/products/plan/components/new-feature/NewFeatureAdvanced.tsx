@@ -16,7 +16,8 @@ export function NewFeatureAdvanced({
 	const showAdvanced =
 		feature.type &&
 		feature.config?.usage_type &&
-		feature.type !== FeatureType.Boolean;
+		feature.type !== FeatureType.Boolean &&
+		feature.type !== FeatureType.CreditSystem;
 
 	if (!showAdvanced) return null;
 

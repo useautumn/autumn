@@ -284,3 +284,60 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 		env: ctx.env,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs without name preserves name")}`, async () => {
+	const customerId = "race-name-preserve-test";
+	const customerName = "John Doe";
+
+	const { autumnV1 } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	// Concurrent creates: first with name, second without name
+	// The name should be preserved regardless of which request wins the race
+	const results = await Promise.all([
+		autumnV1.customers.create({
+			id: customerId,
+			name: customerName,
+			email: `${customerId}@example.com`,
+			withAutumnId: true,
+			internalOptions: {
+				disable_defaults: true,
+			},
+		}),
+		autumnV1.customers.create({
+			id: customerId,
+			// No name provided
+
+			withAutumnId: true,
+			internalOptions: {
+				disable_defaults: true,
+			},
+		}),
+		autumnV1.customers.create({
+			id: customerId,
+			// No name provided
+
+			withAutumnId: true,
+			internalOptions: {
+				disable_defaults: true,
+			},
+		}),
+	]);
+
+	// All should return the same customer
+	const autumnIds = results.map((r) => r.autumn_id);
+	expect(new Set(autumnIds).size).toBe(1);
+
+	// Get the final customer state from DB
+	const finalCustomer = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+
+	// Name should be preserved - not overwritten with empty string
+	expect(finalCustomer.name).toBe(customerName);
+});

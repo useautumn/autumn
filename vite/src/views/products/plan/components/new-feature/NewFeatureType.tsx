@@ -3,7 +3,7 @@ import {
 	type CreateFeature,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { BarcodeIcon } from "@phosphor-icons/react";
+import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
@@ -23,7 +23,7 @@ export function NewFeatureType({
 	const showBooleanWarning =
 		isOnboarding && feature.type === APIFeatureType.Boolean;
 
-	// Hide separator when this is the last section (Boolean features)
+	// Hide separator when this is the last visible section (only Boolean has nothing after it)
 	const isLastSection = feature.type === APIFeatureType.Boolean;
 
 	return (
@@ -51,6 +51,37 @@ export function NewFeatureType({
 							</div>
 							<div className="text-body-secondary leading-tight">
 								A usage-based feature you can track, limit or bill for
+							</div>
+						</div>
+					</div>
+
+					<div className="flex w-full items-center gap-4">
+						<PanelButton
+							isSelected={feature.type === APIFeatureType.CreditSystem}
+							onClick={() => {
+								setFeature({
+									...feature,
+									type: APIFeatureType.CreditSystem,
+									config: {
+										schema: [
+											{
+												metered_feature_id: "",
+												feature_amount: 1,
+												credit_amount: 0,
+											},
+										],
+										usage_type: FeatureUsageType.Single,
+									},
+								});
+							}}
+							icon={<CoinsIcon size={16} color="currentColor" />}
+						/>
+						<div className="flex-1">
+							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
+								Credit System
+							</div>
+							<div className="text-body-secondary leading-tight">
+								A shared balance that many metered features can draw from
 							</div>
 						</div>
 					</div>

@@ -1,8 +1,10 @@
 import {
+	ErrCode,
 	type FullProduct,
 	type Price,
 	priceToEnt,
 	priceUtils,
+	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -49,14 +51,20 @@ export const createStripePrepaidPriceV2 = async ({
 		return;
 	}
 
+	if (entitlement.allowance % (price.config.billing_units ?? 1) !== 0) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message:
+				"If you have a plan feature with both an included usage and a price, the included usage must be an amount that is divisible by the billing units.",
+		});
+	}
+
 	const stripeCreatePriceParams = priceUtils.convert.toStripeCreatePriceParams({
 		price,
 		product,
 		org,
 		currentStripeProduct,
 	});
-
-	console.log("stripeCreatePriceParams", stripeCreatePriceParams);
 
 	const stripeCli = createStripeCli({ org, env });
 

@@ -7,7 +7,11 @@ export const handleListFeatures = createRoute({
 		const ctx = c.get("ctx");
 
 		const apiFeatures = ctx.features.map((feature) =>
-			dbToApiFeatureV1({ dbFeature: feature, targetVersion: ctx.apiVersion }),
+			dbToApiFeatureV1({
+				ctx,
+				dbFeature: feature,
+				targetVersion: ctx.apiVersion,
+			}),
 		);
 
 		return c.json({ list: apiFeatures });

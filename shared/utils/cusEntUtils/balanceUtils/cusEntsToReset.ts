@@ -5,7 +5,7 @@ import { isContUseFeature } from "../../featureUtils/convertFeatureUtils";
 import {
 	entIntvToResetIntv,
 	toIntervalCountResponse,
-} from "../../planFeatureUtils/planFeatureIntervals";
+} from "../../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 
 export const cusEntsToNextResetAt = ({
 	cusEnts,
