@@ -19,7 +19,7 @@ export const ApiFreeTrialSchema = z.object({
 	}),
 
 	// For Cus Product
-	trial_available: z.boolean().nullish().default(true).meta({
+	trial_available: z.boolean().default(true).nullish().meta({
 		description:
 			"Used in customer context. Whether the free trial is available for the customer if they were to attach the product.",
 	}),

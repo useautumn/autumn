@@ -14,7 +14,7 @@ import {
 	type BillingPreviewResponse,
 	type BillingResponse,
 	type CheckQuery,
-	type CreateBalanceParams,
+	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
 	type CreateCustomerParams,
 	type CreateEntityParams,
@@ -562,22 +562,22 @@ export class AutumnInt {
 	};
 
 	products = {
-		update: async (productId: string, product: any) => {
-			// if (product.items && typeof product.items === "object") {
-			//   product.items = Object.values(product.items);
-			// }
+		update: async <TResponse = any, TInput = any>(
+			productId: string,
+			product: TInput,
+		): Promise<TResponse> => {
 			const data = await this.patch(`/products/${productId}`, product);
-			return data;
+			return data as TResponse;
 		},
 
-		get: async (
+		get: async <T = any>(
 			productId: string,
 			{ v1Schema = false }: { v1Schema?: boolean } = {},
-		) => {
+		): Promise<T> => {
 			const data = await this.get(
 				`/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`,
 			);
-			return data;
+			return data as T;
 		},
 
 		list: async <T = any[]>(): Promise<{ list: T }> => {
@@ -585,9 +585,11 @@ export class AutumnInt {
 			return data as { list: T };
 		},
 
-		create: async (product: any) => {
+		create: async <TResponse = any, TInput = any>(
+			product: TInput,
+		): Promise<TResponse> => {
 			const data = await this.post(`/products`, product);
-			return data;
+			return data as TResponse;
 		},
 
 		delete: async (productId: string) => {
@@ -796,7 +798,7 @@ export class AutumnInt {
 	};
 
 	balances = {
-		create: async (params: CreateBalanceParams) => {
+		create: async (params: CreateBalanceParamsV0) => {
 			const data = await this.post(`/balances/create`, params);
 			return data;
 		},

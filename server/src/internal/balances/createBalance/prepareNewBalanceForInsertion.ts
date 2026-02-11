@@ -1,6 +1,7 @@
 import {
 	apiPlanItem,
-	type CreateBalanceParams,
+	type CreateBalanceParamsV0,
+	createBalanceParamsV0ToPlanItemV0,
 	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
@@ -19,11 +20,16 @@ export const prepareNewBalanceForInsertion = async ({
 	ctx: AutumnContext;
 	feature: Feature;
 	fullCustomer: FullCustomer;
-	params: CreateBalanceParams;
+	params: CreateBalanceParamsV0;
 }) => {
+	const planItem = createBalanceParamsV0ToPlanItemV0({
+		ctx,
+		params,
+	});
+
 	const inputAsItem = apiPlanItem.map.v0ToProductItem({
 		ctx,
-		planItem: params,
+		planItem,
 	});
 
 	const { ent: newEntitlement } = toFeature({

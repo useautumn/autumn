@@ -1,4 +1,4 @@
-import { CreateBalanceParamsSchema } from "@autumn/shared";
+import { CreateBalanceParamsV0Schema } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -9,7 +9,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 
 export const handleCreateBalance = createRoute({
-	body: CreateBalanceParamsSchema,
+	body: CreateBalanceParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env } = ctx;

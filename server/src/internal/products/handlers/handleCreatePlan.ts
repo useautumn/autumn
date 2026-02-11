@@ -4,7 +4,7 @@ import {
 	ApiVersion,
 	apiPlan,
 	applyResponseVersionChanges,
-	CreatePlanParamsSchema,
+	CreatePlanParamsV1Schema,
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
 	type Entitlement,
@@ -36,7 +36,7 @@ import { validateDefaultFlag } from "./productActions/validateDefaultFlag.js";
 export const handleCreatePlan = createRoute({
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
-		latest: CreatePlanParamsSchema,
+		latest: CreatePlanParamsV1Schema,
 		[ApiVersion.V1_Beta]: CreateProductV2ParamsSchema,
 	},
 	resource: AffectedResource.Product,
@@ -46,7 +46,7 @@ export const handleCreatePlan = createRoute({
 
 		const v1_2Body = (
 			ctx.apiVersion.gte(ApiVersion.V2_0)
-				? apiPlan.map.v0ToProductV2({ ctx, plan: body })
+				? apiPlan.map.paramsV1ToProductV2({ ctx, params: body })
 				: body
 		) as CreateProductV2Params;
 
