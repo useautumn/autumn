@@ -1,9 +1,9 @@
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { AuthType, CusExpand, tryCatch } from "@autumn/shared";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
@@ -37,7 +37,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 		db.transaction(async (tx) => {
 			const txDb = tx as unknown as DrizzleCli;
 
-			const upsertResult = await CusService.upsert({
+			const upsertResult = await CusService.insertOrClaimEmail({
 				db: txDb,
 				data: fullCustomer,
 			});
