@@ -273,19 +273,15 @@ export function PlanItemsSection({
 				{trialConfig.trialEnabled && (
 					<motion.div
 						key="trial-editor"
-						layout
-						initial={{ opacity: 0, y: 8 }}
+						initial={{ opacity: 0 }}
 						animate={{
 							opacity: 1,
-							y: 0,
-							transition: { ...FAST_TRANSITION, delay: 0.15 },
+							transition: FAST_TRANSITION,
 						}}
 						exit={{
 							opacity: 0,
-							y: -8,
 							transition: FAST_TRANSITION,
 						}}
-						transition={{ layout: LAYOUT_TRANSITION }}
 					>
 						<TrialEditorRow
 							form={form}
@@ -299,6 +295,8 @@ export function PlanItemsSection({
 
 	const renderEditButton = () => (
 		<motion.div
+			layout="position"
+			transition={{ layout: LAYOUT_TRANSITION }}
 			variants={useStaggerAnimation ? STAGGER_ITEM_LAYOUT : undefined}
 		>
 			<Button variant="secondary" onClick={onEditPlan} className="w-full">
@@ -313,7 +311,7 @@ export function PlanItemsSection({
 			<LayoutGroup>
 				<motion.div
 					className="space-y-2"
-					layout
+					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 					initial="hidden"
 					animate="visible"
@@ -344,7 +342,7 @@ export function PlanItemsSection({
 			<LayoutGroup>
 				<motion.div
 					className="space-y-2"
-					layout
+					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 				>
 					{product?.items?.map(renderItemRow)}

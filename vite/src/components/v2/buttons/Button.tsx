@@ -5,15 +5,11 @@ import * as React from "react";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { cn } from "@/lib/utils";
 
-// hover:border-primary
-// focus-visible:bg-active-primary focus-visible:border-primary
-// active:bg-active-primary active:border-primary
-
 // Remove ring styles
 // focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
 const buttonVariants = cva(
 	`inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer
-  rounded-lg group/btn transition-colors duration-100 w-fit
+  rounded-lg group/btn transition-colors duration-100 w-fit transform-gpu
   `,
 	{
 		variants: {
@@ -100,35 +96,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 	) => {
 		const Comp = asChild ? Slot : "button";
 		const buttonRef = React.useRef<HTMLButtonElement>(null);
-		const [contentWidth, setContentWidth] = React.useState<number | null>(null);
-
-		// Combine refs using useImperativeHandle
-		React.useImperativeHandle(
-			ref,
-			() => buttonRef.current as HTMLButtonElement,
-			[],
-		);
-
-		React.useEffect(() => {
-			if (buttonRef.current && !isLoading) {
-				// Measure the full button width including padding
-				const width = buttonRef.current.offsetWidth;
-				setContentWidth(width);
-			}
-		}, [isLoading]);
-
-		// Measure width on mount and when loading state changes
-		React.useEffect(() => {
-			if (buttonRef.current && !isLoading) {
-				// Use requestAnimationFrame to ensure DOM is fully rendered
-				requestAnimationFrame(() => {
-					if (buttonRef.current) {
-						const width = buttonRef.current.offsetWidth;
-						setContentWidth(width);
-					}
-				});
-			}
-		}, [isLoading]);
 
 		const getDisableActiveStyles = () => {
 			if (!disableActive) return "";
@@ -166,14 +133,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				className={cn(
 					buttonVariants({ variant, size, className }),
 					getDisableActiveStyles(),
-					// transition && "transition-all duration-150",
 				)}
-				style={{
-					minWidth:
-						isLoading && contentWidth
-							? `${contentWidth + 0.2}px` // Add small buffer to prevent any slight width changes
-							: undefined,
-				}}
 				disabled={isLoading || props.disabled}
 				{...props}
 			>
@@ -183,7 +143,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 						className={variant === "primary" ? "relative z-10" : undefined}
 					/>
 				) : variant === "primary" ? (
-					<span className="relative z-10 inline-flex items-center gap-2">
+					<span className="relative z-10 inline-flex items-center gap-2 transition-none">
 						{children}
 					</span>
 				) : (

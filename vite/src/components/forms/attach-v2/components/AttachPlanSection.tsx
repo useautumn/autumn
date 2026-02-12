@@ -85,8 +85,6 @@ export function AttachPlanSection() {
 		<SheetSection withSeparator>
 			<motion.div
 				className="space-y-2"
-				layout
-				transition={{ layout: LAYOUT_TRANSITION }}
 				initial="hidden"
 				animate="visible"
 				variants={STAGGER_CONTAINER}
