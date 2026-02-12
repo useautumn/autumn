@@ -85,7 +85,7 @@ export const executePostgresDeduction = async ({
 
 			const {
 				customerEntitlementDeductions,
-				rolloverIds,
+				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
 			} = prepareFeatureDeduction({
@@ -106,7 +106,7 @@ export const executePostgresDeduction = async ({
 					amount_to_deduct: toDeduct ?? null,
 					target_balance: targetBalance ?? null,
 					target_entity_id: entityId || null,
-					rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
+					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
 					skip_additional_balance: resolvedOptions.skipAdditionalBalance,
 					alter_granted_balance: resolvedOptions.alterGrantedBalance,
