@@ -19,6 +19,8 @@ DECLARE
     WHEN params->'rollover_ids' IS NULL OR jsonb_typeof(params->'rollover_ids') != 'array' THEN NULL
     ELSE ARRAY(SELECT jsonb_array_elements_text(params->'rollover_ids'))
   END;
+  -- New: rollovers array with {id, credit_cost} objects for credit cost support
+  rollovers_arr jsonb := params->'rollovers';
   cus_ent_ids text[] := CASE 
     WHEN params->'cus_ent_ids' IS NULL OR jsonb_typeof(params->'cus_ent_ids') != 'array' THEN NULL
     ELSE ARRAY(SELECT jsonb_array_elements_text(params->'cus_ent_ids'))
@@ -118,14 +120,18 @@ BEGIN
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
     
     -- STEP 1: Handle rollovers (only on first entitlement)
-    IF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 AND rollover_deducted = 0 THEN
+    -- Use new rollovers array (with credit_cost) if present, otherwise fall back to rollover_ids
+    IF ((rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0) OR 
+        (rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0)) AND rollover_deducted = 0 THEN
       SELECT * INTO rollover_deducted
       FROM deduct_from_rollovers(jsonb_build_object(
         'rollover_ids', rollover_ids,
+        'rollovers', rollovers_arr,
         'amount_to_deduct', remaining_amount,
         'target_entity_id', target_entity_id,
         'has_entity_scope', has_entity_scope
       ));
+      -- rollover_deducted is returned in feature units, so can subtract directly
       remaining_amount := remaining_amount - rollover_deducted;
     END IF;
 

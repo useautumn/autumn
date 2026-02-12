@@ -101,15 +101,19 @@ const monthlyWords = ({
 /**
  * Monthly credits - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
+ * @param rolloverConfig - Optional rollover configuration
  */
 const monthlyCredits = ({
 	includedUsage = 100,
+	rolloverConfig,
 }: {
 	includedUsage?: number;
+	rolloverConfig?: RolloverConfig;
 } = {}): LimitedItem =>
 	constructFeatureItem({
 		featureId: TestFeature.Credits,
 		includedUsage,
+		rolloverConfig,
 	}) as LimitedItem;
 
 /**
