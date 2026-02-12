@@ -99,9 +99,18 @@ export const prepareFeatureDeduction = ({
 			};
 		});
 
-	// Collect and sort rollovers by expires_at (oldest first)
+	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
-		.flatMap((ce) => ce.rollovers || [])
+		.flatMap((ce) => {
+			const creditCost = getCreditCost({
+				featureId: feature.id,
+				creditSystem: ce.entitlement.feature,
+			});
+			return (ce.rollovers || []).map((r) => ({
+				...r,
+				credit_cost: creditCost,
+			}));
+		})
 		.sort((a, b) => {
 			if (a.expires_at && b.expires_at) return a.expires_at - b.expires_at;
 			if (a.expires_at && !b.expires_at) return -1;
@@ -112,13 +121,10 @@ export const prepareFeatureDeduction = ({
 	return {
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
-		rolloverIds: sortedRollovers.map((r) => r.id),
+		rollovers: sortedRollovers.map((r) => ({
+			id: r.id,
+			credit_cost: r.credit_cost,
+		})),
 		unlimitedFeatureIds,
-		// cusEnts,
-		// cusEntInput,
-		// rolloverIds,
-		// cusEntIds,
-		// unlimited,
-		// unlimitedFeatureIds,
 	};
 };
