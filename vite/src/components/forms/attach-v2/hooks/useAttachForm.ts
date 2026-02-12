@@ -19,6 +19,7 @@ export function useAttachForm({
 			trialDuration: FreeTrialDuration.Day,
 			trialEnabled: false,
 			planSchedule: null,
+			discounts: [],
 		} as AttachForm,
 		validators: {
 			onChange: AttachFormSchema,

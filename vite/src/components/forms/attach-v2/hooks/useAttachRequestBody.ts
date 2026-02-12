@@ -12,6 +12,10 @@ import {
 import Decimal from "decimal.js";
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
+import {
+	type FormDiscount,
+	filterValidDiscounts,
+} from "../utils/discountUtils";
 
 interface UseAttachRequestBodyParams {
 	customerId: string | undefined;
@@ -24,6 +28,7 @@ interface UseAttachRequestBodyParams {
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
 	planSchedule: PlanTiming | null;
+	discounts: FormDiscount[];
 }
 
 function convertPrepaidOptionsToFeatureOptions({
@@ -75,6 +80,7 @@ export function useAttachRequestBody({
 	trialDuration,
 	trialEnabled,
 	planSchedule,
+	discounts,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
 		if (!customerId || !product) {
@@ -125,6 +131,11 @@ export function useAttachRequestBody({
 			body.plan_schedule = planSchedule;
 		}
 
+		const validDiscounts = filterValidDiscounts(discounts);
+		if (validDiscounts.length > 0) {
+			body.discounts = validDiscounts;
+		}
+
 		return body;
 	}, [
 		customerId,
@@ -137,6 +148,7 @@ export function useAttachRequestBody({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		discounts,
 	]);
 
 	const buildRequestBody = useMemo(

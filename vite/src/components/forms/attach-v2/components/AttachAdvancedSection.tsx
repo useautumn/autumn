@@ -3,6 +3,7 @@ import {
 	CalendarIcon,
 	CaretDownIcon,
 	LightningIcon,
+	PlusIcon,
 } from "@phosphor-icons/react";
 import type { Transition, Variants } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -11,6 +12,7 @@ import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import {
 	LAYOUT_TRANSITION,
@@ -23,6 +25,8 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { addDiscount } from "../utils/discountUtils";
+import { AttachDiscountRow } from "./AttachDiscountRow";
 
 const ACCORDION_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -62,7 +66,7 @@ const ACCORDION_ITEM: Variants = {
 export function AttachAdvancedSection() {
 	const [isOpen, setIsOpen] = useState(false);
 	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { planSchedule } = formValues;
+	const { planSchedule, discounts } = formValues;
 	const previewData = previewQuery.data;
 
 	const defaultPlanSchedule = useMemo((): PlanTiming => {
@@ -81,28 +85,56 @@ export function AttachAdvancedSection() {
 	const effectivePlanSchedule = planSchedule ?? defaultPlanSchedule;
 	const hasCustomSchedule =
 		planSchedule !== null && planSchedule !== defaultPlanSchedule;
+	const hasDiscounts = discounts.some((d) => {
+		if ("reward_id" in d) return d.reward_id !== "";
+		if ("promotion_code" in d) return d.promotion_code !== "";
+		return false;
+	});
+	const hasCustomSettings = hasCustomSchedule || hasDiscounts;
 
 	const handleScheduleChange = (value: PlanTiming) => {
 		form.setFieldValue("planSchedule", value);
 	};
 
+	const handleAddDiscount = () => {
+		form.setFieldValue("discounts", addDiscount(discounts));
+	};
+
 	const isImmediateSelected = effectivePlanSchedule === "immediate";
 	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
+
+	const getCustomSettingsTooltip = (): string => {
+		const parts: string[] = [];
+
+		if (hasCustomSchedule) {
+			parts.push(
+				`Plan schedule: ${isImmediateSelected ? "Immediate" : "End of cycle"}`,
+			);
+		}
+
+		if (hasDiscounts) {
+			const validCount = discounts.filter((d) => {
+				if ("reward_id" in d) return d.reward_id !== "";
+				if ("promotion_code" in d) return d.promotion_code !== "";
+				return false;
+			}).length;
+			parts.push(`${validCount} discount${validCount > 1 ? "s" : ""}`);
+		}
+
+		return parts.join(" • ");
+	};
 
 	return (
 		<SheetSection withSeparator>
 			<motion.div
-				layout
+				layout="position"
+				layoutDependency={formValues.productId}
 				transition={{ layout: LAYOUT_TRANSITION }}
 				initial="hidden"
 				animate="visible"
 				variants={STAGGER_CONTAINER}
 			>
-				<motion.div
-					layout
-					transition={{ layout: LAYOUT_TRANSITION }}
-					variants={STAGGER_ITEM}
-				>
+				<motion.div variants={STAGGER_ITEM}>
 					<button
 						type="button"
 						onClick={() => setIsOpen((prev) => !prev)}
@@ -111,7 +143,7 @@ export function AttachAdvancedSection() {
 						<h3 className="text-sub flex items-center gap-2">
 							Advanced
 							<AnimatePresence>
-								{hasCustomSchedule && (
+								{hasCustomSettings && (
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<motion.span
@@ -123,8 +155,7 @@ export function AttachAdvancedSection() {
 											/>
 										</TooltipTrigger>
 										<TooltipContent>
-											Plan schedule set to{" "}
-											{isImmediateSelected ? "Immediate" : "End of cycle"}
+											{getCustomSettingsTooltip()}
 										</TooltipContent>
 									</Tooltip>
 								)}
@@ -143,20 +174,17 @@ export function AttachAdvancedSection() {
 				<AnimatePresence initial={false}>
 					{isOpen && (
 						<motion.div
-							layout
 							initial={{ height: 0 }}
 							animate={{
 								height: "auto",
 								transition: {
 									height: ACCORDION_EXPAND,
-									layout: LAYOUT_TRANSITION,
 								},
 							}}
 							exit={{
 								height: 0,
 								transition: {
 									height: ACCORDION_COLLAPSE,
-									layout: LAYOUT_TRANSITION,
 								},
 							}}
 							className="overflow-hidden"
@@ -168,6 +196,7 @@ export function AttachAdvancedSection() {
 								exit="hidden"
 								variants={ACCORDION_CONTENT}
 							>
+								{/* Plan Schedule */}
 								<motion.div variants={ACCORDION_ITEM}>
 									<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
 										<span className="text-sm text-t2">Plan Schedule</span>
@@ -205,6 +234,41 @@ export function AttachAdvancedSection() {
 												End of cycle
 											</IconCheckbox>
 										</div>
+									</div>
+								</motion.div>
+
+								{/* Discounts */}
+								<motion.div variants={ACCORDION_ITEM}>
+									<div className="rounded-xl input-base px-3 py-2">
+										<div className="flex items-center justify-between h-6">
+											<span className="text-sm text-t2">Discounts</span>
+											<IconButton
+												variant="muted"
+												size="sm"
+												onClick={handleAddDiscount}
+												icon={<PlusIcon size={12} />}
+												className="text-t3"
+											>
+												Add
+											</IconButton>
+										</div>
+										{discounts.length > 0 && (
+											<div className="mt-2 pt-2 border-t border-border space-y-2">
+												<AnimatePresence initial={false} mode="popLayout">
+													{discounts.map((discount, index) => (
+														<motion.div
+															key={discount._id}
+															initial={{ opacity: 0, scale: 0.95 }}
+															animate={{ opacity: 1, scale: 1 }}
+															exit={{ opacity: 0, scale: 0.95 }}
+															transition={{ duration: 0.15 }}
+														>
+															<AttachDiscountRow index={index} />
+														</motion.div>
+													))}
+												</AnimatePresence>
+											</div>
+										)}
 									</div>
 								</motion.div>
 							</motion.div>

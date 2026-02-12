@@ -21,3 +21,4 @@ export * from "./hooks/useAttachRequestBody";
 
 // Utils
 export * from "./utils/attachDiffUtils";
+export * from "./utils/discountUtils";

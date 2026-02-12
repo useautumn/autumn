@@ -789,7 +789,6 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: both entities upg
 		customer,
 		count: 4,
 		latestTotal: 0,
-		count: 4,
 	});
 
 	// Verify Stripe subscription state
