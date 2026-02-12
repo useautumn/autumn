@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 
 export const ListPlansQuerySchema = z.object({
 	customer_id: z.string().optional(),
+	group: z.string().optional(),
 	entity_id: z.string().optional().meta({
 		internal: true,
 	}),

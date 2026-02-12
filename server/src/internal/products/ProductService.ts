@@ -217,6 +217,7 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
+		group,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -226,6 +227,7 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
+		group?: string;
 	}): Promise<FullProduct[]> {
 		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
 		const canCache = !inIds && !returnAll && !version && !excludeEnts;
@@ -235,10 +237,11 @@ export class ProductService {
 				key: buildProductsCacheKey({
 					orgId,
 					env,
-					queryParams: { archived },
+					queryParams: { archived, group },
 				}),
 				ttl: PRODUCTS_CACHE_TTL,
-				fn: () => ProductService._listFullQuery({ db, orgId, env, archived }),
+				fn: () =>
+					ProductService._listFullQuery({ db, orgId, env, archived, group }),
 			});
 		}
 
@@ -251,6 +254,7 @@ export class ProductService {
 			version,
 			excludeEnts,
 			archived,
+			group,
 		});
 	}
 
@@ -263,6 +267,7 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
+		group,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -272,6 +277,7 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
+		group?: string;
 	}): Promise<FullProduct[]> {
 		// Optimization: Use a subquery to only fetch the latest version of each product
 		const latestVersionsSubquery =
@@ -301,6 +307,7 @@ export class ProductService {
 				eq(products.env, env),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
+				group ? eq(products.group, group) : undefined,
 				latestVersionsSubquery
 					? exists(
 							db
