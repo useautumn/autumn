@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
@@ -184,10 +184,11 @@ export const executePostgresDeduction = async ({
 		}
 
 		if (refreshCache) {
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId,
 				ctx,
 				source: "executePostgresDeduction",
+				skipGuard: true,
 			});
 		}
 
