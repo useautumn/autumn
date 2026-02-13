@@ -3,15 +3,19 @@ import { motion } from "motion/react";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
+	STAGGER_ITEM_LAYOUT,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	LAYOUT_TRANSITION,
+	SheetSection,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 function AttachUpdatesSkeleton() {
 	return (
-		<SheetSection withSeparator>
+		<SheetSection withSeparator={false}>
 			<motion.div
 				initial="hidden"
 				animate="visible"
@@ -70,13 +74,19 @@ export function AttachUpdatesSection() {
 	};
 
 	return (
-		<SheetSection withSeparator>
+		<SheetSection withSeparator={false} className="pb-0">
 			<motion.div
+				layout="position"
+				transition={{ layout: LAYOUT_TRANSITION }}
 				initial="hidden"
 				animate="visible"
 				variants={STAGGER_CONTAINER}
 			>
-				<motion.div variants={STAGGER_ITEM}>
+				<motion.div
+					layout="position"
+					transition={{ layout: LAYOUT_TRANSITION }}
+					variants={STAGGER_ITEM_LAYOUT}
+				>
 					<InfoBox variant="note">
 						Attaching{" "}
 						<PlusCircleIcon
