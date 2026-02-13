@@ -83,6 +83,8 @@ BEGIN
   -- Lock all rollover rows at once
   IF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
     PERFORM 1 FROM rollovers r WHERE r.id = ANY(rollover_ids) FOR UPDATE;
+  ELSIF rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0 THEN
+    PERFORM 1 FROM rollovers r WHERE r.id IN (SELECT jsonb_array_elements_text(rollovers_arr)->>'id') FOR UPDATE;
   END IF;
 
   -- ============================================================================
