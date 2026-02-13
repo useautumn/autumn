@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
@@ -85,7 +85,7 @@ export const executePostgresDeduction = async ({
 
 			const {
 				customerEntitlementDeductions,
-				rolloverIds,
+				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
 			} = prepareFeatureDeduction({
@@ -106,7 +106,7 @@ export const executePostgresDeduction = async ({
 					amount_to_deduct: toDeduct ?? null,
 					target_balance: targetBalance ?? null,
 					target_entity_id: entityId || null,
-					rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
+					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
 					skip_additional_balance: resolvedOptions.skipAdditionalBalance,
 					alter_granted_balance: resolvedOptions.alterGrantedBalance,
@@ -184,10 +184,11 @@ export const executePostgresDeduction = async ({
 		}
 
 		if (refreshCache) {
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId,
 				ctx,
 				source: "executePostgresDeduction",
+				skipGuard: true,
 			});
 		}
 

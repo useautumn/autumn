@@ -338,6 +338,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			guardTimestamp: string,
 			guardTtl: string,
+			skipGuard: string,
 		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
 		batchDeleteFullCustomerCache(
 			guardTimestamp: string,

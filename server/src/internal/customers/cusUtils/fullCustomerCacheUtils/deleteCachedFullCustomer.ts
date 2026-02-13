@@ -13,15 +13,18 @@ import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard
 
 /**
  * Delete FullCustomer from Redis cache across ALL regions.
+ * @param skipGuard - If true, skips setting the guard key. Default false (guard is set). Use skipGuard: true when deleting cache before a fresh Postgres read.
  */
 export const deleteCachedFullCustomer = async ({
 	customerId,
 	ctx,
 	source,
+	skipGuard = false,
 }: {
 	customerId: string;
 	ctx: AutumnContext;
 	source?: string;
+	skipGuard?: boolean;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 
@@ -62,6 +65,7 @@ export const deleteCachedFullCustomer = async ({
 				cacheKey,
 				guardTimestamp,
 				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
+				skipGuard.toString(),
 			);
 
 			logger.info(

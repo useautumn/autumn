@@ -79,7 +79,7 @@ export const completeCheckoutForm = async (
 		// Postal code may not be present for all countries (e.g., UK)
 		try {
 			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });
-			await page.type("#billingPostalCode", "123456");
+			await page.type("#billingPostalCode", "SW59SX");
 		} catch (_e) {
 			// Postal code field doesn't exist, continue without it
 		}
