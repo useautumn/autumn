@@ -51,6 +51,7 @@ export const handleFreeTrialParam = ({
 	const dbFreeTrial = initFreeTrial({
 		freeTrialParams,
 		internalProductId: fullProduct.internal_id,
+		isCustom: true,
 	});
 
 	const trialEndsAt = addDuration({
