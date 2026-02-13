@@ -69,20 +69,22 @@ export function AttachAdvancedSection() {
 	const { planSchedule, discounts } = formValues;
 	const previewData = previewQuery.data;
 
-	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData) return "immediate";
+	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
 
-		const hasOutgoing = previewData.outgoing.length > 0;
-		if (!hasOutgoing) return "immediate";
+	const defaultPlanSchedule = useMemo((): PlanTiming => {
+		if (!previewData || !hasOutgoing) return "immediate";
 
 		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
 		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
 		const isUpgrade = incomingPrice > outgoingPrice;
 
 		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData]);
+	}, [previewData, hasOutgoing]);
 
-	const effectivePlanSchedule = planSchedule ?? defaultPlanSchedule;
+	// Force "immediate" when there's no current product to transition from
+	const effectivePlanSchedule = !hasOutgoing
+		? "immediate"
+		: (planSchedule ?? defaultPlanSchedule);
 	const hasCustomSchedule =
 		planSchedule !== null && planSchedule !== defaultPlanSchedule;
 	const hasDiscounts = discounts.some((d) => {
@@ -217,22 +219,35 @@ export function AttachAdvancedSection() {
 											>
 												Immediately
 											</IconCheckbox>
-											<IconCheckbox
-												icon={<CalendarIcon />}
-												iconOrientation="left"
-												variant="secondary"
-												size="sm"
-												checked={isEndOfCycleSelected}
-												onCheckedChange={() =>
-													handleScheduleChange("end_of_cycle")
-												}
-												className={cn(
-													"rounded-l-none",
-													!isEndOfCycleSelected && "border-l-0",
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<span className="inline-flex">
+														<IconCheckbox
+															icon={<CalendarIcon />}
+															iconOrientation="left"
+															variant="secondary"
+															size="sm"
+															checked={isEndOfCycleSelected}
+															disabled={!hasOutgoing}
+															onCheckedChange={() =>
+																handleScheduleChange("end_of_cycle")
+															}
+															className={cn(
+																"rounded-l-none",
+																!isEndOfCycleSelected && "border-l-0",
+															)}
+														>
+															End of cycle
+														</IconCheckbox>
+													</span>
+												</TooltipTrigger>
+												{!hasOutgoing && (
+													<TooltipContent>
+														Only available when transitioning from an existing
+														plan
+													</TooltipContent>
 												)}
-											>
-												End of cycle
-											</IconCheckbox>
+											</Tooltip>
 										</div>
 									</div>
 								</motion.div>

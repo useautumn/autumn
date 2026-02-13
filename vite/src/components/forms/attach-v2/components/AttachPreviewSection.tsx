@@ -8,6 +8,7 @@ import {
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export function AttachPreviewSection() {
@@ -63,6 +64,15 @@ export function AttachPreviewSection() {
 				totals={totals}
 				filterZeroAmounts
 			/>
+			{previewData?.redirect_type && (
+				<SheetSection withSeparator={false} className="py-0 pb-2">
+					<InfoBox variant="note">
+						{previewData.redirect_type === "stripe_checkout"
+							? "Customer will be redirected to Stripe Checkout to complete payment"
+							: "Customer will be redirected to Autumn Checkout to complete payment"}
+					</InfoBox>
+				</SheetSection>
+			)}
 		</motion.div>
 	);
 }

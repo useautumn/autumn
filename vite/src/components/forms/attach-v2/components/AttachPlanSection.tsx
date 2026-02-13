@@ -24,6 +24,7 @@ export function AttachPlanSection() {
 		originalItems: productTemplateItems,
 		productWithFormItems: product,
 		hasCustomizations,
+		initialPrepaidOptions,
 		handleEditPlan,
 		previewQuery,
 	} = useAttachFormContext();
@@ -73,7 +74,7 @@ export function AttachPlanSection() {
 		originalItems: originalItemsForDiff,
 		features,
 		prepaidOptions,
-		initialPrepaidOptions: {},
+		initialPrepaidOptions,
 		form,
 		hasCustomizations: showDiffs,
 		currency,
