@@ -30,15 +30,15 @@ local cacheTtl = tonumber(ARGV[2])
 local serializedData = ARGV[3]
 local overwrite = ARGV[4] == "true"
 
--- -- Check if guard exists (deletion happened recently)
--- -- Skip check if either value is nil/null/falsey
--- local guardTime = redis.call("GET", guardKey)
--- if guardTime and guardTime ~= cjson.null and fetchTimeMs then
---     local guardTimeNum = tonumber(guardTime)
---     if guardTimeNum and guardTimeNum > fetchTimeMs then
---         return "STALE_WRITE"
---     end
--- end
+-- Check if guard exists (deletion happened recently)
+-- Skip check if either value is nil/null/falsey
+local guardTime = redis.call("GET", guardKey)
+if guardTime and guardTime ~= cjson.null and fetchTimeMs then
+    local guardTimeNum = tonumber(guardTime)
+    if guardTimeNum and guardTimeNum > fetchTimeMs then
+        return "STALE_WRITE"
+    end
+end
 
 -- Check if cache already exists (skip this check if overwrite is true)
 if not overwrite then
