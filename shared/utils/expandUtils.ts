@@ -71,7 +71,7 @@ export const filterPlanAndFeatureExpand = <
 
 	const expandScheduledSubscriptionPlan = expandIncludes({
 		expand,
-		includes: [CusExpand.ScheduledSubscriptionsPlan],
+		includes: [CusExpand.PurchasesPlan],
 	});
 
 	if (!expandScheduledSubscriptionPlan && target.scheduled_subscriptions) {

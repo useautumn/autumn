@@ -10,6 +10,7 @@ import {
 	expandIncludes,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductOneOff,
 	isCustomerProductTrialing,
 	type Subscription,
 } from "@autumn/shared";
@@ -81,10 +82,10 @@ export const getApiSubscription = async <
 	// Use expandParams.plan if provided, otherwise fall back to ctx.expand
 	const shouldExpandPlan =
 		expandParams?.plan ??
-		(status === "scheduled"
+		(isCustomerProductOneOff(cusProduct)
 			? expandIncludes({
 					expand: ctx.expand,
-					includes: [CusExpand.ScheduledSubscriptionsPlan],
+					includes: [CusExpand.PurchasesPlan],
 				})
 			: expandIncludes({
 					expand: ctx.expand,

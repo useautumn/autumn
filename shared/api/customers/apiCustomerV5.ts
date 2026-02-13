@@ -10,7 +10,7 @@ import {
 // V5 base customer - uses V1 subscriptions (single array with status field) and V1 balances
 export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	subscriptions: z.array(ApiSubscriptionV1Schema),
-	purchases: z.record(z.string(), ApiPurchaseV0Schema),
+	purchases: z.array(ApiPurchaseV0Schema),
 	balances: z.record(z.string(), ApiBalanceV1Schema),
 });
 

@@ -896,9 +896,11 @@ export async function initScenario(params: {
 	ctx?: TestContext;
 }): Promise<{
 	customerId: string;
+	autumnV0: AutumnInt;
 	autumnV1: AutumnInt;
 	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
+	autumnV2_1: AutumnInt;
 	testClockId: string | undefined;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 	ctx: TestContext;
@@ -917,9 +919,11 @@ export async function initScenario(params: {
 	ctx?: TestContext;
 }): Promise<{
 	customerId: undefined;
+	autumnV0: AutumnInt;
 	autumnV1: AutumnInt;
 	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
+	autumnV2_1: AutumnInt;
 	testClockId: undefined;
 	customer: null;
 	ctx: TestContext;
@@ -1074,6 +1078,11 @@ export async function initScenario({
 	}
 
 	// 3. Create autumn clients
+	const autumnV0 = new AutumnInt({
+		version: ApiVersion.V0_2,
+		secretKey: ctx.orgSecretKey,
+	});
+
 	const autumnV1 = new AutumnInt({
 		version: ApiVersion.V1_2,
 		secretKey: ctx.orgSecretKey,
@@ -1086,6 +1095,11 @@ export async function initScenario({
 
 	const autumnV2 = new AutumnInt({
 		version: ApiVersion.V2_0,
+		secretKey: ctx.orgSecretKey,
+	});
+
+	const autumnV2_1 = new AutumnInt({
+		version: ApiVersion.V2_1,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -1414,9 +1428,11 @@ export async function initScenario({
 
 	return {
 		customerId,
+		autumnV0,
 		autumnV1,
 		autumnV1Beta,
 		autumnV2,
+		autumnV2_1,
 		testClockId,
 		customer,
 		ctx,

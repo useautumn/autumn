@@ -1,7 +1,7 @@
 import {
 	InsufficientBalanceError,
 	type TrackParams,
-	type TrackResponseV2,
+	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -26,7 +26,7 @@ export const handleRedisTrackError = async ({
 	error: Error;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
-}): Promise<TrackResponseV2> => {
+}): Promise<TrackResponseV3> => {
 	if (!(error instanceof RedisDeductionError)) {
 		throw error;
 	}

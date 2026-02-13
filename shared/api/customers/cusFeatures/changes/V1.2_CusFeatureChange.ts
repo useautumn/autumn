@@ -11,7 +11,6 @@ import type {
 	ApiBalanceBreakdown,
 	ApiBalanceSchema,
 } from "../apiBalance.js";
-import type { CusFeatureLegacyData } from "../cusFeatureLegacyData.js";
 import type {
 	ApiCusFeatureV3Breakdown,
 	ApiCusFeatureV3Schema,
@@ -87,13 +86,11 @@ const toV3BalanceParams = ({
 	input,
 	feature,
 	unlimited,
-	legacyData,
 	isBreakdown = false,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
-	legacyData?: CusFeatureLegacyData;
 	isBreakdown?: boolean;
 }) => {
 	const isBoolean = feature?.type === FeatureType.Boolean;
@@ -114,7 +111,8 @@ const toV3BalanceParams = ({
 		prepaidQuantity = (input as ApiBalanceBreakdown).prepaid_quantity ?? 0;
 	} else {
 		prepaidQuantity = sumValues(
-			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity) ?? [],
+			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity ?? 0) ??
+				[],
 		);
 	}
 
@@ -168,10 +166,8 @@ const toV3BalanceParams = ({
 
 export function transformBalanceToCusFeatureV3({
 	input,
-	legacyData,
 }: {
 	input: z.infer<typeof ApiBalanceSchema>;
-	legacyData?: CusFeatureLegacyData;
 }): z.infer<typeof ApiCusFeatureV3Schema> {
 	// 1. Is boolean feature
 
@@ -189,7 +185,6 @@ export function transformBalanceToCusFeatureV3({
 			input,
 			feature,
 			unlimited: isUnlimited,
-			legacyData,
 		});
 
 	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
@@ -216,7 +211,6 @@ export function transformBalanceToCusFeatureV3({
 				input: breakdown,
 				feature,
 				unlimited: isUnlimited,
-				legacyData,
 				isBreakdown: true,
 			});
 
