@@ -57,7 +57,7 @@ export const V1_2_EntityQueryChange = defineVersionChange({
 			...existingExpand,
 			CusExpand.SubscriptionsPlan,
 			CusExpand.BalancesFeature,
-			CusExpand.ScheduledSubscriptionsPlan,
+			CusExpand.PurchasesPlan,
 		] as GetEntityQuery["expand"];
 
 		return {

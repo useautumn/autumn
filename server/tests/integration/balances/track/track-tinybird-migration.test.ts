@@ -90,7 +90,7 @@ test("tinybird migration - dual write", async () => {
 	);
 
 	// Wait for async Tinybird ingestion
-	await timeout(5000);
+	await timeout(10000);
 
 	// Verify all events in Tinybird
 	const checkEvent = await eventActions.getEventById({

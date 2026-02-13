@@ -25,7 +25,7 @@
       amount_to_deduct: number | null,
       target_balance: number | null,
       target_entity_id: string | nil,
-      rollover_ids: string[] | nil,
+      rollovers: { id: string, credit_cost: number }[] | nil,
       cus_ent_ids: string[] | nil,
       skip_additional_balance: boolean,
       alter_granted_balance: boolean,
@@ -54,7 +54,7 @@ local sorted_entitlements = params.sorted_entitlements or {}
 local amount_to_deduct = params.amount_to_deduct
 local target_balance = params.target_balance
 local target_entity_id = params.target_entity_id
-local rollover_ids = params.rollover_ids
+local rollovers = params.rollovers
 local skip_additional_balance = params.skip_additional_balance or false
 local alter_granted_balance = params.alter_granted_balance or false
 local overage_behaviour = params.overage_behaviour or 'cap'
@@ -209,14 +209,14 @@ end
 -- ============================================================================
 local function process_rollovers(config)
   local context = config.context
-  local rollover_ids = config.rollover_ids
+  local rollovers = config.rollovers
   local remaining = config.remaining_amount
   local target_entity_id = config.target_entity_id
   local sorted_entitlements = config.sorted_entitlements
   local logger = context.logger
   
   -- Early return if no rollovers or no positive amount
-  if is_nil(rollover_ids) or #rollover_ids == 0 or remaining <= 0 then
+  if is_nil(rollovers) or #rollovers == 0 or remaining <= 0 then
     return 0
   end
   
@@ -229,7 +229,7 @@ local function process_rollovers(config)
   
   local rollover_deducted = deduct_from_rollovers({
     context = context,
-    rollover_ids = rollover_ids,
+    rollovers = rollovers,
     amount = remaining,
     target_entity_id = target_entity_id,
     has_entity_scope = has_entity_scope,
@@ -252,7 +252,7 @@ end
 if not alter_granted_balance then
   local rollover_deducted = process_rollovers({
     context = context,
-    rollover_ids = rollover_ids,
+    rollovers = rollovers,
     remaining_amount = remaining_amount,
     target_entity_id = target_entity_id,
     sorted_entitlements = sorted_entitlements,
@@ -313,11 +313,11 @@ end
 
 -- Build rollover_updates from context.rollovers (only include modified ones)
 local rollover_updates = {}
-if not is_nil(rollover_ids) then
+if not is_nil(rollovers) and #rollovers > 0 then
   for rollover_id, rollover_data in pairs(context.rollovers) do
-    -- Include all rollovers that were in the rollover_ids list (they may have been modified)
-    for _, rid in ipairs(rollover_ids) do
-      if rid == rollover_id then
+    -- Include all rollovers that were in the rollovers list (they may have been modified)
+    for _, r in ipairs(rollovers) do
+      if r.id == rollover_id then
         rollover_updates[rollover_id] = {
           balance = rollover_data.balance,
           usage = rollover_data.usage,

@@ -1,6 +1,5 @@
 import {
-	type ApiBalance,
-	type CusFeatureLegacyData,
+	type ApiBalanceV1,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -16,7 +15,7 @@ export const getApiBalances = async ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-}) => {
+}): Promise<{ data: Record<string, ApiBalanceV1> }> => {
 	const { org } = ctx;
 
 	const allCusEnts = fullCustomerToCustomerEntitlements({
@@ -34,26 +33,20 @@ export const getApiBalances = async ({
 		];
 	}
 
-	const apiCusFeatures: Record<string, ApiBalance> = {};
-	const cusFeaturesLegacyData: Record<string, CusFeatureLegacyData> = {};
+	const apiCusFeatures: Record<string, ApiBalanceV1> = {};
 	for (const key in featureToCusEnt) {
 		const feature = featureToCusEnt[key][0].entitlement.feature;
 		const cusEnts = featureToCusEnt[key];
 
-		// 1. Get cus feature for each breakdown
-		const { data, legacyData } = getApiBalance({
+		const { data } = getApiBalance({
 			ctx,
 			fullCus,
 			cusEnts,
 			feature,
 		});
 
-		// Otherwise...
 		apiCusFeatures[feature.id] = data;
-		if (legacyData) {
-			cusFeaturesLegacyData[feature.id] = legacyData;
-		}
 	}
 
-	return { data: apiCusFeatures, legacyData: cusFeaturesLegacyData };
+	return { data: apiCusFeatures };
 };

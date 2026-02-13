@@ -153,7 +153,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		env: ctx.env,
 		subId: entity2SubId,
 	});
-}, 120000);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Separate subscriptions via force_checkout + add-on

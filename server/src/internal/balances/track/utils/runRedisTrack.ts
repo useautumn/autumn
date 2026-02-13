@@ -1,7 +1,7 @@
 import type {
 	FullCustomer,
 	TrackParams,
-	TrackResponseV2,
+	TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -85,7 +85,7 @@ export const runRedisTrack = async ({
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	body: TrackParams;
-}): Promise<TrackResponseV2> => {
+}): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(
 		executeRedisDeduction({
 			ctx,

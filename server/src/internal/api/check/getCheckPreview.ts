@@ -1,5 +1,5 @@
 import {
-	type CheckResponseV2,
+	type CheckResponseV3,
 	cusProductToProduct,
 	FeaturePreviewScenario,
 	type FullCusProduct,
@@ -29,7 +29,7 @@ export const getCheckPreview = async ({
 	entityId,
 }: {
 	ctx: AutumnContext;
-	checkResponse: CheckResponseV2;
+	checkResponse: CheckResponseV3;
 	checkData: CheckData;
 	customerId: string;
 	entityId?: string;

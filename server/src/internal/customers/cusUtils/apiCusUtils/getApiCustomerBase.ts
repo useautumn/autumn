@@ -20,22 +20,27 @@ export const getApiCustomerBase = async ({
 	ctx,
 	fullCus,
 	withAutumnId = true,
+	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
+	expandParams?: { plan?: boolean };
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
-	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
-		await getApiBalances({
-			ctx,
-			fullCus,
-		});
+	const { data: apiBalances } = await getApiBalances({
+		ctx,
+		fullCus,
+	});
 
-	const { data: apiSubscriptions, legacyData: cusProductLegacyData } =
-		await getApiSubscriptions({
-			ctx,
-			fullCus,
-		});
+	const {
+		subscriptions: apiSubscriptions,
+		purchases: apiPurchases,
+		legacyData: cusProductLegacyData,
+	} = await getApiSubscriptions({
+		ctx,
+		fullCus,
+		expandParams,
+	});
 
 	const apiCustomer = ApiCustomerV5Schema.extend({
 		autumn_id: z.string().optional(),
@@ -53,6 +58,7 @@ export const getApiCustomerBase = async ({
 		metadata: fullCus.metadata ?? {},
 
 		subscriptions: apiSubscriptions,
+		purchases: apiPurchases,
 		balances: apiBalances,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 
@@ -68,7 +74,6 @@ export const getApiCustomerBase = async ({
 		apiCustomer,
 		legacyData: {
 			cusProductLegacyData,
-			cusFeatureLegacyData,
 		},
 	};
 };
