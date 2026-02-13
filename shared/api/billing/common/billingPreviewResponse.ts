@@ -31,6 +31,14 @@ export const BillingPreviewResponseSchema = z.object({
 	period_start: z.number().optional(),
 	period_end: z.number().optional(),
 
+	/** Credit from excess refund (e.g. unused time on previous plan exceeds new charge). Applied to next invoice(s) by Stripe. */
+	credit: z
+		.object({
+			amount: z.number(),
+			description: z.string(),
+		})
+		.optional(),
+
 	next_cycle: z
 		.object({
 			starts_at: z.number(),
