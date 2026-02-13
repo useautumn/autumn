@@ -59,6 +59,11 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
+	// Only respect new_billing_subscription for non-transition scenarios
+	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
+	const shouldForceNewSubscription =
+		!currentCustomerProduct && params.new_billing_subscription;
+
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -73,6 +78,7 @@ export const setupAttachBillingContext = async ({
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
 		paramDiscounts: params.discounts,
+		newBillingSubscription: shouldForceNewSubscription || undefined,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({

@@ -10,6 +10,7 @@ import {
 import { getBackendErr } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { AttachPreviewSkeleton } from "./AttachPreviewSkeleton";
 
 export function AttachPreviewSection() {
 	const { previewQuery, formValues } = useAttachFormContext();
@@ -56,15 +57,35 @@ export function AttachPreviewSection() {
 
 	return (
 		<AnimatePresence mode="wait">
-			{!isLoading && previewData ? (
+			{isLoading ? (
+				<motion.div
+					key="preview-skeleton"
+					layout="position"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{
+						opacity: 0,
+						transition: { duration: 0.2, ease: [0.4, 0, 1, 1] },
+					}}
+					transition={{
+						opacity: { duration: 0.25 },
+						layout: LAYOUT_TRANSITION,
+					}}
+				>
+					<AttachPreviewSkeleton />
+				</motion.div>
+			) : previewData ? (
 				<motion.div
 					key="preview-content"
 					layout="position"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
+					exit={{
+						opacity: 0,
+						transition: { duration: 0.2, ease: [0.4, 0, 1, 1] },
+					}}
 					transition={{
-						opacity: { duration: 0.25 },
+						opacity: { duration: 0.25, delay: 0.05 },
 						layout: LAYOUT_TRANSITION,
 					}}
 				>

@@ -17,6 +17,7 @@ export const AttachFormSchema = z.object({
 	trialEnabled: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	billingBehavior: z.custom<BillingBehavior>().nullable(),
+	newBillingSubscription: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 });
 

@@ -30,6 +30,7 @@ interface UseAttachRequestBodyParams {
 	trialEnabled: boolean;
 	planSchedule: PlanTiming | null;
 	billingBehavior: BillingBehavior | null;
+	newBillingSubscription: boolean;
 	discounts: FormDiscount[];
 }
 
@@ -83,6 +84,7 @@ export function useAttachRequestBody({
 	trialEnabled,
 	planSchedule,
 	billingBehavior,
+	newBillingSubscription,
 	discounts,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
@@ -138,6 +140,10 @@ export function useAttachRequestBody({
 			body.billing_behavior = billingBehavior;
 		}
 
+		if (newBillingSubscription) {
+			body.new_billing_subscription = true;
+		}
+
 		const validDiscounts = filterValidDiscounts(discounts);
 		if (validDiscounts.length > 0) {
 			body.discounts = validDiscounts;
@@ -156,6 +162,7 @@ export function useAttachRequestBody({
 		trialEnabled,
 		planSchedule,
 		billingBehavior,
+		newBillingSubscription,
 		discounts,
 	]);
 
