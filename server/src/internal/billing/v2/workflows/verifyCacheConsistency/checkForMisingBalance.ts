@@ -64,25 +64,9 @@ export const checkForMisingBalance = async ({
 		const previousBalance = previousApiCustomer.balances?.[feature.id];
 		const newBalance = newApiCustomer.balances?.[feature.id];
 
-		const previousGrantedBalance = previousBalance?.granted_balance ?? 0;
-		const newGrantedBalance = newBalance?.granted_balance ?? 0;
-		const previousPrepaidQuantity =
-			previousBalance?.breakdown?.reduce(
-				(acc, curr) => acc + curr.prepaid_quantity,
-				0,
-			) ?? 0;
-		const newPrepaidQuantity =
-			newBalance?.breakdown?.reduce(
-				(acc, curr) => acc + curr.prepaid_quantity,
-				0,
-			) ?? 0;
-
-		const previousTotalBalance = new Decimal(previousGrantedBalance).plus(
-			previousPrepaidQuantity,
-		);
-		const newTotalBalance = new Decimal(newGrantedBalance).plus(
-			newPrepaidQuantity,
-		);
+		// In V1, 'granted' = included_grant + prepaid_grant (combined)
+		const previousTotalBalance = new Decimal(previousBalance?.granted ?? 0);
+		const newTotalBalance = new Decimal(newBalance?.granted ?? 0);
 
 		const previousUsage = new Decimal(previousBalance?.usage ?? 0);
 		const newUsage = new Decimal(newBalance?.usage ?? 0);

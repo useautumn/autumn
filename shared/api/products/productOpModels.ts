@@ -146,6 +146,9 @@ export const UpdateProductQuerySchema = z.object({
 });
 
 export type CreateProductV2Params = z.infer<typeof CreateProductV2ParamsSchema>;
+export type CreateProductV2ParamsInput = z.input<
+	typeof CreateProductV2ParamsSchema
+>;
 export type UpdateProductV2Params = z.infer<typeof UpdateProductV2ParamsSchema>;
 
 // Copy Product Schema

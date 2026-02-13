@@ -1,7 +1,4 @@
-import type {
-	CreatePlanParams,
-	UpdatePlanParams,
-} from "@api/products/crud/planOpModels";
+import type { ApiPlanItemV0 } from "@api/models";
 import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import {
@@ -17,7 +14,10 @@ export const planV0ToBasePriceProductItem = ({
 	plan,
 }: {
 	ctx: SharedContext;
-	plan: ApiPlan | CreatePlanParams | UpdatePlanParams;
+	plan: {
+		features: ApiPlanItemV0[];
+		price: ApiPlan["price"];
+	};
 }): ProductItem | undefined => {
 	if (!plan.price) return;
 

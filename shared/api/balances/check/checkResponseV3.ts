@@ -1,0 +1,20 @@
+import { z } from "zod/v4";
+import { ApiBalanceV1Schema } from "../../customers/cusFeatures/apiBalanceV1.js";
+import { CheckFeaturePreviewSchema } from "./checkFeaturePreview.js";
+
+/**
+ * Check response V3 - uses ApiBalanceV1 (V2.1 format)
+ * This is the server's internal response format
+ */
+export const CheckResponseV3Schema = z.object({
+	allowed: z.boolean(),
+	customer_id: z.string(),
+	entity_id: z.string().nullish(),
+	required_balance: z.number().optional(),
+
+	balance: ApiBalanceV1Schema.nullable(),
+
+	preview: CheckFeaturePreviewSchema.optional(),
+});
+
+export type CheckResponseV3 = z.infer<typeof CheckResponseV3Schema>;

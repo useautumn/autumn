@@ -4,7 +4,7 @@ import {
 	isCustomerProductTrialing,
 	isProductPaidAndRecurring,
 } from "@autumn/shared";
-import type { FreeTrialParamsV0 } from "@shared/api/billing/common/freeTrial/freeTrialParamsV0";
+import type { FreeTrialParamsV0 } from "@shared/api/common/freeTrial/freeTrialParamsV0";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";

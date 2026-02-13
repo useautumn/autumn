@@ -3,7 +3,6 @@ import {
 	type ApiCustomerV5,
 	applyResponseVersionChanges,
 	CusExpand,
-	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -23,12 +22,11 @@ export const getApiCustomer = async ({
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
 	// Get base ApiCustomer (subscriptions, balances, invoices)
-	const { apiCustomer: baseCustomer, legacyData: customerLegacyData } =
-		await getApiCustomerBase({
-			ctx,
-			fullCus: fullCustomer,
-			withAutumnId,
-		});
+	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBase({
+		ctx,
+		fullCus: fullCustomer,
+		withAutumnId,
+	});
 
 	// Clean base customer (remove entities from base, handle expand)
 	const cleanedBaseCustomer: ApiCustomerV5 = {
@@ -53,11 +51,11 @@ export const getApiCustomer = async ({
 	};
 
 	// Apply version transformations based on API version
-	return applyResponseVersionChanges<ApiCustomerV5, CustomerLegacyData>({
+	return applyResponseVersionChanges<ApiCustomerV5>({
 		input: apiCustomer,
-		legacyData: customerLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
+		legacyData,
 		ctx,
 	});
 };

@@ -12,7 +12,7 @@ import {
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
-	UpdatePlanParamsSchema,
+	UpdatePlanParamsV1Schema,
 	UpdatePlanQuerySchema,
 	UpdateProductQuerySchema,
 	UpdateProductSchema,
@@ -38,7 +38,7 @@ import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlan = createRoute({
 	versionedBody: {
-		latest: UpdatePlanParamsSchema,
+		latest: UpdatePlanParamsV1Schema,
 		[ApiVersion.V1_Beta]: UpdateProductV2ParamsSchema,
 	},
 	versionedQuery: {
@@ -59,9 +59,9 @@ export const handleUpdatePlan = createRoute({
 		// V1.2 clients already send ProductV2, no conversion needed
 
 		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2_0))
-			? (apiPlan.map.v0ToProductV2({
+			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,
-					plan: body,
+					params: body,
 				}) as UpdateProductV2Params)
 			: (body as UpdateProductV2Params);
 

@@ -1,3 +1,5 @@
+import type { ApiBalance } from "@api/customers/cusFeatures/apiBalance.js";
+import { balanceV1ToV0 } from "@api/customers/cusFeatures/mappers/balanceV1ToV0.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -5,10 +7,10 @@ import {
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
+import { apiPurchaseV0ToSubscriptionV0 } from "../../customers/cusPlans/mappers/apiPurchaseV0ToSubscriptionV0.js";
 import { apiSubscriptionV1ToV0 } from "../../customers/cusPlans/mappers/apiSubscriptionV1ToV0.js";
 import { ApiEntityV1Schema } from "../apiEntity.js";
 import { ApiEntityV2Schema } from "../apiEntityV2.js";
-import { EntityLegacyDataSchema } from "../entityLegacyData.js";
 
 /**
  * V2.0_EntityChange: Transforms entity response TO V1 format from V2 format
@@ -34,14 +36,12 @@ export const V2_0_EntityChange = defineVersionChange({
 	affectedResources: [AffectedResource.Entity],
 	newSchema: ApiEntityV2Schema,
 	oldSchema: ApiEntityV1Schema,
-	legacyDataSchema: EntityLegacyDataSchema,
 	affectsResponse: true,
 
 	transformResponse: ({
 		input,
 	}: {
 		input: z.infer<typeof ApiEntityV2Schema>;
-		legacyData?: z.infer<typeof EntityLegacyDataSchema>;
 	}): z.infer<typeof ApiEntityV1Schema> => {
 		// Transform subscriptions from V1 to V0
 		const allSubscriptions = input.subscriptions ?? [];
@@ -54,10 +54,26 @@ export const V2_0_EntityChange = defineVersionChange({
 			.filter((sub) => sub.status === "scheduled")
 			.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
 
+		// Convert purchases to subscriptions and add to active subscriptions
+		const purchasesAsSubscriptions: ApiSubscription[] = (
+			input.purchases ?? []
+		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ input: purchase }));
+
+		const balancesV0: Record<string, ApiBalance> = {};
+		if (input.balances) {
+			for (const [featureId, balance] of Object.entries(input.balances)) {
+				balancesV0[featureId] = balanceV1ToV0({ input: balance });
+			}
+		}
+
+		// Return V0 entity format (without purchases field)
+		const { purchases: _purchases, ...rest } = input;
+
 		return {
-			...input,
-			subscriptions: activeSubscriptionsV0,
+			...rest,
+			subscriptions: [...activeSubscriptionsV0, ...purchasesAsSubscriptions],
 			scheduled_subscriptions: scheduledSubscriptionsV0,
+			balances: balancesV0,
 		};
 	},
 });

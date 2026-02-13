@@ -85,19 +85,7 @@ export * from "./models/featureModels/featureModels.js";
 
 // export * from "./models/featureModels/featureResModels.js";
 
-export * from "./api/products/crud/planOpModels.js";
 export * from "./api/products/items/previousVersions/apiPlanItemV0.js";
-
-// 2. Feature Models
-export * from "./models/featureModels/featureTable.js";
-// Gen Models
-export * from "./models/genModels/genEnums.js";
-export * from "./models/genModels/processorSchemas.js";
-
-// Idempotency Models
-
-export * from "./api/products/items/mappers/planItemV0ToProductItem.js";
-export * from "./api/products/items/mappers/planItemV0ToProductItem.js";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
 // Billing Models (all from single index)
@@ -105,6 +93,11 @@ export * from "./models/billingModels/index.js";
 // Checkout Models
 export * from "./models/checkouts/index.js";
 export * from "./models/cusProductModels/cusPriceModels/customerPriceWithCustomerProduct.js";
+// 2. Feature Models
+export * from "./models/featureModels/featureTable.js";
+// Gen Models
+export * from "./models/genModels/genEnums.js";
+export * from "./models/genModels/processorSchemas.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";

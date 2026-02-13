@@ -1,5 +1,5 @@
 import type {
-	ApiBalance,
+	ApiBalanceV1,
 	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 	FullCustomer,
@@ -19,8 +19,8 @@ export const cusProductToBalances = ({
 	ctx: RequestContext;
 	cusProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-}): Record<string, ApiBalance> => {
-	const balances: Record<string, ApiBalance> = {};
+}): Record<string, ApiBalanceV1> => {
+	const balances: Record<string, ApiBalanceV1> = {};
 
 	// Group customer_entitlements by feature_id
 	const featureToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
@@ -56,8 +56,6 @@ export const cusProductToBalances = ({
 			fullCus: previewFullCus,
 			cusEnts,
 			feature,
-			includeRollovers: false,
-			includeBreakdown: false,
 		});
 
 		balances[featureId] = data;

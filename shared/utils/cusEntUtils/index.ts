@@ -8,11 +8,16 @@ export * from "./balanceUtils/cusEntsToRollovers.js";
 export * from "./balanceUtils/cusEntsToUsage.js";
 export * from "./balanceUtils/cusEntToMinBalance.js";
 export * from "./balanceUtils/cusEntToUsageAllowed.js";
-
+// Customer entitlement to balance price utils
+export * from "./balanceUtils/customerEntitlementToBalancePrice.js";
 // Granted balance utils
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage.js";
 
 // Balance utils barrel
 export * from "./balanceUtils.js";

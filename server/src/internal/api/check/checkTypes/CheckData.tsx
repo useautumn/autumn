@@ -1,10 +1,9 @@
-import type { ApiBalance, CusFeatureLegacyData, Feature } from "@autumn/shared";
+import type { ApiBalanceV1, Feature } from "@autumn/shared";
 
 export interface CheckData {
 	customerId: string;
 	entityId?: string;
-	apiBalance?: ApiBalance;
+	apiBalance?: ApiBalanceV1;
 	originalFeature: Feature;
 	featureToUse: Feature;
-	cusFeatureLegacyData?: CusFeatureLegacyData;
 }

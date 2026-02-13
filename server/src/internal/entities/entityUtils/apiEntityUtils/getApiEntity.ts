@@ -2,7 +2,6 @@ import {
 	AffectedResource,
 	type ApiEntityV2,
 	applyResponseVersionChanges,
-	type EntityLegacyData,
 	EntityNotFoundError,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -41,13 +40,12 @@ export const getApiEntity = async ({
 	}
 
 	// Get base entity (cacheable or direct from DB)
-	const { apiEntity: baseEntity, legacyData: entityLegacyData } =
-		await getApiEntityBase({
-			ctx,
-			entity: fullCustomer.entity,
-			fullCus: fullCustomer,
-			withAutumnId,
-		});
+	const { apiEntity: baseEntity, legacyData } = await getApiEntityBase({
+		ctx,
+		entity: fullCustomer.entity,
+		fullCus: fullCustomer,
+		withAutumnId,
+	});
 
 	// Clean api entity
 	const cleanedEntity = {
@@ -69,11 +67,11 @@ export const getApiEntity = async ({
 		...apiEntityExpand,
 	};
 
-	return applyResponseVersionChanges<ApiEntityV2, EntityLegacyData>({
+	return applyResponseVersionChanges<ApiEntityV2>({
 		input: apiEntity,
-		legacyData: entityLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Entity,
+		legacyData,
 		ctx,
 	});
 };

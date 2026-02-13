@@ -64,7 +64,7 @@ export const isProductUpgrade = ({
 			intervalB: billingInterval2,
 		})
 	) {
-		return getTotalPrice(prices1) < getTotalPrice(prices2);
+		return getTotalPrice(prices1) <= getTotalPrice(prices2);
 	} else {
 		return (
 			compareBillingIntervals({

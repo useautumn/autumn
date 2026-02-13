@@ -1,5 +1,5 @@
 import { FeatureOptionsParamsV0Schema } from "@api/billing/common/featureOptions/featureOptionsParamsV0.js";
-import { FreeTrialParamsV0Schema } from "@api/billing/common/freeTrial/freeTrialParamsV0.js";
+import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData.js";
