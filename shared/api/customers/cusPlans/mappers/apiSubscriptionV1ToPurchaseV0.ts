@@ -12,5 +12,6 @@ export function apiSubscriptionV1ToPurchaseV0({
 		plan_id: input.plan_id,
 		expires_at: input.expires_at,
 		started_at: input.started_at,
+		quantity: input.quantity,
 	};
 }

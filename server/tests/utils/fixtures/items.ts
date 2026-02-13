@@ -446,6 +446,7 @@ const tieredOneOffMessages = ({
  * @param billingUnits - Units per price (default: 1)
  * @param entityFeatureId - Entity feature ID for per-entity balances
  * @param interval - Billing interval (default: month)
+ * @param maxPurchase - Maximum overage allowed (usage_limit = maxPurchase + includedUsage)
  */
 const consumable = ({
 	featureId,
@@ -454,6 +455,7 @@ const consumable = ({
 	billingUnits = 1,
 	entityFeatureId,
 	interval = ProductItemInterval.Month,
+	maxPurchase,
 }: {
 	featureId: string;
 	includedUsage?: number;
@@ -461,6 +463,7 @@ const consumable = ({
 	billingUnits?: number;
 	entityFeatureId?: string;
 	interval?: ProductItemInterval;
+	maxPurchase?: number;
 }): LimitedItem =>
 	constructArrearItem({
 		featureId,
@@ -469,6 +472,8 @@ const consumable = ({
 		billingUnits,
 		entityFeatureId,
 		interval,
+		usageLimit:
+			maxPurchase !== undefined ? maxPurchase + includedUsage : undefined,
 	}) as LimitedItem;
 
 /**
@@ -476,23 +481,30 @@ const consumable = ({
  * @param includedUsage - Free units before overage kicks in (default: 0)
  * @param entityFeatureId - Entity feature ID for per-entity balances
  * @param interval - Billing interval (default: month)
+ * @param maxPurchase - Maximum overage allowed (usage_limit = maxPurchase + includedUsage)
+ * @param price - Price per unit (default: 0.1)
  */
 const consumableMessages = ({
 	includedUsage = 0,
 	entityFeatureId,
 	interval = ProductItemInterval.Month,
+	maxPurchase,
+	price = 0.1,
 }: {
 	includedUsage?: number;
 	entityFeatureId?: string;
 	interval?: ProductItemInterval;
+	maxPurchase?: number;
+	price?: number;
 } = {}): LimitedItem =>
 	consumable({
 		featureId: TestFeature.Messages,
 		includedUsage,
-		price: 0.1,
+		price,
 		billingUnits: 1,
 		entityFeatureId,
 		interval,
+		maxPurchase,
 	});
 
 /**
