@@ -1,10 +1,7 @@
 import type { PreviewLineItem } from "@autumn/shared";
 import { motion } from "motion/react";
 import { useMemo } from "react";
-import { CardBackground } from "@/components/checkout/layout/CardBackground";
 import { PlanGroupSection } from "@/components/checkout/plan/PlanGroupSection";
-import { FreeTrialSection } from "@/components/checkout/trial/FreeTrialSection";
-import { Separator } from "@/components/ui/separator";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { LAYOUT_TRANSITION } from "@/lib/animations";
 
@@ -13,16 +10,29 @@ interface PlanGroup {
 	planName: string;
 	items: PreviewLineItem[];
 	type: "incoming" | "outgoing";
+	cancelledAt?: number;
 }
 
 export function OrderSummary() {
-	const { preview, incoming = [], outgoing = [], freeTrial, trialAvailable } =
+	const { preview, incoming = [], outgoing = [], freeTrial, hasActiveTrial, total, currency } =
 		useCheckoutContext();
 
-	// Early return if no preview data yet
 	if (!preview) return null;
 
-	const { line_items, total, currency, next_cycle } = preview;
+	const { line_items, next_cycle } = preview;
+
+	// Build a map of next cycle line items by plan_id (for trial plans that have no immediate charges)
+	const nextCycleItemsByPlan = useMemo(() => {
+		if (!next_cycle?.line_items) return new Map<string, PreviewLineItem[]>();
+		const map = new Map<string, PreviewLineItem[]>();
+		for (const item of next_cycle.line_items) {
+			if (!map.has(item.plan_id)) {
+				map.set(item.plan_id, []);
+			}
+			map.get(item.plan_id)!.push(item);
+		}
+		return map;
+	}, [next_cycle]);
 
 	const hasNoImmediateCharges = line_items.length === 0 && total === 0;
 	const showNextCycleBreakdown = hasNoImmediateCharges && next_cycle;
@@ -67,6 +77,7 @@ export function OrderSummary() {
 				planName: planNameMap.get(planId) || planId,
 				items,
 				type: "outgoing",
+				cancelledAt: change.period_end,
 			});
 		}
 
@@ -97,50 +108,30 @@ export function OrderSummary() {
 		return groups;
 	}, [displayLineItems, outgoing, incoming, planNameMap]);
 
-	const showFreeTrial = freeTrial && trialAvailable;
-
 	return (
 		<motion.div
 			layout
-			className="flex flex-col gap-4 min-w-0"
+			className="flex flex-col gap-4"
 			transition={{ layout: LAYOUT_TRANSITION }}
 		>
-			{/* Unified card containing all sections */}
-			<motion.div
-				layout
-				layoutId="order-summary-card"
-				transition={{ layout: LAYOUT_TRANSITION }}
-				className="rounded-lg border border-border overflow-hidden"
-			>
-				<CardBackground>
-					{planGroups.map((group, groupIndex) => (
-						<div key={group.planId}>
-							{/* Separator between sections */}
-							{groupIndex > 0 && <Separator />}
-							<PlanGroupSection
-								planId={group.planId}
-								planName={group.planName}
-								items={group.items}
-								currency={currency}
-								type={group.type}
-							/>
-						</div>
-					))}
-
-					{/* Free trial section */}
-					{showFreeTrial && (
-						<>
-							<Separator />
-							<FreeTrialSection
-								freeTrial={freeTrial}
-								trialAvailable={trialAvailable}
-							/>
-						</>
-					)}
-				</CardBackground>
-			</motion.div>
-
-
+			<div className="flex flex-col gap-4">
+				{planGroups.map((group) => {
+					const isIncomingTrial = group.type === "incoming" && hasActiveTrial;
+					return (
+						<PlanGroupSection
+							key={group.planId}
+							planName={group.planName}
+							items={group.items}
+							currency={currency}
+							type={group.type}
+							cancelledAt={group.cancelledAt}
+							hasActiveTrial={isIncomingTrial}
+							freeTrial={group.type === "incoming" ? freeTrial : undefined}
+							nextCycleItems={isIncomingTrial ? nextCycleItemsByPlan.get(group.planId) : undefined}
+						/>
+					);
+				})}
+			</div>
 		</motion.div>
 	);
 }

@@ -10,7 +10,10 @@ export function CheckoutHeader() {
 		<div className="flex flex-col gap-4">
 			{/* Org branding */}
 			{isLoading ? (
-				<Skeleton className="h-5 w-32" />
+				<div className="flex items-center gap-2">
+					<Skeleton className="h-6 w-6 rounded-full" />
+					<Skeleton className="h-3.5 w-24" />
+				</div>
 			) : org ? (
 				<motion.div
 					className="flex items-center gap-2 min-w-0"
@@ -38,7 +41,11 @@ export function CheckoutHeader() {
 					Confirm your order
 				</h1>
 				{isLoading ? (
-					<Skeleton className="h-5 w-80" />
+					<div className="flex flex-col gap-1.5">
+						<Skeleton className="h-3.5 w-full" />
+						<Skeleton className="h-3.5 w-full" />
+						<Skeleton className="h-3.5 w-2/5" />
+					</div>
 				) : headerDescription ? (
 					<motion.p
 						className="text-sm text-muted-foreground"

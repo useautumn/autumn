@@ -11,7 +11,7 @@ export function PlanSection() {
 
 	return (
 		<motion.div
-			className="flex flex-col gap-4 w-full lg:flex-1 min-w-0"
+			className="flex flex-col gap-3 w-full"
 			variants={fadeUpVariants}
 			transition={{ ...STANDARD_TRANSITION, delay: 0.05 }}
 		>

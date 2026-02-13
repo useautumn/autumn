@@ -51,8 +51,7 @@ export function useCheckoutState({ checkoutId }: { checkoutId: string }) {
 		const { env, preview, incoming, outgoing, org, entity } = checkoutData ?? {};
 		const incomingPlan = incoming?.[0]?.plan;
 		const freeTrial = incomingPlan?.free_trial;
-		const trialAvailable =
-			incomingPlan?.customer_eligibility?.trial_available ?? false;
+		const hasActiveTrial = !!freeTrial;
 
 		const headerDescription = buildHeaderDescription({
 			preview,
@@ -60,7 +59,7 @@ export function useCheckoutState({ checkoutId }: { checkoutId: string }) {
 			outgoing,
 			entity: entity ?? undefined,
 			freeTrial,
-			trialAvailable,
+			hasActiveTrial,
 		});
 
 		return {
@@ -75,8 +74,7 @@ export function useCheckoutState({ checkoutId }: { checkoutId: string }) {
 			primaryPlanName: incomingPlan?.name || "Order",
 			isSubscription: incoming?.some((c) => c.plan.price?.interval) ?? false,
 			freeTrial,
-			trialAvailable,
-			hasActiveTrial: !!(freeTrial && trialAvailable),
+			hasActiveTrial,
 			isSandbox: env === "sandbox",
 			headerDescription,
 		};
