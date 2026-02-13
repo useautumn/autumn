@@ -20,6 +20,7 @@ export function useAttachForm({
 			trialEnabled: false,
 			planSchedule: null,
 			billingBehavior: null,
+			newBillingSubscription: false,
 			discounts: [],
 		} as AttachForm,
 		validators: {

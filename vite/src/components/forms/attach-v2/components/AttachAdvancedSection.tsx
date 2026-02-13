@@ -1,4 +1,6 @@
 import {
+	ArrowsInIcon,
+	ArrowsOutIcon,
 	CalendarCheckIcon,
 	CalendarIcon,
 	CaretDownIcon,
@@ -23,6 +25,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
@@ -66,8 +69,9 @@ const ACCORDION_ITEM: Variants = {
 
 export function AttachAdvancedSection() {
 	const [isOpen, setIsOpen] = useState(false);
-	const { form, formValues } = useAttachFormContext();
-	const { discounts } = formValues;
+	const { form, formValues, product } = useAttachFormContext();
+	const { discounts, newBillingSubscription } = formValues;
+	const { entityId } = useEntity();
 
 	const {
 		hasOutgoing,
@@ -81,13 +85,19 @@ export function AttachAdvancedSection() {
 		handleBillingBehaviorChange,
 	} = usePlanScheduleField();
 
+	// Show separate subscription toggle for add-ons or entity-scoped attaches
+	const showNewBillingSubscription = !!product?.is_add_on || !!entityId;
+
 	const hasDiscounts = discounts.some((d) => {
 		if ("reward_id" in d) return d.reward_id !== "";
 		if ("promotion_code" in d) return d.promotion_code !== "";
 		return false;
 	});
 	const hasCustomSettings =
-		hasCustomSchedule || hasCustomBilling || hasDiscounts;
+		hasCustomSchedule ||
+		hasCustomBilling ||
+		newBillingSubscription ||
+		hasDiscounts;
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -106,6 +116,10 @@ export function AttachAdvancedSection() {
 			parts.push(
 				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "Next cycle" : "Prorate"}`,
 			);
+		}
+
+		if (newBillingSubscription) {
+			parts.push("Separate subscription");
 		}
 
 		if (hasDiscounts) {
@@ -289,6 +303,49 @@ export function AttachAdvancedSection() {
 													)}
 												>
 													Next cycle
+												</IconCheckbox>
+											</div>
+										</div>
+									</motion.div>
+								)}
+
+								{/* Billing Subscription — only for add-ons or entity attaches */}
+								{showNewBillingSubscription && (
+									<motion.div variants={ACCORDION_ITEM}>
+										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
+											<span className="text-sm text-t2">Subscription</span>
+											<div className="flex">
+												<IconCheckbox
+													icon={<ArrowsInIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={!newBillingSubscription}
+													onCheckedChange={() =>
+														form.setFieldValue("newBillingSubscription", false)
+													}
+													className={cn(
+														"rounded-r-none",
+														newBillingSubscription && "border-r-0",
+													)}
+												>
+													Merge
+												</IconCheckbox>
+												<IconCheckbox
+													icon={<ArrowsOutIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={newBillingSubscription}
+													onCheckedChange={() =>
+														form.setFieldValue("newBillingSubscription", true)
+													}
+													className={cn(
+														"rounded-l-none",
+														!newBillingSubscription && "border-l-0",
+													)}
+												>
+													Separate
 												</IconCheckbox>
 											</div>
 										</div>
