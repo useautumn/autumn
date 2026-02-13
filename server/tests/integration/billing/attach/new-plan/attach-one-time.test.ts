@@ -171,6 +171,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: onetime-cumulative")}`, async (
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
+	await expectCustomerProducts({
+		customer,
+		active: [oneOff.id],
+	});
+
 	// Verify messages balance is cumulative (200 = 100 + 100)
 	expectCustomerFeatureCorrect({
 		customer,
@@ -245,7 +250,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: onetime-leaves-pro")}`, async (
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerProducts({
+	await expectCustomerProducts({
 		customer,
 		active: [pro.id, oneOff.id],
 	});
@@ -402,13 +407,9 @@ test.concurrent(`${chalk.yellowBright("new-plan: onetime-addon")}`, async () => 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Verify both products are active
-	await expectProductActive({
+	await expectCustomerProducts({
 		customer,
-		productId: pro.id,
-	});
-	await expectProductActive({
-		customer,
-		productId: oneOffAddon.id,
+		active: [pro.id, oneOffAddon.id],
 	});
 
 	// Verify combined messages balance (100 from pro + 50 from one-off = 150)

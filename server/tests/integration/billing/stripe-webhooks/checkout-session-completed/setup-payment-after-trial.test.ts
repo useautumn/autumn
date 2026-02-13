@@ -1,10 +1,8 @@
 import { expect, test } from "bun:test";
+import { completeSetupPaymentForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import {
-	advanceTestClock,
-	completeSetupPaymentForm,
-} from "@tests/utils/stripeUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { FreeTrialDuration } from "autumn-js";
 import chalk from "chalk";

@@ -1,8 +1,8 @@
 import {
 	ApiVersion,
 	type CheckParams,
-	type CheckResponseV2,
-	CheckResponseV2Schema,
+	type CheckResponseV3,
+	CheckResponseV3Schema,
 	FeatureType,
 	InsufficientBalanceError,
 	InternalError,
@@ -25,7 +25,7 @@ export const runCheckWithTrack = async ({
 	body: CheckParams;
 	requiredBalance: number;
 	checkData: CheckData;
-}): Promise<CheckResponseV2> => {
+}): Promise<CheckResponseV3> => {
 	if (!body.feature_id) {
 		throw new InternalError({
 			message: "ran check with track but no feature ID",
@@ -58,11 +58,12 @@ export const runCheckWithTrack = async ({
 	let allowed = true;
 
 	try {
+		// Use V2_1 to get ApiBalanceV1 format internally
 		const response = await runTrackV2({
 			ctx,
 			body: trackBody,
 			featureDeductions,
-			apiVersion: ApiVersion.V2_0,
+			apiVersion: ApiVersion.V2_1,
 		});
 
 		checkData.apiBalance = response.balance ?? undefined;
@@ -86,7 +87,7 @@ export const runCheckWithTrack = async ({
 		});
 	}
 
-	const checkResponse = CheckResponseV2Schema.parse({
+	const checkResponse = CheckResponseV3Schema.parse({
 		allowed,
 		customer_id: checkData.customerId || "",
 		entity_id: checkData.entityId,

@@ -25,7 +25,7 @@ export const consumablePriceToStripeItem = ({
 	}
 
 	const config = price.config;
-	const priceId = config.stripe_price_id;
+	const priceId = config.stripe_price_id ?? config.stripe_empty_price_id;
 
 	const newUsageMethod =
 		withEntity || apiVersion === ApiVersion.V1_Beta || fromVercel;
@@ -38,6 +38,8 @@ export const consumablePriceToStripeItem = ({
 	}
 
 	if (!priceId) {
+		// Create custom price...?
+
 		throw new InternalError({
 			message: `[consumablePriceToStripeItem] config.stripe_price_id is empty for autumn price: ${price.id}`,
 		});

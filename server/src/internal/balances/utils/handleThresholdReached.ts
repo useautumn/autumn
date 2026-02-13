@@ -117,7 +117,11 @@ export const handleThresholdReached = async ({
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 		ctx = addToExpand({
 			ctx,
-			add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+			add: [
+				CusExpand.BalancesFeature,
+				CusExpand.SubscriptionsPlan,
+				CusExpand.PurchasesPlan,
+			],
 		});
 	}
 

@@ -83,7 +83,7 @@ export const executeRedisDeduction = async ({
 
 		const {
 			customerEntitlementDeductions,
-			rolloverIds,
+			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
 		} = prepareFeatureDeduction({
@@ -103,7 +103,7 @@ export const executeRedisDeduction = async ({
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
 			target_entity_id: entityId || null,
-			rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
+			rollovers: rollovers.length > 0 ? rollovers : null,
 			skip_additional_balance: options.skipAdditionalBalance,
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,

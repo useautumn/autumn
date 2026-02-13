@@ -1,8 +1,8 @@
+import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
 import { z } from "zod/v4";
 import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse.js";
-import { ApiBalanceSchema } from "../../api/customers/cusFeatures/apiBalance.js";
 
 /**
  * Org branding for checkout display
@@ -47,7 +47,7 @@ export const CheckoutChangeSchema = z.object({
 			quantity: true,
 		}),
 	),
-	balances: z.record(z.string(), ApiBalanceSchema),
+	balances: z.record(z.string(), ApiBalanceV1Schema),
 	period_start: z.number().optional(),
 	period_end: z.number().optional(),
 });

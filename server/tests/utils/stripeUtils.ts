@@ -79,7 +79,7 @@ export const completeCheckoutForm = async (
 		// Postal code may not be present for all countries (e.g., UK)
 		try {
 			await page.waitForSelector("#billingPostalCode", { timeout: 2000 });
-			await page.type("#billingPostalCode", "123456");
+			await page.type("#billingPostalCode", "SW59SX");
 		} catch (_e) {
 			// Postal code field doesn't exist, continue without it
 		}
@@ -177,14 +177,47 @@ export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 		await page.waitForSelector("#billingName");
 		await page.type("#billingName", "Test Customer");
 
-		// Uncheck "Save my information for faster checkout" (Stripe Link) if present
+		// Uncheck "Save my information for faster checkout" (Stripe Link) if present and checked
 		try {
 			const enableStripePass = await page.waitForSelector("#enableStripePass", {
 				timeout: 3000,
 			});
 			if (enableStripePass) {
-				await enableStripePass.click();
-				await timeout(500);
+				// Check if the checkbox is currently checked before clicking
+				const isChecked = await page.evaluate(
+					(el) => (el as HTMLInputElement).checked,
+					enableStripePass,
+				);
+				if (isChecked) {
+					// Try multiple click targets - Stripe uses custom styled checkboxes
+					// Priority: 1) The styled checkbox span, 2) The checkbox container, 3) The label, 4) The input
+					const styledCheckbox = await page.$(".Checkbox-StyledInput");
+					const checkboxContainer = await page.$(".Checkbox-InputContainer");
+					const label = await page.$('label[for="enableStripePass"]');
+
+					if (styledCheckbox) {
+						await styledCheckbox.click();
+					} else if (checkboxContainer) {
+						await checkboxContainer.click();
+					} else if (label) {
+						await label.click();
+					} else {
+						// Fallback: try clicking the input directly
+						await enableStripePass.click();
+					}
+					await timeout(500);
+
+					// Verify it was unchecked
+					const stillChecked = await page.evaluate(
+						(el) => (el as HTMLInputElement).checked,
+						enableStripePass,
+					);
+					if (stillChecked) {
+						console.log(
+							"[completeSetupPaymentForm] Warning: Stripe Pass checkbox still checked after click attempt",
+						);
+					}
+				}
 			}
 		} catch (_e) {
 			// Stripe Link checkbox not present
@@ -210,7 +243,7 @@ export const completeSetupPaymentForm = async ({ url }: { url: string }) => {
 
 		console.log("[completeSetupPaymentForm] Setup payment completed");
 	} finally {
-		await browser.close();
+		// await browser.close();
 	}
 };
 
