@@ -18,6 +18,7 @@ export * from "./hooks/useAttachForm";
 export * from "./hooks/useAttachMutation";
 export * from "./hooks/useAttachPreview";
 export * from "./hooks/useAttachRequestBody";
+export * from "./hooks/usePlanScheduleField";
 
 // Utils
 export * from "./utils/attachDiffUtils";

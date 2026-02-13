@@ -1,6 +1,7 @@
 import {
 	type AttachParamsV0,
 	type AttachParamsV0Input,
+	type BillingBehavior,
 	type FeatureOptions,
 	type FreeTrialDuration,
 	type PlanTiming,
@@ -28,6 +29,7 @@ interface UseAttachRequestBodyParams {
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
 	planSchedule: PlanTiming | null;
+	billingBehavior: BillingBehavior | null;
 	discounts: FormDiscount[];
 }
 
@@ -80,6 +82,7 @@ export function useAttachRequestBody({
 	trialDuration,
 	trialEnabled,
 	planSchedule,
+	billingBehavior,
 	discounts,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
@@ -131,6 +134,10 @@ export function useAttachRequestBody({
 			body.plan_schedule = planSchedule;
 		}
 
+		if (billingBehavior) {
+			body.billing_behavior = billingBehavior;
+		}
+
 		const validDiscounts = filterValidDiscounts(discounts);
 		if (validDiscounts.length > 0) {
 			body.discounts = validDiscounts;
@@ -148,6 +155,7 @@ export function useAttachRequestBody({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
 		discounts,
 	]);
 

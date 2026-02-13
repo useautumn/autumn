@@ -1,4 +1,5 @@
 import {
+	type BillingBehavior,
 	FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
@@ -15,6 +16,7 @@ export const AttachFormSchema = z.object({
 	trialDuration: z.enum(FreeTrialDuration),
 	trialEnabled: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
+	billingBehavior: z.custom<BillingBehavior>().nullable(),
 	discounts: z.custom<FormDiscount[]>(),
 });
 

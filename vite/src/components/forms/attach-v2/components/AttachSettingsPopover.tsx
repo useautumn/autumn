@@ -1,6 +1,5 @@
-import type { PlanTiming } from "@autumn/shared";
 import { CalendarIcon, GearIcon, LightningIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	Popover,
 	PopoverContent,
@@ -15,43 +14,18 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
-import { useAttachFormContext } from "../context/AttachFormProvider";
+import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
 
 export function AttachSettingsPopover() {
 	const [open, setOpen] = useState(false);
-	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { planSchedule } = formValues;
-	const previewData = previewQuery.data;
 
-	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
-
-	// Compute the default planSchedule based on upgrade vs downgrade
-	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData || !hasOutgoing) return "immediate";
-
-		// Compare prices to determine upgrade vs downgrade
-		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
-		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
-		const isUpgrade = incomingPrice > outgoingPrice;
-
-		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData, hasOutgoing]);
-
-	// Force "immediate" when there's no current product to transition from
-	const effectivePlanSchedule = !hasOutgoing
-		? "immediate"
-		: (planSchedule ?? defaultPlanSchedule);
-
-	const handleScheduleChange = (value: PlanTiming) => {
-		form.setFieldValue("planSchedule", value);
-	};
-
-	const isImmediateSelected = effectivePlanSchedule === "immediate";
-	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
-
-	// Show blue highlight when user has overridden the default
-	const hasCustomSchedule =
-		planSchedule !== null && planSchedule !== defaultPlanSchedule;
+	const {
+		hasOutgoing,
+		hasCustomSchedule,
+		isImmediateSelected,
+		isEndOfCycleSelected,
+		handleScheduleChange,
+	} = usePlanScheduleField();
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
