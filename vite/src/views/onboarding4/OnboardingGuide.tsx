@@ -271,8 +271,8 @@ export function OnboardingGuide() {
 
 	if (isLoading) {
 		return (
-			<div className="relative overflow-hidden border-dashed border-b pb-4 mb-2">
-				{/* Header skeleton */}
+		<div className="relative overflow-x-clip border-dashed border-b pb-4 mb-2">
+			{/* Header skeleton */}
 				<div className="pr-8 mb-2.75">
 					<div className="flex items-center gap-2">
 						<Skeleton className="h-3.5 w-36" />
@@ -290,7 +290,7 @@ export function OnboardingGuide() {
 	}
 
 	return (
-		<div className="relative overflow-hidden border-dashed border-b pb-4 mb-2">
+		<div className="relative overflow-x-clip border-dashed border-b pb-4 mb-2">
 			{/* Dismiss button */}
 			<Tooltip>
 				<TooltipTrigger asChild>
