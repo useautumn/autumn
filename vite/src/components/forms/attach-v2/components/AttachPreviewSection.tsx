@@ -1,6 +1,6 @@
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -55,24 +55,37 @@ export function AttachPreviewSection() {
 	}
 
 	return (
-		<motion.div layout="position" transition={{ layout: LAYOUT_TRANSITION }}>
-			<LineItemsPreview
-				title="Pricing Preview"
-				isLoading={isLoading}
-				lineItems={previewData?.line_items}
-				currency={previewData?.currency}
-				totals={totals}
-				filterZeroAmounts
-			/>
-			{previewData?.redirect_type && (
-				<SheetSection withSeparator={false} className="py-0 pb-2">
-					<InfoBox variant="note">
-						{previewData.redirect_type === "stripe_checkout"
-							? "Customer will be redirected to Stripe Checkout to complete payment"
-							: "Customer will be redirected to Autumn Checkout to complete payment"}
-					</InfoBox>
-				</SheetSection>
-			)}
-		</motion.div>
+		<AnimatePresence mode="wait">
+			{!isLoading && previewData ? (
+				<motion.div
+					key="preview-content"
+					layout="position"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+					transition={{
+						opacity: { duration: 0.25 },
+						layout: LAYOUT_TRANSITION,
+					}}
+				>
+					<LineItemsPreview
+						title="Pricing Preview"
+						lineItems={previewData.line_items}
+						currency={previewData.currency}
+						totals={totals}
+						filterZeroAmounts
+					/>
+					{previewData?.redirect_type && (
+						<SheetSection withSeparator={false} className="py-0 pb-2">
+							<InfoBox variant="note">
+								{previewData.redirect_type === "stripe_checkout"
+									? "Customer will be redirected to Stripe Checkout to complete payment"
+									: "Customer will be redirected to Autumn Checkout to complete payment"}
+							</InfoBox>
+						</SheetSection>
+					)}
+				</motion.div>
+			) : null}
+		</AnimatePresence>
 	);
 }

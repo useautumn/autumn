@@ -123,16 +123,13 @@ export function TableContentVirtualized({
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
-					className="rounded-b-lg w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-neutral-600"
+					className="rounded-b-lg w-full overflow-auto"
 					style={{
 						minHeight,
 						maxHeight: virtualization?.containerHeight
 							? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
 							: undefined,
 						willChange: "scroll-position",
-						overflow: "auto",
-						scrollbarWidth: "thin",
-						scrollbarColor: "rgba(155, 155, 155, 0.5) transparent",
 					}}
 				>
 					<Table
