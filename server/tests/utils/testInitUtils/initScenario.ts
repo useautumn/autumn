@@ -363,7 +363,7 @@ const attach = ({
 	timeout?: number;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
+	const defaultTimeout = concurrency > 1 ? 5000 : 4000;
 	return (config) => ({
 		...config,
 		actions: [

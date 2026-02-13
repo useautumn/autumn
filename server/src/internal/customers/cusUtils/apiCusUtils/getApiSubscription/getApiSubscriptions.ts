@@ -70,6 +70,7 @@ export const getApiSubscriptions = async ({
 			cusProduct,
 			ctx,
 			fullCus,
+			expandParams,
 		});
 
 		if (isCustomerProductOneOff(cusProduct)) {
