@@ -56,6 +56,16 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 	},
 ];
 
+/** Checks if a property value is displayable as a table column */
+function isDisplayableProperty(key: string, value: unknown): boolean {
+	if (key === "value") return false;
+	return (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
+	);
+}
+
 /** Generates dynamic columns from event properties */
 export function generatePropertyColumns({
 	events,
@@ -65,12 +75,12 @@ export function generatePropertyColumns({
 	const propertyKeys = new Set<string>();
 
 	for (const event of events) {
-		if (event.properties) {
-			for (const key of Object.keys(event.properties)) {
-				// Skip 'value' as it's already a base column
-				if (key !== "value") {
-					propertyKeys.add(key);
-				}
+		const props = event.properties;
+		if (!props || typeof props !== "object" || Array.isArray(props)) continue;
+
+		for (const [key, value] of Object.entries(props)) {
+			if (isDisplayableProperty(key, value)) {
+				propertyKeys.add(key);
 			}
 		}
 	}
@@ -85,8 +95,8 @@ export function generatePropertyColumns({
 			if (typeof value === "object") return JSON.stringify(value);
 			return String(value);
 		},
-		cell: ({ getValue }: { getValue: () => string }) => {
-			const value = getValue();
+		cell: ({ getValue }: { getValue: () => unknown }) => {
+			const value = String(getValue() ?? "");
 			return (
 				<div className="text-t3 text-tiny truncate font-mono">{value}</div>
 			);

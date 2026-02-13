@@ -23,6 +23,8 @@ export interface TableProps<T> {
 	columnGroups?: ColumnGroup[];
 	/** Render column visibility in the toolbar instead of inside table content */
 	columnVisibilityInToolbar?: boolean;
+	/** Custom className for the column visibility button container (for positioning overrides) */
+	columnVisibilityClassName?: string;
 	/** For navigation - returns href string, enables cmd+click to open in new tab */
 	getRowHref?: (row: T) => string;
 	/** For non-navigation actions like opening sheets/modals */

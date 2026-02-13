@@ -6,6 +6,49 @@ import {
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ItemEdit } from "./itemEditTypes.js";
 
+/** Keys that are internal/metadata and should not trigger change detection */
+const INTERNAL_KEYS = new Set([
+	"feature_id", // Used as identifier, not for change detection
+	"feature_type", // Internal - derived from feature
+	"feature", // Internal - full feature object
+	"display", // Internal - UI display text
+	"usage_limit", // Internal - hidden from users
+	"created_at", // Internal - timestamp metadata
+	"entitlement_id", // Internal - backend identifier
+	"price_id", // Internal - backend identifier
+	"price_config", // Internal - backend config
+	"isPrice", // Frontend-only extension
+	"isVariable", // Frontend-only extension
+]);
+
+/** Recursively sorts object keys and normalizes undefined to null for consistent comparison */
+function sortAndNormalize(value: unknown): unknown {
+	if (value === undefined || value === null) return null;
+	if (Array.isArray(value)) {
+		return value.map(sortAndNormalize);
+	}
+	if (typeof value === "object") {
+		const sorted: Record<string, unknown> = {};
+		for (const key of Object.keys(value).sort()) {
+			sorted[key] = sortAndNormalize((value as Record<string, unknown>)[key]);
+		}
+		return sorted;
+	}
+	return value;
+}
+
+/** Creates a normalized string representation of a ProductItem excluding internal keys */
+function normalizeForComparison(item: ProductItem): string {
+	const sanitized: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(item)) {
+		if (INTERNAL_KEYS.has(key)) continue;
+		sanitized[key] = value;
+	}
+
+	return JSON.stringify(sortAndNormalize(sanitized));
+}
+
 function hasValue<T>(value: T | null | undefined): value is T {
 	return value !== null && value !== undefined;
 }
@@ -232,11 +275,7 @@ function hasItemChanged({
 	updatedItem: ProductItem;
 }): boolean {
 	return (
-		originalItem.price !== updatedItem.price ||
-		originalItem.included_usage !== updatedItem.included_usage ||
-		JSON.stringify(originalItem.tiers) !== JSON.stringify(updatedItem.tiers) ||
-		originalItem.billing_units !== updatedItem.billing_units ||
-		originalItem.interval !== updatedItem.interval
+		normalizeForComparison(originalItem) !== normalizeForComparison(updatedItem)
 	);
 }
 
