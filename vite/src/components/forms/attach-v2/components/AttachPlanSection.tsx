@@ -84,7 +84,7 @@ export function AttachPlanSection() {
 	return (
 		<SheetSection withSeparator>
 			<motion.div
-				className="space-y-2"
+				className="flex flex-col gap-3"
 				initial="hidden"
 				animate="visible"
 				variants={STAGGER_CONTAINER}

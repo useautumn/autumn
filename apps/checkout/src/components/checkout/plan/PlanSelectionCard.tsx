@@ -1,18 +1,14 @@
 import type { ApiPlanItemV1, CheckoutChange } from "@autumn/shared";
-import { CheckIcon } from "@phosphor-icons/react";
+import { CheckIcon, Wallet, WalletIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import {
 	FAST_TRANSITION,
 	LAYOUT_TRANSITION,
-	STANDARD_TRANSITION,
 	listContainerVariants,
 	listItemVariants,
 } from "@/lib/animations";
 import { formatAmount } from "@/utils/formatUtils";
-import { CardBackground } from "@/components/checkout/layout/CardBackground";
 import { QuantityInput } from "../shared/QuantityInput";
 
 function categorizeFeatures(features: ApiPlanItemV1[]): {
@@ -89,222 +85,209 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 			layout
 			layoutId={`plan-selection-${plan.id}`}
 			transition={{ layout: LAYOUT_TRANSITION }}
+			className="flex flex-col gap-1"
 		>
-			<Card className="py-0 gap-0">
-				<CardBackground>
-				{/* Plan header */}
+			{/* Plan name as section label */}
+			<span className="text-sm text-foreground">{plan.name}</span>
+
+			{hasPricedFeatures && (
 				<motion.div
-					className="flex items-center px-3 py-2.5 border-b bg-background/50"
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					transition={STANDARD_TRANSITION}
+					className="flex flex-col gap-1"
+					variants={listContainerVariants}
+					initial="initial"
+					animate="animate"
 				>
-					<span className="text-sm text-foreground truncate">{plan.name}</span>
-				</motion.div>
+					{/* Prepaid features - show quantity selector */}
+					<AnimatePresence>
+						{prepaid.map((feature, index) => {
+							const price = feature.price;
+							if (!price) return null;
 
-				{hasPricedFeatures && (
-					<motion.div
-						className="flex flex-col"
-						variants={listContainerVariants}
-						initial="initial"
-						animate="animate"
-					>
-						{/* Prepaid features - show quantity selector */}
-						<AnimatePresence>
-							{prepaid.map((feature, index) => {
-								const price = feature.price;
-								if (!price) return null;
+							const quantityInfo = feature_quantities.find(
+								(fq) => fq.feature_id === feature.feature_id,
+							);
+							const currentQuantity =
+								quantities[feature.feature_id] ?? quantityInfo?.quantity ?? 0;
 
-								const quantityInfo = feature_quantities.find(
-									(fq) => fq.feature_id === feature.feature_id,
-								);
-								const currentQuantity =
-									quantities[feature.feature_id] ?? quantityInfo?.quantity ?? 0;
+							const billingUnits = price.billing_units || 1;
+							const unitPrice = price.amount || 0;
+							const units = currentQuantity / billingUnits;
+							const totalPrice = units * unitPrice;
+							const intervalLabel = formatInterval(price.interval || "month");
 
-								const billingUnits = price.billing_units || 1;
-								const unitPrice = price.amount || 0;
-								const units = currentQuantity / billingUnits;
-								const totalPrice = units * unitPrice;
-								const intervalLabel = formatInterval(price.interval || "month");
-
-								return (
-									<motion.div
-										key={feature.feature_id}
-										variants={listItemVariants}
-										layout
-										transition={{ layout: LAYOUT_TRANSITION }}
-									>
-										{index > 0 && (
-											<div className="px-3">
-												<Separator />
-											</div>
-										)}
-										<div className="flex items-center justify-between gap-4 px-3 py-2">
+							return (
+								<motion.div
+									key={feature.feature_id}
+									variants={listItemVariants}
+									layout
+									transition={{ layout: LAYOUT_TRANSITION }}
+								>
+									<div className="flex items-center justify-between gap-4 py-0.5">
+										<div className="flex gap-2">
+											<motion.div
+												className="shrink-0 pt-1"
+												initial={{ scale: 0, opacity: 0 }}
+												animate={{ scale: 1, opacity: 1 }}
+												transition={{
+													type: "spring",
+													stiffness: 400,
+													damping: 20,
+													delay: 0.1 + index * 0.05,
+												}}
+											>
+												<WalletIcon className="h-3.5 w-3.5 text-muted-foreground" />
+											</motion.div>
 											<div className="flex flex-col gap-0.5 min-w-0">
-												<span className="text-xs text-foreground truncate">
+												<span className="text-sm text-muted-foreground truncate">
 													{getFeatureName(feature)}
 												</span>
-												<span className="text-xs text-muted-foreground truncate">
+												<span className="text-xs text-muted-foreground/60 truncate">
 													{formatAmount(unitPrice, currency)} per{" "}
 													{billingUnits === 1
 														? getFeatureUnitDisplay(feature, false)
 														: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
 												</span>
 											</div>
-											<div className="flex items-center gap-4 shrink-0">
-												<motion.span
-													key={totalPrice}
-													className="text-xs text-muted-foreground tabular-nums"
-													initial={{ opacity: 0.5 }}
-													animate={{ opacity: 1 }}
-													transition={FAST_TRANSITION}
-												>
-													{formatAmount(totalPrice, currency)}/{intervalLabel}
-												</motion.span>
-												<QuantityInput
-													value={currentQuantity}
-													onChange={(value) =>
-														handleQuantityChange(
-															feature.feature_id,
-															value,
-															billingUnits,
-														)
-													}
-													min={0}
-													max={
-														price.max_purchase
-															? price.max_purchase * billingUnits
-															: undefined
-													}
-													step={billingUnits}
-												/>
-											</div>
 										</div>
-									</motion.div>
-								);
-							})}
-						</AnimatePresence>
+										<div className="flex items-center gap-3 shrink-0">
+											<motion.span
+												key={totalPrice}
+												className="text-sm text-muted-foreground tabular-nums"
+												initial={{ opacity: 0.5 }}
+												animate={{ opacity: 1 }}
+												transition={FAST_TRANSITION}
+											>
+												{formatAmount(totalPrice, currency)}/{intervalLabel}
+											</motion.span>
+											<QuantityInput
+												value={currentQuantity}
+												onChange={(value) =>
+													handleQuantityChange(
+														feature.feature_id,
+														value,
+														billingUnits,
+													)
+												}
+												min={0}
+												max={
+													price.max_purchase
+														? price.max_purchase * billingUnits
+														: undefined
+												}
+												step={billingUnits}
+											/>
+										</div>
+									</div>
+								</motion.div>
+							);
+						})}
+					</AnimatePresence>
 
-						{/* Pay-per-use features - show rate with checkmark */}
-						<AnimatePresence>
-							{payPerUse.map((feature, index) => {
-								const price = feature.price;
-								if (!price) return null;
+					{/* Pay-per-use features - show rate with checkmark */}
+					<AnimatePresence>
+						{payPerUse.map((feature, index) => {
+							const price = feature.price;
+							if (!price) return null;
 
-								const billingUnits = price.billing_units || 1;
+							const billingUnits = price.billing_units || 1;
 
-								// Handle tiered pricing
-								let priceDisplay: string;
-								if (price.tiers && price.tiers.length > 0) {
-									const firstTier = price.tiers[0];
-									const tierPrice =
-										firstTier?.unit_price ?? firstTier?.flat_price ?? 0;
-									priceDisplay = `From ${formatAmount(tierPrice, currency)}`;
-								} else {
-									priceDisplay = formatAmount(price.amount || 0, currency);
-								}
+							// Handle tiered pricing
+							let priceDisplay: string;
+							if (price.tiers && price.tiers.length > 0) {
+								const firstTier = price.tiers[0];
+								const tierPrice =
+									firstTier?.unit_price ?? firstTier?.flat_price ?? 0;
+								priceDisplay = `From ${formatAmount(tierPrice, currency)}`;
+							} else {
+								priceDisplay = formatAmount(price.amount || 0, currency);
+							}
 
-								// Show separator if there are prepaid features before, or if not the first pay-per-use
-								const showSeparator = index > 0 || prepaid.length > 0;
-
-								return (
-									<motion.div
-										key={feature.feature_id}
-										variants={listItemVariants}
-										layout
-										transition={{ layout: LAYOUT_TRANSITION }}
-									>
-										{showSeparator && (
-											<div className="px-3">
-												<Separator />
-											</div>
-										)}
-										<div className="flex items-center justify-between gap-4 px-3 py-2">
-											<div className="flex items-center gap-2 min-w-0">
-												<motion.div
-													className="shrink-0"
-													initial={{ scale: 0, opacity: 0 }}
-													animate={{ scale: 1, opacity: 1 }}
-													transition={{
-														type: "spring",
-														stiffness: 400,
-														damping: 20,
-														delay: 0.1 + index * 0.05,
-													}}
-												>
-													<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
-												</motion.div>
-												<span className="text-xs text-muted-foreground truncate">
-													{getFeatureName(feature)}
-												</span>
-											</div>
-											<span className="text-xs text-muted-foreground shrink-0">
-												{priceDisplay} per{" "}
-												{billingUnits === 1
-													? getFeatureUnitDisplay(feature, false)
-													: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
+							return (
+								<motion.div
+									key={feature.feature_id}
+									variants={listItemVariants}
+									layout
+									transition={{ layout: LAYOUT_TRANSITION }}
+								>
+									<div className="flex items-center justify-between gap-4 py-0.5">
+										<div className="flex items-center gap-2 min-w-0">
+											<motion.div
+												className="shrink-0"
+												initial={{ scale: 0, opacity: 0 }}
+												animate={{ scale: 1, opacity: 1 }}
+												transition={{
+													type: "spring",
+													stiffness: 400,
+													damping: 20,
+													delay: 0.1 + index * 0.05,
+												}}
+											>
+												<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
+											</motion.div>
+											<span className="text-sm text-muted-foreground truncate">
+												{getFeatureName(feature)}
 											</span>
 										</div>
-									</motion.div>
-								);
-							})}
-						</AnimatePresence>
-					</motion.div>
-				)}
-
-				{/* Included features - shown only when there are no priced features */}
-				{showIncludedFeatures && (
-					<motion.div
-						className="flex flex-col"
-						variants={listContainerVariants}
-						initial="initial"
-						animate="animate"
-					>
-						{included.map((feature, index) => (
-							<motion.div
-								key={feature.feature_id}
-								variants={listItemVariants}
-								layout
-								transition={{ layout: LAYOUT_TRANSITION }}
-							>
-								{index > 0 && (
-									<div className="px-3">
-										<Separator />
-									</div>
-								)}
-								<div className="flex items-center justify-between gap-4 px-3 py-2">
-									<div className="flex items-center gap-2 min-w-0">
-										<motion.div
-											className="shrink-0"
-											initial={{ scale: 0, opacity: 0 }}
-											animate={{ scale: 1, opacity: 1 }}
-											transition={{
-												type: "spring",
-												stiffness: 400,
-												damping: 20,
-												delay: 0.1 + index * 0.05,
-											}}
-										>
-											<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
-										</motion.div>
-										<span className="text-xs text-muted-foreground truncate">
-											{getFeatureName(feature)}
+										<span className="text-sm text-muted-foreground shrink-0">
+											{priceDisplay} per{" "}
+											{billingUnits === 1
+												? getFeatureUnitDisplay(feature, false)
+												: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
 										</span>
 									</div>
-							{feature.included > 0 || feature.unlimited ? (
-								<span className="text-xs text-muted-foreground shrink-0">
-									{feature.unlimited
-										? "Unlimited"
-										: `${feature.included} included`}
-								</span>
-							) : null}
+								</motion.div>
+							);
+						})}
+					</AnimatePresence>
+				</motion.div>
+			)}
+
+			{/* Included features - shown only when there are no priced features */}
+			{showIncludedFeatures && (
+				<motion.div
+					className="flex flex-col"
+					variants={listContainerVariants}
+					initial="initial"
+					animate="animate"
+				>
+					{included.map((feature, index) => (
+						<motion.div
+							key={feature.feature_id}
+							variants={listItemVariants}
+							layout
+							transition={{ layout: LAYOUT_TRANSITION }}
+						>
+							<div className="flex items-center justify-between gap-4 py-0.5">
+								<div className="flex items-center gap-2 min-w-0">
+									<motion.div
+										className="shrink-0"
+										initial={{ scale: 0, opacity: 0 }}
+										animate={{ scale: 1, opacity: 1 }}
+										transition={{
+											type: "spring",
+											stiffness: 400,
+											damping: 20,
+											delay: 0.1 + index * 0.05,
+										}}
+									>
+										<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
+									</motion.div>
+									<span className="text-sm text-muted-foreground truncate">
+										{getFeatureName(feature)}
+									</span>
 								</div>
-							</motion.div>
-						))}
-					</motion.div>
-				)}
-				</CardBackground>
-			</Card>
+								{feature.included > 0 || feature.unlimited ? (
+									<span className="text-sm text-muted-foreground shrink-0">
+										{feature.unlimited
+											? "Unlimited"
+											: `${feature.included} included`}
+									</span>
+								) : null}
+							</div>
+						</motion.div>
+					))}
+				</motion.div>
+			)}
 		</motion.div>
 	);
 }

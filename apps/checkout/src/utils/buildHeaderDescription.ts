@@ -108,14 +108,14 @@ export function buildHeaderDescription({
 	outgoing,
 	entity,
 	freeTrial,
-	trialAvailable,
+	hasActiveTrial,
 }: {
 	preview?: BillingPreviewResponse;
 	incoming?: CheckoutChange[];
 	outgoing?: CheckoutChange[];
 	entity?: CheckoutEntity;
 	freeTrial?: ApiFreeTrialV2 | null;
-	trialAvailable?: boolean;
+	hasActiveTrial?: boolean;
 }): string | undefined {
 	if (!preview) return undefined;
 
@@ -126,7 +126,6 @@ export function buildHeaderDescription({
 	const incomingPlanName = change?.plan.name;
 	const isRecurring = !!change?.plan.price?.interval;
 	const entityName = entity?.name || entity?.id;
-	const hasActiveTrial = freeTrial && trialAvailable;
 
 	// Determine if this is a scheduled change (no immediate charges, changes next cycle)
 	const isScheduledChange =

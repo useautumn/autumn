@@ -1,4 +1,4 @@
-import { LayoutGroup, motion } from "motion/react";
+import { motion } from "motion/react";
 import { Separator } from "@/components/ui/separator";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { STANDARD_TRANSITION, fadeUpVariants, listContainerVariants } from "@/lib/animations";
@@ -49,7 +49,7 @@ export function CheckoutContent() {
 	return (
 		<CheckoutBackground isSandbox={isSandbox}>
 			<motion.div
-				className="flex flex-col gap-8 w-full"
+				className="flex flex-col gap-6 w-full"
 				initial="initial"
 				animate="animate"
 				variants={listContainerVariants}
@@ -59,24 +59,13 @@ export function CheckoutContent() {
 					<CheckoutHeader />
 				</motion.div>
 
-				{/* Main content - two columns */}
-				<LayoutGroup>
-					<div className="flex flex-col lg:flex-row gap-8 w-full max-w-4xl mx-auto">
-						<PlanSection />
-
-						{/* Vertical separator - visible only on desktop */}
-						<Separator
-							orientation="vertical"
-							className="hidden lg:block h-auto self-stretch"
-						/>
-						<Separator
-							orientation="horizontal"
-							className="block lg:hidden h-auto self-stretch"
-						/>
-
-						<OrderSummarySection />
-					</div>
-				</LayoutGroup>
+				{/* Main content - single column */}
+				<div className="flex flex-col gap-6 w-full">
+					<Separator />
+					<PlanSection />
+					<Separator />
+					<OrderSummarySection />
+				</div>
 
 				<Separator />
 
