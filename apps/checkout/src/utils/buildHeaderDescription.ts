@@ -153,10 +153,11 @@ export function buildHeaderDescription({
 		? formatTrialDuration(freeTrial)
 		: null;
 
-	// Handle negative amounts (refund/credit from previous plan)
-	if (total < 0) {
-		const creditAmount = formatAmount(Math.abs(total), currency);
-		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit for unused time on your previous plan.`;
+	// Handle credit from excess refund (unused time on previous plan exceeds new charge)
+	const credit = preview.credit;
+	if (credit) {
+		const creditAmount = formatAmount(credit.amount, currency);
+		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit applied to your next invoice.`;
 
 		if (hasActiveTrial && next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
