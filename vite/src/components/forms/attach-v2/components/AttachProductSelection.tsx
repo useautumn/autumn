@@ -21,6 +21,7 @@ export function AttachProductSelection() {
 					<field.SelectField
 						label=""
 						searchable
+						defaultOpen
 						options={availableProducts.map((p) => ({
 							label: p.name,
 							value: p.id,

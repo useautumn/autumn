@@ -88,7 +88,7 @@ const checkCurStripePrice = async ({
 	} else {
 		stripePrepaidPriceV2 = await getStripePrice({
 			stripeClient: stripeCli,
-			stripePriceId: config.stripe_prepaid_price_v2_id ?? undefined,
+			stripePriceId: config.stripe_prepaid_price_v2_id,
 		});
 	}
 
