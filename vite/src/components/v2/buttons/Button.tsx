@@ -95,7 +95,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 		ref,
 	) => {
 		const Comp = asChild ? Slot : "button";
-		const buttonRef = React.useRef<HTMLButtonElement>(null);
 
 		const getDisableActiveStyles = () => {
 			if (!disableActive) return "";
@@ -128,7 +127,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
 		return (
 			<Comp
-				ref={buttonRef}
+				ref={ref}
 				data-slot="button"
 				className={cn(
 					buttonVariants({ variant, size, className }),
