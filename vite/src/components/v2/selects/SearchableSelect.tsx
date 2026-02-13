@@ -97,9 +97,7 @@ export function SearchableSelect<T>({
 					disabled={disabled}
 					className={cn(
 						"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
-						"input-base input-shadow-default",
-						open && "input-shadow-focus border-primary",
-						!open && "hover:input-shadow-hover",
+						"input-base input-shadow-default input-state-open transition-all duration-150",
 						triggerClassName,
 					)}
 				>

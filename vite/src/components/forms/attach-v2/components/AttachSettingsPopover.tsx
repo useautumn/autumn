@@ -9,6 +9,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
@@ -18,12 +23,11 @@ export function AttachSettingsPopover() {
 	const { planSchedule } = formValues;
 	const previewData = previewQuery.data;
 
+	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
+
 	// Compute the default planSchedule based on upgrade vs downgrade
 	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData) return "immediate";
-
-		const hasOutgoing = previewData.outgoing.length > 0;
-		if (!hasOutgoing) return "immediate";
+		if (!previewData || !hasOutgoing) return "immediate";
 
 		// Compare prices to determine upgrade vs downgrade
 		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
@@ -31,10 +35,12 @@ export function AttachSettingsPopover() {
 		const isUpgrade = incomingPrice > outgoingPrice;
 
 		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData]);
+	}, [previewData, hasOutgoing]);
 
-	// Effective value: user's choice or computed default
-	const effectivePlanSchedule = planSchedule ?? defaultPlanSchedule;
+	// Force "immediate" when there's no current product to transition from
+	const effectivePlanSchedule = !hasOutgoing
+		? "immediate"
+		: (planSchedule ?? defaultPlanSchedule);
 
 	const handleScheduleChange = (value: PlanTiming) => {
 		form.setFieldValue("planSchedule", value);
@@ -99,20 +105,34 @@ export function AttachSettingsPopover() {
 							>
 								Immediately
 							</IconCheckbox>
-							<IconCheckbox
-								icon={<CalendarIcon />}
-								iconOrientation="left"
-								variant="secondary"
-								size="sm"
-								checked={isEndOfCycleSelected}
-								onCheckedChange={() => handleScheduleChange("end_of_cycle")}
-								className={cn(
-									"rounded-l-none",
-									!isEndOfCycleSelected && "border-l-0",
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span className="inline-flex">
+										<IconCheckbox
+											icon={<CalendarIcon />}
+											iconOrientation="left"
+											variant="secondary"
+											size="sm"
+											checked={isEndOfCycleSelected}
+											disabled={!hasOutgoing}
+											onCheckedChange={() =>
+												handleScheduleChange("end_of_cycle")
+											}
+											className={cn(
+												"rounded-l-none",
+												!isEndOfCycleSelected && "border-l-0",
+											)}
+										>
+											End of cycle
+										</IconCheckbox>
+									</span>
+								</TooltipTrigger>
+								{!hasOutgoing && (
+									<TooltipContent>
+										Only available when transitioning from an existing plan
+									</TooltipContent>
 								)}
-							>
-								End of cycle
-							</IconCheckbox>
+							</Tooltip>
 						</div>
 					</div>
 				</div>
