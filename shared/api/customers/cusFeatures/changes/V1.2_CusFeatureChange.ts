@@ -1,9 +1,4 @@
 import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
-import {
-	AffectedResource,
-	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { Decimal } from "decimal.js";
@@ -11,17 +6,13 @@ import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
 import { sumValues } from "../../../../utils/utils.js";
 import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
-import {
-	type ApiBalance,
-	type ApiBalanceBreakdown,
+import type {
+	ApiBalance,
+	ApiBalanceBreakdown,
 	ApiBalanceSchema,
 } from "../apiBalance.js";
-import {
-	type CusFeatureLegacyData,
-	CusFeatureLegacyDataSchema,
-} from "../cusFeatureLegacyData.js";
-import {
-	type ApiCusFeatureV3Breakdown,
+import type {
+	ApiCusFeatureV3Breakdown,
 	ApiCusFeatureV3Schema,
 } from "../previousVersions/apiCusFeatureV3.js";
 
@@ -95,13 +86,11 @@ const toV3BalanceParams = ({
 	input,
 	feature,
 	unlimited,
-	legacyData,
 	isBreakdown = false,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
-	legacyData?: CusFeatureLegacyData;
 	isBreakdown?: boolean;
 }) => {
 	const isBoolean = feature?.type === FeatureType.Boolean;
@@ -122,7 +111,8 @@ const toV3BalanceParams = ({
 		prepaidQuantity = (input as ApiBalanceBreakdown).prepaid_quantity ?? 0;
 	} else {
 		prepaidQuantity = sumValues(
-			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity) ?? [],
+			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity ?? 0) ??
+				[],
 		);
 	}
 
@@ -176,10 +166,8 @@ const toV3BalanceParams = ({
 
 export function transformBalanceToCusFeatureV3({
 	input,
-	legacyData,
 }: {
 	input: z.infer<typeof ApiBalanceSchema>;
-	legacyData?: CusFeatureLegacyData;
 }): z.infer<typeof ApiCusFeatureV3Schema> {
 	// 1. Is boolean feature
 
@@ -197,7 +185,6 @@ export function transformBalanceToCusFeatureV3({
 			input,
 			feature,
 			unlimited: isUnlimited,
-			legacyData,
 		});
 
 	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
@@ -224,7 +211,6 @@ export function transformBalanceToCusFeatureV3({
 				input: breakdown,
 				feature,
 				unlimited: isUnlimited,
-				legacyData,
 				isBreakdown: true,
 			});
 
@@ -276,33 +262,3 @@ export function transformBalanceToCusFeatureV3({
 		rollovers: input.rollovers,
 	};
 }
-
-/**
- * V1_2_CusFeatureChange: Transforms customer feature response TO V1_2 format
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V2.0:
- *
- * 1. Simplified schema with minimal required fields
- * 2. Optional feature object for expanded data
- * 3. Removed verbose metadata and display fields
- *
- * Input: ApiCusFeature (V2.0+ format)
- * Output: ApiCusFeatureV3 (V1.2 format)
- */
-const V1_2_CusFeatureChange = defineVersionChange({
-	newVersion: ApiVersion.V2_0,
-	oldVersion: ApiVersion.V1_2,
-	description: [
-		"Simplified customer feature schema",
-		"Added optional feature object",
-		"Removed verbose fields",
-	],
-	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiBalanceSchema,
-	oldSchema: ApiCusFeatureV3Schema,
-	legacyDataSchema: CusFeatureLegacyDataSchema,
-
-	transformResponse: transformBalanceToCusFeatureV3,
-});

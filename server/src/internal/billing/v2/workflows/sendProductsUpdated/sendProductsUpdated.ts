@@ -83,7 +83,7 @@ export const sendProductsUpdated = async ({
 			add: [
 				CusExpand.BalancesFeature,
 				CusExpand.SubscriptionsPlan,
-				CusExpand.ScheduledSubscriptionsPlan,
+				CusExpand.PurchasesPlan,
 			],
 		});
 	}

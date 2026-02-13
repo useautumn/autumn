@@ -109,7 +109,7 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 	await stripeCli.invoices.pay(invoiceStripeId);
 
 	// Wait for webhook processing
-	await timeout(5000);
+	await timeout(10000);
 
 	const cusProduct = await getMainCusProduct({
 		db,

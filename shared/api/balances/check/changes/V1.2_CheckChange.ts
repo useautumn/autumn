@@ -44,7 +44,7 @@ export const V1_2_CheckChange = defineVersionChange({
 			throw new Error("Legacy data is required");
 		}
 
-		const { cusFeatureLegacyData, featureToUse } = legacyData;
+		const { featureToUse } = legacyData;
 
 		if (!input.balance) {
 			return {
@@ -59,7 +59,6 @@ export const V1_2_CheckChange = defineVersionChange({
 
 		const cusFeatureV3 = transformBalanceToCusFeatureV3({
 			input: input.balance,
-			legacyData: cusFeatureLegacyData,
 		});
 
 		const baseData = {

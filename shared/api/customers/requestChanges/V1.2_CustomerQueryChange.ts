@@ -53,7 +53,7 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 		const newExpand = [
 			...existingExpand,
 			CusExpand.SubscriptionsPlan,
-			CusExpand.ScheduledSubscriptionsPlan,
+			CusExpand.PurchasesPlan,
 			CusExpand.BalancesFeature,
 		];
 

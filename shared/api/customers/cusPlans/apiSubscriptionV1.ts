@@ -26,6 +26,7 @@ export const ApiPurchaseV0Schema = z.object({
 	plan_id: z.string(),
 	expires_at: z.number().nullable(),
 	started_at: z.number(),
+	quantity: z.number(),
 });
 
 export type ApiSubscriptionV1 = z.infer<typeof ApiSubscriptionV1Schema>;
