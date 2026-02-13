@@ -1,12 +1,20 @@
 import {
 	ACTIVE_STATUSES,
 	type ApiSubscriptionV1,
+	apiSubscription,
 	type CusProductLegacyData,
 	type CusProductStatus,
 	type FullCustomer,
+	isCustomerProductOneOff,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubscription } from "./getApiSubscription.js";
+
+const getSubscriptionStatusKey = (cp: ApiSubscriptionV1) => {
+	if (!("status" in cp)) return undefined;
+	if (ACTIVE_STATUSES.includes(cp.status as CusProductStatus)) return "active";
+	return cp.status;
+};
 
 const mergeSubscriptionsResponses = ({
 	subscriptions,
@@ -14,10 +22,7 @@ const mergeSubscriptionsResponses = ({
 	subscriptions: ApiSubscriptionV1[];
 }) => {
 	const getPlanKey = (cp: ApiSubscriptionV1) => {
-		const status = ACTIVE_STATUSES.includes(cp.status as CusProductStatus)
-			? "active"
-			: cp.status;
-		return `${cp.plan_id}:${status}`;
+		return `${cp.plan_id}:${getSubscriptionStatusKey(cp)}`;
 	};
 
 	const record: Record<string, ApiSubscriptionV1> = {};
@@ -28,15 +33,16 @@ const mergeSubscriptionsResponses = ({
 
 		const currStartedAt = curr.started_at;
 
+		const curCanceledAt = "canceled_at" in curr ? curr.canceled_at : null;
+		const curQuantity = "quantity" in curr ? curr.quantity : 0;
+
 		record[key] = {
 			...(latest || curr),
-			canceled_at: curr.canceled_at
-				? curr.canceled_at
-				: latest?.canceled_at || null,
+			canceled_at: curCanceledAt ? curCanceledAt : latest?.canceled_at || null,
 			started_at: latest?.started_at
 				? Math.min(latest?.started_at, currStartedAt)
 				: currStartedAt,
-			quantity: (latest?.quantity || 0) + (curr?.quantity || 0),
+			quantity: (latest?.quantity || 0) + curQuantity,
 		};
 	}
 
@@ -46,13 +52,15 @@ const mergeSubscriptionsResponses = ({
 export const getApiSubscriptions = async ({
 	ctx,
 	fullCus,
+	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
+	expandParams?: { plan?: boolean };
 }) => {
 	// Process full subscriptions
 	const apiSubs: ApiSubscriptionV1[] = [];
-	// const apiPurchases: ApiPurchaseV0[] = [];
+	const apiPurchasesAsSubscriptions: ApiSubscriptionV1[] = [];
 
 	const cusProducts = fullCus.customer_products;
 
@@ -62,9 +70,14 @@ export const getApiSubscriptions = async ({
 			cusProduct,
 			ctx,
 			fullCus,
+			expandParams,
 		});
 
-		apiSubs.push(processed.data);
+		if (isCustomerProductOneOff(cusProduct)) {
+			apiPurchasesAsSubscriptions.push(processed.data);
+		} else {
+			apiSubs.push(processed.data);
+		}
 		legacyData[processed.data.plan_id] = processed.legacyData;
 	}
 
@@ -72,8 +85,19 @@ export const getApiSubscriptions = async ({
 		subscriptions: apiSubs,
 	});
 
+	const mergedPurchasesAsSubscriptions = mergeSubscriptionsResponses({
+		subscriptions: apiPurchasesAsSubscriptions,
+	});
+
+	const mergedPurchases = mergedPurchasesAsSubscriptions.map((sub) =>
+		apiSubscription.map.v1ToPurchaseV0({
+			apiSubscriptionV1: sub,
+		}),
+	);
+
 	return {
-		data: merged,
+		subscriptions: merged,
+		purchases: mergedPurchases,
 		legacyData,
 	};
 };

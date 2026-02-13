@@ -13,6 +13,12 @@ const productRoutes = [
 	{ method: "POST", url: "/products/:product_id" },
 	{ method: "PATCH", url: "/products/:product_id" },
 	{ method: "DELETE", url: "/products/:product_id" },
+
+	// Plan routes
+	{ method: "POST", url: "/plans" },
+	{ method: "POST", url: "/plans/:plan_id" },
+	{ method: "PATCH", url: "/plans/:plan_id" },
+	{ method: "DELETE", url: "/plans/:plan_id" },
 ];
 
 /**

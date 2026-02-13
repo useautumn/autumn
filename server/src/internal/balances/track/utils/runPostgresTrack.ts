@@ -1,4 +1,4 @@
-import type { TrackParams, TrackResponseV2 } from "@autumn/shared";
+import type { TrackParams, TrackResponseV3 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
@@ -20,7 +20,7 @@ export const runPostgresTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
-}): Promise<TrackResponseV2> => {
+}): Promise<TrackResponseV3> => {
 	const fullCustomer = await getOrCreateCustomer({
 		ctx,
 		customerId: body.customer_id,

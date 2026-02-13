@@ -56,9 +56,9 @@ const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 		}
 
 		// 3. Put feature price items in alphabetical order
-		const feature = features.find((f) => f.id == a.feature_id);
+		const feature = features.find((f) => f.id === a.feature_id);
 		const aFeatureName = feature?.name;
-		const bFeatureName = features.find((f) => f.id == b.feature_id)?.name;
+		const bFeatureName = features.find((f) => f.id === b.feature_id)?.name;
 
 		if (!aFeatureName || !bFeatureName) {
 			return 0;
@@ -96,7 +96,7 @@ const getPriceText = ({
 
 	const tiers = item.tiers;
 	if (tiers) {
-		if (tiers.length == 1) {
+		if (tiers.length === 1) {
 			return formatAmount({ org, amount: tiers[0].amount });
 		}
 
@@ -139,7 +139,7 @@ export const getPricecnPrice = ({
 			secondaryText: priceItem.interval ? `per ${priceItem.interval}` : " ",
 		};
 	} else {
-		const feature = features.find((f) => f.id == priceItem.feature_id);
+		const feature = features.find((f) => f.id === priceItem.feature_id);
 		const texts = featurePricetoPricecnItem({
 			feature,
 			item: priceItem,
@@ -169,7 +169,7 @@ const featureToPricecnItem = ({
 		});
 	}
 	// 1. If feature
-	if (item.feature_type == ProductItemFeatureType.Static) {
+	if (item.feature_type === ProductItemFeatureType.Static) {
 		return {
 			primaryText: feature.name,
 		};
@@ -181,9 +181,9 @@ const featureToPricecnItem = ({
 	});
 
 	const includedUsageTxt =
-		item.included_usage == Infinite
+		item.included_usage === Infinite
 			? "Unlimited "
-			: nullish(item.included_usage) || item.included_usage == 0
+			: nullish(item.included_usage) || item.included_usage === 0
 				? ""
 				: `${numberWithCommas(item.included_usage!)} `;
 
@@ -232,7 +232,7 @@ const featurePricetoPricecnItem = ({
 	const priceStr = getPriceText({ item, org });
 	const billingFeatureName = getFeatureName({
 		feature,
-		plural: typeof item.billing_units == "number" && item.billing_units > 1,
+		plural: typeof item.billing_units === "number" && item.billing_units > 1,
 	});
 
 	let priceStr2 = "";
@@ -274,13 +274,13 @@ const getAttachScenario = ({
 	}
 
 	// 1. If current product is the same as the product, return active
-	if (curMainProduct?.product.id == fullProduct.id) {
+	if (curMainProduct?.product.id === fullProduct.id) {
 		if (curMainProduct.canceled_at != null) {
 			return AttachScenario.Renew;
 		} else return AttachScenario.Active;
 	}
 
-	if (curScheduledProduct?.product.id == fullProduct.id) {
+	if (curScheduledProduct?.product.id === fullProduct.id) {
 		return AttachScenario.Scheduled;
 	}
 
@@ -339,7 +339,7 @@ export const toPricecnProduct = async ({
 			};
 		}
 
-		const feature = features.find((f) => f.id == i.feature_id);
+		const feature = features.find((f) => f.id === i.feature_id);
 		if (isFeaturePriceItem(i)) {
 			data = featurePricetoPricecnItem({
 				feature,
@@ -362,8 +362,8 @@ export const toPricecnProduct = async ({
 		};
 	});
 
-	const isCurrent = curMainProduct?.product.id == product.id;
-	const isScheduled = curScheduledProduct?.product.id == product.id;
+	const isCurrent = curMainProduct?.product.id === product.id;
+	const isScheduled = curScheduledProduct?.product.id === product.id;
 
 	let buttonText = "Get Started";
 
@@ -385,7 +385,7 @@ export const toPricecnProduct = async ({
 	let baseVariant = null;
 	if (fullProduct.base_variant_id) {
 		baseVariant = otherProducts.find(
-			(p) => p.id == fullProduct.base_variant_id,
+			(p) => p.id === fullProduct.base_variant_id,
 		);
 	}
 
@@ -397,25 +397,25 @@ export const toPricecnProduct = async ({
 	let intervalGroup = null;
 	if (
 		baseVariant ||
-		otherProducts.some((p) => p.base_variant_id == product.id)
+		otherProducts.some((p) => p.base_variant_id === product.id)
 	) {
 		const intervalSet = getLargestInterval({ prices: fullProduct.prices });
 		intervalGroup = intervalSet?.interval;
 	}
 
 	let trialAvailable = false;
-	if (product.free_trial && fullCus) {
+	if (fullProduct.free_trial && fullCus) {
 		let trial = await getFreeTrialAfterFingerprint({
 			db,
-			freeTrial: product.free_trial,
+			freeTrial: fullProduct.free_trial,
 			fingerprint: fullCus.fingerprint,
 			internalCustomerId: fullCus.internal_id,
 			multipleAllowed: org.config.multiple_trials,
 			productId: product.id,
 		});
 
-		if (scenario == AttachScenario.Downgrade) trial = null;
-		trialAvailable = notNullish(trial) ? true : false;
+		if (scenario === AttachScenario.Downgrade) trial = null;
+		trialAvailable = !!notNullish(trial);
 	}
 
 	return {

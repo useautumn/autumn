@@ -1,117 +1,105 @@
 import type {
-	ApiBalance,
+	ApiBalanceBreakdownV1,
+	ApiBalanceV1,
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
-	type ApiBalanceBreakdown,
-	ApiBalanceBreakdownSchema,
-	ApiBalanceSchema,
 	CheckExpand,
 	CusExpand,
 	cusEntsToAdjustment,
 	cusEntsToAllowance,
 	cusEntsToCurrentBalance,
 	cusEntsToMaxPurchase,
+	cusEntsToNextResetAt,
 	cusEntsToPlanId,
 	cusEntsToPrepaidQuantity,
-	cusEntsToPurchasedBalance,
 	cusEntsToReset,
+	cusEntsToRolloverBalance,
+	cusEntsToRolloverGranted,
 	cusEntsToRollovers,
-	cusEntToKey,
+	cusEntsToRolloverUsage,
+	cusEntsToUsage,
+	customerEntitlementToBalancePrice,
 	dbToApiFeatureV1,
 	expandIncludes,
 	type Feature,
 	FeatureType,
 	getCusEntBalance,
+	isUnlimitedCusEnt,
 	nullish,
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import type { CusFeatureLegacyData } from "../../../../../../../shared/api/customers/cusFeatures/cusFeatureLegacyData.js";
 import {
 	getBooleanApiBalance,
 	getUnlimitedApiBalance,
 } from "./apiBalanceUtils.js";
 
-const cusEntsToBreakdown = ({
-	ctx,
+const getApiBalanceBreakdownItem = ({
 	fullCus,
-	cusEnts,
+	customerEntitlement,
 }: {
-	ctx: RequestContext;
-	cusEnts: FullCusEntWithFullCusProduct[];
 	fullCus: FullCustomer;
-}): {
-	key: string;
-	breakdown: ApiBalanceBreakdown;
-	prepaidQuantity: number;
-}[] => {
+	customerEntitlement: FullCusEntWithFullCusProduct;
+}): ApiBalanceBreakdownV1 => {
 	const entityId = fullCus.entity?.id;
 
-	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
-	for (const cusEnt of cusEnts) {
-		const key = cusEntToKey({ cusEnt });
-		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
-	}
+	const planId = cusEntsToPlanId({ cusEnts: [customerEntitlement] });
 
-	const breakdown: {
-		key: string;
-		breakdown: ApiBalanceBreakdown;
-		prepaidQuantity: number;
-	}[] = [];
+	// Included grant
+	const allowance = cusEntsToAllowance({
+		cusEnts: [customerEntitlement],
+		entityId,
+	});
+	const adjustment = cusEntsToAdjustment({
+		cusEnts: [customerEntitlement],
+		entityId,
+	});
+	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
 
-	for (const key in keyToCusEnts) {
-		const cusEnts = keyToCusEnts[key];
+	// Prepaid grant
+	const prepaidGrant = cusEntsToPrepaidQuantity({
+		cusEnts: [customerEntitlement],
+		sumAcrossEntities: nullish(entityId),
+	});
 
-		const feature = cusEnts[0].entitlement.feature;
-		const reset = cusEntsToReset({ cusEnts, feature });
+	// Remaining
+	const remaining = cusEntsToCurrentBalance({
+		cusEnts: [customerEntitlement],
+		entityId,
+	});
 
-		const { data: breakdownItem } = getApiBalance({
-			ctx,
-			fullCus,
-			cusEnts,
-			feature,
-			includeRollovers: false,
-			includeBreakdown: false,
-		});
+	// Usage
+	const usage = cusEntsToUsage({ cusEnts: [customerEntitlement], entityId });
 
-		const prepaidQuantity = cusEntsToPrepaidQuantity({
-			cusEnts,
-			sumAcrossEntities: nullish(entityId),
-		});
+	// Unlimited
+	const unlimited = isUnlimitedCusEnt(customerEntitlement);
 
-		const planId = cusEntsToPlanId({ cusEnts });
+	// Reset
+	const reset = cusEntsToReset({ cusEnts: [customerEntitlement] });
 
-		// Get expires_at from the first cusEnt (since key is cusEnt.id, there's only one)
-		const expiresAt = cusEnts[0]?.expires_at ?? null;
+	// Price
+	const price = customerEntitlementToBalancePrice({ customerEntitlement });
 
-		breakdown.push({
-			key,
-			breakdown: ApiBalanceBreakdownSchema.parse({
-				id: key,
+	const expiresAt = customerEntitlement.expires_at;
 
-				plan_id: planId,
-				granted_balance: breakdownItem.granted_balance,
-				purchased_balance: breakdownItem.purchased_balance,
-				current_balance: breakdownItem.current_balance,
-				usage: breakdownItem.usage,
+	return {
+		id: customerEntitlement.id,
+		plan_id: planId,
 
-				max_purchase: breakdownItem.max_purchase,
-				overage_allowed: breakdownItem.overage_allowed,
+		included_grant: includedGrant,
+		prepaid_grant: prepaidGrant,
+		remaining: remaining,
+		usage: usage,
+		unlimited: unlimited,
 
-				reset: reset,
-
-				prepaid_quantity: prepaidQuantity,
-				expires_at: expiresAt,
-			}),
-			prepaidQuantity: prepaidQuantity,
-		});
-	}
-
-	return breakdown;
+		reset: reset,
+		price: price,
+		expires_at: expiresAt,
+	};
 };
 
 export const getApiBalance = ({
@@ -119,16 +107,12 @@ export const getApiBalance = ({
 	fullCus,
 	cusEnts,
 	feature,
-	includeRollovers = true,
-	includeBreakdown = true,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
-	includeRollovers?: boolean;
-	includeBreakdown?: boolean;
-}): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
+}): { data: ApiBalanceV1 } => {
 	const entityId = fullCus.entity?.id;
 
 	const apiFeature = expandIncludes({
@@ -145,7 +129,6 @@ export const getApiBalance = ({
 				cusEnts,
 				apiFeature,
 			}),
-			legacyData: undefined,
 		};
 	}
 
@@ -159,7 +142,6 @@ export const getApiBalance = ({
 	if (unlimited) {
 		return {
 			data: getUnlimitedApiBalance({ apiFeature, cusEnts }),
-			legacyData: undefined,
 		};
 	}
 
@@ -170,108 +152,59 @@ export const getApiBalance = ({
 		}),
 	);
 
+	// Build breakdown items - one per customer entitlement
+	const breakdownItems = cusEnts.map((cusEnt) =>
+		getApiBalanceBreakdownItem({ fullCus, customerEntitlement: cusEnt }),
+	);
+
+	// Calculate totals from breakdown
+	const totalGranted = sumValues(
+		breakdownItems.map((item) =>
+			new Decimal(item.included_grant).add(item.prepaid_grant).toNumber(),
+		),
+	);
+
+	const totalUsage = sumValues(breakdownItems.map((item) => item.usage));
+
+	const totalRemaining = sumValues(
+		breakdownItems.map((item) => item.remaining),
+	);
+
 	const totalMaxPurchase = cusEntsToMaxPurchase({ cusEnts, entityId });
 
-	const totalAllowanceWithRollovers = cusEntsToAllowance({
-		cusEnts,
-		entityId,
-		withRollovers: includeRollovers,
-	});
+	const nextResetAt = cusEntsToNextResetAt({ cusEnts });
 
-	const totalAdjustment = cusEntsToAdjustment({
-		cusEnts,
-		entityId,
-	});
-
-	const grantedBalance = new Decimal(totalAllowanceWithRollovers)
-		.add(totalAdjustment)
-		.toNumber();
-
-	// 2. Purchased balance
-	const totalPurchasedBalance = cusEntsToPurchasedBalance({
-		cusEnts,
-		entityId,
-	});
-
-	// 3. Current balance
-	let currentBalance = cusEntsToCurrentBalance({
-		cusEnts,
-		entityId,
-		withRollovers: includeRollovers,
-	});
-
-	currentBalance = new Decimal(currentBalance).add(totalUnused).toNumber();
-
-	// 4. Usage
-	const totalUsage = new Decimal(grantedBalance)
-		.add(totalPurchasedBalance)
-		.sub(currentBalance)
-		.toNumber();
-
-	const reset = cusEntsToReset({ cusEnts, feature });
-	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
-
-	const breakdown = includeBreakdown
-		? cusEntsToBreakdown({ ctx, fullCus, cusEnts })
-		: [];
-
-	const planId = cusEntsToPlanId({ cusEnts });
-
-	const masterKey = breakdown ? null : cusEntToKey({ cusEnt: cusEnts[0] });
-
-	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
-		feature: expandIncludes({
-			expand: ctx.expand,
-			includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
-		})
-			? apiFeature
-			: undefined,
-
-		feature_id: feature.id,
-
-		unlimited: false,
-
-		// Granted balance = granted balance + additional granted balance
-		granted_balance: grantedBalance,
-
-		// Purchased balance = negative balance
-		purchased_balance: totalPurchasedBalance,
-
-		// Current balance = balance + additional balance
-		current_balance: currentBalance,
-
-		// Usage = granted balance + purchased balance - current balance
-		usage: totalUsage,
-
-		// Max purchase...
-		overage_allowed: usageAllowed ?? false,
-
-		max_purchase: totalMaxPurchase,
-		reset: reset,
-
-		plan_id: planId,
-		breakdown: breakdown.map((item) => item.breakdown),
-		rollovers,
-	} satisfies ApiBalance);
-
-	if (error) throw error;
-
-	// Return in latest format - version transformation happens at Customer level
-	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({
-		cusEnts,
-		sumAcrossEntities: nullish(entityId),
-	});
-	const breakdownLegacyData = breakdown.map((item) => ({
-		key: item.key,
-		prepaid_quantity: item.prepaidQuantity,
-	}));
+	// Rollover calculations
+	const totalRollovers = cusEntsToRollovers({ cusEnts, entityId });
+	const totalRolloverGranted = cusEntsToRolloverGranted({ cusEnts, entityId });
+	const totalRolloverBalance = cusEntsToRolloverBalance({ cusEnts, entityId });
+	const totalRolloverUsage = cusEntsToRolloverUsage({ cusEnts, entityId });
 
 	return {
-		data: apiBalance,
-		legacyData: {
-			key: masterKey,
-			prepaid_quantity: totalPrepaidQuantity,
-			breakdown_legacy_data: breakdownLegacyData,
+		data: {
+			feature_id: feature.id,
+			feature: apiFeature,
+
+			granted: new Decimal(totalGranted).add(totalRolloverGranted).toNumber(),
+
+			remaining: new Decimal(totalRemaining)
+				.add(totalRolloverBalance)
+				.add(totalUnused)
+				.toNumber(),
+
+			usage: new Decimal(totalUsage)
+				.add(totalRolloverUsage)
+				.sub(totalUnused)
+				.toNumber(),
+
+			unlimited: unlimited,
+			overage_allowed: usageAllowed ?? false,
+
+			max_purchase: totalMaxPurchase,
+			next_reset_at: nextResetAt,
+
+			breakdown: breakdownItems,
+			rollovers: totalRollovers,
 		},
 	};
 };

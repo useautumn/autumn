@@ -20,18 +20,18 @@ import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/it
 import type { SharedContext } from "../../../../types/sharedContext.js";
 import {
 	type ApiFeatureV0,
-	type CreateBalanceParams,
+	type CreateBalanceParamsV0,
 	FeatureNotFoundError,
 } from "../../../models.js";
 import { ApiVersion } from "../../../versionUtils/ApiVersion.js";
 import { ApiVersionClass } from "../../../versionUtils/ApiVersionClass.js";
-import type { CreatePlanItemParamsV0 } from "../crud/createPlanItemV0Params.js";
+
 import { hasPrice, hasResetInterval } from "../utils/classifyPlanItemV0.js";
 
 const planItemV0ToProductItemInterval = ({
 	planItemV0,
 }: {
-	planItemV0: ApiPlanItemV0 | CreatePlanItemParamsV0;
+	planItemV0: ApiPlanItemV0;
 }) => {
 	// 1. If feature has reset interval, use it
 	if (hasResetInterval(planItemV0)) {
@@ -51,7 +51,7 @@ const planItemV0ToProductItemInterval = ({
 const planItemV0ToItemConfig = ({
 	planItemV0,
 }: {
-	planItemV0: ApiPlanItemV0 | CreatePlanItemParamsV0;
+	planItemV0: ApiPlanItemV0;
 }) => {
 	const toItemRollover = () => {
 		if (planItemV0.rollover) {
@@ -91,10 +91,10 @@ const planItemV0ToItemConfig = ({
 /**
  * Augmented CreateBalanceParams that can be used for planFeaturesToItems function
  */
-type CreateBalanceForPlanFeatureMap = CreateBalanceParams & {
+type CreateBalanceForPlanFeatureMap = CreateBalanceParamsV0 & {
 	price?: undefined;
 } & {
-	reset?: CreateBalanceParams["reset"] & { reset_when_enabled: true };
+	reset?: CreateBalanceParamsV0["reset"] & { reset_when_enabled: true };
 };
 
 export const planItemV0ToProductItem = ({
@@ -102,10 +102,7 @@ export const planItemV0ToProductItem = ({
 	planItem,
 }: {
 	ctx: SharedContext;
-	planItem:
-		| ApiPlanItemV0
-		| CreatePlanItemParamsV0
-		| CreateBalanceForPlanFeatureMap;
+	planItem: ApiPlanItemV0;
 }): ProductItem => {
 	const { features } = ctx;
 

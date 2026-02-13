@@ -37,9 +37,9 @@ export const handlePlanHasCustomersV2 = createRoute({
 		// V2.0+ (CLI): body is CreatePlanParams, convert to ProductV2
 		// < V2.0 (Dashboard): body is already ProductV2
 		const productV2 = apiVersion.gte(ApiVersion.V2_0)
-			? (apiPlan.map.v0ToProductV2({
+			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,
-					plan: body,
+					params: body,
 				}) as ProductV2)
 			: (body as ProductV2);
 

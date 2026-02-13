@@ -29,7 +29,9 @@ import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
+import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange.js";
 import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange.js";
+import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange.js";
 import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange.js";
 // Import attach changes
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange.js";
@@ -38,9 +40,11 @@ import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
-	V2_0_PlanChanges, // Transforms Plan TO V2.1 format from V2.0 format
-	V2_0_CustomerChange, // Transforms Customer TO V2.1 format from V2.0 format
-	V2_0_EntityChange, // Transforms Entity TO V2.1 format from V2.0 format
+	V2_0_PlanChanges, // Transforms Plan TO V2.0 format from V2.1 format
+	V2_0_CustomerChange, // Transforms Customer TO V2.0 format from V2.1 format
+	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
+	V2_0_CheckChange, // Transforms Check TO V2.0 format from V2.1 format
+	V2_0_TrackChange, // Transforms Track TO V2.0 format from V2.1 format
 ];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [

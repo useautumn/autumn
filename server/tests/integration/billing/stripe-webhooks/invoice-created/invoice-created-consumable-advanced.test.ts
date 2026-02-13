@@ -214,6 +214,6 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: invoice total
 	});
 
 	expect(invoices.length).toBe(2);
-	expect(invoices[1].status).toBe(InvoiceStatus.Draft);
-	expect(invoices[1].total).toBe(20 + totalOverage);
+	expect(invoices[0].status).toBe(InvoiceStatus.Draft);
+	expect(invoices[0].total).toBe(20 + totalOverage);
 });

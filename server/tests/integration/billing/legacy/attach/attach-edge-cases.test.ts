@@ -35,7 +35,7 @@ test.concurrent(`${chalk.yellowBright("attach: alipay payment method returns che
 	expect(res.checkout_url).toContain("checkout.stripe.com");
 });
 
-test.concurrent(`${chalk.yellowBright("attach: pro then switch to alipay, add premium addon")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach: pro then upgrade to premium with alipay")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -50,7 +50,7 @@ test.concurrent(`${chalk.yellowBright("attach: pro then switch to alipay, add pr
 	});
 
 	const { customerId, autumnV1, ctx, customer } = await initScenario({
-		customerId: "alipay-addon-2",
+		customerId: "alipay-upgrade",
 		setup: [
 			s.customer({ withDefault: false, paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
