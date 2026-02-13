@@ -1,4 +1,4 @@
-import type { ApiPlanFeature, CheckoutChange } from "@autumn/shared";
+import type { ApiPlanItemV1, CheckoutChange } from "@autumn/shared";
 import { CheckIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { Card } from "@/components/ui/card";
@@ -15,14 +15,14 @@ import { formatAmount } from "@/utils/formatUtils";
 import { CardBackground } from "@/components/checkout/layout/CardBackground";
 import { QuantityInput } from "../shared/QuantityInput";
 
-function categorizeFeatures(features: ApiPlanFeature[]): {
-	prepaid: ApiPlanFeature[];
-	payPerUse: ApiPlanFeature[];
-	included: ApiPlanFeature[];
+function categorizeFeatures(features: ApiPlanItemV1[]): {
+	prepaid: ApiPlanItemV1[];
+	payPerUse: ApiPlanItemV1[];
+	included: ApiPlanItemV1[];
 } {
-	const prepaid: ApiPlanFeature[] = [];
-	const payPerUse: ApiPlanFeature[] = [];
-	const included: ApiPlanFeature[] = [];
+	const prepaid: ApiPlanItemV1[] = [];
+	const payPerUse: ApiPlanItemV1[] = [];
+	const included: ApiPlanItemV1[] = [];
 
 	for (const feature of features) {
 		if (!feature.price) {
@@ -30,7 +30,7 @@ function categorizeFeatures(features: ApiPlanFeature[]): {
 			continue;
 		}
 
-		if (feature.price.usage_model === "prepaid") {
+		if (feature.price.billing_method === "prepaid") {
 			prepaid.push(feature);
 		} else {
 			payPerUse.push(feature);
@@ -55,12 +55,12 @@ function formatInterval(interval: string): string {
 	}
 }
 
-function getFeatureName(feature: ApiPlanFeature): string {
+function getFeatureName(feature: ApiPlanItemV1): string {
 	return feature.feature?.name || feature.feature_id;
 }
 
 function getFeatureUnitDisplay(
-	feature: ApiPlanFeature,
+	feature: ApiPlanItemV1,
 	plural: boolean,
 ): string {
 	const display = feature.feature?.display;
@@ -77,7 +77,7 @@ interface PlanSelectionCardProps {
 export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 	const { currency, quantities, handleQuantityChange } = useCheckoutContext();
 	const { plan, feature_quantities } = change;
-	const { prepaid, payPerUse, included } = categorizeFeatures(plan.features);
+	const { prepaid, payPerUse, included } = categorizeFeatures(plan.items);
 	const hasPricedFeatures = prepaid.length > 0 || payPerUse.length > 0;
 	const hasIncludedFeatures = included.length > 0;
 
@@ -291,13 +291,13 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 											{getFeatureName(feature)}
 										</span>
 									</div>
-								{feature.granted_balance > 0 || feature.unlimited ? (
-									<span className="text-xs text-muted-foreground shrink-0">
-										{feature.unlimited
-											? "Unlimited"
-											: `${feature.granted_balance} included`}
-									</span>
-								) : null}
+							{feature.included > 0 || feature.unlimited ? (
+								<span className="text-xs text-muted-foreground shrink-0">
+									{feature.unlimited
+										? "Unlimited"
+										: `${feature.included} included`}
+								</span>
+							) : null}
 								</div>
 							</motion.div>
 						))}
