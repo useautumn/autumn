@@ -13,7 +13,14 @@ export const handleGetProducts = createRoute({
 	handler: async (c) => {
 		const { db, org, env, features } = c.get("ctx");
 
-		const products = await ProductService.listFull({ db, orgId: org.id, env });
+		const group = c.req.query("group");
+
+		const products = await ProductService.listFull({
+			db,
+			orgId: org.id,
+			env,
+			group,
+		});
 
 		const groupToDefaults = getGroupToDefaults({ defaultProds: products });
 
