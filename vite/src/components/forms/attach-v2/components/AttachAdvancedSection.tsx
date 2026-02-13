@@ -1,5 +1,5 @@
-import type { PlanTiming } from "@autumn/shared";
 import {
+	CalendarCheckIcon,
 	CalendarIcon,
 	CaretDownIcon,
 	LightningIcon,
@@ -7,7 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Transition, Variants } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
@@ -25,6 +25,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
 import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
 
@@ -65,45 +66,32 @@ const ACCORDION_ITEM: Variants = {
 
 export function AttachAdvancedSection() {
 	const [isOpen, setIsOpen] = useState(false);
-	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { planSchedule, discounts } = formValues;
-	const previewData = previewQuery.data;
+	const { form, formValues } = useAttachFormContext();
+	const { discounts } = formValues;
 
-	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
+	const {
+		hasOutgoing,
+		showBillingBehavior,
+		effectiveBillingBehavior,
+		hasCustomSchedule,
+		hasCustomBilling,
+		isImmediateSelected,
+		isEndOfCycleSelected,
+		handleScheduleChange,
+		handleBillingBehaviorChange,
+	} = usePlanScheduleField();
 
-	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData || !hasOutgoing) return "immediate";
-
-		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
-		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
-		const isUpgrade = incomingPrice > outgoingPrice;
-
-		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData, hasOutgoing]);
-
-	// Force "immediate" when there's no current product to transition from
-	const effectivePlanSchedule = !hasOutgoing
-		? "immediate"
-		: (planSchedule ?? defaultPlanSchedule);
-	const hasCustomSchedule =
-		planSchedule !== null && planSchedule !== defaultPlanSchedule;
 	const hasDiscounts = discounts.some((d) => {
 		if ("reward_id" in d) return d.reward_id !== "";
 		if ("promotion_code" in d) return d.promotion_code !== "";
 		return false;
 	});
-	const hasCustomSettings = hasCustomSchedule || hasDiscounts;
-
-	const handleScheduleChange = (value: PlanTiming) => {
-		form.setFieldValue("planSchedule", value);
-	};
+	const hasCustomSettings =
+		hasCustomSchedule || hasCustomBilling || hasDiscounts;
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
 	};
-
-	const isImmediateSelected = effectivePlanSchedule === "immediate";
-	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
 
 	const getCustomSettingsTooltip = (): string => {
 		const parts: string[] = [];
@@ -111,6 +99,12 @@ export function AttachAdvancedSection() {
 		if (hasCustomSchedule) {
 			parts.push(
 				`Plan schedule: ${isImmediateSelected ? "Immediate" : "End of cycle"}`,
+			);
+		}
+
+		if (hasCustomBilling) {
+			parts.push(
+				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "Next cycle" : "Prorate"}`,
 			);
 		}
 
@@ -251,6 +245,55 @@ export function AttachAdvancedSection() {
 										</div>
 									</div>
 								</motion.div>
+
+								{/* Billing Behavior — only when plan schedule is immediate */}
+								{showBillingBehavior && (
+									<motion.div variants={ACCORDION_ITEM}>
+										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
+											<span className="text-sm text-t2">Billing Behavior</span>
+											<div className="flex">
+												<IconCheckbox
+													icon={<LightningIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={
+														effectiveBillingBehavior === "prorate_immediately"
+													}
+													onCheckedChange={() =>
+														handleBillingBehaviorChange("prorate_immediately")
+													}
+													className={cn(
+														"rounded-r-none",
+														effectiveBillingBehavior !==
+															"prorate_immediately" && "border-r-0",
+													)}
+												>
+													Prorate
+												</IconCheckbox>
+												<IconCheckbox
+													icon={<CalendarCheckIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={
+														effectiveBillingBehavior === "next_cycle_only"
+													}
+													onCheckedChange={() =>
+														handleBillingBehaviorChange("next_cycle_only")
+													}
+													className={cn(
+														"rounded-l-none",
+														effectiveBillingBehavior !== "next_cycle_only" &&
+															"border-l-0",
+													)}
+												>
+													Next cycle
+												</IconCheckbox>
+											</div>
+										</div>
+									</motion.div>
+								)}
 
 								{/* Discounts */}
 								<motion.div variants={ACCORDION_ITEM}>

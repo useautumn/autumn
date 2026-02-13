@@ -102,6 +102,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
 		discounts,
 	} = formValues;
 
@@ -183,6 +184,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
 		discounts,
 	});
 
