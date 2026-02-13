@@ -9,8 +9,8 @@ import { ApiCustomerV5Schema } from "../apiCustomerV5.js";
 import type { ApiBalance } from "../cusFeatures/apiBalance.js";
 import { balanceV1ToV0 } from "../cusFeatures/mappers/balanceV1ToV0.js";
 import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
+import { apiPurchaseV0ToSubscriptionV0 } from "../cusPlans/mappers/apiPurchaseV0ToSubscriptionV0.js";
 import { apiSubscriptionV1ToV0 } from "../cusPlans/mappers/apiSubscriptionV1ToV0.js";
-import { CustomerLegacyDataSchema } from "../customerLegacyData.js";
 
 export const V2_0_CustomerChange = defineVersionChange({
 	name: "V2_0 Customer Change",
@@ -20,26 +20,18 @@ export const V2_0_CustomerChange = defineVersionChange({
 	affectedResources: [AffectedResource.Customer],
 	newSchema: ApiCustomerV5Schema,
 	oldSchema: ApiCustomerSchema,
-	legacyDataSchema: CustomerLegacyDataSchema,
 	affectsResponse: true,
 
 	transformResponse: ({
 		input,
-		legacyData,
 	}: {
 		input: z.infer<typeof ApiCustomerV5Schema>;
-		legacyData?: z.infer<typeof CustomerLegacyDataSchema>;
 	}): z.infer<typeof ApiCustomerSchema> => {
 		// Transform balances from V1 to V0
 		const transformedBalances: Record<string, ApiBalance> = {};
 		if (input.balances) {
 			for (const [featureId, balance] of Object.entries(input.balances)) {
-				// Get per-feature legacy data for this balance
-				const featureLegacyData = legacyData?.cusFeatureLegacyData?.[featureId];
-				transformedBalances[featureId] = balanceV1ToV0({
-					input: balance,
-					legacyData: featureLegacyData,
-				});
+				transformedBalances[featureId] = balanceV1ToV0({ input: balance });
 			}
 		}
 
@@ -56,12 +48,17 @@ export const V2_0_CustomerChange = defineVersionChange({
 				.filter((sub) => sub.status === "scheduled")
 				.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
 
+		// Convert purchases to subscriptions and add to subscriptions array
+		const purchasesAsSubscriptions: ApiSubscription[] = (
+			input.purchases ?? []
+		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ input: purchase }));
+
 		// Return V0 customer format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;
 
 		return {
 			...rest,
-			subscriptions: transformedSubscriptions,
+			subscriptions: [...transformedSubscriptions, ...purchasesAsSubscriptions],
 			scheduled_subscriptions: transformedScheduledSubscriptions,
 			balances: transformedBalances,
 		};

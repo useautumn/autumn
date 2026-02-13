@@ -139,7 +139,7 @@ export const handleProductsUpdated = async ({
 			add: [
 				CusExpand.BalancesFeature,
 				CusExpand.SubscriptionsPlan,
-				CusExpand.ScheduledSubscriptionsPlan,
+				CusExpand.PurchasesPlan,
 			],
 		});
 	}
@@ -147,6 +147,9 @@ export const handleProductsUpdated = async ({
 	const { apiCustomer, legacyData: cusLegacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus,
+		expandParams: {
+			plan: true,
+		},
 	});
 
 	const versionedCustomer = applyResponseVersionChanges<

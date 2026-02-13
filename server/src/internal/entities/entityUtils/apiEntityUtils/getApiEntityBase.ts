@@ -43,17 +43,19 @@ export const getApiEntityBase = async ({
 	};
 
 	// Reuse existing customer functions with filtered products
-	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
-		await getApiBalances({
-			ctx,
-			fullCus: filteredFullCus,
-		});
+	const { data: apiBalances } = await getApiBalances({
+		ctx,
+		fullCus: filteredFullCus,
+	});
 
-	const { data: apiSubscriptions, legacyData: cusProductLegacyData } =
-		await getApiSubscriptions({
-			ctx,
-			fullCus: filteredFullCus,
-		});
+	const {
+		subscriptions: apiSubscriptions,
+		purchases: apiPurchases,
+		legacyData: cusProductLegacyData,
+	} = await getApiSubscriptions({
+		ctx,
+		fullCus: filteredFullCus,
+	});
 
 	const apiEntity = ApiEntityV2Schema.extend({
 		autumn_id: z.string().optional(),
@@ -67,6 +69,7 @@ export const getApiEntityBase = async ({
 		env: fullCus.env,
 
 		subscriptions: apiSubscriptions,
+		purchases: apiPurchases,
 		balances: apiBalances,
 	} satisfies ApiEntityV2);
 
@@ -74,7 +77,6 @@ export const getApiEntityBase = async ({
 		apiEntity,
 		legacyData: {
 			cusProductLegacyData,
-			cusFeatureLegacyData,
 		},
 	};
 };

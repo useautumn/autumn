@@ -85,7 +85,6 @@ export const V1_2_CustomerChange = defineVersionChange({
 		for (const [featureId, feature] of Object.entries(input.balances)) {
 			v3_features[featureId] = transformBalanceToCusFeatureV3({
 				input: feature,
-				legacyData: legacyData?.cusFeatureLegacyData[featureId],
 			});
 		}
 

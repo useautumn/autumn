@@ -2,7 +2,6 @@ import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
 	type CheckParams,
-	type CustomerLegacyData,
 	type Feature,
 	FeatureNotFoundError,
 	InternalError,
@@ -105,7 +104,6 @@ export const getCheckData = async ({
 	}
 
 	let apiEntity: ApiCustomerV5 | ApiEntityV2 | undefined;
-	let legacyData: CustomerLegacyData | undefined;
 	const start = performance.now();
 	const fullCustomer = await getOrCreateCachedFullCustomer({
 		ctx,
@@ -113,28 +111,24 @@ export const getCheckData = async ({
 
 		source: "getCheckData",
 	});
-	const { apiCustomer, legacyData: legacyDataResult } =
-		await getApiCustomerBase({
-			ctx,
-			fullCus: fullCustomer,
-			withAutumnId: true,
-		});
+	const { apiCustomer } = await getApiCustomerBase({
+		ctx,
+		fullCus: fullCustomer,
+		withAutumnId: true,
+	});
 	ctx.logger.debug(
 		`[check] getOrCreateCachedFullCustomer took ${performance.now() - start}ms`,
 	);
 
 	apiEntity = apiCustomer;
-	legacyData = legacyDataResult;
 	if (entity_id && fullCustomer.entity) {
-		const { apiEntity: apiEntityResult, legacyData: legacyDataResult } =
-			await getApiEntityBase({
-				ctx,
-				entity: fullCustomer.entity,
-				fullCus: fullCustomer,
-			});
+		const { apiEntity: apiEntityResult } = await getApiEntityBase({
+			ctx,
+			entity: fullCustomer.entity,
+			fullCus: fullCustomer,
+		});
 
 		apiEntity = apiEntityResult;
-		legacyData = legacyDataResult;
 	}
 
 	if (!apiEntity) {
@@ -151,8 +145,6 @@ export const getCheckData = async ({
 	});
 
 	const apiBalance = apiEntity.balances?.[featureToUse.id];
-	const cusFeatureLegacyData =
-		legacyData?.cusFeatureLegacyData?.[featureToUse.id];
 
 	return {
 		customerId: customer_id,
@@ -160,6 +152,5 @@ export const getCheckData = async ({
 		apiBalance,
 		originalFeature: feature,
 		featureToUse,
-		cusFeatureLegacyData,
 	};
 };

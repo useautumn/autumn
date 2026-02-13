@@ -1,94 +1,11 @@
 import {
-	type ApiBalance,
-	type ApiBalanceReset,
-	type ApiBalanceRollover,
+	type ApiBalanceBreakdownV1,
+	type ApiBalanceV1,
 	type ApiFeatureV1,
 	cusEntsToPlanId,
-	entIntvToResetIntv,
-	type Feature,
+	cusEntsToRollovers,
 	type FullCusEntWithFullCusProduct,
-	getRolloverFields,
-	isContUseFeature,
-	notNullish,
-	toIntervalCountResponse,
 } from "@autumn/shared";
-
-const cusEntsToNextResetAt = ({
-	cusEnts,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-}) => {
-	const result = cusEnts.reduce((acc, curr) => {
-		if (curr.next_reset_at && curr.next_reset_at < acc) {
-			return curr.next_reset_at;
-		}
-		return acc;
-	}, Infinity);
-
-	if (result === Infinity) return null;
-
-	return result;
-};
-
-const cusEntsToReset = ({
-	cusEnts,
-	feature,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-	feature: Feature;
-}): ApiBalanceReset | null => {
-	// 1. If feature is allocated, null
-	if (isContUseFeature({ feature })) return null;
-
-	// Check if there are multiple intervals
-	const uniqueIntervals = [
-		...new Set(cusEnts.map((cusEnt) => cusEnt.entitlement.interval)),
-	];
-
-	if (uniqueIntervals.length > 1) {
-		return { interval: "multiple", interval_count: undefined, resets_at: null };
-	}
-
-	// 3. Only 1 interval
-	return {
-		interval: entIntvToResetIntv({
-			entInterval: cusEnts[0].entitlement.interval,
-		}),
-
-		interval_count: toIntervalCountResponse({
-			intervalCount: cusEnts[0].entitlement.interval_count,
-		}),
-
-		resets_at: cusEntsToNextResetAt({ cusEnts }),
-	};
-};
-
-const cusEntsToRollovers = ({
-	cusEnts,
-	entityId,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-	entityId?: string;
-}): ApiBalanceRollover[] | undefined => {
-	// If all cus ents no rollover, return undefined
-
-	if (cusEnts.every((cusEnt) => !cusEnt.entitlement.rollover)) {
-		return undefined;
-	}
-
-	return cusEnts
-		.map((cusEnt) => {
-			const rolloverFields = getRolloverFields({ cusEnt, entityId });
-			if (rolloverFields)
-				return rolloverFields.rollovers.map((rollover) => ({
-					balance: rollover.balance,
-					expires_at: rollover.expires_at || 0,
-				}));
-			return [];
-		})
-		.filter(notNullish)
-		.flat();
-};
 
 export const getBooleanApiBalance = ({
 	cusEnts,
@@ -96,7 +13,7 @@ export const getBooleanApiBalance = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	apiFeature?: ApiFeatureV1;
-}): ApiBalance => {
+}): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
@@ -107,33 +24,30 @@ export const getBooleanApiBalance = ({
 
 		unlimited: false,
 
-		granted_balance: 0,
-		purchased_balance: 0,
-		current_balance: 0,
+		granted: 0,
+		remaining: 0,
 		usage: 0,
 
 		overage_allowed: false,
 		max_purchase: null,
-		reset: null,
+		next_reset_at: null,
 
-		plan_id: planId,
 		breakdown: [
 			{
 				id,
 				plan_id: planId,
-				granted_balance: 0,
-				purchased_balance: 0,
-				current_balance: 0,
+				included_grant: 0,
+				prepaid_grant: 0,
+				remaining: 0,
 				usage: 0,
-				overage_allowed: false,
-				max_purchase: null,
+				unlimited: false,
 				reset: null,
-				prepaid_quantity: 0,
 				expires_at: null,
-			},
+				price: null,
+			} satisfies ApiBalanceBreakdownV1,
 		],
 		rollovers: undefined,
-	} satisfies ApiBalance;
+	} satisfies ApiBalanceV1;
 };
 
 export const getUnlimitedApiBalance = ({
@@ -142,10 +56,11 @@ export const getUnlimitedApiBalance = ({
 }: {
 	apiFeature?: ApiFeatureV1;
 	cusEnts: FullCusEntWithFullCusProduct[];
-}): ApiBalance => {
+}): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
+	const entityId = undefined; // Unlimited features don't have entity context
 
 	return {
 		feature: apiFeature,
@@ -153,31 +68,28 @@ export const getUnlimitedApiBalance = ({
 
 		unlimited: true,
 
-		granted_balance: 0,
-		purchased_balance: 0,
-		current_balance: 0,
+		granted: 0,
+		remaining: 0,
 		usage: 0,
 
-		reset: null,
+		next_reset_at: null,
 		max_purchase: null,
 		overage_allowed: false,
 
-		plan_id: planId,
 		breakdown: [
 			{
 				id,
 				plan_id: planId,
-				granted_balance: 0,
-				purchased_balance: 0,
-				current_balance: 0,
+				included_grant: 0,
+				prepaid_grant: 0,
+				remaining: 0,
 				usage: 0,
-				overage_allowed: false,
-				max_purchase: null,
+				unlimited: true,
 				reset: null,
-				prepaid_quantity: 0,
 				expires_at: null,
-			},
+				price: null,
+			} satisfies ApiBalanceBreakdownV1,
 		],
-		rollovers: undefined,
+		rollovers: cusEntsToRollovers({ cusEnts, entityId }),
 	};
 };

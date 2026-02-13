@@ -2,7 +2,6 @@ import { deduplicateArray } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import type { ApiBalance, ApiBalanceBreakdown } from "../apiBalance.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1.js";
-import type { CusFeatureLegacyData } from "../cusFeatureLegacyData.js";
 import { apiBalanceV1ToPrepaidQuantity } from "../utils/convert/apiBalanceV1ToPrepaidQuantity.js";
 import { apiBalanceV1ToPurchasedBalance } from "../utils/convert/apiBalanceV1ToPurchasedBalance.js";
 
@@ -53,13 +52,7 @@ export function balanceBreakdownV1ToV0({
  * - `current_balance` = remaining balance
  * - `reset` = reset interval object
  */
-export function balanceV1ToV0({
-	input,
-	legacyData: _legacyData,
-}: {
-	input: ApiBalanceV1;
-	legacyData?: CusFeatureLegacyData;
-}): ApiBalance {
+export function balanceV1ToV0({ input }: { input: ApiBalanceV1 }): ApiBalance {
 	// Calculate purchased_balance from breakdown
 	const purchasedBalance = apiBalanceV1ToPurchasedBalance({
 		apiBalance: input,
