@@ -148,11 +148,21 @@ const listVercelPlansForOrg = async ({
 	metadata?: Record<string, any>;
 	canCancel?: boolean;
 }) => {
+	const allowedProductIds =
+		env === AppEnv.Live
+			? org.processor_configs?.vercel?.allowed_product_ids_live
+			: org.processor_configs?.vercel?.allowed_product_ids_sandbox;
+	const allowedIds =
+		allowedProductIds !== undefined
+			? allowedProductIds
+			: org.processor_configs?.vercel?.allowed_product_ids || [];
+
 	const products = await ProductService.listFull({
 		db,
 		orgId: org.id,
 		env,
 		archived: false,
+		inIds: allowedIds.length > 0 ? allowedIds : undefined,
 	});
 
 	sortProductsByPrice({ products });

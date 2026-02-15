@@ -36,6 +36,9 @@ export const getVercelConfigDisplay = ({
 			webhook_url: undefined,
 			custom_payment_method: undefined,
 			marketplace_mode: undefined,
+			allowed_product_ids: undefined,
+			allowed_product_ids_live: undefined,
+			allowed_product_ids_sandbox: undefined,
 		};
 	}
 
@@ -64,15 +67,34 @@ export const getVercelConfigDisplay = ({
 		webhook_url: mask(webhookUrl, 8, 6),
 		custom_payment_method: mask(customPaymentMethod, 5, 3),
 		marketplace_mode: vercelConfig.marketplace_mode,
+		allowed_product_ids: vercelConfig.allowed_product_ids,
+		allowed_product_ids_live: vercelConfig.allowed_product_ids_live,
+		allowed_product_ids_sandbox: vercelConfig.allowed_product_ids_sandbox,
 	};
 };
 
 export const handleUpsertVercelConfig = createRoute({
 	body: UpsertVercelProcessorConfigSchema,
 	handler: async (c) => {
-		const { db, org } = c.get("ctx");
+		const { db, org, env } = c.get("ctx");
 
 		const body = c.req.valid("json");
+		const normalizeAllowedProductIds = (ids: string[] | undefined) => {
+			return Array.from(new Set(ids?.map((id) => id.trim()).filter((id) => !!id)));
+		};
+
+		const liveAllowedProductIds =
+			body.allowed_product_ids_live !== undefined
+				? normalizeAllowedProductIds(body.allowed_product_ids_live)
+				: undefined;
+		const sandboxAllowedProductIds =
+			body.allowed_product_ids_sandbox !== undefined
+				? normalizeAllowedProductIds(body.allowed_product_ids_sandbox)
+				: undefined;
+		const allowedProductIds =
+			body.allowed_product_ids !== undefined
+				? normalizeAllowedProductIds(body.allowed_product_ids)
+				: undefined;
 
 		// Merge with existing processor_configs to avoid unsetting fields
 		const existingVercelConfig =
@@ -87,6 +109,18 @@ export const handleUpsertVercelConfig = createRoute({
 					}
 				: undefined;
 
+		const allowedProductIdsUpdates: Partial<VercelProcessorConfig> = {};
+		if (allowedProductIds !== undefined) {
+			allowedProductIdsUpdates.allowed_product_ids = allowedProductIds;
+		}
+		if (env === AppEnv.Live && liveAllowedProductIds !== undefined) {
+			allowedProductIdsUpdates.allowed_product_ids_live = liveAllowedProductIds;
+		}
+		if (env === AppEnv.Sandbox && sandboxAllowedProductIds !== undefined) {
+			allowedProductIdsUpdates.allowed_product_ids_sandbox =
+				sandboxAllowedProductIds;
+		}
+
 		await OrgService.update({
 			db,
 			orgId: org.id,
@@ -95,6 +129,7 @@ export const handleUpsertVercelConfig = createRoute({
 					...org.processor_configs,
 					vercel: {
 						...existingVercelConfig,
+						...allowedProductIdsUpdates,
 						// Live fields
 						...(body.client_integration_id
 							? { client_integration_id: body.client_integration_id }
