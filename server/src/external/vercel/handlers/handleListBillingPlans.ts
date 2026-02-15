@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	type FullProduct,
 	formatAmount,
 	getProductItemDisplay,
