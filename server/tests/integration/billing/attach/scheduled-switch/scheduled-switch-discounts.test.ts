@@ -672,3 +672,123 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: discount pr
 	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
 	expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Repeating coupon duration preserved across phase transition
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has premium ($50/mo) with 3-month repeating 20% off coupon
+ * - Downgrade to pro ($20/mo) - scheduled
+ * - Advance test clock past one billing cycle
+ *
+ * Expected Result:
+ * - After cycle: pro is active with discount still present
+ * - The discount's `end` timestamp should be the SAME as the original
+ *   (not reset to phase2_start + 3 months)
+ * - This means if 1 month was used on premium, only 2 months remain on pro
+ *
+ * This test catches the bug where using `coupon: couponId` on phases
+ * creates a fresh discount with a reset duration, instead of using
+ * `discount: discountId` to preserve the original duration.
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 7: repeating coupon duration preserved across phase transition")}`, async () => {
+	const customerId = "sched-switch-discount-duration";
+
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
+
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
+
+	const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
+
+	// Create a 3-month repeating coupon and apply to subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
+
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 3,
+	});
+
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [coupon.id],
+	});
+
+	// Record the original discount's end timestamp
+	const subWithDiscount = await stripeCli.subscriptions.retrieve(subBefore.id, {
+		expand: ["discounts.source.coupon"],
+	});
+	expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
+
+	const originalDiscount = subWithDiscount.discounts?.[0];
+	expect(originalDiscount).toBeDefined();
+	const originalDiscountEnd =
+		typeof originalDiscount !== "string" ? originalDiscount?.end : null;
+	expect(originalDiscountEnd).not.toBeNull();
+
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		currentEpochMs: advancedTo,
+		withPause: true,
+	});
+
+	// Verify pro is now active
+	const customerAfterCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// KEY ASSERTION: discount still present AND end timestamp is preserved
+	const { subscription: subAfterCycle } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterCycle.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
+
+	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+
+	const discountAfterCycle = subAfterExpanded.discounts?.[0];
+	const discountEndAfterCycle =
+		typeof discountAfterCycle !== "string" ? discountAfterCycle?.end : null;
+
+	// The discount end should be the SAME as the original - not reset
+	// If it was reset, it would be ~phase2_start + 3 months (much later)
+	expect(discountEndAfterCycle).toBe(originalDiscountEnd);
+});
