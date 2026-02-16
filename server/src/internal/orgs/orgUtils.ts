@@ -245,6 +245,9 @@ export const createOrgResponse = ({
 				webhook_url: vercelConnection.webhook_url,
 				custom_payment_method: vercelConnection.custom_payment_method,
 				marketplace_mode: vercelConnection.marketplace_mode,
+				allowed_product_ids_live: vercelConnection.allowed_product_ids_live,
+				allowed_product_ids_sandbox:
+					vercelConnection.allowed_product_ids_sandbox,
 			},
 			revenuecat: {
 				connected: revenueCatConnection.connected,

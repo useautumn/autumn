@@ -36,6 +36,8 @@ export const getVercelConfigDisplay = ({
 			webhook_url: undefined,
 			custom_payment_method: undefined,
 			marketplace_mode: undefined,
+			allowed_product_ids_live: undefined,
+			allowed_product_ids_sandbox: undefined,
 		};
 	}
 
@@ -64,15 +66,31 @@ export const getVercelConfigDisplay = ({
 		webhook_url: mask(webhookUrl, 8, 6),
 		custom_payment_method: mask(customPaymentMethod, 5, 3),
 		marketplace_mode: vercelConfig.marketplace_mode,
+		allowed_product_ids_live: vercelConfig.allowed_product_ids_live,
+		allowed_product_ids_sandbox: vercelConfig.allowed_product_ids_sandbox,
 	};
 };
 
 export const handleUpsertVercelConfig = createRoute({
 	body: UpsertVercelProcessorConfigSchema,
 	handler: async (c) => {
-		const { db, org } = c.get("ctx");
+		const { db, org, env } = c.get("ctx");
 
 		const body = c.req.valid("json");
+		const normalizeAllowedProductIds = (ids: string[] | undefined) => {
+			return Array.from(
+				new Set(ids?.map((id) => id.trim()).filter((id) => !!id)),
+			);
+		};
+
+		const liveAllowedProductIds =
+			body.allowed_product_ids_live !== undefined
+				? normalizeAllowedProductIds(body.allowed_product_ids_live)
+				: undefined;
+		const sandboxAllowedProductIds =
+			body.allowed_product_ids_sandbox !== undefined
+				? normalizeAllowedProductIds(body.allowed_product_ids_sandbox)
+				: undefined;
 
 		// Merge with existing processor_configs to avoid unsetting fields
 		const existingVercelConfig =
@@ -87,6 +105,43 @@ export const handleUpsertVercelConfig = createRoute({
 					}
 				: undefined;
 
+		const envSpecificClientConfig: Partial<VercelProcessorConfig> = {};
+
+		if (env === AppEnv.Live) {
+			if (body.client_integration_id) {
+				envSpecificClientConfig.client_integration_id =
+					body.client_integration_id;
+			}
+			if (body.client_secret) {
+				envSpecificClientConfig.client_secret = body.client_secret;
+			}
+			if (body.webhook_url) {
+				envSpecificClientConfig.webhook_url = body.webhook_url;
+			}
+		} else {
+			if (body.client_integration_id || body.sandbox_client_id) {
+				envSpecificClientConfig.sandbox_client_id =
+					body.client_integration_id || body.sandbox_client_id;
+			}
+			if (body.client_secret || body.sandbox_client_secret) {
+				envSpecificClientConfig.sandbox_client_secret =
+					body.client_secret || body.sandbox_client_secret;
+			}
+			if (body.webhook_url || body.sandbox_webhook_url) {
+				envSpecificClientConfig.sandbox_webhook_url =
+					body.webhook_url || body.sandbox_webhook_url;
+			}
+		}
+
+		const allowedProductIdsUpdates: Partial<VercelProcessorConfig> = {};
+		if (env === AppEnv.Live && liveAllowedProductIds !== undefined) {
+			allowedProductIdsUpdates.allowed_product_ids_live = liveAllowedProductIds;
+		}
+		if (env === AppEnv.Sandbox && sandboxAllowedProductIds !== undefined) {
+			allowedProductIdsUpdates.allowed_product_ids_sandbox =
+				sandboxAllowedProductIds;
+		}
+
 		await OrgService.update({
 			db,
 			orgId: org.id,
@@ -95,24 +150,8 @@ export const handleUpsertVercelConfig = createRoute({
 					...org.processor_configs,
 					vercel: {
 						...existingVercelConfig,
-						// Live fields
-						...(body.client_integration_id
-							? { client_integration_id: body.client_integration_id }
-							: {}),
-						...(body.client_secret
-							? { client_secret: body.client_secret }
-							: {}),
-						...(body.webhook_url ? { webhook_url: body.webhook_url } : {}),
-						// Sandbox fields
-						...(body.sandbox_client_id
-							? { sandbox_client_id: body.sandbox_client_id }
-							: {}),
-						...(body.sandbox_client_secret
-							? { sandbox_client_secret: body.sandbox_client_secret }
-							: {}),
-						...(body.sandbox_webhook_url
-							? { sandbox_webhook_url: body.sandbox_webhook_url }
-							: {}),
+						...allowedProductIdsUpdates,
+						...envSpecificClientConfig,
 						// Custom payment method (for both envs)
 						...(customPaymentMethod
 							? { custom_payment_method: customPaymentMethod }
