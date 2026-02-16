@@ -18,15 +18,11 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/libraries/react/*"],
-			"@/components/*": ["src/libraries/react/components/*"],
-			"@/lib/*": ["src/libraries/react/lib/*"],
 			"@/hooks/*": ["src/libraries/react/hooks/*"],
 			"@sdk": ["src/sdk/index"],
 			"@sdk/*": ["src/sdk/*"],
 			"@useautumn/sdk": ["../sdk/dist/esm/index.d.ts"],
 			"@useautumn/sdk/*": ["../sdk/dist/esm/*"],
-			"@styles": ["src/styles/*"],
-			"@compose": ["src/compose/*"],
 			"@utils/*": ["src/utils/*"]
 		}
 	},

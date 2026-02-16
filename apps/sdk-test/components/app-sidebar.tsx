@@ -6,8 +6,8 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { findScenarioByHref, scenarioSections } from "@/lib/scenarios";
+import { cn } from "@/lib/utils";
 
 export const AppSidebarLayout = ({
   children,
@@ -84,7 +84,9 @@ export const AppSidebarLayout = ({
           {sidebarContent}
         </aside>
 
-        <div
+        <button
+          type="button"
+          aria-label="Close menu"
           className={cn(
             "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity md:hidden",
             openMobile ? "opacity-100" : "pointer-events-none opacity-0",
@@ -103,19 +105,33 @@ export const AppSidebarLayout = ({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-12 items-center justify-between border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950 md:px-4">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setOpenMobile((prev) => !prev)}
+              <Link
+                href="/"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:hover:bg-zinc-900"
               >
                 Menu
-              </Button>
-              <p className="text-xs text-zinc-500">
-                {active
-                  ? `${active.section.title} / ${active.item.title}`
-                  : "Select a scenario"}
-              </p>
+              </Link>
+              <div className="text-xs text-zinc-500">
+                {active ? (
+                  <>
+                    <Link
+                      href={active.section.items[0]?.href ?? "/"}
+                      className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                    >
+                      {active.section.title}
+                    </Link>
+                    <span className="mx-1">/</span>
+                    <Link
+                      href={active.item.href}
+                      className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                    >
+                      {active.item.title}
+                    </Link>
+                  </>
+                ) : (
+                  "Select a scenario"
+                )}
+              </div>
             </div>
           </header>
 

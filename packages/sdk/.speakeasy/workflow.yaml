@@ -3,7 +3,7 @@ speakeasyVersion: latest
 sources:
     Autumn API:
         inputs:
-            - location: ../../shared/openapi/openapi.yml
+            - location: ../openapi/openapi.yml
         transformations:
             - removeUnused: false
         output: .speakeasy/out.openapi.yaml
@@ -19,4 +19,15 @@ targets:
                 location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-typescript-code-samples
             labelOverride:
                 fixedValue: Typescript (SDK)
+            blocking: false
+    autumn-python:
+        target: python
+        source: Autumn API
+        output: ../../others/python-sdk
+        codeSamples:
+            output: ../../others/python-sdk/.speakeasy/code-samples.overlay.yaml
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-python-code-samples
+            labelOverride:
+                fixedValue: Python (SDK)
             blocking: false

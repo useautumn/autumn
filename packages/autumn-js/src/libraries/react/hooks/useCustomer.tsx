@@ -9,13 +9,13 @@ export interface UseCustomerResult {
 	customer: Customer | null;
 	isLoading: boolean;
 	error: Error | null;
-	attach: ReturnType<typeof useAutumnBase>["attach"];
-	track: ReturnType<typeof useAutumnBase>["track"];
-	cancel: ReturnType<typeof useAutumnBase>["cancel"];
-	setupPayment: ReturnType<typeof useAutumnBase>["setupPayment"];
-	openBillingPortal: ReturnType<typeof useAutumnBase>["openBillingPortal"];
-	checkout: ReturnType<typeof useAutumnBase>["checkout"];
-	refetch: () => Promise<Customer | null>;
+	// attach: ReturnType<typeof useAutumnBase>["attach"];
+	// track: ReturnType<typeof useAutumnBase>["track"];
+	// cancel: ReturnType<typeof useAutumnBase>["cancel"];
+	// setupPayment: ReturnType<typeof useAutumnBase>["setupPayment"];
+	// openBillingPortal: ReturnType<typeof useAutumnBase>["openBillingPortal"];
+	// checkout: ReturnType<typeof useAutumnBase>["checkout"];
+	// refetch: () => Promise<Customer | null>;
 	// createEntity: (params: EntityCreateParams) => Promise<Entity>;
 	// check: (params: CheckParams) => CheckResponse;
 }

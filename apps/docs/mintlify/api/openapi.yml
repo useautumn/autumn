@@ -795,8 +795,7 @@ paths:
                 $ref: "#/components/schemas/Customer"
               example: *a2
       parameters:
-        - &a3
-          name: x-api-version
+        - name: x-api-version
           in: header
           required: true
           schema:
@@ -816,6 +815,18 @@ paths:
               name: "John Doe",
               email: "john@example.com",
             });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+                res = autumn.customers.get_or_create(
+                customer_id="cus_123",
+                name="John Doe",
+                email="john@example.com",
+            )
   /v1/products:
     get:
       operationId: list
@@ -823,7 +834,13 @@ paths:
       tags:
         - plans
       parameters:
-        - *a3
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "2.1"
+          x-speakeasy-globals-hidden: true
       responses:
         "200":
           description: OK
@@ -847,6 +864,14 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.plans.list();
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+                res = autumn.plans.list()
   /v1/attach:
     post:
       operationId: attach
@@ -1075,7 +1100,13 @@ paths:
                   - customer_id
                   - payment_url
       parameters:
-        - *a3
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "2.1"
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -1087,6 +1118,17 @@ paths:
             const result = await autumn.billing.attach({
               productId: "<id>",
             });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+                res = autumn.billing.attach(
+                product_id="<id>",
+                redirect_mode="always",
+            )
 security:
   - secretKey: []
 x-speakeasy-globals:

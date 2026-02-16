@@ -6,7 +6,6 @@ import { defineConfig, type Options } from "tsup";
 const pathAliases = {
 	"@": path.resolve("./src/libraries/react"),
 	"@sdk": path.resolve("./src/sdk"),
-	"@styles": path.resolve("./src/styles"),
 };
 
 const reactConfigs: Options[] = [
@@ -29,9 +28,9 @@ const reactConfigs: Options[] = [
 		},
 	},
 
-	// React - Index file with CSS import (CommonJS)
+	// React
 	{
-		entry: ["src/libraries/react/index.ts"],
+		entry: ["src/libraries/react/**/*.{ts,tsx}"],
 		format: ["cjs", "esm"],
 		dts: true,
 		clean: false,
@@ -40,33 +39,6 @@ const reactConfigs: Options[] = [
 		bundle: true,
 		banner: {
 			js: '"use client";',
-		},
-		injectStyle: true,
-		esbuildOptions(options) {
-			options.plugins = options.plugins || [];
-			options.plugins.push(alias(pathAliases));
-			options.define = {
-				...options.define,
-				__dirname: "import.meta.dirname",
-				__filename: "import.meta.filename",
-			};
-		},
-	},
-
-	// React - Other files without CSS import
-	{
-		entry: [
-			"src/libraries/react/**/*.{ts,tsx}",
-			"!src/libraries/react/index.ts",
-		],
-		format: ["cjs", "esm"],
-		dts: true,
-		clean: false,
-		outDir: "./dist/libraries/react",
-		external: ["react", "react/jsx-runtime", "react-dom"],
-		bundle: true,
-		banner: {
-			js: '"use client";\n',
 		},
 		esbuildOptions(options) {
 			options.plugins = options.plugins || [];
@@ -146,13 +118,4 @@ export default defineConfig([
 	//   },
 	// },
 	...reactConfigs,
-
-	// Styles - Properly process CSS with PostCSS and Tailwind
-	{
-		entry: ["src/styles/global.css"],
-		format: ["esm", "cjs"],
-		outDir: "./dist/styles",
-		clean: false,
-		bundle: true,
-	},
 ]);

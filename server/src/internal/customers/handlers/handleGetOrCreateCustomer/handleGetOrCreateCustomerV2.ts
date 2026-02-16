@@ -1,8 +1,7 @@
 import {
 	AffectedResource,
-	CreateCustomerParamsSchema,
+	CreateCustomerParamsV1Schema,
 	CustomerDataSchema,
-	notNullish,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../../cusUtils/apiCusUtils/getApiCustomer.js";
@@ -10,7 +9,7 @@ import { getOrCreateCachedFullCustomer } from "../../cusUtils/fullCustomerCacheU
 
 export const handleGetOrCreateCustomerV2 = createRoute({
 	resource: AffectedResource.Customer,
-	body: CreateCustomerParamsSchema,
+	body: CreateCustomerParamsV1Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const createCusParams = c.req.valid("json");
@@ -18,9 +17,7 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 		const start = Date.now();
 
 		const customerData = CustomerDataSchema.parse(createCusParams);
-		const customerId = notNullish(createCusParams.id)
-			? createCusParams.id
-			: createCusParams.customer_id;
+		const customerId = createCusParams.customer_id;
 
 		const fullCustomer = await getOrCreateCachedFullCustomer({
 			ctx,

@@ -1,9 +1,9 @@
-speakeasyVersion: 1.718.0
+speakeasyVersion: 1.719.0
 sources:
     Autumn API:
         sourceNamespace: autumn-api
-        sourceRevisionDigest: sha256:5e16ae7af44b95d164092bec91f923bb1ec7454116438f50f5cb3f18dfe3920f
-        sourceBlobDigest: sha256:0bcea56021f5f5820c80a29e9bd7fcfa9ea856f7fe8cf0a3ea3766b5b837aebe
+        sourceRevisionDigest: sha256:c513dea6b35ac61359bca574daa51591c99bff6a4f70884f17daadbaf9038068
+        sourceBlobDigest: sha256:8a6566a50fa1a128ddee4e115b79ed58cf3f17a1602ee4cf2a706b4f8900d5e7
         tags:
             - latest
             - 2.1.0
@@ -15,13 +15,20 @@ targets:
         sourceBlobDigest: sha256:0bcea56021f5f5820c80a29e9bd7fcfa9ea856f7fe8cf0a3ea3766b5b837aebe
         codeSamplesNamespace: autumn-api-typescript-code-samples
         codeSamplesRevisionDigest: sha256:ce36f97d10345afb030ba1efd384c3bb8444afd11b275d20d04cd1f037fff6a2
+    autumn-python:
+        source: Autumn API
+        sourceNamespace: autumn-api
+        sourceRevisionDigest: sha256:c513dea6b35ac61359bca574daa51591c99bff6a4f70884f17daadbaf9038068
+        sourceBlobDigest: sha256:8a6566a50fa1a128ddee4e115b79ed58cf3f17a1602ee4cf2a706b4f8900d5e7
+        codeSamplesNamespace: autumn-api-python-code-samples
+        codeSamplesRevisionDigest: sha256:6dce177dbc4f46c58cec13dfc4ebc6de316e2acf6950663061725f88e10aa414
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest
     sources:
         Autumn API:
             inputs:
-                - location: ../../shared/openapi/openapi.yml
+                - location: ../openapi/openapi.yml
             transformations:
                 - removeUnused: false
             output: .speakeasy/out.openapi.yaml
@@ -37,4 +44,15 @@ workflow:
                     location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-typescript-code-samples
                 labelOverride:
                     fixedValue: Typescript (SDK)
+                blocking: false
+        autumn-python:
+            target: python
+            source: Autumn API
+            output: ../../others/python-sdk
+            codeSamples:
+                output: ../../others/python-sdk/.speakeasy/code-samples.overlay.yaml
+                registry:
+                    location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-python-code-samples
+                labelOverride:
+                    fixedValue: Python (SDK)
                 blocking: false

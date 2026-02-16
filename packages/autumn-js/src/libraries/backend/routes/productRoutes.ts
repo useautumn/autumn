@@ -5,7 +5,7 @@ import { withAuth } from "../utils/withAuth";
 
 const listProductsHandler = withAuth({
 	fn: async ({ autumn }: { autumn: Autumn }) => {
-		return await autumn.plans.getPlans();
+		return await autumn.plans.list();
 	},
 	requireCustomer: false,
 });

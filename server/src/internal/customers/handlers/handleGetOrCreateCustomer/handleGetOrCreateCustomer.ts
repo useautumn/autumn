@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	ApiVersion,
 	backwardsChangeActive,
-	CreateCustomerParamsSchema,
+	CreateCustomerParamsV0Schema,
 	CreateCustomerQuerySchema,
 	CustomerDataSchema,
 	CustomerExpand,
@@ -18,7 +18,7 @@ export const handlePostCustomer = createRoute({
 		[ApiVersion.V1_2]: CreateCustomerQuerySchema,
 	},
 	resource: AffectedResource.Customer,
-	body: CreateCustomerParamsSchema,
+	body: CreateCustomerParamsV0Schema,
 
 	handler: async (c) => {
 		const ctx = c.get("ctx");

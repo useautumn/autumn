@@ -1,6 +1,4 @@
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../common/customerData.js";
-import { CustomerIdSchema } from "../common/customerId.js";
 import { queryStringArray } from "../common/queryHelpers.js";
 import { CustomerExpandEnum } from "./components/customerExpand/customerExpand.js";
 
@@ -15,14 +13,14 @@ export const GetCustomerQuerySchema = z.object({
 	}),
 });
 
-// Update Customer Params (based on handleUpdateCustomer logic)
-export const UpdateCustomerParamsSchema = z
-	.object({
-		id: CustomerIdSchema.optional().meta({
-			description: "New unique identifier for the customer",
-		}),
-	})
-	.extend(CustomerDataSchema.shape);
+// // Update Customer Params (based on handleUpdateCustomer logic)
+// export const UpdateCustomerParamsSchema = z
+// 	.object({
+// 		id: CustomerIdSchema.optional().meta({
+// 			description: "New unique identifier for the customer",
+// 		}),
+// 	})
+// 	.extend(CustomerDataSchema.shape);
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
@@ -82,7 +80,6 @@ export const GetBillingPortalResponseSchema = z.object({
 	}),
 });
 
-export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
 
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;

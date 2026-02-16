@@ -40,6 +40,13 @@ export const scenarioSections: Array<ScenarioSection> = [
         description: "Inspect entity-level behavior.",
         status: "planned",
       },
+      {
+        id: "use-pricing-table",
+        title: "usePricingTable",
+        href: "/scenarios/core/use-pricing-table",
+        description: "Inspect pricing table product data.",
+        status: "ready",
+      },
     ],
   },
   {
