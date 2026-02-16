@@ -53,7 +53,6 @@ export const VercelProcessorConfigSchema = z.object({
 	sandbox_client_secret: z.string().optional(),
 	sandbox_webhook_url: z.string().optional(),
 	webhook_url: z.string(),
-	allowed_product_ids: z.array(z.string().min(1)).optional(),
 	allowed_product_ids_live: z.array(z.string().min(1)).optional(),
 	allowed_product_ids_sandbox: z.array(z.string().min(1)).optional(),
 	custom_payment_method: z
@@ -81,7 +80,6 @@ export const UpsertVercelProcessorConfigSchema = z.object({
 	sandbox_client_id: z.string().min(8).optional(),
 	sandbox_client_secret: z.string().min(8).optional(),
 	sandbox_webhook_url: z.string().min(14).optional(),
-	allowed_product_ids: z.array(z.string().min(1)).optional(),
 	allowed_product_ids_live: z.array(z.string().min(1)).optional(),
 	allowed_product_ids_sandbox: z.array(z.string().min(1)).optional(),
 	custom_payment_method: z
