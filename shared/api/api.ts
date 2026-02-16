@@ -1,7 +1,9 @@
 import { execSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { generateApiReference } from "./_openapi/utils/apiReferenceGenerator/index.js";
+import { transformOpenApiForMintlify } from "./_openapi/utils/mintlifyTransform.js";
 
 // Dynamic imports to avoid duplicate schema registration when supporting multiple versions
 
@@ -57,7 +59,7 @@ if (process.env.NODE_ENV !== "production") {
 			currentDirPath,
 			"../../apps/docs/mintlify/api",
 		);
-		const docsOpenApiLocalPath = path.join(docsApiDirPath, "openapi-local.yml");
+		const docsOpenApiPath = path.join(docsApiDirPath, "openapi.yml");
 
 		mkdirSync(outputDirPath, { recursive: true });
 		mkdirSync(docsApiDirPath, { recursive: true });
@@ -115,13 +117,33 @@ if (process.env.NODE_ENV !== "production") {
 
 			console.log("Applying Speakeasy code samples to OpenAPI for docs...");
 			execSync(
-				`bunx speakeasy overlay apply --schema .speakeasy/out.openapi.yaml --overlay .speakeasy/code-samples.overlay.yaml --out ${JSON.stringify(docsOpenApiLocalPath)}`,
+				`bunx speakeasy overlay apply --schema .speakeasy/out.openapi.yaml --overlay .speakeasy/code-samples.overlay.yaml --out ${JSON.stringify(docsOpenApiPath)}`,
 				{
 					stdio: "inherit",
 					cwd: speakeasySdkDirPath,
 				},
 			);
-			console.log(`Docs OpenAPI written to ${docsOpenApiLocalPath}`);
+			console.log(`Docs OpenAPI written to ${docsOpenApiPath}`);
+
+			// Transform OpenAPI for Mintlify (strip JSDoc tags, fix code samples)
+			console.log("Transforming OpenAPI for Mintlify docs...");
+			const yamlContent = readFileSync(docsOpenApiPath, "utf-8");
+			const transformedYaml = transformOpenApiForMintlify(yamlContent);
+			writeFileSync(docsOpenApiPath, transformedYaml);
+			console.log("Mintlify transformation complete");
+
+			// Generate API reference MDX files with dynamic parameter fields
+			console.log("Generating API reference MDX files...");
+			const manualMdxDir = path.resolve(
+				docsApiDirPath,
+				"../../api-reference-generator",
+			);
+			const outputMdxDir = path.resolve(docsApiDirPath, "../api-reference");
+			await generateApiReference({
+				openApiPath: docsOpenApiPath,
+				manualMdxDir,
+				outputDir: outputMdxDir,
+			});
 		} else {
 			console.log(
 				`Skipping Speakeasy generation for OpenAPI ${version}; only 2.1.0 is wired to SDK generation`,

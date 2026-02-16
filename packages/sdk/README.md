@@ -95,7 +95,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);
@@ -128,7 +130,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);
@@ -226,7 +230,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   }, {
     retries: {
       strategy: "backoff",
@@ -268,7 +274,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);
@@ -305,7 +313,9 @@ const autumn = new Autumn({
 async function run() {
   try {
     const result = await autumn.customers.getOrCreate({
-      customerId: null,
+      customerId: "cus_123",
+      name: "John Doe",
+      email: "john@example.com",
     });
 
     console.log(result);
@@ -362,7 +372,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);

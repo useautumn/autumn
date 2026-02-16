@@ -7,11 +7,8 @@ import { Referral } from "@useautumn/sdk";
 
 let value: Referral = {
   programId: "<id>",
-  customer: {
-    id: "<id>",
-  },
+  customer: {},
   rewardApplied: false,
-  createdAt: 6538.56,
 };
 ```
 
@@ -22,4 +19,3 @@ let value: Referral = {
 | `programId`                                               | *string*                                                  | :heavy_check_mark:                                        | N/A                                                       |
 | `customer`                                                | [models.ReferralCustomer](../models/referral-customer.md) | :heavy_check_mark:                                        | N/A                                                       |
 | `rewardApplied`                                           | *boolean*                                                 | :heavy_check_mark:                                        | N/A                                                       |
-| `createdAt`                                               | *number*                                                  | :heavy_check_mark:                                        | N/A                                                       |

@@ -16,33 +16,22 @@ export type AttachGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type AttachEntityData = {
-  /**
-   * The feature ID that this entity is associated with
-   */
-  featureId: string;
-  /**
-   * Name of the entity
-   */
-  name?: string | undefined;
-};
-
 export type Options = {
   featureId: string;
   quantity?: number | undefined;
   resetAfterTrialEnd?: boolean | undefined;
 };
 
-export const FreeTrialDuration = {
+export const Duration = {
   Day: "day",
   Month: "month",
   Year: "year",
 } as const;
-export type FreeTrialDuration = ClosedEnum<typeof FreeTrialDuration>;
+export type Duration = ClosedEnum<typeof Duration>;
 
 export type AttachFreeTrial = {
   length: number;
-  duration: FreeTrialDuration;
+  duration: Duration;
   cardRequired?: boolean | undefined;
 };
 
@@ -52,78 +41,6 @@ export const AttachType = {
   Price: "price",
 } as const;
 export type AttachType = ClosedEnum<typeof AttachType>;
-
-export const FeatureType = {
-  SingleUse: "single_use",
-  ContinuousUse: "continuous_use",
-  Boolean: "boolean",
-  Static: "static",
-} as const;
-export type FeatureType = ClosedEnum<typeof FeatureType>;
-
-/**
- * The type of the feature
- */
-export const AttachFeatureType = {
-  Static: "static",
-  Boolean: "boolean",
-  SingleUse: "single_use",
-  ContinuousUse: "continuous_use",
-  CreditSystem: "credit_system",
-} as const;
-/**
- * The type of the feature
- */
-export type AttachFeatureType = ClosedEnum<typeof AttachFeatureType>;
-
-export type AttachFeatureDisplay = {
-  /**
-   * The singular display name for the feature.
-   */
-  singular: string;
-  /**
-   * The plural display name for the feature.
-   */
-  plural: string;
-};
-
-export type AttachCreditSchema = {
-  /**
-   * The ID of the metered feature (should be a single_use feature).
-   */
-  meteredFeatureId: string;
-  /**
-   * The credit cost of the metered feature.
-   */
-  creditCost: number;
-};
-
-export type AttachFeature = {
-  /**
-   * The ID of the feature, used to refer to it in other API calls like /track or /check.
-   */
-  id: string;
-  /**
-   * The name of the feature.
-   */
-  name?: string | null | undefined;
-  /**
-   * The type of the feature
-   */
-  type: AttachFeatureType;
-  /**
-   * Singular and plural display names for the feature.
-   */
-  display?: AttachFeatureDisplay | null | undefined;
-  /**
-   * Credit cost schema for credit system features.
-   */
-  creditSchema?: Array<AttachCreditSchema> | null | undefined;
-  /**
-   * Whether or not the feature is archived.
-   */
-  archived?: boolean | null | undefined;
-};
 
 export type IncludedUsage = number | string;
 
@@ -161,46 +78,6 @@ export type Tiers = {
   amount: number;
 };
 
-export type AttachDisplay = {
-  primaryText: string;
-  secondaryText?: string | null | undefined;
-};
-
-export const AttachOnIncrease = {
-  BillImmediately: "bill_immediately",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  BillNextCycle: "bill_next_cycle",
-} as const;
-export type AttachOnIncrease = ClosedEnum<typeof AttachOnIncrease>;
-
-export const AttachOnDecrease = {
-  Prorate: "prorate",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  None: "none",
-  NoProrations: "no_prorations",
-} as const;
-export type AttachOnDecrease = ClosedEnum<typeof AttachOnDecrease>;
-
-export const RolloverDuration = {
-  Month: "month",
-  Forever: "forever",
-} as const;
-export type RolloverDuration = ClosedEnum<typeof RolloverDuration>;
-
-export type AttachRollover = {
-  max: number | null;
-  duration?: RolloverDuration | undefined;
-  length: number;
-};
-
-export type Config = {
-  onIncrease?: AttachOnIncrease | null | undefined;
-  onDecrease?: AttachOnDecrease | null | undefined;
-  rollover?: AttachRollover | null | undefined;
-};
-
 export type AttachItem = {
   /**
    * The type of the product item.
@@ -210,8 +87,6 @@ export type AttachItem = {
    * The feature ID of the product item. Should be null for fixed price items.
    */
   featureId?: string | null | undefined;
-  featureType?: FeatureType | null | undefined;
-  feature?: AttachFeature | null | undefined;
   /**
    * The amount of usage included for this feature (per interval).
    */
@@ -248,13 +123,6 @@ export type AttachItem = {
    * Whether the usage should be reset when the product is enabled.
    */
   resetUsageWhenEnabled?: boolean | null | undefined;
-  display?: AttachDisplay | null | undefined;
-  usageLimit?: number | null | undefined;
-  config?: Config | null | undefined;
-  createdAt?: number | null | undefined;
-  entitlementId?: string | null | undefined;
-  priceId?: string | null | undefined;
-  priceConfig?: any | null | undefined;
 };
 
 export const RedirectMode = {
@@ -277,8 +145,6 @@ export const BillingBehavior = {
 export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
 
 export type AttachRequest = {
-  entityId?: string | null | undefined;
-  entityData?: AttachEntityData | undefined;
   options?: Array<Options> | null | undefined;
   version?: number | undefined;
   freeTrial?: AttachFreeTrial | null | undefined;
@@ -320,41 +186,10 @@ export type RequiredAction = {
  */
 export type AttachResponse = {
   customerId: string;
-  entityId?: string | undefined;
   invoice?: AttachInvoice | undefined;
   paymentUrl: string | null;
   requiredAction?: RequiredAction | undefined;
 };
-
-/** @internal */
-export type AttachEntityData$Outbound = {
-  feature_id: string;
-  name?: string | undefined;
-};
-
-/** @internal */
-export const AttachEntityData$outboundSchema: z.ZodMiniType<
-  AttachEntityData$Outbound,
-  AttachEntityData
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    name: z.optional(z.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
-
-export function attachEntityDataToJSON(
-  attachEntityData: AttachEntityData,
-): string {
-  return JSON.stringify(
-    AttachEntityData$outboundSchema.parse(attachEntityData),
-  );
-}
 
 /** @internal */
 export type Options$Outbound = {
@@ -384,9 +219,9 @@ export function optionsToJSON(options: Options): string {
 }
 
 /** @internal */
-export const FreeTrialDuration$outboundSchema: z.ZodMiniEnum<
-  typeof FreeTrialDuration
-> = z.enum(FreeTrialDuration);
+export const Duration$outboundSchema: z.ZodMiniEnum<typeof Duration> = z.enum(
+  Duration,
+);
 
 /** @internal */
 export type AttachFreeTrial$Outbound = {
@@ -402,7 +237,7 @@ export const AttachFreeTrial$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     length: z.number(),
-    duration: FreeTrialDuration$outboundSchema,
+    duration: Duration$outboundSchema,
     cardRequired: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
@@ -421,107 +256,6 @@ export function attachFreeTrialToJSON(
 /** @internal */
 export const AttachType$outboundSchema: z.ZodMiniEnum<typeof AttachType> = z
   .enum(AttachType);
-
-/** @internal */
-export const FeatureType$outboundSchema: z.ZodMiniEnum<typeof FeatureType> = z
-  .enum(FeatureType);
-
-/** @internal */
-export const AttachFeatureType$outboundSchema: z.ZodMiniEnum<
-  typeof AttachFeatureType
-> = z.enum(AttachFeatureType);
-
-/** @internal */
-export type AttachFeatureDisplay$Outbound = {
-  singular: string;
-  plural: string;
-};
-
-/** @internal */
-export const AttachFeatureDisplay$outboundSchema: z.ZodMiniType<
-  AttachFeatureDisplay$Outbound,
-  AttachFeatureDisplay
-> = z.object({
-  singular: z.string(),
-  plural: z.string(),
-});
-
-export function attachFeatureDisplayToJSON(
-  attachFeatureDisplay: AttachFeatureDisplay,
-): string {
-  return JSON.stringify(
-    AttachFeatureDisplay$outboundSchema.parse(attachFeatureDisplay),
-  );
-}
-
-/** @internal */
-export type AttachCreditSchema$Outbound = {
-  metered_feature_id: string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const AttachCreditSchema$outboundSchema: z.ZodMiniType<
-  AttachCreditSchema$Outbound,
-  AttachCreditSchema
-> = z.pipe(
-  z.object({
-    meteredFeatureId: z.string(),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      meteredFeatureId: "metered_feature_id",
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function attachCreditSchemaToJSON(
-  attachCreditSchema: AttachCreditSchema,
-): string {
-  return JSON.stringify(
-    AttachCreditSchema$outboundSchema.parse(attachCreditSchema),
-  );
-}
-
-/** @internal */
-export type AttachFeature$Outbound = {
-  id: string;
-  name?: string | null | undefined;
-  type: string;
-  display?: AttachFeatureDisplay$Outbound | null | undefined;
-  credit_schema?: Array<AttachCreditSchema$Outbound> | null | undefined;
-  archived?: boolean | null | undefined;
-};
-
-/** @internal */
-export const AttachFeature$outboundSchema: z.ZodMiniType<
-  AttachFeature$Outbound,
-  AttachFeature
-> = z.pipe(
-  z.object({
-    id: z.string(),
-    name: z.optional(z.nullable(z.string())),
-    type: AttachFeatureType$outboundSchema,
-    display: z.optional(
-      z.nullable(z.lazy(() => AttachFeatureDisplay$outboundSchema)),
-    ),
-    creditSchema: z.optional(
-      z.nullable(z.array(z.lazy(() => AttachCreditSchema$outboundSchema))),
-    ),
-    archived: z.optional(z.nullable(z.boolean())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditSchema: "credit_schema",
-    });
-  }),
-);
-
-export function attachFeatureToJSON(attachFeature: AttachFeature): string {
-  return JSON.stringify(AttachFeature$outboundSchema.parse(attachFeature));
-}
 
 /** @internal */
 export type IncludedUsage$Outbound = number | string;
@@ -576,103 +310,9 @@ export function tiersToJSON(tiers: Tiers): string {
 }
 
 /** @internal */
-export type AttachDisplay$Outbound = {
-  primary_text: string;
-  secondary_text?: string | null | undefined;
-};
-
-/** @internal */
-export const AttachDisplay$outboundSchema: z.ZodMiniType<
-  AttachDisplay$Outbound,
-  AttachDisplay
-> = z.pipe(
-  z.object({
-    primaryText: z.string(),
-    secondaryText: z.optional(z.nullable(z.string())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      primaryText: "primary_text",
-      secondaryText: "secondary_text",
-    });
-  }),
-);
-
-export function attachDisplayToJSON(attachDisplay: AttachDisplay): string {
-  return JSON.stringify(AttachDisplay$outboundSchema.parse(attachDisplay));
-}
-
-/** @internal */
-export const AttachOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof AttachOnIncrease
-> = z.enum(AttachOnIncrease);
-
-/** @internal */
-export const AttachOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof AttachOnDecrease
-> = z.enum(AttachOnDecrease);
-
-/** @internal */
-export const RolloverDuration$outboundSchema: z.ZodMiniEnum<
-  typeof RolloverDuration
-> = z.enum(RolloverDuration);
-
-/** @internal */
-export type AttachRollover$Outbound = {
-  max: number | null;
-  duration: string;
-  length: number;
-};
-
-/** @internal */
-export const AttachRollover$outboundSchema: z.ZodMiniType<
-  AttachRollover$Outbound,
-  AttachRollover
-> = z.object({
-  max: z.nullable(z.number()),
-  duration: z._default(RolloverDuration$outboundSchema, "month"),
-  length: z.number(),
-});
-
-export function attachRolloverToJSON(attachRollover: AttachRollover): string {
-  return JSON.stringify(AttachRollover$outboundSchema.parse(attachRollover));
-}
-
-/** @internal */
-export type Config$Outbound = {
-  on_increase?: string | null | undefined;
-  on_decrease?: string | null | undefined;
-  rollover?: AttachRollover$Outbound | null | undefined;
-};
-
-/** @internal */
-export const Config$outboundSchema: z.ZodMiniType<Config$Outbound, Config> = z
-  .pipe(
-    z.object({
-      onIncrease: z.optional(z.nullable(AttachOnIncrease$outboundSchema)),
-      onDecrease: z.optional(z.nullable(AttachOnDecrease$outboundSchema)),
-      rollover: z.optional(
-        z.nullable(z.lazy(() => AttachRollover$outboundSchema)),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        onIncrease: "on_increase",
-        onDecrease: "on_decrease",
-      });
-    }),
-  );
-
-export function configToJSON(config: Config): string {
-  return JSON.stringify(Config$outboundSchema.parse(config));
-}
-
-/** @internal */
 export type AttachItem$Outbound = {
   type?: string | null | undefined;
   feature_id?: string | null | undefined;
-  feature_type?: string | null | undefined;
-  feature?: AttachFeature$Outbound | null | undefined;
   included_usage?: number | string | null | undefined;
   interval?: string | null | undefined;
   interval_count?: number | null | undefined;
@@ -682,13 +322,6 @@ export type AttachItem$Outbound = {
   tiers?: Array<Tiers$Outbound> | null | undefined;
   billing_units?: number | null | undefined;
   reset_usage_when_enabled?: boolean | null | undefined;
-  display?: AttachDisplay$Outbound | null | undefined;
-  usage_limit?: number | null | undefined;
-  config?: Config$Outbound | null | undefined;
-  created_at?: number | null | undefined;
-  entitlement_id?: string | null | undefined;
-  price_id?: string | null | undefined;
-  price_config?: any | null | undefined;
 };
 
 /** @internal */
@@ -699,8 +332,6 @@ export const AttachItem$outboundSchema: z.ZodMiniType<
   z.object({
     type: z.optional(z.nullable(AttachType$outboundSchema)),
     featureId: z.optional(z.nullable(z.string())),
-    featureType: z.optional(z.nullable(FeatureType$outboundSchema)),
-    feature: z.optional(z.nullable(z.lazy(() => AttachFeature$outboundSchema))),
     includedUsage: z.optional(z.nullable(smartUnion([z.number(), z.string()]))),
     interval: z.optional(z.nullable(AttachInterval$outboundSchema)),
     intervalCount: z.optional(z.nullable(z.number())),
@@ -710,29 +341,16 @@ export const AttachItem$outboundSchema: z.ZodMiniType<
     tiers: z.optional(z.nullable(z.array(z.lazy(() => Tiers$outboundSchema)))),
     billingUnits: z.optional(z.nullable(z.number())),
     resetUsageWhenEnabled: z.optional(z.nullable(z.boolean())),
-    display: z.optional(z.nullable(z.lazy(() => AttachDisplay$outboundSchema))),
-    usageLimit: z.optional(z.nullable(z.number())),
-    config: z.optional(z.nullable(z.lazy(() => Config$outboundSchema))),
-    createdAt: z.optional(z.nullable(z.number())),
-    entitlementId: z.optional(z.nullable(z.string())),
-    priceId: z.optional(z.nullable(z.string())),
-    priceConfig: z.optional(z.nullable(z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
-      featureType: "feature_type",
       includedUsage: "included_usage",
       intervalCount: "interval_count",
       entityFeatureId: "entity_feature_id",
       usageModel: "usage_model",
       billingUnits: "billing_units",
       resetUsageWhenEnabled: "reset_usage_when_enabled",
-      usageLimit: "usage_limit",
-      createdAt: "created_at",
-      entitlementId: "entitlement_id",
-      priceId: "price_id",
-      priceConfig: "price_config",
     });
   }),
 );
@@ -756,8 +374,6 @@ export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
 
 /** @internal */
 export type AttachRequest$Outbound = {
-  entity_id?: string | null | undefined;
-  entity_data?: AttachEntityData$Outbound | undefined;
   options?: Array<Options$Outbound> | null | undefined;
   version?: number | undefined;
   free_trial?: AttachFreeTrial$Outbound | null | undefined;
@@ -780,8 +396,6 @@ export const AttachRequest$outboundSchema: z.ZodMiniType<
   AttachRequest
 > = z.pipe(
   z.object({
-    entityId: z.optional(z.nullable(z.string())),
-    entityData: z.optional(z.lazy(() => AttachEntityData$outboundSchema)),
     options: z.optional(
       z.nullable(z.array(z.lazy(() => Options$outboundSchema))),
     ),
@@ -803,8 +417,6 @@ export const AttachRequest$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
-      entityId: "entity_id",
-      entityData: "entity_data",
       freeTrial: "free_trial",
       productId: "product_id",
       enableProductImmediately: "enable_product_immediately",
@@ -883,7 +495,6 @@ export const AttachResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     customer_id: types.string(),
-    entity_id: types.optional(types.string()),
     invoice: types.optional(z.lazy(() => AttachInvoice$inboundSchema)),
     payment_url: types.nullable(types.string()),
     required_action: types.optional(z.lazy(() => RequiredAction$inboundSchema)),
@@ -891,7 +502,6 @@ export const AttachResponse$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
-      "entity_id": "entityId",
       "payment_url": "paymentUrl",
       "required_action": "requiredAction",
     });

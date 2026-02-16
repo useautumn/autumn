@@ -1,13 +1,13 @@
-# RewardsType
+# Type
 
 The type of reward
 
 ## Example Usage
 
 ```typescript
-import { RewardsType } from "@useautumn/sdk";
+import { Type } from "@useautumn/sdk";
 
-let value: RewardsType = "free_product";
+let value: Type = "percentage_discount";
 ```
 
 ## Values

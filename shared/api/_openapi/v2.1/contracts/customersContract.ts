@@ -14,6 +14,13 @@ export const getOrCreateCustomerContract = oc
 	.input(
 		ExtCreateCustomerParamsSchema.meta({
 			title: "GetOrCreateCustomerParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					name: "John Doe",
+					email: "john@example.com",
+				},
+			],
 		}),
 	)
 	.output(ApiCustomerV5Schema);

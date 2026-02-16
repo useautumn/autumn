@@ -20,7 +20,9 @@ const autumn = new Autumn({
 
 async function main() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);
