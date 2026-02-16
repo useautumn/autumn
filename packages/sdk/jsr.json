@@ -1,0 +1,25 @@
+
+
+{
+  "name": "@useautumn/sdk",
+  "version": "0.7.17",
+  "exports": {
+    ".": "./src/index.ts",    
+    "./models": "./src/models/index.ts",
+    "./lib/config": "./src/lib/config.ts",
+    "./lib/http": "./src/lib/http.ts",
+    "./lib/retries": "./src/lib/retries.ts",
+    "./lib/sdks": "./src/lib/sdks.ts",
+    "./types": "./src/types/index.ts"
+  },
+  "publish": {
+    "include": [
+      "LICENSE",
+      "README.md",
+      "RUNTIMES.md",
+      "USAGE.md",
+      "jsr.json",
+      "src/**/*.ts"
+    ]
+  }
+}

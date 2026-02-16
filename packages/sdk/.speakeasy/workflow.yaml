@@ -1,0 +1,22 @@
+workflowVersion: 1.0.0
+speakeasyVersion: latest
+sources:
+    Autumn API:
+        inputs:
+            - location: ../../shared/openapi/openapi.yml
+        transformations:
+            - removeUnused: false
+        output: .speakeasy/out.openapi.yaml
+        registry:
+            location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api
+targets:
+    autumn:
+        target: typescript
+        source: Autumn API
+        codeSamples:
+            output: .speakeasy/code-samples.overlay.yaml
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-typescript-code-samples
+            labelOverride:
+                fixedValue: Typescript (SDK)
+            blocking: false

@@ -58,6 +58,17 @@ const OPENAPI_1_2_0 = createDocument(
 				Feature: ApiFeatureWithMeta,
 				Entity: ApiEntityWithMeta,
 			},
+			parameters: {
+				XApiVersion: {
+					name: "x-api-version",
+					in: "header",
+					required: true,
+					schema: {
+						type: "string",
+						enum: ["2.0"],
+					},
+				},
+			},
 			securitySchemes: {
 				secretKey: {
 					type: "http",
@@ -65,6 +76,14 @@ const OPENAPI_1_2_0 = createDocument(
 					bearerFormat: "JWT",
 				},
 			},
+		},
+		"x-speakeasy-globals": {
+			parameters: [
+				{
+					$ref: "#/components/parameters/XApiVersion",
+					"x-speakeasy-globals-hidden": true,
+				},
+			],
 		},
 
 		paths: {
@@ -84,13 +103,13 @@ const OPENAPI_1_2_0 = createDocument(
 	},
 );
 
-export const writeOpenApi_1_2_0 = () => {
+export const writeOpenApi_1_2_0 = ({
+	outputFilePath,
+}: {
+	outputFilePath: string;
+}) => {
 	const yamlContent = yaml.stringify(
 		JSON.parse(JSON.stringify(OPENAPI_1_2_0, null, 2)),
 	);
-	writeFileSync(
-		`${process.env.STAINLESS_PATH?.replace("\\ ", " ")}/openapi.yml`,
-		yamlContent,
-		"utf8",
-	);
+	writeFileSync(outputFilePath, yamlContent, "utf8");
 };

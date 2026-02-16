@@ -2,9 +2,9 @@ import {
 	type ApiPlanV1,
 	type ApiSubscriptionV1,
 	ApiSubscriptionV1Schema,
-	CusExpand,
 	type CusProductLegacyData,
 	CusProductStatus,
+	CustomerExpand,
 	cusProductToPlanStatus,
 	cusProductToProduct,
 	expandIncludes,
@@ -85,11 +85,11 @@ export const getApiSubscription = async <
 		(isCustomerProductOneOff(cusProduct)
 			? expandIncludes({
 					expand: ctx.expand,
-					includes: [CusExpand.PurchasesPlan],
+					includes: [CustomerExpand.PurchasesPlan],
 				})
 			: expandIncludes({
 					expand: ctx.expand,
-					includes: [CusExpand.SubscriptionsPlan],
+					includes: [CustomerExpand.SubscriptionsPlan],
 				}));
 
 	const apiPlan = shouldExpandPlan

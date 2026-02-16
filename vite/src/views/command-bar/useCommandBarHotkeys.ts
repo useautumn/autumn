@@ -1,4 +1,4 @@
-import { AppEnv } from "autumn-js";
+import { AppEnv } from "@autumn/shared";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { useListOrganizations } from "@/lib/auth-client";

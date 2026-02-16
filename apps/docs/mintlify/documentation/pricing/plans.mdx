@@ -1,0 +1,78 @@
+---
+title: "How plans work"
+description: "Learn about plans in Autumn and how to create them"
+---
+
+Plans are the separate packages that define what your customers get and how much they should be billed for it. Each plan you create is a distinct combination of these features and prices.
+
+For example, you can define a separate plan for all the pricing tiers (eg free plan, team plan, enterprise tier) you offer, or all your different price variations (annual billing, monthly billing, usage-based billing)
+
+## Plan Price
+When you create a plan, you can set its price:
+- **Free** - no price, free to use
+- **Paid, one-off** - a fixed amount a user will be charged. This is often used for one-time topups.
+- **Paid, recurring** - a fixed amount a user will be charged per unit of time. This is often used for subscriptions.
+- **Variable** - there is no fixed price for this plan. The plan is priced purely based on feature usage or quantity purchased.
+
+
+## Plan Features
+
+Plans are made up of a list of [features](/documentation/pricing/features). These can be:
+
+- **Included Features** - features that come with the plan for no additional cost. These can be boolean flags, or metered features with a limit.
+- **Priced Features** - features that are billable based on usage of a feature. These can also have an included amount, and a prepaid or usage-based price.
+
+When a plan is enabled for a customer, they will be granted access to the features defined in the plan.
+
+## Plan Properties
+
+**Auto-enable**
+
+Set this is the plan should be automatically applied to a customer when they're created. This is typically for free plans that give customers access to a limited set of features without paying.
+
+
+**Add ons**
+
+Set this if the plan is an add on. This will mean it can be purchased together with other plans. If this flag is not set, then enabling a plan will replace the existing plan.
+
+**Plan Groups**
+
+If you have multiple groups of plans, and customers can have an active plan from each of these subscription groups at the same time, group the plans together. All plan tiers from the same group should have the same value.
+
+<Info>
+**Example**
+
+Let's say you have two different types of chatbots - one for customer support and one for sales. You want customers to be able to have both types of chatbots at the same time, but only one tier from each type.
+
+You would create two plan groups:
+
+1. "Customer Support Chatbots" (group: "support")
+
+   - Basic ($49/month - 1,000 tickets)
+   - Advanced ($149/month - 5,000 tickets)
+   - Enterprise ($399/month - Unlimited tickets)
+
+2. "Sales Chatbots" (group: "sales")
+   - Starter ($79/month - 500 leads)
+   - Growth ($199/month - 2,000 leads)
+   - Enterprise ($499/month - Unlimited leads)
+
+This way, a customer could have both the "Advanced Support" chatbot and the "Starter Sales" chatbot active at the same time, but they couldn't have both "Basic Support" and "Advanced Support" active together.
+
+</Info>
+
+## Trials
+
+Under plan settings, you can set a free trial for a plan. This will give customers a set amount of days to try the plan for free.
+
+You can set whether a card is required for the free trial. If a card is not required, you can `attach` the plan to a customer without them having to go through a checkout flow or have a card on file. It will be automatically expired after the free trial period.
+
+Each customer can only have access to a plan's trial **once**. If they try to attach the plan again, the trial will be ignored.
+
+For a step-by-step guide on enabling, cancelling and ending trials, see our examples:
+- [Trial - card required](/examples/trial-card-required)
+- [Trial - card not required](/examples/trial-card-not-required)
+
+<Tip>
+  When creating an Autumn customer, you can set the `customer.fingerprint` field (eg. device ID, browser fingerprint). This will limit the customer to one trial of the plan per fingerprint to prevent abuse.
+</Tip>

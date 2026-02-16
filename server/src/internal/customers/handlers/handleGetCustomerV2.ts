@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	ApiVersion,
 	backwardsChangeActive,
-	CusExpand,
+	CustomerExpand,
 	GetCustomerQuerySchema,
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
@@ -30,7 +30,7 @@ export const handleGetCustomerV2 = createRoute({
 				versionChange: V0_2_InvoicesAlwaysExpanded,
 			})
 		) {
-			expand.push(CusExpand.Invoices);
+			expand.push(CustomerExpand.Invoices);
 		}
 
 		const start = Date.now();

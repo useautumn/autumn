@@ -23,6 +23,8 @@
 	},
 	"dependencies": {
 		"@orpc/contract": "catalog:",
+		"@orpc/openapi": "^1.13.4",
+		"@orpc/zod": "^1.13.4",
 		"@date-fns/utc": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",

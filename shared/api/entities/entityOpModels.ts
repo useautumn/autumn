@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
-import { CusExpand } from "../../models/cusModels/cusExpand.js";
 import { queryStringArray } from "../apiUtils.js";
 import { CustomerDataSchema } from "../common/customerData.js";
+import { CustomerExpand } from "../customers/components/customerExpand/customerExpand.js";
 
 // Create Entity Params (based on CreateEntitySchema from shared/models)
 export const CreateEntityParamsSchema = z.object({
@@ -27,10 +27,10 @@ export const CreateEntityParamsSchema = z.object({
 export const GetEntityQuerySchema = z.object({
 	expand: queryStringArray(
 		z.enum([
-			CusExpand.Invoices,
-			CusExpand.SubscriptionsPlan,
-			CusExpand.PurchasesPlan,
-			CusExpand.BalancesFeature,
+			CustomerExpand.Invoices,
+			CustomerExpand.SubscriptionsPlan,
+			CustomerExpand.PurchasesPlan,
+			CustomerExpand.BalancesFeature,
 		]),
 	).default([]),
 	skip_cache: z.boolean().optional(),

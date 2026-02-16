@@ -1,0 +1,1339 @@
+openapi: 3.0.1
+info:
+  title: Autumn API
+  description: API to interact with Autumn
+  license:
+    name: MIT
+  version: 1.0.0
+
+servers:
+  - url: https://api.useautumn.com/v1
+
+security:
+  - secretKeyAuth: []
+
+paths:
+  /checkout:
+    post:
+      security:
+        - secretKeyAuth: []
+      description: Returns a Stripe Checkout URL for the customer to make a payment, or returns payment confirmation information.
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - product_id
+              properties:
+                customer_id:
+                  type: string
+                  description: Your unique identifier for the customer
+                product_id:
+                  type: string
+                  description: Product ID, set when creating the product in the Autumn dashboard
+                product_ids:
+                  type: array
+                  description: List of product IDs to attach to the customer in the same subscription or transaction
+                  items:
+                    type: string
+                success_url:
+                  type: string
+                  description: URL to redirect to after the purchase is successful
+                options:
+                  type: array
+                  description: Pass in quantities for prepaid features.
+                  items:
+                    type: object
+                    properties:
+                      feature_id:
+                        type: string
+                        description: Feature ID of the feature that will be affected by the options.
+                      quantity:
+                        type: integer
+                        description: Quantity of the feature (eg number of seats) to be purchased. Required if billing is in-advance usage-based.
+                reward:
+                  type: string
+                  description: An Autumn promo_code or reward_id to apply at checkout.
+                entity_id:
+                  type: string
+                  description: If using [entities](/features/feature-entities), the entity to attach the product to.
+                customer_data:
+                  $ref: "#/components/schemas/CustomerData"
+                checkout_session_params:
+                  type: object
+                  description: Additional parameters to pass onto Stripe when creating the checkout session.
+      x-code-samples:
+        - lang: typescript
+          label: required
+          source: |
+            import { Autumn as autumn } from 'autumn-js'
+
+            const response = await autumn.checkout({
+              customer_id: 'user_123',
+              product_id: 'pro'
+            })
+        - lang: typescript
+          label: with customer_data
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.checkout({
+              customer_id: 'user_123',
+              product_id: 'pro',
+              customer_data: {
+                name: 'John Yeo',
+                email: 'john@example.com'
+              }
+            });
+        - lang: curl
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/checkout' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "product_id": "pro"
+            }'
+        - lang: python
+          label: required
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+              response = await autumn.checkout(
+                  customer_id='user_123',
+                  product_id='pro'
+              )
+
+            asyncio.run(main())
+        - lang: python
+          label: with customer_data
+          source: |
+            import asyncio
+            from autumn import Autumn, CustomerData
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+              response = await autumn.checkout(
+                  customer_id='user_123',
+                  product_id='pro',
+                  customer_data=CustomerData(
+                      name='John Yeo',
+                      email='john@example.com'
+                  )
+              )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: " "
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                checkout url:
+                  value:
+                    url: "https://checkout.stripe.com/c/pay/cs_test_b1aiNVtSaxIymaUwIgzyDqxsX9TryoFzm8uS0nhncxN6TXFKCydjB9waEk#fid2cGd2ZndsdXFsamtQa2x0cGBrYHZ2QGtkZ2lgYSc%2FY2RpdmApJ2R1bE5gfCc%2FJ3VuWnFgdnFaMDRVajE2YUJNal9QRHVdXWFUVU90T0xNN3NUSXRdXWNqbEw9RGd2QlF9TkhdSU9VU29uSFFRSzJzVUJoVzFxalFhZzw0QmBUUXI9ckZDbGNEQ39nM1N9aGM1NWN2cTN0QWtrJyknY3dqaFZgd3Ngdyc%2FcXdwYCknaWR8anBxUXx1YCc%2FJ2hwaXFsWmxxYGgnKSdga2RnaWBVaWRmYG1qaWFgd3YnP3F3cGB4JSUl"
+                    customer_id: "b"
+                    lines: []
+                    product:
+                      id: "pro"
+                      name: "Pro"
+                      group: null
+                      env: "sandbox"
+                      is_add_on: false
+                      is_default: false
+                      version: 2
+                      created_at: 1753805339212
+                      items:
+                        - type: "price"
+                          feature_id: null
+                          feature: null
+                          interval: "month"
+                          price: 20
+                        - type: "priced_feature"
+                          feature_id: "messages"
+                          feature_type: "single_use"
+                          feature:
+                            id: "messages"
+                            name: "Messages"
+                            type: "single_use"
+                            display:
+                              singular: "message"
+                              plural: "messages"
+                          included_usage: 100
+                          interval: "month"
+                          price: 0.1
+                          usage_model: "pay_per_use"
+                          billing_units: 1
+                          reset_usage_when_enabled: false
+                          entity_feature_id: null
+                      free_trial: null
+                      base_variant_id: null
+                      scenario: "new"
+                      properties:
+                        is_free: false
+                        is_one_off: false
+                        interval_group: "month"
+                        has_trial: false
+                        updateable: false
+                upgrades and downgrades:
+                  value:
+                    customer_id: "a"
+                    lines:
+                      - description: "Unused Pro - $20 / month (from 29 Jul 2025)"
+                        amount: -19.92096809289128
+                        item:
+                          type: "price"
+                          feature_id: null
+                          feature: null
+                          interval: "month"
+                          price: 20
+                          display:
+                            primary_text: "$20"
+                            secondary_text: "per month"
+                      - description: "Pro - 200 messages"
+                        amount: 10
+                        item:
+                          type: "priced_feature"
+                          feature_id: "messages"
+                          feature_type: "single_use"
+                          feature:
+                            id: "messages"
+                            name: "Messages"
+                            type: "single_use"
+                            display:
+                              singular: "message"
+                              plural: "messages"
+                          included_usage: 100
+                          interval: "month"
+                          price: 0.1
+                          usage_model: "pay_per_use"
+                          billing_units: 1
+                          reset_usage_when_enabled: false
+                          entity_feature_id: null
+                          display:
+                            primary_text: "100 message"
+                            secondary_text: "then $0.1 per message"
+                      - description: "Ultra - $100 / month (from 29 Jul 2025)"
+                        amount: 99.60484046445639
+                        item:
+                          type: "price"
+                          feature_id: null
+                          feature: null
+                          interval: "month"
+                          price: 100
+                          display:
+                            primary_text: "$100"
+                            secondary_text: "per month"
+                    product:
+                      id: "ultra"
+                      name: "Ultra"
+                      group: null
+                      env: "sandbox"
+                      is_add_on: false
+                      is_default: false
+                      version: 1
+                      created_at: 1753816049300
+                      items:
+                        - type: "price"
+                          feature_id: null
+                          feature: null
+                          interval: "month"
+                          price: 100
+                          display:
+                            primary_text: "$100"
+                            secondary_text: "per month"
+                        - type: "feature"
+                          feature_id: "messages"
+                          feature_type: "single_use"
+                          feature:
+                            id: "messages"
+                            name: "Messages"
+                            type: "single_use"
+                            display:
+                              singular: "message"
+                              plural: "messages"
+                          included_usage: 100
+                          interval: "month"
+                          reset_usage_when_enabled: true
+                          entity_feature_id: null
+                          display:
+                            primary_text: "100 message"
+                      free_trial: null
+                      base_variant_id: null
+                      scenario: "upgrade"
+                      properties:
+                        is_free: false
+                        is_one_off: false
+                        interval_group: "month"
+                        has_trial: false
+                        updateable: false
+                    current_product:
+                      id: "pro"
+                      name: "Pro"
+                      group: null
+                      env: "sandbox"
+                      is_add_on: false
+                      is_default: false
+                      version: 2
+                      created_at: 1753805339212
+                      items:
+                        - type: "price"
+                          feature_id: null
+                          feature: null
+                          interval: "month"
+                          price: 20
+                          display:
+                            primary_text: "$20"
+                            secondary_text: "per month"
+                        - type: "priced_feature"
+                          feature_id: "messages"
+                          feature_type: "single_use"
+                          feature:
+                            id: "messages"
+                            name: "Messages"
+                            type: "single_use"
+                            display:
+                              singular: "message"
+                              plural: "messages"
+                          included_usage: 100
+                          interval: "month"
+                          price: 0.1
+                          usage_model: "pay_per_use"
+                          billing_units: 1
+                          reset_usage_when_enabled: false
+                          entity_feature_id: null
+                          display:
+                            primary_text: "100 message"
+                            secondary_text: "then $0.1 per message"
+                      free_trial: null
+                      base_variant_id: null
+                      scenario: "new"
+                      properties:
+                        is_free: false
+                        is_one_off: false
+                        interval_group: "month"
+                        has_trial: false
+                        updateable: false
+                    total: 89.68387237156512
+                    currency: "USD"
+                    next_cycle:
+                      starts_at: 1756483882000
+                      total: 100
+                    options: []
+                    has_prorations: true
+
+  /attach:
+    post:
+      security:
+        - secretKeyAuth: []
+      description: Enables a product and handles a payment if the customer's card is already on file.
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - product_id
+              properties:
+                customer_id:
+                  type: string
+                  description: Your unique identifier for the customer
+                product_id:
+                  type: string
+                  description: Product ID, set when creating the product in the Autumn dashboard
+                product_ids:
+                  type: array
+                  description: List of product IDs to attach to the customer in the same subscription or transaction
+                  items:
+                    type: string
+                success_url:
+                  type: string
+                  description: URL to redirect to after the purchase is successful
+                options:
+                  type: array
+                  description: Pass in quantities for prepaid features.
+                  items:
+                    type: object
+                    properties:
+                      feature_id:
+                        type: string
+                        description: Feature ID of the feature that will be affected by the options.
+                      quantity:
+                        type: integer
+                        description: Quantity of the feature (eg number of seats) to be purchased. Required if billing is in-advance usage-based.
+                reward:
+                  type: string
+                  description: An Autumn promo_code or reward_id to apply at checkout.
+                entity_id:
+                  type: string
+                  description: If using [entities](/features/feature-entities), the entity to attach the product to.
+                force_checkout:
+                  type: boolean
+                  default: false
+                  description: Always return a Stripe Checkout URL, even if the customer's card is already on file.
+                customer_data:
+                  $ref: "#/components/schemas/CustomerData"
+                metadata:
+                  type: object
+                  description: Additional metadata to pass onto Stripe.
+                checkout_session_params:
+                  type: object
+                  description: Additional parameters to pass onto Stripe when creating the checkout session.
+      x-code-samples:
+        - lang: typescript
+          label: required
+          source: |
+            import { Autumn as autumn } from 'autumn-js'
+
+            const response = await autumn.attach({
+              customer_id: 'user_123',
+              product_id: 'pro'
+            })
+        - lang: typescript
+          label: with customer_data
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.attach({
+              customer_id: 'user_123',
+              product_id: 'pro',
+              customer_data: {
+                name: 'John Yeo',
+                email: 'john@example.com'
+              }
+            });
+        - lang: curl
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/attach' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "product_id": "pro"
+            }'
+        - lang: python
+          label: required
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+              response = await autumn.attach(
+                  customer_id='user_123',
+                  product_id='pro'
+              )
+
+            asyncio.run(main())
+        - lang: python
+          label: with customer_data
+          source: |
+            import asyncio
+            from autumn import Autumn, CustomerData
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+              response = await autumn.attach(
+                  customer_id='user_123',
+                  product_id='pro',
+                  customer_data=CustomerData(
+                      name='John Yeo',
+                      email='john@example.com'
+                  )
+              )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: Customer attached
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_url:
+                    type: string
+                    description: URL to the Stripe checkout page. Only present if payment is required.
+                  success:
+                    type: boolean
+                    description: Indicates if the product change was successful. Only present if payment is not required.
+                  message:
+                    type: string
+                    description: Description of the action taken
+              examples:
+                upgrades and downgrades:
+                  value:
+                    customer_id: "a"
+                    product_ids:
+                      - "pro"
+                    code: "updated_product_successfully"
+                    message: "Successfully updated product"
+
+  /customers/{customer_id}/billing_portal:
+    post:
+      description: Get the customer's Stripe billing portal URL, so they can manage their subscription and see invoice history.
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID which you provided when creating the customer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                return_url:
+                  type: string
+                  description: URL to return to after the customer is finished in the billing portal
+      x-code-samples:
+        - lang: typescript
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.customers.billingPortal('user_123', {
+              return_url: 'https://example.com/account'
+            });
+        - lang: curl
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/customers/user_123/billing_portal' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "return_url": "https://example.com/account"
+            }'
+        - lang: python
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+              response = await autumn.customers.get_billing_portal(
+                "user_123", returl_url="https://example.com/account"
+              )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: URL to access the customer's billing portal
+              example:
+                url: https://billing.stripe.com/session/<hash>
+
+  /track:
+    post:
+      description: Track a usage event in Autumn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - feature_id
+              allOf:
+                - properties:
+                    customer_id:
+                      type: string
+                      description: ID which you provided when creating the customer
+                - $ref: "#/components/schemas/EventData"
+                - properties:
+                    customer_data:
+                      $ref: "#/components/schemas/CustomerData"
+      x-code-samples:
+        - lang: typescript
+          label: with value
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            await autumn.track({
+              customer_id: 'user_123',
+              feature_id: 'messages',
+              value: 3
+            });
+
+        - lang: typescript
+          label: single event
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            await autumn.track({
+              customer_id: 'user_123', 
+              feature_id: 'messages'
+            });
+
+        - lang: typescript
+          label: with customer data
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            await autumn.track({
+              customer_id: 'user_123',
+              feature_id: 'messages', 
+              value: 12,
+              customer_data: {
+                name: 'John Yeo',
+                email: 'john@useautumn.com'
+              }
+            });
+
+        - lang: typescript
+          label: with event name
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            await autumn.track({
+              customer_id: 'user_123', 
+              event_name: 'mobile_messages',
+              value: 12
+            });
+
+        - lang: bash
+          label: with value
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/track' \
+              -H 'Authorization: Bearer am_sk_1234567890' \
+              -H 'Content-Type: application/json' \
+              -d '{
+                "customer_id": "user_123",
+                "feature_id": "messages",
+                "value": 3
+              }'
+
+        - lang: bash
+          label: single event
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/track' \
+              -H 'Authorization: Bearer am_sk_1234567890' \
+              -H 'Content-Type: application/json' \
+              -d '{
+                "customer_id": "user_123",
+                "feature_id": "messages"
+              }'
+        - lang: python
+          label: with value
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                await autumn.track(
+                    customer_id='user_123',
+                    feature_id='messages',
+                    value=3
+                )
+
+            asyncio.run(main())
+        - lang: python
+          label: single event
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                await autumn.track(
+                    customer_id='user_123', 
+                    feature_id='messages',
+                )
+
+            asyncio.run(main())
+        - lang: python
+          label: with customer data
+          source: |
+            import asyncio
+            from autumn import Autumn, CustomerData
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                await autumn.track(
+                    customer_id='user_123',
+                    feature_id='messages',
+                    value=12,
+                    customer_data=CustomerData(
+                        name='John Yeo',
+                        email='john@example.com'
+                    )
+                )
+
+            asyncio.run(main())
+        - lang: python
+          label: with event name
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                await autumn.track(
+                    customer_id='user_123',
+                    event_name='mobile_messages',
+                    value=12
+                )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique identifier for the event
+                  code:
+                    type: string
+                    description: Status code indicating the result of sending the event
+                  customer_id:
+                    type: string
+                    description: Your unique identifier for the customer
+                  feature_id:
+                    type: string
+                    description: ID of the feature being tracked
+              example:
+                id: "evt_2w5dzidzFD1cESxOGnn9frVuVcm"
+                code: "event_received"
+                customer_id: "user_123"
+                feature_id: "messages"
+
+  /check:
+    post:
+      security:
+        - secretKeyAuth: []
+      description: Check if a customer has access to a feature or product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+              properties:
+                product_id:
+                  type: string
+                  description: ID of the product to check access to. Required if `feature_id` is not provided.
+                feature_id:
+                  type: string
+                  description: ID of the feature to check access to. Required if `product_id` is not provided.
+                customer_id:
+                  type: string
+                  description: ID which you provided when creating the customer
+                required_balance:
+                  type: integer
+                  default: 1
+                  description: If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, `allowed` will be `false`.
+                send_event:
+                  type: boolean
+                  description: If true, a usage event will be recorded together with checking access. The `required_balance` field will be used as the usage `value`.
+                with_preview:
+                  type: boolean
+                  default: false
+                  description: If true, the response will include a `preview` object, which can be used to display [information](/quickstart/ui-components) such as a paywall or upgrade confirmation.
+                entity_id:
+                  type: string
+                  description: If using [entity balances](/features/feature-entities) (eg, seats), the entity ID to check access for.
+                customer_data:
+                  $ref: "#/components/schemas/CustomerData"
+      x-code-samples:
+        - lang: typescript
+          label: required
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.check({
+              customer_id: 'user_123',
+              feature_id: 'messages'
+            });
+
+        - lang: typescript
+          label: with event
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.check({
+              customer_id: 'user_123',
+              feature_id: 'messages',
+              required_balance: 12,
+              send_event: true
+            });
+
+        - lang: typescript
+          label: with customer data
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.check({
+              customer_id: 'user_123', 
+              feature_id: 'messages',
+              customer_data: {
+                name: 'John Yeo',
+                email: 'john@useautumn.com'
+              }
+            });
+
+        - lang: curl
+          label: required
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/check' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "feature_id": "messages"
+            }'
+
+        - lang: curl
+          label: with event
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/check' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "feature_id": "messages",
+              "required_balance": 12,
+              "send_event": true
+            }'
+
+        - lang: curl
+          label: with customer data
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/check' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "feature_id": "messages",
+              "customer_data": {
+                "name": "John Yeo",
+                "email": "john@useautumn.com"
+              }
+            }'
+        - lang: python
+          label: required
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn('am_sk_1234567890')
+
+            async def main():
+                response = await autumn.check(
+                  customer_id='user_123',
+                  feature_id='messages'
+                )
+                
+            asyncio.run(main())
+        - lang: python
+          label: with event
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn('am_sk_1234567890')
+
+            async def main():
+                response = await autumn.check(
+                  customer_id='user_123',
+                  feature_id='messages',
+                  required_balance=12,
+                  send_event=True
+                )
+                
+            asyncio.run(main())
+
+        - lang: python
+          label: with customer_data
+          source: |
+            import asyncio
+            from autumn import Autumn, CustomerData
+
+            autumn = Autumn('am_sk_1234567890')
+
+            async def main():
+                response = await autumn.check(
+                  customer_id='user_123',
+                  feature_id='messages',
+                  customer_data=CustomerData(
+                      name='John Yeo',
+                      email='john@useautumn.com'
+                  )
+                )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                    description: Whether the customer has access to the feature or product
+                  customer_id:
+                    type: string
+                    description: Your unique identifier for the customer
+                  feature_id:
+                    type: string
+                    description: ID of the feature being checked
+                  code:
+                    type: string
+                    description: Status code indicating the result of the check
+                  balance:
+                    type: object
+                    description: Balances of the associated feature or credit system
+                    properties:
+                      feature_id:
+                        type: string
+                        description: ID of the feature
+                      required_balance:
+                        type: integer
+                        description: Required amount of the feature
+                      balance:
+                        type: integer
+                        description: Current balance of the feature
+                  feature_preview:
+                    type: object
+                    description: Information about the feature, used to display information such as a paywall. Returned if check is called with a `feature_id` and `with_preview` is true.
+                    properties:
+                      title:
+                        type: string
+                        description: Title of the preview message
+                      message:
+                        type: string
+                        description: Message to display to the user
+                      scenario:
+                        type: string
+                        enum:
+                          - usage_limit
+                          - feature_flag
+                        description: The scenario of the feature preview
+                      feature_id:
+                        type: string
+                        description: ID of the feature
+                      feature_name:
+                        type: string
+                        description: Name of the feature
+                      products:
+                        type: array
+                        description: List of available products that include this feature
+                      upgrade_product_id:
+                        type: string
+                        description: Next available product tier to upgrade to
+                  product_preview:
+                    type: object
+                    description: Information about the product, used to display information such as an upgrade confirmation. Returned if check is called with a `product_id` and `with_preview` is true.
+                    properties:
+                      title:
+                        type: string
+                        description: Title of the preview message
+                      message:
+                        type: string
+                        description: Message to display to the user
+                      scenario:
+                        type: string
+                        enum:
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - renew
+                          - scheduled
+                          - active
+                        description: The scenario of the product preview
+                      product_id:
+                        type: string
+                        description: ID of the product
+                      product_name:
+                        type: string
+                        description: Name of the product
+                      recurring:
+                        type: boolean
+                        description: Whether the product is recurring
+                      next_cycle_at:
+                        type: integer
+                        description: Timestamp of the next billing cycle
+                      current_product_name:
+                        type: string
+                        description: Name of the current product
+                      items:
+                        type: array
+                        description: List of items in the preview
+                        items:
+                          type: object
+                          properties:
+                            price:
+                              type: string
+                              description: Price of the item ($8)
+                            description:
+                              type: string
+                              description: Description of the item (Eg, time used on Pro plan)
+                      options:
+                        type: array
+                        description: List of available options required to attach the product (eg, quantity of seats)
+                      due_today:
+                        type: object
+                        description: Amount due today
+                        properties:
+                          price:
+                            type: number
+                            description: Price amount
+                          currency:
+                            type: string
+                            description: Currency code
+                      due_next_cycle:
+                        type: object
+                        description: Amount due in next cycle
+                        properties:
+                          price:
+                            type: number
+                            description: Price amount
+                          currency:
+                            type: string
+                            description: Currency code
+              example:
+                customer_id: "user_123"
+                feature_id: "messages"
+                code: "feature_found"
+                allowed: true
+                balance: { balance: 100, required_balance: 12 }
+
+  /query:
+    post:
+      security:
+        - secretKeyAuth: []
+      description: Query usage data for specific features over a time range
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - feature_id
+              properties:
+                customer_id:
+                  type: string
+                  description: Your unique identifier for the customer
+                feature_id:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                  description: Feature ID or array of feature IDs to query usage for
+                range:
+                  type: string
+                  enum: ["24h", "7d", "30d", "90d", "last_cycle"]
+                  description: Time range for the query. Defaults to "30d" if not provided. `last_cycle` returns usage since the last billing cycle.
+      x-code-samples:
+        - lang: typescript
+          label: single feature
+          source: |
+            import { Autumn as autumn } from 'autumn-js'
+
+            const response = await autumn.query({
+              customer_id: 'user_123',
+              feature_id: 'messages',
+              range: '30d'
+            })
+        - lang: typescript
+          label: multiple features
+          source: |
+            import { Autumn as autumn } from 'autumn-js'
+
+            const response = await autumn.query({
+              customer_id: 'user_123',
+              feature_id: ['credits', 'messages'],
+              range: '7d'
+            })
+        - lang: curl
+          label: single feature
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/query' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "feature_id": "messages",
+              "range": "30d"
+            }'
+        - lang: curl
+          label: multiple features
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/query' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "feature_id": ["credits", "messages"],
+              "range": "7d"
+            }'
+        - lang: python
+          label: single feature
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                response = await autumn.query(
+                    customer_id='user_123',
+                    feature_id='messages',
+                    range='30d'
+                )
+
+            asyncio.run(main())
+        - lang: python
+          label: multiple features
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn("am_sk_1234567890")
+
+            async def main():
+                response = await autumn.query(
+                    customer_id='user_123',
+                    feature_id=['credits', 'messages'],
+                    range='7d'
+                )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: Usage data for the specified features
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    description: List of usage data points for each time period
+                    items:
+                      type: object
+                      properties:
+                        period:
+                          type: integer
+                          description: Unix timestamp in milliseconds representing start of period
+                      additionalProperties:
+                        type: integer
+                        description: Usage amount for each feature_id in the period
+              examples:
+                single feature:
+                  value:
+                    list:
+                      - period: 1672531200000
+                        messages: 45
+                      - period: 1672617600000
+                        messages: 32
+                      - period: 1672704000000
+                        messages: 18
+                multiple features:
+                  value:
+                    list:
+                      - period: 1672531200000
+                        credits: 20
+                        messages: 45
+                      - period: 1672617600000
+                        credits: 15
+                        messages: 32
+                      - period: 1672704000000
+                        credits: 30
+                        messages: 18
+
+  /cancel:
+    post:
+      security:
+        - secretKeyAuth: []
+      description: Cancel a customer's subscription or product attachment
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - product_id
+              properties:
+                customer_id:
+                  type: string
+                  description: Your unique identifier for the customer
+                product_id:
+                  type: string
+                  description: Product ID to cancel for the customer
+                entity_id:
+                  type: string
+                  description: If using [entities](/features/feature-entities), the entity to cancel the product for.
+                cancel_immediately:
+                  type: boolean
+                  description: Whether to cancel the product immediately. If false, the product will be cancelled at the end of the billing cycle.
+      x-code-samples:
+        - lang: typescript
+          label: required
+          source: |
+            import { Autumn as autumn } from 'autumn-js'
+
+            const response = await autumn.cancel({
+              customer_id: 'user_123',
+              product_id: 'lite'
+            })
+        - lang: typescript
+          label: with entity
+          source: |
+            import { Autumn as autumn } from 'autumn-js';
+
+            const response = await autumn.cancel({
+              customer_id: 'user_123',
+              product_id: 'lite',
+              entity_id: '1'
+            });
+        - lang: curl
+          label: required
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/cancel' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "product_id": "lite"
+            }'
+        - lang: curl
+          label: with entity
+          source: |
+            curl -X POST 'https://api.useautumn.com/v1/cancel' \
+            -H 'Authorization: Bearer am_sk_1234567890' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "customer_id": "user_123",
+              "product_id": "lite",
+              "entity_id": "1"
+            }'
+        - lang: python
+          label: required
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn('am_sk_1234567890')
+
+            async def main():
+                response = await autumn.products.cancel(
+                  customer_id='user_123',
+                  product_id='lite'
+                )
+
+            asyncio.run(main())
+        - lang: python
+          label: with entity
+          source: |
+            import asyncio
+            from autumn import Autumn
+
+            autumn = Autumn('am_sk_1234567890')
+
+            async def main():
+                response = await autumn.products.cancel(
+                    customer_id='user_123',
+                    product_id='lite',
+                    entity_id='1',
+                )
+
+            asyncio.run(main())
+      responses:
+        "200":
+          description: Product cancelled successfully
+
+components:
+  schemas:
+    CustomerData:
+      type: object
+      description: Additional customer properties. These will be used if the customer's properties are not already set.
+      properties:
+        name:
+          type: string
+          description: Name of the customer
+        email:
+          type: string
+          description: Email of the customer
+        fingerprint:
+          type: string
+          description: Unique fingerprint of the customer, used to prevent free trial abuse (eg serial_number, device_id, etc)
+
+    EventData:
+      type: object
+      properties:
+        feature_id:
+          type: string
+          description: ID of the feature to track usage for.
+        value:
+          type: integer
+          default: 1
+          description: How much usage should be deducted from the balance. Default is 1.
+        entity_id:
+          type: string
+          description: If using [entity balances](/features/feature-entities) (eg, seats), the entity ID to track usage for.
+        event_name:
+          type: string
+          description: An [event name](/features/tracking-usage#using-event-names) can be used in place of `feature_id`. This can be used if multiple features are tracked in the same event.
+        idempotency_key:
+          type: string
+          description: Unique identifier for the event. If the an event with the same key is sent multiple times, any subsequent events will be ignored and return an error.
+        properties:
+          type: object
+          description: Event properties that you can define.
+
+    Error:
+      required:
+        - error
+        - message
+      type: object
+      properties:
+        error:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+  securitySchemes:
+    secretKeyAuth:
+      type: http
+      scheme: bearer
+      description: Use your Autumn Secret Key as the Bearer token.

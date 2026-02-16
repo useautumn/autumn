@@ -1,0 +1,173 @@
+---
+title: "Track and limit usage"
+description: "Give customers access to the right features and limits based on their plan"
+---
+
+Typically, your users should get access to different features and usage limits, depending on their plan.
+
+Autumn handles your customer's payments and grants them the features defined in your plan configuration. There are 2 functions you need to enforce limits and gating:
+
+- `check` for feature access, before allowing a user to do something
+- `track` the usage in Autumn afterwards (if needed)
+
+This example will continue from before: a 2-tier pricing model for a chatbot.
+
+<Note>
+This guide shows an asynchronous approach to checking and tracking. You can also [check and reserve](/documentation/customers/check#checking-and-reserving-usage) balance in a single, atomic API call for concurrent events.
+</Note>
+
+### Checking feature access
+
+Check if a user has enough remaining balance of messages, before executing the action. The `feature_id` used here is defined by you when you create the feature in Autumn.
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+export function SendChatMessage() {
+	const { check, refetch } = useCustomer();
+
+	const handleSendMessage = async () => {
+		const { data } = check({ featureId: "messages" });
+
+		if (!data?.allowed) {
+			alert("You're out of messages");
+		} else {
+			//send chatbot message
+			//then, refresh customer usage data
+			await refetch();
+		}
+	};
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+//check if user can send 1 message
+const { data } = await autumn.check({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "messages",
+  required_balance: 1,
+});
+
+if (!data.allowed) {
+  console.log("User has run out of messages");
+  return;
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+
+    # check feature access
+    response = await autumn.check(
+      customer_id='user_or_org_id_from_auth',
+      feature_id='messages'
+      required_balance=1,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+# check feature access
+curl -X POST 'https://api.useautumn.com/v1/check' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_123",
+  "feature_id": "messages"
+  "required_balance": 1,
+}'
+```
+
+</CodeGroup>
+
+<Accordion title="Using React hooks to check access client-side">
+
+When using [React hooks](/react/hooks/useCustomer), you have access to the [`customer`](/react/hooks/useCustomer#customer) state object, which you can use to [display billing data](/documentation/getting-started/display-billing) to your users (subscription status, feature permissions, usage balances, etc). 
+
+You can use the client-side `check` function to gate features and show paywalls. Permissions are determined by reading the local `customer` state, so no call to Autumn's API is made. The "true" state should always be fetched server-side.
+
+</Accordion>
+
+<Tip>
+You can also use `check` to [gate boolean features](/documentation/customers/check#checking-boolean-features) (non-metered features), such as access to "premium AI models".
+</Tip>
+
+### Tracking usage
+
+After the user has successfully used a chatbot message, you can record the usage in Autumn. This will decrement the user's message balance.
+
+<CodeGroup>
+
+```typescript Node.js
+//Your own function to send the chat message
+
+//then record 1 message used
+await autumn.track({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "messages",
+  value: 1
+});
+```
+
+```python Python
+import asyncio
+#Your own function to send the chat message
+
+#then record 1 message used
+async def main():
+    await autumn.track(
+        customer_id='user_or_org_id_from_auth',
+        feature_id='messages',
+        value=1
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+#Your own function to send the chat message
+
+#then record 1 message used
+curl -X POST 'https://api.useautumn.com/v1/track' \
+  -H 'Authorization: Bearer am_sk_42424242' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "messages",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+Once you send usage events, you can verify their receipt in the Autumn dashboard, on the [customer](https://app.useautumn.com/customers) detail page.
+
+<Warning>
+You should always handle access checks and usage tracking server-side for security. Users can manipulate client-side code using devtools.
+</Warning>
+--- 
+
+**Next: Displaying Billing Data**
+
+Now, whenever your customers change their plan, they will automaticially have the correct access and limits. Next, display billing information to your customers.
+
+<Card
+  title="Displaying Billing Data"
+  href='/documentation/getting-started/display-billing'
+ >
+Display plan, balance and usage information to your customers using Autumn's `customer` state
+ </Card>

@@ -1,0 +1,176 @@
+---
+title: Balances
+description: Learn about feature balances for your metered features
+---
+
+Each metered feature you create has 3 different fields associated with it per customer. When you get a customer's available features, you will see each of these fields:
+
+1. **Included Usage**: This is the allowance of usage that is included with the product the customer has purchased. This is a fixed value, defined in the product item's `included_usage` field.
+   <Note>
+     If the product item has a `prepaid` price, the included usage will be
+     dynamically set to the quantity of the product item purchased in advance.
+   </Note>
+2. **Usage**: This is the amount of the feature that the customer has used. It will either be 0 or a positive integer.
+3. **Balance**: This is the amount of usage that the customer has remaining. It is typically the difference between the Included Usage and the Usage.
+
+## Getting a Customer's Available Features
+
+You can get a list of acustomer's available features and balances with the `customers` method.
+
+<CodeGroup>
+
+```shell cURL
+curl --request GET \
+  --url https://api.useautumn.com/v1/customers/user_123 \
+  --header 'Authorization: Bearer am_sk_1234567890'
+```
+
+```javascript Typescript
+import { Autumn as autumn } from "autumn-js";
+
+const customer = await autumn.customers.get("user_123");
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+
+async def main():
+    customer = await autumn.customers.get("user_123")
+
+asyncio.run(main())
+```
+
+</CodeGroup>
+
+```json [expandable]
+{
+  "features": [
+    {
+      "feature_id": "ai-messages", //metered feature
+      "included_usage": 100,
+      "usage": 60,
+      "balance": 40,
+      "unlimited": false,
+      "interval": "month",
+      "next_reset_at": 1745193600011
+    },
+    {
+      "feature_id": "seats", //metered feature
+      "included_usage": 0,
+      "usage": 6,
+      "balance": -6,
+      "unlimited": false,
+      "interval": "month",
+      "next_reset_at": null
+    },
+    {
+      "feature_id": "premium-support" //boolean feature
+    }
+  ]
+}
+```
+
+## Positive and Negative Balances
+
+A feature's balance can either be a negative number or a positive number.
+
+- **Positive Balance**: this represents that the customer has used less than the included usage, and they have some usage remaining.
+- **Negative Balance**: this represents that the customer has used more than the included usage, and they have usage that they will be billed for in the next billing period.
+
+<Note>
+Features can only have a negative balance if they have a [usage-based price](/documentation/pricing/plan-features#priced-features) associated with them.
+
+If a feature does not have a price, its balance will never fall below 0 even if more usage events are sent.
+</Note>
+
+## Reset Intervals
+
+When you create a product item, you'll define a usage reset interval. When the reset interval comes around, `usage` will be reset to 0, and `balance` will be set back to the `included_usage`.
+
+Reset intervals can be: `minute`, `hour`, `day`, `week`, `month`, `quarter`, `semi_annual`, or `year`.
+
+If a feature has a price associated with it, the reset interval will be the same as the billing interval. This means it can be one of the following: `month`, `quarter`, `semi_annual`, or `year`.
+
+#### No Reset
+
+Certain features are consumable, and can have balances that are replenished. For example, you may have features like:
+
+- Credits
+- AI messages
+- Hours of compute
+
+Other features are not consumable, and their usage is continuous. For example:
+
+- Seats
+- Workspaces
+- Number of compute instances in use
+
+These features should not have a reset interval, so that their balances are never reset.
+
+<Note>
+  This is not a hard rule. You may have consumable features like messages, but
+  want them to last forever. In this case, they should also have a reset
+  interval of “no reset”
+</Note>
+
+You can configure a product item to have no reset interval by selecting "One-off" in the plan editor dashboard.
+
+<Info>
+
+**Example use case**
+
+We have a free tier, which gives customers access to 3 seats.
+We also have a pro tier, which is charged at $10/seat/month.
+
+For our free tier, we'd create a product item with:
+
+- Usage reset: No Reset
+- Via API: `interval: null`
+
+For our pro tier, we'd create a product item with:
+
+- Usage reset: No Reset
+- Billing Interval: Month
+- Via API: `interval: month`, and `reset_usage_on_billing: false`
+
+</Info>
+
+#### Features with multiple intervals
+
+You may have a pricing model in which a customer can buy the following together:
+
+- a pro plan with 50 credits per month.
+- a top-up add-on that grants 100 credits that don't expire
+
+In this case you have a feature that shares two intervals: `month` and "no reset".
+
+Autumn will create 2 separate balances for each of these. You will see each of these in the `customers` route and on the customer details page in the dashboard.
+
+When you send a usage event, Autumn will deduct from the balance with the shortest reset interval first.
+
+<Note>
+  If you want to deduct from the balance with the longest reset interval first,
+  please contact us.
+</Note>
+
+## Edge Cases
+
+There are certain cases in which a feature's balance will diverge from the typical `included_usage` minus `usage` calculation.
+
+#### Setting a feature's balance manually
+
+You can manually edit a users balance via the dashboard or via the API.
+
+When this happens, the balance will be updated to the new value, but the `included_usage` and `usage` will not be updated.
+
+#### Customer has paid for more than they are using
+
+Let's take a pricing model in which a customer pays $10 per seat per month. At the start of the billing period, they are using 5 seats (`balance: -5`, `usage: 5`). Then, they remove a seat.
+
+If `prorate_decrease` is set to `false`, the customer will be paying for 5 seats and using 4 seats (`balance: -5`, `usage: 4`). This means that our customer has 1 seat available that they have paid for but not using.
+
+In this case, the balance and usage has diverged. Autumn accounts for this scenario: they can add another seat at any time, which will not be charged for.
+
+Otherwise, at the start of the next billing period, they usage and balance will synchronize again (`balance: -4`, `usage: 4`), and they will be billed for 4 seats.

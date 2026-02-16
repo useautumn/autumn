@@ -4,7 +4,7 @@ import {
 	ApiVersion,
 	addToExpand,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	dbToApiFeatureV1,
 	type Feature,
@@ -118,9 +118,9 @@ export const handleThresholdReached = async ({
 		ctx = addToExpand({
 			ctx,
 			add: [
-				CusExpand.BalancesFeature,
-				CusExpand.SubscriptionsPlan,
-				CusExpand.PurchasesPlan,
+				CustomerExpand.BalancesFeature,
+				CustomerExpand.SubscriptionsPlan,
+				CustomerExpand.PurchasesPlan,
 			],
 		});
 	}

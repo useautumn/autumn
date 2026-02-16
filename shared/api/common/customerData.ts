@@ -13,7 +13,7 @@ export const CreateCustomerInternalOptionsSchema = z.object({
 
 // Base schema without top-level .meta() to avoid side effects during imports
 // Individual field descriptions are kept as they don't cause registry conflicts
-export const ExtCustomerDataSchema = z
+export const CustomerDataSchema = z
 	.object({
 		name: z.string().nullish().meta({
 			description: "Customer's name",
@@ -48,15 +48,16 @@ export const ExtCustomerDataSchema = z
 		send_email_receipts: z.boolean().optional().meta({
 			description: "Whether to send email receipts to this customer",
 		}),
+
+		internal_options: CreateCustomerInternalOptionsSchema.optional().meta({
+			internal: true,
+		}),
 	})
 	.meta({
 		id: "CustomerData",
+		title: "CustomerData",
 		description: "Customer details to set when creating a customer",
 	});
-
-export const CustomerDataSchema = ExtCustomerDataSchema.extend({
-	internal_options: CreateCustomerInternalOptionsSchema.optional(),
-});
 
 export type CustomerData = z.infer<typeof CustomerDataSchema>;
 

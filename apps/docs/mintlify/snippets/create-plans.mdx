@@ -1,0 +1,134 @@
+<Tip>
+Browse our [Examples](/examples) for guides on setting up credit systems, top ups and other common pricing models.
+</Tip>
+<Tabs>
+<Tab title="Dashboard">
+Create your [Autumn account](https://app.useautumn.com/), and the Free and Pro plans in the [Plans](https://app.useautumn.com/products) tab.
+<AccordionGroup>
+
+  <Accordion title="Free Plan">
+   - On the [Plans](https://app.useautumn.com/products) page, click **Create Plan**.
+   - Name the plan (eg, "Free") and select plan type `Free`
+   - Toggle the `auto-enable` flag, so that the plan is assigned whenever customers are created
+   - In the plan editor, click **Add Feature to Plan**, and create a `Metered`, `Consumable` feature for "messages"
+   - Configure the plan to grant `5` messages, and set the interval to `per month`
+   - Click **Save**
+
+
+   <Frame
+   hint="Your Free plan should look like this"
+   >
+    <img
+      className="block dark:hidden"
+      src="/assets/getting-started/free-plan-light.png"
+    />
+    <img
+      className="hidden dark:block"
+      src="/assets/getting-started/free-plan-dark.png"
+    />
+
+  </Frame>
+
+  </Accordion>
+
+  <Accordion title="Pro Plan">
+  - On the [Plans](https://app.useautumn.com/products) page, click **Create Plan**.
+  - Name the plan (eg, "Pro") and select plan type `Paid`, `Recurring`, and set the price to `$20` per month
+  - In the plan editor, click **Add Feature to Plan**, and add the `messages` feature that you created in the Free plan
+  - Configure the plan to grant `100` messages, and set the interval to `per month`
+  - Click **Save**
+
+  <Frame
+  hint="Your Pro plan should look like this"
+  >
+  <img
+    className="block dark:hidden"
+    src="/assets/getting-started/pro-plan-light.png"
+  />
+  <img
+    className="hidden dark:block"
+    src="/assets/getting-started/pro-plan-dark.png"
+  />
+  </Frame>
+  </Accordion>
+</AccordionGroup>
+</Tab>
+<Tab title="CLI">
+
+<Info>
+The CLI is in beta. The dashboard is the source of truth for plans and features and has the most up-to-date configurations.
+</Info>
+
+Run the following command in your root directory:
+
+```bash
+npx atmn init
+```
+
+This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/api-reference/cli/config) to build your own.
+
+```typescript autumn.config.ts [expandable]
+import {
+  feature,
+  product,
+  featureItem,
+  pricedFeatureItem,
+  priceItem,
+} from "atmn";
+
+// Features
+export const messages = feature({
+  id: "messages",
+  name: "Messages",
+  type: "single_use",
+});
+
+// Products
+export const free = product({
+  id: "free",
+  name: "Free",
+  items: [
+    // 5 messages per month
+    featureItem({
+      feature_id: messages.id,
+      included_usage: 5,
+      interval: "month",
+    }),
+  ],
+});
+
+export const pro = product({
+  id: "pro",
+  name: "Pro",
+  items: [
+    // 100 messages per month
+    featureItem({
+      feature_id: messages.id,
+      included_usage: 100,
+      interval: "month",
+    }),
+    // $20 per month
+    priceItem({
+      price: 20,
+      interval: "month",
+    }),
+  ],
+});
+```
+
+Then, push your changes to Autumn's sandbox environment.
+
+```bash
+npx atmn push
+```
+
+<Tip>
+  If you already have products created in the dashboard, run `npx atmn pull` to
+  pull them into your local config.
+</Tip>
+
+</Tab>
+
+
+</Tabs>
+

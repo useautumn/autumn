@@ -1,0 +1,26 @@
+import { Hono } from "hono";
+import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
+import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
+import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
+import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
+import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
+import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
+import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
+import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware.js";
+import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
+import type { HonoEnv } from "../honoUtils/HonoEnv.js";
+import { customerRpcRouter } from "../internal/customers/cusRouter";
+
+export const rpcRouter = new Hono<HonoEnv>();
+
+rpcRouter.use("*", secretKeyMiddleware);
+rpcRouter.use("*", orgConfigMiddleware);
+rpcRouter.use("*", apiVersionMiddleware);
+rpcRouter.use("*", refreshCacheMiddleware);
+rpcRouter.use("*", refreshProductsCacheMiddleware);
+rpcRouter.use("*", analyticsMiddleware);
+rpcRouter.use("*", rateLimitMiddleware);
+rpcRouter.use("*", queryMiddleware());
+rpcRouter.use("*", idempotencyMiddleware);
+
+rpcRouter.route("", customerRpcRouter);

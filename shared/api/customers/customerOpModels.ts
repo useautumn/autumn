@@ -1,22 +1,15 @@
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { CustomerIdSchema } from "../common/customerId.js";
 import { queryStringArray } from "../common/queryHelpers.js";
+import { CustomerExpandEnum } from "./components/customerExpand/customerExpand.js";
 
 export const GetCustomerQuerySchema = z.object({
-	expand: queryStringArray(z.enum(CusExpand)).optional(),
+	expand: queryStringArray(CustomerExpandEnum).optional(),
 
 	skip_cache: z.boolean().optional().meta({
 		internal: true,
 	}),
-	with_autumn_id: z.boolean().default(false).meta({
-		internal: true,
-	}),
-});
-
-export const CreateCustomerQuerySchema = z.object({
-	expand: queryStringArray(z.enum(CusExpand)).optional(),
 	with_autumn_id: z.boolean().default(false).meta({
 		internal: true,
 	}),

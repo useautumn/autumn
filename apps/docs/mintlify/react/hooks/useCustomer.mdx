@@ -1,0 +1,507 @@
+---
+title: "useCustomer"
+description: "Access a customer's state and use it to display information in your React app"
+---
+
+import SWRConfigParam from '/snippets/swr-config-param.mdx';
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useCustomer` hook provides access to customer data and related operations. You can use it from your frontend to retrieve customer information, manage loading states, and create entities.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="expand" type="CustomerExpandOption[]">
+  Array of additional data to include in the customer response. Options include
+  `invoices`, `rewards`, `trials_used`, `entities`, `referrals`, `payment_method`.
+</ParamField>
+
+<ParamField body="errorOnNotFound" type="boolean">
+  Whether to throw an error if the customer is not found. Defaults to `false`.
+</ParamField>
+
+<SWRConfigParam />
+
+## Returns
+
+### `customer`
+
+The customer object containing all customer data.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerProfile() {
+  const { customer } = useCustomer({ expand: ["invoices"] });
+
+  return (
+    <div>
+      <h2>Customer Profile</h2>
+      <p>Name: {customer?.name}</p>
+      <p>Email: {customer?.email}</p>
+      <p>Balance: {customer?.features.chat_messages?.balance}</p>
+    </div>
+  );
+}
+```
+
+### `checkout()`
+
+Opens a checkout URL for the user to make a payment.
+
+If the payment method already exists, purchase confirmation data will be returned.
+
+If a `dialog` is passed in, a payment confirmation dialog ([`CheckoutDialog`](/react/components/checkout-dialog)) will be opened.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+import CheckoutDialog from "@/components/autumn/checkout-dialog";
+// or import { CheckoutDialog } from "autumn-js/react";
+
+export default function PurchaseButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "pro",
+          dialog: CheckoutDialog,
+        });
+      }}
+    >
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="productId" type="string" required>
+  The ID of the product being enabled.
+</ParamField>
+<ParamField body="dialog" type="(data: any) => JSX.Element | React.ReactNode">
+  A dialog that pops up to confirm the purchase (eg, for upgrades/downgrades).
+  See the [\<CheckoutDialog />](/react/components/checkout-dialog) page.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity (eg, user seat) to attach the product to.
+</ParamField>
+
+<ParamField body="options" type="AttachFeatureOptions[]">
+  Array of feature options to configure for the attachment. Each option contains
+  `featureId` (string) and `quantity` (number).
+</ParamField>
+
+<ParamField body="productIds" type="string[]">
+  Array of additional product IDs to attach simultaneously.
+</ParamField>
+
+<ParamField body="freeTrial" type="boolean">
+  Whether to disable free trials for this product. Only applicable if the
+  product has a free trial.
+</ParamField>
+
+<ParamField body="successUrl" type="string">
+  URL to redirect to after successful attachment/checkout.
+</ParamField>
+
+<ParamField body="metadata" type="Record<string, string>">
+  Additional metadata to pass onto Stripe.
+</ParamField>
+
+<ParamField body="checkoutSessionParams" type="object">
+  Pass in Stripe checkout session fields and they will be forwarded on.
+</ParamField>
+
+<ParamField body="forceCheckout" type="boolean">
+  Whether to force the checkout flow even if the payment method already exists.
+  Not available for upgrades/downgrades.
+</ParamField>
+
+<ParamField body="openInNewTab" type="boolean" default="false">
+  Whether to open the checkout URL in a new tab.
+</ParamField>
+
+### `attach()`
+
+Enables a product for a customer and handles a payment. Typically used after the `checkout` function.
+
+If the payment method is not on file, this function will also return a Checkout URL.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function ConfirmationButton() {
+  const { attach } = useCustomer();
+
+  return (
+    <div>
+      Click to confirm your upgrade. Your card will be charged.
+      <button
+        onClick={async () => {
+          await attach({
+            productId: "ultra",
+          });
+        }}
+      >
+        Confirm Purchase
+      </button>
+    </div>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="productId" type="string" required>
+  The ID of the product to attach.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity (eg, user seat) to attach the product to.
+</ParamField>
+
+<ParamField body="options" type="AttachFeatureOptions[]">
+  Array of feature options to configure for the attachment. Each option contains
+  `featureId` (string) and `quantity` (number).
+</ParamField>
+
+<ParamField body="productIds" type="string[]">
+  Array of additional product IDs to attach simultaneously.
+</ParamField>
+
+<ParamField body="freeTrial" type="boolean">
+  Whether to disable free trials for this product. Only applicable if the
+  product has a free trial.
+</ParamField>
+
+<ParamField body="successUrl" type="string">
+  URL to redirect to after successful attachment/checkout.
+</ParamField>
+
+<ParamField body="metadata" type="Record<string, string>">
+  Additional metadata to pass onto Stripe.
+</ParamField>
+
+<ParamField body="forceCheckout" type="boolean">
+  Whether to force the checkout flow even if the payment method already exists.
+  Not available for upgrades/downgrades.
+</ParamField>
+
+<ParamField body="openInNewTab" type="boolean" default="false">
+  Whether to open the checkout URL in a new tab.
+</ParamField>
+
+### `check()`
+
+Check if a user has access to a specific feature or product.
+
+<Note>
+  This will be read from the local `customer` state object, so no API call to
+  Autumn is made. This should be combined with a backend `check` call for
+  security.
+</Note>
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function FeatureGate({ children }) {
+  const { check } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        const { data, error } = await check({
+          featureId: "chat-messages",
+          requiredBalance: 7,
+        });
+      }}
+    >
+      Send 7 Messages
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="featureId" type="string">
+  The ID of the feature to check access for.
+</ParamField>
+
+<ParamField body="productId" type="string">
+  The ID of the product to check access for.
+</ParamField>
+
+<ParamField body="dialog" type="(data: any) => JSX.Element | React.ReactNode">
+  A dialog that pops up to act as a paywall (eg, when a feature runs out). See
+  the [\<PaywallDialog />](/react/components/paywall-dialog) page.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity (customer/user) to check access for.
+</ParamField>
+
+<ParamField body="requiredBalance" type="number">
+  The required balance/usage amount to check against.
+</ParamField>
+
+<ParamField body="sendEvent" type="boolean">
+  Whether to send an event when checking access.
+</ParamField>
+
+<ParamField body="withPreview" type="boolean">
+  Return preview data to display to the user. Using this with a `featureID` will
+  return paywall data, and using it with a `productId` will return
+  upgrade/downgrade data.
+</ParamField>
+
+### `track()`
+
+Track usage events for features or analytics.
+
+<Warning>
+  Tracking usage client-side is not recommended, as a user in theory could stop
+  script execution and mess with your tracking data.
+</Warning>
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function ApiCallButton() {
+  const { track } = useCustomer();
+
+  const handleApiCall = async () => {
+    // Make your API call
+    await makeApiCall();
+
+    // Track the usage
+    await track({
+      featureId: "api-calls",
+      value: 1,
+      idempotencyKey: `api-call-${Date.now()}`,
+    });
+  };
+
+  return <button onClick={handleApiCall}>Make API Call</button>;
+}
+```
+
+**Parameters**
+
+<ParamField body="featureId" type="string">
+  The ID of the feature to track usage for.
+</ParamField>
+
+<ParamField body="eventName" type="string">
+  Custom event name for tracking.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity (customer/user) to track usage for.
+</ParamField>
+
+<ParamField body="value" type="number">
+  The value/quantity to track (e.g., number of API calls, storage used).
+</ParamField>
+
+<ParamField body="idempotencyKey" type="string">
+  Unique key to prevent duplicate tracking events.
+</ParamField>
+
+### `openBillingPortal()`
+
+Open the billing portal for customers to manage their subscriptions, payment methods, and billing information.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function BillingSettings() {
+  const { openBillingPortal } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await openBillingPortal({
+          returnUrl: "https://useautumn.com/settings/billing",
+        });
+      }}
+    >
+      Manage Billing
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="returnUrl" type="string">
+  URL to redirect to when the customer exits the billing portal.
+</ParamField>
+
+### `setupPayment()`
+
+Setup a payment method for a customer.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function SetupPayment() {
+  const { setupPayment } = useCustomer();
+}
+```
+
+**Parameters**
+
+<ParamField body="successUrl" type="string">
+  Optional URL to redirect to after successful setup. If not provided, the default return URL will be used.
+</ParamField>
+
+<ParamField body="checkoutSessionParams" type="object">
+  Optional parameters to pass to the Checkout session. Accepts an object with string keys and any values.
+</ParamField>
+
+<ParamField body="openInNewTab" type="boolean">
+  If true, will open the payment session in a new tab. Defaults to false.
+</ParamField>
+
+
+
+### `cancel()`
+
+Cancel a product or subscription for a user/entity.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CancelSubscription() {
+  const { cancel } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await cancel({ productId: "pro" });
+      }}
+    >
+      Cancel Subscription
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="productId" type="string" required>
+  The ID of the product to cancel.
+</ParamField>
+
+<ParamField body="cancelImmediately" type="boolean">
+  Whether to cancel the product immediately. If false, the product will be
+  cancelled at the end of the billing cycle.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity (customer/user) to cancel the product for.
+</ParamField>
+
+### `refetch()`
+
+Function to manually refetch the `customer` data, eg when updating a customer's usage or balance to display.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerWithRefresh() {
+  const { customer, refetch } = useCustomer();
+  const { track } = useCustomer();
+
+  const sendMessage = async () => {
+    await track({ featureId: "chat_messages" });
+    await refetch();
+  };
+
+  return <button onClick={sendMessage}>Send Message</button>;
+}
+```
+
+### `createEntity()`
+
+Function to create one or more [entities](/documentation/customers/feature-entities) for the customer.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CreateUserSeat() {
+  const { createEntity } = useCustomer();
+
+  const handleCreateSeat = async () => {
+    const { data, error } = await createEntity({
+      id: "user_abc",
+      name: "John Doe",
+      featureId: "seats",
+    });
+    console.log("Created entity:", data);
+  };
+}
+
+return <button onClick={handleCreateSeat}>Create User Seat</button>;
+```
+
+**Parameters**
+
+<ParamField body="id" type="string" required>
+  The ID of the entity to create.
+</ParamField>
+
+<ParamField body="name" type="string">
+  Display name for the entity.
+</ParamField>
+
+<ParamField body="featureId" type="string">
+  The feature ID for the entity being created. Must be a `continuous_use`
+  feature.
+</ParamField>
+
+### `isLoading`
+
+Boolean indicating whether the customer data is currently being fetched.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerLoader() {
+  const { customer, isLoading } = useCustomer();
+
+  if (isLoading) {
+    return <div>Loading customer data...</div>;
+  }
+
+  return <div>Welcome, {customer?.name}!</div>;
+}
+```
+
+### `error`
+
+Any error that occurred while fetching customer data.
+
+```jsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerWithError() {
+  const { customer, error, isLoading } = useCustomer();
+
+  if (error) {
+    return <div>Error loading customer: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return <div>Customer: {customer?.name}</div>;
+}
+```

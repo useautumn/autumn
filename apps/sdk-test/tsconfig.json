@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*", "../../packages/autumn-js/src/libraries/react/*"],
+      "@/components/*": [
+        "./components/*",
+        "../../packages/autumn-js/src/libraries/react/components/*"
+      ],
+      "@/lib/*": [
+        "./lib/*",
+        "../../packages/autumn-js/src/libraries/react/lib/*"
+      ],
+      "@/hooks/*": [
+        "./hooks/*",
+        "../../packages/autumn-js/src/libraries/react/hooks/*"
+      ],
+      "@sdk": ["../../packages/autumn-js/src/sdk/index.ts"],
+      "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
+      "@utils/*": ["../../packages/autumn-js/src/utils/*"],
+      "autumn-js": ["../../packages/autumn-js/src/sdk/index.ts"],
+      "autumn-js/react": [
+        "../../packages/autumn-js/src/libraries/react/index.ts"
+      ],
+      "autumn-js/next": [
+        "../../packages/autumn-js/src/libraries/backend/next.ts"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}

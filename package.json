@@ -7,7 +7,11 @@
 			"shared",
 			"vite",
 			"scripts",
-			"apps/checkout"
+			"apps/checkout",
+			"apps/docs",
+			"apps/sdk-test",
+			"packages/sdk",
+			"packages/autumn-js"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -69,7 +73,12 @@
 		"knip": "knip",
 		"knip:fix": "knip --fix",
 		"knip:fix-all": "knip --fix --allow-remove-files",
-		"prepare": "husky"
+		"prepare": "husky",
+
+		"api": "cd shared && bun api",
+		"docs:pull": "bun -F @autumn/docs pull",
+		"docs:dev": "bun -F @autumn/docs dev",
+		"docs:build": "bun -F @autumn/docs build"
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",

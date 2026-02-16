@@ -1,0 +1,24 @@
+---
+title: "Generate Stripe OAuth URL"
+openapi: "platform POST /platform/oauth_url"
+---
+
+<Info>
+  Generates a Stripe Connect OAuth URL for a platform organization. Use this to allow your tenants to connect their Stripe accounts through the OAuth flow.
+</Info>
+
+## OAuth Flow
+
+After generating the OAuth URL:
+
+1. Redirect your tenant to the `oauth_url`
+2. User authorizes their Stripe account
+3. Stripe redirects to Autumn's callback URL
+4. Autumn processes the authorization and redirects to your `redirect_url`
+5. Your `redirect_url` will receive query parameters:
+   - `success=true` or `success=false`
+   - `message=...` (if error occurred)
+
+<Note>
+  OAuth state is stored in Upstash with a 10-minute expiry. The organization must have been created via the platform API before generating an OAuth URL.
+</Note>

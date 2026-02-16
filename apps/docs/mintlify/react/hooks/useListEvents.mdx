@@ -1,0 +1,129 @@
+---
+title: "useListEvents"
+description: "List and paginate through individual customer events"
+---
+
+import SWRConfigParam from '/snippets/swr-config-param.mdx';
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useListEvents` hook provides access to individual event records with pagination. 
+
+It fetches data from the [/events/list](/api-reference/events/list-events) endpoint, allowing you to display detailed event logs and histories.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="featureId" type="string | string[]" required>
+  The feature ID or array of feature IDs to query events for.
+</ParamField>
+
+<ParamField body="offset" type="number">
+  Number of events to skip for pagination. Defaults to 0.
+</ParamField>
+
+<ParamField body="limit" type="number">
+  Maximum number of events to return per page. Defaults to 50.
+</ParamField>
+
+<ParamField body="customRange" type="object">
+  Custom date range for filtering events by timestamp.
+  
+  <Expandable title="customRange properties">
+    <ParamField body="start" type="number">
+      Start timestamp (Unix timestamp in milliseconds)
+    </ParamField>
+    
+    <ParamField body="end" type="number">
+      End timestamp (Unix timestamp in milliseconds)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<SWRConfigParam />
+
+## Returns
+
+### `list`
+
+Array of individual event records. Each event object includes:
+- `id`: Unique event identifier
+- `timestamp`: Unix timestamp in milliseconds when the event occurred
+- `feature_id`: The feature associated with the event recorded
+- `customer_id`: The customer that recorded this event
+- `value`: The numeric value recorded with the event
+- `properties`: Metadata and custom properties for the event
+
+<Expandable title="list example">
+
+```json
+[
+    {
+        "id": "evt_abc123",
+        "timestamp": 1765411200000,
+        "feature_id": "api_calls",
+        "customer_id": "cust_xyz789",
+        "value": 1,
+        "properties": {
+            "endpoint": "/api/users",
+            "method": "GET",
+            "status": 200
+        }
+    },
+    {
+        "id": "evt_def456",
+        "timestamp": 1765411260000,
+        "feature_id": "api_calls",
+        "customer_id": "cust_xyz789",
+        "value": 1,
+        "properties": {
+            "endpoint": "/api/posts",
+            "method": "POST",
+            "status": 201
+        }
+    }
+]
+```
+
+</Expandable>
+
+### `hasMore`
+
+Boolean indicating whether there are more events available on subsequent pages.
+
+### `hasPrevious`
+
+Boolean indicating whether there are previous events available on earlier pages.
+
+### `page`
+
+Current page number (1-based indexing).
+
+### `isLoading`
+
+Boolean indicating whether the event data is currently being fetched.
+
+### `error`
+
+Any `AutumnError` that occurred while fetching event data.
+
+### `refetch()`
+
+Function to manually refetch the current page of events.
+
+### `nextPage()`
+
+Function to navigate to the next page of events. Only call when `hasMore` is true.
+
+### `prevPage()`
+
+Function to navigate to the previous page of events. Only call when `hasPrevious` is true.
+
+### `goToPage()`
+
+Function to jump to a specific page number. Accepts a page number (1-based) as parameter.
+
+### `resetPagination()`
+
+Function to reset pagination back to the first page.
+

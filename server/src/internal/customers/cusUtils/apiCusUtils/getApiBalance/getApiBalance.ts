@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	CheckExpand,
-	CusExpand,
+	CustomerExpand,
 	cusEntsToAdjustment,
 	cusEntsToAllowance,
 	cusEntsToCurrentBalance,
@@ -117,7 +117,7 @@ export const getApiBalance = ({
 
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
-		includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
+		includes: [CheckExpand.BalanceFeature, CustomerExpand.BalancesFeature],
 	})
 		? dbToApiFeatureV1({ ctx, dbFeature: feature })
 		: undefined;

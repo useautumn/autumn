@@ -1,7 +1,7 @@
 import {
 	type AppEnv,
 	type CheckParams,
-	CusExpand,
+	CustomerExpand,
 	type Entity,
 	type FullCustomer,
 	type TrackParams,
@@ -66,7 +66,7 @@ export const getOrCreateCachedFullCustomer = async ({
 			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
-			expand: [CusExpand.Invoices],
+			expand: [CustomerExpand.Invoices],
 			allowNotFound: true,
 		});
 	}
@@ -98,7 +98,7 @@ export const getOrCreateCachedFullCustomer = async ({
 			withEntities: true,
 			withSubs: true,
 			entityId,
-			expand: [CusExpand.Invoices],
+			expand: [CustomerExpand.Invoices],
 		});
 	}
 

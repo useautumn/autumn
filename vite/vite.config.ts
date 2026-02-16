@@ -46,6 +46,8 @@ export default defineConfig({
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",
+			"autumn-js",
+			"autumn-js/react",
 			"better-auth",
 			"better-auth/react",
 			"@better-auth/stripe",
