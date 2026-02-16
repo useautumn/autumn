@@ -1,11 +1,11 @@
 import {
-	ArrowsInIcon,
-	ArrowsOutIcon,
-	CalendarCheckIcon,
 	CalendarIcon,
+	CalendarXIcon,
 	CaretDownIcon,
 	LightningIcon,
 	PlusIcon,
+	SquareSplitHorizontalIcon,
+	UniteIcon,
 } from "@phosphor-icons/react";
 import type { Transition, Variants } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -114,12 +114,12 @@ export function AttachAdvancedSection() {
 
 		if (hasCustomBilling) {
 			parts.push(
-				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "Next cycle" : "Prorate"}`,
+				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "No Charges" : "Prorate"}`,
 			);
 		}
 
 		if (newBillingSubscription) {
-			parts.push("Separate subscription");
+			parts.push("Create New Cycle");
 		}
 
 		if (hasDiscounts) {
@@ -286,7 +286,7 @@ export function AttachAdvancedSection() {
 													Prorate
 												</IconCheckbox>
 												<IconCheckbox
-													icon={<CalendarCheckIcon />}
+													icon={<CalendarXIcon />}
 													iconOrientation="left"
 													variant="secondary"
 													size="sm"
@@ -302,7 +302,7 @@ export function AttachAdvancedSection() {
 															"border-l-0",
 													)}
 												>
-													Next cycle
+													No Charges
 												</IconCheckbox>
 											</div>
 										</div>
@@ -313,10 +313,10 @@ export function AttachAdvancedSection() {
 								{showNewBillingSubscription && (
 									<motion.div variants={ACCORDION_ITEM}>
 										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
-											<span className="text-sm text-t2">Subscription</span>
+											<span className="text-sm text-t2">Billing Cycle</span>
 											<div className="flex">
 												<IconCheckbox
-													icon={<ArrowsInIcon />}
+													icon={<UniteIcon />}
 													iconOrientation="left"
 													variant="secondary"
 													size="sm"
@@ -329,10 +329,10 @@ export function AttachAdvancedSection() {
 														newBillingSubscription && "border-r-0",
 													)}
 												>
-													Merge
+													Merge With Existing
 												</IconCheckbox>
 												<IconCheckbox
-													icon={<ArrowsOutIcon />}
+													icon={<SquareSplitHorizontalIcon />}
 													iconOrientation="left"
 													variant="secondary"
 													size="sm"
@@ -345,7 +345,7 @@ export function AttachAdvancedSection() {
 														!newBillingSubscription && "border-l-0",
 													)}
 												>
-													Separate
+													Create New Cycle
 												</IconCheckbox>
 											</div>
 										</div>
