@@ -14,7 +14,7 @@ targets:
         sourceRevisionDigest: sha256:870cf5d97b4095695b870c563c519e87267e9b61c1c77e0702ba713ed5016249
         sourceBlobDigest: sha256:d056cbb523f45acbfe06ad522417e87c888e233cb9d39800b0879a0f03715b15
         codeSamplesNamespace: autumn-api-typescript-code-samples
-        codeSamplesRevisionDigest: sha256:57f6c87bf54eebe3cc8972b4b752cc5c8acbb5579db5a72c62712c09a7535c4c
+        codeSamplesRevisionDigest: sha256:e389b775535782501dd362726e1aa4392a9d3ac8cda59fcbdb12aa06d8f6c7b3
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest

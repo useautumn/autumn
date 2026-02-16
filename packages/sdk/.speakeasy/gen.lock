@@ -5,12 +5,12 @@ management:
   docVersion: 2.1.0
   speakeasyVersion: 1.718.0
   generationVersion: 2.824.1
-  releaseVersion: 0.7.20
-  configChecksum: 0b4fb6dcfb9d39ab7b3d33663bd406b2
+  releaseVersion: 0.7.21
+  configChecksum: e8cca01036abd5005433bf1ece03cd66
 persistentEdits:
-  generation_id: a47f16dc-6445-4109-b975-2d3d49434c47
-  pristine_commit_hash: 11ad79633a20a21e4ef703ce48922a924c341aa5
-  pristine_tree_hash: 1e6fc7ba17b211330e97103160441cbef1c2b0dc
+  generation_id: fdaf92d1-ceb4-49de-8dfe-55b357a0d4ff
+  pristine_commit_hash: 242296df70c8de64ebe278e67e9d4dc7577c9d44
+  pristine_tree_hash: 6cb3cef2e6e543695cf6556d8074305fcd2674d3
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -495,12 +495,12 @@ trackedFiles:
     pristine_git_object: 900d545ed58929951e2208e1bec791cb264429a4
   jsr.json:
     id: 7f6ab7767282
-    last_write_checksum: sha1:2e89abed613d4deac741401a416279b68cfa9e72
-    pristine_git_object: 93b86e0cdade6cd1d8a890fc839d4b485097a5fb
+    last_write_checksum: sha1:6b889588e192e634404e76cef8eae2dad35bbf00
+    pristine_git_object: 78d9932c46bb7d1e5bf248ff7a6566f6f2c27227
   package.json:
     id: 7030d0b2f71b
-    last_write_checksum: sha1:0352148b93072588870244e5f8189426040f3582
-    pristine_git_object: 9ef6629935a084177973f29c3964fcf927dc2efb
+    last_write_checksum: sha1:06888652d920aebda539176536409eafd46fe289
+    pristine_git_object: 19e39bcec4382c83a2e327cc4b4e50a261ef0dbc
   src/core.ts:
     id: f431fdbcd144
     last_write_checksum: sha1:f8f24a3ca09c1efb285d7a75ad3697d0128f47e2
@@ -539,8 +539,8 @@ trackedFiles:
     pristine_git_object: 44be0eae8246521b230e8e711a88eff738fc015d
   src/lib/config.ts:
     id: 320761608fb3
-    last_write_checksum: sha1:027a62f4a5a0c604e17486a65b11de580239e35d
-    pristine_git_object: 138841a530619f3d549f4bb45d7ea82bbd45eae4
+    last_write_checksum: sha1:3146368c59049d4922e647a6175a4cbd0e00ac87
+    pristine_git_object: 8c542a4cd3d4fa86acf95b463a05495ac3e3831b
   src/lib/dlv.ts:
     id: b1988214835a
     last_write_checksum: sha1:1dd3e3fbb4550c4bf31f5ef997faff355d6f3250
