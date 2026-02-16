@@ -1,4 +1,4 @@
-import type { BillingContext } from "@autumn/shared";
+import type { BillingContext, StripeDiscountWithCoupon } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	msToSeconds,
@@ -71,6 +71,23 @@ const customerProductsToPhaseItems = ({
 		}
 		return { price, quantity };
 	});
+};
+
+/**
+ * Converts billing context discounts to the format expected by Stripe schedule phases.
+ * Uses the existing discount ID so Stripe reuses the same discount object,
+ * preserving the original start/end timestamps and remaining duration for repeating coupons.
+ */
+const stripeDiscountsToPhaseDiscounts = ({
+	stripeDiscounts,
+}: {
+	stripeDiscounts?: StripeDiscountWithCoupon[];
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] | undefined => {
+	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
+
+	return stripeDiscounts.map((discount) => ({
+		discount: discount.id,
+	}));
 };
 
 /**
@@ -167,6 +184,9 @@ export const buildStripePhasesUpdate = ({
 			start_date: msToSeconds(startMs),
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),
+			discounts: stripeDiscountsToPhaseDiscounts({
+				stripeDiscounts: billingContext.stripeDiscounts,
+			}),
 		};
 
 		// Log phase details

@@ -25,12 +25,12 @@ export const setupDefaultProductContext = async ({
 	if (nullish(params.cancel_action)) return undefined;
 
 	// Add-ons don't trigger default products
-	const { valid: isMainCustomerScopedAndPaid } = cp(customerProduct)
+	const { valid: isMainCustomerScopedAndRecurring } = cp(customerProduct)
 		.main()
-		.paidRecurring()
+		.recurring()
 		.customerScoped();
 
-	if (!isMainCustomerScopedAndPaid) return undefined;
+	if (!isMainCustomerScopedAndRecurring) return undefined;
 
 	const defaultProduct = await getFreeDefaultProductByGroup({
 		ctx,
