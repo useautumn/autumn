@@ -1,0 +1,13 @@
+---
+title: "Track Usage"
+openapi: "openapi-1.2.0 POST /track"
+---
+
+This endpoint is for tracking usage events in Autumn, so feature usage can be limited or billed for.
+
+<Tip>
+  {" "}
+  If the `customer_id` you send doesn't already exist, Autumn will automatically
+  create a new customer. You can optionally set the properties of this new customer
+  through the `customer_data` field.
+</Tip>

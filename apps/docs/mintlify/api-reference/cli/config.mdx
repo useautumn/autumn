@@ -1,0 +1,330 @@
+---
+title: "Product Config"
+description: "Create your pricing plans and products via our CLI"
+---
+
+Products can be created via our dashboard, or via our CLI defined in an `autumn.config.ts` file.
+
+You can export `features` and `products` from this config file, and push them to Autumn using `npx atmn push`
+
+<Note>
+  CLI functionality is in beta. Please let us know any issues you run into and
+  we'll resolve them ASAP.
+</Note>
+
+## Feature
+
+The features of your application that can be gated depending on pricing tier. These will be used to define your products.
+
+<ParamField body="id" type="string" required>
+  The ID of the feature that will be used via Autumn's APIs.
+</ParamField>
+
+<ParamField body="name" type="string">
+  The display name of the feature
+</ParamField>
+
+<ParamField body="type" type="enum">
+  One of `single_use`, `continuous_use`, `credit_system` or `boolean`. See below
+  for examples.
+</ParamField>
+
+### Feature Types
+
+#### Single-use meter
+
+Single-use features are those that can be used-up and replenished. They may have a reset interval (eg 200 per month).
+
+Examples: AI messages, credits, API calls.
+
+```ts
+export const messages = feature({
+  id: "messages",
+  name: "Messages",
+  type: "single_use",
+});
+```
+
+#### Continuous-use meter
+
+Continuous-use features are those used on an ongoing basis. They do not reset periodically and may be prorated when billed for.
+
+Examples: Seats, storage, workspaces.
+
+```ts
+export const messages = feature({
+  id: "seats",
+  name: "Seats",
+  type: "continuous_use",
+});
+```
+
+#### Credit system
+
+Use a credit system when you have multiple metered features that each cost a different amount.
+
+Eg, if a basic model message costs 1 credit, and a premium message costs 5 credits.
+
+<Tip>
+  If you set the price per credit to be 1 cent when you create your products,
+  these can be used as monetary credits (eg 0.05 USD per premium message)
+</Tip>
+
+```ts
+export const credits = feature({
+  id: "ai_credits",
+  name: "AI Credits",
+  type: "credit_system",
+  credit_schema: [
+    {
+      metered_feature_id: basicMessage.id,
+      credit_cost: 1,
+    },
+    {
+      metered_feature_id: premiumMessage.id,
+      credit_cost: 5,
+    },
+  ],
+});
+```
+
+#### Boolean
+
+A feature flag that can be enabled or disabled.
+
+```ts
+export const sso = feature({
+  id: "sso",
+  name: "SSO Auth",
+  type: "boolean",
+});
+```
+
+## Products
+
+Products are made up of features and prices, and define your pricing plans. You should create products for any free plans, paid plans and any add-ons / top-up products.
+
+<ParamField body="id" type="string" required>
+  The ID of the product that will be used via Autumn's APIs.
+</ParamField>
+
+<ParamField body="name" type="string">
+  The display name of the product.
+</ParamField>
+
+<ParamField body="is_default" type="boolean">
+  Whether the product should be attached by default to new customers
+</ParamField>
+
+<ParamField body="is_add_on" type="boolean">
+  Whether the product is an add-on and can be purchased alongside other products
+  (as opposed to trigger upgrade/downgrade flows)
+</ParamField>
+
+<ParamField body="items" type="array">
+  An array of objects that define the product. Can be one of:
+  
+  - `featureItem`: a feature to grant access to when the product is enabled
+  - `priceItem`: a fixed price to pay for the product
+  - `pricedFeatureItem`: a feature that has a price associated based on usage or quantity purchased.
+
+</ParamField>
+
+### Item Types
+
+Define your products using a combination of the 3 item types below.
+
+#### Feature Item
+
+A feature that is included with the product.
+
+<ParamField body="feature_id" type="string">
+  Feature ID for the product item
+</ParamField>
+
+<ParamField body="included_usage" type="number">
+  How much usage is included with this item. This acts as a usage limit. Not
+  applicable for boolean features.
+</ParamField>
+
+<ParamField body="interval" type="enum">
+
+`month` | `hour` | `day` | `week` | `quarter` | `semi_annual` | `year`
+
+How often the feature's balance should be reset back to the included_usage.
+Set as `null` for one-time grants.
+
+</ParamField>
+
+<ParamField body="entity_feature_id" type="string">
+  The entity feature to assign this item to: eg, seats. This will set a usage
+  limit at the entity level (eg, 10 message per seat per month)
+</ParamField>
+
+**Example**
+
+```ts
+export const free = product({
+  id: "free",
+  name: "Free",
+  is_default: true,
+  items: [
+    // 5 messages per month
+    featureItem({
+      feature_id: messages.id,
+      included_usage: 5,
+      interval: "month",
+    }),
+    // 3 seats (no reset)
+    featureItem({
+      feature_id: seats.id,
+      included_usage: 3,
+    }),
+    // SSO Auth (boolean)
+    featureItem({
+      feature_id: sso.id,
+    }),
+  ],
+});
+```
+
+#### Price Item
+
+A fixed price to be charged with the product: either one-time or a subscription.
+
+<ParamField body="price" type="number">
+  A fixed amount to charge for this product
+</ParamField>
+
+<ParamField body="interval" type="enum">
+
+`month` | `quarter` | `semi_annual` | `year`
+
+How often this price should be billed to the customer. Set as `null` for
+one-time prices.
+
+</ParamField>
+
+**Example**
+
+```ts
+export const pro = product({
+  id: "pro",
+  name: "Pro",
+  items: [
+    // 20 USD per month
+    priceItem({
+      price: 20,
+      interval: "month",
+    }),
+    // 5 USD (one-time price)
+    priceItem({
+      price: 5,
+    }),
+  ],
+});
+```
+
+#### Priced Feature Item
+
+A price to be charged based on the usage or prepaid quantity of a feature.
+
+<ParamField body="feature_id" type="string">
+  Feature ID for the product item
+</ParamField>
+
+<ParamField body="price" type="number">
+  A fixed amount to charge per `billing_units` of this feature.
+</ParamField>
+
+<ParamField body="billing_units" type="number">
+  The package quantity that the price is charged in (eg 5 USD for 100 messages)
+</ParamField>
+
+<ParamField body="usage_model" type="enum" default="pay_per_use">
+
+`prepaid` | `pay_per_use`
+
+Whether the feature is charged based on how much is used (`pay_per_use`), or if a fixed quantity is purchased upfront (`prepaid`).
+
+For continuous use meters that are `pay_per_use` (eg paying per seat used), you can define billing behavior in the dashboard (eg, whether to bill immediately or at the end of the cycle).
+
+</ParamField>
+
+<ParamField body="included_usage" type="number">
+  How much usage is included with this item.
+</ParamField>
+
+<ParamField body="interval" type="enum">
+
+`month` | `quarter` | `semi_annual` | `year`
+
+How often this price should be billed to the customer. Set as `null` for
+one-time prices.
+
+</ParamField>
+
+<ParamField body="entity_feature_id" type="string">
+  The entity feature to assign this item to: eg, seats. This will set a usage
+  price at the entity level (eg, 0.01 USD per message per seat per month)
+</ParamField>
+
+**Example**
+
+```ts
+export const pro = product({
+  id: "pro",
+  name: "Pro",
+  items: [
+    // 100 messages included
+    // then, 0.01 USD per 10 messages
+    pricedFeatureItem({
+      feature_id: messages.id,
+      included_usage: 100,
+      price: 0.01,
+      billing_units: 10,
+    }),
+  ],
+});
+```
+
+```ts
+export const team = product({
+  id: "team",
+  name: "team",
+  items: [
+    // 20 USD per seat per month
+    // paying per seat used
+    pricedFeatureItem({
+      feature_id: seats.id,
+      price: 20,
+      interval: "month",
+    }),
+    // 10 USD per seat per month
+    // paying upfront for a fixed quantity
+    pricedFeatureItem({
+      feature_id: seats.id,
+      price: 10,
+      interval: "month",
+      usage_model: "prepaid",
+    }),
+  ],
+});
+```
+
+```ts
+export const topUp = product({
+  id: "top_up",
+  name: "Credit top up",
+  items: [
+    // 5 USD per 100 credits
+    // one-time payment (+ credits don't reset periodically)
+    pricedFeatureItem({
+      feature_id: credits.id,
+      price: 5,
+      billing_units: 100,
+      usage_model: "prepaid",
+    }),
+  ],
+});
+```

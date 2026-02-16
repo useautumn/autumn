@@ -1,0 +1,30 @@
+---
+title: "Create a referral code"
+openapi: "productsapi POST /referrals/code"
+---
+
+This endpoint creates or retrieves a unique referral code for a customer within a specific referral program. 
+
+<Tip>
+  A referral code is unique per customer within each program. On the first call, a new code is created, but subsequent calls will return the same existing code for that customer and program combination.
+</Tip>
+
+<Note>
+  The `program_id` parameter refers to the referral program ID that you define when creating a referral program in the Autumn dashboard. Each program can have different rewards and rules.
+</Note>
+
+{/* ## How it works
+
+1. **First call**: Creates a new unique referral code for the customer
+2. **Subsequent calls**: Returns the existing code for that customer/program pair  
+3. **Code sharing**: Customers can share their referral code with others
+4. **Redemption**: Other customers can redeem the code using the [redeem endpoint](/api-reference/products/referral-redeem)
+
+## Use Cases
+
+This endpoint is useful for:
+
+- **Customer referral programs**: Allow customers to generate codes to share with friends
+- **Affiliate marketing**: Create tracking codes for affiliate partners  
+- **Loyalty programs**: Generate codes tied to specific promotional campaigns
+- **User dashboards**: Display referral codes in customer account pages */}

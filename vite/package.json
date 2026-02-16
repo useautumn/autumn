@@ -52,7 +52,7 @@
 		"ag-grid-community": "^34.0.2",
 		"ag-grid-react": "^34.0.2",
 		"ai": "^6.0.5",
-		"autumn-js": "^0.1.8",
+		"autumn-js": "workspace:*",
 		"axios": "^1.8.3",
 		"better-auth": "catalog:",
 		"buffer": "^6.0.3",

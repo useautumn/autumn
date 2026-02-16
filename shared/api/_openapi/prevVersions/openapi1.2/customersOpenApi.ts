@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { CusExpandV0 } from "../../../../models/cusModels/cusExpand.js";
 import { UpdateBalancesParamsSchema } from "../../../balances/prevVersions/legacyUpdateBalanceModels.js";
 import { SuccessResponseSchema } from "../../../common/commonResponses.js";
 import { queryStringArray } from "../../../common/queryHelpers.js";
+import { CustomerExpandEnum } from "../../../customers/components/customerExpand/customerExpand.js";
 import {
 	API_CUSTOMER_V3_EXAMPLE,
 	ApiCustomerV3Schema,
@@ -53,7 +53,7 @@ export const customersOpenApi = {
 			tags: ["customers"],
 			requestParams: {
 				query: z.object({
-					expand: queryStringArray(z.enum(CusExpandV0)).optional(),
+					expand: queryStringArray(CustomerExpandEnum).optional(),
 				}),
 			},
 			requestBody: {
@@ -81,7 +81,7 @@ export const customersOpenApi = {
 					}),
 				}),
 				query: z.object({
-					expand: queryStringArray(z.enum(CusExpandV0)).optional(),
+					expand: queryStringArray(CustomerExpandEnum).optional(),
 				}),
 			},
 			responses: {

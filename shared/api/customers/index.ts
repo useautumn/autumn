@@ -4,7 +4,7 @@ export * from "./apiCustomerV5.js";
 export * from "./baseApiCustomer.js";
 // Submodules
 export * from "./components/index.js";
-export * from "./createCustomerParams.js";
+export * from "./crud/createCustomerParams.js";
 export * from "./crud/index.js";
 export * from "./cusFeatures/index.js";
 export * from "./cusPlans/index.js";

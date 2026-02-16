@@ -1,0 +1,1 @@
+When writing the docs, always make sure to add it to `docs.json` for it to appear

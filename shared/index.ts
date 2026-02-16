@@ -11,6 +11,7 @@ export * from "./api/billing/common/billingResponse.js";
 export * from "./api/billing/common/cancelAction.js";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas.js";
+export * from "./api/customers/components/customerExpand/customerExpand.js";
 // API MODELS
 export * from "./api/models.js";
 // API VERSIONING SYSTEM
@@ -26,7 +27,6 @@ export * from "./enums/SuccessCode.js";
 export * from "./enums/WebhookEventType.js";
 // Internal API (checkout app, dashboard)
 export * from "./internal/index.js";
-
 // ANALYTICS MODELS
 export * from "./models/analyticsModels/actionEnums.js";
 export * from "./models/analyticsModels/actionTable.js";
@@ -38,11 +38,9 @@ export * from "./models/attachModels/attachPreviewModels.js";
 export * from "./models/authModels/membership.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
-
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";
 export * from "./models/checkModels/checkPreviewModels.js";
-export * from "./models/cusModels/cusExpand.js";
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
 // Processor Models

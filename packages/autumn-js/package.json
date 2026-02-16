@@ -1,0 +1,199 @@
+{
+	"name": "autumn-js",
+	"description": "Autumn JS Library",
+	"version": "0.1.40",
+	"repository": "github:useautumn/autumn-js",
+	"homepage": "https://docs.useautumn.com",
+	"main": "./dist/sdk/index.js",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md",
+		"tsup.config.ts"
+	],
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "rm -rf dist && tsup && node scripts/post-build.js",
+		"build:backend": "tsup \"src/libraries/backend/**/*.ts\" --format cjs,esm --clean=false --outDir=\"./dist/libraries/backend\"",
+		"build:cli": "tsup src/cli/index.ts --format cjs --outDir dist/cli",
+		"publish-beta": "pnpm publish --tag beta",
+		"dev": "concurrently \"tsx scripts/sync-registry.ts watch\" \"nodemon --watch src --ext ts,tsx,css --exec \\\"tsup --config tsup.dev.config.ts && node scripts/post-build.js\\\"\"",
+		"cli": "tsx src/cli/index.ts",
+		"test-cli": "node ./dist/cli/cli.mjs",
+		"dev2": "nodemon --watch src --ext ts,tsx,css --exec \"tsup --config tsup.dev.config.ts\"",
+		"sync-registry": "tsx scripts/sync-registry.ts sync",
+		"watch-registry": "tsx scripts/sync-registry.ts watch"
+	},
+	"module": "./dist/sdk/index.mjs",
+	"types": "./dist/sdk/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/sdk/index.d.ts",
+			"require": "./dist/sdk/index.js",
+			"import": "./dist/sdk/index.mjs"
+		},
+		"./next": {
+			"types": "./dist/libraries/backend/next.d.ts",
+			"require": "./dist/libraries/backend/next.js",
+			"import": "./dist/libraries/backend/next.mjs"
+		},
+		"./hono": {
+			"types": "./dist/libraries/backend/hono.d.ts",
+			"require": "./dist/libraries/backend/hono.js",
+			"import": "./dist/libraries/backend/hono.mjs"
+		},
+		"./express": {
+			"types": "./dist/libraries/backend/express.d.ts",
+			"require": "./dist/libraries/backend/express.js",
+			"import": "./dist/libraries/backend/express.mjs"
+		},
+		"./fastify": {
+			"types": "./dist/libraries/backend/fastify.d.ts",
+			"require": "./dist/libraries/backend/fastify.js",
+			"import": "./dist/libraries/backend/fastify.mjs"
+		},
+		"./tanstack": {
+			"types": "./dist/libraries/backend/tanstack.d.ts",
+			"require": "./dist/libraries/backend/tanstack.js",
+			"import": "./dist/libraries/backend/tanstack.mjs"
+		},
+		"./react": {
+			"types": "./dist/libraries/react/index.d.ts",
+			"require": "./dist/libraries/react/index.js",
+			"import": "./dist/libraries/react/index.mjs"
+		},
+		"./supabase": {
+			"types": "./dist/libraries/backend/supabase.d.ts",
+			"require": "./dist/libraries/backend/supabase.js",
+			"import": "./dist/libraries/backend/supabase.mjs"
+		},
+		"./react-router": {
+			"types": "./dist/libraries/backend/react-router.d.ts",
+			"require": "./dist/libraries/backend/react-router.js",
+			"import": "./dist/libraries/backend/react-router.mjs"
+		},
+		"./better-auth": {
+			"types": "./dist/libraries/backend/better-auth.d.ts",
+			"require": "./dist/libraries/backend/better-auth.js",
+			"import": "./dist/libraries/backend/better-auth.mjs"
+		},
+		"./convex": {
+			"types": "./dist/libraries/backend/convex.d.ts",
+			"require": "./dist/libraries/backend/convex.js",
+			"import": "./dist/libraries/backend/convex.mjs"
+		},
+		"./elysia": {
+			"types": "./dist/libraries/backend/elysia.d.ts",
+			"require": "./dist/libraries/backend/elysia.js",
+			"import": "./dist/libraries/backend/elysia.mjs"
+		},
+		"./backend": {
+			"types": "./dist/libraries/backend/index.d.ts",
+			"require": "./dist/libraries/backend/index.js",
+			"import": "./dist/libraries/backend/index.mjs"
+		}
+	},
+	"keywords": [
+		"pricing",
+		"autumn",
+		"js-sdk"
+	],
+	"author": "John Yeo",
+	"license": "MIT",
+	"devDependencies": {
+		"@radix-ui/react-accordion": "^1.2.11",
+		"@radix-ui/react-dialog": "^1.1.14",
+		"@radix-ui/react-popover": "^1.1.14",
+		"@radix-ui/react-slot": "^1.2.3",
+		"@radix-ui/react-switch": "^1.2.5",
+		"@remix-run/node": "^2.16.6",
+		"@supabase/ssr": "^0.6.1",
+		"@tanstack/react-start": "^1.120.5",
+		"@types/express": "^5.0.1",
+		"@types/node": "^22.15.32",
+		"@types/react": "^19",
+		"autoprefixer": "^10.4.21",
+		"autumn-js": "^0.0.115",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"concurrently": "^9.2.0",
+		"convex": "^1.25.4",
+		"elysia": "^1.3.5",
+		"esbuild-plugin-path-alias": "^1.0.7",
+		"esbuild-postcss": "^0.0.4",
+		"express": "^5.1.0",
+		"fastify": "^5.3.3",
+		"hono": "^4.7.9",
+		"install": "^0.13.0",
+		"lucide-react": "^0.523.0",
+		"next": "^15.2.3",
+		"nodemon": "^3.1.10",
+		"postcss": "^8.5.6",
+		"postcss-nested": "^7.0.2",
+		"postcss-prefix-selector": "^2.1.1",
+		"react-dom": "^19.1.0",
+		"stripe": "^18.3.0",
+		"tailwind-merge": "^2.6.0",
+		"tailwindcss": "^3.4.1",
+		"tailwindcss-animate": "^1.0.7",
+		"tailwindcss-scoped-preflight": "^3.4.12",
+		"tsconfig-paths": "^4.2.0",
+		"tsup": "^8.4.0",
+		"tsx": "^4.19.3",
+		"typescript": "^5.8.3"
+	},
+	"peerDependencies": {
+		"better-auth": "^1.3.17",
+		"better-call": "^1.0.12",
+		"convex": "^1.25.4"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		},
+		"better-auth": {
+			"optional": true
+		},
+		"better-call": {
+			"optional": true
+		}
+	},
+	"dependencies": {
+		"@useautumn/sdk": "workspace:*",
+		"query-string": "^9.2.2",
+		"rou3": "^0.6.1",
+		"swr": "^2.3.3",
+		"zod": "^4.0.0"
+	},
+	"typesVersions": {
+		"*": {
+			"backend": [
+				"./dist/libraries/backend/index.d.ts"
+			],
+			"next": [
+				"./dist/libraries/backend/next.d.ts"
+			],
+			"hono": [
+				"./dist/libraries/backend/hono.d.ts"
+			],
+			"express": [
+				"./dist/libraries/backend/express.d.ts"
+			],
+			"fastify": [
+				"./dist/libraries/backend/fastify.d.ts"
+			],
+			"tanstack": [
+				"./dist/libraries/backend/tanstack.d.ts"
+			],
+			"react": [
+				"./dist/libraries/react/index.d.ts"
+			],
+			"elysia": [
+				"./dist/libraries/backend/elysia.d.ts"
+			],
+			"supabase": [
+				"./dist/libraries/backend/supabase.d.ts"
+			]
+		}
+	}
+}

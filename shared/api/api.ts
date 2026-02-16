@@ -1,14 +1,18 @@
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Dynamic imports to avoid duplicate schema registration when supporting multiple versions
 
 // Determine which version to export
 const versionArg = process.argv.find((arg) => arg.startsWith("--version="));
 let version: string;
+let hasExplicitVersion = false;
 
 if (versionArg) {
 	version = versionArg.split("=")[1];
+	hasExplicitVersion = true;
 } else {
 	// Check for positional argument (e.g., "bun api 1.2")
 	const positionalArg = process.argv.find(
@@ -16,20 +20,47 @@ if (versionArg) {
 	);
 
 	if (positionalArg) {
+		hasExplicitVersion = true;
 		// If version has only one dot (e.g., "1.2"), append ".0" to make it "1.2.0"
 		version =
 			positionalArg.split(".").length === 2
 				? `${positionalArg}.0`
 				: positionalArg;
 	} else {
-		version = "2.0.0";
+		version = "2.1.0";
 	}
 }
 
 // Export to YAML file during build
 if (process.env.NODE_ENV !== "production") {
 	try {
-		let writeOpenApiFunc: (() => void) | null = null;
+		let writeOpenApiFunc:
+			| (({
+					outputFilePath,
+			  }: {
+					outputFilePath: string;
+			  }) => void | Promise<void>)
+			| null = null;
+		const currentFilePath = fileURLToPath(import.meta.url);
+		const currentDirPath = path.dirname(currentFilePath);
+		const outputDirPath = path.resolve(currentDirPath, "../openapi");
+		const outputFileName = hasExplicitVersion
+			? `openapi-${version}.yml`
+			: "openapi.yml";
+		const outputFilePath = path.join(outputDirPath, outputFileName);
+		const defaultOutputFilePath = path.join(outputDirPath, "openapi.yml");
+		const speakeasySdkDirPath = path.resolve(
+			currentDirPath,
+			"../../packages/sdk",
+		);
+		const docsApiDirPath = path.resolve(
+			currentDirPath,
+			"../../apps/docs/mintlify/api",
+		);
+		const docsOpenApiLocalPath = path.join(docsApiDirPath, "openapi-local.yml");
+
+		mkdirSync(outputDirPath, { recursive: true });
+		mkdirSync(docsApiDirPath, { recursive: true });
 
 		// Dynamically import the correct version to avoid schema conflicts
 		if (version === "1.2.0") {
@@ -40,64 +71,54 @@ if (process.env.NODE_ENV !== "production") {
 			console.log("Using OpenAPI version 1.2.0");
 		} else if (version === "2.0.0") {
 			const { writeOpenApi_2_0_0 } = await import(
-				"./_openapi2.0_/openapi2.0.js"
+				"./_openapi/v2.0/openapi2.0.js"
 			);
 			writeOpenApiFunc = writeOpenApi_2_0_0;
 			console.log("Using OpenAPI version 2.0.0");
+		} else if (version === "2.1.0") {
+			const { writeOpenApi_2_1_0 } = await import(
+				"./_openapi/v2.1/openapi2.1.js"
+			);
+			writeOpenApiFunc = writeOpenApi_2_1_0;
+			console.log("Using OpenAPI version 2.1.0");
 		} else {
 			console.error(
-				`Unknown version: ${version}. Supported versions: 1.2.0, 2.0.0`,
+				`Unknown version: ${version}. Supported versions: 1.2.0, 2.0.0, 2.1.0`,
 			);
 			process.exit(1);
 		}
 
-		// If --no-build flag is present, write the OpenAPI spec and exit
-		if (process.argv.includes("--no-build")) {
-			writeOpenApiFunc();
+		await writeOpenApiFunc({ outputFilePath });
+		console.log(`OpenAPI document exported to ${outputFilePath}`);
+
+		if (version === "2.1.0" && outputFilePath !== defaultOutputFilePath) {
+			await writeOpenApiFunc({ outputFilePath: defaultOutputFilePath });
 			console.log(
-				`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
+				`OpenAPI document exported to ${defaultOutputFilePath} for Speakeasy`,
 			);
-			process.exit(0);
 		}
 
-		// Write OpenAPI spec and optionally run Stainless generation
-		if (process.env.STAINLESS_PATH) {
-			writeOpenApiFunc();
+		if (version === "2.1.0") {
+			console.log("Running Speakeasy SDK generation...");
+			execSync("bunx speakeasy run -t autumn", {
+				stdio: "inherit",
+				cwd: speakeasySdkDirPath,
+			});
+			console.log("Speakeasy SDK generation completed");
 
-			// Run the run.sh script if it exists
-			const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
-			const runStainless = !process.argv.includes("--noEmit");
-			if (existsSync(runScriptPath) && runStainless) {
-				try {
-					console.log("Running Stainless generation script...");
-					execSync(`chmod +x "${runScriptPath}" && "${runScriptPath}"`, {
-						stdio: "inherit",
-						cwd: process.env.STAINLESS_PATH,
-					});
-					console.log("Stainless generation completed successfully");
-				} catch (error) {
-					console.error("Failed to run Stainless generation script:", error);
-				}
-			} else {
-				console.log(
-					`\n${!runStainless ? "Stainless generation skipped due to --noEmit flag" : "Stainless generation script not found"}`,
-				);
-			}
-		}
-
-		// If docs path, run bun pull to update documentation
-		if (process.env.DOCS_PATH) {
-			const docsPath = process.env.DOCS_PATH.replace("\\ ", " ");
-			try {
-				console.log("Updating documentation with Mintlify...");
-				execSync("bun pull", {
+			console.log("Applying Speakeasy code samples to OpenAPI for docs...");
+			execSync(
+				`bunx speakeasy overlay apply --schema .speakeasy/out.openapi.yaml --overlay .speakeasy/code-samples.overlay.yaml --out ${JSON.stringify(docsOpenApiLocalPath)}`,
+				{
 					stdio: "inherit",
-					cwd: docsPath,
-				});
-				console.log("Documentation updated successfully");
-			} catch (error) {
-				console.error("Failed to update documentation:", error);
-			}
+					cwd: speakeasySdkDirPath,
+				},
+			);
+			console.log(`Docs OpenAPI written to ${docsOpenApiLocalPath}`);
+		} else {
+			console.log(
+				`Skipping Speakeasy generation for OpenAPI ${version}; only 2.1.0 is wired to SDK generation`,
+			);
 		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
@@ -107,13 +128,3 @@ if (process.env.NODE_ENV !== "production") {
 	// Exit the process after completion
 	process.exit(0);
 }
-
-// writeFileSync(
-// 	`${process.env.STAINLESS_PATH.replace("\\ ", " ")}/openapi.yml`,
-// 	yamlContent,
-// 	"utf8",
-// );
-
-// console.log(
-// 	`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
-// );

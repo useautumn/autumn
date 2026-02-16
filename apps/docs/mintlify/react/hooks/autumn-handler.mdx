@@ -1,0 +1,49 @@
+---
+title: "autumnHandler"
+description: "Server-side handler for managing Autumn API endpoints and customer authentication"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `autumnHandler` creates server-side endpoints that handle communication between your frontend React hooks and Autumn's API. It manages customer authentication and data flow for all Autumn operations.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="identify" type="(request: any) => AuthResult" required>
+  Function that receives the incoming request and returns customer identification data. This function should extract the user/customer ID from your authentication provider and return both the ID and optional customer metadata.
+  
+  <Expandable title="AuthResult properties">
+    <ParamField body="customerId" type="string" required>
+      The unique identifier for the customer. This should be the user ID or organization ID from your authentication system.
+    </ParamField>
+
+    <ParamField body="customerData" type="object" optional>
+      Additional metadata about the customer that will be stored in Autumn.
+      
+      <Expandable title="customerData properties">
+        <ParamField body="name" type="string" optional>
+          The customer's display name
+        </ParamField>
+        
+        <ParamField body="email" type="string" optional>
+          The customer's email address
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="url" type="string" optional>
+  Override the default Autumn API base URL (api.useautumn.com/v1). Use this when self-hosting Autumn or when you need to connect to a different API endpoint.
+</ParamField>
+
+<ParamField body="secretKey" type="string" optional>
+  Override the Autumn secret key. If not provided, the handler will use the `AUTUMN_SECRET_KEY` environment variable.
+</ParamField>
+
+<ParamField body="suppressLogs" type="boolean" optional>
+  If true, suppresses console warnings and logs from the Autumn handler. Useful for reducing noise in production environments.
+</ParamField>
+

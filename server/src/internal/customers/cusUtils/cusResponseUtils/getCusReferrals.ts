@@ -1,6 +1,6 @@
 import {
 	ApiCusReferralSchema,
-	CusExpand,
+	CustomerExpand,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -13,9 +13,9 @@ export const getCusReferrals = async ({
 }: {
 	db: DrizzleCli;
 	fullCus: FullCustomer;
-	expand?: CusExpand[];
+	expand?: CustomerExpand[];
 }) => {
-	if (!expand?.includes(CusExpand.Referrals)) {
+	if (!expand?.includes(CustomerExpand.Referrals)) {
 		return undefined;
 	}
 

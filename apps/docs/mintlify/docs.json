@@ -1,0 +1,263 @@
+{
+	"$schema": "https://mintlify.com/docs.json",
+	"theme": "mint",
+	"name": "Autumn",
+	"colors": {
+		"primary": "#8838ff",
+		"light": "#8838ff",
+		"dark": "#8838ff"
+	},
+	"appearance": {
+		"default": "system",
+		"strict": false
+	},
+	"contextual": {
+		"options": ["copy", "cursor", "view"]
+	},
+	"favicon": "/favicon.png",
+	"interaction": {
+		"drilldown": true
+	},
+	"navigation": {
+		"global": {
+			"anchors": [
+				{
+					"anchor": "Discord",
+					"icon": "discord",
+					"href": "https://discord.gg/STqxY92zuS"
+				},
+				{
+					"anchor": "GitHub",
+					"icon": "github",
+					"href": "https://github.com/useautumn/autumn"
+				},
+				{
+					"anchor": "Website",
+					"icon": "globe",
+					"href": "https://useautumn.com"
+				}
+			]
+		},
+		"tabs": [
+			{
+				"tab": "Documentation",
+				"icon": "folder-open",
+				"groups": [
+					{
+						"group": " ",
+						"pages": ["welcome"]
+					},
+					{
+						"group": "Getting Started",
+						"pages": [
+							{
+								"group": "Setup and payments",
+								"pages": [
+									"documentation/getting-started/setup/react",
+									"documentation/getting-started/setup/sdk",
+									"documentation/getting-started/setup/convex"
+								]
+							},
+							"documentation/getting-started/gating",
+							"documentation/getting-started/display-billing"
+						]
+					},
+					{
+						"group": "Configure Pricing",
+						"pages": [
+							"documentation/pricing/plans",
+							"documentation/pricing/features",
+							"documentation/pricing/plan-features",
+							"documentation/pricing/credits",
+							"documentation/pricing/versioning",
+							"documentation/pricing/rewards"
+						]
+					},
+					{
+						"group": "Manage Customers",
+						"pages": [
+							"documentation/customers/check",
+							"documentation/customers/tracking-usage",
+							"documentation/customers/balances",
+							"documentation/customers/feature-entities",
+							"documentation/customers/enabling-product",
+							"documentation/customers/creating-customers",
+							"documentation/customers/managing-customers"
+						]
+					},
+					{
+						"group": "Additional Resources",
+						"pages": ["documentation/external-providers/revenuecat"]
+					}
+				]
+			},
+			{
+				"tab": "Examples",
+				"icon": "graduation-cap",
+				"pages": [
+					"examples/credits",
+					"examples/prepaid",
+					"examples/trial-card-required",
+					"examples/trial-card-not-required"
+				]
+			},
+			{
+				"tab": "React",
+				"icon": "image",
+				"groups": [
+					{
+						"group": "React Hooks",
+						"pages": [
+							"react/hooks/autumn-provider",
+							"react/hooks/autumn-handler",
+							"react/hooks/useCustomer",
+							"react/hooks/useEntity",
+							"react/hooks/useListEvents",
+							"react/hooks/useAggregateEvents"
+						]
+					},
+					{
+						"group": "Component Library",
+						"pages": [
+							"react/components/pricing-table",
+							"react/components/checkout-dialog",
+							"react/components/paywall-dialog"
+						]
+					}
+				]
+			},
+			{
+				"tab": "API Reference",
+				"icon": "rectangle-terminal",
+				"groups": [
+					{
+						"group": "Core",
+						"pages": [
+							"api-reference/core/checkout",
+							"api-reference/core/attach",
+							"api-reference/core/check",
+							"api-reference/core/track",
+							"api-reference/core/cancel"
+						]
+					},
+					{
+						"group": "Customers",
+						"pages": [
+							"api-reference/customers/get-or-create-customer",
+							"api-reference/customers/list-customers",
+							"api-reference/customers/update-customer",
+							"api-reference/customers/delete-customer",
+							"api-reference/customers/open-billing-portal"
+						]
+					},
+					{
+						"group": "Events",
+						"pages": [
+							"api-reference/events/list-events",
+							"api-reference/events/aggregate-events"
+						]
+					},
+					{
+						"group": "Entities",
+						"pages": [
+							"api-reference/entities/get-entity",
+							"api-reference/entities/create-entity",
+							"api-reference/entities/delete-entity"
+						]
+					},
+					{
+						"group": "Features",
+						"pages": [
+							"api-reference/features/get-feature",
+							"api-reference/features/list-features",
+							"api-reference/features/create-feature",
+							"api-reference/features/update-feature",
+							"api-reference/features/delete-feature",
+							"api-reference/features/set-feature-usage",
+							"api-reference/features/set-feature-balances",
+							"api-reference/features/create-balance"
+						]
+					},
+					{
+						"group": "Products",
+						"pages": [
+							"api-reference/products/get-product",
+							"api-reference/products/list-products",
+							"api-reference/products/create-product",
+							"api-reference/products/update-product",
+							"api-reference/products/delete-product"
+						]
+					},
+					{
+						"group": "Referrals",
+						"pages": [
+							"api-reference/referrals/referral-code",
+							"api-reference/referrals/referral-redeem"
+						]
+					},
+
+					{
+						"group": "CLI",
+						"pages": ["api-reference/cli/config"]
+					},
+					{
+						"group": "Platform (Beta)",
+						"pages": [
+							"api-reference/platform/overview",
+							"api-reference/platform/create-organization",
+							"api-reference/platform/oauth-url",
+							"api-reference/platform/update-stripe",
+							"api-reference/platform/list-users",
+							"api-reference/platform/list-orgs"
+						]
+					}
+				]
+			},
+			{
+				"tab": "Changelog",
+				"icon": "list-ol",
+				"pages": ["changelog/changelog"]
+			}
+		]
+	},
+	"logo": {
+		"light": "/assets/logo/autumn-dark.png",
+		"dark": "/assets/logo/autumn-light.png"
+	},
+	"api": {
+		"playground": {
+			"display": "interactive"
+		},
+		"examples": {
+			"languages": ["typescript", "bash", "python"]
+		}
+	},
+	"background": {
+		"color": {
+			"light": "#FAFAFA",
+			"dark": "#121212"
+		}
+	},
+	"navbar": {
+		"primary": {
+			"type": "button",
+			"label": "Dashboard",
+			"href": "https://app.useautumn.com"
+		}
+	},
+	"footer": {
+		"socials": {
+			"x": "https://x.com/autumnpricing",
+			"github": "https://github.com/useautumn",
+			"linkedin": "https://linkedin.com/company/useautumn"
+		}
+	},
+	"fonts": {
+		"heading": {
+			"family": "Inter"
+		},
+		"body": {
+			"family": "Inter"
+		}
+	}
+}

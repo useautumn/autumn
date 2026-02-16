@@ -3,8 +3,8 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import type { z } from "zod/v4";
+import { CustomerExpand } from "../../customers/components/customerExpand/customerExpand.js";
 import {
 	type GetEntityQuery,
 	GetEntityQuerySchema,
@@ -55,9 +55,9 @@ export const V1_2_EntityQueryChange = defineVersionChange({
 		// Add `plan` and `feature` to expand array
 		const newExpand = [
 			...existingExpand,
-			CusExpand.SubscriptionsPlan,
-			CusExpand.BalancesFeature,
-			CusExpand.PurchasesPlan,
+			CustomerExpand.SubscriptionsPlan,
+			CustomerExpand.BalancesFeature,
+			CustomerExpand.PurchasesPlan,
 		] as GetEntityQuery["expand"];
 
 		return {

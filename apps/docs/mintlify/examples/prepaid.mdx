@@ -1,0 +1,461 @@
+---
+title: Prepaid top-ups
+description: Let customers purchase prepaid packages and top-ups.
+---
+
+If a user hits a usage limit you granted them, they may be willing to purchase a top-up.
+
+These are typically one-time purchases (or less commonly, recurring add-ons) that grant a fixed usage of a feature.
+
+This gives users full spend control and allows your business to be paid upfront. For these reasons, it tends to be a more popular alternative to usage-based pricing -- eg, OpenAI uses this model for their API.
+
+## Example case
+
+In this example, we have an AI chatbot that offers:
+
+- 10 premium messages for free
+- An option for customers to top-up premium messages in packages of $10 per 100 messages.
+
+## Configure Pricing
+
+<Steps>
+<Step>
+#### Create Features
+
+Create a `metered` `consumable` feature for our premium messages, so we can track its balance.
+
+<Frame>
+<img src="/assets/guides/prepaid/features-light.png" className="block dark:hidden" />
+<img src="/assets/guides/prepaid/features-dark.png" className="hidden dark:block" />
+</Frame>
+</Step>
+
+<Step>
+#### Create Free and Top-up Plans
+
+Create our free plan, and assign 10 premium messages to it. These are "one-off" credits, that will not reset periodically.
+
+<Tip>
+Make sure to set the `auto-enable` flag on the free plan, so that it is automatically assigned to new customers.
+</Tip>
+<Frame>
+<img src="/assets/guides/prepaid/free-light.png" className="block dark:hidden" />
+<img src="/assets/guides/prepaid/free-dark.png" className="hidden dark:block" />
+</Frame>
+
+Now we'll create our top-up plan. We'll add a price to our premium messages feature, at $10 per 100 messages. These are "one-off" purchases, with a `prepaid` billing method.
+
+`prepaid` features require a `quantity` to be sent in when a customer attaches this product, so the customer can specify how many premium messages they want to top up with.
+
+<Frame>
+<img src="/assets/guides/prepaid/topup-light.png" className="block dark:hidden" />
+<img src="/assets/guides/prepaid/topup-dark.png" className="hidden dark:block" />
+</Frame>
+
+</Step>
+</Steps>
+
+## Implementation
+
+<Steps>
+<Step>
+#### Create an Autumn Customer
+
+When your user signs up, create an Autumn customer. This will automatically assign them the Free plan, and grant them 10 premium messages.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const App = () => {
+  const { customer } = useCustomer();
+
+  console.log("Autumn customer:", customer);
+
+  return <h1>Welcome, {customer?.name || "user"}!</h1>;
+};
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data, error } = await autumn.customers.create({
+  id: "user_or_org_id_from_auth",
+  name: "John Yeo",
+  email: "john@example.com",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.create(
+        id="user_or_org_id_from_auth",
+        name="John Yeo",
+        email="john@example.com",
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request POST \
+  --url https://api.useautumn.com/customers \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": "user_or_org_id_from_auth",
+    "name": "John Yeo",
+    "email": "john@example.com"
+  }'
+```
+
+</CodeGroup>
+</Step>
+
+<Step>
+#### Checking for access
+
+Every time our user wants to send a premium message, we'll first check if they have enough premium messages remaining.
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+export function CheckPremiumMessage() {
+  const { check, refetch } = useCustomer();
+
+  const handleCheckAccess = async () => {
+    const { data } = await check({ featureId: "premium-messages" });
+
+    if (!data?.allowed) {
+      alert("You've run out of premium messages");
+    } else {
+      // proceed with sending message
+      await refetch();
+    }
+  };
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.check({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "premium_messages",
+});
+
+if (!data.allowed) {
+  console.log("User has run out of premium messages");
+  return;
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    response = await autumn.check(
+        customer_id="user_or_org_id_from_auth",
+        feature_id="premium_messages",
+    )
+    
+    if not response.allowed:
+        print("User has run out of premium messages")
+        return
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_1234567890" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "premium_messages"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+```json
+{
+  "customer_id": "user_or_org_id_from_auth",
+  "feature_id": "premium_messages",
+  "code": "feature_found",
+  "allowed": true,
+  "balance": 10,
+  "usage": 0,
+  "included_usage": 10,
+  "unlimited": false,
+  "interval": null,
+  "interval_count": 1,
+  "next_reset_at": null,
+  "overage_allowed": false
+}
+```
+</Expandable>
+</Step>
+
+<Step>
+#### Tracking premium messages
+
+Now let's implement our usage tracking and use up our premium messages. In this example, we're using 5 premium messages.
+
+<CodeGroup>
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+await autumn.track({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "premium_messages",
+  value: 5,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    await autumn.track(
+        customer_id="user_or_org_id_from_auth",
+        feature_id="premium_messages",
+        value=5,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "premium_messages",
+    "value": 5
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="track response">
+```json
+{
+  "code": "event_received",
+  "customer_id": "user_or_org_id_from_auth",
+  "feature_id": "premium_messages"
+}
+```
+</Expandable>
+</Step>
+
+<Step>
+#### Purchasing top-ups
+
+When users run out of premium messages, they can purchase additional messages using our top-up plan. In this example, the user is purchasing 200 premium messages, which will cost them $20.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function TopUpButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "top_up",
+          dialog: CheckoutDialog,
+          options: [{
+            featureId: "premium_messages",
+            quantity: 200,
+          }],
+        });
+      }}
+    >
+      Buy More Messages
+    </button>
+  );
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.checkout({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "top_up",
+  options: [{
+    feature_id: "premium_messages",
+    quantity: 200,
+  }],
+});
+
+if (data.url) {
+  // Redirect user to Stripe checkout URL
+} else {
+  // Show purchase preview to user
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.checkout(
+        customer_id="user_or_org_id_from_auth",
+        product_id="top-up",
+        options=[{
+          "feature_id": "premium-messages",
+          "quantity": 200,
+        }],
+    )
+    
+    if response.url:
+        # Redirect user to Stripe checkout URL
+        pass
+    else:
+        # Show purchase preview to user
+        pass
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "product_id": "top-up",
+    "options": [{
+      "feature_id": "premium-messages",
+      "quantity": 200
+    }]
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="checkout response">
+```json
+{
+  "customer_id": "user_or_org_id_from_auth",
+  "lines": [
+    {
+      "description": "Top-up - 200 premium messages",
+      "amount": 20,
+      "item": {
+        "type": "feature",
+        "feature_id": "premium-messages",
+        "feature_type": "prepaid",
+        "feature": {
+          "id": "premium-messages",
+          "name": "Premium messages",
+          "type": "metered",
+          "display": {
+            "singular": "premium message",
+            "plural": "premium messages"
+          }
+        },
+        "quantity": 200,
+        "price": 10,
+        "price_per": 100,
+        "display": {
+          "primary_text": "200 premium messages",
+          "secondary_text": "$10 per 100 messages"
+        }
+      }
+    }
+  ],
+  "product": {
+    "id": "top-up",
+    "name": "Top-up",
+    "group": null,
+    "env": "sandbox",
+    "is_add_on": false,
+    "is_default": false,
+    "archived": false,
+    "version": 1,
+    "created_at": 1766428038264,
+    "items": [
+      {
+        "type": "feature",
+        "feature_id": "premium-messages",
+        "feature_type": "prepaid",
+        "feature": {
+          "id": "premium-messages",
+          "name": "Premium messages",
+          "type": "metered",
+          "display": {
+            "singular": "premium message",
+            "plural": "premium messages"
+          }
+        },
+        "price": 10,
+        "price_per": 100,
+        "display": {
+          "primary_text": "$10 per 100 messages"
+        }
+      }
+    ],
+    "free_trial": null,
+    "base_variant_id": null,
+    "scenario": "attach",
+    "properties": {
+      "is_free": false,
+      "is_one_off": true,
+      "has_trial": false,
+      "updateable": false
+    }
+  },
+  "total": 20,
+  "currency": "usd",
+  "url": "https://checkout.stripe.com/c/pay/.......",
+  "has_prorations": false
+}
+```
+</Expandable>
+
+Once the customer completes the payment, they will have an additional 200 premium messages available to use. You can display to the user by getting balances from the `customer` method. 
+
+</Step>
+</Steps>

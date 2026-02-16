@@ -1,7 +1,7 @@
 import {
-	CusExpand,
 	CusProductStatus,
 	type CustomerData,
+	CustomerExpand,
 	type Entity,
 	type EntityData,
 	type FullCustomer,
@@ -36,7 +36,7 @@ export const getOrCreateCustomer = async ({
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;
 	withEntities?: boolean;
-	expand?: CusExpand[];
+	expand?: CustomerExpand[];
 	entityId?: string;
 	entityData?: EntityData;
 	skipUpdate?: boolean;
@@ -46,7 +46,7 @@ export const getOrCreateCustomer = async ({
 	const { db, org, env, logger } = ctx;
 
 	if (!withEntities) {
-		withEntities = expand?.includes(CusExpand.Entities) || false;
+		withEntities = expand?.includes(CustomerExpand.Entities) || false;
 	}
 
 	if (!skipGet && customerId) {

@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	type ApiEntityV0,
-	CusExpand,
+	CustomerExpand,
 	sumValues,
 	type TrackResponseV2,
 } from "@autumn/shared";
@@ -73,7 +73,7 @@ test.concurrent(`${chalk.yellowBright("track-misc1: track auto-creates customer 
 	// Verify customer.entities includes the created entity
 	const customerWithEntities = await autumnV1.customers.get<ApiCustomerV3>(
 		customerId,
-		{ expand: [CusExpand.Entities] },
+		{ expand: [CustomerExpand.Entities] },
 	);
 	expect(customerWithEntities.entities).toBeDefined();
 	expect(customerWithEntities.entities).toHaveLength(1);

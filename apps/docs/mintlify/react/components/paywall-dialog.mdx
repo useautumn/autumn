@@ -1,0 +1,294 @@
+---
+title: "Paywall Dialog"
+description: "Drop in Autumn's Paywall Dialog component to prompt users to upgrade to the next tier when they hit a usage limit, or don't have access to a feature"
+---
+
+
+A paywall that prompts users to upgrade to the next tier when they hit a usage limit, or don't have access to a feature.
+
+#### Install
+
+<CodeGroup>
+```bash npm
+npx shadcn@latest add https://ui.useautumn.com/paywall-dialog
+```
+
+```bash pnpm
+pnpm dlx shadcn@latest add https://ui.useautumn.com/paywall-dialog
+```
+
+```bash yarn
+yarn dlx shadcn@latest add https://ui.useautumn.com/paywall-dialog
+```
+
+```bash bun
+bunx --bun shadcn@latest add https://ui.useautumn.com/paywall-dialog
+```
+
+</CodeGroup>
+
+<img
+  src="/assets/quickstart/ui-components/paywall-dialog.png"
+  alt="Paywall Dialog"
+  className="border"
+/>
+
+This will download the `paywall-dialog` component in your `/components` directory, under a `/autumn` folder.
+
+#### Usage
+
+Pass in the `paywall-dialog` component to the `check` function (exported from the `useCustomer` hook).
+
+```jsx
+import PaywallDialog from "@/components/autumn/paywall-dialog";
+// or import { PaywallDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
+
+const { check } = useCustomer();
+
+const { data, error } = await check({
+  featureId: "ai-messages",
+  dialog: PaywallDialog,
+});
+```
+
+Now when you use the `check()` function, Autumn will automatically pass in the `withPreview: true` parameter. If `data.allowed: false` is returned for the feature, the paywall will open with the following details:
+
+- The feature they don't have access to, or have run out of
+- The next product tier they should upgrade to, in order to access the feature (or an add-on if no additional tier exists)
+- A button that lets them purchase the next tier or add-on
+
+#### Scenarios
+
+When the `paywall-dialog` component is installed, a `/lib/autumn/get-paywall-content.tsx` file is also installed. This file contains the dialog texts for each scenario (depending on the available products), which you can customize how you want.
+
+```tsx /lib/autumn/get-paywall-content.tsx [expandable]
+import { CheckFeaturePreview } from "autumn-js";
+
+export const getPaywallDialogTexts = (preview: CheckFeaturePreview) => {
+  const { scenario, products, feature_name } = preview;
+
+  if (products.length == 0) {
+    switch (scenario) {
+      case "usage_limit":
+        return {
+          title: `Feature Unavailable`,
+          message: `You have reached the usage limit for ${feature_name}. Please contact us to increase your limit.`,
+        };
+      default:
+        return {
+          title: "Feature Unavailable",
+          message:
+            "This feature is not available for your account. Please contact us to enable it.",
+        };
+    }
+  }
+
+  const nextProduct = products[0];
+
+  const isAddOn = nextProduct && nextProduct.is_add_on;
+
+  const title = nextProduct.free_trial
+    ? `Start trial for ${nextProduct.name}`
+    : nextProduct.is_add_on
+    ? `Purchase ${nextProduct.name}`
+    : `Upgrade to ${nextProduct.name}`;
+
+  let message = "";
+  if (isAddOn) {
+    message = `Please purchase the ${nextProduct.name} add-on to continue using ${feature_name}.`;
+  } else {
+    message = `Please upgrade to the ${nextProduct.name} plan to continue using ${feature_name}.`;
+  }
+
+  switch (scenario) {
+    case "usage_limit":
+      return {
+        title: title,
+        message: `You have reached the usage limit for ${feature_name}. ${message}`,
+      };
+    case "feature_flag":
+      return {
+        title: title,
+        message: `This feature is not available for your account. ${message}`,
+      };
+    default:
+      return {
+        title: "Feature Unavailable",
+        message: "This feature is not available for your account.",
+      };
+  }
+};
+```
+
+## Build your own
+
+A paywall that prompts users to upgrade to the next tier when they hit a usage limit, or don't have access to a feature.
+
+The `check` function has a `with_preview` parameter that can be used to get paywall preview information when a customer doesn't have access to a feature. This will contain information about the next product tier (or an add-on) they should upgrade to, in order to access the feature.
+
+<CodeGroup>
+
+```typescript React
+import { useCustomer } from "autumn-js/react";
+const { check } = useCustomer();
+const { data, error } = await check({
+  featureId: "chat_messages",
+  withPreview: true,
+});
+```
+
+```typescript Node.js
+import { Autumn as autumn } from "autumn-js";
+const { data, error } = await autumn.check({
+  customer_id: "cus_123",
+  feature_id: "chat_messages",
+  with_preview: true,
+});
+```
+
+```bash cURL
+curl -X POST https://api.useautumn.com/v1/check \
+-H "Authorization: Bearer am_sk_xxxxxxxxxx" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "cus_123",
+"feature_id": "chat_messages",
+"with_preview": true
+}'
+```
+
+</CodeGroup>
+
+<CodeGroup>
+
+```json Usage Limit [expandable]
+{
+  "customer_id": "user_1234",
+  "feature_id": "chat_messages",
+  "required_balance": 1,
+  "code": "feature_found",
+  "allowed": false,
+  "unlimited": false,
+  "balance": 0,
+  "preview": {
+    "title": "Upgrade to Pro",
+    "message": "You have run out of messages. Please upgrade to Pro to continue using this feature.",
+    "scenario": "usage_limit",
+    "feature_id": "chat_messages",
+    "feature_name": "messages",
+    "products": [
+      {
+        "id": "pro",
+        "name": "Pro",
+        "group": null,
+        "env": "sandbox",
+        "is_add_on": false,
+        "is_default": false,
+        "version": 2,
+        "created_at": 1748802907591,
+        "items": [
+          {
+            "type": "price",
+            "feature_id": null,
+            "interval": "month",
+            "price": 55
+          },
+          {
+            "type": "feature",
+            "feature_id": "chat_messages",
+            "feature_type": "single_use",
+            "included_usage": 300,
+            "interval": "month",
+            "reset_usage_when_enabled": true
+          },
+          {
+            "type": "feature",
+            "feature_id": "premium_support",
+            "feature_type": "static"
+          }
+        ],
+        "free_trial": null
+      }
+    ],
+    "upgrade_product_id": "pro"
+  }
+}
+```
+
+```json Feature Flag [expandable]
+{
+  "customer_id": "user_1234",
+  "feature_id": "premium_support",
+  "code": "feature_found",
+  "allowed": false,
+  "preview": {
+    "scenario": "feature_flag",
+    "title": "Feature Unavailable",
+    "feature_id": "premium_support",
+    "feature_name": "Premium support",
+    "message": "Your current plan does not include the Premium support feature. Please contact us to get access.",
+    "products": [],
+    "upgrade_product_id": null
+  }
+}
+```
+
+```json Feature Allowed [expandable]
+{
+  "customer_id": "user_1234",
+  "feature_id": "chat_messages",
+  "required_balance": 1,
+  "code": "feature_found",
+  "allowed": true,
+  "unlimited": false,
+  "balance": 1,
+  "preview": null
+}
+```
+
+</CodeGroup>
+
+The preview object that is returned from the check function can be used to control the paywall's contents. preview will be null if the feature is allowed and no paywall should be shown.
+
+Example implementation:
+
+```jsx [expandable]
+import { useCustomer } from "autumn-js/react";
+
+export default function FeatureButton() {
+  const { check, attach } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        const { data } = await check({
+          featureId: "chat_messages",
+          withPreview: true,
+        });
+
+        if (!data?.allowed && data?.preview) {
+          if (
+            window.confirm(`${data.preview.title}: ${data.preview.message}`)
+          ) {
+            if (data.preview.upgrade_product_id) {
+              await attach({
+                productId: data.preview.upgrade_product_id,
+              });
+            }
+          }
+        }
+      }}
+    >
+      Send Message
+    </button>
+  );
+}
+```
+
+If preview is returned, it will contain a scenario enum, which you can use this to control the paywall's contents. See our shadcn/ui paywall dialog messaging for an example.
+
+| Scenario       | Description                                        |
+| -------------- | -------------------------------------------------- |
+| `usage_limit`  | The customer has hit a usage limit for the feature |
+| `feature_flag` | The customer doesn't have access to the feature    |

@@ -1,14 +1,15 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleGetOrCreateCustomerV2 } from "@/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomerV2.js";
 import { handleAddCouponToCusV2 } from "./handlers/handleAddCouponToCusV2.js";
 import { handleCreateBillingPortal } from "./handlers/handleBillingPortal/handleCreateBillingPortal.js";
 import { handleGetBillingPortal } from "./handlers/handleBillingPortal/handleGetBillingPortal.js";
 import { handleClearCustomerCache } from "./handlers/handleClearCustomerCache.js";
 import { handleDeleteCustomerV2 } from "./handlers/handleDeleteCustomerV2.js";
 import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
+import { handlePostCustomer } from "./handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomer.js";
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
-import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
 import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
 import { handleUpdateCustomerV2 } from "./handlers/handleUpdateCustomerV2.js";
@@ -35,3 +36,10 @@ cusRouter.get("/:customer_id/billing_portal", ...handleGetBillingPortal);
 
 // Legacy...
 cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
+
+// RPC Routes
+export const customerRpcRouter = new Hono<HonoEnv>();
+customerRpcRouter.post(
+	"/customers.getOrCreate",
+	...handleGetOrCreateCustomerV2,
+);

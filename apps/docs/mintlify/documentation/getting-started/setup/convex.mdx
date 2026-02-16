@@ -1,0 +1,432 @@
+---
+title: "Convex"
+description: "Implementing the Autumn + Convex component"
+---
+
+<Note>
+	As a prerequisite, you will require Convex version 1.25.0 or higher. Additionally, if you already have `autumn-js` installed, it will need to be version 0.1.24 or higher.
+</Note>
+
+## Setup
+
+#### 1. Install the npm packages
+
+<CodeGroup>
+```bash npm
+npm install autumn-js @useautumn/convex
+```
+
+```bash pnpm
+pnpm add autumn-js @useautumn/convex
+```
+
+```bash yarn
+yarn add autumn-js @useautumn/convex
+```
+
+```bash bun
+bun add autumn-js @useautumn/convex
+```
+</CodeGroup>
+
+#### 2. Set the Autumn secret key in your convex environment
+<CodeGroup>
+```bash
+npx convex env set AUTUMN_SECRET_KEY=am_sk_xxx
+```
+</CodeGroup>
+
+#### 3. Add the component to your application
+Add the autumn convex component to your `convex/convex.config.ts`
+
+```typescript convex/convex.config.ts
+import { defineApp } from "convex/server";
+import autumn from "@useautumn/convex/convex.config";
+
+const app = defineApp();
+app.use(autumn);
+
+export default app;
+```
+
+#### 4. Initialize the Autumn client
+
+Paste the following code into `convex/autumn.ts`
+
+<CodeGroup>
+```typescript Convex Auth
+import { components } from "./_generated/api";
+import { Autumn } from "@useautumn/convex";
+
+export const autumn = new Autumn(components.autumn, {
+	secretKey:'am_sk_42424242',
+	identify: async (ctx: any) => {
+		const user = await ctx.auth.getUserIdentity();
+		if (!user) return null;
+
+		const userId = user.subject.split("|")[0];
+		return {
+			customerId: user.subject as string,
+			customerData: {
+				name: user.name as string,
+				email: user.email as string,
+			},
+		};
+	},
+});
+
+/**
+ * These exports are required for our react hooks and components
+ */
+
+export const {
+  track,
+  cancel,
+  query,
+  attach,
+  check,
+  checkout,
+  usage,
+  setupPayment,
+  createCustomer,
+  listProducts,
+  billingPortal,
+  createReferralCode,
+  redeemReferralCode,
+  createEntity,
+  getEntity,
+} = autumn.api();
+```
+
+```typescript Clerk / Better Auth
+import { components } from "./_generated/api";
+import { Autumn } from "@useautumn/convex";
+
+export const autumn = new Autumn(components.autumn, {
+	secretKey:'am_sk_42424242',
+	identify: async (ctx: any) => {
+		const user = await ctx.auth.getUserIdentity();
+		if (!user) return null
+
+		return {
+			customerId: user.subject as string,
+			customerData: {
+				name: user.name as string,
+				email: user.email as string,
+			},
+		};
+	},
+});
+
+/**
+ * These exports are required for our react hooks and components
+ */
+
+export const {
+  track,
+  cancel,
+  query,
+  attach,
+  check,
+  checkout,
+  usage,
+  setupPayment,
+  createCustomer,
+  listProducts,
+  billingPortal,
+  createReferralCode,
+  redeemReferralCode,
+  createEntity,
+  getEntity,
+} = autumn.api();
+```
+
+```typescript Others
+import { components } from "./_generated/api";
+import { Autumn } from "@useautumn/convex";
+
+export const autumn = new Autumn(components.autumn, {
+	secretKey:'am_sk_42424242',
+	identify: async (ctx: any) => {
+		const user = await ctx.auth.getUserIdentity();
+		if (!user) return null
+
+		return {
+			customerId: user.subject as string,
+			customerData: {
+				name: user.name as string,
+				email: user.email as string,
+			},
+		};
+	},
+});
+
+/**
+ * These exports are required for our react hooks and components
+ */
+
+export const {
+  track,
+  cancel,
+  query,
+  attach,
+  check,
+  checkout,
+  usage,
+  setupPayment,
+  createCustomer,
+  listProducts,
+  billingPortal,
+  createReferralCode,
+  redeemReferralCode,
+  createEntity,
+  getEntity,
+} = autumn.api();
+```
+</CodeGroup>
+
+<Note>
+The `identify()` function determines which customer is making the request. You may customise it based on your use case. For example, if organizations are your customers, you should return an organization ID as `customerId`. This can help you with
+[entity billing](/documentation/customers/feature-entities).
+</Note>
+
+<Warning>
+In the `identify()` function, you may need to change `user.subject` to `user.id` depending on your auth provider.
+</Warning>
+
+
+
+#### 5. Setting up \<AutumnProvider/> on your frontend
+
+This allows your React app to make use of our hooks and components. To do this, add the following to a file `AutumnWrapper.tsx`:
+
+<CodeGroup>
+```typescript 
+"use client";
+import { AutumnProvider } from "autumn-js/react";
+import { api } from "../convex/_generated/api";
+import { useConvex } from "convex/react";
+
+export function AutumnWrapper({ children }: { children: React.ReactNode }) {
+  const convex = useConvex();
+
+  return (
+    <AutumnProvider convex={convex} convexApi={(api as any).autumn}>
+      {children}
+    </AutumnProvider>
+  );
+}
+```
+</CodeGroup>
+
+<Note>
+If you're using Autumn purely on the backend, you may skip this step.
+</Note>
+
+
+## Using Autumn hooks and components on the frontend
+
+`<PricingTable/>`
+
+The quickest way to get started is to use our \<PricingTable/> component:
+
+```typescript src/app/page.tsx [expandable] wrap
+import { PricingTable } from "autumn-js/react";
+
+export default function Home() {
+  return (
+    <PricingTable/>
+  );
+}
+```
+
+<Note>
+Our components can be downloaded as shadcn components and are fully customizable. You can learn how to do so [here](https://docs.useautumn.com/setup/shadcn)
+</Note>
+
+`useCustomer`
+
+We also provide a `useCustomer` hook which lets you easily access your customer data and interact with the Autumn API directly from your frontend. For example, to upgrade a user:
+
+```typescript src/app/page.tsx [expandable] wrap
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function Home() {
+  const { customer, track, check, checkout } = useCustomer();
+  return (
+    <button onClick={() =>
+        checkout({
+          productId: "pro",
+          dialog: CheckoutDialog,
+        })
+      }>
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+You can use all of the `useCustomer()` and `useEntity()` features as you would normally. If you aren't familiar with these,
+you can read more about them [here](/react/hooks/useCustomer).
+
+## Using Autumn on the backend
+
+You will also need to use Autumn on your backend for actions such as tracking or gating usage of a feature. To do so, you can use our Autumn client:
+
+#### Check feature access
+```typescript
+import { autumn } from "convex/autumn";
+
+const { data, error } = await autumn.check(ctx, {
+	featureId: "messages"
+});
+
+if (data.allowed) {
+	// Action to perform if user is allowed messages
+}
+```
+
+#### Track feature usage
+```typescript
+import { autumn } from "convex/autumn";
+
+const { data, error } = await autumn.track(ctx, {
+	featureId: "messages",
+	value: 10
+});
+```
+
+<Note>
+These are the most common functions you'll be using, but we also export all other functions in our JS SDK / API reference, for eg:
+- `checkout`
+- `attach`
+And more!
+
+Check out our API reference [here](https://docs.useautumn.com/api-reference/core/checkout)
+</Note>
+
+**Congrats 🎉**
+
+Nice! You've now integrated Autumn into your application with Convex.
+
+
+
+{/* <CodeGroup>
+```typescript Clerk [expandable] wrap
+import { AutumnProvider } from "autumn-js";
+import { api } from "../convex/_generated/api";
+import { useAuth, ClerkProvider } from "@clerk/clerk-react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
+
+function AutumnWrapper({ children }: { children: React.ReactNode }) {
+	const { getToken, isLoaded } = useAuth();
+	if (!isLoaded) return <p>Loading...</p>;
+	
+	return (
+		<AutumnProvider
+			convexApi={(api as any).autumn}
+			convexUrl={import.meta.env.VITE_CONVEX_URL}
+			getBearerToken={async () => {
+				try {
+					return (
+						(await getToken({
+							template: "convex",
+						})) || ""
+					);
+				} catch (error) {
+					console.error("Failed to get fresh token:", error);
+					return null;
+				}
+			}}
+		>
+			{children}
+		</AutumnProvider>
+	);
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+	return (
+		<ClerkProvider publishableKey={import.meta.env.CLERK_PUBLISHABLE_KEY}>
+			<ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+				<AutumnWrapper>
+					{children}
+				</AutumnWrapper>
+			</ConvexProviderWithClerk>
+		</ClerkProvider>
+	);
+}
+```
+
+```typescript Better Auth [expandable] wrap
+import { AutumnProvider } from "autumn-js/react";
+import { api } from "../convex/_generated/api";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { authClient } from "./lib/auth-client";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+
+function AutumnWrapper({ children }: { children: React.ReactNode }) {
+	const getToken = async () => {
+		try {
+			const cookie = await authClient.getCookie();
+			if (cookie) {
+				const cookieParts = cookie.split(";");
+				const convexJwtPart = cookieParts.find((part) =>
+					part.trim().startsWith("better-auth.convex_jwt=")
+				);
+
+				if (convexJwtPart) {
+					const token = convexJwtPart.split("=")[1];
+					return token;
+				}
+			} else return null;
+		} catch (error) {
+			console.error("Failed to get auth token:", error);
+			return null;
+		}
+	};
+
+	return (
+		<AutumnProvider
+			convexApi={(api as any).autumn}
+			convexUrl={import.meta.env.VITE_CONVEX_URL}
+			getBearerToken={getToken}
+		>
+			{children}
+		</AutumnProvider>
+	);
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+	return (
+		<ConvexBetterAuthProvider client={convex} authClient={authClient}>
+			<AutumnWrapper>{children}</AutumnWrapper>
+		</ConvexBetterAuthProvider>
+	);
+}
+```
+
+</CodeGroup> */}
+
+{/* If you have used autumn-js before, this should be very familiar for you. The code is almost identical,
+you just need to pass in some Convex-specific props to your `<AutumnProvider />`. Below are examples using Clerk and Better Auth for authentication.
+You may simply copy this into your codebase. */}
+{/* As you can see, the main difference is that we need to pass in these three props to the `<AutumnProvider />`:
+
+- `convexApi` - The Convex API object from your `convex/_generated/api.ts` file.
+
+You can import this as usual, and pass it in as the `convexApi` prop. Make sure its `api.autumn` and not just `api`.
+
+- `convexUrl` - The Convex URL.
+
+You can get this from the environment variable that Convex generates for you. It will be something like `https://<your-project-id>.convex.cloud`.
+
+- `getBearerToken` - A function that returns a bearer token for the Convex API.
+
+This is critical. This allows the currently authenticated user to access the Convex API, otherwise nothing will work. These examples were written for Clerk and Better Auth,
+but it works with any auth provider that Convex supports.
+
+Here are the relevant docs for other common auth providers:
+
+- [Convex Auth](https://labs.convex.dev/auth/api_reference/react#useauthtoken)
+- [Kinde Auth](https://docs.kinde.com/developer-tools/sdks/frontend/react-sdk/#gettoken) */}

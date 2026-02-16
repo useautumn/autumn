@@ -1,0 +1,64 @@
+---
+alwaysApply: true
+---
+
+# SDK Architecture Rules (Speakeasy Monorepo)
+
+## Purpose
+This rule explains how SDK generation and SDK-consumer packages are wired in this monorepo, and defines the required update path when adding or changing SDK-backed behavior.
+
+## Canonical Pipeline (Conceptual)
+1. OpenAPI contract source lives in `shared/api/_openapi/v2.1/` (router + contracts).
+2. `bun api` (root) delegates to `shared/api/api.ts` and generates OpenAPI YAML in `shared/openapi/openapi.yml` (default 2.1 flow).
+3. For v2.1, Speakeasy runs from `packages/sdk` and regenerates `@useautumn/sdk`.
+4. `autumn-js` consumes `@useautumn/sdk` and re-exports SDK client types/classes through `packages/autumn-js/src/sdk/index.ts`.
+5. `autumn-js` backend adapters mount `/api/autumn/*` routes for host apps.
+6. `autumn-js/react` hooks call those mounted backend routes.
+7. `apps/sdk-test` exercises package integrations scenario-by-scenario.
+
+## Source of Truth Rules
+1. API behavior starts at contracts, not generated code.
+2. Do not hand-edit generated `packages/sdk/src/**` as a source of truth; regeneration can overwrite it.
+3. If SDK shapes are wrong, fix contracts/OpenAPI generation inputs first.
+4. Keep backend route behavior aligned with generated SDK operation models from `@useautumn/sdk/models/operations`.
+
+## `autumn-js` Component Map
+### A) Backend routing layer
+- Entry router: `packages/autumn-js/src/libraries/backend/routes/backendRouter.ts`
+- Route groups: customers, billing, core/gen, entities, referrals, products.
+- Route handlers call `Autumn` client methods (from `@useautumn/sdk`) and inject identity through `withAuth`.
+- Adapters (`next`, `hono`, `express`, `fastify`, `better-auth`, etc.) all delegate into this shared router pattern.
+
+### B) React client + hooks layer
+- Provider: `AutumnProvider` (`ReactAutumnProvider`) sets client transport config (`backendUrl`, `pathPrefix`, auth headers).
+- Hooks (`useCustomer`, `useEntity`, `useAutumn`, etc.) read from provider context and call backend routes.
+- Hook payload types should come from `@useautumn/sdk` models/operations where possible.
+
+### C) SDK wrapper layer
+- `packages/autumn-js/src/sdk/index.ts` re-exports `Autumn` and SDK exports from `@useautumn/sdk`.
+- Backend code imports `Autumn` via `@sdk` alias to keep a stable internal import surface.
+
+### D) Integration test harness (`apps/sdk-test`)
+- Scenario-driven app with one page per tested component/integration.
+- Core pattern per scenario: params panel, state panel, payload viewer, action controls.
+- Current and future integrations are represented uniformly (core, better-auth, convex).
+- Use this app as the canonical manual verification surface for SDK-consumer packages.
+
+## Required Change Workflow
+When adding or changing an SDK-backed feature:
+1. Update contract definitions under `shared/api/_openapi/v2.1/contracts/*`.
+2. Ensure the v2.1 contract router includes the new operation.
+3. Regenerate OpenAPI + SDK via existing pipeline.
+4. Wire/adjust `autumn-js` backend route mapping.
+5. Wire/adjust `autumn-js/react` client methods/hooks.
+6. Add or update `apps/sdk-test` scenario coverage for the affected component.
+
+## Consistency Rules for Agents
+1. Always describe pipeline impacts in PR/task notes when touching contracts/SDK wrappers/hooks.
+2. Keep naming consistent between operation intent, backend route path, and hook/action name.
+3. Prefer shared route/auth handling (`withAuth` + central router) over one-off adapter logic.
+4. Treat `apps/sdk-test` as required integration documentation, not optional demo code.
+
+## Scope Assumptions
+- Convex integration is included as part of target architecture, even where implementation is still in progress.
+- Rules describe intended steady-state architecture, while allowing explicit WIP markers in scenario status metadata.

@@ -7,7 +7,7 @@ import {
 	type AttachBodyV0,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	CusExpand,
+	CustomerExpand,
 	EntityExpand,
 	ErrCode,
 	type OrgConfig,
@@ -272,7 +272,7 @@ export class AutumnCliV2 {
 		get: async (
 			customerId: string,
 			params?: {
-				expand?: CusExpand[];
+				expand?: CustomerExpand[];
 			},
 		): Promise<
 			Customer & {
@@ -281,7 +281,7 @@ export class AutumnCliV2 {
 		> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			};
 
 			const finalParams = { ...defaultParams, ...params };

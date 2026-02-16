@@ -29,6 +29,6 @@
 		// "**/.claude": true,
 		"**/.cursor": true,
 		"**/.github": true,
-		"**/.superset": true,
+		"**/.superset": true
 	}
 }

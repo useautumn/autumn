@@ -1,0 +1,12 @@
+---
+title: "List Organizations"
+openapi: "platform GET /platform/organizations"
+---
+
+<Info>
+  Lists all organizations created by your master organization. Supports pagination to handle large numbers of tenant organizations.
+</Info>
+
+<Note>
+  Only returns organizations that were created by your master organization through the Platform API. Organization slugs in the response do not include the master org ID prefix.
+</Note>

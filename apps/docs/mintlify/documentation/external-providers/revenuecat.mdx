@@ -1,0 +1,263 @@
+---
+title: "RevenueCat"
+description: "Integrate Autumn with RevenueCat for mobile app billing"
+---
+
+RevenueCat integration allows you to use Autumn alongside RevenueCat for managing mobile app subscriptions and billing. This is a _read-only_ integration, which means that you will handle billing through RevenueCat. 
+
+Autumn will receive webhook updates from RevenueCat to update the customer's plan and features. You keep the benefits of RevenueCat's paywalls, AB testing and SDK.
+
+<Note>
+ This is currently in beta, please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at support@useautumn.com to get access.
+</Note>
+
+## Setup Guide
+<Steps>
+    <Step>
+    #### Connect RevenueCat to Autumn
+    
+        To connect RevenueCat to Autumn, you'll need:
+        - A RevenueCat project ID
+        - A RevenueCat API key
+
+        To get your RevenueCat project ID, visit your RevenueCat dashboard and copy the project ID from the URL. e.g. `https://app.revenuecat.com/projects/1234567890/overview` will have a project ID of `1234567890`.
+
+        <Frame>
+          <img src="/assets/screenshots/revenuecat/project-id.png" alt="RevenueCat dashboard showing where to find your project ID" />
+        </Frame>
+
+        To get your RevenueCat API key, visit the API keys section on your dashboard, select "New secret API key", and select the following configuration:
+
+        - API Version: V2
+        - Charts metrics permissions: No access
+        - Customer information permissions: Read only
+        - Project configuration permissions: Read only
+
+        <Frame>
+            <img src="/assets/screenshots/revenuecat/api-key.png" alt="RevenueCat dashboard showing where to find your API key" />
+        </Frame>
+
+        Then, visit your Autumn dashboard, and in the "Developer > RevenueCat" section,
+        set up your RevenueCat project ID and API key.
+
+        <Frame>
+            <img src="/assets/screenshots/revenuecat/savekeys.png" alt="Autumn dashboard showing where to set up your RevenueCat project ID and API key" />
+        </Frame>
+    </Step>
+
+    <Step>
+    #### Map your RevenueCat products to Autumn products
+
+    When a RevenueCat product is purchased, define which Autumn product should be enabled for the customer. 
+    
+        <Warning>
+        RevenueCat is managing billing, so any plan prices in Autumn will be ignored. 
+        
+        Since RevenueCat does not support usage-based or quantity-based pricing, any Autumn plans with these price types will not display in the mapping screen for safety. 
+
+        </Warning>
+
+        RevenueCat products are mapped at the store-level into Autumn. This means instead of mapping a Package or an Offering, you will be mapping Products from Google Play, Apple Store, Roku or etc... instead. 
+        
+        You can still use this in conjunction with RevenueCat's paywalls, packages and offerings however you wish.
+
+        <Frame>
+            <img src="/assets/screenshots/revenuecat/mappings.png" alt="Autumn dashboard showing where to map your products to RevenueCat products" />
+        </Frame>
+    </Step>
+
+    <Step>
+    #### Set up the webhook integration
+
+        For Autumn to recieve updates from RevenueCat, you'll need to set up a webhook integration.
+
+        In RevenueCat, visit "Integrations > Webhooks", and click "Add new configuration". Use the following configuration:
+
+        - Webhook URL: paste this from the Autumn dashboard
+        - Authorization header value: paste this from the Autumn dashboard
+        - Environments: Depending on your Autumn environment, you are given two different URLs. This means you should also separate your RevenueCat webhooks for test and live environments.
+        - Events filter: All apps, all events.
+
+        <Frame>
+            <img src="/assets/screenshots/revenuecat/webhooks.png" alt="RevenueCat dashboard showing where to set up your webhook integration" />
+        </Frame>
+    </Step>
+
+    <Step>
+    #### Integration
+    
+        **You should not call Autumn's `attach()` or `checkout()` functions. Instead you should either use RevenueCat's SDK or RevenueCat's paywalls.**
+        
+        When the user pays via mobile, the plan will automatically sync into Autumn. Once you have purchased a product or an add-on, you may then continue using `check()` or `track()` to manage your features.
+        
+        Any existing Autumn customers (that have purchased a plan via Stripe / Web) can still access their balances and features as normal on mobile. They will have an active plan in their `customer` object.
+        
+        <Warning>
+            You should handle blocking existing Autumn customers from initiating subscriptions with RevenueCat on mobile, by checking for an active plan in their `customer` object.
+        </Warning>
+
+        When integrating RevenueCat and initiating your `Purchases` instance, you must use the `appUserID` parameter to pass in the customer ID from your auth system.
+        This will allow you to sync the customer ID into Autumn, whether its a new user or an existing user from Stripe.
+        <Tip>
+        if you are using [Expo](https://expo.dev/), you can use Autumn's [React hooks](/react/hooks/useCustomer) too
+        </Tip>
+
+        <CodeGroup>
+            ```typescript RevenueCatProvider.tsx
+            import { useEffect } from "react";
+            import Purchases, { LOG_LEVEL } from "react-native-purchases";
+
+            export default function RevenueCatProvider({ userID }: { userID: string }) {
+                useEffect(() => {
+                    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+                    Purchases.configure({
+                        apiKey:
+                            process.env.EXPO_PUBLIC_REVENUE_CAT_API_KEY || "",
+                        appUserID: userID,
+                    });
+                }, [userID]);
+
+                return null;
+            }
+            ```
+
+            ```typescript app/api/autumn/[...all]+api.ts
+            // Expo also supports better-auth :)
+            import { auth } from "@/lib/auth";
+            import { autumnHandler } from "autumn-js/backend";
+
+            export async function GET(request: Request, { all }: { all: string }) {
+                // Get the session from Better Auth
+                const session = await auth.api.getSession({ headers: request.headers });
+                if (!session?.user?.id) {
+                    return Response.json(
+                        { error: "Unauthorized - Please sign in" },
+                        { status: 401 },
+                    );
+                }
+
+                // Extract user data from session
+                const customerId = session.user.id;
+                const customerData = {
+                    name: session.user.name || "Unknown User",
+                    email: session.user.email || "",
+                };
+
+                const autumnResponse = await autumnHandler({
+                    request,
+                    customerId,
+                    customerData
+                });
+
+                return Response.json(autumnResponse.response, { status: autumnResponse.statusCode });
+            }
+
+            export const POST = GET;
+            export const PUT = GET;
+            export const DELETE = GET;
+            export const PATCH = GET;
+            export const OPTIONS = GET;
+            ```
+        </CodeGroup>
+
+        Then to initiate a purchase, you can use the `purchasePackage` function from the `Purchases` SDK, or open a paywall.
+
+        <CodeGroup>
+            ```typescript PurchaseProduct.tsx
+            <Button
+                variant="default"
+                size="lg"
+                onPress={async () => {
+                    try {
+                        const offerings = await Purchases.getOfferings();
+                        const pkg = offerings.all.default.availablePackages.find(
+                            (x) => x.identifier === "$rc_monthly",
+                        );
+                        if (!pkg) {
+                            throw new Error("Package not found");
+                        }
+                        const { customerInfo } = await Purchases.purchasePackage(pkg);
+                        if (
+                            typeof customerInfo.entitlements.active["monthly"] !==
+                            "undefined"
+                        ) {
+                            // For immediate responsiveness, the App can rely on RevenueCat's existing entitlements system
+                            // with the above if statement. However, Autumn still needs to wait for the webhooks,
+                            // at which point the App should move onto using check and track as usual.
+                            alert("Successfully purchased product PRO");
+                        }
+                    } catch (e: unknown) {
+                        if (JSON.stringify(e).includes("Purchase was cancelled")) return;
+                        alert("Error purchasing product PRO");
+                    }
+                }}
+                className="w-full mt-6"
+            >
+                <Text>Upgrade to PRO</Text>
+            </Button>
+            ```
+
+            ```typescript RCPaywall.tsx
+                import { useRouter } from "expo-router";
+                import { View } from "react-native";
+                import RevenueCatUI from "react-native-purchases-ui";
+
+                export default function RCPaywall() {
+                    const router = useRouter();
+
+                    return (
+                        <View className="flex-1">
+                            <RevenueCatUI.Paywall
+                                onDismiss={() => {
+                                    router.back();
+                                }}
+                            />
+                        </View>
+                    );
+                }
+
+            ```
+        </CodeGroup>
+    </Step>
+
+    <Step>
+    #### Congratulations!
+        You have now successfully integrated Autumn with RevenueCat.
+
+        You can now use the `check()` and `track()` functions to manage your features as usual.
+
+        <CodeGroup>
+            ```typescript check.ts
+            const { data } = await autumn.check({
+                customer_id: "user_or_org_id_from_auth",
+                feature_id: "pro",
+            });
+
+            if (data.allowed) {
+                // User has access to the feature
+            } else {
+                // User does not have access to the feature
+            }
+            ```
+
+            ```typescript track.ts
+            const { data } = await autumn.track({
+                customer_id: "john_doe",
+                feature_id: "messages",
+                value: 1,
+            });
+
+            // This will decrement the messages balance by 1
+            ```
+        </CodeGroup>
+    </Step>
+
+</Steps>
+
+## Versioning Plans
+
+Autumn's [plan versioning](/documentation/pricing/versioning) feature allows you to update your pricing and migrate customers between versions. However, since mobile billing has specific limitations and is handled by RevenueCat, you should keep the following in mind:
+
+- Whenever a RevenueCat product is purchased, the latest version of the Autumn plan will be enabled for the customer.
+- Any price set in Autumn is ignored: only the price set in RevenueCat will be used
+- If you migrate a customer from one plan version to another, the plan features will be immediately updated -- just as with the standard migration process. Prices will **not** be updated. You should handle this in [RevenueCat](https://www.revenuecat.com/docs/subscription-guidance/price-changes) <Icon icon="external-link" size={12} className="ml-1 mr-1 mb-1" color="#8838ff" /> (your customers may need to opt-in to the new pricing).

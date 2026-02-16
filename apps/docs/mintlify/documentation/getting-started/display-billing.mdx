@@ -1,0 +1,397 @@
+---
+title: "Display billing data"
+description: "Display usage and billing data in your app for your users"
+---
+
+Software applications typically ship with a billing page. This allows customers to change plan, cancel subscription and view their usage.
+
+The `customer` endpoint will return the current state of the customer, including their active plans, feature usage and remaining balances.
+
+### Active plans
+
+Display the plan the user is currently on. You can also display price information and features granted with that plan.
+
+As users can have multiple active plans (eg, add ons), this is an array.
+
+<CodeGroup>
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+const { customer } = useCustomer();
+
+const activeProducts = customer?.products.filter(
+	(product) => product.status === "active",
+);
+
+console.log(`Users active plans are: ${activeProducts?.map((product) => product.name).join(", ")}`);
+
+```
+
+```typescript Node.js wrap
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+	secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.customers.get("user_or_org_id_from_auth");
+
+//filter for active products
+const activeProducts = data?.products.filter(
+	(product) => product.status === "active",
+);
+
+console.log(
+	`Users active plans are: 
+	${activeProducts?.map((product) => product.name).join(", ")}`,
+);
+```
+
+
+```python Python wrap
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.get("user_or_org_id_from_auth")
+    activeProducts = [product for product in customer.products if product.status == "active"]
+    print(f"Users active plans are: {', '.join([product.name for product in activeProducts])}")
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request GET \
+  --url https://api.useautumn.com/customers/user_or_org_id_from_auth \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json'
+
+  # get products object from customer.products
+```
+</CodeGroup>
+
+### Usage balances
+
+Metered features have a `balance`, `usage` and `included_usage` field. You can use these to display the current usage and remaining balance to the user.
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+const { customer } = useCustomer();
+
+const messages = customer?.features.messages;
+
+console.log(`Users messages balance is: ${messages?.balance} / ${messages?.included_usage}`);
+```
+
+```typescript Node.js wrap
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+	secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.customers.get("user_or_org_id_from_auth");
+
+const messages = data?.features.messages
+
+console.log(`Users messages balance is: ${messages?.balance} / ${messages?.included_usage}`);
+```
+
+```python Python wrap
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.get("user_or_org_id_from_auth")
+    messages = customer.features.messages
+    print(f"Users messages balance is: {messages.balance} / {messages.included_usage}")
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request GET \
+  --url https://api.useautumn.com/customers/user_or_org_id_from_auth \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json'
+
+# get features usage object from customer.features.[feature_id]
+```
+</CodeGroup>
+
+### Switching or cancelling plans
+
+Switching plans follows the same Stripe payment flow as [previously described](/documentation/getting-started/setup/sdk). 
+
+<Note>You can alternatively use our pre-built [pricing table component](/react/components/pricing-table) to handle all the various switching scenarios.</Note>
+
+<CodeGroup>
+
+```jsx React wrap expandable
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function PurchaseButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "pro",
+          dialog: CheckoutDialog,
+        });
+      }}
+    >
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+```typescript Node.js wrap expandable
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ 
+  secretKey: 'am_sk_42424242' 
+});
+
+const { data } = await autumn.checkout({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "pro",
+});
+
+if (data.url) {
+  // Return Stripe checkout URL to frontend
+} else {
+  // Return upgrade preview data to frontend
+}
+
+//if user needs to confirm payment
+const { data } = await autumn.attach({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "pro",
+});
+```
+
+```python Python wrap expandable
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def checkout():
+  response = await autumn.checkout(
+      customer_id='user_or_org_id_from_auth',
+      product_id='pro'
+  )
+  if response.url:
+    # Return Stripe checkout URL to frontend
+  else:
+    # Return upgrade preview data to frontend
+
+asyncio.run(main())
+
+# if user needs to confirm payment
+async def attach():
+  response = await autumn.attach(
+      customer_id='user_or_org_id_from_auth',
+      product_id='pro'
+  )
+```
+
+```bash cURL expandable
+curl -X POST 'https://api.useautumn.com/v1/checkout' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "product_id": "pro"
+}'
+
+# if user needs to confirm payment
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "product_id": "pro"
+}'
+```
+
+</CodeGroup>
+
+Cancelling a plan will schedule the cancellation for the end of the billing cycle, and enable any plan with the `auto-enable` property.
+
+<Info>
+You can cancel a plan immediately by passing `cancel_immediately: true`.
+</Info>
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+const { cancel } = useCustomer();
+
+await cancel({ productId: "pro" });
+```
+
+```typescript Node.js wrap
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+await autumn.cancel({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "pro",
+});
+```
+
+```python Python wrap
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+  await autumn.cancel(
+    customer_id='user_or_org_id_from_auth', 
+    product_id='pro'
+  )
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/cancel' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "product_id": "pro"
+}'
+```
+
+</CodeGroup>
+
+### Stripe billing portal
+
+The Stripe billing portal is a convenient way to allow users to manage their payment method, see past invoices and also cancel their current plan. You can also set up "churn offers" to encourage users to stay with you.
+
+<Warning>
+To use the Stripe billing portal, you'll need to enable it in your [Stripe settings](https://dashboard.stripe.com/settings/billing/portal).
+</Warning>
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+const { openBillingPortal } = useCustomer();
+
+await openBillingPortal({ returnUrl: "https://your-app.com/billing" });
+```
+
+```typescript Node.js wrap
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+await autumn.customers.billingPortal('customer_id', 
+  {
+    return_url: "https://your-app.com/billing"
+  }
+);
+```
+
+```python Python wrap
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+  await autumn.openBillingPortal(
+    customer_id='user_or_org_id_from_auth',
+    return_url='https://your-app.com/billing'
+  )
+``` 
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/openBillingPortal' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "return_url": "https://your-app.com/billing"
+}'
+```
+
+</CodeGroup>
+
+
+### Usage history chart
+
+Autumn replicates your usage data to Clickhouse, so you can retrieve aggregate time series usage data for your customers. The response can be passed into a charting library like Recharts to display a usage history graph.
+
+<CodeGroup>
+
+```jsx React wrap
+import { useAnalytics } from "autumn-js/react";
+
+const { list } = useAggregateEvents({
+  featureId: 'messages',
+  range: '30d'
+})
+```
+
+```typescript Node.js wrap
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.events.aggregate({
+  customer_id: 'user_or_org_id_from_auth',
+  feature_id: 'messages',
+  range: '30d'
+})
+```
+
+```python Python wrap
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    response = await autumn.events.aggregate(
+        customer_id='user_or_org_id_from_auth',
+        feature_id='messages',
+        range='30d'
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/events/aggregate' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "feature_id": "messages",
+  "range": "30d"
+}'
+```
+</CodeGroup>

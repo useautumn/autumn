@@ -1,0 +1,42 @@
+{
+  "name": "@useautumn/sdk",
+  "version": "0.7.17",
+  "author": "Speakeasy",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "type": "module",
+  "tshy": {
+    "sourceDialects": [
+      "@useautumn/sdk/source"
+    ],
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json",
+      "./types": "./src/types/index.ts",
+      "./models": "./src/models/index.ts",
+      "./*.js": "./src/*.ts",
+      "./*": "./src/*.ts"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "lint": "eslint --cache --max-warnings=0 src",
+    "build": "tshy",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "eslint": "^9.26.0",
+    "globals": "^15.14.0",
+    "tshy": "^2.0.0",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.26.0"
+  },
+  "dependencies": {
+    "zod": "^3.25.65 || ^4.0.0"
+  }
+}

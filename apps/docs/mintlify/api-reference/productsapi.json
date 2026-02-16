@@ -1,0 +1,572 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Product API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.useautumn.com/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/products": {
+      "post": {
+        "summary": "Create a new product",
+        "operationId": "createProduct",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all products",
+        "operationId": "listProducts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Products retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{product_id}": {
+      "get": {
+        "summary": "Get a product by ID",
+        "operationId": "getProduct",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The product ID defined when creating the product "
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update a product",
+        "operationId": "updateProduct",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The product ID of the product to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_-]+$",
+                    "description": "Update the product ID"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the product"
+                  },
+                  "is_add_on": {
+                    "type": "boolean",
+                    "description": "Whether the product is an add-on"
+                  },
+                  "is_default": {
+                    "type": "boolean",
+                    "description": "Whether the product is the default product"
+                  },
+                  "version": {
+                    "type": "number",
+                    "description": "The version number for this product"
+                  },
+                  "group": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The product group this belongs to"
+                  },
+                  "archived": {
+                    "type": "boolean",
+                    "description": "Whether to archive this product"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ProductItem"
+                    },
+                    "description": "Array of product items that define features and pricing"
+                  },
+                  "free_trial": {
+                    "$ref": "#/components/schemas/FreeTrial"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a product",
+        "operationId": "deleteProduct",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The product ID of the product to delete"
+          },
+          {
+            "name": "all_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Delete all versions of the product. By default only the latest version is deleted."
+          }
+        ],
+        "x-code-samples": [
+          {
+            "lang": "typescript",
+            "label": "Delete latest version",
+            "source": "// Delete latest version\nawait autumn.products.delete(productId);"
+          },
+          {
+            "lang": "typescript", 
+            "label": "Delete all versions",
+            "source": "// Delete all versions\nawait autumn.products.delete(productId, { all_versions: true });"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Product cannot be deleted because it has been attached to customers"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      }
+    },
+    "/referrals/code": {
+      "post": {
+        "summary": "Get a referral code",
+        "operationId": "getReferralCode",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetReferralCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Referral code generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralCode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/referrals/redeem": {
+      "post": {
+        "summary": "Redeem a referral code",
+        "operationId": "redeemReferralCode",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemReferralRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Referral code redeemed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedemptionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PriceTier": {
+        "type": "object",
+        "required": ["to", "amount"],
+        "properties": {
+          "to": {
+            "oneOf": [{ "type": "number" }, { "type": "string" }],
+            "description": "The maximum amount of usage for this tier."
+          },
+          "amount": {
+            "type": "number",
+            "description": "The price of the product item for this tier."
+          }
+        }
+      },
+      "ProductItem": {
+        "type": "object",
+        "properties": {
+          "feature_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "The feature ID of the product item. Should be `null` for prices."
+          },
+          "feature_type": {
+            "type": "string",
+            "enum": ["single_use", "continuous_use"],
+            "description": "Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."
+          },
+          "included_usage": {
+            "oneOf": [
+              { "type": "number" },
+              { "type": "string", "enum": ["Infinity"] }
+            ],
+            "nullable": true,
+            "description": "The amount of usage included for this feature."
+          },
+          "interval": {
+            "type": "string",
+            "nullable": true,
+            "description": "The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."
+          },
+          "usage_model": {
+            "type": "string",
+            "enum": ["prepaid", "pay_per_use"],
+            "description": "Whether the feature should be prepaid upfront or billed for how much they use end of billing period. "
+          },
+          "price": {
+            "type": "number",
+            "nullable": true,
+            "description": "The price of the product item. Should be `null` if tiered pricing is set."
+          },
+          "billing_units": {
+            "type": "number",
+            "nullable": true,
+            "description": "The billing units of the product item (eg $1 for 30 credits). Should be `null` if the feature is prepaid."
+          },
+          "entity_feature_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "The feature ID of the entity (like seats) to track sub-balances for."
+          },
+          "reset_usage_when_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Whether the usage should be reset when the product is enabled."
+          },
+          "tiers": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/PriceTier"
+            }
+          }
+        }
+      },
+      "FreeTrial": {
+        "type": "object",
+        "required": ["duration", "length", "unique_fingerprint"],
+        "properties": {
+          "duration": {
+            "type": "string"
+          },
+          "length": {
+            "type": "number"
+          },
+          "unique_fingerprint": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The product ID of the product to create, used to identify the product in the API"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the product"
+          },
+          "is_add_on": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether the product is an add-on and can be purchased alongside other products"
+          },
+          "is_default": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether the product should be attached by default to new customers"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductItem"
+            }
+          },
+          "free_trial": {
+            "$ref": "#/components/schemas/FreeTrial"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "integer",
+            "description": "The timestamp of when the product was created"
+          },
+          "id": {
+            "type": "string",
+            "description": "The ID of the product you set when creating the product"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the product"
+          },
+          "env": {
+            "type": "string",
+            "enum": ["production", "sandbox"],
+            "description": "The environment of the product"
+          },
+          "is_add_on": {
+            "type": "boolean",
+            "description": "Whether the product is an add-on and can be purchased alongside other products"
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Whether the product is the default product"
+          },
+          "group": {
+            "type": "string",
+            "description": "The group of the product"
+          },
+          "version": {
+            "type": "integer",
+            "description": "The version of the product"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductItem"
+            }
+          },
+          "free_trial": {
+            "nullable": true,
+            "$ref": "#/components/schemas/FreeTrial"
+          }
+        }
+      },
+      "GetReferralCodeRequest": {
+        "type": "object",
+        "required": ["customer_id", "program_id"],
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "The unique identifier of the customer"
+          },
+          "program_id": {
+            "type": "string",
+            "description": "ID of your referral program"
+          }
+        }
+      },
+      "ReferralCode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The referral code that can be shared with customers"
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "Your unique identifier for the customer"
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "The timestamp of when the referral code was created"
+          }
+        }
+      },
+      "RedeemReferralRequest": {
+        "type": "object",
+        "required": ["code", "customer_id"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The referral code to redeem"
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "The unique identifier of the customer redeeming the code"
+          }
+        }
+      },
+      "RedemptionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ID of the redemption event"
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "Your unique identifier for the customer"
+          },
+          "reward_id": {
+            "type": "string",
+            "description": "The ID of the reward that will be granted"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

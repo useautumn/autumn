@@ -12,6 +12,7 @@ import {
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
 } from "../core/coreOpModels.js";
+import { ExtCreateCustomerParamsSchema } from "../customers/crud/createCustomerParams.js";
 import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models.js";
 /**
  * Centralized JSDoc declarations for all core API methods.
@@ -231,4 +232,23 @@ export const setUsageJsDoc = createJSDocDescription({
 			title: "Set Usage",
 		}),
 	],
+});
+
+export const getOrCreateCustomerJsDoc = createJSDocDescription({
+	description:
+		"Creates a customer if they do not exist, or returns the existing customer by your external customer ID.",
+	whenToUse:
+		"Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.",
+	body: ExtCreateCustomerParamsSchema.partial(),
+	examples: [
+		example({
+			values: {
+				id: "cus_123",
+				name: "John Doe",
+				email: "john@example.com",
+			},
+			description: "Create or fetch a customer by external ID",
+		}),
+	],
+	methodName: "getOrCreate",
 });

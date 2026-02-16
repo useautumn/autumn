@@ -19,7 +19,7 @@ import {
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	CusExpand,
+	CustomerExpand,
 	EntityExpand,
 	ErrCode,
 	type LegacyVersion,
@@ -400,14 +400,14 @@ export class AutumnInt {
 		>(
 			customerId: string,
 			params?: {
-				expand?: CusExpand[];
+				expand?: CustomerExpand[];
 				skip_cache?: string;
 				with_autumn_id?: boolean;
 			},
 		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			};
 
 			const finalParams = { ...defaultParams, ...params };
@@ -439,7 +439,7 @@ export class AutumnInt {
 			...customerData
 		}: {
 			withAutumnId?: boolean;
-			expand?: CusExpand[];
+			expand?: CustomerExpand[];
 			internalOptions?: CreateCustomerInternalOptions;
 			skipWebhooks?: boolean;
 		} & Omit<CreateCustomerParams, "internal_options">) => {

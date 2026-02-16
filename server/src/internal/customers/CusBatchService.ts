@@ -3,8 +3,8 @@ import {
 	type ApiCustomerV5,
 	type AppEnv,
 	applyResponseVersionChanges,
-	CusExpand,
 	type CusProductStatus,
+	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 	type ListCustomersV2Params,
@@ -52,9 +52,9 @@ export class CusBatchService {
 		query: ListCustomersV2Params;
 	}) {
 		const expand = ctx.expand || [];
-		const includeInvoices = expand.includes(CusExpand.Invoices);
-		const withEntities = expand.includes(CusExpand.Entities);
-		const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
+		const includeInvoices = expand.includes(CustomerExpand.Invoices);
+		const withEntities = expand.includes(CustomerExpand.Entities);
+		const withTrialsUsed = expand.includes(CustomerExpand.TrialsUsed);
 
 		const { limit, offset, plans, subscription_status, search } = query;
 

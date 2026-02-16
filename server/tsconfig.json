@@ -24,6 +24,8 @@
 			"@scripts/*": ["./scripts/*"],
 			"@lua/*": ["./src/_luaScripts/*"],
 			"@tests/*": ["./tests/*"],
+			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
+			"autumn-js/hono": ["../packages/autumn-js/src/libraries/backend/hono.ts"],
 
 			// From shared package?
 			"@autumn/shared": ["../shared/index.ts"],
