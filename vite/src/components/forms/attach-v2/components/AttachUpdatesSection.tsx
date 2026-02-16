@@ -63,7 +63,7 @@ export function AttachUpdatesSection() {
 					{needsAnd && " and "}
 					<MinusCircleIcon
 						weight="fill"
-						className="text-red-500 size-3.5 inline align-[-2px] mr-1"
+						className="text-red-500 size-3.5 inline align-middle mr-1"
 					/>
 					<span className="text-foreground font-medium">
 						{change.plan.name}
@@ -91,7 +91,7 @@ export function AttachUpdatesSection() {
 						Attaching{" "}
 						<PlusCircleIcon
 							weight="fill"
-							className="text-green-500 size-3.5 inline align-[-2px] mr-1"
+							className="text-green-500 size-3.5 inline align-middle mr-1"
 						/>
 						<span className="text-foreground font-medium">{product.name}</span>
 						{outgoing.length > 0 && <> and removing {renderOutgoingPlans()}</>}
