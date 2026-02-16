@@ -31,7 +31,7 @@ async function main() {
 	// Generate Mintlify docs (transform OpenAPI + generate MDX)
 	await generateMintlifyDocs({
 		openApiPath: paths.docsOpenApiPath,
-		docsDir: paths.docsApiDir,
+		docsDir: paths.docsDir,
 	});
 
 	console.log("Done!");

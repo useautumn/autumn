@@ -12,6 +12,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicResponseField name="list" type="object[]">
   <Expandable title="properties">
+    <DynamicResponseField name="id" type="string" />
+
     <DynamicResponseField name="name" type="string" />
 
     <DynamicResponseField name="description" type="string | null" />
@@ -32,12 +34,70 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="interval_count" type="number" />
 
+        <DynamicResponseField name="display" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="primary_text" type="string" />
+
+            <DynamicResponseField name="secondary_text" type="string" />
+
+          </Expandable>
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 
     <DynamicResponseField name="items" type="object[]">
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string" />
+
+        <DynamicResponseField name="feature" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string">
+              The ID of the feature, used to refer to it in other API calls like /track or /check.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="name" type="string | null">
+              The name of the feature.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system'">
+              The type of the feature
+            </DynamicResponseField>
+
+            <DynamicResponseField name="display" type="object | null">
+              Singular and plural display names for the feature.
+              <Expandable title="properties">
+                <DynamicResponseField name="singular" type="string">
+                  The singular display name for the feature.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="plural" type="string">
+                  The plural display name for the feature.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="credit_schema" type="object[] | null">
+              Credit cost schema for credit system features.
+              <Expandable title="properties">
+                <DynamicResponseField name="metered_feature_id" type="string">
+                  The ID of the metered feature (should be a single_use feature).
+                </DynamicResponseField>
+
+                <DynamicResponseField name="credit_cost" type="number">
+                  The credit cost of the metered feature.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="archived" type="boolean | null">
+              Whether or not the feature is archived.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
 
         <DynamicResponseField name="included" type="number" />
 
@@ -78,6 +138,15 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
+        <DynamicResponseField name="display" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="primary_text" type="string" />
+
+            <DynamicResponseField name="secondary_text" type="string" />
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="rollover" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="max" type="number | null" />
@@ -111,6 +180,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
       </Expandable>
     </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number" />
 
     <DynamicResponseField name="env" type="'sandbox' | 'live'" />
 

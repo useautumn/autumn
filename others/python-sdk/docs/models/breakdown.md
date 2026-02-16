@@ -5,6 +5,7 @@
 
 | Field                                                        | Type                                                         | Required                                                     | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `id`                                                         | *Optional[str]*                                              | :heavy_minus_sign:                                           | N/A                                                          |
 | `plan_id`                                                    | *Nullable[str]*                                              | :heavy_check_mark:                                           | N/A                                                          |
 | `included_grant`                                             | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |
 | `prepaid_grant`                                              | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |

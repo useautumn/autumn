@@ -9,8 +9,6 @@ const autumn = new Autumn({
   secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-const customer = await autumn.customers.getOrCreate({
-  customerId: "john",
-});
+const customer = await autumn.customers.list();
 
 console.log("Customer:", customer);

@@ -1,17 +1,14 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"composite": true,
-		"declaration": true,
-		"declarationMap": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"module": "Preserve",
 		"moduleResolution": "bundler",
 		"target": "ES2020",
-		"outDir": "./dist",
-		"rootDir": ".",
+		"noEmit": true,
 		"paths": {
+			"@autumn/shared": ["../../shared/index.ts"],
 			"@api/*": ["../../shared/api/*"],
 			"@models/*": ["../../shared/models/*"],
 			"@utils/*": ["../../shared/utils/*"]

@@ -25,6 +25,28 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/customers.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.delete({
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/customers.getOrCreate"]["post"]
     update:
       x-codeSamples:
@@ -43,6 +65,50 @@ actions:
                 customerId: "cus_123",
                 name: "John Doe",
                 email: "john@example.com",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/customers.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.list({});
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/customers.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.update({
+                customerId: "cus_123",
+                name: "Jane Doe",
+                email: "jane@example.com",
               });
 
               console.log(result);

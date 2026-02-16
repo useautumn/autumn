@@ -5,7 +5,7 @@ import {
 	notNullish,
 	ProcessorType,
 	RecaseError,
-	type UpdateCustomerParams,
+	type UpdateCustomerParamsV1,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -17,10 +17,14 @@ export const updateCustomer = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: UpdateCustomerParams;
+	params: UpdateCustomerParamsV1;
 }) => {
 	const { db, org, env, logger } = ctx;
-	const { customer_id: customerId, ...newCusData } = params;
+	const {
+		customer_id: customerId,
+		new_customer_id: newCustomerId,
+		...newCusData
+	} = params;
 
 	const originalCustomer = await CusService.get({
 		db,
@@ -33,25 +37,25 @@ export const updateCustomer = async ({
 		throw new CustomerNotFoundError({ customerId });
 	}
 
-	if (newCusData.id === null) {
+	if (newCustomerId === null) {
 		throw new RecaseError({
 			message: `Not allowed to update a customer's ID to null`,
 		});
 	}
 
-	if (notNullish(newCusData.id) && originalCustomer.id !== newCusData.id) {
+	if (notNullish(newCustomerId) && originalCustomer.id !== newCustomerId) {
 		// Fetch for existing customer
 		const existingCustomer = await CusService.get({
 			db,
-			idOrInternalId: newCusData.id,
+			idOrInternalId: newCustomerId,
 			orgId: org.id,
 			env,
 		});
 
 		if (existingCustomer) {
 			throw new CustomerAlreadyExistsError({
-				message: `Customer with ID ${newCusData.id} already exists, can't change to this ID`,
-				customerId: newCusData.id,
+				message: `Customer with ID ${newCustomerId} already exists, can't change to this ID`,
+				customerId: newCustomerId,
 			});
 		}
 	}
@@ -100,6 +104,7 @@ export const updateCustomer = async ({
 	// Prepare update data
 	const updateData: Partial<Customer> = {
 		...newCusData,
+		id: newCustomerId,
 		metadata: {
 			...oldMetadata,
 			...newMetadata,
@@ -111,7 +116,7 @@ export const updateCustomer = async ({
 		updateData.processor = { id: newStripeId, type: ProcessorType.Stripe };
 	}
 
-	if (!notNullish(newCusData.id) || originalCustomer.id === newCusData.id) {
+	if (!notNullish(newCustomerId) || originalCustomer.id === newCustomerId) {
 		// Remove id from update if not changing
 		delete updateData.id;
 	}
@@ -124,5 +129,5 @@ export const updateCustomer = async ({
 		update: updateData,
 	});
 
-	return newCusData.id ?? customerId;
+	return newCustomerId ?? customerId;
 };

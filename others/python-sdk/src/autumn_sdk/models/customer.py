@@ -157,6 +157,108 @@ class Purchase(BaseModel):
         return m
 
 
+CustomerBalancesType = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+
+
+class CustomerCreditSchemaTypedDict(TypedDict):
+    metered_feature_id: str
+    credit_cost: float
+
+
+class CustomerCreditSchema(BaseModel):
+    metered_feature_id: str
+
+    credit_cost: float
+
+
+class CustomerDisplayTypedDict(TypedDict):
+    singular: NotRequired[Nullable[str]]
+    plural: NotRequired[Nullable[str]]
+
+
+class CustomerDisplay(BaseModel):
+    singular: OptionalNullable[str] = UNSET
+
+    plural: OptionalNullable[str] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CustomerFeatureTypedDict(TypedDict):
+    id: str
+    name: str
+    type: CustomerBalancesType
+    consumable: bool
+    archived: bool
+    event_names: NotRequired[List[str]]
+    credit_schema: NotRequired[List[CustomerCreditSchemaTypedDict]]
+    display: NotRequired[CustomerDisplayTypedDict]
+
+
+class CustomerFeature(BaseModel):
+    id: str
+
+    name: str
+
+    type: CustomerBalancesType
+
+    consumable: bool
+
+    archived: bool
+
+    event_names: Optional[List[str]] = None
+
+    credit_schema: Optional[List[CustomerCreditSchema]] = None
+
+    display: Optional[CustomerDisplay] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 CustomerIntervalEnum = Union[
     Literal[
         "one_off",
@@ -173,20 +275,24 @@ CustomerIntervalEnum = Union[
 ]
 
 
-IntervalTypedDict = TypeAliasType("IntervalTypedDict", Union[CustomerIntervalEnum, str])
+CustomerIntervalUnionTypedDict = TypeAliasType(
+    "CustomerIntervalUnionTypedDict", Union[CustomerIntervalEnum, str]
+)
 
 
-Interval = TypeAliasType("Interval", Union[CustomerIntervalEnum, str])
+CustomerIntervalUnion = TypeAliasType(
+    "CustomerIntervalUnion", Union[CustomerIntervalEnum, str]
+)
 
 
 class CustomerResetTypedDict(TypedDict):
-    interval: IntervalTypedDict
+    interval: CustomerIntervalUnionTypedDict
     resets_at: Nullable[float]
     interval_count: NotRequired[float]
 
 
 class CustomerReset(BaseModel):
-    interval: Interval
+    interval: CustomerIntervalUnion
 
     resets_at: Nullable[float]
 
@@ -299,6 +405,7 @@ class BreakdownTypedDict(TypedDict):
     reset: Nullable[CustomerResetTypedDict]
     price: Nullable[CustomerPriceTypedDict]
     expires_at: Nullable[float]
+    id: NotRequired[str]
 
 
 class Breakdown(BaseModel):
@@ -320,17 +427,30 @@ class Breakdown(BaseModel):
 
     expires_at: Nullable[float]
 
+    id: Optional[str] = ""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["id"])
+        nullable_fields = set(["plan_id", "reset", "price", "expires_at"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m
 
@@ -355,6 +475,7 @@ class BalancesTypedDict(TypedDict):
     overage_allowed: bool
     max_purchase: Nullable[float]
     next_reset_at: Nullable[float]
+    feature: NotRequired[CustomerFeatureTypedDict]
     breakdown: NotRequired[List[BreakdownTypedDict]]
     rollovers: NotRequired[List[CustomerRolloverTypedDict]]
 
@@ -376,13 +497,15 @@ class Balances(BaseModel):
 
     next_reset_at: Nullable[float]
 
+    feature: Optional[CustomerFeature] = None
+
     breakdown: Optional[List[Breakdown]] = None
 
     rollovers: Optional[List[CustomerRollover]] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["breakdown", "rollovers"])
+        optional_fields = set(["feature", "breakdown", "rollovers"])
         nullable_fields = set(["max_purchase", "next_reset_at"])
         serialized = handler(self)
         m = {}
@@ -417,6 +540,8 @@ class InvoiceTypedDict(TypedDict):
     r"""The total amount of the invoice"""
     currency: str
     r"""The currency code for the invoice"""
+    created_at: float
+    r"""Timestamp when the invoice was created"""
     hosted_invoice_url: NotRequired[Nullable[str]]
     r"""URL to the Stripe-hosted invoice page"""
 
@@ -436,6 +561,9 @@ class Invoice(BaseModel):
 
     currency: str
     r"""The currency code for the invoice"""
+
+    created_at: float
+    r"""Timestamp when the invoice was created"""
 
     hosted_invoice_url: OptionalNullable[str] = UNSET
     r"""URL to the Stripe-hosted invoice page"""
@@ -477,10 +605,15 @@ r"""The environment (sandbox/live)"""
 
 
 class EntityTypedDict(TypedDict):
+    id: Nullable[str]
+    r"""The unique identifier of the entity"""
     name: Nullable[str]
     r"""The name of the entity"""
+    created_at: float
+    r"""Unix timestamp when the entity was created"""
     env: EntityEnv
     r"""The environment (sandbox/live)"""
+    autumn_id: NotRequired[str]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
@@ -488,11 +621,19 @@ class EntityTypedDict(TypedDict):
 
 
 class Entity(BaseModel):
+    id: Nullable[str]
+    r"""The unique identifier of the entity"""
+
     name: Nullable[str]
     r"""The name of the entity"""
 
+    created_at: float
+    r"""Unix timestamp when the entity was created"""
+
     env: EntityEnv
     r"""The environment (sandbox/live)"""
+
+    autumn_id: Optional[str] = None
 
     customer_id: OptionalNullable[str] = UNSET
     r"""The customer ID this entity belongs to"""
@@ -502,8 +643,8 @@ class Entity(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customer_id", "feature_id"])
-        nullable_fields = set(["name", "customer_id", "feature_id"])
+        optional_fields = set(["autumn_id", "customer_id", "feature_id"])
+        nullable_fields = set(["id", "name", "customer_id", "feature_id"])
         serialized = handler(self)
         m = {}
 
@@ -565,7 +706,7 @@ class TrialsUsed(BaseModel):
         return m
 
 
-Type = Union[
+RewardsType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -589,9 +730,11 @@ r"""How long the discount lasts"""
 
 
 class DiscountTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: Type
+    type: RewardsType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -612,10 +755,13 @@ class DiscountTypedDict(TypedDict):
 
 
 class Discount(BaseModel):
+    id: str
+    r"""The unique identifier for this discount"""
+
     name: str
     r"""The name of the discount or coupon"""
 
-    type: Type
+    type: RewardsType
     r"""The type of reward"""
 
     discount_value: float
@@ -697,11 +843,14 @@ class Rewards(BaseModel):
 
 
 class ReferralCustomerTypedDict(TypedDict):
+    id: str
     name: NotRequired[Nullable[str]]
     email: NotRequired[Nullable[str]]
 
 
 class ReferralCustomer(BaseModel):
+    id: str
+
     name: OptionalNullable[str] = UNSET
 
     email: OptionalNullable[str] = UNSET
@@ -736,6 +885,7 @@ class ReferralTypedDict(TypedDict):
     program_id: str
     customer: ReferralCustomerTypedDict
     reward_applied: bool
+    created_at: float
 
 
 class Referral(BaseModel):
@@ -745,12 +895,18 @@ class Referral(BaseModel):
 
     reward_applied: bool
 
+    created_at: float
+
 
 class CustomerTypedDict(TypedDict):
+    id: Nullable[str]
+    r"""Your unique identifier for the customer."""
     name: Nullable[str]
     r"""The name of the customer."""
     email: Nullable[str]
     r"""The email address of the customer."""
+    created_at: float
+    r"""Timestamp of customer creation in milliseconds since epoch."""
     fingerprint: Nullable[str]
     r"""A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID."""
     stripe_id: Nullable[str]
@@ -773,11 +929,17 @@ class CustomerTypedDict(TypedDict):
 
 
 class Customer(BaseModel):
+    id: Nullable[str]
+    r"""Your unique identifier for the customer."""
+
     name: Nullable[str]
     r"""The name of the customer."""
 
     email: Nullable[str]
     r"""The email address of the customer."""
+
+    created_at: float
+    r"""Timestamp of customer creation in milliseconds since epoch."""
 
     fingerprint: Nullable[str]
     r"""A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID."""
@@ -825,7 +987,15 @@ class Customer(BaseModel):
             ]
         )
         nullable_fields = set(
-            ["name", "email", "fingerprint", "stripe_id", "rewards", "payment_method"]
+            [
+                "id",
+                "name",
+                "email",
+                "fingerprint",
+                "stripe_id",
+                "rewards",
+                "payment_method",
+            ]
         )
         serialized = handler(self)
         m = {}

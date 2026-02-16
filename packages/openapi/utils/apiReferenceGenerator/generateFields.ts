@@ -222,14 +222,13 @@ function buildResponseFieldProps({
 
 /**
  * Format the type string, including enum values if present.
+ * Shows all enum values inline for better documentation clarity.
  */
 function formatType(type: string, enumValues?: string[]): string {
 	if (enumValues && enumValues.length > 0) {
-		// Show enum values inline if there are few, otherwise just show "enum"
-		if (enumValues.length <= 5) {
-			return enumValues.map((v) => `'${v}'`).join(" | ");
-		}
-		return "enum";
+		const isArray = type.endsWith("[]");
+		const values = enumValues.map((v) => `'${v}'`).join(" | ");
+		return isArray ? `(${values})[]` : values;
 	}
 	return type;
 }

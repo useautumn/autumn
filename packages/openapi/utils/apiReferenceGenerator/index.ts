@@ -31,7 +31,7 @@ export async function generateApiReference({
 	console.log(`  Found ${operations.length} operations`);
 
 	let generated = 0;
-	let skipped = 0;
+	const skipped = 0;
 
 	for (const operation of operations) {
 		const { tag, operationId } = operation;
@@ -40,21 +40,8 @@ export async function generateApiReference({
 		const manualMdxPath = path.join(manualMdxDir, tag, `${operationId}.mdx`);
 		const outputPath = path.join(outputDir, tag, `${operationId}.mdx`);
 
-		// Check if output file already exists and there's no manual MDX
-		// In that case, skip to avoid overwriting existing content
-		if (existsSync(outputPath) && !existsSync(manualMdxPath)) {
-			skipped++;
-			continue;
-		}
-
 		// Generate fields MDX
 		const generatedContent = generateFields({ operation });
-
-		// Skip if no content was generated
-		if (!generatedContent.trim()) {
-			skipped++;
-			continue;
-		}
 
 		// Merge with manual MDX (if exists)
 		const finalMdx = mergeMdx({

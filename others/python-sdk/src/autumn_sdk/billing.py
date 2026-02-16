@@ -13,6 +13,10 @@ class Billing(BaseSDK):
         self,
         *,
         product_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        entity_data: Optional[
+            Union[models.EntityData, models.EntityDataTypedDict]
+        ] = None,
         options: OptionalNullable[
             Union[List[models.Options], List[models.OptionsTypedDict]]
         ] = UNSET,
@@ -39,6 +43,8 @@ class Billing(BaseSDK):
     ) -> models.AttachResponse:
         r"""
         :param product_id:
+        :param entity_id:
+        :param entity_data:
         :param options:
         :param version:
         :param free_trial:
@@ -68,6 +74,10 @@ class Billing(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.AttachRequest(
+            entity_id=entity_id,
+            entity_data=utils.get_pydantic_model(
+                entity_data, Optional[models.EntityData]
+            ),
             options=utils.get_pydantic_model(
                 options, OptionalNullable[List[models.Options]]
             ),
@@ -151,6 +161,10 @@ class Billing(BaseSDK):
         self,
         *,
         product_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        entity_data: Optional[
+            Union[models.EntityData, models.EntityDataTypedDict]
+        ] = None,
         options: OptionalNullable[
             Union[List[models.Options], List[models.OptionsTypedDict]]
         ] = UNSET,
@@ -177,6 +191,8 @@ class Billing(BaseSDK):
     ) -> models.AttachResponse:
         r"""
         :param product_id:
+        :param entity_id:
+        :param entity_data:
         :param options:
         :param version:
         :param free_trial:
@@ -206,6 +222,10 @@ class Billing(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.AttachRequest(
+            entity_id=entity_id,
+            entity_data=utils.get_pydantic_model(
+                entity_data, Optional[models.EntityData]
+            ),
             options=utils.get_pydantic_model(
                 options, OptionalNullable[List[models.Options]]
             ),

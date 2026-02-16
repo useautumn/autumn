@@ -14,6 +14,8 @@ let value: AttachRequest = {
 
 | Field                                                    | Type                                                     | Required                                                 | Description                                              |
 | -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `entityId`                                               | *string*                                                 | :heavy_minus_sign:                                       | N/A                                                      |
+| `entityData`                                             | [models.EntityData](../models/entity-data.md)            | :heavy_minus_sign:                                       | N/A                                                      |
 | `options`                                                | [models.Options](../models/options.md)[]                 | :heavy_minus_sign:                                       | N/A                                                      |
 | `version`                                                | *number*                                                 | :heavy_minus_sign:                                       | N/A                                                      |
 | `freeTrial`                                              | [models.AttachFreeTrial](../models/attach-free-trial.md) | :heavy_minus_sign:                                       | N/A                                                      |

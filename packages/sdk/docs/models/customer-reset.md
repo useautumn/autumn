@@ -13,8 +13,8 @@ let value: CustomerReset = {
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `interval`         | *models.Interval*  | :heavy_check_mark: | N/A                |
-| `intervalCount`    | *number*           | :heavy_minus_sign: | N/A                |
-| `resetsAt`         | *number*           | :heavy_check_mark: | N/A                |
+| Field                          | Type                           | Required                       | Description                    |
+| ------------------------------ | ------------------------------ | ------------------------------ | ------------------------------ |
+| `interval`                     | *models.CustomerIntervalUnion* | :heavy_check_mark:             | N/A                            |
+| `intervalCount`                | *number*                       | :heavy_minus_sign:             | N/A                            |
+| `resetsAt`                     | *number*                       | :heavy_check_mark:             | N/A                            |

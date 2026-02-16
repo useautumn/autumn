@@ -407,20 +407,23 @@ function parseField({
 		const itemType = resolveType(items, schemas);
 		type = `${itemType}[]`;
 
-		// Check if array items have properties
-		if (items.type === "object" && items.properties) {
-			children = parseSchema({
-				schema: items,
-				schemas,
-				requiredFields: (items.required as string[]) ?? [],
-				visited,
-			});
+		// Check if array items are an enum (directly or via $ref)
+		if (items.enum) {
+			enumValues = items.enum as string[];
 		} else if (items.$ref) {
 			const refPath = items.$ref as string;
 			const refName = refPath.replace("#/components/schemas/", "");
 			const refSchema = schemas[refName] as Record<string, unknown> | undefined;
 
-			if (refSchema && refSchema.type === "object" && refSchema.properties) {
+			if (refSchema?.enum) {
+				// Array items reference an enum schema
+				enumValues = refSchema.enum as string[];
+			} else if (
+				refSchema &&
+				refSchema.type === "object" &&
+				refSchema.properties
+			) {
+				// Array items reference an object schema
 				children = parseSchema({
 					schema: refSchema,
 					schemas,
@@ -428,6 +431,16 @@ function parseField({
 					visited: new Set(visited),
 				});
 			}
+		}
+
+		// Check if array items have properties (inline object)
+		if (items.type === "object" && items.properties) {
+			children = parseSchema({
+				schema: items,
+				schemas,
+				requiredFields: (items.required as string[]) ?? [],
+				visited,
+			});
 		}
 	}
 

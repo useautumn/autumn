@@ -156,20 +156,9 @@ run();
 ### [Customers](docs/sdks/customers/README.md)
 
 * [getOrCreate](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
-
-Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
-
-@example
-```typescript
-// Create or fetch a customer by external ID
-const response = await client.getOrCreate({
-
-
-    "id": "cus_123",
-    "name": "John Doe",
-    "email": "john@example.com"
-  });
-```
+* [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
+* [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
+* [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -194,21 +183,10 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 <summary>Available standalone functions</summary>
 
 - [`billingAttach`](docs/sdks/billing/README.md#attach)
+- [`customersDelete`](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 - [`customersGetOrCreate`](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
-
-Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
-
-@example
-```typescript
-// Create or fetch a customer by external ID
-const response = await client.getOrCreate({
-
-
-    "id": "cus_123",
-    "name": "John Doe",
-    "email": "john@example.com"
-  });
-```
+- [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
+- [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 - [`plansList`](docs/sdks/plans/README.md#list) - List Plans
 
 </details>

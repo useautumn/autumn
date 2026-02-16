@@ -1,12 +1,16 @@
 import { writeFileSync } from "node:fs";
+import {
+	ApiCustomerV5Schema,
+	ApiPlanV1Schema,
+	AttachParamsV0Schema,
+	BaseApiCustomerSchema,
+	BillingResponseSchema,
+	CreateCustomerParamsV1Schema,
+	CustomerDataSchema,
+	CustomerExpandEnum,
+	CustomerIdSchema,
+} from "@autumn/shared";
 
-import { BillingResponseSchema } from "@api/billing/common/billingResponse.js";
-import { CustomerIdSchema } from "@api/common/customerId.js";
-import { ApiCustomerV5Schema } from "@api/customers/apiCustomerV5.js";
-import { CustomerExpandEnum } from "@api/customers/components/customerExpand/customerExpand.js";
-import { CreateCustomerParamsV1Schema } from "@api/customers/crud/createCustomerParams.js";
-import { AttachParamsV0Schema, CustomerDataSchema } from "@api/models.js";
-import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import yaml from "yaml";
@@ -29,6 +33,7 @@ export const writeOpenApi_2_1_0 = async ({
 }) => {
 	// Register internal schemas before generation so they get x-internal: true
 	// in the OpenAPI output, which removeInternalFields() will then strip
+	registerInternalSchemas(BaseApiCustomerSchema);
 	registerInternalSchemas(CreateCustomerParamsV1Schema);
 	registerInternalSchemas(AttachParamsV0Schema);
 	registerInternalSchemas(BillingResponseSchema);

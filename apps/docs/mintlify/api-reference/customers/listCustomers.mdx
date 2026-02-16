@@ -1,0 +1,523 @@
+---
+title: "List Customers"
+openapi: "openapi POST /v1/customers.list"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="offset" type="integer">
+  Number of items to skip
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 10, max 1000.
+</DynamicParamField>
+
+<DynamicParamField body="plans" type="object[]">
+  Filter by plan ID and version. Returns customers with active subscriptions to this plan.
+  <Expandable title="properties">
+    <DynamicParamField body="id" type="string" required />
+
+    <DynamicParamField body="versions" type="number[]" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="subscription_status" type="'active' | 'scheduled'">
+  Filter by customer product status. Defaults to active and scheduled
+</DynamicParamField>
+
+<DynamicParamField body="search" type="string">
+  Search customers by id, name, or email
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Array of items for current page
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string | null">
+      Your unique identifier for the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      The name of the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="email" type="string | null">
+      The email address of the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp of customer creation in milliseconds since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="fingerprint" type="string | null">
+      A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string | null">
+      Stripe customer ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="env" type="'sandbox' | 'live'">
+      The environment this customer was created in.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="metadata" type="object">
+      The metadata for the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="send_email_receipts" type="boolean">
+      Whether to send email receipts to the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="subscriptions" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="plan" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string" />
+
+            <DynamicResponseField name="name" type="string" />
+
+            <DynamicResponseField name="description" type="string | null" />
+
+            <DynamicResponseField name="group" type="string | null" />
+
+            <DynamicResponseField name="version" type="number" />
+
+            <DynamicResponseField name="add_on" type="boolean" />
+
+            <DynamicResponseField name="auto_enable" type="boolean" />
+
+            <DynamicResponseField name="price" type="object | null">
+              <Expandable title="properties">
+                <DynamicResponseField name="amount" type="number" />
+
+                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                <DynamicResponseField name="interval_count" type="number" />
+
+                <DynamicResponseField name="display" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="primary_text" type="string" />
+
+                    <DynamicResponseField name="secondary_text" type="string" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="items" type="object[]">
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string" />
+
+                <DynamicResponseField name="feature" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="id" type="string">
+                      The ID of the feature, used to refer to it in other API calls like /track or /check.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="name" type="string | null">
+                      The name of the feature.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system'">
+                      The type of the feature
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="display" type="object | null">
+                      Singular and plural display names for the feature.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="singular" type="string">
+                          The singular display name for the feature.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="plural" type="string">
+                          The plural display name for the feature.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_schema" type="object[] | null">
+                      Credit cost schema for credit system features.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="metered_feature_id" type="string">
+                          The ID of the metered feature (should be a single_use feature).
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="credit_cost" type="number">
+                          The credit cost of the metered feature.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="archived" type="boolean | null">
+                      Whether or not the feature is archived.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="included" type="number" />
+
+                <DynamicResponseField name="unlimited" type="boolean" />
+
+                <DynamicResponseField name="reset" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                    <DynamicResponseField name="interval_count" type="number" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="price" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="amount" type="number" />
+
+                    <DynamicResponseField name="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicResponseField name="to" type="number" />
+
+                        <DynamicResponseField name="amount" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                    <DynamicResponseField name="interval_count" type="number" />
+
+                    <DynamicResponseField name="billing_units" type="number" />
+
+                    <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'" />
+
+                    <DynamicResponseField name="max_purchase" type="number | null" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="display" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="primary_text" type="string" />
+
+                    <DynamicResponseField name="secondary_text" type="string" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="rollover" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="max" type="number | null" />
+
+                    <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'" />
+
+                    <DynamicResponseField name="expiry_duration_length" type="number" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="proration" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" />
+
+                    <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="free_trial" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="duration_length" type="number" />
+
+                <DynamicResponseField name="duration_type" type="'day' | 'month' | 'year'" />
+
+                <DynamicResponseField name="card_required" type="boolean" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="created_at" type="number" />
+
+            <DynamicResponseField name="env" type="'sandbox' | 'live'" />
+
+            <DynamicResponseField name="archived" type="boolean" />
+
+            <DynamicResponseField name="base_variant_id" type="string | null" />
+
+            <DynamicResponseField name="customer_eligibility" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="trial_available" type="boolean" />
+
+                <DynamicResponseField name="scenario" type="'scheduled' | 'active' | 'new' | 'renew' | 'upgrade' | 'downgrade' | 'cancel' | 'expired' | 'past_due'" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string" />
+
+        <DynamicResponseField name="auto_enable" type="boolean" />
+
+        <DynamicResponseField name="add_on" type="boolean" />
+
+        <DynamicResponseField name="status" type="'active' | 'scheduled' | 'expired'" />
+
+        <DynamicResponseField name="past_due" type="boolean" />
+
+        <DynamicResponseField name="canceled_at" type="number | null" />
+
+        <DynamicResponseField name="expires_at" type="number | null" />
+
+        <DynamicResponseField name="trial_ends_at" type="number | null" />
+
+        <DynamicResponseField name="started_at" type="number" />
+
+        <DynamicResponseField name="current_period_start" type="number | null" />
+
+        <DynamicResponseField name="current_period_end" type="number | null" />
+
+        <DynamicResponseField name="quantity" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="purchases" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="plan" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string" />
+
+            <DynamicResponseField name="name" type="string" />
+
+            <DynamicResponseField name="description" type="string | null" />
+
+            <DynamicResponseField name="group" type="string | null" />
+
+            <DynamicResponseField name="version" type="number" />
+
+            <DynamicResponseField name="add_on" type="boolean" />
+
+            <DynamicResponseField name="auto_enable" type="boolean" />
+
+            <DynamicResponseField name="price" type="object | null">
+              <Expandable title="properties">
+                <DynamicResponseField name="amount" type="number" />
+
+                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                <DynamicResponseField name="interval_count" type="number" />
+
+                <DynamicResponseField name="display" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="primary_text" type="string" />
+
+                    <DynamicResponseField name="secondary_text" type="string" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="items" type="object[]">
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string" />
+
+                <DynamicResponseField name="feature" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="id" type="string">
+                      The ID of the feature, used to refer to it in other API calls like /track or /check.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="name" type="string | null">
+                      The name of the feature.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system'">
+                      The type of the feature
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="display" type="object | null">
+                      Singular and plural display names for the feature.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="singular" type="string">
+                          The singular display name for the feature.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="plural" type="string">
+                          The plural display name for the feature.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_schema" type="object[] | null">
+                      Credit cost schema for credit system features.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="metered_feature_id" type="string">
+                          The ID of the metered feature (should be a single_use feature).
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="credit_cost" type="number">
+                          The credit cost of the metered feature.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="archived" type="boolean | null">
+                      Whether or not the feature is archived.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="included" type="number" />
+
+                <DynamicResponseField name="unlimited" type="boolean" />
+
+                <DynamicResponseField name="reset" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                    <DynamicResponseField name="interval_count" type="number" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="price" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="amount" type="number" />
+
+                    <DynamicResponseField name="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicResponseField name="to" type="number" />
+
+                        <DynamicResponseField name="amount" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" />
+
+                    <DynamicResponseField name="interval_count" type="number" />
+
+                    <DynamicResponseField name="billing_units" type="number" />
+
+                    <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'" />
+
+                    <DynamicResponseField name="max_purchase" type="number | null" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="display" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="primary_text" type="string" />
+
+                    <DynamicResponseField name="secondary_text" type="string" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="rollover" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="max" type="number | null" />
+
+                    <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'" />
+
+                    <DynamicResponseField name="expiry_duration_length" type="number" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="proration" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" />
+
+                    <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="free_trial" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="duration_length" type="number" />
+
+                <DynamicResponseField name="duration_type" type="'day' | 'month' | 'year'" />
+
+                <DynamicResponseField name="card_required" type="boolean" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="created_at" type="number" />
+
+            <DynamicResponseField name="env" type="'sandbox' | 'live'" />
+
+            <DynamicResponseField name="archived" type="boolean" />
+
+            <DynamicResponseField name="base_variant_id" type="string | null" />
+
+            <DynamicResponseField name="customer_eligibility" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="trial_available" type="boolean" />
+
+                <DynamicResponseField name="scenario" type="'scheduled' | 'active' | 'new' | 'renew' | 'upgrade' | 'downgrade' | 'cancel' | 'expired' | 'past_due'" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string" />
+
+        <DynamicResponseField name="expires_at" type="number | null" />
+
+        <DynamicResponseField name="started_at" type="number" />
+
+        <DynamicResponseField name="quantity" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="balances" type="object" />
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist after this page
+</DynamicResponseField>
+
+<DynamicResponseField name="offset" type="number">
+  Current offset position
+</DynamicResponseField>
+
+<DynamicResponseField name="limit" type="number">
+  Limit passed in the request
+</DynamicResponseField>
+
+<DynamicResponseField name="total" type="number">
+  Total number of items returned in the current page
+</DynamicResponseField>

@@ -76,7 +76,7 @@
 		"knip:fix-all": "knip --fix --allow-remove-files",
 		"prepare": "husky",
 
-		"api": "bun -F @autumn/openapi generate",
+		"api": "cd packages/openapi && bun generate",
 		"docs:pull": "bun -F @autumn/docs pull",
 		"docs:dev": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build"

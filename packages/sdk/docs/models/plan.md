@@ -6,6 +6,7 @@
 import { Plan } from "@useautumn/sdk";
 
 let value: Plan = {
+  id: "<id>",
   name: "<value>",
   description:
     "deplore incomparable among because tired diligently pillow tenant pro mmm",
@@ -18,7 +19,8 @@ let value: Plan = {
     interval: "one_off",
   },
   items: [],
-  env: "sandbox",
+  createdAt: 3920.84,
+  env: "live",
   archived: false,
   baseVariantId: "<id>",
 };
@@ -28,6 +30,7 @@ let value: Plan = {
 
 | Field                                                           | Type                                                            | Required                                                        | Description                                                     |
 | --------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| `id`                                                            | *string*                                                        | :heavy_check_mark:                                              | N/A                                                             |
 | `name`                                                          | *string*                                                        | :heavy_check_mark:                                              | N/A                                                             |
 | `description`                                                   | *string*                                                        | :heavy_check_mark:                                              | N/A                                                             |
 | `group`                                                         | *string*                                                        | :heavy_check_mark:                                              | N/A                                                             |
@@ -37,6 +40,7 @@ let value: Plan = {
 | `price`                                                         | [models.PlanPrice](../models/plan-price.md)                     | :heavy_check_mark:                                              | N/A                                                             |
 | `items`                                                         | [models.Item](../models/item.md)[]                              | :heavy_check_mark:                                              | N/A                                                             |
 | `freeTrial`                                                     | [models.FreeTrial](../models/free-trial.md)                     | :heavy_minus_sign:                                              | N/A                                                             |
+| `createdAt`                                                     | *number*                                                        | :heavy_check_mark:                                              | N/A                                                             |
 | `env`                                                           | [models.PlanEnv](../models/plan-env.md)                         | :heavy_check_mark:                                              | N/A                                                             |
 | `archived`                                                      | *boolean*                                                       | :heavy_check_mark:                                              | N/A                                                             |
 | `baseVariantId`                                                 | *string*                                                        | :heavy_check_mark:                                              | N/A                                                             |
