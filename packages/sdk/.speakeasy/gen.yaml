@@ -33,7 +33,7 @@ generation:
     generateNewTests: true
     skipResponseBodyAssertions: false
 typescript:
-  version: 0.7.17
+  version: 0.7.20
   acceptHeaderEnum: false
   additionalDependencies:
     dependencies: {}
@@ -41,17 +41,30 @@ typescript:
     peerDependencies: {}
   additionalPackageJSON:
     exports:
-      .: ./src/index.ts
-      ./*: ./src/*.ts
-      ./*.js: ./src/*.ts
-      ./models: ./src/models/index.ts
-      ./models/errors: ./src/models/index.ts
-      ./models/operations: ./src/models/index.ts
+      .:
+        import: ./dist/esm/index.js
+        require: ./dist/commonjs/index.js
+        types: ./dist/esm/index.d.ts
+      ./models:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
+      ./models/errors:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
+      ./models/operations:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
       ./package.json: ./package.json
-      ./types: ./src/types/index.ts
-    main: ./src/index.ts
-    module: ./src/index.ts
-    types: ./src/index.ts
+      ./types:
+        import: ./dist/esm/types/index.js
+        require: ./dist/commonjs/types/index.js
+        types: ./dist/esm/types/index.d.ts
+    main: ./dist/commonjs/index.js
+    module: ./dist/esm/index.js
+    types: ./dist/esm/index.d.ts
   additionalScripts: {}
   alwaysIncludeInboundAndOutbound: false
   author: Speakeasy

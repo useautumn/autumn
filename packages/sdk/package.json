@@ -1,10 +1,10 @@
 {
   "name": "@useautumn/sdk",
-  "version": "0.7.17",
+  "version": "0.7.20",
   "author": "Speakeasy",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/commonjs/index.d.ts",
   "type": "module",
   "tshy": {
     "sourceDialects": [
@@ -25,9 +25,7 @@
     "build": "tshy",
     "prepublishOnly": "npm run build"
   },
-  "peerDependencies": {
-    
-  },
+  "peerDependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "eslint": "^9.26.0",
@@ -38,5 +36,63 @@
   },
   "dependencies": {
     "zod": "^3.25.65 || ^4.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "@useautumn/sdk/source": "./src/index.ts",
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json",
+    "./types": {
+      "import": {
+        "@useautumn/sdk/source": "./src/types/index.ts",
+        "types": "./dist/esm/types/index.d.ts",
+        "default": "./dist/esm/types/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/types/index.d.ts",
+        "default": "./dist/commonjs/types/index.js"
+      }
+    },
+    "./models": {
+      "import": {
+        "@useautumn/sdk/source": "./src/models/index.ts",
+        "types": "./dist/esm/models/index.d.ts",
+        "default": "./dist/esm/models/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/models/index.d.ts",
+        "default": "./dist/commonjs/models/index.js"
+      }
+    },
+    "./*.js": {
+      "import": {
+        "@useautumn/sdk/source": "./src/*.ts",
+        "types": "./dist/esm/*.d.ts",
+        "default": "./dist/esm/*.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/*.d.ts",
+        "default": "./dist/commonjs/*.js"
+      }
+    },
+    "./*": {
+      "import": {
+        "@useautumn/sdk/source": "./src/*.ts",
+        "types": "./dist/esm/*.d.ts",
+        "default": "./dist/esm/*.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/*.d.ts",
+        "default": "./dist/commonjs/*.js"
+      }
+    }
   }
 }
