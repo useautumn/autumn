@@ -35,7 +35,6 @@ export const FrontendOrgSchema = z.object({
 			webhook_url: z.string().optional(),
 			custom_payment_method: z.string().optional(),
 			marketplace_mode: z.enum(VercelMarketplaceMode).optional(),
-			allowed_product_ids: z.array(z.string()).optional(),
 			allowed_product_ids_live: z.array(z.string()).optional(),
 			allowed_product_ids_sandbox: z.array(z.string()).optional(),
 		}),

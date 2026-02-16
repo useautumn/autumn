@@ -85,16 +85,13 @@ export const ConfigureVercel = () => {
 			return;
 		}
 
-		const fallbackAllowedProductIds = vercelOrgConfig.allowed_product_ids ?? [];
-
 		setVercelConfig((prev) => ({
 			...prev,
 			allowed_product_ids_live:
 				vercelOrgConfig.allowed_product_ids_live ??
-				fallbackAllowedProductIds,
+				[],
 			allowed_product_ids_sandbox:
-				vercelOrgConfig.allowed_product_ids_sandbox ??
-				fallbackAllowedProductIds,
+				vercelOrgConfig.allowed_product_ids_sandbox ?? [],
 		}));
 	}, [org]);
 
@@ -106,22 +103,10 @@ export const ConfigureVercel = () => {
 			value: product.id,
 		}));
 
-	const currentClientIntegrationId =
-		env === "live"
-			? org?.processor_configs?.vercel?.client_integration_id
-			: org?.processor_configs?.vercel?.sandbox_client_id;
-	const currentClientSecret =
-		env === "live"
-			? org?.processor_configs?.vercel?.client_secret
-			: org?.processor_configs?.vercel?.sandbox_client_secret;
-	const currentWebhookUrl =
-		env === "live"
-			? org?.processor_configs?.vercel?.webhook_url
-			: org?.processor_configs?.vercel?.sandbox_webhook_url;
-	const currentCustomPaymentMethod =
-		env === "live"
-			? org?.processor_configs?.vercel?.custom_payment_method
-			: org?.processor_configs?.vercel?.custom_payment_method;
+	const currentClientIntegrationId = org?.processor_configs?.vercel?.client_integration_id
+	const currentClientSecret = org?.processor_configs?.vercel?.client_secret
+	const currentWebhookUrl = org?.processor_configs?.vercel?.webhook_url
+	const currentCustomPaymentMethod = org?.processor_configs?.vercel?.custom_payment_method
 
 	const { isDark } = useTheme();
 
@@ -132,7 +117,6 @@ export const ConfigureVercel = () => {
 		try {
 			const filteredConfig: UpsertVercelProcessorConfig = {};
 
-			// Map to correct field names based on current env
 			if (vercelConfig.client_integration_id?.trim()) {
 				if (env === "live") {
 					filteredConfig.client_integration_id =
@@ -156,7 +140,8 @@ export const ConfigureVercel = () => {
 				if (env === "live") {
 					filteredConfig.webhook_url = vercelConfig.webhook_url.trim();
 				} else {
-					filteredConfig.sandbox_webhook_url = vercelConfig.webhook_url.trim();
+					filteredConfig.sandbox_webhook_url =
+						vercelConfig.webhook_url.trim();
 				}
 			}
 
