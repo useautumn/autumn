@@ -129,6 +129,7 @@
 			{
 				"tab": "API Reference",
 				"icon": "rectangle-terminal",
+				"openapi": "api/openapi.yml",
 				"groups": [
 					{
 						"group": "Core",
@@ -143,10 +144,10 @@
 					{
 						"group": "Customers",
 						"pages": [
-							"api-reference/customers/getOrCreate",
-							"api-reference/customers/list-customers",
-							"api-reference/customers/update-customer",
-							"api-reference/customers/delete-customer",
+							"api-reference/customers/getOrCreateCustomer",
+							"api-reference/customers/listCustomers",
+							"api-reference/customers/updateCustomer",
+							"api-reference/customers/deleteCustomer",
 							"api-reference/customers/open-billing-portal"
 						]
 					},

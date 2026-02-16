@@ -9,6 +9,21 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 ### Body Parameters
 
+<DynamicParamField body="entity_id" type="string | null" />
+
+<DynamicParamField body="entity_data" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="feature_id" type="string" required>
+      The feature ID that this entity is associated with
+    </DynamicParamField>
+
+    <DynamicParamField body="name" type="string">
+      Name of the entity
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="options" type="object[] | null">
   <Expandable title="properties">
     <DynamicParamField body="feature_id" type="string" required />
@@ -116,6 +131,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ### Response
 
 <DynamicResponseField name="customer_id" type="string" />
+
+<DynamicResponseField name="entity_id" type="string" />
 
 <DynamicResponseField name="invoice" type="object">
   <Expandable title="properties">

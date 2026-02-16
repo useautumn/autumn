@@ -16,6 +16,17 @@ export type AttachGlobals = {
   xApiVersion?: string | undefined;
 };
 
+export type EntityData = {
+  /**
+   * The feature ID that this entity is associated with
+   */
+  featureId: string;
+  /**
+   * Name of the entity
+   */
+  name?: string | undefined;
+};
+
 export type Options = {
   featureId: string;
   quantity?: number | undefined;
@@ -145,6 +156,8 @@ export const BillingBehavior = {
 export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
 
 export type AttachRequest = {
+  entityId?: string | null | undefined;
+  entityData?: EntityData | undefined;
   options?: Array<Options> | null | undefined;
   version?: number | undefined;
   freeTrial?: AttachFreeTrial | null | undefined;
@@ -186,10 +199,37 @@ export type RequiredAction = {
  */
 export type AttachResponse = {
   customerId: string;
+  entityId?: string | undefined;
   invoice?: AttachInvoice | undefined;
   paymentUrl: string | null;
   requiredAction?: RequiredAction | undefined;
 };
+
+/** @internal */
+export type EntityData$Outbound = {
+  feature_id: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const EntityData$outboundSchema: z.ZodMiniType<
+  EntityData$Outbound,
+  EntityData
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function entityDataToJSON(entityData: EntityData): string {
+  return JSON.stringify(EntityData$outboundSchema.parse(entityData));
+}
 
 /** @internal */
 export type Options$Outbound = {
@@ -374,6 +414,8 @@ export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
 
 /** @internal */
 export type AttachRequest$Outbound = {
+  entity_id?: string | null | undefined;
+  entity_data?: EntityData$Outbound | undefined;
   options?: Array<Options$Outbound> | null | undefined;
   version?: number | undefined;
   free_trial?: AttachFreeTrial$Outbound | null | undefined;
@@ -396,6 +438,8 @@ export const AttachRequest$outboundSchema: z.ZodMiniType<
   AttachRequest
 > = z.pipe(
   z.object({
+    entityId: z.optional(z.nullable(z.string())),
+    entityData: z.optional(z.lazy(() => EntityData$outboundSchema)),
     options: z.optional(
       z.nullable(z.array(z.lazy(() => Options$outboundSchema))),
     ),
@@ -417,6 +461,8 @@ export const AttachRequest$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      entityId: "entity_id",
+      entityData: "entity_data",
       freeTrial: "free_trial",
       productId: "product_id",
       enableProductImmediately: "enable_product_immediately",
@@ -495,6 +541,7 @@ export const AttachResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     customer_id: types.string(),
+    entity_id: types.optional(types.string()),
     invoice: types.optional(z.lazy(() => AttachInvoice$inboundSchema)),
     payment_url: types.nullable(types.string()),
     required_action: types.optional(z.lazy(() => RequiredAction$inboundSchema)),
@@ -502,6 +549,7 @@ export const AttachResponse$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
+      "entity_id": "entityId",
       "payment_url": "paymentUrl",
       "required_action": "requiredAction",
     });

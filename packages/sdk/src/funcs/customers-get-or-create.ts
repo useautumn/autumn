@@ -27,19 +27,6 @@ import { Result } from "../types/fp.js";
 
 /**
  * Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
- *
- * Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
- *
- * @example
- * ```typescript
- * // Create or fetch a customer by external ID
- * const response = await client.getOrCreate({
- *
- *     "id": "cus_123",
- *     "name": "John Doe",
- *     "email": "john@example.com"
- *   });
- * ```
  */
 export function customersGetOrCreate(
   client: AutumnCore,
@@ -115,7 +102,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "getOrCreate",
+    operationID: "getOrCreateCustomer",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,

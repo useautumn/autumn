@@ -1,17 +1,18 @@
-import { JSON_SCHEMA_INPUT_REGISTRY } from "@orpc/zod/zod4";
+import {
+	JSON_SCHEMA_INPUT_REGISTRY,
+	JSON_SCHEMA_OUTPUT_REGISTRY,
+} from "@orpc/zod/zod4";
 import type { z } from "zod/v4";
 import { globalRegistry } from "zod/v4/core";
 
 /**
  * Recursively walks a Zod schema and registers any schemas marked with
- * `.meta({ internal: true })` in the JSON_SCHEMA_INPUT_REGISTRY with
- * `x-internal: true`. This allows `removeInternalFields()` to strip them
- * from the generated OpenAPI spec.
+ * `.meta({ internal: true })` in both JSON_SCHEMA_INPUT_REGISTRY and
+ * JSON_SCHEMA_OUTPUT_REGISTRY with `x-internal: true`. This allows
+ * `removeInternalFields()` to strip them from the generated OpenAPI spec.
  *
- * Note: This approach has limitations with schema transformations like
- * `.omit()`, `.extend()`, `.refine()` which create new schema instances.
- * For reliable internal field removal, use the INTERNAL_FIELD_NAMES
- * list in openapi2.1.ts which removes fields by name.
+ * Both registries are needed because ORPC uses the input registry for
+ * request body schemas and the output registry for response schemas.
  */
 export function registerInternalSchemas(schema: z.ZodType): void {
 	const visited = new WeakSet<z.ZodType>();
@@ -25,9 +26,12 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 	// Check if this schema has internal: true in its metadata
 	const meta = globalRegistry.get(schema);
 	if (meta?.internal === true) {
-		// Register with x-internal so removeInternalFields() can find it
+		// Register with x-internal in BOTH registries so removeInternalFields() can find it
+		// Input registry is used for request bodies, output registry for responses
 		// biome-ignore lint/suspicious/noExplicitAny: TypeScript types are restrictive but runtime accepts arbitrary props
 		JSON_SCHEMA_INPUT_REGISTRY.add(schema, { "x-internal": true } as any);
+		// biome-ignore lint/suspicious/noExplicitAny: TypeScript types are restrictive but runtime accepts arbitrary props
+		JSON_SCHEMA_OUTPUT_REGISTRY.add(schema, { "x-internal": true } as any);
 	}
 
 	// Get the internal Zod definition to traverse nested schemas

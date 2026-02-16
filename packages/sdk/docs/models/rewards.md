@@ -8,6 +8,7 @@ import { Rewards } from "@useautumn/sdk";
 let value: Rewards = {
   discounts: [
     {
+      id: "<id>",
       name: "<value>",
       type: "invoice_credits",
       discountValue: 8349.54,

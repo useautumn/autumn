@@ -1,0 +1,17 @@
+# ListCustomersBreakdown
+
+
+## Fields
+
+| Field                                                                  | Type                                                                   | Required                                                               | Description                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `id`                                                                   | *Optional[str]*                                                        | :heavy_minus_sign:                                                     | N/A                                                                    |
+| `plan_id`                                                              | *Nullable[str]*                                                        | :heavy_check_mark:                                                     | N/A                                                                    |
+| `included_grant`                                                       | *float*                                                                | :heavy_check_mark:                                                     | N/A                                                                    |
+| `prepaid_grant`                                                        | *float*                                                                | :heavy_check_mark:                                                     | N/A                                                                    |
+| `remaining`                                                            | *float*                                                                | :heavy_check_mark:                                                     | N/A                                                                    |
+| `usage`                                                                | *float*                                                                | :heavy_check_mark:                                                     | N/A                                                                    |
+| `unlimited`                                                            | *bool*                                                                 | :heavy_check_mark:                                                     | N/A                                                                    |
+| `reset`                                                                | [Nullable[models.ListCustomersReset]](../models/listcustomersreset.md) | :heavy_check_mark:                                                     | N/A                                                                    |
+| `price`                                                                | [Nullable[models.ListCustomersPrice]](../models/listcustomersprice.md) | :heavy_check_mark:                                                     | N/A                                                                    |
+| `expires_at`                                                           | *Nullable[float]*                                                      | :heavy_check_mark:                                                     | N/A                                                                    |

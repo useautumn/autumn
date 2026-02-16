@@ -26,6 +26,7 @@ export const handleUpdateCustomer = createRoute({
 			ctx,
 			params: {
 				customer_id,
+				new_customer_id: params.id,
 				...params,
 			},
 		});

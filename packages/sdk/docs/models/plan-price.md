@@ -18,3 +18,4 @@ let value: PlanPrice = {
 | `amount`                                            | *number*                                            | :heavy_check_mark:                                  | N/A                                                 |
 | `interval`                                          | [models.PriceInterval](../models/price-interval.md) | :heavy_check_mark:                                  | N/A                                                 |
 | `intervalCount`                                     | *number*                                            | :heavy_minus_sign:                                  | N/A                                                 |
+| `display`                                           | [models.PriceDisplay](../models/price-display.md)   | :heavy_minus_sign:                                  | N/A                                                 |

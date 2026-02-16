@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import yaml from "yaml";
 import { generateApiReference } from "../apiReferenceGenerator/index.js";
+import { removeInternalFields } from "../openapiTransform/removeInternalFields.js";
 import { transformNode } from "./transformNode.js";
 
 export { stripJsDocTags } from "./stripJsDocTags.js";
@@ -14,6 +15,7 @@ export { resolveSchemaExample, transformNode } from "./transformNode.js";
 /**
  * Transforms an OpenAPI YAML document for Mintlify consumption.
  *
+ * - Removes internal fields (marked with `internal: true` or `x-internal: true`)
  * - Strips JSDoc tags from descriptions
  * - Transforms Speakeasy code samples to use autumn-js format
  * - Copies schema examples to response content level
@@ -23,6 +25,10 @@ export function transformOpenApiForMintlify(yamlContent: string): string {
 	const schemas = (doc.components as Record<string, unknown>)?.schemas as
 		| Record<string, unknown>
 		| undefined;
+
+	// Remove internal fields before other transformations
+	removeInternalFields({ openApiDocument: doc });
+
 	transformNode(doc, schemas);
 	return yaml.stringify(doc);
 }

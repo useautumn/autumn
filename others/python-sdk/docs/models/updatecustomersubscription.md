@@ -1,0 +1,20 @@
+# UpdateCustomerSubscription
+
+
+## Fields
+
+| Field                                                            | Type                                                             | Required                                                         | Description                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `plan`                                                           | [Optional[models.Plan]](../models/plan.md)                       | :heavy_minus_sign:                                               | N/A                                                              |
+| `plan_id`                                                        | *str*                                                            | :heavy_check_mark:                                               | N/A                                                              |
+| `auto_enable`                                                    | *bool*                                                           | :heavy_check_mark:                                               | N/A                                                              |
+| `add_on`                                                         | *bool*                                                           | :heavy_check_mark:                                               | N/A                                                              |
+| `status`                                                         | [models.UpdateCustomerStatus](../models/updatecustomerstatus.md) | :heavy_check_mark:                                               | N/A                                                              |
+| `past_due`                                                       | *bool*                                                           | :heavy_check_mark:                                               | N/A                                                              |
+| `canceled_at`                                                    | *Nullable[float]*                                                | :heavy_check_mark:                                               | N/A                                                              |
+| `expires_at`                                                     | *Nullable[float]*                                                | :heavy_check_mark:                                               | N/A                                                              |
+| `trial_ends_at`                                                  | *Nullable[float]*                                                | :heavy_check_mark:                                               | N/A                                                              |
+| `started_at`                                                     | *float*                                                          | :heavy_check_mark:                                               | N/A                                                              |
+| `current_period_start`                                           | *Nullable[float]*                                                | :heavy_check_mark:                                               | N/A                                                              |
+| `current_period_end`                                             | *Nullable[float]*                                                | :heavy_check_mark:                                               | N/A                                                              |
+| `quantity`                                                       | *float*                                                          | :heavy_check_mark:                                               | N/A                                                              |

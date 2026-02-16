@@ -44,6 +44,37 @@ class AttachGlobals(BaseModel):
         return m
 
 
+class EntityDataTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID that this entity is associated with"""
+    name: NotRequired[str]
+    r"""Name of the entity"""
+
+
+class EntityData(BaseModel):
+    feature_id: str
+    r"""The feature ID that this entity is associated with"""
+
+    name: Optional[str] = None
+    r"""Name of the entity"""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class OptionsTypedDict(TypedDict):
     feature_id: str
     quantity: NotRequired[float]
@@ -299,6 +330,8 @@ BillingBehavior = Literal[
 
 class AttachRequestTypedDict(TypedDict):
     product_id: str
+    entity_id: NotRequired[Nullable[str]]
+    entity_data: NotRequired[EntityDataTypedDict]
     options: NotRequired[Nullable[List[OptionsTypedDict]]]
     version: NotRequired[float]
     free_trial: NotRequired[Nullable[AttachFreeTrialTypedDict]]
@@ -316,6 +349,10 @@ class AttachRequestTypedDict(TypedDict):
 
 class AttachRequest(BaseModel):
     product_id: str
+
+    entity_id: OptionalNullable[str] = UNSET
+
+    entity_data: Optional[EntityData] = None
 
     options: OptionalNullable[List[Options]] = UNSET
 
@@ -347,6 +384,8 @@ class AttachRequest(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "entity_id",
+                "entity_data",
                 "options",
                 "version",
                 "free_trial",
@@ -362,7 +401,7 @@ class AttachRequest(BaseModel):
                 "adjustable_quantity",
             ]
         )
-        nullable_fields = set(["options", "free_trial"])
+        nullable_fields = set(["entity_id", "options", "free_trial"])
         serialized = handler(self)
         m = {}
 
@@ -445,6 +484,7 @@ class AttachResponseTypedDict(TypedDict):
 
     customer_id: str
     payment_url: Nullable[str]
+    entity_id: NotRequired[str]
     invoice: NotRequired[AttachInvoiceTypedDict]
     required_action: NotRequired[RequiredActionTypedDict]
 
@@ -456,13 +496,15 @@ class AttachResponse(BaseModel):
 
     payment_url: Nullable[str]
 
+    entity_id: Optional[str] = None
+
     invoice: Optional[AttachInvoice] = None
 
     required_action: Optional[RequiredAction] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["invoice", "required_action"])
+        optional_fields = set(["entity_id", "invoice", "required_action"])
         nullable_fields = set(["payment_url"])
         serialized = handler(self)
         m = {}
