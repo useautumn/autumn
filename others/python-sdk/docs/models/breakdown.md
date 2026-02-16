@@ -1,0 +1,16 @@
+# Breakdown
+
+
+## Fields
+
+| Field                                                        | Type                                                         | Required                                                     | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `plan_id`                                                    | *Nullable[str]*                                              | :heavy_check_mark:                                           | N/A                                                          |
+| `included_grant`                                             | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |
+| `prepaid_grant`                                              | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |
+| `remaining`                                                  | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |
+| `usage`                                                      | *float*                                                      | :heavy_check_mark:                                           | N/A                                                          |
+| `unlimited`                                                  | *bool*                                                       | :heavy_check_mark:                                           | N/A                                                          |
+| `reset`                                                      | [Nullable[models.CustomerReset]](../models/customerreset.md) | :heavy_check_mark:                                           | N/A                                                          |
+| `price`                                                      | [Nullable[models.CustomerPrice]](../models/customerprice.md) | :heavy_check_mark:                                           | N/A                                                          |
+| `expires_at`                                                 | *Nullable[float]*                                            | :heavy_check_mark:                                           | N/A                                                          |

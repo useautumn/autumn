@@ -11,7 +11,8 @@
 			"apps/docs",
 			"apps/sdk-test",
 			"packages/sdk",
-			"packages/autumn-js"
+			"packages/autumn-js",
+			"packages/openapi"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -75,7 +76,7 @@
 		"knip:fix-all": "knip --fix --allow-remove-files",
 		"prepare": "husky",
 
-		"api": "cd shared && bun api",
+		"api": "bun -F @autumn/openapi generate",
 		"docs:pull": "bun -F @autumn/docs pull",
 		"docs:dev": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build"

@@ -19,12 +19,11 @@ export const CreateCustomerQuerySchema = z.object({
 });
 
 // Create Customer Params (based on handlePostCustomer logic)
-export const ExtCreateCustomerParamsSchema = z
+export const CreateCustomerParamsV0Schema = z
 	.object({
-		customer_id: CustomerIdSchema.nullable(),
+		id: CustomerIdSchema.optional().nullable(),
 		...CustomerDataSchema.shape,
 	})
-
 	.extend({
 		expand: CustomerExpandArraySchema.optional(),
 
@@ -32,11 +31,6 @@ export const ExtCreateCustomerParamsSchema = z
 			internal: true,
 		}),
 		entity_data: EntityDataSchema.optional().meta({
-			internal: true,
-		}),
-
-		// Legacy
-		id: CustomerIdSchema.optional().nullable().meta({
 			internal: true,
 		}),
 
@@ -48,10 +42,15 @@ export const ExtCreateCustomerParamsSchema = z
 		}),
 	});
 
-export const CreateCustomerParamsSchema = ExtCreateCustomerParamsSchema;
+export const CreateCustomerParamsV1Schema = z
+	.object({
+		customer_id: CustomerIdSchema.nullable(),
+		...CreateCustomerParamsV0Schema.shape,
+	})
+	.omit({
+		id: true,
+	});
 
-export type ExtCreateCustomerParams = z.infer<
-	typeof ExtCreateCustomerParamsSchema
+export type CreateCustomerParamsV0 = z.infer<
+	typeof CreateCustomerParamsV0Schema
 >;
-
-export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;

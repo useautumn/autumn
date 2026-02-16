@@ -500,3 +500,39 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicResponseField name="payment_method" type="any | null" />
 
+
+<ResponseExample>
+```json 200
+{
+  "id": "cus_123",
+  "created_at": 1717000000,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "fingerprint": "1234567890",
+  "stripe_id": "cus_123",
+  "env": "sandbox",
+  "metadata": {},
+  "subscriptions": [
+    {
+      "id": "sub_123",
+      "created_at": 1717000000,
+      "plan_id": "plan_123",
+      "status": "active",
+      "quantity": 1,
+      "interval": "month",
+      "interval_count": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "balance_1": {
+      "id": "balance_1",
+      "amount": 100,
+      "currency": "USD",
+      "created_at": 1717000000,
+      "updated_at": 1717000000
+    }
+  }
+}
+```
+</ResponseExample>

@@ -12,8 +12,11 @@ import {
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
 } from "../core/coreOpModels.js";
-import { ExtCreateCustomerParamsSchema } from "../customers/crud/createCustomerParams.js";
-import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models.js";
+import {
+	CreateCustomerParamsV0Schema,
+	ExtAttachBodyV0Schema,
+	ExtCheckoutParamsV0Schema,
+} from "../models.js";
 /**
  * Centralized JSDoc declarations for all core API methods.
  * These are used by the OpenAPI spec generator and propagate to SDK documentation.
@@ -239,7 +242,7 @@ export const getOrCreateCustomerJsDoc = createJSDocDescription({
 		"Creates a customer if they do not exist, or returns the existing customer by your external customer ID.",
 	whenToUse:
 		"Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.",
-	body: ExtCreateCustomerParamsSchema.partial(),
+	body: CreateCustomerParamsV0Schema.partial(),
 	examples: [
 		example({
 			values: {

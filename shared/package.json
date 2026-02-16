@@ -14,7 +14,6 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"api": "bun api/api.ts",
 		"ts": "bunx tsgo --build --noEmit",
 		"db:push": "bun db:generate && bun db:migrate",
 		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",

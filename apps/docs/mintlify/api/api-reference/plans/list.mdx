@@ -1,0 +1,131 @@
+---
+title: "List Plans"
+openapi: "openapi GET /v1/products"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="name" type="string" />
+
+    <DynamicResponseField name="description" type="string | null" />
+
+    <DynamicResponseField name="group" type="string | null" />
+
+    <DynamicResponseField name="version" type="number" />
+
+    <DynamicResponseField name="add_on" type="boolean" />
+
+    <DynamicResponseField name="auto_enable" type="boolean" />
+
+    <DynamicResponseField name="price" type="object | null">
+      <Expandable title="properties">
+        <DynamicResponseField name="amount" type="number" />
+
+        <DynamicResponseField name="interval" type="enum" />
+
+        <DynamicResponseField name="interval_count" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="items" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string" />
+
+        <DynamicResponseField name="included" type="number" />
+
+        <DynamicResponseField name="unlimited" type="boolean" />
+
+        <DynamicResponseField name="reset" type="object | null">
+          <Expandable title="properties">
+            <DynamicResponseField name="interval" type="enum" />
+
+            <DynamicResponseField name="interval_count" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="price" type="object | null">
+          <Expandable title="properties">
+            <DynamicResponseField name="amount" type="number" />
+
+            <DynamicResponseField name="tiers" type="object[]">
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number" />
+
+                <DynamicResponseField name="amount" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval" type="enum" />
+
+            <DynamicResponseField name="interval_count" type="number" />
+
+            <DynamicResponseField name="billing_units" type="number" />
+
+            <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'" />
+
+            <DynamicResponseField name="max_purchase" type="number | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="rollover" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="max" type="number | null" />
+
+            <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'" />
+
+            <DynamicResponseField name="expiry_duration_length" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="proration" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" />
+
+            <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="free_trial" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="duration_length" type="number" />
+
+        <DynamicResponseField name="duration_type" type="'day' | 'month' | 'year'" />
+
+        <DynamicResponseField name="card_required" type="boolean" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="env" type="'sandbox' | 'live'" />
+
+    <DynamicResponseField name="archived" type="boolean" />
+
+    <DynamicResponseField name="base_variant_id" type="string | null" />
+
+    <DynamicResponseField name="customer_eligibility" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="trial_available" type="boolean" />
+
+        <DynamicResponseField name="scenario" type="enum" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>

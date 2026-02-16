@@ -1,0 +1,17 @@
+# Discount
+
+
+## Fields
+
+| Field                                                                  | Type                                                                   | Required                                                               | Description                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `name`                                                                 | *str*                                                                  | :heavy_check_mark:                                                     | The name of the discount or coupon                                     |
+| `type`                                                                 | [models.Type](../models/type.md)                                       | :heavy_check_mark:                                                     | The type of reward                                                     |
+| `discount_value`                                                       | *float*                                                                | :heavy_check_mark:                                                     | The discount value (percentage or fixed amount)                        |
+| `duration_type`                                                        | [models.CustomerDurationType](../models/customerdurationtype.md)       | :heavy_check_mark:                                                     | How long the discount lasts                                            |
+| `duration_value`                                                       | *OptionalNullable[float]*                                              | :heavy_minus_sign:                                                     | Number of billing periods the discount applies for repeating durations |
+| `currency`                                                             | *OptionalNullable[str]*                                                | :heavy_minus_sign:                                                     | The currency code for fixed amount discounts                           |
+| `start`                                                                | *OptionalNullable[float]*                                              | :heavy_minus_sign:                                                     | Timestamp when the discount becomes active                             |
+| `end`                                                                  | *OptionalNullable[float]*                                              | :heavy_minus_sign:                                                     | Timestamp when the discount expires                                    |
+| `subscription_id`                                                      | *OptionalNullable[str]*                                                | :heavy_minus_sign:                                                     | The Stripe subscription ID this discount is applied to                 |
+| `total_discount_amount`                                                | *OptionalNullable[float]*                                              | :heavy_minus_sign:                                                     | Total amount saved from this discount                                  |

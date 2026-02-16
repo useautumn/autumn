@@ -2,63 +2,298 @@
 alwaysApply: true
 ---
 
-# SDK Architecture Rules (Speakeasy Monorepo)
+# SDK Generation Pipeline
 
-## Purpose
-This rule explains how SDK generation and SDK-consumer packages are wired in this monorepo, and defines the required update path when adding or changing SDK-backed behavior.
+This guide explains the complete SDK generation pipeline from Zod schemas to React hooks.
 
-## Canonical Pipeline (Conceptual)
-1. OpenAPI contract source lives in `shared/api/_openapi/v2.1/` (router + contracts).
-2. `bun api` (root) delegates to `shared/api/api.ts` and generates OpenAPI YAML in `shared/openapi/openapi.yml` (default 2.1 flow).
-3. For v2.1, Speakeasy runs from `packages/sdk` and regenerates `@useautumn/sdk`.
-4. `autumn-js` consumes `@useautumn/sdk` and re-exports SDK client types/classes through `packages/autumn-js/src/sdk/index.ts`.
-5. `autumn-js` backend adapters mount `/api/autumn/*` routes for host apps.
-6. `autumn-js/react` hooks call those mounted backend routes.
-7. `apps/sdk-test` exercises package integrations scenario-by-scenario.
+## Pipeline Overview
+
+```
+Zod Schemas → ORPC Contracts → OpenAPI Spec → Speakeasy SDKs → autumn-js Wrapper → React Hooks
+```
+
+Run `bun api` from root to execute the full pipeline.
+
+---
+
+## 1. Zod Schema Layer
+
+**Location:** `shared/api/`
+
+Schemas define request/response shapes with field descriptions and internal field markers.
+
+### Key Patterns
+
+- Use `.describe()` for field descriptions that appear in API docs
+- Use `.meta({ internal: true })` to mark fields that should be stripped from the public OpenAPI spec
+- Use `.meta({ id: "SchemaName" })` for schema registration in OpenAPI components
+
+### Example
+
+```typescript
+// shared/api/customers/crud/createCustomerParams.ts
+export const CreateCustomerParamsV0Schema = z.object({
+  id: CustomerIdSchema.optional().nullable(),
+  name: z.string().optional().describe("Customer display name"),
+  
+  // Internal fields - stripped from public API
+  entity_id: z.string().optional().meta({ internal: true }),
+  with_autumn_id: z.boolean().default(false).meta({ internal: true }),
+});
+```
+
+---
+
+## 2. ORPC Contract Layer
+
+**Location:** `packages/openapi/v2.1/contracts/`
+
+Uses `@orpc/contract` to define route contracts that reference Zod schemas.
+
+### Contract Structure
+
+Each contract defines:
+- `method`: HTTP method (API is transitioning to RPC-style, so all POST)
+- `path`: Route path (e.g., `/v1/customers.getOrCreate`)
+- `operationId`: Unique operation identifier for SDK method naming
+- `tags`: Grouping for docs
+- `input`: Request body schema (with `.meta()` for examples)
+- `output`: Response schema
+
+### Example
+
+```typescript
+// packages/openapi/v2.1/contracts/customersContract.ts
+export const getOrCreateCustomerContract = oc
+  .route({
+    method: "POST",
+    path: "/v1/customers.getOrCreate",
+    operationId: "getOrCreate",
+    tags: ["customers"],
+    description: getOrCreateCustomerJsDoc,
+  })
+  .input(
+    CreateCustomerParamsV1Schema.meta({
+      title: "GetOrCreateCustomerParams",
+      examples: [{ customer_id: "cus_123", name: "John Doe" }],
+    }),
+  )
+  .output(ApiCustomerV5Schema);
+```
+
+### Router Aggregation
+
+All contracts are aggregated in `packages/openapi/v2.1/contracts/index.ts`:
+
+```typescript
+export const v2_1ContractRouter = oc.router({
+  getOrCreateCustomer: getOrCreateCustomerContract,
+  listPlans: listPlansContract,
+  attach: attachContract,
+});
+```
+
+---
+
+## 3. OpenAPI Generation
+
+**Entry point:** `packages/openapi/v2.1/openapi2.1.ts`
+
+### Step 3a: Register Internal Schemas
+
+`packages/openapi/utils/registerInternalSchemas.ts` recursively walks Zod schemas and registers any with `.meta({ internal: true })` in the JSON_SCHEMA_INPUT_REGISTRY with `x-internal: true`. Call this for each schema that may contain internal fields.
+
+### Step 3b: Generate via ORPC
+
+Uses `@orpc/openapi` `OpenAPIGenerator` with `ZodToJsonSchemaConverter` to produce the raw OpenAPI document from the contract router.
+
+### Step 3c: Apply Speakeasy Settings
+
+`packages/openapi/utils/openapiTransform/applySpeakeasySettings.ts`:
+- Adds `secretKey` bearer auth security scheme
+- Configures `x-speakeasy-globals` with hidden `x-api-version` header parameter (defaults to "2.1")
+
+### Step 3d: Inject Global Header Parameters
+
+`packages/openapi/utils/openapiTransform/injectGlobalHeaderParameters.ts` adds the `x-api-version` header to every operation. This header is hidden in the SDK (users don't need to set it) but automatically sent with every request.
+
+Server parses this in `server/src/honoMiddlewares/apiVersionMiddleware.ts` to determine API version for response formatting.
+
+### Step 3e: Remove Internal Fields
+
+`packages/openapi/utils/openapiTransform/removeInternalFields.ts` strips fields/parameters marked with `x-internal: true` or `internal: true` from the final spec. This ensures internal fields don't appear in the public API documentation or generated SDKs.
+
+---
+
+## 4. SDK Generation
+
+**Entry point:** `packages/openapi/api.ts`
+
+### Step 4a: Generate SDKs in Parallel
+
+`packages/openapi/utils/sdkGeneration/generateSdks.ts` runs Speakeasy CLI for both targets:
+
+- **TypeScript:** `bunx speakeasy run -t autumn` → `packages/sdk/`
+- **Python:** `bunx speakeasy run -t autumn-python` → `others/python-sdk/`
+
+Speakeasy config lives in `packages/sdk/.speakeasy/workflow.yaml` and `gen.yaml`.
+
+### Step 4b: Patch Python SDK
+
+`packages/openapi/utils/sdkGeneration/patchPythonSdk.ts` fixes a Speakeasy bug where `get_global_from_env` returns `None` and overrides Pydantic defaults for `x-api-version`. This ensures the default version header works correctly.
+
+### Step 4c: Merge Code Samples
+
+`packages/openapi/utils/sdkGeneration/mergeCodeSamples.ts` applies Speakeasy overlay files (`.speakeasy/code-samples.overlay.yaml`) to add TypeScript and Python code samples to the OpenAPI spec used for documentation.
+
+---
+
+## 5. Mintlify Documentation Transform
+
+**Location:** `packages/openapi/utils/mintlifyTransform/`
+
+### Step 5a: Transform OpenAPI
+
+- **Strip JSDoc tags:** Removes `@example`, `@deprecated`, etc. from descriptions for cleaner docs
+- **Transform code samples:** Converts Speakeasy SDK format to cleaner autumn-js format (simpler imports like `import { Autumn } from 'autumn-js'`, removes async wrappers and console.log)
+- **Copy schema examples:** Moves examples from schema level to response content level for Mintlify rendering
+
+### Step 5b: Generate API Reference MDX
+
+`packages/openapi/utils/apiReferenceGenerator/` parses the OpenAPI spec and generates `DynamicParamField`/`DynamicResponseField` components. These enable dynamic field switching in Mintlify docs (showing different parameter descriptions based on context).
+
+---
+
+## 6. autumn-js Wrapper Layer
+
+**Location:** `packages/autumn-js/`
+
+The autumn-js package wraps the generated SDK and provides framework integrations.
+
+### 6a: Backend Router
+
+`packages/autumn-js/src/libraries/backend/routes/backendRouter.ts` creates pass-through routes that users mount on their backend (e.g., `/api/autumn/*`).
+
+**Route groups:** customers, billing, entities, referrals, products, gen (general)
+
+**Pattern:** Route handlers use `withAuth` to inject identity and call the SDK:
+
+```typescript
+export const handleGetOrCreateCustomer = withAuth({
+  fn: async ({ autumn, customerId, customerData, body }) => {
+    return await autumn.customers.getOrCreate({
+      customerId,
+      ...customerData,
+      ...body,
+    });
+  },
+});
+```
+
+**Response format:** `packages/autumn-js/src/libraries/backend/utils/backendRes.ts` wraps responses in a consistent structure with `{ statusCode, body }`. Errors include `{ message, code, statusCode, details }` for frontend console logging.
+
+### 6b: React Client
+
+`packages/autumn-js/src/libraries/react/client/ReactAutumnClient.tsx` mirrors the SDK interface but routes through the mounted backend routes.
+
+**CORS Detection:** The client auto-detects CORS credential support:
+1. `detectCors()` makes test requests to `/api/autumn/cors` with and without credentials
+2. `shouldIncludeCredentials()` caches the result and logs a warning suggesting users set `includeCredentials` explicitly
+3. Users can override with the `includeCredentials` prop in `AutumnProvider`
+
+**Client methods:** `attach`, `checkout`, `cancel`, `check`, `track`, `openBillingPortal`, `setupPayment`, `query`, plus namespaced methods for `customers`, `entities`, `referrals`, `products`.
+
+### 6c: React Hooks
+
+Hooks like `packages/autumn-js/src/libraries/react/hooks/useCustomer.tsx`:
+- Use SWR for data fetching with automatic caching
+- Accept `expand`, `errorOnNotFound`, and `swrConfig` params
+- Return `{ customer, isLoading, error, refetch }` plus SDK action methods
+- Get client from `AutumnContext` or accept a `client` prop directly
+
+---
+
+## 7. Framework Integrations
+
+### Better Auth Plugin
+
+`packages/autumn-js/src/libraries/backend/better-auth.ts` is a `BetterAuthPlugin` that:
+- Mounts Autumn routes under `/api/auth/autumn/*`
+- Extracts identity from Better Auth session
+- Supports `customerScope: "user" | "organization" | "user_and_organization"`
+- Auto-maps user/org to `customerId` and `customerData`
+
+### Convex Client
+
+`packages/autumn-js/src/libraries/react/client/ConvexAutumnClient.tsx`:
+- Implements `IAutumnClient` interface
+- Routes through Convex actions instead of HTTP (`convex.action()`)
+- Stubs HTTP methods (`post`, `get`, etc.) with errors
+- Same method signatures as `AutumnClient` for drop-in replacement
+
+---
+
+## 8. Testing (sdk-test)
+
+**Location:** `apps/sdk-test/`
+
+### Scenario Pattern
+
+Each integration is tested via scenario pages organized by provider:
+- `scenarios/core/` - Default HTTP provider
+- `scenarios/better-auth/` - Better Auth integration
+- `scenarios/convex/` - Convex integration
+
+### Page Structure
+
+Each scenario page follows a consistent pattern:
+1. **Hook params panel:** Exact params passed to the hook
+2. **Hook state panel:** Loading, error, lastUpdatedAt
+3. **Payload viewer:** Customer/entity data returned
+4. **Action controls:** Refetch, etc.
+
+### Scenario Registry
+
+`apps/sdk-test/lib/scenarios.ts` tracks all scenarios with status:
+- `ready` - Implemented and working
+- `wip` - Work in progress
+- `planned` - Not yet implemented
+
+---
 
 ## Source of Truth Rules
-1. API behavior starts at contracts, not generated code.
-2. Do not hand-edit generated `packages/sdk/src/**` as a source of truth; regeneration can overwrite it.
-3. If SDK shapes are wrong, fix contracts/OpenAPI generation inputs first.
-4. Keep backend route behavior aligned with generated SDK operation models from `@useautumn/sdk/models/operations`.
 
-## `autumn-js` Component Map
-### A) Backend routing layer
-- Entry router: `packages/autumn-js/src/libraries/backend/routes/backendRouter.ts`
-- Route groups: customers, billing, core/gen, entities, referrals, products.
-- Route handlers call `Autumn` client methods (from `@useautumn/sdk`) and inject identity through `withAuth`.
-- Adapters (`next`, `hono`, `express`, `fastify`, `better-auth`, etc.) all delegate into this shared router pattern.
+1. **API behavior starts at Zod schemas and contracts**, not generated code
+2. **Never hand-edit** `packages/sdk/src/**` - regeneration will overwrite
+3. **If SDK shapes are wrong**, fix schemas/contracts first, then regenerate
+4. **Keep backend routes aligned** with generated SDK operation models
 
-### B) React client + hooks layer
-- Provider: `AutumnProvider` (`ReactAutumnProvider`) sets client transport config (`backendUrl`, `pathPrefix`, auth headers).
-- Hooks (`useCustomer`, `useEntity`, `useAutumn`, etc.) read from provider context and call backend routes.
-- Hook payload types should come from `@useautumn/sdk` models/operations where possible.
-
-### C) SDK wrapper layer
-- `packages/autumn-js/src/sdk/index.ts` re-exports `Autumn` and SDK exports from `@useautumn/sdk`.
-- Backend code imports `Autumn` via `@sdk` alias to keep a stable internal import surface.
-
-### D) Integration test harness (`apps/sdk-test`)
-- Scenario-driven app with one page per tested component/integration.
-- Core pattern per scenario: params panel, state panel, payload viewer, action controls.
-- Current and future integrations are represented uniformly (core, better-auth, convex).
-- Use this app as the canonical manual verification surface for SDK-consumer packages.
+---
 
 ## Required Change Workflow
-When adding or changing an SDK-backed feature:
-1. Update contract definitions under `shared/api/_openapi/v2.1/contracts/*`.
-2. Ensure the v2.1 contract router includes the new operation.
-3. Regenerate OpenAPI + SDK via existing pipeline.
-4. Wire/adjust `autumn-js` backend route mapping.
-5. Wire/adjust `autumn-js/react` client methods/hooks.
-6. Add or update `apps/sdk-test` scenario coverage for the affected component.
 
-## Consistency Rules for Agents
-1. Always describe pipeline impacts in PR/task notes when touching contracts/SDK wrappers/hooks.
-2. Keep naming consistent between operation intent, backend route path, and hook/action name.
-3. Prefer shared route/auth handling (`withAuth` + central router) over one-off adapter logic.
-4. Treat `apps/sdk-test` as required integration documentation, not optional demo code.
+When adding or changing SDK-backed features:
 
-## Scope Assumptions
-- Convex integration is included as part of target architecture, even where implementation is still in progress.
-- Rules describe intended steady-state architecture, while allowing explicit WIP markers in scenario status metadata.
+1. **Update Zod schemas** in `shared/api/` (use `.meta({ internal: true })` for internal fields)
+2. **Add/update ORPC contract** in `packages/openapi/v2.1/contracts/`
+3. **Add contract to router** in `packages/openapi/v2.1/contracts/index.ts`
+4. **Regenerate** via `bun api` from root
+5. **Wire backend route** in `autumn-js` if needed
+6. **Wire React hook method** if needed
+7. **Add scenario test coverage** in `apps/sdk-test/`
+
+---
+
+## Key File Paths
+
+| Purpose | Path |
+|---------|------|
+| Zod schemas | `shared/api/` |
+| ORPC contracts | `packages/openapi/v2.1/contracts/` |
+| OpenAPI generation | `packages/openapi/v2.1/openapi2.1.ts` |
+| Pipeline entry | `packages/openapi/api.ts` |
+| Generated TS SDK | `packages/sdk/` |
+| Generated Python SDK | `others/python-sdk/` |
+| autumn-js backend | `packages/autumn-js/src/libraries/backend/` |
+| autumn-js react | `packages/autumn-js/src/libraries/react/` |
+| SDK tests | `apps/sdk-test/` |

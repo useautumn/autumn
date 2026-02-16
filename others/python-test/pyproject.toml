@@ -1,0 +1,13 @@
+[project]
+name = "python-test"
+version = "0.1.0"
+description = "Test project for Autumn Python SDK"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "autumn-sdk",
+    "dotenv>=0.9.9",
+]
+
+[tool.uv.sources]
+autumn-sdk = { path = "../python-sdk", editable = true }
