@@ -106,6 +106,13 @@ if (process.env.NODE_ENV !== "production") {
 			});
 			console.log("Speakeasy SDK generation completed");
 
+			console.log("Building @useautumn/sdk dist output...");
+			execSync("bun run build", {
+				stdio: "inherit",
+				cwd: speakeasySdkDirPath,
+			});
+			console.log("@useautumn/sdk build completed");
+
 			console.log("Applying Speakeasy code samples to OpenAPI for docs...");
 			execSync(
 				`bunx speakeasy overlay apply --schema .speakeasy/out.openapi.yaml --overlay .speakeasy/code-samples.overlay.yaml --out ${JSON.stringify(docsOpenApiLocalPath)}`,

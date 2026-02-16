@@ -1,4 +1,4 @@
-import { Hooks } from "./types";
+import type { Hooks } from "./types.js";
 
 /*
  * This file is only ever generated once on the first generation and then is free to be modified.
