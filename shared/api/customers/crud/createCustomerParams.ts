@@ -22,8 +22,9 @@ export const CreateCustomerQuerySchema = z.object({
 export const ExtCreateCustomerParamsSchema = z
 	.object({
 		customer_id: CustomerIdSchema.nullable(),
+		...CustomerDataSchema.shape,
 	})
-	.extend(CustomerDataSchema.shape)
+
 	.extend({
 		expand: CustomerExpandArraySchema.optional(),
 

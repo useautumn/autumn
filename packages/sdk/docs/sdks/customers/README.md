@@ -51,7 +51,9 @@ const autumn = new Autumn({
 
 async function run() {
   const result = await autumn.customers.getOrCreate({
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
 
   console.log(result);
@@ -77,7 +79,9 @@ const autumn = new AutumnCore({
 
 async function run() {
   const res = await customersGetOrCreate(autumn, {
-    customerId: null,
+    customerId: "cus_123",
+    name: "John Doe",
+    email: "john@example.com",
   });
   if (res.ok) {
     const { value: result } = res;

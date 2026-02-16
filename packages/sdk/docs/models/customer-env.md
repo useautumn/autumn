@@ -1,5 +1,7 @@
 # CustomerEnv
 
+The environment this customer was created in.
+
 ## Example Usage
 
 ```typescript

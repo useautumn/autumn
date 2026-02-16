@@ -13,10 +13,16 @@ import { smartUnion } from "../types/smart-union.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
+/**
+ * The environment this customer was created in.
+ */
 export const CustomerEnv = {
   Sandbox: "sandbox",
   Live: "live",
 } as const;
+/**
+ * The environment this customer was created in.
+ */
 export type CustomerEnv = OpenEnum<typeof CustomerEnv>;
 
 export const Status = {
@@ -48,34 +54,6 @@ export type Purchase = {
   expiresAt: number | null;
   startedAt: number;
   quantity: number;
-};
-
-export const BalancesType = {
-  Boolean: "boolean",
-  Metered: "metered",
-  CreditSystem: "credit_system",
-} as const;
-export type BalancesType = OpenEnum<typeof BalancesType>;
-
-export type CustomerCreditSchema = {
-  meteredFeatureId: string;
-  creditCost: number;
-};
-
-export type CustomerDisplay = {
-  singular?: string | null | undefined;
-  plural?: string | null | undefined;
-};
-
-export type CustomerFeature = {
-  id: string;
-  name: string;
-  type: BalancesType;
-  consumable: boolean;
-  eventNames?: Array<string> | undefined;
-  creditSchema?: Array<CustomerCreditSchema> | undefined;
-  display?: CustomerDisplay | undefined;
-  archived: boolean;
 };
 
 export const CustomerIntervalEnum = {
@@ -121,7 +99,6 @@ export type CustomerPrice = {
 };
 
 export type Breakdown = {
-  id: string;
   planId: string | null;
   includedGrant: number;
   prepaidGrant: number;
@@ -140,7 +117,6 @@ export type CustomerRollover = {
 
 export type Balances = {
   featureId: string;
-  feature?: CustomerFeature | undefined;
   granted: number;
   remaining: number;
   usage: number;
@@ -174,10 +150,6 @@ export type Invoice = {
    */
   currency: string;
   /**
-   * Timestamp when the invoice was created
-   */
-  createdAt: number;
-  /**
    * URL to the Stripe-hosted invoice page
    */
   hostedInvoiceUrl?: string | null | undefined;
@@ -196,11 +168,6 @@ export const EntityEnv = {
 export type EntityEnv = OpenEnum<typeof EntityEnv>;
 
 export type Entity = {
-  autumnId?: string | undefined;
-  /**
-   * The unique identifier of the entity
-   */
-  id: string | null;
   /**
    * The name of the entity
    */
@@ -213,10 +180,6 @@ export type Entity = {
    * The feature ID this entity belongs to
    */
   featureId?: string | null | undefined;
-  /**
-   * Unix timestamp when the entity was created
-   */
-  createdAt: number;
   /**
    * The environment (sandbox/live)
    */
@@ -232,7 +195,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const RewardsType = {
+export const Type = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -241,7 +204,7 @@ export const RewardsType = {
 /**
  * The type of reward
  */
-export type RewardsType = OpenEnum<typeof RewardsType>;
+export type Type = OpenEnum<typeof Type>;
 
 /**
  * How long the discount lasts
@@ -258,17 +221,13 @@ export type CustomerDurationType = OpenEnum<typeof CustomerDurationType>;
 
 export type Discount = {
   /**
-   * The unique identifier for this discount
-   */
-  id: string;
-  /**
    * The name of the discount or coupon
    */
   name: string;
   /**
    * The type of reward
    */
-  type: RewardsType;
+  type: Type;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -311,7 +270,6 @@ export type Rewards = {
 };
 
 export type ReferralCustomer = {
-  id: string;
   name?: string | null | undefined;
   email?: string | null | undefined;
 };
@@ -320,19 +278,36 @@ export type Referral = {
   programId: string;
   customer: ReferralCustomer;
   rewardApplied: boolean;
-  createdAt: number;
 };
 
 export type Customer = {
-  autumnId?: string | undefined;
-  id: string | null;
+  /**
+   * The name of the customer.
+   */
   name: string | null;
+  /**
+   * The email address of the customer.
+   */
   email: string | null;
-  createdAt: number;
+  /**
+   * A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID.
+   */
   fingerprint: string | null;
+  /**
+   * Stripe customer ID.
+   */
   stripeId: string | null;
+  /**
+   * The environment this customer was created in.
+   */
   env: CustomerEnv;
+  /**
+   * The metadata for the customer.
+   */
   metadata: { [k: string]: any };
+  /**
+   * Whether to send email receipts to the customer.
+   */
   sendEmailReceipts: boolean;
   subscriptions: Array<Subscription>;
   purchases: Array<Purchase>;
@@ -422,91 +397,6 @@ export function purchaseFromJSON(
     jsonString,
     (x) => Purchase$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'Purchase' from JSON`,
-  );
-}
-
-/** @internal */
-export const BalancesType$inboundSchema: z.ZodMiniType<BalancesType, unknown> =
-  openEnums.inboundSchema(BalancesType);
-
-/** @internal */
-export const CustomerCreditSchema$inboundSchema: z.ZodMiniType<
-  CustomerCreditSchema,
-  unknown
-> = z.pipe(
-  z.object({
-    metered_feature_id: types.string(),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "metered_feature_id": "meteredFeatureId",
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function customerCreditSchemaFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerCreditSchema, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerCreditSchema' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerDisplay$inboundSchema: z.ZodMiniType<
-  CustomerDisplay,
-  unknown
-> = z.object({
-  singular: z.optional(z.nullable(types.string())),
-  plural: z.optional(z.nullable(types.string())),
-});
-
-export function customerDisplayFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerDisplay, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerDisplay' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerFeature$inboundSchema: z.ZodMiniType<
-  CustomerFeature,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    name: types.string(),
-    type: BalancesType$inboundSchema,
-    consumable: types.boolean(),
-    event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => CustomerCreditSchema$inboundSchema)),
-    ),
-    display: types.optional(z.lazy(() => CustomerDisplay$inboundSchema)),
-    archived: types.boolean(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "event_names": "eventNames",
-      "credit_schema": "creditSchema",
-    });
-  }),
-);
-
-export function customerFeatureFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerFeature, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerFeature$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerFeature' from JSON`,
   );
 }
 
@@ -630,7 +520,6 @@ export function customerPriceFromJSON(
 export const Breakdown$inboundSchema: z.ZodMiniType<Breakdown, unknown> = z
   .pipe(
     z.object({
-      id: z._default(types.string(), ""),
       plan_id: types.nullable(types.string()),
       included_grant: types.number(),
       prepaid_grant: types.number(),
@@ -691,7 +580,6 @@ export function customerRolloverFromJSON(
 export const Balances$inboundSchema: z.ZodMiniType<Balances, unknown> = z.pipe(
   z.object({
     feature_id: types.string(),
-    feature: types.optional(z.lazy(() => CustomerFeature$inboundSchema)),
     granted: types.number(),
     remaining: types.number(),
     usage: types.number(),
@@ -732,14 +620,12 @@ export const Invoice$inboundSchema: z.ZodMiniType<Invoice, unknown> = z.pipe(
     status: types.string(),
     total: types.number(),
     currency: types.string(),
-    created_at: types.number(),
     hosted_invoice_url: z.optional(z.nullable(types.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_ids": "planIds",
       "stripe_id": "stripeId",
-      "created_at": "createdAt",
       "hosted_invoice_url": "hostedInvoiceUrl",
     });
   }),
@@ -762,20 +648,15 @@ export const EntityEnv$inboundSchema: z.ZodMiniType<EntityEnv, unknown> =
 /** @internal */
 export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
-    id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
     feature_id: z.optional(z.nullable(types.string())),
-    created_at: types.number(),
     env: EntityEnv$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
-      "created_at": "createdAt",
     });
   }),
 );
@@ -817,8 +698,8 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const RewardsType$inboundSchema: z.ZodMiniType<RewardsType, unknown> =
-  openEnums.inboundSchema(RewardsType);
+export const Type$inboundSchema: z.ZodMiniType<Type, unknown> = openEnums
+  .inboundSchema(Type);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -829,9 +710,8 @@ export const CustomerDurationType$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
-    id: types.string(),
     name: types.string(),
-    type: RewardsType$inboundSchema,
+    type: Type$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),
@@ -882,7 +762,6 @@ export const ReferralCustomer$inboundSchema: z.ZodMiniType<
   ReferralCustomer,
   unknown
 > = z.object({
-  id: types.string(),
   name: z.optional(z.nullable(types.string())),
   email: z.optional(z.nullable(types.string())),
 });
@@ -903,13 +782,11 @@ export const Referral$inboundSchema: z.ZodMiniType<Referral, unknown> = z.pipe(
     program_id: types.string(),
     customer: z.lazy(() => ReferralCustomer$inboundSchema),
     reward_applied: types.boolean(),
-    created_at: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "program_id": "programId",
       "reward_applied": "rewardApplied",
-      "created_at": "createdAt",
     });
   }),
 );
@@ -927,11 +804,8 @@ export function referralFromJSON(
 /** @internal */
 export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
-    id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     email: types.nullable(types.string()),
-    created_at: types.number(),
     fingerprint: types.nullable(types.string()),
     stripe_id: types.nullable(types.string()),
     env: CustomerEnv$inboundSchema,
@@ -951,8 +825,6 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
-      "created_at": "createdAt",
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
       "trials_used": "trialsUsed",

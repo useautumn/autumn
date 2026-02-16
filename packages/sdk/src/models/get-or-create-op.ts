@@ -13,39 +13,6 @@ export type GetOrCreateGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type Vercel = {
-  installationId: string;
-  accessToken: string;
-  accountId: string;
-  customPaymentMethodId?: string | undefined;
-};
-
-export type Processors = {
-  vercel?: Vercel | undefined;
-};
-
-export type InternalOptions = {
-  /**
-   * The group of products to attach to the customer
-   */
-  defaultGroup?: string | undefined;
-  /**
-   * Whether to disable default products
-   */
-  disableDefaults?: boolean | undefined;
-};
-
-export type GetOrCreateEntityData = {
-  /**
-   * The feature ID that this entity is associated with
-   */
-  featureId: string;
-  /**
-   * Name of the entity
-   */
-  name?: string | undefined;
-};
-
 export type GetOrCreateCustomerParams = {
   customerId: string | null;
   /**
@@ -77,130 +44,14 @@ export type GetOrCreateCustomerParams = {
    */
   autoEnablePlanId?: string | undefined;
   /**
-   * External processors for the customer
-   */
-  processors?: Processors | null | undefined;
-  /**
    * Whether to send email receipts to this customer
    */
   sendEmailReceipts?: boolean | undefined;
-  internalOptions?: InternalOptions | undefined;
   /**
    * Customer expand options
    */
   expand?: Array<CustomerExpand> | undefined;
-  entityId?: string | undefined;
-  entityData?: GetOrCreateEntityData | undefined;
-  id?: string | null | undefined;
-  withAutumnId?: boolean | undefined;
 };
-
-/** @internal */
-export type Vercel$Outbound = {
-  installation_id: string;
-  access_token: string;
-  account_id: string;
-  custom_payment_method_id?: string | undefined;
-};
-
-/** @internal */
-export const Vercel$outboundSchema: z.ZodMiniType<Vercel$Outbound, Vercel> = z
-  .pipe(
-    z.object({
-      installationId: z.string(),
-      accessToken: z.string(),
-      accountId: z.string(),
-      customPaymentMethodId: z.optional(z.string()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        installationId: "installation_id",
-        accessToken: "access_token",
-        accountId: "account_id",
-        customPaymentMethodId: "custom_payment_method_id",
-      });
-    }),
-  );
-
-export function vercelToJSON(vercel: Vercel): string {
-  return JSON.stringify(Vercel$outboundSchema.parse(vercel));
-}
-
-/** @internal */
-export type Processors$Outbound = {
-  vercel?: Vercel$Outbound | undefined;
-};
-
-/** @internal */
-export const Processors$outboundSchema: z.ZodMiniType<
-  Processors$Outbound,
-  Processors
-> = z.object({
-  vercel: z.optional(z.lazy(() => Vercel$outboundSchema)),
-});
-
-export function processorsToJSON(processors: Processors): string {
-  return JSON.stringify(Processors$outboundSchema.parse(processors));
-}
-
-/** @internal */
-export type InternalOptions$Outbound = {
-  default_group?: string | undefined;
-  disable_defaults?: boolean | undefined;
-};
-
-/** @internal */
-export const InternalOptions$outboundSchema: z.ZodMiniType<
-  InternalOptions$Outbound,
-  InternalOptions
-> = z.pipe(
-  z.object({
-    defaultGroup: z.optional(z.string()),
-    disableDefaults: z.optional(z.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      defaultGroup: "default_group",
-      disableDefaults: "disable_defaults",
-    });
-  }),
-);
-
-export function internalOptionsToJSON(
-  internalOptions: InternalOptions,
-): string {
-  return JSON.stringify(InternalOptions$outboundSchema.parse(internalOptions));
-}
-
-/** @internal */
-export type GetOrCreateEntityData$Outbound = {
-  feature_id: string;
-  name?: string | undefined;
-};
-
-/** @internal */
-export const GetOrCreateEntityData$outboundSchema: z.ZodMiniType<
-  GetOrCreateEntityData$Outbound,
-  GetOrCreateEntityData
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    name: z.optional(z.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
-
-export function getOrCreateEntityDataToJSON(
-  getOrCreateEntityData: GetOrCreateEntityData,
-): string {
-  return JSON.stringify(
-    GetOrCreateEntityData$outboundSchema.parse(getOrCreateEntityData),
-  );
-}
 
 /** @internal */
 export type GetOrCreateCustomerParams$Outbound = {
@@ -212,14 +63,8 @@ export type GetOrCreateCustomerParams$Outbound = {
   stripe_id?: string | null | undefined;
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
-  processors?: Processors$Outbound | null | undefined;
   send_email_receipts?: boolean | undefined;
-  internal_options?: InternalOptions$Outbound | undefined;
   expand?: Array<string> | undefined;
-  entity_id?: string | undefined;
-  entity_data?: GetOrCreateEntityData$Outbound | undefined;
-  id?: string | null | undefined;
-  with_autumn_id: boolean;
 };
 
 /** @internal */
@@ -236,14 +81,8 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
     stripeId: z.optional(z.nullable(z.string())),
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
-    processors: z.optional(z.nullable(z.lazy(() => Processors$outboundSchema))),
     sendEmailReceipts: z.optional(z.boolean()),
-    internalOptions: z.optional(z.lazy(() => InternalOptions$outboundSchema)),
     expand: z.optional(z.array(CustomerExpand$outboundSchema)),
-    entityId: z.optional(z.string()),
-    entityData: z.optional(z.lazy(() => GetOrCreateEntityData$outboundSchema)),
-    id: z.optional(z.nullable(z.string())),
-    withAutumnId: z._default(z.boolean(), false),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -252,10 +91,6 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
       createInStripe: "create_in_stripe",
       autoEnablePlanId: "auto_enable_plan_id",
       sendEmailReceipts: "send_email_receipts",
-      internalOptions: "internal_options",
-      entityId: "entity_id",
-      entityData: "entity_data",
-      withAutumnId: "with_autumn_id",
     });
   }),
 );

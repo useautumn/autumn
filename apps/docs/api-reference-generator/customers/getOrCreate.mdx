@@ -3,6 +3,10 @@ title: "Get or Create Customer"
 openapi: "openapi POST /v1/customers.getOrCreate"
 ---
 
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
 <Note>
   If the customer already exists and you try to create it again, you will simply be returned the customer object (rather than an error being thrown).
 </Note>

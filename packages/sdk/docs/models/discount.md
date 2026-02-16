@@ -6,7 +6,6 @@
 import { Discount } from "@useautumn/sdk";
 
 let value: Discount = {
-  id: "<id>",
   name: "<value>",
   type: "free_product",
   discountValue: 8208.57,
@@ -18,9 +17,8 @@ let value: Discount = {
 
 | Field                                                                  | Type                                                                   | Required                                                               | Description                                                            |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `id`                                                                   | *string*                                                               | :heavy_check_mark:                                                     | The unique identifier for this discount                                |
 | `name`                                                                 | *string*                                                               | :heavy_check_mark:                                                     | The name of the discount or coupon                                     |
-| `type`                                                                 | [models.RewardsType](../models/rewards-type.md)                        | :heavy_check_mark:                                                     | The type of reward                                                     |
+| `type`                                                                 | [models.Type](../models/type.md)                                       | :heavy_check_mark:                                                     | The type of reward                                                     |
 | `discountValue`                                                        | *number*                                                               | :heavy_check_mark:                                                     | The discount value (percentage or fixed amount)                        |
 | `durationType`                                                         | [models.CustomerDurationType](../models/customer-duration-type.md)     | :heavy_check_mark:                                                     | How long the discount lasts                                            |
 | `durationValue`                                                        | *number*                                                               | :heavy_minus_sign:                                                     | Number of billing periods the discount applies for repeating durations |

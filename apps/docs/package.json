@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"pull": "bun scripts/pull.ts",
-		"dev": "cd mintlify && mint dev",
+		"dev": "cd mintlify && mint dev -p 3002",
 		"build": "cd mintlify && mint build",
 		"start": "cd mintlify && mint dev"
 	},

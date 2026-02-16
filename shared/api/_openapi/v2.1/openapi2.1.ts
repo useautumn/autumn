@@ -1,7 +1,11 @@
 import { writeFileSync } from "node:fs";
+import { registerInternalSchemas } from "@api/_openapi/utils/registerInternalSchemas.js";
+import { AttachParamsV0Schema } from "@api/billing/attachV2/attachParamsV0.js";
+import { BillingResponseSchema } from "@api/billing/common/billingResponse.js";
 import { CustomerIdSchema } from "@api/common/customerId.js";
 import { ApiCustomerV5Schema } from "@api/customers/apiCustomerV5.js";
 import { CustomerExpandEnum } from "@api/customers/components/customerExpand/customerExpand.js";
+import { ExtCreateCustomerParamsSchema } from "@api/customers/crud/createCustomerParams.js";
 import { CustomerDataSchema } from "@api/models.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import { OpenAPIGenerator } from "@orpc/openapi";
@@ -113,6 +117,32 @@ const applySpeakeasySettings = ({
 	};
 };
 
+/**
+ * Fields that should be stripped from the public OpenAPI spec.
+ * These are internal fields marked with `.meta({ internal: true })` in schemas.
+ */
+const INTERNAL_FIELD_NAMES = new Set([
+	// Customer params internal fields
+	"entity_id",
+	"entity_data",
+	"id",
+	"with_autumn_id",
+	"internal_options",
+	"processors",
+	// Customer feature internal fields
+	"feature_type",
+	"feature",
+	"display",
+	"usage_limit",
+	"config",
+	"created_at",
+	"entitlement_id",
+	"price_id",
+	"price_config",
+	// Customer response internal field
+	"autumn_id",
+]);
+
 const removeInternalFields = ({
 	openApiDocument,
 }: {
@@ -157,10 +187,14 @@ const removeInternalFields = ({
 				: null;
 
 			for (const [propertyName, propertySchema] of Object.entries(properties)) {
-				if (!isInternalNode(propertySchema)) continue;
-
-				delete properties[propertyName];
-				requiredSet?.delete(propertyName);
+				// Remove fields marked with x-internal or internal, OR fields in the internal names list
+				if (
+					isInternalNode(propertySchema) ||
+					INTERNAL_FIELD_NAMES.has(propertyName)
+				) {
+					delete properties[propertyName];
+					requiredSet?.delete(propertyName);
+				}
 			}
 
 			if (requiredSet) {
@@ -189,6 +223,15 @@ export const writeOpenApi_2_1_0 = async ({
 }: {
 	outputFilePath: string;
 }) => {
+	// Register internal schemas before generation so they get x-internal: true
+	// in the OpenAPI output, which removeInternalFields() will then strip
+	registerInternalSchemas(ExtCreateCustomerParamsSchema);
+	registerInternalSchemas(AttachParamsV0Schema);
+	registerInternalSchemas(BillingResponseSchema);
+	registerInternalSchemas(ApiCustomerV5Schema);
+	registerInternalSchemas(ApiPlanV1Schema);
+	registerInternalSchemas(CustomerDataSchema);
+
 	const openApiDocument = (await generator.generate(v2_1ContractRouter, {
 		info: {
 			title: "Autumn API",

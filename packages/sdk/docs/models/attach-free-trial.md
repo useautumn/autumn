@@ -13,8 +13,8 @@ let value: AttachFreeTrial = {
 
 ## Fields
 
-| Field                                                        | Type                                                         | Required                                                     | Description                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `length`                                                     | *number*                                                     | :heavy_check_mark:                                           | N/A                                                          |
-| `duration`                                                   | [models.FreeTrialDuration](../models/free-trial-duration.md) | :heavy_check_mark:                                           | N/A                                                          |
-| `cardRequired`                                               | *boolean*                                                    | :heavy_minus_sign:                                           | N/A                                                          |
+| Field                                    | Type                                     | Required                                 | Description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| `length`                                 | *number*                                 | :heavy_check_mark:                       | N/A                                      |
+| `duration`                               | [models.Duration](../models/duration.md) | :heavy_check_mark:                       | N/A                                      |
+| `cardRequired`                           | *boolean*                                | :heavy_minus_sign:                       | N/A                                      |

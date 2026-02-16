@@ -10,3 +10,9 @@
 
 	border: 1px solid #661ecf;
 }
+
+/* Hide auto-generated OpenAPI sections (Authorizations, Headers, Body, Response) */
+/* These sections are wrapped in div.api-section with h4 headings */
+.prose > .api-section {
+	display: none !important;
+}

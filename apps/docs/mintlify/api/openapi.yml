@@ -26,40 +26,40 @@ components:
     Customer:
       type: object
       properties:
-        autumn_id:
-          type: string
-        id:
-          anyOf:
-            - type: string
-            - type: "null"
         name:
           anyOf:
             - type: string
             - type: "null"
+          description: The name of the customer.
         email:
           anyOf:
             - type: string
             - type: "null"
-        created_at:
-          type: number
+          description: The email address of the customer.
         fingerprint:
           anyOf:
             - type: string
             - type: "null"
+          description: "A unique identifier (eg. serial number) to de-duplicate customers
+            across devices or browsers. For example: apple device ID."
         stripe_id:
           anyOf:
             - type: string
             - type: "null"
+          description: Stripe customer ID.
         env:
           enum:
             - sandbox
             - live
+          description: The environment this customer was created in.
         metadata:
           type: object
           propertyNames: {}
           additionalProperties: {}
+          description: The metadata for the customer.
         send_email_receipts:
           type: boolean
+          description: Whether to send email receipts to the customer.
         subscriptions:
           type: array
           items:
@@ -148,55 +148,6 @@ components:
             properties:
               feature_id:
                 type: string
-              feature:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  type:
-                    enum:
-                      - boolean
-                      - metered
-                      - credit_system
-                  consumable:
-                    type: boolean
-                  event_names:
-                    type: array
-                    items:
-                      type: string
-                  credit_schema:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        metered_feature_id:
-                          type: string
-                        credit_cost:
-                          type: number
-                      required:
-                        - metered_feature_id
-                        - credit_cost
-                  display:
-                    type: object
-                    properties:
-                      singular:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      plural:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                  archived:
-                    type: boolean
-                required:
-                  - id
-                  - name
-                  - type
-                  - consumable
-                  - archived
               granted:
                 type: number
               remaining:
@@ -221,9 +172,6 @@ components:
                 items:
                   type: object
                   properties:
-                    id:
-                      type: string
-                      default: ""
                     plan_id:
                       anyOf:
                         - type: string
@@ -357,9 +305,6 @@ components:
               currency:
                 type: string
                 description: The currency code for the invoice
-              created_at:
-                type: number
-                description: Timestamp when the invoice was created
               hosted_invoice_url:
                 anyOf:
                   - type: string
@@ -371,19 +316,11 @@ components:
               - status
               - total
               - currency
-              - created_at
         entities:
           type: array
           items:
             type: object
             properties:
-              autumn_id:
-                type: string
-              id:
-                anyOf:
-                  - type: string
-                  - type: "null"
-                description: The unique identifier of the entity
               name:
                 anyOf:
                   - type: string
@@ -399,18 +336,13 @@ components:
                   - type: string
                   - type: "null"
                 description: The feature ID this entity belongs to
-              created_at:
-                type: number
-                description: Unix timestamp when the entity was created
               env:
                 enum:
                   - sandbox
                   - live
                 description: The environment (sandbox/live)
             required:
-              - id
               - name
-              - created_at
               - env
         trials_used:
           type: array
@@ -437,9 +369,6 @@ components:
                   items:
                     type: object
                     properties:
-                      id:
-                        type: string
-                        description: The unique identifier for this discount
                       name:
                         type: string
                         description: The name of the discount or coupon
@@ -463,7 +392,8 @@ components:
                         anyOf:
                           - type: number
                           - type: "null"
-                        description: Number of billing periods the discount applies for repeating durations
+                        description: Number of billing periods the discount applies for repeating
+                          durations
                       currency:
                         anyOf:
                           - type: string
@@ -490,7 +420,6 @@ components:
                           - type: "null"
                         description: Total amount saved from this discount
                     required:
-                      - id
                       - name
                       - type
                       - discount_value
@@ -509,8 +438,6 @@ components:
               customer:
                 type: object
                 properties:
-                  id:
-                    type: string
                   name:
                     anyOf:
                       - type: string
@@ -519,26 +446,20 @@ components:
                     anyOf:
                       - type: string
                       - type: "null"
-                required:
-                  - id
+                required: []
               reward_applied:
                 type: boolean
-              created_at:
-                type: number
             required:
               - program_id
               - customer
               - reward_applied
-              - created_at
         payment_method:
           anyOf:
             - {}
             - type: "null"
       required:
-        - id
         - name
         - email
-        - created_at
         - fingerprint
         - stripe_id
         - env
@@ -547,11 +468,35 @@ components:
         - subscriptions
         - purchases
         - balances
+      examples:
+        - &a2
+          id: cus_123
+          created_at: 1717000000
+          name: John Doe
+          email: john@example.com
+          fingerprint: "1234567890"
+          stripe_id: cus_123
+          env: sandbox
+          metadata: {}
+          subscriptions:
+            - id: sub_123
+              created_at: 1717000000
+              plan_id: plan_123
+              status: active
+              quantity: 1
+              interval: month
+              interval_count: 1
+          purchases: []
+          balances:
+            balance_1:
+              id: balance_1
+              amount: 100
+              currency: USD
+              created_at: 1717000000
+              updated_at: 1717000000
     Plan:
       type: object
       properties:
-        id:
-          type: string
         name:
           type: string
         description:
@@ -584,15 +529,6 @@ components:
                     - year
                 interval_count:
                   type: number
-                display:
-                  type: object
-                  properties:
-                    primary_text:
-                      type: string
-                    secondary_text:
-                      type: string
-                  required:
-                    - primary_text
               required:
                 - amount
                 - interval
@@ -604,65 +540,6 @@ components:
             properties:
               feature_id:
                 type: string
-              feature:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: The ID of the feature, used to refer to it in other API calls like /track or /check.
-                  name:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The name of the feature.
-                  type:
-                    enum:
-                      - static
-                      - boolean
-                      - single_use
-                      - continuous_use
-                      - credit_system
-                    description: The type of the feature
-                  display:
-                    anyOf:
-                      - type: object
-                        properties:
-                          singular:
-                            type: string
-                            description: The singular display name for the feature.
-                          plural:
-                            type: string
-                            description: The plural display name for the feature.
-                        required:
-                          - singular
-                          - plural
-                      - type: "null"
-                    description: Singular and plural display names for the feature.
-                  credit_schema:
-                    anyOf:
-                      - type: array
-                        items:
-                          type: object
-                          properties:
-                            metered_feature_id:
-                              type: string
-                              description: The ID of the metered feature (should be a single_use feature).
-                            credit_cost:
-                              type: number
-                              description: The credit cost of the metered feature.
-                          required:
-                            - metered_feature_id
-                            - credit_cost
-                      - type: "null"
-                    description: Credit cost schema for credit system features.
-                  archived:
-                    anyOf:
-                      - type: boolean
-                      - type: "null"
-                    description: Whether or not the feature is archived.
-                required:
-                  - id
-                  - type
               included:
                 type: number
               unlimited:
@@ -733,15 +610,6 @@ components:
                       - billing_method
                       - max_purchase
                   - type: "null"
-              display:
-                type: object
-                properties:
-                  primary_text:
-                    type: string
-                  secondary_text:
-                    type: string
-                required:
-                  - primary_text
               rollover:
                 type: object
                 properties:
@@ -796,8 +664,6 @@ components:
             - duration_length
             - duration_type
             - card_required
-        created_at:
-          type: number
         env:
           enum:
             - sandbox
@@ -827,7 +693,6 @@ components:
           required:
             - scenario
       required:
-        - id
         - name
         - description
         - group
@@ -836,7 +701,6 @@ components:
         - auto_enable
         - price
         - items
-        - created_at
         - env
         - archived
         - base_variant_id
@@ -850,27 +714,12 @@ paths:
     post:
       operationId: getOrCreate
       description: >-
-        Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+        Creates a customer if they do not exist, or returns the existing
+        customer by your external customer ID.
 
 
-        Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
-
-
-        @example
-
-        ```typescript
-
-        // Create or fetch a customer by external ID
-
-        const response = await client.getOrCreate({
-
-
-
-            "id": "cus_123",
-            "name": "John Doe",
-            "email": "john@example.com"
-          });
-        ```
+        Use this as the primary entrypoint before billing operations so the
+        customer record is always present and up to date.
       tags:
         - customers
       requestBody:
@@ -899,7 +748,8 @@ paths:
                   anyOf:
                     - type: string
                     - type: "null"
-                  description: Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse
+                  description: Unique identifier (eg, serial number) to detect duplicate customers
+                    and prevent free trial abuse
                 metadata:
                   anyOf:
                     - type: object
@@ -919,67 +769,23 @@ paths:
                 auto_enable_plan_id:
                   type: string
                   description: The ID of the free plan to auto-enable for the customer
-                processors:
-                  anyOf:
-                    - type: object
-                      properties:
-                        vercel:
-                          type: object
-                          properties:
-                            installation_id:
-                              type: string
-                            access_token:
-                              type: string
-                            account_id:
-                              type: string
-                            custom_payment_method_id:
-                              type: string
-                          required:
-                            - installation_id
-                            - access_token
-                            - account_id
-                    - type: "null"
-                  description: External processors for the customer
                 send_email_receipts:
                   type: boolean
                   description: Whether to send email receipts to this customer
-                internal_options:
-                  type: object
-                  properties:
-                    default_group:
-                      type: string
-                      description: The group of products to attach to the customer
-                    disable_defaults:
-                      type: boolean
-                      description: Whether to disable default products
                 expand:
                   type: array
                   items:
                     $ref: "#/components/schemas/CustomerExpand"
                   description: Customer expand options
-                entity_id:
-                  type: string
-                entity_data:
-                  type: object
-                  properties:
-                    feature_id:
-                      type: string
-                      description: The feature ID that this entity is associated with
-                    name:
-                      type: string
-                      description: Name of the entity
-                  required:
-                    - feature_id
-                id:
-                  anyOf:
-                    - $ref: "#/components/schemas/CustomerId"
-                    - type: "null"
-                with_autumn_id:
-                  type: boolean
-                  default: false
               required:
                 - customer_id
               title: GetOrCreateCustomerParams
+              examples:
+                - &a1
+                  customer_id: cus_123
+                  name: John Doe
+                  email: john@example.com
+            example: *a1
       responses:
         "200":
           description: OK
@@ -987,8 +793,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Customer"
+              example: *a2
       parameters:
-        - &a1
+        - &a3
           name: x-api-version
           in: header
           required: true
@@ -1000,22 +807,15 @@ paths:
         - lang: typescript
           label: Typescript (SDK)
           source: |-
-            import { Autumn } from "@useautumn/sdk";
+            import { Autumn } from 'autumn-js'
 
-            const autumn = new Autumn({
-              xApiVersion: "2.1",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            const autumn = new Autumn()
+
+            const result = await autumn.customers.getOrCreate({
+              customerId: "cus_123",
+              name: "John Doe",
+              email: "john@example.com",
             });
-
-            async function run() {
-              const result = await autumn.customers.getOrCreate({
-                customerId: null,
-              });
-
-              console.log(result);
-            }
-
-            run();
   /v1/products:
     get:
       operationId: list
@@ -1023,7 +823,7 @@ paths:
       tags:
         - plans
       parameters:
-        - *a1
+        - *a3
       responses:
         "200":
           description: OK
@@ -1042,20 +842,11 @@ paths:
         - lang: typescript
           label: Typescript (SDK)
           source: |-
-            import { Autumn } from "@useautumn/sdk";
+            import { Autumn } from 'autumn-js'
 
-            const autumn = new Autumn({
-              xApiVersion: "2.1",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-            });
+            const autumn = new Autumn()
 
-            async function run() {
-              const result = await autumn.plans.list();
-
-              console.log(result);
-            }
-
-            run();
+            const result = await autumn.plans.list();
   /v1/attach:
     post:
       operationId: attach
@@ -1068,21 +859,6 @@ paths:
             schema:
               type: object
               properties:
-                entity_id:
-                  anyOf:
-                    - type: string
-                    - type: "null"
-                entity_data:
-                  type: object
-                  properties:
-                    feature_id:
-                      type: string
-                      description: The feature ID that this entity is associated with
-                    name:
-                      type: string
-                      description: Name of the entity
-                  required:
-                    - feature_id
                 options:
                   anyOf:
                     - type: array
@@ -1136,76 +912,8 @@ paths:
                         anyOf:
                           - type: string
                           - type: "null"
-                        description: The feature ID of the product item. Should be null for fixed price items.
-                      feature_type:
-                        anyOf:
-                          - enum:
-                              - single_use
-                              - continuous_use
-                              - boolean
-                              - static
-                          - type: "null"
-                      feature:
-                        anyOf:
-                          - type: object
-                            properties:
-                              id:
-                                type: string
-                                description: The ID of the feature, used to refer to it in other API calls like /track or /check.
-                              name:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The name of the feature.
-                              type:
-                                enum:
-                                  - static
-                                  - boolean
-                                  - single_use
-                                  - continuous_use
-                                  - credit_system
-                                description: The type of the feature
-                              display:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      singular:
-                                        type: string
-                                        description: The singular display name for the feature.
-                                      plural:
-                                        type: string
-                                        description: The plural display name for the feature.
-                                    required:
-                                      - singular
-                                      - plural
-                                  - type: "null"
-                                description: Singular and plural display names for the feature.
-                              credit_schema:
-                                anyOf:
-                                  - type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        metered_feature_id:
-                                          type: string
-                                          description: The ID of the metered feature (should be a single_use feature).
-                                        credit_cost:
-                                          type: number
-                                          description: The credit cost of the metered feature.
-                                      required:
-                                        - metered_feature_id
-                                        - credit_cost
-                                  - type: "null"
-                                description: Credit cost schema for credit system features.
-                              archived:
-                                anyOf:
-                                  - type: boolean
-                                  - type: "null"
-                                description: Whether or not the feature is archived.
-                            required:
-                              - id
-                              - type
-                          - type: "null"
+                        description: The feature ID of the product item. Should be null for fixed price
+                          items.
                       included_usage:
                         anyOf:
                           - anyOf:
@@ -1225,7 +933,9 @@ paths:
                               - semi_annual
                               - year
                           - type: "null"
-                        description: The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
+                        description: The reset or billing interval of the product item. If null, feature
+                          will have no reset date, and if there's a price, it
+                          will be billed one-off.
                       interval_count:
                         anyOf:
                           - type: number
@@ -1235,19 +945,22 @@ paths:
                         anyOf:
                           - type: string
                           - type: "null"
-                        description: The feature ID of the entity (like seats) to track sub-balances for.
+                        description: The feature ID of the entity (like seats) to track sub-balances
+                          for.
                       usage_model:
                         anyOf:
                           - enum:
                               - prepaid
                               - pay_per_use
                           - type: "null"
-                        description: Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
+                        description: Whether the feature should be prepaid upfront or billed for how
+                          much they use end of billing period.
                       price:
                         anyOf:
                           - type: number
                           - type: "null"
-                        description: The price of the product item. Should be null if tiered pricing is set.
+                        description: The price of the product item. Should be null if tiered pricing is
+                          set.
                       tiers:
                         anyOf:
                           - type: array
@@ -1266,7 +979,8 @@ paths:
                                 - to
                                 - amount
                           - type: "null"
-                        description: Tiered pricing for the product item. Not applicable for fixed price items.
+                        description: Tiered pricing for the product item. Not applicable for fixed price
+                          items.
                       billing_units:
                         anyOf:
                           - type: number
@@ -1277,80 +991,6 @@ paths:
                           - type: boolean
                           - type: "null"
                         description: Whether the usage should be reset when the product is enabled.
-                      display:
-                        anyOf:
-                          - type: object
-                            properties:
-                              primary_text:
-                                type: string
-                              secondary_text:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                            required:
-                              - primary_text
-                          - type: "null"
-                      usage_limit:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      config:
-                        anyOf:
-                          - type: object
-                            properties:
-                              on_increase:
-                                anyOf:
-                                  - enum:
-                                      - bill_immediately
-                                      - prorate_immediately
-                                      - prorate_next_cycle
-                                      - bill_next_cycle
-                                  - type: "null"
-                              on_decrease:
-                                anyOf:
-                                  - enum:
-                                      - prorate
-                                      - prorate_immediately
-                                      - prorate_next_cycle
-                                      - none
-                                      - no_prorations
-                                  - type: "null"
-                              rollover:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      max:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                      duration:
-                                        enum:
-                                          - month
-                                          - forever
-                                        default: month
-                                      length:
-                                        type: number
-                                    required:
-                                      - max
-                                      - length
-                                  - type: "null"
-                          - type: "null"
-                      created_at:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      entitlement_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      price_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      price_config:
-                        anyOf:
-                          - {}
-                          - type: "null"
                 product_id:
                   type: string
                 invoice:
@@ -1390,8 +1030,6 @@ paths:
                 type: object
                 properties:
                   customer_id:
-                    type: string
-                  entity_id:
                     type: string
                   invoice:
                     type: object
@@ -1437,27 +1075,18 @@ paths:
                   - customer_id
                   - payment_url
       parameters:
-        - *a1
+        - *a3
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
           source: |-
-            import { Autumn } from "@useautumn/sdk";
+            import { Autumn } from 'autumn-js'
 
-            const autumn = new Autumn({
-              xApiVersion: "2.1",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            const autumn = new Autumn()
+
+            const result = await autumn.billing.attach({
+              productId: "<id>",
             });
-
-            async function run() {
-              const result = await autumn.billing.attach({
-                productId: "<id>",
-              });
-
-              console.log(result);
-            }
-
-            run();
 security:
   - secretKey: []
 x-speakeasy-globals:
