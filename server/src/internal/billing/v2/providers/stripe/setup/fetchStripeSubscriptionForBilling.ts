@@ -7,6 +7,7 @@ import {
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/subscriptions";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
@@ -47,6 +48,12 @@ export const fetchStripeSubscriptionForBilling = async ({
 	if (!sub) {
 		throw new InternalError({
 			message: `[Stripe Subscription] Subscription not found: ${subId}`,
+		});
+	}
+
+	if (isStripeSubscriptionCanceled(sub)) {
+		throw new InternalError({
+			message: `[Stripe Subscription] Subscription is canceled: ${subId}`,
 		});
 	}
 

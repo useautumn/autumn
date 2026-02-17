@@ -14,6 +14,10 @@ export const applyProration = ({
 
 	const denom = new Decimal(end).minus(start);
 
+	if (denom.isZero()) {
+		throw new Error("Billing period is incorrect (start and end are the same)");
+	}
+
 	const num = new Decimal(end).minus(now);
 
 	return num.div(denom).mul(amount).toNumber();
