@@ -69,7 +69,7 @@ function InlinePlanEditorContent({
 			<div className="flex w-full h-full overflow-hidden relative flex-1">
 				<motion.div
 					className={cn(
-						"h-full overflow-hidden absolute inset-0",
+						"h-full overflow-hidden absolute inset-0 z-0",
 						sheetType && "pointer-events-none",
 					)}
 					animate={{ width: sheetType ? "calc(100% - 28rem)" : "100%" }}
