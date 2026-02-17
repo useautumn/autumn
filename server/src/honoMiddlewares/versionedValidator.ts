@@ -122,6 +122,7 @@ export const versionedValidator = ({
 				fromVersion: userVersion,
 				toVersion: new ApiVersionClass(LATEST_VERSION),
 				resource,
+				ctx,
 			});
 
 			// Replace validated data with transformed version

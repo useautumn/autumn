@@ -5,7 +5,6 @@ import {
 	ApiVersion,
 	formatMs,
 } from "@autumn/shared";
-import type { Customer } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -16,7 +15,7 @@ export const expectCustomerFeatureExists = async ({
 	featureId,
 }: {
 	customerId?: string;
-	customer?: Customer | ApiEntityV0;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	featureId: string;
 }) => {
 	const customer = providedCustomer

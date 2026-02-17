@@ -1,6 +1,6 @@
 import type {
 	UpdateSubscriptionBillingContextOverride,
-	UpdateSubscriptionV0Params,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import {
 	type AttachBodyV0,
@@ -63,7 +63,7 @@ export const renew = async ({
 
 	const fullCustomer = attachParams.customer;
 
-	const params: UpdateSubscriptionV0Params = {
+	const params: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
 		product_id: fullProduct.id,

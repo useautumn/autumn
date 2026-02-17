@@ -1,6 +1,6 @@
 import type {
 	AttachBillingContext,
-	AttachParamsV0,
+	AttachParamsV1,
 	BillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -20,11 +20,11 @@ export async function createAutumnCheckout({
 	billingPlan,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<AttachResult> {
-	const { checkout, checkoutUrl } = await billingPlanToAutumnCheckout({
+	const { checkout } = await billingPlanToAutumnCheckout({
 		ctx,
 		params,
 		billingContext,

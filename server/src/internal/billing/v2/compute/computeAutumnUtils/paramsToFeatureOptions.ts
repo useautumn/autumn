@@ -1,5 +1,5 @@
 import type {
-	BillingParamsBase,
+	BillingParamsBaseV1,
 	EntitlementWithFeature,
 	FeatureOptions,
 	Price,
@@ -12,7 +12,7 @@ export const paramsToFeatureOptions = ({
 	price,
 	entitlement,
 }: {
-	params: BillingParamsBase;
+	params: BillingParamsBaseV1;
 	price: Price;
 	entitlement: EntitlementWithFeature;
 }): FeatureOptions | undefined => {

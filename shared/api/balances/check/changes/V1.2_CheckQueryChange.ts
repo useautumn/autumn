@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../../types/sharedContext.js";
 import { CheckQuerySchema } from "../checkParams.js";
 import { CheckExpand } from "../enums/CheckExpand.js";
 
@@ -42,8 +43,10 @@ export const V1_2_CheckQueryChange = defineVersionChange({
 
 	// Request: V1.2 → V2.0 (add expand option)
 	transformRequest: ({
+		ctx: _ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof CheckQuerySchema>;
 	}) => {
 		const existingExpand = input.expand || [];

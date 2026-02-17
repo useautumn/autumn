@@ -4,7 +4,7 @@ import {
 	notNullish,
 	RecaseError,
 	type UpdateSubscriptionBillingContextOverride,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
@@ -19,7 +19,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }) => {
 	const { productContext } = contextOverride;
@@ -59,7 +59,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 	} = await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: fullProduct,
-		customItems: params.items,
+		customizePlan: params.customize,
 	});
 
 	return {
