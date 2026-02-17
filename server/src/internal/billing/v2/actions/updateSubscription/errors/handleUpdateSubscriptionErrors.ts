@@ -74,7 +74,7 @@ export const handleUpdateSubscriptionErrors = async ({
 		billingContext,
 		currentCustomerProduct: customerProduct,
 		billingPlan,
-		billingBehavior: params.billing_behavior,
+		params,
 	});
 
 	// 11. Stripe billing plan errors (validate Stripe resources)
