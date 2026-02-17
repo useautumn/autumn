@@ -374,6 +374,8 @@ export function BalanceEditSheet() {
 													next_reset_at: unixDate,
 												});
 											}}
+											withTime
+											use24Hour
 										/>
 									</div>
 
