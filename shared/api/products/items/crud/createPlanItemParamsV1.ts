@@ -51,6 +51,10 @@ export const CreatePlanItemParamsV1Schema = z
 			})
 			.optional(),
 
+		entity_feature_id: z.string().optional().meta({
+			internal: true,
+		}),
+
 		// Internal
 		entitlement_id: z.string().optional().meta({
 			internal: true,

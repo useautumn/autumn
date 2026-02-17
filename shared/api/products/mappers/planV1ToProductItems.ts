@@ -24,7 +24,7 @@ export const planV1ToProductItems = ({
 	// Convert features to items
 	const featureItems =
 		plan.items?.map((planItem) => {
-			const planV0 = planItemV1ToV0(planItem);
+			const planV0 = planItemV1ToV0({ ctx, item: planItem });
 			return planItemV0ToProductItem({ ctx, planItem: planV0 });
 		}) ?? [];
 

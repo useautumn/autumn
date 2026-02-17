@@ -1,4 +1,3 @@
-import { RefundBehaviorSchema } from "@api/billing/common/refundBehavior";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
@@ -23,20 +22,12 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'prorate_immediately' (default): Invoice line items are charged immediately
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
-
-		// Refund behavior for negative invoice totals (downgrades):
-		// - 'grant_invoice_credits' (default): Apply credits to customer balance
-		// - 'refund_payment_method': Issue refund to payment method
-		// refund_behavior: RefundBehaviorSchema.optional(),
-
-		// reset_billing_cycle_anchor: z.boolean().optional(),
-		// new_billing_subscription: z.boolean().optional(),
 	});
 
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
-		refund_behavior: RefundBehaviorSchema.optional(),
+		// refund_behavior: RefundBehaviorSchema.optional(),
 	})
 		.refine(
 			(data) => {

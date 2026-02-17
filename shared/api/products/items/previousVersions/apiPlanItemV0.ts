@@ -58,6 +58,10 @@ export const ApiPlanItemV0Schema = z
 			})
 			.optional(),
 
+		entity_feature_id: z.string().optional().meta({
+			internal: true,
+		}),
+
 		entitlement_id: z.string().optional().meta({
 			internal: true,
 		}),
