@@ -16,7 +16,7 @@ import { generateId } from "@/utils/genUtils";
 const CHECKOUT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 // Current params version for attach
-const ATTACH_PARAMS_VERSION = 0;
+const ATTACH_PARAMS_VERSION = 1;
 
 /**
  * Creates an Autumn checkout from billing plan.
