@@ -1,6 +1,6 @@
 import type {
 	AttachBillingContext,
-	AttachParamsV0,
+	AttachParamsV1,
 	BillingContextOverride,
 	BillingPlan,
 	BillingResult,
@@ -31,7 +31,7 @@ export async function attach({
 	contextOverride,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 	contextOverride?: BillingContextOverride;

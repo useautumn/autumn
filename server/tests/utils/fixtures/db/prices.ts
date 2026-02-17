@@ -43,6 +43,7 @@ const createPrepaid = ({
 			usage_tiers: [{ to: Infinite, amount: 10 }],
 			interval: BillingInterval.Month,
 			stripe_price_id: stripePriceId ?? `stripe_price_${id}`,
+			stripe_prepaid_price_v2_id: stripePriceId ?? `stripe_price_${id}`,
 		},
 	}) as Price;
 

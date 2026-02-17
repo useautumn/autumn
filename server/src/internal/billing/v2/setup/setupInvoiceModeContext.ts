@@ -1,12 +1,12 @@
 import type {
-	AttachParamsV0,
-	UpdateSubscriptionV0Params,
+	AttachParamsV1,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
 export const setupInvoiceModeContext = ({
 	params,
 }: {
-	params: UpdateSubscriptionV0Params | AttachParamsV0;
+	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
 	if (params?.invoice !== true) {
 		return undefined;

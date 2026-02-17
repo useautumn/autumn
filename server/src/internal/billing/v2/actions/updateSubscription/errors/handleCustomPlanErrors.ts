@@ -1,12 +1,14 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import {
 	cusProductToProduct,
 	productsAreSame,
 	RecaseError,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 
 export const handleCustomPlanErrors = ({
 	ctx,
@@ -17,9 +19,9 @@ export const handleCustomPlanErrors = ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
-	if (!params.items) return;
+	if (!params.customize) return;
 
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
 	const currentCustomerProduct = billingContext.customerProduct;

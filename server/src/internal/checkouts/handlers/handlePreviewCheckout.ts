@@ -1,5 +1,5 @@
 import {
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type Checkout,
 	CheckoutAction,
 	ErrCode,
@@ -44,10 +44,10 @@ export const handlePreviewCheckout = createRoute({
 			});
 		}
 
-		const originalParams = checkout.params as AttachParamsV0;
+		const originalParams = checkout.params as AttachParamsV1;
 
 		// Merge provided options with original params
-		const params: AttachParamsV0 = {
+		const params: AttachParamsV1 = {
 			...originalParams,
 			options: body.options,
 		};

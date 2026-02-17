@@ -2,11 +2,11 @@ import { RefundBehaviorSchema } from "@api/billing/common/refundBehavior";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
-import { BillingParamsBaseSchema } from "../common/billingParamsBase";
+import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
-	BillingParamsBaseSchema.extend({
+	BillingParamsBaseV0Schema.extend({
 		// Product identification (optional for update subscription - can target by customer_product_id)
 		product_id: z.string().nullish(),
 
