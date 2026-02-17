@@ -51,7 +51,7 @@ export function planItemParamsV1ToPlanItemV0({
 
 		rollover: item.rollover
 			? {
-					max: item.rollover.max,
+					max: item.rollover.max ?? null,
 					expiry_duration_type: item.rollover.expiry_duration_type,
 					expiry_duration_length: item.rollover.expiry_duration_length,
 				}

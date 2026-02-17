@@ -147,12 +147,14 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 	fromVersion,
 	toVersion,
 	resource,
+	ctx,
 }: {
 	input: T;
 	legacyData?: TLegacyData;
 	fromVersion: ApiVersionClass; // User's version (old)
 	toVersion: ApiVersionClass; // Latest version (new)
 	resource: AffectedResource;
+	ctx: SharedContext;
 }): T {
 	// If versions are equal, no transformation needed
 	if (fromVersion.eq(toVersion)) {
@@ -204,6 +206,7 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 				input: transformedData,
 				// biome-ignore lint/suspicious/noExplicitAny: Runtime type flexibility needed for version changes
 				legacyData: legacyData as any,
+				ctx,
 			}) as T;
 		}
 	}
@@ -277,12 +280,14 @@ export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 	fromVersion,
 	toVersion,
 	resource,
+	ctx,
 }: {
 	inputArray: T[];
 	legacyData?: TLegacyData;
 	fromVersion: ApiVersionClass;
 	toVersion: ApiVersionClass;
 	resource: AffectedResource;
+	ctx: SharedContext;
 }): T[] {
 	return inputArray.map((item) =>
 		applyRequestVersionChanges({
@@ -291,6 +296,7 @@ export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 			fromVersion,
 			toVersion,
 			resource,
+			ctx,
 		}),
 	);
 }

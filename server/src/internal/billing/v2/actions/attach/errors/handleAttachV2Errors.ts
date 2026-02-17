@@ -1,6 +1,6 @@
 import type {
 	AttachBillingContext,
-	AttachParamsV0,
+	AttachParamsV1,
 	BillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -22,7 +22,7 @@ export const handleAttachV2Errors = ({
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
@@ -52,6 +52,6 @@ export const handleAttachV2Errors = ({
 		billingContext,
 		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,
-		billingBehavior: params.billing_behavior,
+		params,
 	});
 };

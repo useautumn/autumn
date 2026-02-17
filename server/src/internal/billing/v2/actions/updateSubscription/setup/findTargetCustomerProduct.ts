@@ -1,14 +1,14 @@
 import {
 	type FullCustomer,
 	isCusProductOnEntity,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
 export const findTargetCustomerProduct = ({
 	params,
 	fullCustomer,
 }: {
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	fullCustomer: FullCustomer;
 }) => {
 	const cusProducts = fullCustomer.customer_products;

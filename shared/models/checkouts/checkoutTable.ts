@@ -1,8 +1,8 @@
+import type { AttachParamsV1 } from "@api/billing/attachV2/attachParamsV1.js";
+import type { UpdateSubscriptionV1Params } from "@api/billing/updateSubscription/updateSubscriptionV1Params.js";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { integer, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
-import type { AttachParamsV0 } from "../../api/billing/attachV2/attachParamsV0.js";
-import type { UpdateSubscriptionV0Params } from "../../api/billing/updateSubscription/updateSubscriptionV0Params.js";
-import { sqlNow } from "../../db/utils.js";
+import { sqlNow } from "../../db/utils";
 
 export enum CheckoutStatus {
 	Pending = "pending",
@@ -15,7 +15,7 @@ export enum CheckoutAction {
 	UpdateSubscription = "update_subscription",
 }
 
-export type CheckoutParams = AttachParamsV0 | UpdateSubscriptionV0Params;
+export type CheckoutParams = AttachParamsV1 | UpdateSubscriptionV1Params;
 
 export const checkouts = pgTable("checkouts", {
 	id: text().primaryKey().notNull(),

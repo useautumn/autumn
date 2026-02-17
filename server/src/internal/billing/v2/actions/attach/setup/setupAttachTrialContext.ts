@@ -1,5 +1,5 @@
 import {
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
@@ -30,7 +30,7 @@ export const setupAttachTrialContext = async ({
 	currentContext,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	currentContext: {
 		fullCustomer: FullCustomer;
 		attachProduct: FullProduct;

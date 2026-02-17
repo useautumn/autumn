@@ -129,11 +129,13 @@ export abstract class VersionChange<
 	transformRequest({
 		input,
 		legacyData: _legacyData,
+		ctx: _ctx,
 	}: {
 		input: z.infer<TOldSchema>;
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
+		ctx?: SharedContext;
 	}): z.infer<TNewSchema> {
 		// Default: no-op (override if change affects requests)
 		return input as unknown as z.infer<TNewSchema>;
@@ -241,6 +243,7 @@ export interface VersionChangeConfig<
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
+		ctx: SharedContext;
 	}) => z.infer<TNewSchema>;
 
 	/**
@@ -305,6 +308,7 @@ export function defineVersionChange<
 			legacyData?: TLegacyDataSchema extends ZodType
 				? z.infer<TLegacyDataSchema>
 				: never;
+			ctx: SharedContext;
 		}): z.infer<TNewSchema> {
 			if (config.transformRequest) {
 				const result = config.transformRequest(params);
