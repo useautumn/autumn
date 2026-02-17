@@ -1,16 +1,14 @@
-import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
+import { InvoiceModeParamsSchema } from "../common/invoiceModeParams.js";
 
 export const UpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
-		product_id: z.string().nullish(),
+		plan_id: z.string().nullish(),
 
-		invoice: z.boolean().optional(),
-		enable_product_immediately: z.boolean().optional(),
-		finalize_invoice: z.boolean().optional(),
+		invoice_mode: InvoiceModeParamsSchema.optional(),
 
 		cancel_action: CancelActionSchema.optional(),
 		billing_behavior: BillingBehaviorSchema.optional(),
@@ -19,28 +17,12 @@ export const UpdateSubscriptionV1ParamsSchema =
 			internal: true,
 		}),
 	})
-
-		.check((ctx) => {
-			if (ctx.value.options && ctx.value.options.length > 0) {
-				const invalidFeatures = ctx.value.options
-					.filter((opt) => nullish(opt.quantity) || opt.quantity < 0)
-					.map((opt) => opt.feature_id);
-
-				if (invalidFeatures.length > 0) {
-					ctx.issues.push({
-						code: "custom",
-						message: `Options quantity must be >= 0 for features: ${invalidFeatures.join(", ")}`,
-						input: ctx.value,
-					});
-				}
-			}
-		})
 		.refine(
 			(data) => {
 				if (data.cancel_action !== "cancel_immediately") return true;
 
 				const forbiddenFields = [
-					"options",
+					"feature_quantities",
 					"version",
 					"free_trial",
 					"customize",
@@ -49,7 +31,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 			},
 			{
 				message:
-					"Cannot pass options, customize, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
+					"Cannot pass feature_quantities, customize, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
 			},
 		)
 		.refine(
