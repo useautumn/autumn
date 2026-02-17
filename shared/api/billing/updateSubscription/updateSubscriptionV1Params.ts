@@ -49,7 +49,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 			},
 			{
 				message:
-					"Cannot pass options, items, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
+					"Cannot pass options, customize, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
 			},
 		)
 		.refine(
