@@ -43,13 +43,13 @@ const handleNonCheckoutErrors = ({
 			message: `Not allowed to ${action} when using force_checkout`,
 			code: ErrCode.InvalidRequest,
 		});
-	} else if (config.invoiceCheckout) {
-		throw new RecaseError({
-			message: `Not allowed to ${action} when using 'invoice': true`,
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	// } else if (config.invoiceCheckout) {
+	// 	throw new RecaseError({
+	// 		message: `Not allowed to ${action} when using 'invoice': true`,
+	// 		code: ErrCode.InvalidRequest,
+	// 		statusCode: StatusCodes.BAD_REQUEST,
+	// 	});
+	// }
 };
 
 const handlePrepaidErrors = async ({
