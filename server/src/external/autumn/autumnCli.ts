@@ -11,8 +11,6 @@ import {
 	type AttachBodyV0,
 	type AttachParamsV0Input,
 	type BalancesUpdateParams,
-	type BillingPreviewResponse,
-	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
@@ -263,13 +261,13 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(
-		params: AttachBodyV0,
+	async attach<TInput = AttachBodyV0>(
+		params: TInput,
 		{
 			skipWebhooks,
 			idempotencyKey,
 		}: { skipWebhooks?: boolean; idempotencyKey?: string } = {},
-	) {
+	): Promise<any> {
 		const headers: Record<string, string> = {};
 		if (skipWebhooks !== undefined) {
 			headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
@@ -815,13 +813,13 @@ export class AutumnInt {
 	};
 
 	subscriptions = {
-		update: async (
-			params: UpdateSubscriptionV0Params,
+		update: async <TInput = UpdateSubscriptionV0Params>(
+			params: TInput,
 			{
 				timeout,
 				skipWebhooks,
 			}: { timeout?: number; skipWebhooks?: boolean } = {},
-		): Promise<BillingResponse> => {
+		): Promise<any> => {
 			const headers: Record<string, string> = {};
 			if (skipWebhooks !== undefined) {
 				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
@@ -838,15 +836,21 @@ export class AutumnInt {
 			return data;
 		},
 
-		previewUpdate: async (params: UpdateSubscriptionV0Params) => {
+		previewUpdate: async <TInput = UpdateSubscriptionV0Params>(
+			params: TInput,
+		): Promise<any> => {
 			const data = await this.post(`/subscriptions/preview_update`, params);
 			return data;
 		},
 	};
 
 	billing = {
-		attach: async (
-			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
+		attach: async <
+			TInput = Omit<AttachParamsV0Input, "items"> & {
+				items?: ProductItem[];
+			},
+		>(
+			params: TInput,
 			{
 				skipWebhooks,
 				idempotencyKey,
@@ -856,7 +860,7 @@ export class AutumnInt {
 				idempotencyKey?: string;
 				timeout?: number;
 			} = {},
-		) => {
+		): Promise<any> => {
 			const headers: Record<string, string> = {};
 			if (skipWebhooks !== undefined) {
 				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
@@ -877,9 +881,13 @@ export class AutumnInt {
 			return data;
 		},
 
-		previewAttach: async (
-			params: Omit<AttachParamsV0Input, "items"> & { items?: ProductItem[] },
-		): Promise<BillingPreviewResponse> => {
+		previewAttach: async <
+			TInput = Omit<AttachParamsV0Input, "items"> & {
+				items?: ProductItem[];
+			},
+		>(
+			params: TInput,
+		): Promise<any> => {
 			const data = await this.post(`/billing/preview_attach`, {
 				...params,
 				redirect_mode: "if_required",

@@ -483,7 +483,7 @@ describe(
 				expect(result[0].price).toBe("stripe_premium_consumable");
 			});
 
-			test("Entity product, same quantities returns empty array", () => {
+			test("Entity product, same quantities returns only metered addition", () => {
 				const premium = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -508,7 +508,8 @@ describe(
 					entityId: "entity_1",
 				});
 
-				// Entity-level includes the empty price with quantity 0
+				// Entity-level subscription has 3 items (no metered consumable)
+				// Note: withEntity is hardcoded to false, so entity products use regular metered prices
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, { isEntityLevel: true }),
@@ -526,8 +527,9 @@ describe(
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
-				// No changes needed - all quantities match
-				expect(result).toHaveLength(0);
+				// Only the metered consumable needs to be added (wasn't in existing subscription)
+				expect(result).toHaveLength(1);
+				expect(result[0].price).toBe("stripe_premium_consumable");
 			});
 		});
 
@@ -568,14 +570,14 @@ describe(
 				]);
 			});
 
-			test("Remove entity product marks all items including consumable as deleted", () => {
+			test("Remove entity product marks all items as deleted", () => {
 				const premium = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
 					customerProductId: "cus_prod_premium_entity",
 				});
 
-				// Entity-level subscription has 4 items (including empty consumable)
+				// Entity-level subscription has 3 items (no metered consumable - withEntity is hardcoded to false)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, { isEntityLevel: true }),
@@ -593,12 +595,11 @@ describe(
 					finalCustomerProducts: [],
 				});
 
-				// Should delete all 4 items
-				expect(result).toHaveLength(4);
+				// Should delete all 3 items (fixed, prepaid, allocated)
+				expect(result).toHaveLength(3);
 				expectSubscriptionItemsUpdate(result, [
 					{ id: "si_premium_fixed", deleted: true },
 					{ id: "si_premium_prepaid", deleted: true },
-					{ id: "si_premium_consumable", deleted: true },
 					{ id: "si_premium_allocated", deleted: true },
 				]);
 			});
@@ -753,7 +754,7 @@ describe(
 				expect(result).toHaveLength(0);
 			});
 
-			test("Entity-level consumable uses stripe_empty_price_id with quantity 0", () => {
+			test("Entity-level consumable uses regular metered price (withEntity hardcoded to false)", () => {
 				const premium = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -787,13 +788,14 @@ describe(
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
-				// Find the consumable item
+				// Find the consumable item - now uses regular metered price (withEntity is hardcoded to false)
 				const consumableItem = result.find((item) =>
 					item.price?.includes("consumable"),
 				);
 				expect(consumableItem).toBeDefined();
-				expect(consumableItem?.price).toBe("stripe_premium_consumable_empty");
-				expect(consumableItem?.quantity).toBe(0);
+				expect(consumableItem?.price).toBe("stripe_premium_consumable");
+				// Metered prices should NOT have quantity
+				expect("quantity" in (consumableItem ?? {})).toBe(false);
 			});
 
 			test("Customer-level consumable (metered) has no quantity", () => {

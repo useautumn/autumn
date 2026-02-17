@@ -8,14 +8,14 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import chalk from "chalk";
 import {
 	computeUpdateSubscriptionIntent,
 	UpdateSubscriptionIntent,
 } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionIntent";
 
-const baseParams: UpdateSubscriptionV0Params = {
+const baseParams: UpdateSubscriptionV1Params = {
 	customer_id: "cus_test",
 	product_id: "prod_test",
 };
@@ -23,7 +23,7 @@ const baseParams: UpdateSubscriptionV0Params = {
 describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 	describe(chalk.cyan("Version parameter priority"), () => {
 		test("returns UpdatePlan when version is specified", () => {
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				version: 2,
 			};
@@ -34,7 +34,7 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 		});
 
 		test("returns UpdatePlan when version is specified even with options", () => {
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				version: 3,
 				options: [{ feature_id: "seats", quantity: 10 }],
@@ -46,7 +46,7 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 		});
 
 		test("returns UpdatePlan when version is 0", () => {
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				version: 0,
 			};
@@ -58,8 +58,8 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 	});
 
 	describe(chalk.cyan("UpdateQuantity intent"), () => {
-		test("returns UpdateQuantity when options provided without items", () => {
-			const params: UpdateSubscriptionV0Params = {
+		test("returns UpdateQuantity when options provided without customize", () => {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				options: [{ feature_id: "seats", quantity: 5 }],
 			};
@@ -70,7 +70,7 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 		});
 
 		test("returns UpdateQuantity with multiple options", () => {
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				options: [
 					{ feature_id: "seats", quantity: 5 },
@@ -85,10 +85,12 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 	});
 
 	describe(chalk.cyan("UpdatePlan intent (default)"), () => {
-		test("returns UpdatePlan when items provided", () => {
-			const params: UpdateSubscriptionV0Params = {
+		test("returns UpdatePlan when customize provided", () => {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
-				items: [{ feature_id: "seats", included_usage: 10 }],
+				customize: {
+					items: [{ feature_id: "seats", included: 10 }],
+				},
 			};
 
 			const result = computeUpdateSubscriptionIntent(params);
@@ -96,11 +98,13 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
 
-		test("returns UpdatePlan when both options and items provided", () => {
-			const params: UpdateSubscriptionV0Params = {
+		test("returns UpdatePlan when both options and customize provided", () => {
+			const params: UpdateSubscriptionV1Params = {
 				...baseParams,
 				options: [{ feature_id: "seats", quantity: 5 }],
-				items: [{ feature_id: "seats", included_usage: 10 }],
+				customize: {
+					items: [{ feature_id: "seats", included: 10 }],
+				},
 			};
 
 			const result = computeUpdateSubscriptionIntent(params);

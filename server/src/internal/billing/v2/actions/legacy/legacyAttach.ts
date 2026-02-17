@@ -1,5 +1,9 @@
-import type { BillingContextOverride, PlanTiming } from "@autumn/shared";
-import { type AttachParamsV0, BillingVersion } from "@autumn/shared";
+import type {
+	AttachParamsV1,
+	BillingContextOverride,
+	PlanTiming,
+} from "@autumn/shared";
+import { BillingVersion } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
@@ -44,14 +48,10 @@ export const legacyAttach = async ({
 
 	const fullCustomer = attachParams.customer;
 
-	const params: AttachParamsV0 = {
+	const params: AttachParamsV1 = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
 		product_id: fullProduct.id,
-		// items: body.items,
-		// version: body.version,
-		// invoice: body.invoice,
-		// free_trial: body.free_trial === false ? null : undefined,
 
 		invoice: attachParams.invoiceOnly,
 		enable_product_immediately: true,

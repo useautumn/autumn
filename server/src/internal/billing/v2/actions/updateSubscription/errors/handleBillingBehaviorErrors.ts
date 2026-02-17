@@ -7,7 +7,7 @@ import {
 	ErrCode,
 	isFreeProduct,
 	RecaseError,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import {
@@ -22,7 +22,7 @@ export const handleBillingBehaviorErrors = ({
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 

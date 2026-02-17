@@ -105,12 +105,13 @@ describe(
 				);
 				expect(prepaidItem?.quantity).toBe(200);
 
-				// Consumable (entities use empty price): 0 + 0 = 0
+				// Consumable (metered, withEntity hardcoded to false): no quantity
 				const consumableItem = result.find((item) =>
 					item.price?.includes("consumable"),
 				);
-				expect(consumableItem?.price).toBe("stripe_pro_consumable_empty");
-				expect(consumableItem?.quantity).toBe(0);
+				expect(consumableItem?.price).toBe("stripe_pro_consumable");
+				// Metered prices should NOT have quantity
+				expect("quantity" in (consumableItem ?? {})).toBe(false);
 
 				// Allocated: 5 + 5 = 10
 				const allocatedItem = result.find((item) =>
@@ -293,8 +294,8 @@ describe(
 					finalCustomerProducts: [entity1ProProduct, entity2ProProduct],
 				});
 
-				// Should update quantities (double them)
-				expect(result).toHaveLength(3); // fixed, prepaid, allocated (consumable stays 0)
+				// Should update quantities (double them) + add metered consumable
+				expect(result).toHaveLength(4); // fixed, prepaid, allocated, consumable (metered)
 
 				const fixedItem = result.find((item) => item.id?.includes("fixed"));
 				expect(fixedItem?.quantity).toBe(2);
@@ -306,6 +307,12 @@ describe(
 					item.id?.includes("allocated"),
 				);
 				expect(allocatedItem?.quantity).toBe(10);
+
+				// Metered consumable needs to be added
+				const consumableItem = result.find((item) =>
+					item.price?.includes("consumable"),
+				);
+				expect(consumableItem).toBeDefined();
 			});
 
 			test("Remove one entity from two-entity subscription", () => {
@@ -334,7 +341,7 @@ describe(
 					subscriptionIds: ["sub_123"],
 				});
 
-				// Current subscription has 2 entities worth of quantities
+				// Current subscription has 2 entities worth of quantities (no consumable since withEntity is false)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: [
@@ -347,11 +354,6 @@ describe(
 							id: "si_pro_prepaid",
 							priceId: "stripe_pro_prepaid",
 							quantity: 200,
-						},
-						{
-							id: "si_pro_consumable",
-							priceId: "stripe_pro_consumable_empty",
-							quantity: 0,
 						},
 						{
 							id: "si_pro_allocated",
@@ -373,8 +375,8 @@ describe(
 					finalCustomerProducts: [entity1ProProduct],
 				});
 
-				// Should update quantities (halve them)
-				expect(result).toHaveLength(3); // fixed, prepaid, allocated
+				// Should update quantities (halve them) + add metered consumable
+				expect(result).toHaveLength(4); // fixed, prepaid, allocated, consumable
 
 				const fixedItem = result.find((item) => item.id?.includes("fixed"));
 				expect(fixedItem?.quantity).toBe(1);
@@ -386,6 +388,12 @@ describe(
 					item.id?.includes("allocated"),
 				);
 				expect(allocatedItem?.quantity).toBe(5);
+
+				// Metered consumable needs to be added
+				const consumableItem = result.find((item) =>
+					item.price?.includes("consumable"),
+				);
+				expect(consumableItem).toBeDefined();
 			});
 		});
 
@@ -524,13 +532,12 @@ describe(
 					finalCustomerProducts: [customerProProduct, entityProProduct],
 				});
 
-				// Should have 5 items:
+				// Should have 4 items (withEntity hardcoded to false, so both use metered):
 				// - fixed (1+1=2)
 				// - prepaid (100+50=150)
 				// - allocated (5+3=8)
-				// - consumable metered (customer)
-				// - consumable empty (entity)
-				expect(result).toHaveLength(5);
+				// - consumable metered (both customer and entity use regular price)
+				expect(result).toHaveLength(4);
 
 				// Fixed: 1 + 1 = 2
 				const fixedItem = result.find((item) => item.price?.includes("fixed"));
@@ -548,16 +555,11 @@ describe(
 				);
 				expect(allocatedItem?.quantity).toBe(8);
 
-				// Both consumable prices should be present
+				// Only one consumable price (metered, withEntity is false)
 				const consumableMetered = result.find(
 					(item) => item.price === "stripe_pro_consumable",
 				);
-				const consumableEmpty = result.find(
-					(item) => item.price === "stripe_pro_consumable_empty",
-				);
 				expect(consumableMetered).toBeDefined();
-				expect(consumableEmpty).toBeDefined();
-				expect(consumableEmpty?.quantity).toBe(0);
 				// Metered should not have quantity
 				expect("quantity" in (consumableMetered ?? {})).toBe(false);
 			});
@@ -588,7 +590,7 @@ describe(
 					subscriptionIds: ["sub_123"],
 				});
 
-				// Current subscription has both customer and entity
+				// Current subscription has customer and entity (both use regular metered price - withEntity is false)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: [
@@ -597,16 +599,6 @@ describe(
 							id: "si_pro_prepaid",
 							priceId: "stripe_pro_prepaid",
 							quantity: 200,
-						},
-						{
-							id: "si_pro_consumable",
-							priceId: "stripe_pro_consumable",
-							quantity: 0,
-						},
-						{
-							id: "si_pro_consumable_empty",
-							priceId: "stripe_pro_consumable_empty",
-							quantity: 0,
 						},
 						{
 							id: "si_pro_allocated",
@@ -628,7 +620,7 @@ describe(
 					finalCustomerProducts: [entityProProduct],
 				});
 
-				// Should update quantities and remove metered consumable
+				// Should update quantities + add metered consumable (wasn't in subscription)
 				// Fixed: 2 -> 1
 				const fixedItem = result.find((item) => item.id === "si_pro_fixed");
 				expect(fixedItem?.quantity).toBe(1);
@@ -643,11 +635,11 @@ describe(
 				);
 				expect(allocatedItem?.quantity).toBe(5);
 
-				// Metered consumable should be deleted
-				const deletedMetered = result.find(
-					(item) => item.id === "si_pro_consumable" && item.deleted,
+				// Metered consumable should be added (wasn't in subscription)
+				const consumableItem = result.find(
+					(item) => item.price === "stripe_pro_consumable",
 				);
-				expect(deletedMetered).toBeDefined();
+				expect(consumableItem).toBeDefined();
 			});
 		});
 

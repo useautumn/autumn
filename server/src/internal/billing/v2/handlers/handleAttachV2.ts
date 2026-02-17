@@ -1,10 +1,20 @@
-import { AttachParamsV0Schema, InternalError } from "@autumn/shared";
+import {
+	AffectedResource,
+	ApiVersion,
+	AttachParamsV0Schema,
+	AttachParamsV1Schema,
+	InternalError,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleAttachV2 = createRoute({
-	body: AttachParamsV0Schema,
+	versionedBody: {
+		latest: AttachParamsV1Schema,
+		[ApiVersion.V1_Beta]: AttachParamsV0Schema,
+	},
+	resource: AffectedResource.Attach,
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {

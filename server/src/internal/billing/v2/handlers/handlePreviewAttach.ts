@@ -1,11 +1,20 @@
-import { AttachParamsV0Schema } from "@autumn/shared";
+import {
+	AffectedResource,
+	ApiVersion,
+	AttachParamsV0Schema,
+	AttachParamsV1Schema,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewAttach = createRoute({
-	body: AttachParamsV0Schema,
+	versionedBody: {
+		latest: AttachParamsV1Schema,
+		[ApiVersion.V1_Beta]: AttachParamsV0Schema,
+	},
+	resource: AffectedResource.Attach,
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {

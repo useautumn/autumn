@@ -6,7 +6,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	featureUtils,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { FeatureOptionsParamsV0 } from "@shared/api/billing/common/featureOptions/featureOptionsParamsV0";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -45,7 +45,7 @@ export async function migrate({
 			reset_after_trial_end: true,
 		}));
 
-	const updateSubscriptionParams: UpdateSubscriptionV0Params = {
+	const updateSubscriptionParams: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		customer_product_id: currentCustomerProduct.id,
 		entity_id: entity?.id,

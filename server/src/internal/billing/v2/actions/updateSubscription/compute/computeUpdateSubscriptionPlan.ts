@@ -1,7 +1,9 @@
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionV1Params,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 
 import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelPlan";
 
@@ -23,7 +25,7 @@ export const computeUpdateSubscriptionPlan = async ({
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
 	const intent = computeUpdateSubscriptionIntent(params);
 
@@ -39,7 +41,6 @@ export const computeUpdateSubscriptionPlan = async ({
 			plan = await computeCustomPlan({
 				ctx,
 				updateSubscriptionContext: billingContext,
-				params,
 			});
 			break;
 		case UpdateSubscriptionIntent.None:

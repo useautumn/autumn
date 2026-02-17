@@ -2,10 +2,7 @@ import type {
 	AutumnBillingPlan,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
-import {
-	CusProductStatus,
-	type UpdateSubscriptionV0Params,
-} from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/computeDeleteCustomerProduct";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
@@ -14,11 +11,9 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 export const computeCustomPlan = async ({
 	ctx,
 	updateSubscriptionContext,
-	params,
 }: {
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV0Params;
 }) => {
 	const {
 		customerProduct,
