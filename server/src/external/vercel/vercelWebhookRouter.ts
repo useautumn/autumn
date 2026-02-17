@@ -14,6 +14,11 @@ import { handleCreateResource } from "./handlers/resources/handleCreateResource.
 import { handleDeleteResource } from "./handlers/resources/handleDeleteResource.js";
 import { handleGetResource } from "./handlers/resources/handleGetResource.js";
 import { handleUpdateResource } from "./handlers/resources/handleUpdateResource.js";
+import {
+	handleAcceptResourceTransfer,
+	handleCreateResourceTransfer,
+	handleVerifyResourceTransfer,
+} from "./handlers/transfers/handleResourceTransfers.js";
 import { captureRawBody } from "./misc/rawBodyMiddleware.js";
 import { vercelOidcAuthMiddleware } from "./misc/vercelAuth.js";
 import {
@@ -88,6 +93,27 @@ vercelWebhookRouter.patch(
 	vercelSeederMiddleware,
 	vercelOidcAuthMiddleware,
 	...handleUpdateResource,
+);
+
+vercelWebhookRouter.post(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleCreateResourceTransfer,
+);
+
+vercelWebhookRouter.get(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests/:providerClaimId/verify",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleVerifyResourceTransfer,
+);
+
+vercelWebhookRouter.post(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests/:providerClaimId/accept",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleAcceptResourceTransfer,
 );
 
 vercelWebhookRouter.delete(
