@@ -37,7 +37,7 @@ export const billingPlanToPreviewResponse = ({
 		(line) => !line.deferred_for_trial,
 	);
 
-	const total = new Decimal(
+	const rawTotal = new Decimal(
 		sumValues(chargeableItems.map((line) => line.amount)),
 	)
 		.toDP(2)
@@ -51,6 +51,29 @@ export const billingPlanToPreviewResponse = ({
 		billingContext,
 		billingPlan,
 	});
+
+	// When total is negative (refund credit exceeds new charges), clamp to 0
+	// and emit a credit object. Reduce the next cycle total by the credit amount
+	// to reflect what Stripe actually does (apply customer balance to next invoice).
+	let total = rawTotal;
+	let credit: BillingPreviewResponse["credit"];
+
+	if (rawTotal < 0) {
+		const creditAmount = new Decimal(rawTotal).abs().toDP(2).toNumber();
+		total = 0;
+		credit = {
+			amount: creditAmount,
+			description: "Credit for unused time on previous plan",
+		};
+
+		if (nextCycle) {
+			const appliedCredit = Math.min(creditAmount, nextCycle.total);
+			nextCycle.total = new Decimal(nextCycle.total)
+				.minus(appliedCredit)
+				.toDP(2)
+				.toNumber();
+		}
+	}
 
 	logBillingPreview({
 		ctx,
@@ -74,6 +97,7 @@ export const billingPlanToPreviewResponse = ({
 		line_items: previewImmediateLineItems,
 		total,
 		currency,
+		credit,
 		period_start: periodStart,
 		period_end: periodEnd,
 		next_cycle: nextCycle,

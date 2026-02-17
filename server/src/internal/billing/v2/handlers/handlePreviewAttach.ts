@@ -1,4 +1,7 @@
-import { AttachParamsV0Schema } from "@autumn/shared";
+import {
+	type AttachBillingContext,
+	AttachParamsV0Schema,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
@@ -53,6 +56,7 @@ export const handlePreviewAttach = createRoute({
 				...previewResponse,
 				incoming,
 				outgoing,
+				redirect_type: (billingContext as AttachBillingContext).checkoutMode,
 			},
 			200,
 		);

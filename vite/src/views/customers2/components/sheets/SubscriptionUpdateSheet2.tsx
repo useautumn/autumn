@@ -1,5 +1,4 @@
 import type { FullCusProduct, ProductItem, ProductV2 } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
 
 import { useMemo } from "react";
 import {
@@ -16,11 +15,11 @@ import {
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 
@@ -99,7 +98,6 @@ export function SubscriptionUpdateSheet2() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
-	const axiosInstance = useAxiosInstance();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { setIsInlineEditorOpen } = useCustomerContext();
@@ -107,16 +105,8 @@ export function SubscriptionUpdateSheet2() {
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 
-	const { data: productData } = useQuery({
-		queryKey: ["product-versions", productV2?.id],
-		queryFn: async () => {
-			if (!productV2?.id) return null;
-			const { data } = await axiosInstance.get(
-				`/products/${productV2.id}/data`,
-			);
-			return data;
-		},
-		enabled: !!productV2?.id,
+	const { data: productData } = useProductVersionQuery({
+		productId: productV2?.id,
 	});
 
 	const numVersions = productData?.numVersions ?? productV2?.version ?? 1;

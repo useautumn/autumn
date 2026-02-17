@@ -40,12 +40,16 @@ export const executeStripeCheckoutSessionAction = async ({
 	});
 
 	// 2. Build full checkout params (merge variable + static params)
+	// Stripe doesn't allow both `discounts` and `allow_promotion_codes` simultaneously
+	const hasPreAppliedDiscounts =
+		!!checkoutSessionAction.params.discounts?.length;
+
 	const fullParams: Stripe.Checkout.SessionCreateParams = {
 		...checkoutSessionAction.params,
 
 		// Static params
 		currency: orgToCurrency({ org }),
-		allow_promotion_codes: true,
+		allow_promotion_codes: hasPreAppliedDiscounts ? undefined : true,
 		saved_payment_method_options: { payment_method_save: "enabled" },
 		invoice_creation:
 			checkoutSessionAction.params.mode === "payment"
