@@ -38,7 +38,7 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial update: set trial with v1 f
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		free_trial: {
 			duration_length: 7,
 			duration_type: FreeTrialDuration.Day,
@@ -94,7 +94,7 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial update: remove trial with f
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: proTrial.id,
+		plan_id: proTrial.id,
 		free_trial: null,
 	};
 
@@ -139,7 +139,7 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial update: replace active tria
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: proTrial.id,
+		plan_id: proTrial.id,
 		free_trial: {
 			duration_length: 1,
 			duration_type: FreeTrialDuration.Month,

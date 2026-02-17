@@ -42,7 +42,7 @@ export const legacyAttach = async ({
 
 		stripeBillingContext,
 		featureQuantities: attachParams.optionsList,
-		transitionConfigs: setupLegacyTransitionContext({ attachParams }),
+		transitionConfig: setupLegacyTransitionContext({ attachParams }),
 		billingVersion: BillingVersion.V1,
 	};
 
@@ -51,11 +51,15 @@ export const legacyAttach = async ({
 	const params: AttachParamsV1 = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
-		product_id: fullProduct.id,
+		plan_id: fullProduct.id,
 
-		invoice: attachParams.invoiceOnly,
-		enable_product_immediately: true,
-		finalize_invoice: attachParams.finalizeInvoice,
+		invoice_mode: attachParams.invoiceOnly
+			? {
+					enabled: attachParams.invoiceOnly,
+					enable_product_immediately: true,
+					finalize_invoice: attachParams.finalizeInvoice ?? true,
+				}
+			: undefined,
 
 		redirect_mode: "if_required",
 

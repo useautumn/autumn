@@ -18,7 +18,7 @@ export const paramsToFeatureOptions = ({
 }): FeatureOptions | undefined => {
 	const feature = entitlement.feature;
 
-	const options = params.options?.find(
+	const options = params.feature_quantities?.find(
 		(option) => option.feature_id === feature.id,
 	);
 

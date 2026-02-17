@@ -8,7 +8,7 @@ import {
 	featureUtils,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import type { FeatureOptionsParamsV0 } from "@shared/api/billing/common/featureOptions/featureOptionsParamsV0";
+import type { TransitionRules } from "@shared/api/billing/common/transitionRules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 
@@ -37,23 +37,22 @@ export async function migrate({
 
 	const features = newProduct.entitlements.map((e) => e.feature);
 
-	// Always reset after trial end for non-allocated features
-	const options: FeatureOptionsParamsV0[] = features
-		.filter((f) => !featureUtils.isAllocated(f))
-		.map((f) => ({
-			feature_id: f.id,
-			reset_after_trial_end: true,
-		}));
+	// Reset all features after trial ends
+	const transitionRules: TransitionRules = {
+		reset_after_trial_end: features
+			.filter((f) => !featureUtils.isAllocated(f))
+			.map((f) => f.id),
+	};
 
 	const updateSubscriptionParams: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		customer_product_id: currentCustomerProduct.id,
 		entity_id: entity?.id,
 
-		options,
-
 		billing_behavior: "next_cycle_only",
 		version: newProduct.version, // to trigger update custom plan intent
+
+		transition_rules: transitionRules,
 	};
 
 	ctx.logger.info(

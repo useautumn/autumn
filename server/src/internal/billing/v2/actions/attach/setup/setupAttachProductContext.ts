@@ -23,7 +23,7 @@ export const setupAttachProductContext = async ({
 	// 1. Fetch the product being attached
 	const fullProduct = await ProductService.getFull({
 		db,
-		idOrInternalId: params.product_id,
+		idOrInternalId: params.plan_id,
 		orgId: org.id,
 		env,
 		version: params.version,

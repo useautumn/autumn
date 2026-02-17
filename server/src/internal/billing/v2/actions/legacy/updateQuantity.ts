@@ -14,6 +14,7 @@ import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/action
 import { setupLegacyTransitionContext } from "@/internal/billing/v2/actions/legacy/utils/setupLegacyFeatureQuantitiesContext";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
+import { optionsListToFeatureQuantities } from "./utils/optionsListToFeatureQuantities";
 
 export const updateQuantity = async ({
 	ctx,
@@ -58,7 +59,7 @@ export const updateQuantity = async ({
 
 		stripeBillingContext,
 		featureQuantities: attachParams.optionsList,
-		transitionConfigs: setupLegacyTransitionContext({ attachParams }),
+		transitionConfig: setupLegacyTransitionContext({ attachParams }),
 		billingVersion: BillingVersion.V1,
 	};
 
@@ -67,13 +68,19 @@ export const updateQuantity = async ({
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
-		product_id: fullProduct.id,
+		plan_id: fullProduct.id,
 
-		invoice: body.invoice,
-		enable_product_immediately: body.enable_product_immediately,
-		finalize_invoice: body.finalize_invoice,
+		invoice_mode: body.invoice
+			? {
+					enabled: true,
+					enable_product_immediately: body.enable_product_immediately ?? false,
+					finalize_invoice: body.finalize_invoice ?? true,
+				}
+			: undefined,
 
-		options: attachParams.optionsList,
+		feature_quantities: optionsListToFeatureQuantities({
+			optionsList: attachParams.optionsList,
+		}),
 	};
 
 	const res = await billingActions.updateSubscription({

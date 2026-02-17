@@ -12,6 +12,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
+import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -141,7 +142,7 @@ export const setupAttachBillingContext = async ({
 		trialContext,
 	});
 
-	const transitionConfigs = setupTransitionConfigs({
+	const transitionConfig = setupTransitionConfigs({
 		params,
 		contextOverride,
 	});
@@ -151,7 +152,7 @@ export const setupAttachBillingContext = async ({
 		fullProducts: [attachProduct],
 		attachProduct,
 		featureQuantities,
-		transitionConfigs,
+		transitionConfig,
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
@@ -177,7 +178,7 @@ export const setupAttachBillingContext = async ({
 		isCustom,
 		trialContext,
 
-		checkoutQuantityAdjustable: params.adjustable_quantity,
+		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 	};
