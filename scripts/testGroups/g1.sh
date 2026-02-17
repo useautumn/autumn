@@ -36,15 +36,6 @@ BUN_PARALLEL_V2 \
   'balances/check/send-event' \
   'balances/check/loose' \
   'balances/set-usage' \
+  'integration/balances/update' \
   --max=6
 
-
-BUN_PARALLEL_V2 \
-  'server/tests/balances/update/filters' \
-  'server/tests/balances/update/update-combined' \
-  'server/tests/balances/update/update-current-balance/basic' \
-  'server/tests/balances/update/update-current-balance/entity' \
-  'server/tests/balances/update/update-current-balance/allocated' \
-  'server/tests/balances/update/update-current-balance/breakdown' \
-  'server/tests/balances/update/update-granted-balance' \
-  --max=6

@@ -105,6 +105,7 @@ describe(`${chalk.yellowBright("track-negative3: track negative on free allocate
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
 			current_balance: 10,
+			granted_balance: 10,
 		});
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
