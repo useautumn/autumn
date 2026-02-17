@@ -1,4 +1,4 @@
-import { GearIcon, TimerIcon } from "@phosphor-icons/react";
+import { TimerIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import {
 	STAGGER_CONTAINER,
@@ -24,24 +24,14 @@ export function AttachPlanSkeleton() {
 							<span className="flex items-center gap-1.5">
 								Plan Configuration
 							</span>
-							<span className="flex items-center gap-2">
-								<IconButton
-									icon={<GearIcon size={14} />}
-									variant="secondary"
-									className="h-7 whitespace-nowrap"
-									disabled
-								>
-									Settings
-								</IconButton>
-								<IconButton
-									icon={<TimerIcon size={14} />}
-									variant="secondary"
-									className="h-7 whitespace-nowrap"
-									disabled
-								>
-									Free Trial
-								</IconButton>
-							</span>
+							<IconButton
+								icon={<TimerIcon size={14} />}
+								variant="secondary"
+								className="h-7 whitespace-nowrap"
+								disabled
+							>
+								Free Trial
+							</IconButton>
 						</span>
 					</h3>
 				</motion.div>

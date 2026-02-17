@@ -1,6 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	type AttachBillingContext,
 	AttachParamsV0Schema,
 	AttachParamsV1Schema,
 } from "@autumn/shared";
@@ -62,6 +63,7 @@ export const handlePreviewAttach = createRoute({
 				...previewResponse,
 				incoming,
 				outgoing,
+				redirect_type: (billingContext as AttachBillingContext).checkoutMode,
 			},
 			200,
 		);

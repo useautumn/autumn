@@ -62,11 +62,12 @@ export const priceToStripePrepaidV2Tiers = ({
 				? "inf"
 				: new Decimal(tier.up_to ?? 0)
 						.div(config.billing_units ?? 1)
+						.ceil()
 						.toNumber(),
 
 		unit_amount_decimal: new Decimal(tier.unit_amount_decimal ?? 0)
 			.mul(config.billing_units ?? 1)
-			.toNumber(),
+			.toString(),
 	}));
 
 	return dividedTiers;

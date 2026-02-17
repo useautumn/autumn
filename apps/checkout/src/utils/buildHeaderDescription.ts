@@ -108,14 +108,14 @@ export function buildHeaderDescription({
 	outgoing,
 	entity,
 	freeTrial,
-	trialAvailable,
+	hasActiveTrial,
 }: {
 	preview?: BillingPreviewResponse;
 	incoming?: CheckoutChange[];
 	outgoing?: CheckoutChange[];
 	entity?: CheckoutEntity;
 	freeTrial?: ApiFreeTrialV2 | null;
-	trialAvailable?: boolean;
+	hasActiveTrial?: boolean;
 }): string | undefined {
 	if (!preview) return undefined;
 
@@ -126,7 +126,6 @@ export function buildHeaderDescription({
 	const incomingPlanName = change?.plan.name;
 	const isRecurring = !!change?.plan.price?.interval;
 	const entityName = entity?.name || entity?.id;
-	const hasActiveTrial = freeTrial && trialAvailable;
 
 	// Determine if this is a scheduled change (no immediate charges, changes next cycle)
 	const isScheduledChange =
@@ -153,10 +152,11 @@ export function buildHeaderDescription({
 		? formatTrialDuration(freeTrial)
 		: null;
 
-	// Handle negative amounts (refund/credit from previous plan)
-	if (total < 0) {
-		const creditAmount = formatAmount(Math.abs(total), currency);
-		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit for unused time on your previous plan.`;
+	// Handle credit from excess refund (unused time on previous plan exceeds new charge)
+	const credit = preview.credit;
+	if (credit) {
+		const creditAmount = formatAmount(credit.amount, currency);
+		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit applied to your next invoice.`;
 
 		if (hasActiveTrial && next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");

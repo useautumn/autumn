@@ -52,31 +52,39 @@ export function ConfirmSection() {
 				<CrossfadeContainer
 					isLoading={status.isLoading}
 					skeleton={<BottomSectionSkeleton />}
-					className="flex flex-col gap-6"
+					className="flex flex-col gap-4"
 				>
 					{/* Amount summary */}
 					<div className="flex flex-col gap-1">
 						{/* Amount due today */}
 						<div className="flex items-center justify-between">
-							<span className="text-base font-medium text-foreground">
+							<span className="text-sm text-foreground">
 								Amount due today
 							</span>
-							<span className="text-lg font-medium text-foreground tabular-nums">
+							<span className="text-sm font-semibold text-foreground tabular-nums">
 								{formatAmount(total, currency)}
 							</span>
 						</div>
 
 						{/* Amount next cycle / Amount due on trial end */}
 						{preview?.next_cycle && (
-							<div className="flex items-center justify-between text-sm text-muted-foreground">
-								<span>
-									{preview.next_cycle.starts_at
-										? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
-										: "Total due next cycle"}
-								</span>
-								<span className="tabular-nums">
-									{formatAmount(preview.next_cycle.total, currency)}
-								</span>
+							<div className="flex flex-col gap-0.5">
+								<div className="flex items-center justify-between text-sm text-muted-foreground">
+									<span>
+										{preview.next_cycle.starts_at
+											? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
+											: "Total due next cycle"}
+									</span>
+									<span className="tabular-nums">
+										{formatAmount(preview.next_cycle.total, currency)}
+									</span>
+								</div>
+								{/* Credit note explaining reduced next cycle amount */}
+								{preview.credit && (
+									<span className="text-xs text-muted-foreground/60 text-right">
+										Includes {formatAmount(preview.credit.amount, currency)} credit from unused plan
+									</span>
+								)}
 							</div>
 						)}
 					</div>
@@ -88,7 +96,7 @@ export function ConfirmSection() {
 						className="pt-4"
 					>
 						<Button
-							className="w-full h-12 text-base font-medium rounded-lg"
+							className="w-full h-11 text-sm font-medium rounded-lg"
 							onClick={handleConfirm}
 							disabled={status.isConfirming || status.isUpdating}
 						>

@@ -3,6 +3,7 @@
 export * from "./attach/prevVersions/attachBodyV0.js";
 export * from "./attach/prevVersions/attachResponseV1.js";
 // Attach V2
+export * from "./attachV2/attachDiscount.js";
 export * from "./attachV2/attachParamsV0.js";
 export * from "./attachV2/attachParamsV1.js";
 

@@ -1,6 +1,7 @@
 import {
 	type AttachParamsV0,
 	type AttachParamsV0Input,
+	type BillingBehavior,
 	type FeatureOptions,
 	type FreeTrialDuration,
 	type PlanTiming,
@@ -12,6 +13,10 @@ import {
 import Decimal from "decimal.js";
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
+import {
+	type FormDiscount,
+	filterValidDiscounts,
+} from "../utils/discountUtils";
 
 interface UseAttachRequestBodyParams {
 	customerId: string | undefined;
@@ -24,6 +29,9 @@ interface UseAttachRequestBodyParams {
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
 	planSchedule: PlanTiming | null;
+	billingBehavior: BillingBehavior | null;
+	newBillingSubscription: boolean;
+	discounts: FormDiscount[];
 }
 
 function convertPrepaidOptionsToFeatureOptions({
@@ -75,6 +83,9 @@ export function useAttachRequestBody({
 	trialDuration,
 	trialEnabled,
 	planSchedule,
+	billingBehavior,
+	newBillingSubscription,
+	discounts,
 }: UseAttachRequestBodyParams) {
 	const requestBody = useMemo((): AttachParamsV0 | null => {
 		if (!customerId || !product) {
@@ -125,6 +136,19 @@ export function useAttachRequestBody({
 			body.plan_schedule = planSchedule;
 		}
 
+		if (billingBehavior) {
+			body.billing_behavior = billingBehavior;
+		}
+
+		if (newBillingSubscription) {
+			body.new_billing_subscription = true;
+		}
+
+		const validDiscounts = filterValidDiscounts(discounts);
+		if (validDiscounts.length > 0) {
+			body.discounts = validDiscounts;
+		}
+
 		return body;
 	}, [
 		customerId,
@@ -137,6 +161,9 @@ export function useAttachRequestBody({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
+		newBillingSubscription,
+		discounts,
 	]);
 
 	const buildRequestBody = useMemo(
