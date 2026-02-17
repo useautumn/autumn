@@ -37,7 +37,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			});
 
 			// Act
-			const existingUsages = cusProductToExistingUsages({ cusProduct });
+			const existingUsages = cusProductToExistingUsages({ cusProduct, carryAllConsumableFeatures: true });
 
 			// Assert: Total usage should be 40 (20 + 20)
 			expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -78,7 +78,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			});
 
 			// Act
-			const existingUsages = cusProductToExistingUsages({ cusProduct });
+			const existingUsages = cusProductToExistingUsages({ cusProduct, carryAllConsumableFeatures: true });
 
 			// Assert
 			expect(existingUsages[internalFeatureId]).toBeDefined();
@@ -130,7 +130,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			});
 
 			// Act
-			const existingUsages = cusProductToExistingUsages({ cusProduct });
+			const existingUsages = cusProductToExistingUsages({ cusProduct, carryAllConsumableFeatures: true });
 
 			// Assert: Usage should be 20 (allowance 100 - balance 80)
 			// NOT 50 (allowance 100 + rollover 30 - balance 80)

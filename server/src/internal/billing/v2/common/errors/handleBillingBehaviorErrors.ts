@@ -1,4 +1,5 @@
 import type {
+	AttachParamsV1,
 	BillingContext,
 	BillingPlan,
 	FullCusProduct,
@@ -8,6 +9,7 @@ import {
 	ErrCode,
 	isFreeProduct,
 	RecaseError,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import {
@@ -26,15 +28,15 @@ export const handleBillingBehaviorErrors = ({
 	billingContext,
 	currentCustomerProduct,
 	billingPlan,
-	billingBehavior,
+	params,
 }: {
 	billingContext: BillingContext;
 	currentCustomerProduct?: FullCusProduct;
 	billingPlan: BillingPlan;
-	billingBehavior?: string;
+	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
 	// Only validate when billing_behavior is 'next_cycle_only' (defer charges)
-	if (billingBehavior !== "next_cycle_only") return;
+	if (params.billing_behavior !== "next_cycle_only") return;
 
 	const { autumn: autumnBillingPlan } = billingPlan;
 

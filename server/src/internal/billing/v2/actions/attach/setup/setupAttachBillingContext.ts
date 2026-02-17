@@ -1,12 +1,9 @@
 import type {
 	AttachBillingContext,
+	AttachParamsV1,
 	BillingContextOverride,
 } from "@autumn/shared";
-import {
-	type AttachParamsV0,
-	BillingVersion,
-	notNullish,
-} from "@autumn/shared";
+import { BillingVersion, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -30,7 +27,7 @@ export const setupAttachBillingContext = async ({
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	contextOverride?: BillingContextOverride;
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
@@ -91,7 +88,7 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = notNullish(params.items);
+	const isCustom = notNullish(params.customize);
 
 	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();

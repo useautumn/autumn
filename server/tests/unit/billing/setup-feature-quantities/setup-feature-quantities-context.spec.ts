@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
+import { entitlements } from "@tests/utils/fixtures/db/entitlements";
 import { features } from "@tests/utils/fixtures/db/features";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -18,12 +19,23 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -35,7 +47,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				// No options provided
@@ -61,15 +73,26 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 50 }],
@@ -95,12 +118,23 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -111,7 +145,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 200 }],
@@ -147,21 +181,44 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Storage",
 			});
 
+			const creditsEnt = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+			const seatsEnt = entitlements.create({
+				id: "ent_seats",
+				featureId: "seats",
+				featureName: "Seats",
+				allowance: 0,
+			});
+			const storageEnt = entitlements.create({
+				id: "ent_storage",
+				featureId: "storage",
+				featureName: "Storage",
+				allowance: 0,
+			});
+
 			const creditsPrice = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 			const seatsPrice = prices.createPrepaid({
 				id: "price_seats",
 				featureId: "seats",
+				entitlementId: "ent_seats",
 			});
 			const storagePrice = prices.createPrepaid({
 				id: "price_storage",
 				featureId: "storage",
+				entitlementId: "ent_storage",
 			});
 
 			const fullProduct = products.createFull({
 				prices: [creditsPrice, seatsPrice, storagePrice],
+				entitlements: [creditsEnt, seatsEnt, storageEnt],
 			});
 
 			const cusProduct = customerProducts.create({
@@ -189,7 +246,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "seats", quantity: 10 }], // Only updating seats
@@ -225,16 +282,27 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 100, // Billing in units of 100
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 150 }], // Should round up to 200
@@ -261,16 +329,27 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 50,
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 200 }], // Exact multiple
@@ -296,16 +375,27 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 1000,
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 1 }], // Should round to 1000
@@ -334,10 +424,18 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			// Old price: billing units of 100
 			const oldPrice = prices.createPrepaid({
 				id: "price_credits_old",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 100,
 			});
 
@@ -345,10 +443,14 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const newPrice = prices.createPrepaid({
 				id: "price_credits_new",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 250,
 			});
 
-			const fullProduct = products.createFull({ prices: [newPrice] });
+			const fullProduct = products.createFull({
+				prices: [newPrice],
+				entitlements: [entitlement],
+			});
 
 			const cusProduct = customerProducts.create({
 				options: [
@@ -361,7 +463,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price: oldPrice })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				// No options - should inherit from current
@@ -393,19 +495,31 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const oldPrice = prices.createPrepaid({
 				id: "price_credits_old",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 100,
 			});
 
 			const newPrice = prices.createPrepaid({
 				id: "price_credits_new",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 250,
 			});
 
-			const fullProduct = products.createFull({ prices: [newPrice] });
+			const fullProduct = products.createFull({
+				prices: [newPrice],
+				entitlements: [entitlement],
+			});
 
 			const cusProduct = customerProducts.create({
 				options: [
@@ -418,7 +532,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price: oldPrice })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 			};
@@ -447,13 +561,24 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const newPrice = prices.createPrepaid({
 				id: "price_credits_new",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 				billingUnits: 250,
 			});
 
-			const fullProduct = products.createFull({ prices: [newPrice] });
+			const fullProduct = products.createFull({
+				prices: [newPrice],
+				entitlements: [entitlement],
+			});
 
 			const cusProduct = customerProducts.create({
 				options: [
@@ -466,7 +591,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				// No customerPrices - can't interpret stored quantity
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 			};
@@ -493,19 +618,28 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const fixedPrice = prices.createFixed({ id: "price_fixed" });
 			const prepaidPrice = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
 			const fullProduct = products.createFull({
 				prices: [fixedPrice, prepaidPrice],
+				entitlements: [entitlement],
 			});
 
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 50 }],
@@ -528,10 +662,10 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 	describe("edge cases", () => {
 		test("empty prices array returns empty array", () => {
-			const fullProduct = products.createFull({ prices: [] });
+			const fullProduct = products.createFull({ prices: [], entitlements: [] });
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 			};
@@ -548,21 +682,25 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			expect(result).toHaveLength(0);
 		});
 
-		test("throws error when feature not found for price", () => {
+		test("throws error when entitlement not found for price", () => {
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			// No entitlements provided - entitlement won't be found
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [],
+			});
 			const cusProduct = customerProducts.create({ options: [] });
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 			};
 
-			// Empty features array - feature won't be found
 			const ctx = contexts.create({ features: [] });
 
 			expect(() =>
@@ -572,7 +710,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 					fullProduct,
 					currentCustomerProduct: cusProduct,
 				}),
-			).toThrow("Feature not found for price");
+			).toThrow("Entitlement not found for price");
 		});
 
 		test("neither current nor new has quantity → feature not included", () => {
@@ -581,15 +719,26 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({ options: [] }); // No current options
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				// No options in params either
@@ -614,12 +763,23 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -631,7 +791,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [], // Explicitly empty
@@ -657,12 +817,23 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -674,7 +845,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				options: [{ feature_id: "credits", quantity: 0 }],
@@ -700,13 +871,25 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Credits",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_credits",
+				featureId: "credits",
+				internalFeatureId: "internal_credits_v2",
+				featureName: "Credits",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_credits",
 				featureId: "credits",
 				internalFeatureId: "internal_credits_v2",
+				entitlementId: "ent_credits",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -718,7 +901,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 			};
@@ -742,12 +925,23 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				name: "Seats",
 			});
 
+			const entitlement = entitlements.create({
+				id: "ent_seats",
+				featureId: "seats",
+				featureName: "Seats",
+				allowance: 0,
+			});
+
 			const price = prices.createPrepaid({
 				id: "price_seats",
 				featureId: "seats",
+				entitlementId: "ent_seats",
 			});
 
-			const fullProduct = products.createFull({ prices: [price] });
+			const fullProduct = products.createFull({
+				prices: [price],
+				entitlements: [entitlement],
+			});
 			const cusProduct = customerProducts.create({
 				options: [
 					{
@@ -759,7 +953,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				customerPrices: [prices.createCustomer({ price })],
 			});
 
-			const params: UpdateSubscriptionV0Params = {
+			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				product_id: "prod_test",
 				// No options provided - should carry over from current

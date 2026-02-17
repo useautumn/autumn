@@ -2,10 +2,10 @@ import { FeatureOptionsParamsV0Schema } from "@api/billing/common/featureOptions
 import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../../common/customerData.js";
-import { EntityDataSchema } from "../../common/entityData.js";
+import { CustomerDataSchema } from "../../../common/customerData.js";
+import { EntityDataSchema } from "../../../common/entityData.js";
 
-export const BillingParamsBaseSchema = z.object({
+export const BillingParamsBaseV0Schema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string().nullish(),
 	customer_data: CustomerDataSchema.optional(),
@@ -18,4 +18,4 @@ export const BillingParamsBaseSchema = z.object({
 	items: z.array(ProductItemSchema).optional(),
 });
 
-export type BillingParamsBase = z.infer<typeof BillingParamsBaseSchema>;
+export type BillingParamsBaseV0 = z.infer<typeof BillingParamsBaseV0Schema>;

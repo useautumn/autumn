@@ -1,5 +1,4 @@
-import type { UpdateSubscriptionV0Params } from "@shared/api/billing/updateSubscription/updateSubscriptionV0Params";
-import type { CancelAction } from "@autumn/shared";
+import type { CancelAction, UpdateSubscriptionV1Params } from "@autumn/shared";
 
 /**
  * Setup cancel action from params
@@ -14,7 +13,7 @@ import type { CancelAction } from "@autumn/shared";
 export const setupCancelAction = ({
 	params,
 }: {
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }): CancelAction | undefined => {
 	return params.cancel_action;
 };

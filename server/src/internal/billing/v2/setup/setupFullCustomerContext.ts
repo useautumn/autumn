@@ -1,4 +1,4 @@
-import type { BillingParamsBase } from "@autumn/shared";
+import type { BillingParamsBaseV1 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { CusService } from "@server/internal/customers/CusService";
 
@@ -7,7 +7,7 @@ export const setupFullCustomerContext = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: BillingParamsBase;
+	params: BillingParamsBaseV1;
 }) => {
 	const { db, org, env } = ctx;
 	const { customer_id: customerId } = params;
