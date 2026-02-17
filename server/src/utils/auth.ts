@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { ALL_SCOPES, invitation, schemas } from "@autumn/shared";
-import { dash } from "@better-auth/dash";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -97,7 +96,6 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
-		dash(),
 		emailOTP({
 			async sendVerificationOTP({ email, otp, type }) {
 				// Implement the sendVerificationOTP method to send the OTP to the user's email address
