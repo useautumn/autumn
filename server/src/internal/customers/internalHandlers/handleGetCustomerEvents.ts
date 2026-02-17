@@ -13,13 +13,13 @@ const QuerySchema = z.object({
  * GET /customers/:customer_id/events
  * Used by: vite/src/views/customers/customer/hooks/useCusEventsQuery.tsx
  *
- * Returns raw events from Tinybird using the paginated pipe (same as analytics page)
+ * Returns raw events from Tinybird using legacy pipe (includes idempotency_key, entity_id)
  */
 export const handleGetCustomerEvents = createRoute({
 	query: QuerySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { org, env } = ctx;
+		const { db, org, env } = ctx;
 		const { customer_id } = c.req.param();
 		const { interval, limit } = c.req.valid("query");
 
@@ -33,7 +33,8 @@ export const handleGetCustomerEvents = createRoute({
 			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
-		const result = await eventActions.listRawEvents({
+		// Use legacy Tinybird pipe (includes idempotency_key, entity_id fields)
+		const result = await eventActions._legacyListRawEvents({
 			ctx,
 			params: {
 				customer_id: customer.id ?? "",
