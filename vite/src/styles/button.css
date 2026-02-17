@@ -33,19 +33,19 @@
 		0 4px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
-.btn-secondary-shadow:focus-visible,
-/* .btn-secondary-shadow:active {
+/* .btn-secondary-shadow:focus-visible,
+.btn-secondary-shadow:active {
 	box-shadow:
 		0 0 0 0.2px var(--primary),
 		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
 		0 4px 4px 0 rgba(0, 0, 0, 0.04);
 } */
 
-	/* .btn-secondary-active {
+.btn-secondary-active {
 	border: 1px solid var(--primary);
 	background-color: var(--color-interactive-secondary-hover);
 	box-shadow: 0 0 0 0.2px var(--primary);
-} */
+}
 
 	.btn-destructive-shadow {
 	box-shadow:
