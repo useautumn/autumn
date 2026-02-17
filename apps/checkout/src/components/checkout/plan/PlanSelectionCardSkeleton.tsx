@@ -1,38 +1,26 @@
-import { CardBackground } from "@/components/checkout/layout/CardBackground";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Skeleton that matches PlanSelectionCard layout */
+/** Skeleton that matches PlanSelectionCard inline layout */
 export function PlanSelectionCardSkeleton() {
 	return (
-		<Card className="py-0 gap-0 flex-1">
-			<CardBackground>
-				{/* Plan header */}
-				<div className="flex items-center px-3 py-2.5 border-b bg-background/50">
-					<div className="flex items-center gap-2">
-						<Skeleton className="h-4 w-4" />
-						<Skeleton className="h-4 w-32" />
-					</div>
+		<div className="flex flex-col gap-1">
+			{/* Plan name */}
+			<Skeleton className="h-3.5 w-2/5" />
+
+			{/* Feature row */}
+			<div className="flex items-center justify-between gap-4 py-0.5">
+				{/* Left: feature name + price per unit */}
+				<div className="flex flex-col gap-1 min-w-0">
+					<Skeleton className="h-3.5 w-20" />
+					<Skeleton className="h-3 w-28" />
 				</div>
 
-				{/* Feature rows - 2 rows for a balanced skeleton */}
-				{[0, 1].map((i) => (
-					<div key={`feature-skeleton-${i}`}>
-						{i > 0 && (
-							<div className="px-3">
-								<Separator />
-							</div>
-						)}
-						<div className="flex items-center justify-between px-3 py-2">
-							<div className="flex items-center gap-2">
-								<Skeleton className="h-4 w-4" />
-								<Skeleton className="h-4 w-24" />
-							</div>
-						</div>
-					</div>
-				))}
-			</CardBackground>
-		</Card>
+				{/* Right: total price + quantity input */}
+				<div className="flex items-center gap-3 shrink-0">
+					<Skeleton className="h-3.5 w-20" />
+					<Skeleton className="h-6 w-[88px]" />
+				</div>
+			</div>
+		</div>
 	);
 }

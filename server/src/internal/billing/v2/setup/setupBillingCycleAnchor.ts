@@ -1,3 +1,4 @@
+import type { TrialContext } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	type FullProduct,
@@ -9,7 +10,6 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { TrialContext } from "@autumn/shared";
 
 /**
  * Determine the billing cycle anchor based on product transitions.
@@ -32,7 +32,7 @@ export const setupBillingCycleAnchor = ({
 
 	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	const currentIsOneOff = isCustomerProductOneOff(customerProduct);
@@ -40,7 +40,7 @@ export const setupBillingCycleAnchor = ({
 
 	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	// If trialing:
