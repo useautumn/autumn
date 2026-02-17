@@ -1,4 +1,3 @@
-import { dashClient } from "@better-auth/dash/client";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import {
 	adminClient,
@@ -13,7 +12,6 @@ export const authClient = createAuthClient({
 		emailOTPClient(),
 		organizationClient(),
 		adminClient(),
-		dashClient(),
 		oauthProviderClient(),
 	],
 });
