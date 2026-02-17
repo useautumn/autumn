@@ -43,6 +43,7 @@ const handleNonCheckoutErrors = ({
 			message: `Not allowed to ${action} when using force_checkout`,
 			code: ErrCode.InvalidRequest,
 		});
+	}
 	// } else if (config.invoiceCheckout) {
 	// 	throw new RecaseError({
 	// 		message: `Not allowed to ${action} when using 'invoice': true`,
