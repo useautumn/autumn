@@ -43,6 +43,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 
 		return {
 			...input,
+			plan_id: input.product_id,
 			free_trial: freeTrialV1,
 			customize: customizeV1,
 		};

@@ -33,7 +33,7 @@ export interface BillingContextOverride {
 	};
 
 	featureQuantities?: FeatureOptions[];
-	transitionConfigs?: TransitionConfig[];
+	transitionConfig?: TransitionConfig;
 	billingVersion?: BillingVersion;
 }
 

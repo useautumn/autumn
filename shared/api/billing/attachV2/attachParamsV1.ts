@@ -2,24 +2,19 @@ import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { BillingBehaviorSchema } from "../common/billingBehavior.js";
+import { InvoiceModeParamsSchema } from "../common/invoiceModeParams.js";
 import { RedirectModeSchema } from "../common/redirectMode.js";
 import { AttachDiscountSchema } from "./attachDiscount.js";
 
 export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	// Product identification
-	product_id: z.string(),
+	plan_id: z.string(),
 
 	// Invoice mode
-	invoice: z.boolean().optional(),
-	enable_product_immediately: z.boolean().optional(),
-	finalize_invoice: z.boolean().optional(),
-	// invoice_mode: z
-	// 	.object({
-	// 		enabled: z.boolean(),
-	// 		enable_product_immediately: z.boolean(),
-	// 		finalize_invoice: z.boolean(),
-	// 	})
-	// 	.optional(),
+	// invoice: z.boolean().optional(),
+	// enable_product_immediately: z.boolean().optional(),
+	// finalize_invoice: z.boolean().optional(),
+	invoice_mode: InvoiceModeParamsSchema.optional(),
 
 	// Checkout behavior
 	discounts: z.array(AttachDiscountSchema).optional(),
@@ -28,7 +23,6 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	new_billing_subscription: z.boolean().optional(),
 	plan_schedule: PlanTimingSchema.optional(),
 	billing_behavior: BillingBehaviorSchema.optional(),
-	adjustable_quantity: z.boolean().optional(),
 });
 
 // export const AttachParamsV1Schema = ExtAttachParamsV1Schema.extend({
