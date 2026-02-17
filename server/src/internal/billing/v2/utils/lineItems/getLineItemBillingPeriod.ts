@@ -1,3 +1,4 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	type BillingPeriod,
 	getCycleEnd,
@@ -6,7 +7,6 @@ import {
 	type Price,
 	secondsToMs,
 } from "@autumn/shared";
-import type { BillingContext } from "@autumn/shared";
 
 /**
  * Calculates the billing period (start and end) for a line item based on the billing context.
