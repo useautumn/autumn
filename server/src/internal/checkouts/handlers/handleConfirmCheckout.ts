@@ -1,5 +1,5 @@
 import {
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type Checkout,
 	CheckoutAction,
 	CheckoutStatus,
@@ -43,7 +43,7 @@ export const handleConfirmCheckout = createRoute({
 			});
 		}
 
-		const params = checkout.params as AttachParamsV0;
+		const params = checkout.params as AttachParamsV1;
 
 		try {
 			// Execute attach (not preview mode)

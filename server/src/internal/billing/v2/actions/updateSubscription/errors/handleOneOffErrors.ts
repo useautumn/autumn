@@ -1,3 +1,7 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import {
 	cusProductToProduct,
 	isCustomerProductOneOff,
@@ -5,12 +9,10 @@ import {
 	isOneOffPrice,
 	productsAreSame,
 	RecaseError,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { cusProductToPrices } from "@shared/utils/cusProductUtils/convertCusProduct";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 export const handleOneOffErrors = ({
@@ -22,7 +24,7 @@ export const handleOneOffErrors = ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
 	const { customerProduct } = billingContext;
 

@@ -1,6 +1,6 @@
 import {
 	type AttachBillingContext,
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type BillingPlan,
 	type Checkout,
 	CheckoutAction,
@@ -29,7 +29,7 @@ export async function billingPlanToAutumnCheckout({
 	billingContext,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<{ checkout: Checkout; checkoutUrl: string }> {

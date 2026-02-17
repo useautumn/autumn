@@ -119,6 +119,10 @@ export const planItemV0ToProductItem = ({
 		? ProductItemType.FeaturePrice
 		: ProductItemType.Feature;
 
+	const entitlementId =
+		"entitlement_id" in planItem ? planItem.entitlement_id : undefined;
+	const priceId = "price_id" in planItem ? planItem.price_id : undefined;
+
 	return ProductItemSchema.parse({
 		type,
 
@@ -155,5 +159,8 @@ export const planItemV0ToProductItem = ({
 		config,
 
 		display: "display" in planItem ? planItem.display : undefined,
+
+		entitlement_id: entitlementId,
+		price_id: priceId,
 	} satisfies ProductItem);
 };

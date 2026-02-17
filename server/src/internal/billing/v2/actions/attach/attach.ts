@@ -1,9 +1,9 @@
-import {
-	type AttachBillingContext,
-	type AttachParamsV0,
-	type BillingContextOverride,
-	type BillingPlan,
-	type BillingResult,
+import type {
+	AttachBillingContext,
+	AttachParamsV1,
+	BillingContextOverride,
+	BillingPlan,
+	BillingResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
@@ -31,7 +31,7 @@ export async function attach({
 	contextOverride,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 	contextOverride?: BillingContextOverride;

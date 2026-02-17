@@ -28,7 +28,6 @@ export const BillingResponseSchema = z.object({
 		.optional(),
 
 	payment_url: z.string().nullable(),
-
 	required_action: BillingResponseRequiredActionSchema.optional(),
 });
 

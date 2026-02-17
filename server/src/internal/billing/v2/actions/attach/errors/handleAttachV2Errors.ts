@@ -1,6 +1,6 @@
 import type {
 	AttachBillingContext,
-	AttachParamsV0,
+	AttachParamsV1,
 	AutumnBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -24,7 +24,7 @@ export const handleAttachV2Errors = ({
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 }) => {
 	// 1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({

@@ -1,11 +1,11 @@
 import {
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type AutumnBillingPlan,
 	cusProductToPrices,
 	ErrCode,
 	isFreeProduct,
 	RecaseError,
-	type AttachBillingContext,
-	type AttachParamsV0,
-	type AutumnBillingPlan,
 } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
@@ -22,7 +22,7 @@ export const handleAttachBillingBehaviorErrors = ({
 }: {
 	billingContext: AttachBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 }) => {
 	// Only validate when billing_behavior is 'next_cycle_only' (defer charges)
 	if (params.billing_behavior !== "next_cycle_only") return;

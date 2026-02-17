@@ -1,7 +1,7 @@
 import type {
 	BillingPlan,
 	UpdateSubscriptionBillingContext,
-	UpdateSubscriptionV0Params,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
@@ -28,7 +28,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
 	const { customerProduct } = billingContext;
 
