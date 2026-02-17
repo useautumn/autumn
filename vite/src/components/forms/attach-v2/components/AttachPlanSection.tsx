@@ -4,8 +4,12 @@ import { PlanItemsSection } from "@/components/forms/shared";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
+	STAGGER_ITEM_LAYOUT,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	LAYOUT_TRANSITION,
+	SheetSection,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { outgoingToProductItems } from "../utils/attachDiffUtils";
@@ -20,6 +24,7 @@ export function AttachPlanSection() {
 		originalItems: productTemplateItems,
 		productWithFormItems: product,
 		hasCustomizations,
+		initialPrepaidOptions,
 		handleEditPlan,
 		previewQuery,
 	} = useAttachFormContext();
@@ -69,7 +74,7 @@ export function AttachPlanSection() {
 		originalItems: originalItemsForDiff,
 		features,
 		prepaidOptions,
-		initialPrepaidOptions: {},
+		initialPrepaidOptions,
 		form,
 		hasCustomizations: showDiffs,
 		currency,
@@ -80,12 +85,16 @@ export function AttachPlanSection() {
 	return (
 		<SheetSection withSeparator>
 			<motion.div
-				className="space-y-2"
+				className="flex flex-col gap-3"
 				initial="hidden"
 				animate="visible"
 				variants={STAGGER_CONTAINER}
 			>
-				<motion.div variants={STAGGER_ITEM}>
+				<motion.div
+					layout="position"
+					transition={{ layout: LAYOUT_TRANSITION }}
+					variants={STAGGER_ITEM_LAYOUT}
+				>
 					<h3 className="text-sub select-none w-full">
 						<AttachSectionTitle />
 					</h3>

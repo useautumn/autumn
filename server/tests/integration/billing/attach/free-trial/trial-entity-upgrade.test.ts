@@ -787,8 +787,8 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: both entities upg
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
-		latestTotal: 0,
 		count: 4,
+		latestTotal: 0,
 	});
 
 	// Verify Stripe subscription state

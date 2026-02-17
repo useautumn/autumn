@@ -1,9 +1,8 @@
+import { BasePriceSchema } from "@api/products/components/basePrice/basePrice.js";
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
-import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "../components/apiFreeTrialV2.js";
-import { DisplaySchema } from "../components/display.js";
 import { ApiPlanItemV0Schema } from "../items/previousVersions/apiPlanItemV0.js";
 
 export {
@@ -22,14 +21,7 @@ export const ApiPlanV0Schema = z.object({
 	default: z.boolean(),
 
 	// Change
-	price: z
-		.object({
-			amount: z.number(),
-			interval: z.enum(BillingInterval),
-			interval_count: z.number().optional(),
-			display: DisplaySchema.optional(),
-		})
-		.nullable(),
+	price: BasePriceSchema.nullable(),
 
 	features: z.array(ApiPlanItemV0Schema),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),

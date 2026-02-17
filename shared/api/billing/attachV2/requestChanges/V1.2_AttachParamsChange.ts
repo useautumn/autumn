@@ -1,0 +1,51 @@
+import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import {
+	AffectedResource,
+	defineVersionChange,
+} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1.js";
+import type { z } from "zod/v4";
+import type { SharedContext } from "../../../../types/sharedContext.js";
+import { AttachParamsV0Schema } from "../attachParamsV0.js";
+import { AttachParamsV1Schema } from "../attachParamsV1.js";
+
+export const V1_2_AttachParamsChange = defineVersionChange({
+	name: "V1.2 Attach Params Change",
+	newVersion: ApiVersion.V2_0,
+	oldVersion: ApiVersion.V1_Beta,
+	description: [
+		"Maps free_trial {length,duration} to {duration_length,duration_type}",
+		"Maps top-level items to customize.items",
+	],
+	affectedResources: [AffectedResource.Attach],
+	newSchema: AttachParamsV1Schema,
+	oldSchema: AttachParamsV0Schema,
+	affectsRequest: true,
+	affectsResponse: false,
+	transformRequest: ({
+		ctx,
+		input,
+	}: {
+		ctx: SharedContext;
+		input: z.infer<typeof AttachParamsV0Schema>;
+	}): z.infer<typeof AttachParamsV1Schema> => {
+		const customizeV1 = input.items
+			? productItemsToCustomizePlanV1({
+					ctx,
+					items: input.items,
+				})
+			: undefined;
+
+		const freeTrialV1 = freeTrialParamsV0ToV1({
+			freeTrialParamsV0: input.free_trial,
+		});
+
+		return {
+			...input,
+			plan_id: input.product_id,
+			free_trial: freeTrialV1,
+			customize: customizeV1,
+		};
+	},
+});

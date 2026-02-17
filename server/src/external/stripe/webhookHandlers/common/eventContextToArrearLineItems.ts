@@ -5,7 +5,7 @@ import type {
 	UpdateCustomerEntitlement,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
+import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import {
@@ -67,7 +67,7 @@ export const eventContextToArrearLineItems = ({
 	}
 
 	// Apply discounts to line items
-	const discounts = setupStripeDiscountsForBilling({
+	const discounts = extractStripeDiscounts({
 		stripeSubscription: eventContext.stripeSubscription,
 		stripeCustomer: eventContext.stripeCustomer,
 	});

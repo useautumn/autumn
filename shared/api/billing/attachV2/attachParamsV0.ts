@@ -1,13 +1,12 @@
+import { RedirectModeSchema } from "@api/billing/common/redirectMode.js";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { BillingBehaviorSchema } from "../common/billingBehavior.js";
-import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
+import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0.js";
+import { AttachDiscountSchema } from "./attachDiscount.js";
 
-export const RedirectModeSchema = z.enum(["always", "if_required", "never"]);
-export type RedirectMode = z.infer<typeof RedirectModeSchema>;
-
-export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
+export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// Product identification
 	product_id: z.string(),
 
@@ -24,6 +23,8 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 
 	plan_schedule: PlanTimingSchema.optional(),
 
+	// Discounts to apply (Stripe coupon IDs or human-readable promo code strings)
+	discounts: z.array(AttachDiscountSchema).optional(),
 	// Billing behavior for attach operations (product transitions):
 	// - 'prorate_immediately' (default): Invoice line items are charged immediately
 	// - 'next_cycle_only': Do NOT create any charges due to the attach

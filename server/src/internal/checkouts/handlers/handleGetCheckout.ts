@@ -1,5 +1,5 @@
 import {
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type Checkout,
 	CheckoutAction,
 	ErrCode,
@@ -31,7 +31,7 @@ export const handleGetCheckout = createRoute({
 			});
 		}
 
-		const params = checkout.params as AttachParamsV0;
+		const params = checkout.params as AttachParamsV1;
 
 		// Re-run attach in preview mode to get current billing plan
 		const { billingContext, billingPlan } = await billingActions.attach({

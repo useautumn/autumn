@@ -19,6 +19,8 @@ export const getBooleanApiBalance = ({
 	const id = cusEnts[0].id;
 
 	return {
+		object: "balance",
+
 		feature: apiFeature,
 		feature_id: feature.id,
 
@@ -34,6 +36,7 @@ export const getBooleanApiBalance = ({
 
 		breakdown: [
 			{
+				object: "balance_breakdown",
 				id,
 				plan_id: planId,
 				included_grant: 0,
@@ -44,6 +47,7 @@ export const getBooleanApiBalance = ({
 				reset: null,
 				expires_at: null,
 				price: null,
+				overage: 0,
 			} satisfies ApiBalanceBreakdownV1,
 		],
 		rollovers: undefined,
@@ -63,6 +67,7 @@ export const getUnlimitedApiBalance = ({
 	const entityId = undefined; // Unlimited features don't have entity context
 
 	return {
+		object: "balance",
 		feature: apiFeature,
 		feature_id: feature.id,
 
@@ -78,6 +83,7 @@ export const getUnlimitedApiBalance = ({
 
 		breakdown: [
 			{
+				object: "balance_breakdown",
 				id,
 				plan_id: planId,
 				included_grant: 0,
@@ -88,6 +94,7 @@ export const getUnlimitedApiBalance = ({
 				reset: null,
 				expires_at: null,
 				price: null,
+				overage: 0,
 			} satisfies ApiBalanceBreakdownV1,
 		],
 		rollovers: cusEntsToRollovers({ cusEnts, entityId }),

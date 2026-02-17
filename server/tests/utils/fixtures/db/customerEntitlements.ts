@@ -3,6 +3,7 @@ import {
 	type EntityBalance,
 	FeatureType,
 	type FullCustomerEntitlement,
+	type RolloverConfig,
 } from "@autumn/shared";
 import { entitlements } from "./entitlements";
 
@@ -26,6 +27,7 @@ const create = ({
 	nextResetAt = null,
 	entities = null,
 	entityFeatureId = null,
+	rollover = null,
 }: {
 	id?: string;
 	entitlementId?: string;
@@ -43,6 +45,7 @@ const create = ({
 	nextResetAt?: number | null;
 	entities?: Record<string, EntityBalance> | null;
 	entityFeatureId?: string | null;
+	rollover?: RolloverConfig | null;
 }): FullCustomerEntitlement => {
 	const entId = entitlementId ?? `ent_${featureId}`;
 	return {
@@ -72,6 +75,7 @@ const create = ({
 			interval,
 			intervalCount,
 			entityFeatureId,
+			rollover,
 		}),
 		replaceables: [],
 		rollovers: [],

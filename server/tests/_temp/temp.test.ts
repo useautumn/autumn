@@ -7,32 +7,26 @@ import chalk from "chalk";
 /**
  * Test: Attach free default product, then attach pro with invoice mode
  */
-test.concurrent(`${chalk.yellowBright("invoice-mode: free default then pro with invoice checkout")}`, async () => {
-	const users = items.monthlyUsers({ includedUsage: 1 });
-	const free = products.base({
-		id: "free",
-		items: [items.monthlyMessages({ includedUsage: 100 }), users],
-	});
+test.concurrent(`${chalk.yellowBright("attach: pro plan with failed payment method")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({
 		id: "pro",
-		items: [items.monthlyMessages({ includedUsage: 100 }), users],
-	});
-	const premium = products.premium({
-		id: "premium",
-		items: [items.monthlyMessages({ includedUsage: 100 }), users],
+		items: [messagesItem],
 	});
 
 	const { autumnV1 } = await initScenario({
-		customerId: "test",
+		customerId: "test-failed-pm",
 		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
+			s.customer({ paymentMethod: "fail" }), // Failed payment method
+			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	await autumnV1.attach({
-		customer_id: "test",
+	const result = await autumnV1.attach({
+		customer_id: "test-failed-pm",
 		product_id: pro.id,
 	});
+
+	console.log("Attach response:", JSON.stringify(result, null, 2));
 });
