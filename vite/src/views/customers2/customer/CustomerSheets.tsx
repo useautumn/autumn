@@ -6,6 +6,7 @@ import {
 	useSheetEscapeHandler,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
@@ -18,6 +19,7 @@ import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdate
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
+	const isMobile = useIsMobile();
 	const sheetType = useSheetStore((s) => s.type);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
@@ -62,9 +64,9 @@ export function CustomerSheets() {
 					exit={{ x: "100%" }}
 					transition={SHEET_ANIMATION}
 					className="absolute right-0 top-0 bottom-0"
-					style={{ width: "28rem", zIndex: 45 }}
+					style={{ width: isMobile ? "100%" : "28rem", zIndex: 45 }}
 				>
-					<SheetContainer className="w-full bg-background z-40 border-l border-border/40 h-full relative">
+					<SheetContainer className="w-full bg-background z-40 sm:border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={handleClose} />
 						{renderSheet()}
 					</SheetContainer>

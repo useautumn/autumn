@@ -27,7 +27,7 @@ export function CustomerListSearchBar() {
 	};
 
 	return (
-		<div className="relative flex items-center w-full max-w-xs">
+		<div className="relative flex items-center flex-1 min-w-0">
 			<ListMagnifyingGlassIcon
 				size={16}
 				className="text-t3 absolute left-2.5 pointer-events-none"

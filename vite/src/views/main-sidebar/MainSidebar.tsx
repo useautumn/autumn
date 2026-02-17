@@ -79,17 +79,24 @@ const buildDevSubTabs = ({
 	];
 };
 
-export const MainSidebar = () => {
+export const MainSidebar = ({
+	onNavigate,
+}: {
+	onNavigate?: () => void;
+} = {}) => {
 	const env = useEnv();
 	const { org } = useOrg();
 
 	const flags = useAutumnFlags();
-	console.log();
 
-	const [expanded, setExpanded] = useLocalStorage<boolean>(
+	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
 		true,
 	);
+
+	// In mobile sheet mode, always show expanded sidebar
+	const isMobileSheet = !!onNavigate;
+	const expanded = isMobileSheet ? true : storedExpanded;
 
 	const [productGroupOpen, setProductGroupOpen] = useLocalStorage<boolean>(
 		"sidebar.productGroupOpen",
@@ -108,33 +115,36 @@ export const MainSidebar = () => {
 		setProductGroupOpen((prev) => !prev);
 	};
 
-	// const expanded = state == "expanded";
 	return (
-		<SidebarContext.Provider value={{ expanded, setExpanded }}>
+		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
 			<div
 				className={cn(
 					`h-full py-4 flex flex-col justify-between transition-all duration-150 relative`,
-					expanded
-						? "min-w-[200px] max-w-[200px]"
-						: "min-w-[50px] max-w-[50px]",
+					isMobileSheet
+						? "min-w-[200px]"
+						: expanded
+							? "min-w-[200px] max-w-[200px]"
+							: "min-w-[50px] max-w-[50px]",
 				)}
 			>
 				<div className="flex flex-col gap-6 relative">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => {
-							setExpanded((prev) => !prev);
-						}}
-						className={cn(
-							"absolute top-1 right-4 text-t3 hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none !bg-transparent",
-							expanded
-								? "opacity-100 transition-opacity duration-100"
-								: "opacity-0 transition-opacity duration-100",
-						)}
-					>
-						<PanelLeft size={14} />
-					</Button>
+					{!isMobileSheet && (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								setExpanded((prev) => !prev);
+							}}
+							className={cn(
+								"absolute top-1 right-4 text-t3 hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none !bg-transparent",
+								expanded
+									? "opacity-100 transition-opacity duration-100"
+									: "opacity-0 transition-opacity duration-100",
+							)}
+						>
+							<PanelLeft size={14} />
+						</Button>
+					)}
 					<OrgDropdown />
 					{org?.deployed && <EnvDropdown env={env} />}
 					<div className="flex flex-col px-2 gap-1">
@@ -188,7 +198,7 @@ export const MainSidebar = () => {
 				</div>
 
 				<SidebarBottom />
-				<SidebarRail />
+				{!isMobileSheet && <SidebarRail />}
 			</div>
 		</SidebarContext.Provider>
 	);
