@@ -12,7 +12,7 @@ export const findTargetCustomerProduct = ({
 	fullCustomer: FullCustomer;
 }) => {
 	const cusProducts = fullCustomer.customer_products;
-	const productId = params.product_id;
+	const productId = params.plan_id;
 	const internalEntityId = fullCustomer.entity?.internal_id;
 	const cusProductId = params.customer_product_id;
 

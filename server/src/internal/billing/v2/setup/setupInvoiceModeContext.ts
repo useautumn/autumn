@@ -8,12 +8,13 @@ export const setupInvoiceModeContext = ({
 }: {
 	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
-	if (params?.invoice !== true) {
+	if (params?.invoice_mode?.enabled !== true) {
 		return undefined;
 	}
 
 	return {
-		finalizeInvoice: params.finalize_invoice === true,
-		enableProductImmediately: params.enable_product_immediately !== false,
+		finalizeInvoice: params.invoice_mode?.finalize_invoice === true,
+		enableProductImmediately:
+			params.invoice_mode?.enable_product_immediately !== false,
 	};
 };

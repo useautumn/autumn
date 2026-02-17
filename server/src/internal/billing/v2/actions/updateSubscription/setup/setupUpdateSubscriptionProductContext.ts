@@ -33,7 +33,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 
 	if (!targetCustomerProduct) {
 		throw new RecaseError({
-			message: `Customer ${fullCustomer.id} does not have the product ${params.product_id}.`,
+			message: `Customer ${fullCustomer.id} does not have the plan ${params.plan_id}.`,
 		});
 	}
 

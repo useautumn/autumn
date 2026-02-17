@@ -34,7 +34,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize update: both customize.price
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 30 }),
 			items: [itemsV2.monthlyWords({ included: 200 })],
@@ -86,7 +86,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize update: only customize.price
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 24 }),
 		},
@@ -137,7 +137,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize update: only customize.items
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		customize: {
 			price: null,
 			items: [itemsV2.monthlyMessages({ included: 180 })],
@@ -189,8 +189,8 @@ test.concurrent(`${chalk.yellowBright("v2-customize update: plan item v1 prepaid
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		plan_id: pro.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		customize: {
 			price: null,
 			items: [itemsV2.prepaidMessages({ amount: 10, billingUnits: 100 })],
@@ -235,7 +235,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize update: plan item v1 multi-f
 
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 40 }),
 			items: [
