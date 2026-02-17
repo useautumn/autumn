@@ -13,8 +13,7 @@ export const setupInvoiceModeContext = ({
 	}
 
 	return {
-		finalizeInvoice: params.invoice_mode?.finalize_invoice === true,
-		enableProductImmediately:
-			params.invoice_mode?.enable_product_immediately !== false,
+		finalizeInvoice: params.invoice_mode?.finalize,
+		enableProductImmediately: params.invoice_mode?.enable_plan_immediately,
 	};
 };

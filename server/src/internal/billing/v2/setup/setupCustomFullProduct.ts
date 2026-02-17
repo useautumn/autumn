@@ -26,6 +26,12 @@ export const setupCustomFullProduct = async ({
 		};
 	}
 
+	const newItems = customizePlanV1ToV0({
+		ctx,
+		customizePlanV1: customizePlan,
+		fullProduct: currentFullProduct,
+	});
+
 	// Customize plan -> custom items
 
 	const { db, logger, features } = ctx;
@@ -38,11 +44,7 @@ export const setupCustomFullProduct = async ({
 			db,
 			curPrices: currentPrices,
 			curEnts: currentEntitlements,
-			newItems: customizePlanV1ToV0({
-				ctx,
-				customizePlanV1: customizePlan,
-				fullProduct: currentFullProduct,
-			}),
+			newItems,
 			features,
 			product: currentFullProduct,
 			logger,

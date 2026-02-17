@@ -17,10 +17,10 @@ export const handleTransitionConfigErrors = ({
 }) => {
 	const { transitionConfig } = billingContext;
 
-	const resetAfterTrialEndFeaturIds =
-		transitionConfig?.resetAfterTrialEndFeaturIds ?? [];
+	const resetAfterTrialEndFeatureIds =
+		transitionConfig?.resetAfterTrialEndFeatureIds ?? [];
 
-	for (const featureId of resetAfterTrialEndFeaturIds) {
+	for (const featureId of resetAfterTrialEndFeatureIds) {
 		const feature = featureUtils.find.byId({
 			features: ctx.features,
 			featureId,
