@@ -52,7 +52,7 @@ const productFields = {
 interface SearchFilters {
 	status?: string[];
 	version?: string[];
-	none?: string;
+	none?: boolean;
 }
 
 export class CusSearchService {
@@ -511,7 +511,7 @@ export class CusSearchService {
 				resolvedLastItem = null;
 			}
 		}
-		const noneProducts = filters?.none === "true";
+		const noneProducts = !!filters?.none;
 
 		if (noneProducts) {
 			return await CusSearchService.searchByNone({
