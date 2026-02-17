@@ -1,4 +1,7 @@
-import type { BillingResponseRequiredAction } from "@autumn/shared";
+import type {
+	BillingResponseRequiredAction,
+	InvoiceMode,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 
@@ -20,11 +23,16 @@ export const getRequiredActionFromSubscriptionInvoice = async ({
 	stripeClient,
 	invoiceId,
 	hasPaymentMethod,
+	invoiceMode,
 }: {
 	stripeClient: Stripe;
 	invoiceId: string;
 	hasPaymentMethod: boolean;
+	invoiceMode?: InvoiceMode;
 }): Promise<BillingResponseRequiredAction | undefined> => {
+	// Should enable prooduct immediately, can pay later
+	if (invoiceMode?.enableProductImmediately) return undefined;
+
 	// Fetch invoice with expanded payments to get payment intent status
 	const invoice = await getStripeInvoice({
 		stripeClient,

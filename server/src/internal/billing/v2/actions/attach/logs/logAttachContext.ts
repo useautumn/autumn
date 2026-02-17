@@ -61,9 +61,9 @@ export const logAttachContext = ({
 								.join(", ")
 						: "none",
 
-				resetAfterTrialEndFeaturIds:
-					transitionConfig?.resetAfterTrialEndFeaturIds
-						? transitionConfig.resetAfterTrialEndFeaturIds.join(", ")
+				resetAfterTrialEndFeatureIds:
+					transitionConfig?.resetAfterTrialEndFeatureIds
+						? transitionConfig.resetAfterTrialEndFeatureIds.join(", ")
 						: "none",
 
 				trialContext: trialContext

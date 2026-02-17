@@ -37,5 +37,7 @@ export const setupDefaultProductContext = async ({
 		productGroup: customerProduct.product.group,
 	});
 
+	if (defaultProduct?.id === customerProduct.product.id) return undefined;
+
 	return defaultProduct;
 };

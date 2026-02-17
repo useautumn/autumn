@@ -6,6 +6,7 @@ export const isDeferredInvoiceMode = ({
 	billingContext: BillingContext;
 }): boolean => {
 	const isInvoiceMode = Boolean(billingContext.invoiceMode);
+
 	const shouldDefer =
 		billingContext.invoiceMode?.enableProductImmediately === false;
 

@@ -16,7 +16,7 @@ export const setupTransitionConfigs = ({
 	}
 
 	return {
-		resetAfterTrialEndFeaturIds:
+		resetAfterTrialEndFeatureIds:
 			params.transition_rules?.reset_after_trial_end ?? [],
 	};
 };

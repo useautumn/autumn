@@ -7,7 +7,7 @@ export const setupAdjustableQuantities = ({
 }) => {
 	return (
 		params.feature_quantities
-			?.filter((fq) => fq.adjustable)
+			?.filter((fq) => fq.adjustable === true)
 			.map((fq) => fq.feature_id) ?? []
 	);
 };

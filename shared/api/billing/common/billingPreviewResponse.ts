@@ -6,10 +6,9 @@ export const PreviewLineItemSchema = z.object({
 	description: z.string(),
 	amount: z.number(),
 	discounts: z.array(LineItemDiscountSchema).default([]),
-	is_base: z.boolean().optional(),
+	plan_id: z.string(),
 	total_quantity: z.number(),
 	paid_quantity: z.number(),
-	plan_id: z.string(),
 	deferred_for_trial: z.boolean().optional(),
 	effective_period: z
 		.object({
@@ -17,6 +16,8 @@ export const PreviewLineItemSchema = z.object({
 			end: z.number(),
 		})
 		.optional(),
+
+	is_base: z.boolean().optional(),
 });
 
 export type PreviewLineItem = z.infer<typeof PreviewLineItemSchema>;
@@ -31,13 +32,13 @@ export const BillingPreviewResponseSchema = z.object({
 	period_start: z.number().optional(),
 	period_end: z.number().optional(),
 
-	/** Credit from excess refund (e.g. unused time on previous plan exceeds new charge). Applied to next invoice(s) by Stripe. */
-	credit: z
-		.object({
-			amount: z.number(),
-			description: z.string(),
-		})
-		.optional(),
+	// /** Credit from excess refund (e.g. unused time on previous plan exceeds new charge). Applied to next invoice(s) by Stripe. */
+	// credit: z
+	// 	.object({
+	// 		amount: z.number(),
+	// 		description: z.string(),
+	// 	})
+	// 	.optional(),
 
 	next_cycle: z
 		.object({

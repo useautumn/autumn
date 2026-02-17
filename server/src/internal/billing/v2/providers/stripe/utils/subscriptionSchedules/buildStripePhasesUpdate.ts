@@ -78,6 +78,7 @@ const customerProductsToPhaseItems = ({
  * Converts billing context discounts to the format expected by Stripe schedule phases.
  * Uses the existing discount ID so Stripe reuses the same discount object,
  * preserving the original start/end timestamps and remaining duration for repeating coupons.
+ * Falls back to coupon ID for new discounts that don't have a discount ID yet.
  */
 const stripeDiscountsToPhaseDiscounts = ({
 	stripeDiscounts,
@@ -86,9 +87,11 @@ const stripeDiscountsToPhaseDiscounts = ({
 }): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] | undefined => {
 	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
 
-	return stripeDiscounts.map((discount) => ({
-		discount: discount.source.coupon.id,
-	}));
+	return stripeDiscounts.map((discount) =>
+		discount.id
+			? { discount: discount.id }
+			: { coupon: discount.source.coupon.id },
+	);
 };
 
 /**

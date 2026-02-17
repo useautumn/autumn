@@ -26,11 +26,11 @@ export const initCustomerEntitlementNextResetAt = ({
 	if (isLifetime || isUnlimited || isBoolean) return null;
 
 	let { resetCycleAnchor, now, trialEndsAt, transitionConfig } = initContext;
-	const { resetAfterTrialEndFeaturIds } = transitionConfig ?? {};
+	const { resetAfterTrialEndFeatureIds } = transitionConfig ?? {};
 	const { startsAt } = initOptions ?? {};
 
 	if (
-		resetAfterTrialEndFeaturIds?.includes(entitlement.feature.id) &&
+		resetAfterTrialEndFeatureIds?.includes(entitlement.feature.id) &&
 		trialEndsAt
 	) {
 		now = trialEndsAt;

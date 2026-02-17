@@ -61,19 +61,25 @@ const extractCouponId = (discount: unknown): string | null => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Premium to Pro with 20% discount - verify discount on sub after schedule
+// TEST 1: Premium to Pro with 20% discount - verify discount preserved through cycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Customer has premium ($50/mo) with 20% off coupon on subscription
  * - Downgrade to pro ($20/mo) - scheduled for end of cycle
+ * - Advance test clock to next billing cycle
  *
  * Expected Result:
  * - Discount still present on Stripe subscription after scheduling the downgrade
  * - Premium is canceling, pro is scheduled
+ * - After cycle: pro is active, premium removed
+ * - Discount should STILL be on the subscription after the phase transition
+ *
+ * THIS TEST EXPOSES THE BUG: subscription schedule phases don't carry discounts,
+ * so when the subscription transitions to the pro phase, the discount is lost.
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 1: 20% discount preserved after scheduling downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 1: 20% discount preserved after scheduling and cycle advance")}`, async () => {
 	const customerId = "sched-switch-discount-20pct";
 
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -90,7 +96,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 1: 20% discoun
 		items: [premiumMessagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -128,7 +134,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 1: 20% discoun
 		redirect_mode: "if_required",
 	});
 
-	// Verify product states
+	// Verify product states after scheduling
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
 		customer,
@@ -140,16 +146,57 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 1: 20% discoun
 	});
 
 	// Verify discount is still on the subscription after scheduling the downgrade
-	const { subscription: subAfter } = await getStripeSubscription({
+	const { subscription: subAfterSchedule } = await getStripeSubscription({
 		customerId,
 	});
-	const subAfterExpanded = await stripeCli.subscriptions.retrieve(subAfter.id, {
-		expand: ["discounts.source.coupon"],
+	const subAfterScheduleExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterSchedule.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
+	expect(subAfterScheduleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterScheduleExpanded.discounts?.[0])).toBe(
+		coupon.id,
+	);
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		currentEpochMs: advancedTo,
+		withPause: true,
 	});
 
-	// KEY ASSERTION: discount should still be present
-	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-	expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
+	const customerAfterCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Verify pro is active, premium removed
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// Verify features updated to pro tier
+	expectCustomerFeatureCorrect({
+		customer: customerAfterCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500,
+		usage: 0,
+	});
+
+	// KEY BUG CHECK: verify discount survives the phase transition
+	const { subscription: subAfterCycle } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterCycleExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterCycle.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
+
+	// The discount should still be present after the scheduled switch completed
+	expect(subAfterCycleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterCycleExpanded.discounts?.[0])).toBe(coupon.id);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -237,128 +284,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 2: $10 off dis
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Premium to Pro with discount - advance cycle, verify discount survives
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with 20% off coupon
- * - Downgrade to pro ($20/mo) - scheduled
- * - Advance test clock to next billing cycle
- *
- * Expected Result:
- * - After cycle: pro is active, premium removed
- * - Discount should STILL be on the subscription after the phase transition
- *
- * THIS TEST EXPOSES THE BUG: subscription schedule phases don't carry discounts,
- * so when the subscription transitions to the pro phase, the discount is lost.
- */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 3: 20% discount preserved after cycle advance")}`, async () => {
-	const customerId = "sched-switch-discount-cycle";
-
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
-
-	const premiumMessagesItem = items.monthlyMessages({
-		includedUsage: 1000,
-	});
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessagesItem],
-	});
-
-	const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
-		],
-		actions: [s.billing.attach({ productId: premium.id })],
-	});
-
-	// Apply 20% discount to the subscription
-	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-		customerId,
-	});
-
-	const coupon = await createPercentCoupon({
-		stripeCli,
-		percentOff: 20,
-	});
-
-	await applySubscriptionDiscount({
-		stripeCli,
-		subscriptionId: subBefore.id,
-		couponIds: [coupon.id],
-	});
-
-	// Verify discount applied before downgrade
-	const subWithDiscount = await stripeCli.subscriptions.retrieve(subBefore.id, {
-		expand: ["discounts.source.coupon"],
-	});
-	expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
-
-	// Schedule downgrade to pro
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
-
-	// Verify discount still present after scheduling
-	const { subscription: subMid } = await getStripeSubscription({
-		customerId,
-	});
-	const subMidExpanded = await stripeCli.subscriptions.retrieve(subMid.id, {
-		expand: ["discounts.source.coupon"],
-	});
-	expect(subMidExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-
-	// Advance to next billing cycle (discount is still on the subscription)
-	await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		currentEpochMs: advancedTo,
-		withPause: true,
-	});
-
-	const customerAfterCycle =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify pro is active, premium removed
-	await expectCustomerProducts({
-		customer: customerAfterCycle,
-		active: [pro.id],
-		notPresent: [premium.id],
-	});
-
-	// Verify features updated to pro tier
-	expectCustomerFeatureCorrect({
-		customer: customerAfterCycle,
-		featureId: TestFeature.Messages,
-		includedUsage: 500,
-		balance: 500,
-		usage: 0,
-	});
-
-	// KEY BUG CHECK: verify discount survives the phase transition
-	const { subscription: subAfterCycle } = await getStripeSubscription({
-		customerId,
-	});
-	const subAfterExpanded = await stripeCli.subscriptions.retrieve(
-		subAfterCycle.id,
-		{ expand: ["discounts.source.coupon"] },
-	);
-
-	// The discount should still be present after the scheduled switch completed
-	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Premium to Pro (scheduled) to Free (replace) - discount preserved
+// TEST 3: Premium to Pro (scheduled) to Free (replace) - discount preserved
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -373,7 +299,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 3: 20% discoun
  * The schedule is released and recreated during replacement. This test verifies
  * that the discount survives the release + recreate cycle.
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 4: discount preserved when replacing scheduled downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 3: discount preserved when replacing scheduled downgrade")}`, async () => {
 	const customerId = "sched-switch-discount-replace";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -472,7 +398,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 4: discount pr
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Multiple discounts preserved after scheduled downgrade
+// TEST 4: Multiple discounts preserved after scheduled downgrade
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -483,7 +409,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 4: discount pr
  * Expected Result:
  * - Both discounts still present on subscription after scheduling
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 5: multiple discounts preserved after scheduling")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 4: multiple discounts preserved after scheduling")}`, async () => {
 	const customerId = "sched-switch-discount-multi";
 
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -568,7 +494,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 5: multiple di
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Upgrade from scheduled downgrade - discount preserved
+// TEST 5: Upgrade from scheduled downgrade - discount preserved
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -581,7 +507,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 5: multiple di
  * - Discount should still be on the subscription after upgrade cancels the schedule
  * - Ultra is active, premium and pro are removed
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: discount preserved after upgrade cancels scheduled downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 5: discount preserved after upgrade cancels scheduled downgrade")}`, async () => {
 	const customerId = "sched-switch-discount-upgrade";
 
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -674,7 +600,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: discount pr
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Repeating coupon duration preserved across phase transition
+// TEST 6: Repeating coupon duration preserved across phase transition
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -693,7 +619,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: discount pr
  * creates a fresh discount with a reset duration, instead of using
  * `discount: discountId` to preserve the original duration.
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 7: repeating coupon duration preserved across phase transition")}`, async () => {
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: repeating coupon duration preserved across phase transition")}`, async () => {
 	const customerId = "sched-switch-discount-duration";
 
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
