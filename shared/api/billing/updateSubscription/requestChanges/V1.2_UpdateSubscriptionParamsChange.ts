@@ -1,3 +1,4 @@
+import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams.js";
 import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
@@ -41,8 +42,17 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 			freeTrialParamsV0: input.free_trial,
 		});
 
+		const newPlanId = input.product_id ?? undefined;
+		const featureQuantities = input.options;
+
+		const invoiceMode = billingParamsV0ToInvoiceModeParams({ input });
+
 		return {
 			...input,
+			plan_id: newPlanId,
+			invoice_mode: invoiceMode,
+			feature_quantities: featureQuantities,
+
 			free_trial: freeTrialV1,
 			customize: customizeV1,
 		};

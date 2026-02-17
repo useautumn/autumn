@@ -14,7 +14,7 @@ import {
 } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { dbToApiFeatureV1 } from "@utils/featureUtils/apiFeatureToDbFeature.js";
 import { featureToItemFeatureType } from "@utils/featureUtils/convertFeatureUtils.js";
-
+import { featureUtils } from "@utils/featureUtils/index.js";
 import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import type { SharedContext } from "../../../../types/sharedContext.js";
@@ -25,7 +25,6 @@ import {
 } from "../../../models.js";
 import { ApiVersion } from "../../../versionUtils/ApiVersion.js";
 import { ApiVersionClass } from "../../../versionUtils/ApiVersionClass.js";
-
 import { hasPrice, hasResetInterval } from "../utils/classifyPlanItemV0.js";
 
 const planItemV0ToProductItemInterval = ({
@@ -123,6 +122,8 @@ export const planItemV0ToProductItem = ({
 		"entitlement_id" in planItem ? planItem.entitlement_id : undefined;
 	const priceId = "price_id" in planItem ? planItem.price_id : undefined;
 
+	const resetUsageWhenEnabled = featureUtils.isConsumable(feature);
+
 	return ProductItemSchema.parse({
 		type,
 
@@ -139,8 +140,6 @@ export const planItemV0ToProductItem = ({
 		interval,
 		interval_count: planItem.reset?.interval_count,
 
-		entity_feature_id: null,
-
 		price: planItem.price?.amount,
 
 		tiers: planItem.price?.tiers?.map((tier) => ({
@@ -154,7 +153,8 @@ export const planItemV0ToProductItem = ({
 			? planItem.price.max_purchase + (planItem.granted_balance ?? 0)
 			: undefined,
 
-		reset_usage_when_enabled: planItem.reset?.reset_when_enabled,
+		reset_usage_when_enabled:
+			planItem.reset?.reset_when_enabled ?? resetUsageWhenEnabled,
 
 		config,
 
@@ -162,5 +162,7 @@ export const planItemV0ToProductItem = ({
 
 		entitlement_id: entitlementId,
 		price_id: priceId,
+
+		entity_feature_id: planItem.entity_feature_id,
 	} satisfies ProductItem);
 };
