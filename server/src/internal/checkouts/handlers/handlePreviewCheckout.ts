@@ -49,7 +49,7 @@ export const handlePreviewCheckout = createRoute({
 		// Merge provided options with original params
 		const params: AttachParamsV1 = {
 			...originalParams,
-			options: body.options,
+			feature_quantities: body.options,
 		};
 
 		// Re-run attach in preview mode with updated options

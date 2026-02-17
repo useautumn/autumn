@@ -49,7 +49,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 				// No options provided
 			};
 
@@ -94,8 +94,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 50 }],
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 50 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -147,8 +147,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 200 }],
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 200 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -248,8 +248,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "seats", quantity: 10 }], // Only updating seats
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "seats", quantity: 10 }], // Only updating seats
 			};
 
 			const ctx = contexts.create({
@@ -304,8 +304,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 150 }], // Should round up to 200
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 150 }], // Should round up to 200
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -351,8 +351,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 200 }], // Exact multiple
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 200 }], // Exact multiple
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -397,8 +397,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 1 }], // Should round to 1000
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 1 }], // Should round to 1000
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -465,7 +465,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 				// No options - should inherit from current
 			};
 
@@ -534,7 +534,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -593,7 +593,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -641,8 +641,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 50 }],
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 50 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -667,7 +667,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 			};
 
 			const ctx = contexts.create({ features: [] });
@@ -698,7 +698,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 			};
 
 			const ctx = contexts.create({ features: [] });
@@ -740,8 +740,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				// No options in params either
+				plan_id: "prod_test",
+				// No feature_quantities in params either
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -793,8 +793,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [], // Explicitly empty
+				plan_id: "prod_test",
+				feature_quantities: [], // Explicitly empty
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -847,8 +847,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
-				options: [{ feature_id: "credits", quantity: 0 }],
+				plan_id: "prod_test",
+				feature_quantities: [{ feature_id: "credits", quantity: 0 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -903,7 +903,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -955,7 +955,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
-				product_id: "prod_test",
+				plan_id: "prod_test",
 				// No options provided - should carry over from current
 			};
 

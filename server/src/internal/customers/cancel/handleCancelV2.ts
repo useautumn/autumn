@@ -25,7 +25,7 @@ export const handleCancelV2 = createRoute({
 
 		const updateSubscriptionBody: UpdateSubscriptionV1Params = {
 			customer_id,
-			product_id,
+			plan_id: product_id,
 			entity_id,
 			cancel_action: cancel_immediately
 				? "cancel_immediately"

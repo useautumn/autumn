@@ -54,10 +54,15 @@ export const buildStripeCheckoutSessionItems = ({
 
 		// If it's a prepaid price, allow adjustable quantity
 		if (autumnPrice && autumnEntitlement && isPrepaidPrice(autumnPrice)) {
+			const feature = autumnEntitlement.feature;
+			const isAdjustable = billingContext.adjustableFeatureQuantities?.includes(
+				feature.id,
+			);
+
 			return {
 				price: stripePriceId,
 				quantity: quantity ?? 0,
-				adjustable_quantity: billingContext.checkoutQuantityAdjustable
+				adjustable_quantity: isAdjustable
 					? {
 							enabled: true,
 							minimum: priceUtils.convert.toAllowanceInPacks({

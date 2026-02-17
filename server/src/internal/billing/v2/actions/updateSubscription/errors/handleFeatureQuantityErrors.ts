@@ -37,7 +37,7 @@ const checkInputFeatureQuantitiesAreValid = ({
 		cusProduct: targetCustomerProduct,
 	}).filter(isPrepaidPrice);
 
-	for (const option of params.options ?? []) {
+	for (const option of params.feature_quantities ?? []) {
 		if (nullish(option.quantity)) continue;
 
 		const targetPrepaidPrice = prepaidPrices.find((p) => {
