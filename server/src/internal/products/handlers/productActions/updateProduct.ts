@@ -160,10 +160,12 @@ export const updateProduct = async ({
 		});
 	}
 
+	const latestProductId = updates.id || fullProduct.id;
+
 	// New full product
 	const newFullProduct = await ProductService.getFull({
 		db,
-		idOrInternalId: fullProduct.id,
+		idOrInternalId: latestProductId,
 		orgId: org.id,
 		env,
 	});
@@ -202,7 +204,7 @@ export const updateProduct = async ({
 		jobName: JobName.RewardMigration,
 		payload: {
 			oldPrices: fullProduct.prices,
-			productId: fullProduct.id,
+			productId: latestProductId,
 			orgId: org.id,
 			env,
 		},
