@@ -34,7 +34,7 @@ export const computeAttachNewCustomerProduct = ({
 		trialContext,
 		isCustom,
 		billingVersion,
-		transitionConfigs,
+		transitionConfig,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -82,7 +82,7 @@ export const computeAttachNewCustomerProduct = ({
 
 			existingUsagesConfig,
 			existingRolloversConfig,
-			transitionConfigs,
+			transitionConfig,
 		},
 		initOptions: {
 			isCustom,

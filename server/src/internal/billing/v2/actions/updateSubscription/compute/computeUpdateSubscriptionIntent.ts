@@ -21,7 +21,7 @@ export const computeUpdateSubscriptionIntent = (
 
 	// Version change = plan update (takes priority)
 	const featureQuantitiesChanges =
-		params.options?.length && params.options.length > 0;
+		params.feature_quantities?.length && params.feature_quantities.length > 0;
 
 	if (featureQuantitiesChanges) {
 		return UpdateSubscriptionIntent.UpdateQuantity;

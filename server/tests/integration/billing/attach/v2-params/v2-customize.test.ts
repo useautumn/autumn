@@ -33,7 +33,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: both customize.price
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: base.id,
+		plan_id: base.id,
 		redirect_mode: "if_required",
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 30 }),
@@ -86,7 +86,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: only customize.price
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: base.id,
+		plan_id: base.id,
 		redirect_mode: "if_required",
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 25 }),
@@ -137,7 +137,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: only customize.items
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		redirect_mode: "if_required",
 		customize: {
 			// price: null,
@@ -196,7 +196,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: price null makes pro
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
 		redirect_mode: "if_required",
 		customize: {
 			price: null,
@@ -253,9 +253,9 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: plan item v1 prepaid
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: base.id,
+		plan_id: base.id,
 		redirect_mode: "if_required",
-		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		customize: {
 			price: null,
 			items: [itemsV2.prepaidMessages({ amount: 10, billingUnits: 100 })],
@@ -295,7 +295,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: plan item v1 multi-f
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: base.id,
+		plan_id: base.id,
 		redirect_mode: "if_required",
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 40 }),
@@ -344,9 +344,9 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: paid feature mix (co
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
-		product_id: base.id,
+		plan_id: base.id,
 		redirect_mode: "if_required",
-		options: [{ feature_id: TestFeature.Words, quantity: 500 }],
+		feature_quantities: [{ feature_id: TestFeature.Words, quantity: 500 }],
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 40 }),
 			items: [
