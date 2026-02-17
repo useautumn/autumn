@@ -20,6 +20,7 @@ import {
 	cusEntsToRollovers,
 	cusEntsToRolloverUsage,
 	cusEntsToUsage,
+	cusEntToInvoiceOverage,
 	customerEntitlementToBalancePrice,
 	dbToApiFeatureV1,
 	expandIncludes,
@@ -84,9 +85,16 @@ const getApiBalanceBreakdownItem = ({
 	// Price
 	const price = customerEntitlementToBalancePrice({ customerEntitlement });
 
+	const overage = cusEntToInvoiceOverage({
+		cusEnt: customerEntitlement,
+		entityId,
+	});
+
 	const expiresAt = customerEntitlement.expires_at;
 
 	return {
+		object: "balance_breakdown",
+
 		id: customerEntitlement.id,
 		plan_id: planId,
 
@@ -99,6 +107,8 @@ const getApiBalanceBreakdownItem = ({
 		reset: reset,
 		price: price,
 		expires_at: expiresAt,
+
+		overage: overage,
 	};
 };
 
@@ -182,6 +192,8 @@ export const getApiBalance = ({
 
 	return {
 		data: {
+			object: "balance",
+
 			feature_id: feature.id,
 			feature: apiFeature,
 

@@ -3,7 +3,7 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	nullish,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getFreeDefaultProductByGroup } from "@/internal/customers/cusProducts/cusProductUtils";
@@ -18,19 +18,19 @@ export const setupDefaultProductContext = async ({
 	customerProduct,
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	customerProduct: FullCusProduct;
 }): Promise<FullProduct | undefined> => {
 	// Only fetch if cancel is requested (not null/undefined)
 	if (nullish(params.cancel_action)) return undefined;
 
 	// Add-ons don't trigger default products
-	const { valid: isMainCustomerScopedAndPaid } = cp(customerProduct)
+	const { valid: isMainCustomerScopedAndRecurring } = cp(customerProduct)
 		.main()
-		.paidRecurring()
+		.recurring()
 		.customerScoped();
 
-	if (!isMainCustomerScopedAndPaid) return undefined;
+	if (!isMainCustomerScopedAndRecurring) return undefined;
 
 	const defaultProduct = await getFreeDefaultProductByGroup({
 		ctx,

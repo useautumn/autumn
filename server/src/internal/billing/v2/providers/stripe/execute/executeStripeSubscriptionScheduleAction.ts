@@ -1,15 +1,16 @@
-import { createStripeCli } from "@server/external/connect/createStripeCli";
-import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type Stripe from "stripe";
-import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import type {
 	BillingContext,
 	StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
+import { createStripeCli } from "@server/external/connect/createStripeCli";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import type Stripe from "stripe";
+import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
  * Maps update phase format to create phase format (strips start_date).
+ * Preserves discounts so they carry forward to the new schedule phases.
  */
 const toCreatePhase = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
@@ -19,6 +20,9 @@ const toCreatePhase = (
 		quantity: item.quantity,
 	})),
 	end_date: typeof phase.end_date === "number" ? phase.end_date : undefined,
+	discounts: phase.discounts as
+		| Stripe.SubscriptionScheduleCreateParams.Phase.Discount[]
+		| undefined,
 });
 
 /**

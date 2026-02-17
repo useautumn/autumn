@@ -9,9 +9,9 @@ BUN_PARALLEL_V2 \
   'integration/billing/stripe-webhooks' \
   'integration/billing/autumn-webhooks' \
   'integration/cron' \
-  # 'integration/crud/plans' \
-  # 'integration/billing/update-subscription' \
-  # 'integration/billing/attach' \
+  'integration/crud/plans' \
+  'integration/billing/update-subscription' \
+  'integration/billing/attach' \
 
 
 # 'integration/billing/attach' \

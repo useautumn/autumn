@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { CustomerExpand } from "../components/customerExpand/customerExpand.js";
 import { GetCustomerQuerySchema } from "../customerOpModels.js";
 
@@ -43,8 +44,10 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 
 	// Request: V1.2 → V2.0 (add expand options)
 	transformRequest: ({
+		ctx: _ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof GetCustomerQuerySchema>;
 	}) => {
 		const existingExpand = input.expand || [];

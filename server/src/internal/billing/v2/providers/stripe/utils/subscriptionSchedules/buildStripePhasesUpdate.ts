@@ -1,4 +1,4 @@
-import type { BillingContext } from "@autumn/shared";
+import type { BillingContext, StripeDiscountWithCoupon } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	msToSeconds,
@@ -7,6 +7,7 @@ import {
 import type Stripe from "stripe";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
@@ -74,6 +75,23 @@ const customerProductsToPhaseItems = ({
 };
 
 /**
+ * Converts billing context discounts to the format expected by Stripe schedule phases.
+ * Uses the existing discount ID so Stripe reuses the same discount object,
+ * preserving the original start/end timestamps and remaining duration for repeating coupons.
+ */
+const stripeDiscountsToPhaseDiscounts = ({
+	stripeDiscounts,
+}: {
+	stripeDiscounts?: StripeDiscountWithCoupon[];
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] | undefined => {
+	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
+
+	return stripeDiscounts.map((discount) => ({
+		discount: discount.source.coupon.id,
+	}));
+};
+
+/**
  * Builds Stripe subscription schedule phases.
  *
  * Takes add/remove customer products and computes phases based on
@@ -118,6 +136,12 @@ export const buildStripePhasesUpdate = ({
 			nowMs,
 		});
 	}
+
+	const discounts = billingContext.stripeDiscounts?.length
+		? stripeDiscountsToParams({
+				stripeDiscounts: billingContext.stripeDiscounts,
+			})
+		: undefined;
 
 	let startMs = nowMs;
 
@@ -167,6 +191,9 @@ export const buildStripePhasesUpdate = ({
 			start_date: msToSeconds(startMs),
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),
+			discounts: stripeDiscountsToPhaseDiscounts({
+				stripeDiscounts: billingContext.stripeDiscounts,
+			}),
 		};
 
 		// Log phase details

@@ -86,11 +86,7 @@ export const handleVoidInvoiceCron = async ({
 		} catch (error) {
 			logger.error(`Error voiding invoice: ${error}`);
 		}
-	} else if (
-		invoice.status === "void" ||
-		invoice.status === "paid" ||
-		invoice.status === "uncollectible"
-	) {
+	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
 		await MetadataService.delete({
 			db,
 			id: metadata.id,

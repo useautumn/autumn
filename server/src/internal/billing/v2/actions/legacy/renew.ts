@@ -1,6 +1,6 @@
 import type {
 	UpdateSubscriptionBillingContextOverride,
-	UpdateSubscriptionV0Params,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import {
 	type AttachBodyV0,
@@ -57,22 +57,26 @@ export const renew = async ({
 
 		stripeBillingContext,
 		featureQuantities: attachParams.optionsList,
-		transitionConfigs: setupLegacyTransitionContext({ attachParams }),
+		transitionConfig: setupLegacyTransitionContext({ attachParams }),
 		billingVersion: BillingVersion.V1,
 	};
 
 	const fullCustomer = attachParams.customer;
 
-	const params: UpdateSubscriptionV0Params = {
+	const params: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		entity_id: fullCustomer.entity?.id,
-		product_id: fullProduct.id,
+		plan_id: fullProduct.id,
 
-		invoice: body.invoice,
-		enable_product_immediately: body.enable_product_immediately,
-		finalize_invoice: body.finalize_invoice,
+		invoice_mode: body.invoice
+			? {
+					enabled: true,
+					enable_product_immediately: body.enable_product_immediately ?? false,
+					finalize_invoice: body.finalize_invoice ?? true,
+				}
+			: undefined,
 
-		// options: attachParams.optionsList,
+		// feature_quantities: attachParams.optionsList,
 		cancel_action: "uncancel",
 	};
 

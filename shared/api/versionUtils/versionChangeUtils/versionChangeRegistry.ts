@@ -35,6 +35,8 @@ import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange.
 import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange.js";
 // Import attach changes
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange.js";
+import { V1_2_AttachParamsChange } from "../../billing/attachV2/requestChanges/V1.2_AttachParamsChange.js";
+import { V1_2_UpdateSubscriptionParamsChange } from "../../billing/updateSubscription/requestChanges/V1.2_UpdateSubscriptionParamsChange.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -59,6 +61,8 @@ export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
 	V1_2_TrackChange, // Transforms Track TO V1.2 format from V0.2 format
 	V1_2_TrackParamsChange, // Transforms Track params TO V2.0 (maps properties.value → value)
+	V1_2_AttachParamsChange, // Transforms attach params TO V2.0 (free_trial/items -> free_trial/customize)
+	V1_2_UpdateSubscriptionParamsChange, // Transforms update params TO V2.0 (free_trial/items -> free_trial/customize)
 
 	V1_2_FeatureChange, // Transforms Feature TO V1_Beta format (V0) from V2 format (V1)
 	V1_2_CreateFeatureChange, // Transforms Create Feature params TO V1_Beta

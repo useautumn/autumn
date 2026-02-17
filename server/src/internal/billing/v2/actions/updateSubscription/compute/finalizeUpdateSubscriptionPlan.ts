@@ -2,7 +2,7 @@ import {
 	type AutumnBillingPlan,
 	isCustomerProductOneOff,
 	type UpdateSubscriptionBillingContext,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
@@ -20,7 +20,7 @@ export const finalizeUpdateSubscriptionPlan = ({
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }): AutumnBillingPlan => {
 	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({

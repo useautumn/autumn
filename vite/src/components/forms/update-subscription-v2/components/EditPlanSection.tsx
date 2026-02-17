@@ -16,12 +16,13 @@ export function EditPlanSection() {
 		originalItems,
 		initialPrepaidOptions,
 		productWithFormItems: product,
+		isVersionReady,
 		handleEditPlan,
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct, numVersions, currentVersion } = formContext;
 	const { prepaidOptions } = formValues;
-	const hasCustomizations = formValues.items !== null;
+	const hasCustomizations = formValues.items !== null || isVersionReady;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
@@ -89,7 +90,9 @@ export function EditPlanSection() {
 
 	const selectedVersion = form.getFieldValue("version");
 	const versionChange =
-		currentVersion !== undefined && selectedVersion !== undefined
+		isVersionReady &&
+		currentVersion !== undefined &&
+		selectedVersion !== undefined
 			? { currentVersion, selectedVersion }
 			: null;
 
@@ -97,7 +100,7 @@ export function EditPlanSection() {
 		<SheetSection
 			title={
 				<SectionTitle
-					hasCustomizations={hasCustomizations}
+					hasCustomizations={formValues.items !== null}
 					form={form}
 					numVersions={numVersions}
 					currentVersion={currentVersion}

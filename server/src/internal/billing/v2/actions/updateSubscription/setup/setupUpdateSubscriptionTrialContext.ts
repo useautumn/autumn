@@ -1,5 +1,5 @@
 import type {
-	BillingParamsBase,
+	BillingParamsBaseV1,
 	FullCusProduct,
 	FullProduct,
 	TrialContext,
@@ -33,7 +33,7 @@ export const setupUpdateSubscriptionTrialContext = ({
 	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
 	fullProduct: FullProduct;
-	params: BillingParamsBase;
+	params: BillingParamsBaseV1;
 }): TrialContext | undefined => {
 	// Handle explicit free_trial param (null or value)
 	if (params.free_trial !== undefined) {
