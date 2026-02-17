@@ -54,15 +54,7 @@ export async function attach({
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
-	// 3. Errors
-	handleAttachV2Errors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		params,
-	});
-
-	// 4. Evaluate Stripe billing plan (handles checkout mode internally)
+	// 3. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -76,6 +68,14 @@ export async function attach({
 		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
+
+	// 4. Errors (requires full billing plan)
+	handleAttachV2Errors({
+		ctx,
+		billingContext,
+		billingPlan,
+		params,
+	});
 
 	if (preview) {
 		return {

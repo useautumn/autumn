@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
 import { BillingBehaviorSchema } from "../common/billingBehavior.js";
 import { RedirectModeSchema } from "../common/redirectMode.js";
+import { AttachDiscountSchema } from "./attachDiscount.js";
 
 export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	// Product identification
@@ -21,6 +22,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	// 	.optional(),
 
 	// Checkout behavior
+	discounts: z.array(AttachDiscountSchema).optional(),
 	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
 	new_billing_subscription: z.boolean().optional(),
