@@ -8,15 +8,21 @@ export const CustomerPlanInfoBox = () => {
 	return (
 		<InfoBox>
 			<h1>
-				You're creating a custom plan. Changes will only apply to this customer{" "}
+			<h1>
+				You're creating a custom plan. Changes will only apply to this customer
 				{customerLabel && (
-					<span
-						className="inline-block max-w-[200px] truncate align-bottom font-medium"
-						title={customerLabel}
-					>
-						({customerLabel}).
-					</span>
-				)}{" "}
+					<>
+						{" "}
+						<span
+							className="inline-block max-w-[200px] truncate align-bottom font-medium"
+							title={customerLabel}
+						>
+							({customerLabel})
+						</span>
+					</>
+				)}
+				.
+			</h1>
 			</h1>
 		</InfoBox>
 	);
