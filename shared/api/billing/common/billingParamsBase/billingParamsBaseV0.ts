@@ -1,4 +1,4 @@
-import { FeatureOptionsParamsV0Schema } from "@api/billing/common/featureOptions/featureOptionsParamsV0.js";
+import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0.js";
 import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
@@ -12,7 +12,7 @@ export const BillingParamsBaseV0Schema = z.object({
 	entity_data: EntityDataSchema.optional(),
 
 	// Used for both update and attach
-	options: z.array(FeatureOptionsParamsV0Schema).nullish(),
+	options: z.array(FeatureQuantityParamsV0Schema).nullish(),
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),
