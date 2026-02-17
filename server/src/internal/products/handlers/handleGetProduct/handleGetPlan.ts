@@ -9,7 +9,7 @@ import {
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
+import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 const GetProductQuerySchema = z.object({
 	schemaVersion: z.string().optional(),
