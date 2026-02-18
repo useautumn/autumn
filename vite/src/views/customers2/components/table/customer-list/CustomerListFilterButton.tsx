@@ -19,8 +19,13 @@ import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQue
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 export function CustomerListFilterButton() {
-	const { setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomersQueryStates();
 	const [open, setOpen] = useState(false);
+
+	const hasActiveFilters =
+		queryStates.status.length > 0 ||
+		queryStates.version.length > 0 ||
+		queryStates.none;
 
 	const { data, refetch: refetchSavedViews } = useSavedViewsQuery();
 
@@ -39,7 +44,10 @@ export function CustomerListFilterButton() {
 			<DropdownMenuTrigger asChild>
 				<IconButton
 					variant="secondary"
-					className={cn("gap-2", open && "btn-secondary-active")}
+					className={cn(
+						"gap-2",
+						(open || hasActiveFilters) && "btn-secondary-active",
+					)}
 					icon={<FunnelSimpleIcon size={14} className="text-t3" />}
 				>
 					Filter
