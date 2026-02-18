@@ -16,7 +16,8 @@ export const handleListPlans = createRoute({
 		const { org, features, env, db } = ctx;
 		const query = c.req.valid("query");
 
-		const { customer_id, entity_id, include_archived, v1_schema } = query;
+		const { customer_id, group, entity_id, include_archived, v1_schema } =
+			query;
 
 		const startedAt = Date.now();
 
@@ -26,6 +27,7 @@ export const handleListPlans = createRoute({
 				orgId: org.id,
 				env,
 				archived: include_archived ? undefined : false,
+				group,
 			}),
 			customer_id
 				? CusService.getFull({
