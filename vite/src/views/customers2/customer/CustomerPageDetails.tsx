@@ -16,7 +16,7 @@ export const CustomerPageDetails = () => {
 	const appliedCoupon = stripeCus?.discount?.source;
 
 	return (
-		<div className="flex items-center min-w-0">
+		<div className="flex items-center shrink-0">
 			<div className="flex gap-2 flex-wrap">
 				{customer.email && (
 					<CopyButton

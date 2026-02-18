@@ -100,9 +100,9 @@ export default function CustomerView2() {
 									<div className="flex items-center justify-between w-full gap-4">
 										<CustomerBreadcrumbs />
 									</div>
-									<div className="flex items-center flex-wrap justify-between w-full pt-2 gap-2">
+									<div className="flex items-center justify-between w-full pt-2 gap-2">
 										<h3
-											className={`text-md font-semibold truncate ${
+											className={`text-md font-semibold truncate min-w-0 ${
 												customer.name
 													? "text-t1"
 													: customer.email

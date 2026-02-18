@@ -13,7 +13,6 @@ import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/S
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
-import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
@@ -46,8 +45,6 @@ export function CustomerSheets() {
 				return <SubscriptionCancelSheet />;
 			case "subscription-uncancel":
 				return <SubscriptionUncancelSheet />;
-			case "balance-selection":
-				return <BalanceSelectionSheet />;
 			case "balance-edit":
 				return <BalanceEditSheet />;
 			default:

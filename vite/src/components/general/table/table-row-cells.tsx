@@ -17,6 +17,8 @@ interface TableRowCellsProps<T> {
 	flexibleTableColumns?: boolean;
 	rowHref?: string;
 	visibleColumnKey?: string;
+	/** Snapshot of row.getIsExpanded() captured at render time for memo comparison */
+	isExpanded?: boolean;
 }
 
 function TableRowCellsInner<T>({
@@ -43,12 +45,12 @@ function TableRowCellsInner<T>({
 					cell.column.columnDef.cell,
 					cell.getContext(),
 				);
-			const cellStyle = flexibleTableColumns
-				? {
-						width: `${cell.column.getSize()}px`,
-						maxWidth: `${cell.column.getSize()}px`,
-					}
-				: { width: `${cell.column.getSize()}px` };
+				const cellStyle = flexibleTableColumns
+					? {
+							width: `${cell.column.getSize()}px`,
+							maxWidth: `${cell.column.getSize()}px`,
+						}
+					: { width: `${cell.column.getSize()}px` };
 
 				return (
 					<TableCell
@@ -91,6 +93,7 @@ export const TableRowCells = memo(
 			prevProps.row.id === nextProps.row.id &&
 			prevProps.row.original === nextProps.row.original &&
 			prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
+			prevProps.isExpanded === nextProps.isExpanded &&
 			prevProps.rowHref === nextProps.rowHref &&
 			prevProps.enableSelection === nextProps.enableSelection &&
 			prevProps.flexibleTableColumns === nextProps.flexibleTableColumns &&
