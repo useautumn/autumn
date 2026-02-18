@@ -1,4 +1,5 @@
 import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
 	StripeCustomerWithDiscount,
@@ -42,9 +43,37 @@ export const extractStripeDiscounts = ({
 };
 
 /**
+ * Filters out discounts whose underlying coupon was deleted from Stripe.
+ * The deprecated rollover flow deletes coupons after applying them,
+ * leaving orphaned discounts that break schedule phase creation.
+ */
+export const filterDeletedCouponDiscounts = async ({
+	stripeCli,
+	discounts,
+}: {
+	stripeCli: Stripe;
+	discounts: StripeDiscountWithCoupon[];
+}): Promise<StripeDiscountWithCoupon[]> => {
+	if (discounts.length === 0) return discounts;
+
+	const couponExists = await Promise.all(
+		discounts.map(async (d) => {
+			try {
+				await stripeCli.coupons.retrieve(d.source.coupon.id);
+				return true;
+			} catch {
+				return false;
+			}
+		}),
+	);
+
+	return discounts.filter((_, i) => couponExists[i]);
+};
+
+/**
  * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
  * Resolves param discounts via Stripe API and merges with existing subscription/customer discounts.
- * Deduplicates by coupon ID.
+ * Deduplicates by coupon ID. Filters out discounts with deleted coupons.
  */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
@@ -62,11 +91,15 @@ export const fetchStripeDiscountsForBilling = async ({
 		stripeCustomer,
 	});
 
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
 	if (!paramDiscounts?.length) {
-		return existingDiscounts;
+		return filterDeletedCouponDiscounts({
+			stripeCli,
+			discounts: existingDiscounts,
+		});
 	}
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const resolvedParamDiscounts = await resolveParamDiscounts({
 		stripeCli,
 		discounts: paramDiscounts,
@@ -80,5 +113,6 @@ export const fetchStripeDiscountsForBilling = async ({
 		(d) => !existingCouponIds.has(d.source.coupon.id),
 	);
 
-	return [...existingDiscounts, ...newDiscounts];
+	const allDiscounts = [...existingDiscounts, ...newDiscounts];
+	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
 };
