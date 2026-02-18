@@ -32,7 +32,7 @@ export const setupBillingCycleAnchor = ({
 
 	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	const currentIsOneOff = isCustomerProductOneOff(customerProduct);
@@ -40,7 +40,7 @@ export const setupBillingCycleAnchor = ({
 
 	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	// If trialing:

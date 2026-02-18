@@ -1,24 +1,38 @@
-import type { FullProduct, ProductItem } from "@autumn/shared";
+import {
+	type CustomizePlanV1,
+	customizePlanV1ToV0,
+	type FullProduct,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems";
 
 export const setupCustomFullProduct = async ({
 	ctx,
-	customItems,
+	// customItems,
 	currentFullProduct,
+	customizePlan,
 }: {
 	ctx: AutumnContext;
-	customItems?: ProductItem[];
+	// customItems?: ProductItem[];
 	currentFullProduct: FullProduct;
+	customizePlan?: CustomizePlanV1;
 }) => {
-	if (!customItems) {
+	if (!customizePlan) {
 		return {
 			fullProduct: currentFullProduct,
 			customPrices: [],
 			customEnts: [],
 		};
 	}
+
+	const newItems = customizePlanV1ToV0({
+		ctx,
+		customizePlanV1: customizePlan,
+		fullProduct: currentFullProduct,
+	});
+
+	// Customize plan -> custom items
 
 	const { db, logger, features } = ctx;
 
@@ -30,7 +44,7 @@ export const setupCustomFullProduct = async ({
 			db,
 			curPrices: currentPrices,
 			curEnts: currentEntitlements,
-			newItems: customItems,
+			newItems,
 			features,
 			product: currentFullProduct,
 			logger,

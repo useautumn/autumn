@@ -1,4 +1,7 @@
-import { isProductAlreadyEnabled } from "@autumn/shared";
+import {
+	isProductAlreadyEnabled,
+	isProductCurrentlyAttached,
+} from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -21,17 +24,29 @@ export function AttachProductSelection() {
 					<field.SelectField
 						label=""
 						searchable
-						options={availableProducts.map((p) => ({
-							label: p.name,
-							value: p.id,
-							disabledValue: isProductAlreadyEnabled({
+						defaultOpen
+						options={availableProducts.map((p) => {
+							const entityIdVal = entityId ?? undefined;
+							const alreadyEnabled = isProductAlreadyEnabled({
 								productId: p.id,
 								customer,
-								entityId: entityId ?? undefined,
-							})
-								? "Already Enabled"
-								: undefined,
-						}))}
+								entityId: entityIdVal,
+							});
+							const currentlyAttached =
+								!alreadyEnabled &&
+								isProductCurrentlyAttached({
+									productId: p.id,
+									customer,
+									entityId: entityIdVal,
+								});
+
+							return {
+								label: p.name,
+								value: p.id,
+								disabledValue: alreadyEnabled ? "Already Enabled" : undefined,
+								badgeValue: currentlyAttached ? "Already Enabled" : undefined,
+							};
+						})}
 						placeholder="Select Product"
 						searchPlaceholder="Search plans..."
 						emptyText="No products found"

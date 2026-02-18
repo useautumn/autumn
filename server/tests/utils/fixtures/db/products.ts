@@ -1,4 +1,9 @@
-import { AppEnv, type FullProduct, type Price } from "@autumn/shared";
+import {
+	AppEnv,
+	type EntitlementWithFeature,
+	type FullProduct,
+	type Price,
+} from "@autumn/shared";
 
 /**
  * Create a product fixture
@@ -33,12 +38,14 @@ const createFull = ({
 	id = "prod_test",
 	name = "Test Product",
 	prices = [],
+	entitlements = [],
 	stripeProductId,
 	isAddOn = false,
 }: {
 	id?: string;
 	name?: string;
 	prices?: Price[];
+	entitlements?: EntitlementWithFeature[];
 	stripeProductId?: string;
 	isAddOn?: boolean;
 }): FullProduct =>
@@ -58,7 +65,7 @@ const createFull = ({
 		base_variant_id: null,
 		archived: false,
 		prices,
-		entitlements: [],
+		entitlements,
 		free_trial: null,
 	}) as FullProduct;
 

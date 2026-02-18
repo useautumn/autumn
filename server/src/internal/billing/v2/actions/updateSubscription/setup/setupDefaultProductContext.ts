@@ -3,7 +3,7 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	nullish,
-	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getFreeDefaultProductByGroup } from "@/internal/customers/cusProducts/cusProductUtils";
@@ -18,7 +18,7 @@ export const setupDefaultProductContext = async ({
 	customerProduct,
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	customerProduct: FullCusProduct;
 }): Promise<FullProduct | undefined> => {
 	// Only fetch if cancel is requested (not null/undefined)
@@ -36,6 +36,8 @@ export const setupDefaultProductContext = async ({
 		ctx,
 		productGroup: customerProduct.product.group,
 	});
+
+	if (defaultProduct?.id === customerProduct.product.id) return undefined;
 
 	return defaultProduct;
 };

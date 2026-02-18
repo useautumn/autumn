@@ -285,3 +285,67 @@ test.concurrent(`${chalk.yellowBright("error: remove trial and add one-off item"
 		},
 	});
 });
+
+// Update prepaid item included usage on one-off product
+test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usage")}`, async () => {
+	const billingUnits = 100;
+	const price = 10;
+	const oldIncludedUsage = 50;
+	const prepaidItem = items.oneOffMessages({
+		includedUsage: oldIncludedUsage,
+		billingUnits,
+		price,
+	});
+	const oneOffProduct = products.base({
+		items: [prepaidItem],
+		id: "one-off-prepaid-included",
+	});
+
+	const quantity = 200; // 2 packs
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "one-off-prepaid-included",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOffProduct] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProduct.id,
+				options: [{ feature_id: TestFeature.Messages, quantity }],
+				timeout: 4000,
+			}),
+		],
+	});
+
+	// Track some usage
+	const messagesUsed = 100;
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: messagesUsed,
+		},
+		{ timeout: 2000 },
+	);
+
+	// Update included usage from 50 to 100 (same quantity)
+	const newIncludedUsage = 100;
+	const updatedPrepaidItem = items.oneOffMessages({
+		includedUsage: newIncludedUsage,
+		billingUnits,
+		price,
+	});
+
+	const updateParams = {
+		customer_id: customerId,
+		product_id: oneOffProduct.id,
+		items: [updatedPrepaidItem],
+	};
+
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update(updateParams);
+		},
+	});
+});

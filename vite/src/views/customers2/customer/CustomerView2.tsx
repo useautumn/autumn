@@ -1,5 +1,6 @@
 "use client";
 
+import { AppEnv } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -8,9 +9,12 @@ import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
+import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
@@ -38,6 +42,10 @@ export default function CustomerView2() {
 	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
+
+	const env = useEnv();
+	const { isDismissed } = useOnboardingVisibility();
+	const showOnboarding = env === AppEnv.Sandbox && !isDismissed;
 
 	// useSheetCleanup();
 
@@ -76,11 +84,17 @@ export default function CustomerView2() {
 					transition={SHEET_ANIMATION}
 				>
 					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">
-						<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 pb-6 px-4 sm:px-10">
-							<OnboardingGuide />
-						</div>
-						{/* Rest of content shrinks normally with the container */}
-						<div className="flex flex-col gap-4 w-full max-w-5xl mx-auto pt-4 px-4 sm:px-10">
+						{showOnboarding && (
+							<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-10">
+								<OnboardingGuide />
+							</div>
+						)}
+						<div
+							className={cn(
+								"flex flex-col gap-4 w-full max-w-5xl mx-auto px-4 sm:px-10",
+								showOnboarding ? "pt-4" : "pt-4 sm:pt-8",
+							)}
+						>
 							<div className="flex flex-col gap-2 w-full">
 								<div className="flex flex-col w-full">
 									<div className="flex items-center justify-between w-full gap-4">

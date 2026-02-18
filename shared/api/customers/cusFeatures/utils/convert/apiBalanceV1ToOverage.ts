@@ -1,5 +1,4 @@
 import { sumValues } from "@utils/utils.js";
-import { Decimal } from "decimal.js";
 import type {
 	ApiBalanceBreakdownV1,
 	ApiBalanceV1,
@@ -10,14 +9,15 @@ export const apiBalanceBreakdownV1ToOverage = ({
 }: {
 	apiBalanceBreakdown: ApiBalanceBreakdownV1;
 }) => {
-	// Overage = usage beyond what was granted and prepaid, clamped to 0
-	return Math.max(
-		0,
-		new Decimal(apiBalanceBreakdown.usage)
-			.sub(apiBalanceBreakdown.included_grant)
-			.sub(apiBalanceBreakdown.prepaid_grant)
-			.toNumber(),
-	);
+	// const overage = Math.max(
+	// 	0,
+	// 	new Decimal(apiBalanceBreakdown.usage)
+	// 		.sub(apiBalanceBreakdown.included_grant)
+	// 		.sub(apiBalanceBreakdown.prepaid_grant)
+	// 		.toNumber(),
+	// );
+
+	return apiBalanceBreakdown.overage ?? 0;
 };
 
 export const apiBalanceV1ToOverage = ({

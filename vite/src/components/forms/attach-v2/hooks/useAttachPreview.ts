@@ -59,7 +59,8 @@ export function useAttachPreview({
 
 	return {
 		...query,
-		isLoading: shouldEnable && (query.isLoading || isDebouncing),
+		isLoading:
+			shouldEnable && (query.isLoading || query.isFetching || isDebouncing),
 	};
 }
 

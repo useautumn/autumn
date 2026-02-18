@@ -26,5 +26,6 @@ export const apiBalanceV1ToPurchasedBalance = ({
 }) => {
 	const totalOverage = apiBalanceV1ToOverage({ apiBalance });
 	const totalPrepaid = apiBalanceV1ToPrepaidQuantity({ apiBalance });
+
 	return new Decimal(totalOverage).add(totalPrepaid).toNumber();
 };
