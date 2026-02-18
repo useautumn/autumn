@@ -43,7 +43,7 @@ export interface InitFullCustomerProductContext {
 
 	existingRolloversConfig?: ExistingRolloversConfig;
 
-	transitionConfigs?: TransitionConfig[];
+	transitionConfig?: TransitionConfig;
 }
 
 export interface InitFullCustomerProductOptions {

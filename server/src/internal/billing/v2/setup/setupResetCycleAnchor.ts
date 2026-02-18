@@ -31,7 +31,7 @@ export const setupResetCycleAnchor = ({
 
 	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	const currentIsOneOff = isOneOffProduct({
@@ -41,7 +41,7 @@ export const setupResetCycleAnchor = ({
 
 	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {
-		return customerProduct?.created_at ?? "now";
+		return customerProduct?.starts_at ?? "now";
 	}
 
 	return billingCycleAnchorMs;

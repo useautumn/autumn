@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../../types/sharedContext.js";
 import { TrackParamsSchema } from "../trackParams.js";
 
 /**
@@ -31,8 +32,10 @@ export const V1_2_TrackParamsChange = defineVersionChange({
 
 	// Request: V1.2 → V2.0 (extract properties.value to value if not already set)
 	transformRequest: ({
+		ctx: _ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof TrackParamsSchema>;
 	}): z.infer<typeof TrackParamsSchema> => {
 		// Keep original value if provided, otherwise extract from properties.value

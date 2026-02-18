@@ -1,4 +1,4 @@
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
@@ -23,9 +23,9 @@ export const handleCancelV2 = createRoute({
 			prorate: bodyProrate = true,
 		} = await c.req.json();
 
-		const updateSubscriptionBody: UpdateSubscriptionV0Params = {
+		const updateSubscriptionBody: UpdateSubscriptionV1Params = {
 			customer_id,
-			product_id,
+			plan_id: product_id,
 			entity_id,
 			cancel_action: cancel_immediately
 				? "cancel_immediately"

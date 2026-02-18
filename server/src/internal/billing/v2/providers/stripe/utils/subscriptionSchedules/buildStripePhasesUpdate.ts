@@ -7,6 +7,7 @@ import {
 import type Stripe from "stripe";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
@@ -77,6 +78,7 @@ const customerProductsToPhaseItems = ({
  * Converts billing context discounts to the format expected by Stripe schedule phases.
  * Uses the existing discount ID so Stripe reuses the same discount object,
  * preserving the original start/end timestamps and remaining duration for repeating coupons.
+ * Falls back to coupon ID for new discounts that don't have a discount ID yet.
  */
 const stripeDiscountsToPhaseDiscounts = ({
 	stripeDiscounts,
@@ -85,9 +87,11 @@ const stripeDiscountsToPhaseDiscounts = ({
 }): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] | undefined => {
 	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
 
-	return stripeDiscounts.map((discount) => ({
-		discount: discount.id,
-	}));
+	return stripeDiscounts.map((discount) =>
+		discount.id
+			? { discount: discount.id }
+			: { coupon: discount.source.coupon.id },
+	);
 };
 
 /**
@@ -135,6 +139,12 @@ export const buildStripePhasesUpdate = ({
 			nowMs,
 		});
 	}
+
+	const discounts = billingContext.stripeDiscounts?.length
+		? stripeDiscountsToParams({
+				stripeDiscounts: billingContext.stripeDiscounts,
+			})
+		: undefined;
 
 	let startMs = nowMs;
 

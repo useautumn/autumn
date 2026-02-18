@@ -1,4 +1,9 @@
-import { AllowanceType, type EntInterval, FeatureType } from "@autumn/shared";
+import {
+	AllowanceType,
+	type EntInterval,
+	FeatureType,
+	type RolloverConfig,
+} from "@autumn/shared";
 import { features } from "./features";
 
 /**
@@ -15,6 +20,7 @@ const create = ({
 	interval = null,
 	intervalCount = 1,
 	entityFeatureId = null,
+	rollover = null,
 }: {
 	id?: string;
 	featureId: string;
@@ -26,6 +32,7 @@ const create = ({
 	interval?: EntInterval | null;
 	intervalCount?: number;
 	entityFeatureId?: string | null;
+	rollover?: RolloverConfig | null;
 }) => ({
 	id: id ?? `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,
 	created_at: Date.now(),
@@ -40,7 +47,7 @@ const create = ({
 	entity_feature_id: entityFeatureId,
 	feature_id: featureId,
 	usage_limit: null,
-	rollover: null,
+	rollover,
 	feature: features.create({
 		id: featureId,
 		internalId: internalFeatureId,

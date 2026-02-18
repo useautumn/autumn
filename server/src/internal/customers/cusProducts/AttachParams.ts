@@ -74,6 +74,7 @@ export type AttachParams = {
 
 	fromMigration?: boolean;
 	finalizeInvoice?: boolean;
+	enableProductImmediately?: boolean;
 	req?: AutumnContext;
 	fromCancel?: boolean;
 	setupPayment?: boolean;

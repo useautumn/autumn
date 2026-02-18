@@ -1,13 +1,13 @@
 import type {
 	BillingPlan,
 	UpdateSubscriptionBillingContext,
-	UpdateSubscriptionV0Params,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
+import { handleBillingBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
@@ -28,7 +28,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
 	const { customerProduct } = billingContext;
 
@@ -72,6 +72,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 9. Billing behavior errors
 	handleBillingBehaviorErrors({
 		billingContext,
+		currentCustomerProduct: customerProduct,
 		billingPlan,
 		params,
 	});

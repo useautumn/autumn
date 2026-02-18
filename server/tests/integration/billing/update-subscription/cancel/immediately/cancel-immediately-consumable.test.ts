@@ -170,12 +170,17 @@ test.concurrent(`${chalk.yellowBright("cancel immediately consumable: entity - t
 
 	// Track 500 messages on entity (100 included, 400 overage)
 	// Note: This overage will NOT be charged when canceling immediately
-	await autumnV1.track({
-		customer_id: customerId,
-		entity_id: entityId,
-		feature_id: TestFeature.Messages,
-		value: 500,
-	});
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			entity_id: entityId,
+			feature_id: TestFeature.Messages,
+			value: 500,
+		},
+		{
+			timeout: 4000,
+		},
+	);
 
 	// Preview cancel immediately
 	const cancelParams = {

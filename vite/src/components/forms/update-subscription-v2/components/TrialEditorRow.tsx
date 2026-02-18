@@ -179,18 +179,13 @@ export function TrialEditorRow({
 						</span>
 					) : null}
 				</div>
-				<motion.div
-					layout
-					transition={FAST_TRANSITION}
-					className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden"
-				>
+				<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden">
 					<AnimatePresence mode="popLayout" initial={false}>
 						<motion.div
 							key="display"
-							layout
-							initial={{ opacity: 0, x: -10 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: 10 }}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
 							transition={FAST_TRANSITION}
 							className="flex items-center gap-2"
 						>
@@ -206,7 +201,7 @@ export function TrialEditorRow({
 							/>
 						</motion.div>
 					</AnimatePresence>
-				</motion.div>
+				</div>
 			</div>
 		);
 	}
@@ -249,18 +244,13 @@ export function TrialEditorRow({
 					<span className="text-sm text-t2">Free Trial</span>
 				</div>
 			</div>
-			<motion.div
-				layout
-				transition={FAST_TRANSITION}
-				className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden"
-			>
+			<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden">
 				<AnimatePresence mode="popLayout" initial={false}>
 					<motion.div
 						key="edit"
-						layout
-						initial={{ opacity: 0, x: 10 }}
-						animate={{ opacity: 1, x: 0 }}
-						exit={{ opacity: 0, x: -10 }}
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
 						transition={FAST_TRANSITION}
 						className="flex items-center gap-2"
 					>
@@ -315,7 +305,7 @@ export function TrialEditorRow({
 						/>
 					</motion.div>
 				</AnimatePresence>
-			</motion.div>
+			</div>
 		</div>
 	);
 }

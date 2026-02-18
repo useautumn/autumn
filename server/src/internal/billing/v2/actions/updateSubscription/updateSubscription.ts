@@ -3,7 +3,7 @@ import type {
 	BillingResult,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionBillingContextOverride,
-	UpdateSubscriptionV0Params,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
@@ -23,7 +23,7 @@ export async function updateSubscription({
 	contextOverride,
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	preview?: boolean;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<{

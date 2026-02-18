@@ -1,9 +1,9 @@
-import {
-	type AttachBillingContext,
-	type AttachParamsV0,
-	type BillingContextOverride,
-	type BillingPlan,
-	type BillingResult,
+import type {
+	AttachBillingContext,
+	AttachParamsV1,
+	BillingContextOverride,
+	BillingPlan,
+	BillingResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
@@ -31,7 +31,7 @@ export async function attach({
 	contextOverride,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 	contextOverride?: BillingContextOverride;
@@ -54,15 +54,7 @@ export async function attach({
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
-	// 3. Errors
-	handleAttachV2Errors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		params,
-	});
-
-	// 4. Evaluate Stripe billing plan (handles checkout mode internally)
+	// 3. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -76,6 +68,14 @@ export async function attach({
 		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
+
+	// 4. Errors (requires full billing plan)
+	handleAttachV2Errors({
+		ctx,
+		billingContext,
+		billingPlan,
+		params,
+	});
 
 	if (preview) {
 		return {

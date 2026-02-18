@@ -4,10 +4,10 @@ import {
 	isCustomerProductTrialing,
 	isProductPaidAndRecurring,
 } from "@autumn/shared";
-import type { FreeTrialParamsV0 } from "@shared/api/common/freeTrial/freeTrialParamsV0";
+import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
+import { initFreeTrialFromParamsV1 } from "@/internal/products/free-trials/initFreeTrialFromParamsV1";
 
 /**
  * Handles explicit free_trial parameter passed to attach/update subscription.
@@ -22,7 +22,7 @@ export const handleFreeTrialParam = ({
 	fullProduct,
 	currentEpochMs,
 }: {
-	freeTrialParams: FreeTrialParamsV0 | null;
+	freeTrialParams: FreeTrialParamsV1 | null;
 	stripeSubscription?: Stripe.Subscription;
 	customerProduct?: FullCusProduct;
 	fullProduct: FullProduct;
@@ -48,7 +48,7 @@ export const handleFreeTrialParam = ({
 	}
 
 	// free_trial: { length, duration } → Fresh trial
-	const dbFreeTrial = initFreeTrial({
+	const dbFreeTrial = initFreeTrialFromParamsV1({
 		freeTrialParams,
 		internalProductId: fullProduct.internal_id,
 		isCustom: true,

@@ -29,6 +29,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import {
 	usePrepaidItems,
 	useProductStore,
@@ -64,6 +65,10 @@ export function SubscriptionDetailSheet() {
 
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+
+	// Prefetch product version data so the update sheet has it cached immediately
+	useProductVersionQuery({ productId: productV2?.id });
+
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
 

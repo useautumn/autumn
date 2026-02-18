@@ -38,7 +38,8 @@ export interface BillingContext {
 	fullProducts: FullProduct[];
 
 	featureQuantities: FeatureOptions[];
-	transitionConfigs?: TransitionConfig[];
+	adjustableFeatureQuantities?: string[];
+	transitionConfig?: TransitionConfig;
 	invoiceMode?: InvoiceMode;
 
 	// Timestamps...
@@ -67,5 +68,5 @@ export interface BillingContext {
 
 	billingVersion: BillingVersion;
 
-	checkoutQuantityAdjustable?: boolean;
+	// checkoutQuantityAdjustable?: boolean;
 }

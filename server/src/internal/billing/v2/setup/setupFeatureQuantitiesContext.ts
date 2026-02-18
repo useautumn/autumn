@@ -1,6 +1,6 @@
 import {
 	type BillingContextOverride,
-	type BillingParamsBase,
+	type BillingParamsBaseV1,
 	cusProductToConvertedFeatureOptions,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -25,7 +25,7 @@ export const setupFeatureQuantitiesContext = ({
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	featureQuantitiesParams: BillingParamsBase;
+	featureQuantitiesParams: BillingParamsBaseV1;
 	fullProduct: FullProduct;
 	currentCustomerProduct?: FullCusProduct;
 	initializeUndefinedQuantities?: boolean;

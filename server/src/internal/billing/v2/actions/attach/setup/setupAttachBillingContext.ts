@@ -1,12 +1,9 @@
 import type {
 	AttachBillingContext,
+	AttachParamsV1,
 	BillingContextOverride,
 } from "@autumn/shared";
-import {
-	type AttachParamsV0,
-	BillingVersion,
-	notNullish,
-} from "@autumn/shared";
+import { BillingVersion, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -15,6 +12,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
+import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -30,7 +28,7 @@ export const setupAttachBillingContext = async ({
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	contextOverride?: BillingContextOverride;
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
@@ -59,6 +57,11 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
+	// Only respect new_billing_subscription for non-transition scenarios
+	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
+	const shouldForceNewSubscription =
+		!currentCustomerProduct && params.new_billing_subscription;
+
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -72,6 +75,8 @@ export const setupAttachBillingContext = async ({
 		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
+		paramDiscounts: params.discounts,
+		newBillingSubscription: shouldForceNewSubscription || undefined,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -84,7 +89,7 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = notNullish(params.items);
+	const isCustom = notNullish(params.customize);
 
 	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -137,7 +142,7 @@ export const setupAttachBillingContext = async ({
 		trialContext,
 	});
 
-	const transitionConfigs = setupTransitionConfigs({
+	const transitionConfig = setupTransitionConfigs({
 		params,
 		contextOverride,
 	});
@@ -147,7 +152,7 @@ export const setupAttachBillingContext = async ({
 		fullProducts: [attachProduct],
 		attachProduct,
 		featureQuantities,
-		transitionConfigs,
+		transitionConfig,
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
@@ -173,7 +178,7 @@ export const setupAttachBillingContext = async ({
 		isCustom,
 		trialContext,
 
-		checkoutQuantityAdjustable: params.adjustable_quantity,
+		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 	};
