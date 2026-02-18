@@ -19,6 +19,7 @@ actions:
             async function run() {
               const result = await autumn.balances.check({
                 customerId: "<id>",
+                featureId: "<id>",
               });
 
               console.log(result);

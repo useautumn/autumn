@@ -47,7 +47,8 @@ class BalancesCheckGlobals(BaseModel):
 class BalancesCheckRequestTypedDict(TypedDict):
     customer_id: str
     r"""ID which you provided when creating the customer"""
-    feature_id: NotRequired[str]
+    feature_id: str
+    r"""ID of the feature to check access to."""
     entity_id: NotRequired[str]
     r"""If using entity balances (eg, seats), the entity ID to check access for."""
     required_balance: NotRequired[float]
@@ -57,15 +58,14 @@ class BalancesCheckRequestTypedDict(TypedDict):
     r"""If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value."""
     with_preview: NotRequired[bool]
     r"""If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation."""
-    product_id: NotRequired[str]
-    required_quantity: NotRequired[float]
 
 
 class BalancesCheckRequest(BaseModel):
     customer_id: str
     r"""ID which you provided when creating the customer"""
 
-    feature_id: Optional[str] = None
+    feature_id: str
+    r"""ID of the feature to check access to."""
 
     entity_id: Optional[str] = None
     r"""If using entity balances (eg, seats), the entity ID to check access for."""
@@ -81,22 +81,15 @@ class BalancesCheckRequest(BaseModel):
     with_preview: Optional[bool] = None
     r"""If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation."""
 
-    product_id: Optional[str] = None
-
-    required_quantity: Optional[float] = None
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
-                "feature_id",
                 "entity_id",
                 "required_balance",
                 "properties",
                 "send_event",
                 "with_preview",
-                "product_id",
-                "required_quantity",
             ]
         )
         serialized = handler(self)

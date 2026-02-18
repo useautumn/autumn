@@ -473,14 +473,12 @@ class BalancesSDK(BaseSDK):
         self,
         *,
         customer_id: str,
-        feature_id: Optional[str] = None,
+        feature_id: str,
         entity_id: Optional[str] = None,
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
         with_preview: Optional[bool] = None,
-        product_id: Optional[str] = None,
-        required_quantity: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -489,14 +487,12 @@ class BalancesSDK(BaseSDK):
         r"""Check whether usage is allowed for a customer feature.
 
         :param customer_id: ID which you provided when creating the customer
-        :param feature_id:
+        :param feature_id: ID of the feature to check access to.
         :param entity_id: If using entity balances (eg, seats), the entity ID to check access for.
         :param required_balance: If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.
         :param properties:
         :param send_event: If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value.
         :param with_preview: If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
-        :param product_id:
-        :param required_quantity:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -520,8 +516,6 @@ class BalancesSDK(BaseSDK):
             properties=properties,
             send_event=send_event,
             with_preview=with_preview,
-            product_id=product_id,
-            required_quantity=required_quantity,
         )
 
         req = self._build_request(
@@ -587,14 +581,12 @@ class BalancesSDK(BaseSDK):
         self,
         *,
         customer_id: str,
-        feature_id: Optional[str] = None,
+        feature_id: str,
         entity_id: Optional[str] = None,
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
         with_preview: Optional[bool] = None,
-        product_id: Optional[str] = None,
-        required_quantity: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -603,14 +595,12 @@ class BalancesSDK(BaseSDK):
         r"""Check whether usage is allowed for a customer feature.
 
         :param customer_id: ID which you provided when creating the customer
-        :param feature_id:
+        :param feature_id: ID of the feature to check access to.
         :param entity_id: If using entity balances (eg, seats), the entity ID to check access for.
         :param required_balance: If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.
         :param properties:
         :param send_event: If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value.
         :param with_preview: If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
-        :param product_id:
-        :param required_quantity:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -634,8 +624,6 @@ class BalancesSDK(BaseSDK):
             properties=properties,
             send_event=send_event,
             with_preview=with_preview,
-            product_id=product_id,
-            required_quantity=required_quantity,
         )
 
         req = self._build_request_async(

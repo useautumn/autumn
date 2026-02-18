@@ -1,7 +1,7 @@
 import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
-import { Decimal } from "decimal";
+import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums";
 import { sumValues } from "../../../../utils/utils";

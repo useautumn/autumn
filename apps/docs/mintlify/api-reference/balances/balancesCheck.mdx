@@ -13,7 +13,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   ID which you provided when creating the customer
 </DynamicParamField>
 
-<DynamicParamField body="feature_id" type="string" />
+<DynamicParamField body="feature_id" type="string" required>
+  ID of the feature to check access to.
+</DynamicParamField>
 
 <DynamicParamField body="entity_id" type="string">
   If using entity balances (eg, seats), the entity ID to check access for.
@@ -32,10 +34,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <DynamicParamField body="with_preview" type="boolean">
   If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
 </DynamicParamField>
-
-<DynamicParamField body="product_id" type="string" />
-
-<DynamicParamField body="required_quantity" type="number" />
 
 
 ### Response

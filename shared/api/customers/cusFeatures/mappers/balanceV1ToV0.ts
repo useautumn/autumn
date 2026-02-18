@@ -1,5 +1,5 @@
 import { deduplicateArray } from "@utils/utils";
-import { Decimal } from "decimal";
+import { Decimal } from "decimal.js";
 import type { ApiBalance, ApiBalanceBreakdown } from "../apiBalance";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
 import { apiBalanceV1ToPrepaidQuantity } from "../utils/convert/apiBalanceV1ToPrepaidQuantity";

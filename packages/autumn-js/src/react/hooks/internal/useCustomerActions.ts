@@ -8,7 +8,7 @@ import type {
 import { useCallback } from "react";
 import type { AttachParams, CheckParams } from "../../../types";
 import type { IAutumnClient } from "../../client/IAutumnClient";
-import { getLocalCheckResponse } from "./checkUtils";
+import { getLocalCheckResponse } from "./getLocalCheckResponse";
 
 const redirectToUrl = ({
 	url,

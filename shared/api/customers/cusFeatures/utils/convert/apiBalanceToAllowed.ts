@@ -1,36 +1,16 @@
+import type { ApiBalanceV1 } from "@api/customers/cusFeatures/apiBalanceV1";
+import { apiBalanceV1ToAvailableOverage } from "@api/customers/cusFeatures/utils/convert/apiBalanceV1ToAvailableOverage";
+import type { Feature } from "@models/featureModels/featureModels";
+import { isBooleanFeature, notNullish } from "@utils/index";
 import { Decimal } from "decimal.js";
-import { apiBalanceV1ToAvailableOverage } from "./apiBalanceV1ToAvailableOverage";
-
-export type ApiBalanceBreakdownInput = {
-	usage: number;
-	included_grant: number;
-	prepaid_grant: number;
-	price?: {
-		billing_method?: string;
-		max_purchase: number | null;
-	} | null;
-	overage?: number;
-};
-
-export type ApiBalanceInput = {
-	unlimited: boolean;
-	overage_allowed: boolean;
-	remaining: number;
-	max_purchase: number | null;
-	breakdown?: ApiBalanceBreakdownInput[];
-};
-
-export type FeatureInput = {
-	type?: string;
-};
 
 export const apiBalanceToAllowed = ({
 	apiBalance,
 	feature,
 	requiredBalance,
 }: {
-	apiBalance: ApiBalanceInput;
-	feature: FeatureInput;
+	apiBalance: ApiBalanceV1;
+	feature: Feature;
 	requiredBalance: number;
 }) => {
 	if (!apiBalance) {
@@ -38,7 +18,7 @@ export const apiBalanceToAllowed = ({
 	}
 
 	// 1. Boolean
-	if (feature.type === "boolean") {
+	if (isBooleanFeature({ feature })) {
 		return true;
 	}
 
@@ -57,7 +37,7 @@ export const apiBalanceToAllowed = ({
 		// 1. Available overage
 		const availableOverage = apiBalanceV1ToAvailableOverage({ apiBalance });
 
-		if (availableOverage !== null && availableOverage !== undefined) {
+		if (notNullish(availableOverage)) {
 			return new Decimal(availableOverage)
 				.add(apiBalance.remaining)
 				.gte(requiredBalance);

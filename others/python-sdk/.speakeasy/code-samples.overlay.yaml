@@ -17,7 +17,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.check(customer_id="<id>")
+                res = autumn.balances.check(customer_id="<id>", feature_id="<id>")
 
                 # Handle response
                 print(res)

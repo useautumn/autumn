@@ -6,6 +6,6 @@ const SIMULATE_UNAUTHENTICATED = false;
 
 export const handler = autumnHandler({
   secretKey: process.env.AUTUMN_SECRET_KEY,
-  baseURL: "http://localhost:8080",
+  autumnURL: "http://localhost:8080",
   identify: async () => (SIMULATE_UNAUTHENTICATED ? null : SDK_TEST_IDENTITY),
 });

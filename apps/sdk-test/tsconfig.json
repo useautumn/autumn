@@ -35,6 +35,7 @@
       ],
       "@sdk": ["../../packages/autumn-js/src/sdk/index.ts"],
       "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
+      "@api/*": ["../../shared/api/*"],
       "@utils/*": ["../../packages/autumn-js/src/utils/*"],
       "autumn-js": ["../../packages/autumn-js/src/sdk/index.ts"],
       "autumn-js/react": ["../../packages/autumn-js/src/react/index.ts"],
