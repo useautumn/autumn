@@ -3,6 +3,7 @@ import type { FullCustomer } from "../../models/cusModels/fullCusModel";
 import {
 	customerProductHasSubscriptionSchedule,
 	isCusProductOnEntity,
+	isCustomerProductFree,
 } from "./classifyCustomerProduct/classifyCustomerProduct";
 import { cp } from "./classifyCustomerProduct/cpBuilder";
 
@@ -110,11 +111,13 @@ export const getTargetSubscriptionCusProduct = ({
 	productId,
 	productGroup,
 	cusProductId,
+	includeFreeProducts = true,
 }: {
 	fullCus: FullCustomer;
 	productId: string;
 	productGroup: string;
 	cusProductId?: string;
+	includeFreeProducts?: boolean;
 }) => {
 	const internalEntityId = fullCus.entity?.internal_id;
 
@@ -124,7 +127,11 @@ export const getTargetSubscriptionCusProduct = ({
 			.hasActiveStatus()
 			.hasSubscription();
 
-		return valid;
+		if (!valid) return false;
+
+		if (includeFreeProducts) return true;
+
+		return !isCustomerProductFree(customerProduct);
 	});
 
 	// Sort by merge order:

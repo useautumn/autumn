@@ -25,7 +25,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
@@ -69,9 +68,8 @@ const ACCORDION_ITEM: Variants = {
 
 export function AttachAdvancedSection() {
 	const [isOpen, setIsOpen] = useState(false);
-	const { form, formValues, product } = useAttachFormContext();
+	const { form, formValues } = useAttachFormContext();
 	const { discounts, newBillingSubscription } = formValues;
-	const { entityId } = useEntity();
 
 	const {
 		hasActiveSubscription,
@@ -82,12 +80,13 @@ export function AttachAdvancedSection() {
 		hasCustomBilling,
 		isImmediateSelected,
 		isEndOfCycleSelected,
+		isNoChargesAllowed,
+		noChargesDisabledReason,
+		canChooseBillingCycle,
 		handleScheduleChange,
+		handleBillingCycleChange,
 		handleBillingBehaviorChange,
 	} = usePlanScheduleField();
-
-	// Show separate subscription toggle for add-ons or entity-scoped attaches
-	const showNewBillingSubscription = !!product?.is_add_on || !!entityId;
 
 	const hasDiscounts = discounts.some((d) => {
 		if ("reward_id" in d) return d.reward_id !== "";
@@ -112,14 +111,14 @@ export function AttachAdvancedSection() {
 			);
 		}
 
+		if (newBillingSubscription) {
+			parts.push("Create New Cycle");
+		}
+
 		if (hasCustomBilling) {
 			parts.push(
 				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "No Charges" : "Prorate"}`,
 			);
-		}
-
-		if (newBillingSubscription) {
-			parts.push("Create New Cycle");
 		}
 
 		if (hasDiscounts) {
@@ -262,6 +261,53 @@ export function AttachAdvancedSection() {
 									</motion.div>
 								)}
 
+								{/* Billing Cycle — shown when this attach can target an existing paid recurring cycle */}
+								{canChooseBillingCycle && (
+									<motion.div variants={ACCORDION_ITEM}>
+										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
+											<span className="text-sm text-t2">Billing Cycle</span>
+											<div className="flex">
+												<IconCheckbox
+													icon={<UniteIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={!newBillingSubscription}
+													onCheckedChange={() =>
+														handleBillingCycleChange({
+															createNewCycle: false,
+														})
+													}
+													className={cn(
+														"rounded-r-none",
+														newBillingSubscription && "border-r-0",
+													)}
+												>
+													Merge With Existing
+												</IconCheckbox>
+												<IconCheckbox
+													icon={<SquareSplitHorizontalIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={newBillingSubscription}
+													onCheckedChange={() =>
+														handleBillingCycleChange({
+															createNewCycle: true,
+														})
+													}
+													className={cn(
+														"rounded-l-none",
+														!newBillingSubscription && "border-l-0",
+													)}
+												>
+													Create New Cycle
+												</IconCheckbox>
+											</div>
+										</div>
+									</motion.div>
+								)}
+
 								{/* Billing Behavior — only when plan schedule is immediate and subscription exists */}
 								{showBillingBehavior && (
 									<motion.div variants={ACCORDION_ITEM}>
@@ -287,68 +333,37 @@ export function AttachAdvancedSection() {
 												>
 													Prorate
 												</IconCheckbox>
-												<IconCheckbox
-													icon={<CalendarXIcon />}
-													iconOrientation="left"
-													variant="secondary"
-													size="sm"
-													checked={
-														effectiveBillingBehavior === "next_cycle_only"
-													}
-													onCheckedChange={() =>
-														handleBillingBehaviorChange("next_cycle_only")
-													}
-													className={cn(
-														"rounded-l-none",
-														effectiveBillingBehavior !== "next_cycle_only" &&
-															"border-l-0",
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<span className="inline-flex">
+															<IconCheckbox
+																icon={<CalendarXIcon />}
+																iconOrientation="left"
+																variant="secondary"
+																size="sm"
+																checked={
+																	effectiveBillingBehavior === "next_cycle_only"
+																}
+																disabled={!isNoChargesAllowed}
+																onCheckedChange={() =>
+																	handleBillingBehaviorChange("next_cycle_only")
+																}
+																className={cn(
+																	"rounded-l-none",
+																	effectiveBillingBehavior !==
+																		"next_cycle_only" && "border-l-0",
+																)}
+															>
+																No Charges
+															</IconCheckbox>
+														</span>
+													</TooltipTrigger>
+													{!isNoChargesAllowed && (
+														<TooltipContent>
+															{noChargesDisabledReason}
+														</TooltipContent>
 													)}
-												>
-													No Charges
-												</IconCheckbox>
-											</div>
-										</div>
-									</motion.div>
-								)}
-
-								{/* Billing Subscription — only for add-ons or entity attaches */}
-								{showNewBillingSubscription && (
-									<motion.div variants={ACCORDION_ITEM}>
-										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
-											<span className="text-sm text-t2">Billing Cycle</span>
-											<div className="flex">
-												<IconCheckbox
-													icon={<UniteIcon />}
-													iconOrientation="left"
-													variant="secondary"
-													size="sm"
-													checked={!newBillingSubscription}
-													onCheckedChange={() =>
-														form.setFieldValue("newBillingSubscription", false)
-													}
-													className={cn(
-														"rounded-r-none",
-														newBillingSubscription && "border-r-0",
-													)}
-												>
-													Merge With Existing
-												</IconCheckbox>
-												<IconCheckbox
-													icon={<SquareSplitHorizontalIcon />}
-													iconOrientation="left"
-													variant="secondary"
-													size="sm"
-													checked={newBillingSubscription}
-													onCheckedChange={() =>
-														form.setFieldValue("newBillingSubscription", true)
-													}
-													className={cn(
-														"rounded-l-none",
-														!newBillingSubscription && "border-l-0",
-													)}
-												>
-													Create New Cycle
-												</IconCheckbox>
+												</Tooltip>
 											</div>
 										</div>
 									</motion.div>

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
-
+import { cn } from "@/lib/utils";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";

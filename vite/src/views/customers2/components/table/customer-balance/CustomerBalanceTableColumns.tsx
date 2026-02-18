@@ -286,40 +286,6 @@ export const CustomerBalanceTableColumns = ({
 	entities?: unknown[];
 }) => [
 	{
-		id: "expander",
-		header: "",
-		size: 32,
-		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => {
-			const canExpand = row.getCanExpand();
-			const isExpanded = row.getIsExpanded();
-			const isSubRow = row.depth > 0;
-
-			if (isSubRow || !canExpand) {
-				return <div className="w-0" />;
-			}
-
-			return (
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						row.getToggleExpandedHandler()();
-					}}
-					className="text-t3 hover:text-t2 select-none"
-				>
-					<span
-						className={cn(
-							"inline-flex transition-transform duration-200",
-							isExpanded && "rotate-90",
-						)}
-					>
-						<CaretRightIcon size={14} weight="bold" />
-					</span>
-				</button>
-			);
-		},
-	},
-	{
 		header: "Feature",
 		accessorKey: "feature",
 		enableResizing: true,
@@ -330,7 +296,7 @@ export const CustomerBalanceTableColumns = ({
 
 			if (isSubRow) {
 				return (
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-2 pl-5.5">
 						<AdminHover
 							texts={getCusEntHoverTexts({
 								cusEnt: ent,
@@ -345,8 +311,21 @@ export const CustomerBalanceTableColumns = ({
 				);
 			}
 
+			const canExpand = row.getCanExpand();
+			const isExpanded = row.getIsExpanded();
+
 			return (
 				<div className="flex items-center gap-2">
+					{canExpand && (
+						<span
+							className={cn(
+								"inline-flex text-t3 transition-transform duration-200",
+								isExpanded && "rotate-90",
+							)}
+						>
+							<CaretRightIcon size={14} weight="bold" />
+						</span>
+					)}
 					<AdminHover
 						texts={getCusEntHoverTexts({
 							cusEnt: ent,
