@@ -163,6 +163,9 @@ export type BillingPreviewAttachItem = {
   rollover?: BillingPreviewAttachRolloverRequest | undefined;
 };
 
+/**
+ * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ */
 export type BillingPreviewAttachCustomize = {
   price?: BillingPreviewAttachPriceRequest | null | undefined;
   items?: Array<BillingPreviewAttachItem> | undefined;
@@ -170,8 +173,8 @@ export type BillingPreviewAttachCustomize = {
 
 export type BillingPreviewAttachInvoiceMode = {
   enabled: boolean;
-  enableProductImmediately?: boolean | undefined;
-  finalizeInvoice?: boolean | undefined;
+  enablePlanImmediately?: boolean | undefined;
+  finalize?: boolean | undefined;
 };
 
 export type BillingPreviewAttachDiscountRequest2 = {
@@ -227,8 +230,14 @@ export type BillingPreviewAttachRequest = {
     | Array<BillingPreviewAttachFeatureQuantities>
     | null
     | undefined;
+  /**
+   * The version of the plan to attach.
+   */
   version?: number | undefined;
   freeTrial?: BillingPreviewAttachFreeTrial | null | undefined;
+  /**
+   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   */
   customize?: BillingPreviewAttachCustomize | undefined;
   planId: string;
   invoiceMode?: BillingPreviewAttachInvoiceMode | undefined;
@@ -262,17 +271,12 @@ export type BillingPreviewAttachLineItem = {
   description: string;
   amount: number;
   discounts?: Array<BillingPreviewAttachDiscountResponse> | undefined;
-  isBase?: boolean | undefined;
+  planId: string;
   totalQuantity: number;
   paidQuantity: number;
-  planId: string;
   deferredForTrial?: boolean | undefined;
   effectivePeriod?: BillingPreviewAttachEffectivePeriod | undefined;
-};
-
-export type BillingPreviewAttachCredit = {
-  amount: number;
-  description: string;
+  isBase?: boolean | undefined;
 };
 
 export type BillingPreviewAttachNextCycleDiscount = {
@@ -292,12 +296,12 @@ export type BillingPreviewAttachNextCycleLineItem = {
   description: string;
   amount: number;
   discounts?: Array<BillingPreviewAttachNextCycleDiscount> | undefined;
-  isBase?: boolean | undefined;
+  planId: string;
   totalQuantity: number;
   paidQuantity: number;
-  planId: string;
   deferredForTrial?: boolean | undefined;
   effectivePeriod?: BillingPreviewAttachNextCycleEffectivePeriod | undefined;
+  isBase?: boolean | undefined;
 };
 
 export type BillingPreviewAttachNextCycle = {
@@ -380,7 +384,6 @@ export type IncomingPrice = {
 };
 
 export type IncomingBreakdown = {
-  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -399,7 +402,6 @@ export type IncomingRollover = {
 };
 
 export type IncomingBalances = {
-  object: "balance";
   featureId: string;
   feature?: IncomingFeature | undefined;
   granted: number;
@@ -495,7 +497,6 @@ export type OutgoingPrice = {
 };
 
 export type OutgoingBreakdown = {
-  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -514,7 +515,6 @@ export type OutgoingRollover = {
 };
 
 export type OutgoingBalances = {
-  object: "balance";
   featureId: string;
   feature?: OutgoingFeature | undefined;
   granted: number;
@@ -552,7 +552,6 @@ export type BillingPreviewAttachResponse = {
   currency: string;
   periodStart?: number | undefined;
   periodEnd?: number | undefined;
-  credit?: BillingPreviewAttachCredit | undefined;
   nextCycle?: BillingPreviewAttachNextCycle | undefined;
   incoming: Array<Incoming>;
   outgoing: Array<Outgoing>;
@@ -980,8 +979,8 @@ export function billingPreviewAttachCustomizeToJSON(
 /** @internal */
 export type BillingPreviewAttachInvoiceMode$Outbound = {
   enabled: boolean;
-  enable_product_immediately: boolean;
-  finalize_invoice: boolean;
+  enable_plan_immediately: boolean;
+  finalize: boolean;
 };
 
 /** @internal */
@@ -991,13 +990,12 @@ export const BillingPreviewAttachInvoiceMode$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     enabled: z.boolean(),
-    enableProductImmediately: z._default(z.boolean(), false),
-    finalizeInvoice: z._default(z.boolean(), true),
+    enablePlanImmediately: z._default(z.boolean(), false),
+    finalize: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
     return remap$(v, {
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );
@@ -1257,23 +1255,23 @@ export const BillingPreviewAttachLineItem$inboundSchema: z.ZodMiniType<
     discounts: types.optional(
       z.array(z.lazy(() => BillingPreviewAttachDiscountResponse$inboundSchema)),
     ),
-    is_base: types.optional(types.boolean()),
+    plan_id: types.string(),
     total_quantity: types.number(),
     paid_quantity: types.number(),
-    plan_id: types.string(),
     deferred_for_trial: types.optional(types.boolean()),
     effective_period: types.optional(
       z.lazy(() => BillingPreviewAttachEffectivePeriod$inboundSchema),
     ),
+    is_base: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "is_base": "isBase",
+      "plan_id": "planId",
       "total_quantity": "totalQuantity",
       "paid_quantity": "paidQuantity",
-      "plan_id": "planId",
       "deferred_for_trial": "deferredForTrial",
       "effective_period": "effectivePeriod",
+      "is_base": "isBase",
     });
   }),
 );
@@ -1285,25 +1283,6 @@ export function billingPreviewAttachLineItemFromJSON(
     jsonString,
     (x) => BillingPreviewAttachLineItem$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'BillingPreviewAttachLineItem' from JSON`,
-  );
-}
-
-/** @internal */
-export const BillingPreviewAttachCredit$inboundSchema: z.ZodMiniType<
-  BillingPreviewAttachCredit,
-  unknown
-> = z.object({
-  amount: types.number(),
-  description: types.string(),
-});
-
-export function billingPreviewAttachCreditFromJSON(
-  jsonString: string,
-): SafeParseResult<BillingPreviewAttachCredit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => BillingPreviewAttachCredit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BillingPreviewAttachCredit' from JSON`,
   );
 }
 
@@ -1367,23 +1346,23 @@ export const BillingPreviewAttachNextCycleLineItem$inboundSchema: z.ZodMiniType<
         z.lazy(() => BillingPreviewAttachNextCycleDiscount$inboundSchema),
       ),
     ),
-    is_base: types.optional(types.boolean()),
+    plan_id: types.string(),
     total_quantity: types.number(),
     paid_quantity: types.number(),
-    plan_id: types.string(),
     deferred_for_trial: types.optional(types.boolean()),
     effective_period: types.optional(
       z.lazy(() => BillingPreviewAttachNextCycleEffectivePeriod$inboundSchema),
     ),
+    is_base: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "is_base": "isBase",
+      "plan_id": "planId",
       "total_quantity": "totalQuantity",
       "paid_quantity": "paidQuantity",
-      "plan_id": "planId",
       "deferred_for_trial": "deferredForTrial",
       "effective_period": "effectivePeriod",
+      "is_base": "isBase",
     });
   }),
 );
@@ -1650,7 +1629,6 @@ export const IncomingBreakdown$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance_breakdown"),
     id: z._default(types.string(), ""),
     plan_id: types.nullable(types.string()),
     included_grant: types.number(),
@@ -1714,7 +1692,6 @@ export const IncomingBalances$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => IncomingFeature$inboundSchema)),
     granted: types.number(),
@@ -2005,7 +1982,6 @@ export const OutgoingBreakdown$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance_breakdown"),
     id: z._default(types.string(), ""),
     plan_id: types.nullable(types.string()),
     included_grant: types.number(),
@@ -2069,7 +2045,6 @@ export const OutgoingBalances$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => OutgoingFeature$inboundSchema)),
     granted: types.number(),
@@ -2157,9 +2132,6 @@ export const BillingPreviewAttachResponse$inboundSchema: z.ZodMiniType<
     currency: types.string(),
     period_start: types.optional(types.number()),
     period_end: types.optional(types.number()),
-    credit: types.optional(
-      z.lazy(() => BillingPreviewAttachCredit$inboundSchema),
-    ),
     next_cycle: types.optional(
       z.lazy(() => BillingPreviewAttachNextCycle$inboundSchema),
     ),

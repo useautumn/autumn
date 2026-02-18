@@ -1,1 +1,1 @@
-export * from "./planV1ToV0.js";
+export * from "./planV1ToV0";

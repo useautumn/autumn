@@ -6,7 +6,6 @@
 import { UpdateCustomerBreakdown } from "@useautumn/sdk";
 
 let value: UpdateCustomerBreakdown = {
-  object: "balance_breakdown",
   planId: "<id>",
   includedGrant: 2437.9,
   prepaidGrant: 2339.29,
@@ -30,7 +29,6 @@ let value: UpdateCustomerBreakdown = {
 
 | Field                                                            | Type                                                             | Required                                                         | Description                                                      |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `object`                                                         | *"balance_breakdown"*                                            | :heavy_check_mark:                                               | N/A                                                              |
 | `id`                                                             | *string*                                                         | :heavy_minus_sign:                                               | N/A                                                              |
 | `planId`                                                         | *string*                                                         | :heavy_check_mark:                                               | N/A                                                              |
 | `includedGrant`                                                  | *number*                                                         | :heavy_check_mark:                                               | N/A                                                              |

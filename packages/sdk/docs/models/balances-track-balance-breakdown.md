@@ -6,7 +6,6 @@
 import { BalancesTrackBalanceBreakdown } from "@useautumn/sdk";
 
 let value: BalancesTrackBalanceBreakdown = {
-  object: "balance_breakdown",
   planId: "<id>",
   includedGrant: 1267.23,
   prepaidGrant: 7892.69,
@@ -30,7 +29,6 @@ let value: BalancesTrackBalanceBreakdown = {
 
 | Field                                                                         | Type                                                                          | Required                                                                      | Description                                                                   |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `object`                                                                      | *"balance_breakdown"*                                                         | :heavy_check_mark:                                                            | N/A                                                                           |
 | `id`                                                                          | *string*                                                                      | :heavy_minus_sign:                                                            | N/A                                                                           |
 | `planId`                                                                      | *string*                                                                      | :heavy_check_mark:                                                            | N/A                                                                           |
 | `includedGrant`                                                               | *number*                                                                      | :heavy_check_mark:                                                            | N/A                                                                           |

@@ -20,8 +20,8 @@ export const billingAttachTierSchema = z.object({
 
 export const billingAttachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
-	enableProductImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalizeInvoice: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const billingAttachDiscount2Schema = z.object({
@@ -126,8 +126,8 @@ export const billingAttachCustomizeOutboundSchema = z.object({
 
 export const billingAttachInvoiceModeOutboundSchema = z.object({
 	enabled: z.boolean(),
-	enable_product_immediately: z.boolean(),
-	finalize_invoice: z.boolean(),
+	enable_plan_immediately: z.boolean(),
+	finalize: z.boolean(),
 });
 
 export const billingAttachDiscount2OutboundSchema = z.object({

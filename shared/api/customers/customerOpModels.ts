@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { queryStringArray } from "../common/queryHelpers.js";
-import { CustomerExpandEnum } from "./components/customerExpand/customerExpand.js";
+import { queryStringArray } from "../common/queryHelpers";
+import { CustomerExpandEnum } from "./components/customerExpand/customerExpand";
 
 export const GetCustomerQuerySchema = z.object({
 	expand: queryStringArray(CustomerExpandEnum).optional(),

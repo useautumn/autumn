@@ -11,7 +11,6 @@ let value: BalancesCheckResponse = {
   allowed: true,
   customerId: "<id>",
   balance: {
-    object: "balance",
     featureId: "<id>",
     granted: 5669.36,
     remaining: 9220.56,

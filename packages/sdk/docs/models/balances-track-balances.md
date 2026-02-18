@@ -6,7 +6,6 @@
 import { BalancesTrackBalances } from "@useautumn/sdk";
 
 let value: BalancesTrackBalances = {
-  object: "balance",
   featureId: "<id>",
   granted: 4279.52,
   remaining: 1892.83,
@@ -22,7 +21,6 @@ let value: BalancesTrackBalances = {
 
 | Field                                                                    | Type                                                                     | Required                                                                 | Description                                                              |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `object`                                                                 | *"balance"*                                                              | :heavy_check_mark:                                                       | N/A                                                                      |
 | `featureId`                                                              | *string*                                                                 | :heavy_check_mark:                                                       | N/A                                                                      |
 | `feature`                                                                | [models.BalancesTrackFeature](../models/balances-track-feature.md)       | :heavy_minus_sign:                                                       | N/A                                                                      |
 | `granted`                                                                | *number*                                                                 | :heavy_check_mark:                                                       | N/A                                                                      |

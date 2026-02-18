@@ -1,14 +1,14 @@
-import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
-import { BillingMethod } from "@api/products/components/billingMethod.js";
-import { DisplaySchema } from "@api/products/components/display.js";
-import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
-import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0";
+import { BillingMethod } from "@api/products/components/billingMethod";
+import { DisplaySchema } from "@api/products/components/display";
+import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
+import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums.js";
+} from "@models/productV2Models/productItemModels/productItemEnums";
 import { z } from "zod/v4";
 
 export const ApiPlanItemV1Schema = z

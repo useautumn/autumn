@@ -56,9 +56,9 @@ class Billing(BaseSDK):
         :param plan_id:
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param invoice_mode:
         :param discounts:
         :param redirect_mode:
@@ -215,9 +215,9 @@ class Billing(BaseSDK):
         :param plan_id:
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param invoice_mode:
         :param discounts:
         :param redirect_mode:
@@ -380,9 +380,9 @@ class Billing(BaseSDK):
         :param plan_id:
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param invoice_mode:
         :param discounts:
         :param redirect_mode:
@@ -547,9 +547,9 @@ class Billing(BaseSDK):
         :param plan_id:
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param invoice_mode:
         :param discounts:
         :param redirect_mode:
@@ -679,7 +679,7 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
         ] = None,
-        plan_id: OptionalNullable[str] = UNSET,
+        plan_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.BillingUpdateInvoiceMode,
@@ -698,9 +698,9 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to attach the plan to.
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param plan_id:
         :param invoice_mode:
         :param cancel_action:
@@ -819,7 +819,7 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
         ] = None,
-        plan_id: OptionalNullable[str] = UNSET,
+        plan_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.BillingUpdateInvoiceMode,
@@ -838,9 +838,9 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to attach the plan to.
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param plan_id:
         :param invoice_mode:
         :param cancel_action:
@@ -965,7 +965,7 @@ class Billing(BaseSDK):
                 models.BillingPreviewUpdateCustomizeTypedDict,
             ]
         ] = None,
-        plan_id: OptionalNullable[str] = UNSET,
+        plan_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.BillingPreviewUpdateInvoiceMode,
@@ -984,9 +984,9 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to attach the plan to.
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param plan_id:
         :param invoice_mode:
         :param cancel_action:
@@ -1113,7 +1113,7 @@ class Billing(BaseSDK):
                 models.BillingPreviewUpdateCustomizeTypedDict,
             ]
         ] = None,
-        plan_id: OptionalNullable[str] = UNSET,
+        plan_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.BillingPreviewUpdateInvoiceMode,
@@ -1132,9 +1132,9 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to attach the plan to.
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
-        :param version:
+        :param version: The version of the plan to attach.
         :param free_trial:
-        :param customize:
+        :param customize: Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
         :param plan_id:
         :param invoice_mode:
         :param cancel_action:

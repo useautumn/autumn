@@ -1,6 +1,6 @@
-import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { z } from "zod/v4";
-import { ApiFeatureV1Schema } from "../../features/apiFeatureV1.js";
+import { ApiFeatureV1Schema } from "../../features/apiFeatureV1";
 
 export const ApiBalanceResetSchema = z.object({
 	interval: z.enum(ResetInterval).or(z.literal("multiple")),

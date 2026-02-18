@@ -6,7 +6,6 @@
 import { UpdateCustomerBalances } from "@useautumn/sdk";
 
 let value: UpdateCustomerBalances = {
-  object: "balance",
   featureId: "<id>",
   granted: 3659.37,
   remaining: 1762.52,
@@ -22,7 +21,6 @@ let value: UpdateCustomerBalances = {
 
 | Field                                                                      | Type                                                                       | Required                                                                   | Description                                                                |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `object`                                                                   | *"balance"*                                                                | :heavy_check_mark:                                                         | N/A                                                                        |
 | `featureId`                                                                | *string*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
 | `feature`                                                                  | [models.UpdateCustomerFeature](../models/update-customer-feature.md)       | :heavy_minus_sign:                                                         | N/A                                                                        |
 | `granted`                                                                  | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |

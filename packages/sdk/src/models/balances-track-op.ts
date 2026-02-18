@@ -126,7 +126,6 @@ export type BalancesTrackBalancePrice = {
 };
 
 export type BalancesTrackBalanceBreakdown = {
-  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -145,7 +144,6 @@ export type BalancesTrackBalanceRollover = {
 };
 
 export type BalancesTrackBalance = {
-  object: "balance";
   featureId: string;
   feature?: BalancesTrackBalanceFeature | undefined;
   granted: number;
@@ -234,7 +232,6 @@ export type BalancesTrackPrice = {
 };
 
 export type BalancesTrackBreakdown = {
-  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -253,7 +250,6 @@ export type BalancesTrackRollover = {
 };
 
 export type BalancesTrackBalances = {
-  object: "balance";
   featureId: string;
   feature?: BalancesTrackFeature | undefined;
   granted: number;
@@ -557,7 +553,6 @@ export const BalancesTrackBalanceBreakdown$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance_breakdown"),
     id: z._default(types.string(), ""),
     plan_id: types.nullable(types.string()),
     included_grant: types.number(),
@@ -625,7 +620,6 @@ export const BalancesTrackBalance$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(
       z.lazy(() => BalancesTrackBalanceFeature$inboundSchema),
@@ -884,7 +878,6 @@ export const BalancesTrackBreakdown$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance_breakdown"),
     id: z._default(types.string(), ""),
     plan_id: types.nullable(types.string()),
     included_grant: types.number(),
@@ -948,7 +941,6 @@ export const BalancesTrackBalances$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => BalancesTrackFeature$inboundSchema)),
     granted: types.number(),

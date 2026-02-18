@@ -10,10 +10,9 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -381,11 +380,15 @@ class BillingPreviewAttachItem(BaseModel):
 
 
 class BillingPreviewAttachCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: NotRequired[Nullable[BillingPreviewAttachPriceRequestTypedDict]]
     items: NotRequired[List[BillingPreviewAttachItemTypedDict]]
 
 
 class BillingPreviewAttachCustomize(BaseModel):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: OptionalNullable[BillingPreviewAttachPriceRequest] = UNSET
 
     items: Optional[List[BillingPreviewAttachItem]] = None
@@ -418,20 +421,20 @@ class BillingPreviewAttachCustomize(BaseModel):
 
 class BillingPreviewAttachInvoiceModeTypedDict(TypedDict):
     enabled: bool
-    enable_product_immediately: NotRequired[bool]
-    finalize_invoice: NotRequired[bool]
+    enable_plan_immediately: NotRequired[bool]
+    finalize: NotRequired[bool]
 
 
 class BillingPreviewAttachInvoiceMode(BaseModel):
     enabled: bool
 
-    enable_product_immediately: Optional[bool] = False
+    enable_plan_immediately: Optional[bool] = False
 
-    finalize_invoice: Optional[bool] = True
+    finalize: Optional[bool] = True
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_product_immediately", "finalize_invoice"])
+        optional_fields = set(["enable_plan_immediately", "finalize"])
         serialized = handler(self)
         m = {}
 
@@ -507,8 +510,10 @@ class BillingPreviewAttachRequestTypedDict(TypedDict):
     ]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
+    r"""The version of the plan to attach."""
     free_trial: NotRequired[Nullable[BillingPreviewAttachFreeTrialTypedDict]]
     customize: NotRequired[BillingPreviewAttachCustomizeTypedDict]
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
     invoice_mode: NotRequired[BillingPreviewAttachInvoiceModeTypedDict]
     discounts: NotRequired[List[BillingPreviewAttachDiscountUnionTypedDict]]
     redirect_mode: NotRequired[BillingPreviewAttachRedirectMode]
@@ -533,10 +538,12 @@ class BillingPreviewAttachRequest(BaseModel):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
 
     version: Optional[float] = None
+    r"""The version of the plan to attach."""
 
     free_trial: OptionalNullable[BillingPreviewAttachFreeTrial] = UNSET
 
     customize: Optional[BillingPreviewAttachCustomize] = None
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
 
     invoice_mode: Optional[BillingPreviewAttachInvoiceMode] = None
 
@@ -643,13 +650,13 @@ class BillingPreviewAttachLineItemTypedDict(TypedDict):
     title: str
     description: str
     amount: float
+    plan_id: str
     total_quantity: float
     paid_quantity: float
-    plan_id: str
     discounts: NotRequired[List[BillingPreviewAttachDiscountResponseTypedDict]]
-    is_base: NotRequired[bool]
     deferred_for_trial: NotRequired[bool]
     effective_period: NotRequired[BillingPreviewAttachEffectivePeriodTypedDict]
+    is_base: NotRequired[bool]
 
 
 class BillingPreviewAttachLineItem(BaseModel):
@@ -659,24 +666,24 @@ class BillingPreviewAttachLineItem(BaseModel):
 
     amount: float
 
+    plan_id: str
+
     total_quantity: float
 
     paid_quantity: float
 
-    plan_id: str
-
     discounts: Optional[List[BillingPreviewAttachDiscountResponse]] = None
-
-    is_base: Optional[bool] = None
 
     deferred_for_trial: Optional[bool] = None
 
     effective_period: Optional[BillingPreviewAttachEffectivePeriod] = None
 
+    is_base: Optional[bool] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["discounts", "is_base", "deferred_for_trial", "effective_period"]
+            ["discounts", "deferred_for_trial", "effective_period", "is_base"]
         )
         serialized = handler(self)
         m = {}
@@ -690,17 +697,6 @@ class BillingPreviewAttachLineItem(BaseModel):
                     m[k] = val
 
         return m
-
-
-class BillingPreviewAttachCreditTypedDict(TypedDict):
-    amount: float
-    description: str
-
-
-class BillingPreviewAttachCredit(BaseModel):
-    amount: float
-
-    description: str
 
 
 class BillingPreviewAttachNextCycleDiscountTypedDict(TypedDict):
@@ -753,13 +749,13 @@ class BillingPreviewAttachNextCycleLineItemTypedDict(TypedDict):
     title: str
     description: str
     amount: float
+    plan_id: str
     total_quantity: float
     paid_quantity: float
-    plan_id: str
     discounts: NotRequired[List[BillingPreviewAttachNextCycleDiscountTypedDict]]
-    is_base: NotRequired[bool]
     deferred_for_trial: NotRequired[bool]
     effective_period: NotRequired[BillingPreviewAttachNextCycleEffectivePeriodTypedDict]
+    is_base: NotRequired[bool]
 
 
 class BillingPreviewAttachNextCycleLineItem(BaseModel):
@@ -769,24 +765,24 @@ class BillingPreviewAttachNextCycleLineItem(BaseModel):
 
     amount: float
 
+    plan_id: str
+
     total_quantity: float
 
     paid_quantity: float
 
-    plan_id: str
-
     discounts: Optional[List[BillingPreviewAttachNextCycleDiscount]] = None
-
-    is_base: Optional[bool] = None
 
     deferred_for_trial: Optional[bool] = None
 
     effective_period: Optional[BillingPreviewAttachNextCycleEffectivePeriod] = None
 
+    is_base: Optional[bool] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["discounts", "is_base", "deferred_for_trial", "effective_period"]
+            ["discounts", "deferred_for_trial", "effective_period", "is_base"]
         )
         serialized = handler(self)
         m = {}
@@ -1085,7 +1081,6 @@ class IncomingBreakdownTypedDict(TypedDict):
     reset: Nullable[IncomingResetTypedDict]
     price: Nullable[IncomingPriceTypedDict]
     expires_at: Nullable[float]
-    object: Literal["balance_breakdown"]
     id: NotRequired[str]
 
 
@@ -1107,14 +1102,6 @@ class IncomingBreakdown(BaseModel):
     price: Nullable[IncomingPrice]
 
     expires_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[
-            Literal["balance_breakdown"],
-            AfterValidator(validate_const("balance_breakdown")),
-        ],
-        pydantic.Field(alias="object"),
-    ] = "balance_breakdown"
 
     id: Optional[str] = ""
 
@@ -1164,7 +1151,6 @@ class IncomingBalancesTypedDict(TypedDict):
     overage_allowed: bool
     max_purchase: Nullable[float]
     next_reset_at: Nullable[float]
-    object: Literal["balance"]
     feature: NotRequired[IncomingFeatureTypedDict]
     breakdown: NotRequired[List[IncomingBreakdownTypedDict]]
     rollovers: NotRequired[List[IncomingRolloverTypedDict]]
@@ -1186,11 +1172,6 @@ class IncomingBalances(BaseModel):
     max_purchase: Nullable[float]
 
     next_reset_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[Literal["balance"], AfterValidator(validate_const("balance"))],
-        pydantic.Field(alias="object"),
-    ] = "balance"
 
     feature: Optional[IncomingFeature] = None
 
@@ -1529,7 +1510,6 @@ class OutgoingBreakdownTypedDict(TypedDict):
     reset: Nullable[OutgoingResetTypedDict]
     price: Nullable[OutgoingPriceTypedDict]
     expires_at: Nullable[float]
-    object: Literal["balance_breakdown"]
     id: NotRequired[str]
 
 
@@ -1551,14 +1531,6 @@ class OutgoingBreakdown(BaseModel):
     price: Nullable[OutgoingPrice]
 
     expires_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[
-            Literal["balance_breakdown"],
-            AfterValidator(validate_const("balance_breakdown")),
-        ],
-        pydantic.Field(alias="object"),
-    ] = "balance_breakdown"
 
     id: Optional[str] = ""
 
@@ -1608,7 +1580,6 @@ class OutgoingBalancesTypedDict(TypedDict):
     overage_allowed: bool
     max_purchase: Nullable[float]
     next_reset_at: Nullable[float]
-    object: Literal["balance"]
     feature: NotRequired[OutgoingFeatureTypedDict]
     breakdown: NotRequired[List[OutgoingBreakdownTypedDict]]
     rollovers: NotRequired[List[OutgoingRolloverTypedDict]]
@@ -1630,11 +1601,6 @@ class OutgoingBalances(BaseModel):
     max_purchase: Nullable[float]
 
     next_reset_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[Literal["balance"], AfterValidator(validate_const("balance"))],
-        pydantic.Field(alias="object"),
-    ] = "balance"
 
     feature: Optional[OutgoingFeature] = None
 
@@ -1725,7 +1691,6 @@ class BillingPreviewAttachResponseTypedDict(TypedDict):
     redirect_type: Nullable[RedirectType]
     period_start: NotRequired[float]
     period_end: NotRequired[float]
-    credit: NotRequired[BillingPreviewAttachCreditTypedDict]
     next_cycle: NotRequired[BillingPreviewAttachNextCycleTypedDict]
 
 
@@ -1750,13 +1715,11 @@ class BillingPreviewAttachResponse(BaseModel):
 
     period_end: Optional[float] = None
 
-    credit: Optional[BillingPreviewAttachCredit] = None
-
     next_cycle: Optional[BillingPreviewAttachNextCycle] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["period_start", "period_end", "credit", "next_cycle"])
+        optional_fields = set(["period_start", "period_end", "next_cycle"])
         nullable_fields = set(["redirect_type"])
         serialized = handler(self)
         m = {}
@@ -1786,21 +1749,5 @@ except NameError:
     pass
 try:
     BillingPreviewAttachNextCycleDiscount.model_rebuild()
-except NameError:
-    pass
-try:
-    IncomingBreakdown.model_rebuild()
-except NameError:
-    pass
-try:
-    IncomingBalances.model_rebuild()
-except NameError:
-    pass
-try:
-    OutgoingBreakdown.model_rebuild()
-except NameError:
-    pass
-try:
-    OutgoingBalances.model_rebuild()
 except NameError:
     pass

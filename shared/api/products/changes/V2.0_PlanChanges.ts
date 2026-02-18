@@ -1,16 +1,16 @@
-import { type ApiPlanV1, ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
-import { planV1ToV0 } from "@api/products/mappers/planV1ToV0.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { type ApiPlanV1, ApiPlanV1Schema } from "@api/products/apiPlanV1";
+import { planV1ToV0 } from "@api/products/mappers/planV1ToV0";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import type { SharedContext } from "../../../types/sharedContext.js";
-import { PlanLegacyDataSchema } from "../planLegacyData.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
+import type { SharedContext } from "../../../types/sharedContext";
+import { PlanLegacyDataSchema } from "../planLegacyData";
 import {
 	type ApiPlan,
 	ApiPlanV0Schema,
-} from "../previousVersions/apiPlanV0.js";
+} from "../previousVersions/apiPlanV0";
 
 export const V2_0_PlanChanges = defineVersionChange({
 	newVersion: ApiVersion.V2_1,

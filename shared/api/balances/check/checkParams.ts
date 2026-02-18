@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../../common/customerData.js";
-import { EntityDataSchema } from "../../common/entityData.js";
-import { queryStringArray } from "../../common/queryHelpers.js";
-import { CheckExpand } from "./enums/CheckExpand.js";
+import { CustomerDataSchema } from "../../common/customerData";
+import { EntityDataSchema } from "../../common/entityData";
+import { queryStringArray } from "../../common/queryHelpers";
+import { CheckExpand } from "./enums/CheckExpand";
 
 const checkDescriptions = {
 	customer_id: "ID which you provided when creating the customer",

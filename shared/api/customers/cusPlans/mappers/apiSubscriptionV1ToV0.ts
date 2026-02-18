@@ -1,7 +1,7 @@
-import { planV1ToV0 } from "@api/products/mappers/planV1ToV0.js";
-import type { SharedContext } from "../../../../types/sharedContext.js";
-import type { ApiSubscription } from "../apiSubscription.js";
-import type { ApiSubscriptionV1 } from "../apiSubscriptionV1.js";
+import { planV1ToV0 } from "@api/products/mappers/planV1ToV0";
+import type { SharedContext } from "../../../../types/sharedContext";
+import type { ApiSubscription } from "../apiSubscription";
+import type { ApiSubscriptionV1 } from "../apiSubscriptionV1";
 
 export function apiSubscriptionV1ToV0({
 	ctx,

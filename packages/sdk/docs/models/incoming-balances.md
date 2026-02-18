@@ -6,7 +6,6 @@
 import { IncomingBalances } from "@useautumn/sdk";
 
 let value: IncomingBalances = {
-  object: "balance",
   featureId: "<id>",
   granted: 3885.87,
   remaining: 4866.24,
@@ -22,7 +21,6 @@ let value: IncomingBalances = {
 
 | Field                                                         | Type                                                          | Required                                                      | Description                                                   |
 | ------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
-| `object`                                                      | *"balance"*                                                   | :heavy_check_mark:                                            | N/A                                                           |
 | `featureId`                                                   | *string*                                                      | :heavy_check_mark:                                            | N/A                                                           |
 | `feature`                                                     | [models.IncomingFeature](../models/incoming-feature.md)       | :heavy_minus_sign:                                            | N/A                                                           |
 | `granted`                                                     | *number*                                                      | :heavy_check_mark:                                            | N/A                                                           |

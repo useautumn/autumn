@@ -34,7 +34,6 @@ let value: Customer = {
   purchases: [],
   balances: {
     "balance_1": {
-      object: "balance",
       featureId: "<id>",
       granted: 7438.76,
       remaining: 7441.15,

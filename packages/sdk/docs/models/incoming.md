@@ -47,7 +47,6 @@ let value: Incoming = {
   ],
   balances: {
     "key": {
-      object: "balance",
       featureId: "<id>",
       granted: 3858.89,
       remaining: 9478.44,

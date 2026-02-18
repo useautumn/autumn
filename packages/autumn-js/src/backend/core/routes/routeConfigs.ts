@@ -35,10 +35,14 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 			}
 
 			// Build args and call SDK
+			const existingExpand = Array.isArray(sanitizedBody.expand)
+				? sanitizedBody.expand
+				: [];
 			const args = {
 				customerId: identity.customerId,
 				...identity.customerData,
 				...sanitizedBody,
+				expand: [...existingExpand, "balances.feature"],
 			};
 			return autumn.customers.getOrCreate(args);
 		},

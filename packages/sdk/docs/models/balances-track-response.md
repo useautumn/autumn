@@ -11,7 +11,6 @@ let value: BalancesTrackResponse = {
   customerId: "<id>",
   value: 107.2,
   balance: {
-    object: "balance",
     featureId: "<id>",
     granted: 121.68,
     remaining: 7842.83,

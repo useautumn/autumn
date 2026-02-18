@@ -6,7 +6,6 @@
 import { ListCustomersBalances } from "@useautumn/sdk";
 
 let value: ListCustomersBalances = {
-  object: "balance",
   featureId: "<id>",
   granted: 2638.08,
   remaining: 7638.23,
@@ -22,7 +21,6 @@ let value: ListCustomersBalances = {
 
 | Field                                                                    | Type                                                                     | Required                                                                 | Description                                                              |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `object`                                                                 | *"balance"*                                                              | :heavy_check_mark:                                                       | N/A                                                                      |
 | `featureId`                                                              | *string*                                                                 | :heavy_check_mark:                                                       | N/A                                                                      |
 | `feature`                                                                | [models.ListCustomersFeature](../models/list-customers-feature.md)       | :heavy_minus_sign:                                                       | N/A                                                                      |
 | `granted`                                                                | *number*                                                                 | :heavy_check_mark:                                                       | N/A                                                                      |

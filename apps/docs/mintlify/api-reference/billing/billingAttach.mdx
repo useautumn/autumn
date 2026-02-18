@@ -29,7 +29,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="version" type="number" />
+<DynamicParamField body="version" type="number">
+  The version of the plan to attach.
+</DynamicParamField>
 
 <DynamicParamField body="free_trial" type="object | null">
   <Expandable title="properties">
@@ -43,6 +45,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicParamField>
 
 <DynamicParamField body="customize" type="object">
+  Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
   <Expandable title="properties">
     <DynamicParamField body="price" type="object | null">
       <Expandable title="properties">
@@ -130,9 +133,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   <Expandable title="properties">
     <DynamicParamField body="enabled" type="boolean" required />
 
-    <DynamicParamField body="enable_product_immediately" type="boolean" />
+    <DynamicParamField body="enable_plan_immediately" type="boolean" />
 
-    <DynamicParamField body="finalize_invoice" type="boolean" />
+    <DynamicParamField body="finalize" type="boolean" />
 
   </Expandable>
 </DynamicParamField>

@@ -378,11 +378,15 @@ class BillingPreviewUpdateItem(BaseModel):
 
 
 class BillingPreviewUpdateCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: NotRequired[Nullable[BillingPreviewUpdatePriceTypedDict]]
     items: NotRequired[List[BillingPreviewUpdateItemTypedDict]]
 
 
 class BillingPreviewUpdateCustomize(BaseModel):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: OptionalNullable[BillingPreviewUpdatePrice] = UNSET
 
     items: Optional[List[BillingPreviewUpdateItem]] = None
@@ -415,20 +419,20 @@ class BillingPreviewUpdateCustomize(BaseModel):
 
 class BillingPreviewUpdateInvoiceModeTypedDict(TypedDict):
     enabled: bool
-    enable_product_immediately: NotRequired[bool]
-    finalize_invoice: NotRequired[bool]
+    enable_plan_immediately: NotRequired[bool]
+    finalize: NotRequired[bool]
 
 
 class BillingPreviewUpdateInvoiceMode(BaseModel):
     enabled: bool
 
-    enable_product_immediately: Optional[bool] = False
+    enable_plan_immediately: Optional[bool] = False
 
-    finalize_invoice: Optional[bool] = True
+    finalize: Optional[bool] = True
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_product_immediately", "finalize_invoice"])
+        optional_fields = set(["enable_plan_immediately", "finalize"])
         serialized = handler(self)
         m = {}
 
@@ -466,9 +470,11 @@ class BillingPreviewUpdateRequestTypedDict(TypedDict):
     ]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
+    r"""The version of the plan to attach."""
     free_trial: NotRequired[Nullable[BillingPreviewUpdateFreeTrialTypedDict]]
     customize: NotRequired[BillingPreviewUpdateCustomizeTypedDict]
-    plan_id: NotRequired[Nullable[str]]
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+    plan_id: NotRequired[str]
     invoice_mode: NotRequired[BillingPreviewUpdateInvoiceModeTypedDict]
     cancel_action: NotRequired[BillingPreviewUpdateCancelAction]
     billing_behavior: NotRequired[BillingPreviewUpdateBillingBehavior]
@@ -487,12 +493,14 @@ class BillingPreviewUpdateRequest(BaseModel):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
 
     version: Optional[float] = None
+    r"""The version of the plan to attach."""
 
     free_trial: OptionalNullable[BillingPreviewUpdateFreeTrial] = UNSET
 
     customize: Optional[BillingPreviewUpdateCustomize] = None
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
 
-    plan_id: OptionalNullable[str] = UNSET
+    plan_id: Optional[str] = None
 
     invoice_mode: Optional[BillingPreviewUpdateInvoiceMode] = None
 
@@ -515,9 +523,7 @@ class BillingPreviewUpdateRequest(BaseModel):
                 "billing_behavior",
             ]
         )
-        nullable_fields = set(
-            ["entity_id", "feature_quantities", "free_trial", "plan_id"]
-        )
+        nullable_fields = set(["entity_id", "feature_quantities", "free_trial"])
         serialized = handler(self)
         m = {}
 
@@ -590,13 +596,13 @@ class BillingPreviewUpdateLineItemTypedDict(TypedDict):
     title: str
     description: str
     amount: float
+    plan_id: str
     total_quantity: float
     paid_quantity: float
-    plan_id: str
     discounts: NotRequired[List[BillingPreviewUpdateDiscountTypedDict]]
-    is_base: NotRequired[bool]
     deferred_for_trial: NotRequired[bool]
     effective_period: NotRequired[BillingPreviewUpdateEffectivePeriodTypedDict]
+    is_base: NotRequired[bool]
 
 
 class BillingPreviewUpdateLineItem(BaseModel):
@@ -606,24 +612,24 @@ class BillingPreviewUpdateLineItem(BaseModel):
 
     amount: float
 
+    plan_id: str
+
     total_quantity: float
 
     paid_quantity: float
 
-    plan_id: str
-
     discounts: Optional[List[BillingPreviewUpdateDiscount]] = None
-
-    is_base: Optional[bool] = None
 
     deferred_for_trial: Optional[bool] = None
 
     effective_period: Optional[BillingPreviewUpdateEffectivePeriod] = None
 
+    is_base: Optional[bool] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["discounts", "is_base", "deferred_for_trial", "effective_period"]
+            ["discounts", "deferred_for_trial", "effective_period", "is_base"]
         )
         serialized = handler(self)
         m = {}
@@ -637,17 +643,6 @@ class BillingPreviewUpdateLineItem(BaseModel):
                     m[k] = val
 
         return m
-
-
-class BillingPreviewUpdateCreditTypedDict(TypedDict):
-    amount: float
-    description: str
-
-
-class BillingPreviewUpdateCredit(BaseModel):
-    amount: float
-
-    description: str
 
 
 class BillingPreviewUpdateNextCycleDiscountTypedDict(TypedDict):
@@ -700,13 +695,13 @@ class BillingPreviewUpdateNextCycleLineItemTypedDict(TypedDict):
     title: str
     description: str
     amount: float
+    plan_id: str
     total_quantity: float
     paid_quantity: float
-    plan_id: str
     discounts: NotRequired[List[BillingPreviewUpdateNextCycleDiscountTypedDict]]
-    is_base: NotRequired[bool]
     deferred_for_trial: NotRequired[bool]
     effective_period: NotRequired[BillingPreviewUpdateNextCycleEffectivePeriodTypedDict]
+    is_base: NotRequired[bool]
 
 
 class BillingPreviewUpdateNextCycleLineItem(BaseModel):
@@ -716,24 +711,24 @@ class BillingPreviewUpdateNextCycleLineItem(BaseModel):
 
     amount: float
 
+    plan_id: str
+
     total_quantity: float
 
     paid_quantity: float
 
-    plan_id: str
-
     discounts: Optional[List[BillingPreviewUpdateNextCycleDiscount]] = None
-
-    is_base: Optional[bool] = None
 
     deferred_for_trial: Optional[bool] = None
 
     effective_period: Optional[BillingPreviewUpdateNextCycleEffectivePeriod] = None
 
+    is_base: Optional[bool] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["discounts", "is_base", "deferred_for_trial", "effective_period"]
+            ["discounts", "deferred_for_trial", "effective_period", "is_base"]
         )
         serialized = handler(self)
         m = {}
@@ -772,7 +767,6 @@ class BillingPreviewUpdateResponseTypedDict(TypedDict):
     currency: str
     period_start: NotRequired[float]
     period_end: NotRequired[float]
-    credit: NotRequired[BillingPreviewUpdateCreditTypedDict]
     next_cycle: NotRequired[BillingPreviewUpdateNextCycleTypedDict]
 
 
@@ -791,13 +785,11 @@ class BillingPreviewUpdateResponse(BaseModel):
 
     period_end: Optional[float] = None
 
-    credit: Optional[BillingPreviewUpdateCredit] = None
-
     next_cycle: Optional[BillingPreviewUpdateNextCycle] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["period_start", "period_end", "credit", "next_cycle"])
+        optional_fields = set(["period_start", "period_end", "next_cycle"])
         serialized = handler(self)
         m = {}
 

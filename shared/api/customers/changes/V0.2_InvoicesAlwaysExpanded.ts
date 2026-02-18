@@ -1,8 +1,8 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	VersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import { z } from "zod/v4";
 
 /**

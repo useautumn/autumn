@@ -29,7 +29,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="version" type="number" />
+<DynamicParamField body="version" type="number">
+  The version of the plan to attach.
+</DynamicParamField>
 
 <DynamicParamField body="free_trial" type="object | null">
   <Expandable title="properties">
@@ -43,6 +45,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicParamField>
 
 <DynamicParamField body="customize" type="object">
+  Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
   <Expandable title="properties">
     <DynamicParamField body="price" type="object | null">
       <Expandable title="properties">
@@ -124,15 +127,15 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="plan_id" type="string | null" />
+<DynamicParamField body="plan_id" type="string" />
 
 <DynamicParamField body="invoice_mode" type="object">
   <Expandable title="properties">
     <DynamicParamField body="enabled" type="boolean" required />
 
-    <DynamicParamField body="enable_product_immediately" type="boolean" />
+    <DynamicParamField body="enable_plan_immediately" type="boolean" />
 
-    <DynamicParamField body="finalize_invoice" type="boolean" />
+    <DynamicParamField body="finalize" type="boolean" />
 
   </Expandable>
 </DynamicParamField>
@@ -167,13 +170,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="is_base" type="boolean" />
+    <DynamicResponseField name="plan_id" type="string" />
 
     <DynamicResponseField name="total_quantity" type="number" />
 
     <DynamicResponseField name="paid_quantity" type="number" />
-
-    <DynamicResponseField name="plan_id" type="string" />
 
     <DynamicResponseField name="deferred_for_trial" type="boolean" />
 
@@ -186,6 +187,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
+    <DynamicResponseField name="is_base" type="boolean" />
+
   </Expandable>
 </DynamicResponseField>
 
@@ -196,15 +199,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <DynamicResponseField name="period_start" type="number" />
 
 <DynamicResponseField name="period_end" type="number" />
-
-<DynamicResponseField name="credit" type="object">
-  <Expandable title="properties">
-    <DynamicResponseField name="amount" type="number" />
-
-    <DynamicResponseField name="description" type="string" />
-
-  </Expandable>
-</DynamicResponseField>
 
 <DynamicResponseField name="next_cycle" type="object">
   <Expandable title="properties">
@@ -233,13 +227,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
-        <DynamicResponseField name="is_base" type="boolean" />
+        <DynamicResponseField name="plan_id" type="string" />
 
         <DynamicResponseField name="total_quantity" type="number" />
 
         <DynamicResponseField name="paid_quantity" type="number" />
-
-        <DynamicResponseField name="plan_id" type="string" />
 
         <DynamicResponseField name="deferred_for_trial" type="boolean" />
 
@@ -251,6 +243,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
           </Expandable>
         </DynamicResponseField>
+
+        <DynamicResponseField name="is_base" type="boolean" />
 
       </Expandable>
     </DynamicResponseField>

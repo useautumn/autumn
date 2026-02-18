@@ -57,8 +57,6 @@ export const executeRoute = async ({
 		try {
 			const result = await route.customHandler({ autumn, identity, body });
 
-			console.log("result", result);
-
 			// If customHandler returns BackendResult, use it directly
 			if (isBackendResult(result)) {
 				return result;

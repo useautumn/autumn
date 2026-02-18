@@ -1,12 +1,12 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../types/sharedContext.js";
-import { CustomerExpand } from "../components/customerExpand/customerExpand.js";
-import { GetCustomerQuerySchema } from "../customerOpModels.js";
+import type { SharedContext } from "../../../types/sharedContext";
+import { CustomerExpand } from "../components/customerExpand/customerExpand";
+import { GetCustomerQuerySchema } from "../customerOpModels";
 
 /**
  * V1_2_CustomerQueryChange: Transforms customer query TO latest format

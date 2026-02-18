@@ -2,7 +2,7 @@
 
 {
   "name": "@useautumn/sdk",
-  "version": "0.8.25",
+  "version": "0.8.26",
   "exports": {
     ".": "./src/index.ts",    
     "./models": "./src/models/index.ts",

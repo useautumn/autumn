@@ -12,8 +12,8 @@ let value: BillingPreviewUpdateInvoiceMode = {
 
 ## Fields
 
-| Field                      | Type                       | Required                   | Description                |
-| -------------------------- | -------------------------- | -------------------------- | -------------------------- |
-| `enabled`                  | *boolean*                  | :heavy_check_mark:         | N/A                        |
-| `enableProductImmediately` | *boolean*                  | :heavy_minus_sign:         | N/A                        |
-| `finalizeInvoice`          | *boolean*                  | :heavy_minus_sign:         | N/A                        |
+| Field                   | Type                    | Required                | Description             |
+| ----------------------- | ----------------------- | ----------------------- | ----------------------- |
+| `enabled`               | *boolean*               | :heavy_check_mark:      | N/A                     |
+| `enablePlanImmediately` | *boolean*               | :heavy_minus_sign:      | N/A                     |
+| `finalize`              | *boolean*               | :heavy_minus_sign:      | N/A                     |

@@ -86,6 +86,7 @@
 		"react-dom": "^19.1.0",
 		"stripe": "^18.3.0",
 		"tsup": "^8.4.0",
+		"tsgo": "catalog:",
 		"tsx": "^4.19.3",
 		"typescript": "^5.8.3"
 	},

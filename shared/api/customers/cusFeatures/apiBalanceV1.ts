@@ -1,11 +1,8 @@
-import { BillingMethod } from "@api/products/components/billingMethod.js";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { BillingMethod } from "@api/products/components/billingMethod";
+import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { z } from "zod/v4";
-import { ApiFeatureV1Schema } from "../../features/apiFeatureV1.js";
-import {
-	ApiBalanceResetSchema,
-	ApiBalanceRolloverSchema,
-} from "./apiBalance.js";
+import { ApiFeatureV1Schema } from "../../features/apiFeatureV1";
+import { ApiBalanceResetSchema, ApiBalanceRolloverSchema } from "./apiBalance";
 
 export const ApiBalanceBreakdownPriceSchema = z.object({
 	amount: z.number().optional(),
@@ -16,7 +13,9 @@ export const ApiBalanceBreakdownPriceSchema = z.object({
 });
 
 export const ApiBalanceBreakdownV1Schema = z.object({
-	object: z.literal("balance_breakdown"),
+	object: z.literal("balance_breakdown").meta({
+		internal: true,
+	}),
 
 	id: z.string().default(""),
 	plan_id: z.string().nullable(),
@@ -40,7 +39,9 @@ export const ApiBalanceBreakdownV1Schema = z.object({
 });
 
 export const ApiBalanceV1Schema = z.object({
-	object: z.literal("balance"),
+	object: z.literal("balance").meta({
+		internal: true,
+	}),
 
 	feature_id: z.string(),
 	feature: ApiFeatureV1Schema.optional(),

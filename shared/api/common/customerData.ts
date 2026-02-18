@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas.js";
+import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({

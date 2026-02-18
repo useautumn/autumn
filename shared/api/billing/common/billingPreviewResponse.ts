@@ -1,4 +1,4 @@
-import { LineItemDiscountSchema } from "@models/billingModels/lineItem/lineItem.js";
+import { LineItemDiscountSchema } from "@models/billingModels/lineItem/lineItem";
 import { z } from "zod/v4";
 
 export const PreviewLineItemSchema = z.object({

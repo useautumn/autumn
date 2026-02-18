@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
-import { rewards } from "../rewardModels/rewardTable.js";
-import { rewardPrograms } from "./rewardProgramTable.js";
+import { rewards } from "../rewardModels/rewardTable";
+import { rewardPrograms } from "./rewardProgramTable";
 
 export const rewardProgramRelations = relations(rewardPrograms, ({ one }) => ({
 	reward: one(rewards, {

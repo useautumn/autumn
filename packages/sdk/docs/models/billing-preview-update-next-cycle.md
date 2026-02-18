@@ -13,9 +13,9 @@ let value: BillingPreviewUpdateNextCycle = {
       title: "<value>",
       description: "given gratefully whoever",
       amount: 5703.35,
+      planId: "<id>",
       totalQuantity: 3085.48,
       paidQuantity: 8080.87,
-      planId: "<id>",
     },
   ],
 };

@@ -6,7 +6,6 @@
 import { BalancesCheckBalance } from "@useautumn/sdk";
 
 let value: BalancesCheckBalance = {
-  object: "balance",
   featureId: "<id>",
   granted: 5805.07,
   remaining: 2547.08,
@@ -22,7 +21,6 @@ let value: BalancesCheckBalance = {
 
 | Field                                                                                 | Type                                                                                  | Required                                                                              | Description                                                                           |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `object`                                                                              | *"balance"*                                                                           | :heavy_check_mark:                                                                    | N/A                                                                                   |
 | `featureId`                                                                           | *string*                                                                              | :heavy_check_mark:                                                                    | N/A                                                                                   |
 | `feature`                                                                             | [models.BalancesCheckFeature](../models/balances-check-feature.md)                    | :heavy_minus_sign:                                                                    | N/A                                                                                   |
 | `granted`                                                                             | *number*                                                                              | :heavy_check_mark:                                                                    | N/A                                                                                   |
