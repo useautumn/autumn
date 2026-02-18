@@ -128,7 +128,7 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
-		billingVersion: BillingVersion.V2,
+		billingVersion: BillingVersion.V1,
 	});
 
 	await expectCustomerInvoiceCorrect({

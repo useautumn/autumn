@@ -1,14 +1,17 @@
 import { planV1ToV0 } from "@api/products/mappers/planV1ToV0.js";
+import type { SharedContext } from "../../../../types/sharedContext.js";
 import type { ApiSubscription } from "../apiSubscription.js";
 import type { ApiSubscriptionV1 } from "../apiSubscriptionV1.js";
 
 export function apiSubscriptionV1ToV0({
+	ctx,
 	input,
 }: {
+	ctx: SharedContext;
 	input: ApiSubscriptionV1;
 }): ApiSubscription {
 	return {
-		plan: input.plan ? planV1ToV0(input.plan) : undefined,
+		plan: input.plan ? planV1ToV0({ ctx, plan: input.plan }) : undefined,
 		plan_id: input.plan_id,
 		default: input.auto_enable,
 		add_on: input.add_on,

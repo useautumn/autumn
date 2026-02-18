@@ -78,6 +78,7 @@ export const executeStripeSubscriptionAction = async ({
 					stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
 					invoiceId: latestStripeInvoice!.id,
 					hasPaymentMethod: Boolean(billingContext.paymentMethod),
+					invoiceMode: billingContext.invoiceMode ?? undefined,
 				})
 			: undefined;
 

@@ -60,13 +60,9 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: true,
-			},
-		],
+		transition_rules: {
+			reset_after_trial_end: [TestFeature.Messages],
+		},
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -91,19 +87,19 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: reset_after_trial_end: false - reset at trial end (default behavior)
+// TEST 2: No transition_rules - reset at trial end (default behavior)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Product has 7-day trial + monthly messages
- * - Attach with reset_after_trial_end: false for messages
+ * - Attach WITHOUT transition_rules (default behavior)
  *
  * Expected Result:
  * - next_reset_at = advancedTo + 7 days (trial end)
- * - Same as default behavior
+ * - Default: feature NOT in reset_after_trial_end array
  */
-test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: false - reset at trial end")}`, async () => {
+test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: no transition_rules - reset at trial end")}`, async () => {
 	const customerId = "reset-trial-end-false";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -123,18 +119,12 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: false - reset at
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end: false
+	// Attach with reset_after_trial_end: false (omit from transition_rules)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: false,
-			},
-		],
+		// No transition_rules = default behavior (reset at trial end)
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -159,19 +149,19 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: false - reset at
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: reset_after_trial_end: default (undefined) - reset at trial end
+// TEST 3: Empty options array - reset at trial end (default behavior)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Product has 7-day trial + monthly messages
- * - Attach WITHOUT specifying reset_after_trial_end
+ * - Attach WITHOUT any options array
  *
  * Expected Result:
- * - Default behavior is false (reset at trial end)
+ * - Default behavior (reset at trial end)
  * - next_reset_at = advancedTo + 7 days (trial end)
  */
-test.concurrent(`${chalk.yellowBright("reset-after-trial-end 3: default - reset at trial end")}`, async () => {
+test.concurrent(`${chalk.yellowBright("reset-after-trial-end 3: no options - reset at trial end")}`, async () => {
 	const customerId = "reset-trial-end-default";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -256,13 +246,9 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 4: true but no tria
 		customer_id: customerId,
 		product_id: pro.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: true,
-			},
-		],
+		transition_rules: {
+			reset_after_trial_end: [TestFeature.Messages],
+		},
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -288,13 +274,11 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 4: true but no tria
 /**
  * Scenario:
  * - Product has 7-day trial + monthly messages + monthly words
- * - Attach with:
- *   - messages: reset_after_trial_end: true (billing cycle after trial)
- *   - words: reset_after_trial_end: false (reset at trial end)
+ * - Attach with reset_after_trial_end: [messages] (only messages, not words)
  *
  * Expected Result:
  * - messages next_reset_at = advancedTo + 7 days + 30 days (trial end + cycle)
- * - words next_reset_at = advancedTo + 7 days (trial end)
+ * - words next_reset_at = advancedTo + 7 days (trial end) - not in array, uses default
  */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature config")}`, async () => {
 	const customerId = "reset-trial-end-per-feature";
@@ -317,23 +301,14 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature conf
 		actions: [],
 	});
 
-	// Attach with different configs per feature
+	// Attach with reset_after_trial_end only for messages (not words)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: true, // Billing cycle starts after trial
-			},
-			{
-				feature_id: TestFeature.Words,
-				quantity: 1000,
-				reset_after_trial_end: false, // Reset at trial end
-			},
-		],
+		transition_rules: {
+			reset_after_trial_end: [TestFeature.Messages], // Only messages, not words
+		},
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -417,13 +392,9 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with tri
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: true,
-			},
-		],
+		transition_rules: {
+			reset_after_trial_end: [TestFeature.Messages],
+		},
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -488,13 +459,9 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long t
 		customer_id: customerId,
 		product_id: proLongTrial.id,
 		redirect_mode: "if_required",
-		options: [
-			{
-				feature_id: TestFeature.Messages,
-				quantity: 500,
-				reset_after_trial_end: true,
-			},
-		],
+		transition_rules: {
+			reset_after_trial_end: [TestFeature.Messages],
+		},
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

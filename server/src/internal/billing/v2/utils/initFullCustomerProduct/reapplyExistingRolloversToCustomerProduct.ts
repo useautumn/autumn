@@ -44,6 +44,7 @@ export const reapplyExistingRolloversToCustomerProduct = async ({
 		existingRollovers: currentRollovers,
 	});
 
+
 	try {
 		for (const cusEnt of customerProduct.customer_entitlements) {
 			await RolloverService.insert({

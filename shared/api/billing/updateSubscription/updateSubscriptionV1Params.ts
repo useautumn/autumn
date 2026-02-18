@@ -6,7 +6,7 @@ import { InvoiceModeParamsSchema } from "../common/invoiceModeParams.js";
 
 export const UpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
-		plan_id: z.string().nullish(),
+		plan_id: z.string().optional(),
 
 		invoice_mode: InvoiceModeParamsSchema.optional(),
 

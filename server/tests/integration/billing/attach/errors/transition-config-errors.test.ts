@@ -60,9 +60,11 @@ test.concurrent(`${chalk.yellowBright("transition-config-errors 1: reset_after_t
 					{
 						feature_id: TestFeature.Workflows,
 						quantity: 5,
-						reset_after_trial_end: true,
 					},
 				],
+				transition_rules: {
+					reset_after_trial_end: [TestFeature.Workflows],
+				},
 			});
 		},
 	});
@@ -107,9 +109,11 @@ test.concurrent(`${chalk.yellowBright("transition-config-errors 2: reset_after_t
 					{
 						feature_id: TestFeature.Users,
 						quantity: 5,
-						reset_after_trial_end: true,
 					},
 				],
+				transition_rules: {
+					reset_after_trial_end: [TestFeature.Users],
+				},
 			});
 		},
 	});
@@ -156,6 +160,9 @@ test.concurrent(`${chalk.yellowBright("transition-config-errors 3: feature optio
 						quantity: 5,
 					},
 				],
+				transition_rules: {
+					reset_after_trial_end: ["random-nonexistent-feature"],
+				},
 			});
 		},
 	});
