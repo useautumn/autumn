@@ -3,7 +3,17 @@ import type {
 	AttachParamsV1,
 	BillingContextOverride,
 } from "@autumn/shared";
-import { BillingVersion, notNullish } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	BillingVersion,
+	CusProductStatus,
+	cusProductToPrices,
+	ErrCode,
+	isFreeProduct,
+	isOneOffProduct,
+	notNullish,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -57,10 +67,59 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
+	const isAttachPaidRecurring =
+		!isOneOffProduct({ prices: attachProduct.prices }) &&
+		!isFreeProduct({ prices: attachProduct.prices });
+
+	const hasPaidRecurringSubscription = fullCustomer.customer_products.some(
+		(customerProduct) => {
+			const hasActiveOrTrialingStatus =
+				ACTIVE_STATUSES.includes(customerProduct.status) ||
+				customerProduct.status === CusProductStatus.Trialing;
+
+			if (!hasActiveOrTrialingStatus) return false;
+			if (!customerProduct.subscription_ids?.length) return false;
+
+			const prices = cusProductToPrices({
+				cusProduct: customerProduct,
+			});
+
+			return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+		},
+	);
+
+	const isTransitionFromFree =
+		notNullish(currentCustomerProduct) &&
+		isFreeProduct({
+			prices: cusProductToPrices({
+				cusProduct: currentCustomerProduct,
+			}),
+		});
+
 	// Only respect new_billing_subscription for non-transition scenarios
 	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
 	const shouldForceNewSubscription =
-		!currentCustomerProduct && params.new_billing_subscription;
+		(!currentCustomerProduct && params.new_billing_subscription) ||
+		(Boolean(params.new_billing_subscription) &&
+			isAttachPaidRecurring &&
+			isTransitionFromFree &&
+			hasPaidRecurringSubscription);
+
+	const requirePaidSubscriptionTarget =
+		isAttachPaidRecurring && !shouldForceNewSubscription;
+
+	if (
+		params.new_billing_subscription === false &&
+		requirePaidSubscriptionTarget &&
+		!hasPaidRecurringSubscription
+	) {
+		throw new RecaseError({
+			message:
+				"Cannot merge with an existing billing cycle because the customer has no active paid recurring subscription. Set new_billing_subscription to true to create a new cycle.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	const {
 		stripeSubscription,
@@ -77,6 +136,7 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 		paramDiscounts: params.discounts,
 		newBillingSubscription: shouldForceNewSubscription || undefined,
+		requirePaidSubscriptionTarget: requirePaidSubscriptionTarget || undefined,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({

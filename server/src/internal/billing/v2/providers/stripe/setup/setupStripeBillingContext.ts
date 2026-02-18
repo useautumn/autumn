@@ -19,6 +19,7 @@ export const setupStripeBillingContext = async ({
 	contextOverride = {},
 	paramDiscounts,
 	newBillingSubscription,
+	requirePaidSubscriptionTarget,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -27,6 +28,7 @@ export const setupStripeBillingContext = async ({
 	contextOverride?: BillingContextOverride;
 	paramDiscounts?: AttachDiscount[];
 	newBillingSubscription?: boolean;
+	requirePaidSubscriptionTarget?: boolean;
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
@@ -39,6 +41,7 @@ export const setupStripeBillingContext = async ({
 		product,
 		targetCusProductId: targetCustomerProduct?.id,
 		newBillingSubscription,
+		requirePaidSubscriptionTarget,
 	});
 
 	const stripeSubscriptionSchedule = targetCustomerProduct

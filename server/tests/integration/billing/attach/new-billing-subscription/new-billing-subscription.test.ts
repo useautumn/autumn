@@ -452,3 +452,131 @@ test.concurrent(`${chalk.yellowBright("new-billing-sub 6: customer upgrade doesn
 		productId: premium.id,
 	});
 }, 120000);
+
+// =============================================================================
+// TEST 7: Free -> paid main with existing paid cycle honors new_billing_subscription
+// =============================================================================
+
+/**
+ * Scenario:
+ * - Customer has free main product
+ * - Customer has paid recurring add-on (existing paid cycle)
+ * - Attach paid main product with new_billing_subscription: true
+ *
+ * Expected:
+ * - Creates a separate subscription for the paid main product
+ * - Free main is replaced
+ * - Paid add-on remains active
+ */
+test.concurrent(`${chalk.yellowBright("new-billing-sub 7: free to paid main honors new cycle when paid cycle exists")}`, async () => {
+	const customerId = "new-billing-sub-v2-free-to-paid-main-new-cycle";
+
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 50 })],
+	});
+
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyWords({ includedUsage: 200 })],
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 300 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, addon, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: free.id }),
+			s.billing.attach({ productId: addon.id }),
+		],
+	});
+
+	await expectSubCount({ ctx, customerId, count: 1 });
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		new_billing_subscription: true,
+		redirect_mode: "if_required",
+	});
+
+	await expectSubCount({ ctx, customerId, count: 2 });
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id, addon.id],
+		notPresent: [free.id],
+	});
+});
+
+// =============================================================================
+// TEST 8: Free -> paid main with existing paid cycle merges when requested
+// =============================================================================
+
+/**
+ * Scenario:
+ * - Customer has free main product
+ * - Customer has paid recurring add-on (existing paid cycle)
+ * - Attach paid main product with new_billing_subscription: false (explicit merge)
+ *
+ * Expected:
+ * - Stays on one subscription (merge into existing paid cycle)
+ * - Free main is replaced
+ * - Paid add-on remains active
+ */
+test.concurrent(`${chalk.yellowBright("new-billing-sub 8: free to paid main merges into existing paid cycle")}`, async () => {
+	const customerId = "new-billing-sub-v2-free-to-paid-main-merge";
+
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 50 })],
+	});
+
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyWords({ includedUsage: 200 })],
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 300 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, addon, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: free.id }),
+			s.billing.attach({ productId: addon.id }),
+		],
+	});
+
+	await expectSubCount({ ctx, customerId, count: 1 });
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		new_billing_subscription: false,
+		redirect_mode: "if_required",
+	});
+
+	await expectSubCount({ ctx, customerId, count: 1 });
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id, addon.id],
+		notPresent: [free.id],
+	});
+});
