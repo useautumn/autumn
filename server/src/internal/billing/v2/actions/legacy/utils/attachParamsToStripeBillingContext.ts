@@ -1,11 +1,15 @@
 import type { StripeBillingContextOverride } from "@autumn/shared";
 import type { FullProduct } from "@shared/index";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 import {
 	type StripeCustomerWithDiscount,
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
+import {
+	extractStripeDiscounts,
+	filterDeletedCouponDiscounts,
+} from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionScheduleForBilling";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
@@ -37,9 +41,13 @@ export const attachParamsToStripeBillingContext = async ({
 
 	const stripeCustomer = attachParams.stripeCus as StripeCustomerWithDiscount;
 
-	const stripeDiscounts = extractStripeDiscounts({
-		stripeSubscription,
-		stripeCustomer,
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeDiscounts = await filterDeletedCouponDiscounts({
+		stripeCli,
+		discounts: extractStripeDiscounts({
+			stripeSubscription,
+			stripeCustomer,
+		}),
 	});
 
 	const { paymentMethod, now } = attachParams;
