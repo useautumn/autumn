@@ -9,7 +9,7 @@ export const attachParamsToInvoiceModeParams = ({
 	return attachParams.invoiceOnly
 		? {
 				enabled: attachParams.invoiceOnly,
-				enable_plan_immediately: true,
+				enable_plan_immediately: attachParams.enableProductImmediately ?? false,
 				finalize: attachParams.finalizeInvoice ?? true,
 			}
 		: undefined;
