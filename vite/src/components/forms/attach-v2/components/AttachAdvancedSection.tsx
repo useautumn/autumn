@@ -74,6 +74,7 @@ export function AttachAdvancedSection() {
 	const { entityId } = useEntity();
 
 	const {
+		hasActiveSubscription,
 		hasOutgoing,
 		showBillingBehavior,
 		effectiveBillingBehavior,
@@ -94,8 +95,7 @@ export function AttachAdvancedSection() {
 		return false;
 	});
 	const hasCustomSettings =
-		hasCustomSchedule ||
-		hasCustomBilling ||
+		(hasActiveSubscription && (hasCustomSchedule || hasCustomBilling)) ||
 		newBillingSubscription ||
 		hasDiscounts;
 
@@ -206,61 +206,63 @@ export function AttachAdvancedSection() {
 								exit="hidden"
 								variants={ACCORDION_CONTENT}
 							>
-								{/* Plan Schedule */}
-								<motion.div variants={ACCORDION_ITEM}>
-									<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
-										<span className="text-sm text-t2">Plan Schedule</span>
-										<div className="flex">
-											<IconCheckbox
-												icon={<LightningIcon />}
-												iconOrientation="left"
-												variant="secondary"
-												size="sm"
-												checked={isImmediateSelected}
-												onCheckedChange={() =>
-													handleScheduleChange("immediate")
-												}
-												className={cn(
-													"rounded-r-none",
-													!isImmediateSelected && "border-r-0",
-												)}
-											>
-												Immediately
-											</IconCheckbox>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<span className="inline-flex">
-														<IconCheckbox
-															icon={<CalendarIcon />}
-															iconOrientation="left"
-															variant="secondary"
-															size="sm"
-															checked={isEndOfCycleSelected}
-															disabled={!hasOutgoing}
-															onCheckedChange={() =>
-																handleScheduleChange("end_of_cycle")
-															}
-															className={cn(
-																"rounded-l-none",
-																!isEndOfCycleSelected && "border-l-0",
-															)}
-														>
-															End of cycle
-														</IconCheckbox>
-													</span>
-												</TooltipTrigger>
-												{!hasOutgoing && (
-													<TooltipContent>
-														Only available when transitioning from an existing
-														plan
-													</TooltipContent>
-												)}
-											</Tooltip>
+								{/* Plan Schedule — only when customer has an active Stripe subscription */}
+								{hasActiveSubscription && (
+									<motion.div variants={ACCORDION_ITEM}>
+										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
+											<span className="text-sm text-t2">Plan Schedule</span>
+											<div className="flex">
+												<IconCheckbox
+													icon={<LightningIcon />}
+													iconOrientation="left"
+													variant="secondary"
+													size="sm"
+													checked={isImmediateSelected}
+													onCheckedChange={() =>
+														handleScheduleChange("immediate")
+													}
+													className={cn(
+														"rounded-r-none",
+														!isImmediateSelected && "border-r-0",
+													)}
+												>
+													Immediately
+												</IconCheckbox>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<span className="inline-flex">
+															<IconCheckbox
+																icon={<CalendarIcon />}
+																iconOrientation="left"
+																variant="secondary"
+																size="sm"
+																checked={isEndOfCycleSelected}
+																disabled={!hasOutgoing}
+																onCheckedChange={() =>
+																	handleScheduleChange("end_of_cycle")
+																}
+																className={cn(
+																	"rounded-l-none",
+																	!isEndOfCycleSelected && "border-l-0",
+																)}
+															>
+																End of cycle
+															</IconCheckbox>
+														</span>
+													</TooltipTrigger>
+													{!hasOutgoing && (
+														<TooltipContent>
+															Only available when transitioning from an existing
+															plan
+														</TooltipContent>
+													)}
+												</Tooltip>
+											</div>
 										</div>
-									</div>
-								</motion.div>
+									</motion.div>
+								)}
 
-								{/* Billing Behavior — only when plan schedule is immediate */}
+								{/* Billing Behavior — only when plan schedule is immediate and subscription exists */}
 								{showBillingBehavior && (
 									<motion.div variants={ACCORDION_ITEM}>
 										<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
