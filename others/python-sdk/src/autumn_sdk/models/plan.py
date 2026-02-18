@@ -14,7 +14,7 @@ from typing import List, Literal, Optional, Union
 from typing_extensions import NotRequired, TypeAliasType, TypedDict
 
 
-PriceInterval = Union[
+PlanPriceInterval = Union[
     Literal[
         "one_off",
         "week",
@@ -56,7 +56,7 @@ class PriceDisplay(BaseModel):
 
 class PlanPriceTypedDict(TypedDict):
     amount: float
-    interval: PriceInterval
+    interval: PlanPriceInterval
     interval_count: NotRequired[float]
     display: NotRequired[PriceDisplayTypedDict]
 
@@ -64,7 +64,7 @@ class PlanPriceTypedDict(TypedDict):
 class PlanPrice(BaseModel):
     amount: float
 
-    interval: PriceInterval
+    interval: PlanPriceInterval
 
     interval_count: Optional[float] = None
 
@@ -100,14 +100,14 @@ PlanType = Union[
 r"""The type of the feature"""
 
 
-class ItemFeatureDisplayTypedDict(TypedDict):
+class PlanFeatureDisplayTypedDict(TypedDict):
     singular: str
     r"""The singular display name for the feature."""
     plural: str
     r"""The plural display name for the feature."""
 
 
-class ItemFeatureDisplay(BaseModel):
+class PlanFeatureDisplay(BaseModel):
     singular: str
     r"""The singular display name for the feature."""
 
@@ -137,7 +137,7 @@ class PlanFeatureTypedDict(TypedDict):
     r"""The type of the feature"""
     name: NotRequired[Nullable[str]]
     r"""The name of the feature."""
-    display: NotRequired[Nullable[ItemFeatureDisplayTypedDict]]
+    display: NotRequired[Nullable[PlanFeatureDisplayTypedDict]]
     r"""Singular and plural display names for the feature."""
     credit_schema: NotRequired[Nullable[List[PlanCreditSchemaTypedDict]]]
     r"""Credit cost schema for credit system features."""
@@ -155,7 +155,7 @@ class PlanFeature(BaseModel):
     name: OptionalNullable[str] = UNSET
     r"""The name of the feature."""
 
-    display: OptionalNullable[ItemFeatureDisplay] = UNSET
+    display: OptionalNullable[PlanFeatureDisplay] = UNSET
     r"""Singular and plural display names for the feature."""
 
     credit_schema: OptionalNullable[List[PlanCreditSchema]] = UNSET
@@ -250,7 +250,7 @@ class PlanTier(BaseModel):
     amount: float
 
 
-PriceItemInterval = Union[
+PlanPriceItemInterval = Union[
     Literal[
         "one_off",
         "week",
@@ -272,8 +272,8 @@ PlanBillingMethod = Union[
 ]
 
 
-class ItemPriceTypedDict(TypedDict):
-    interval: PriceItemInterval
+class PlanItemPriceTypedDict(TypedDict):
+    interval: PlanPriceItemInterval
     billing_units: float
     billing_method: PlanBillingMethod
     max_purchase: Nullable[float]
@@ -282,8 +282,8 @@ class ItemPriceTypedDict(TypedDict):
     interval_count: NotRequired[float]
 
 
-class ItemPrice(BaseModel):
-    interval: PriceItemInterval
+class PlanItemPrice(BaseModel):
+    interval: PlanPriceItemInterval
 
     billing_units: float
 
@@ -323,12 +323,12 @@ class ItemPrice(BaseModel):
         return m
 
 
-class ItemDisplayTypedDict(TypedDict):
+class PlanItemDisplayTypedDict(TypedDict):
     primary_text: str
     secondary_text: NotRequired[str]
 
 
-class ItemDisplay(BaseModel):
+class PlanItemDisplay(BaseModel):
     primary_text: str
 
     secondary_text: Optional[str] = None
@@ -453,9 +453,9 @@ class ItemTypedDict(TypedDict):
     included: float
     unlimited: bool
     reset: Nullable[PlanResetTypedDict]
-    price: Nullable[ItemPriceTypedDict]
+    price: Nullable[PlanItemPriceTypedDict]
     feature: NotRequired[PlanFeatureTypedDict]
-    display: NotRequired[ItemDisplayTypedDict]
+    display: NotRequired[PlanItemDisplayTypedDict]
     rollover: NotRequired[PlanRolloverTypedDict]
     proration: NotRequired[ProrationTypedDict]
 
@@ -469,11 +469,11 @@ class Item(BaseModel):
 
     reset: Nullable[PlanReset]
 
-    price: Nullable[ItemPrice]
+    price: Nullable[PlanItemPrice]
 
     feature: Optional[PlanFeature] = None
 
-    display: Optional[ItemDisplay] = None
+    display: Optional[PlanItemDisplay] = None
 
     rollover: Optional[PlanRollover] = None
 

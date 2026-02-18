@@ -13,9 +13,9 @@ let value: PlanPrice = {
 
 ## Fields
 
-| Field                                               | Type                                                | Required                                            | Description                                         |
-| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| `amount`                                            | *number*                                            | :heavy_check_mark:                                  | N/A                                                 |
-| `interval`                                          | [models.PriceInterval](../models/price-interval.md) | :heavy_check_mark:                                  | N/A                                                 |
-| `intervalCount`                                     | *number*                                            | :heavy_minus_sign:                                  | N/A                                                 |
-| `display`                                           | [models.PriceDisplay](../models/price-display.md)   | :heavy_minus_sign:                                  | N/A                                                 |
+| Field                                                        | Type                                                         | Required                                                     | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `amount`                                                     | *number*                                                     | :heavy_check_mark:                                           | N/A                                                          |
+| `interval`                                                   | [models.PlanPriceInterval](../models/plan-price-interval.md) | :heavy_check_mark:                                           | N/A                                                          |
+| `intervalCount`                                              | *number*                                                     | :heavy_minus_sign:                                           | N/A                                                          |
+| `display`                                                    | [models.PriceDisplay](../models/price-display.md)            | :heavy_minus_sign:                                           | N/A                                                          |

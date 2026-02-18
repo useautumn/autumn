@@ -1,4 +1,7 @@
 import { Hono } from "hono";
+import { balancesRpcRouter } from "@/internal/balances/balancesRouter.js";
+import { billingRpcRouter } from "@/internal/billing/billingRouter.js";
+import { plansRpcRouter } from "@/internal/products/productRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
@@ -24,3 +27,6 @@ rpcRouter.use("*", queryMiddleware());
 rpcRouter.use("*", idempotencyMiddleware);
 
 rpcRouter.route("", customerRpcRouter);
+rpcRouter.route("", plansRpcRouter);
+rpcRouter.route("", billingRpcRouter);
+rpcRouter.route("", balancesRpcRouter);

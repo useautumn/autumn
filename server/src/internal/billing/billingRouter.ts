@@ -26,5 +26,14 @@ billingRouter.post(
 );
 
 // V2 Attach
-billingRouter.post("/billing/attach", ...handleAttachV2);
-billingRouter.post("/billing/preview_attach", ...handlePreviewAttach);
+// billingRouter.post("/billing/attach", ...handleAttachV2);
+// billingRouter.post("/billing/preview_attach", ...handlePreviewAttach);
+
+export const billingRpcRouter = new Hono<HonoEnv>();
+billingRpcRouter.post("/billing.update", ...handleUpdateSubscription);
+billingRpcRouter.post(
+	"/billing.preview_update",
+	...handlePreviewUpdateSubscription,
+);
+billingRpcRouter.post("/billing.attach", ...handleAttachV2);
+billingRpcRouter.post("/billing.preview_attach", ...handlePreviewAttach);

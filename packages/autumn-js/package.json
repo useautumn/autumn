@@ -29,65 +29,35 @@
 			"require": "./dist/sdk/index.js",
 			"import": "./dist/sdk/index.mjs"
 		},
-		"./next": {
-			"types": "./dist/libraries/backend/next.d.ts",
-			"require": "./dist/libraries/backend/next.js",
-			"import": "./dist/libraries/backend/next.mjs"
+		"./backend": {
+			"types": "./dist/backend/index.d.ts",
+			"require": "./dist/backend/index.js",
+			"import": "./dist/backend/index.mjs"
 		},
-		"./hono": {
-			"types": "./dist/libraries/backend/hono.d.ts",
-			"require": "./dist/libraries/backend/hono.js",
-			"import": "./dist/libraries/backend/hono.mjs"
+		"./backend/next": {
+			"types": "./dist/backend/adapters/next.d.ts",
+			"require": "./dist/backend/adapters/next.js",
+			"import": "./dist/backend/adapters/next.mjs"
 		},
-		"./express": {
-			"types": "./dist/libraries/backend/express.d.ts",
-			"require": "./dist/libraries/backend/express.js",
-			"import": "./dist/libraries/backend/express.mjs"
-		},
-		"./fastify": {
-			"types": "./dist/libraries/backend/fastify.d.ts",
-			"require": "./dist/libraries/backend/fastify.js",
-			"import": "./dist/libraries/backend/fastify.mjs"
-		},
-		"./tanstack": {
-			"types": "./dist/libraries/backend/tanstack.d.ts",
-			"require": "./dist/libraries/backend/tanstack.js",
-			"import": "./dist/libraries/backend/tanstack.mjs"
+		"./backend/hono": {
+			"types": "./dist/backend/adapters/hono.d.ts",
+			"require": "./dist/backend/adapters/hono.js",
+			"import": "./dist/backend/adapters/hono.mjs"
 		},
 		"./react": {
-			"types": "./dist/libraries/react/index.d.ts",
-			"require": "./dist/libraries/react/index.js",
-			"import": "./dist/libraries/react/index.mjs"
-		},
-		"./supabase": {
-			"types": "./dist/libraries/backend/supabase.d.ts",
-			"require": "./dist/libraries/backend/supabase.js",
-			"import": "./dist/libraries/backend/supabase.mjs"
-		},
-		"./react-router": {
-			"types": "./dist/libraries/backend/react-router.d.ts",
-			"require": "./dist/libraries/backend/react-router.js",
-			"import": "./dist/libraries/backend/react-router.mjs"
+			"types": "./dist/react/index.d.ts",
+			"require": "./dist/react/index.js",
+			"import": "./dist/react/index.mjs"
 		},
 		"./better-auth": {
-			"types": "./dist/libraries/backend/better-auth.d.ts",
-			"require": "./dist/libraries/backend/better-auth.js",
-			"import": "./dist/libraries/backend/better-auth.mjs"
+			"types": "./dist/better-auth/index.d.ts",
+			"require": "./dist/better-auth/index.js",
+			"import": "./dist/better-auth/index.mjs"
 		},
-		"./convex": {
-			"types": "./dist/libraries/backend/convex.d.ts",
-			"require": "./dist/libraries/backend/convex.js",
-			"import": "./dist/libraries/backend/convex.mjs"
-		},
-		"./elysia": {
-			"types": "./dist/libraries/backend/elysia.d.ts",
-			"require": "./dist/libraries/backend/elysia.js",
-			"import": "./dist/libraries/backend/elysia.mjs"
-		},
-		"./backend": {
-			"types": "./dist/libraries/backend/index.d.ts",
-			"require": "./dist/libraries/backend/index.js",
-			"import": "./dist/libraries/backend/index.mjs"
+		"./better-auth/client": {
+			"types": "./dist/better-auth/client.d.ts",
+			"require": "./dist/better-auth/client.js",
+			"import": "./dist/better-auth/client.mjs"
 		}
 	},
 	"keywords": [
@@ -98,6 +68,7 @@
 	"author": "John Yeo",
 	"license": "MIT",
 	"devDependencies": {
+		"@tanstack/react-query": "catalog:",
 		"@remix-run/node": "^2.16.6",
 		"@supabase/ssr": "^0.6.1",
 		"@tanstack/react-start": "^1.120.5",
@@ -119,11 +90,16 @@
 		"typescript": "^5.8.3"
 	},
 	"peerDependencies": {
+		"@tanstack/react-query": "^5.0.0",
 		"better-auth": "^1.3.17",
 		"better-call": "^1.0.12",
-		"convex": "^1.25.4"
+		"convex": "^1.25.4",
+		"react": "^18.0.0 || ^19.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@tanstack/react-query": {
+			"optional": true
+		},
 		"react": {
 			"optional": true
 		},
@@ -144,7 +120,16 @@
 	"typesVersions": {
 		"*": {
 			"backend": [
-				"./dist/libraries/backend/index.d.ts"
+				"./dist/backend/index.d.ts"
+			],
+			"backend/next": [
+				"./dist/backend/adapters/next.d.ts"
+			],
+			"backend/hono": [
+				"./dist/backend/adapters/hono.d.ts"
+			],
+			"backend/elysia": [
+				"./dist/backend/adapters/elysia.d.ts"
 			],
 			"next": [
 				"./dist/libraries/backend/next.d.ts"
@@ -162,7 +147,13 @@
 				"./dist/libraries/backend/tanstack.d.ts"
 			],
 			"react": [
-				"./dist/libraries/react/index.d.ts"
+				"./dist/react/index.d.ts"
+			],
+			"better-auth": [
+				"./dist/better-auth/index.d.ts"
+			],
+			"better-auth/client": [
+				"./dist/better-auth/client.d.ts"
 			],
 			"elysia": [
 				"./dist/libraries/backend/elysia.d.ts"

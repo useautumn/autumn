@@ -127,6 +127,7 @@ export type CustomerPrice = {
 };
 
 export type Breakdown = {
+  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -145,6 +146,7 @@ export type CustomerRollover = {
 };
 
 export type Balances = {
+  object: "balance";
   featureId: string;
   feature?: CustomerFeature | undefined;
   granted: number;
@@ -666,6 +668,7 @@ export function customerPriceFromJSON(
 export const Breakdown$inboundSchema: z.ZodMiniType<Breakdown, unknown> = z
   .pipe(
     z.object({
+      object: types.literal("balance_breakdown"),
       id: z._default(types.string(), ""),
       plan_id: types.nullable(types.string()),
       included_grant: types.number(),
@@ -726,6 +729,7 @@ export function customerRolloverFromJSON(
 /** @internal */
 export const Balances$inboundSchema: z.ZodMiniType<Balances, unknown> = z.pipe(
   z.object({
+    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => CustomerFeature$inboundSchema)),
     granted: types.number(),

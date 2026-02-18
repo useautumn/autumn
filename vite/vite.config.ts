@@ -25,6 +25,16 @@ export default defineConfig({
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 
+			// Workspace packages
+			"autumn-js/react": path.resolve(
+				__dirname,
+				"../packages/autumn-js/src/react/index.ts",
+			),
+			"autumn-js": path.resolve(
+				__dirname,
+				"../packages/autumn-js/src/sdk/index.ts",
+			),
+
 			// Hide Radix UI imports with cleaner aliases
 			"@radix/accordion": "@radix-ui/react-accordion",
 			"@radix/checkbox": "@radix-ui/react-checkbox",

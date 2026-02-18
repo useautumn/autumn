@@ -9,12 +9,12 @@ import { unwrapAsync } from "../types/fp.js";
 
 export class Plans extends ClientSDK {
   /**
-   * List Plans
+   * List all plans
    */
   async list(
-    request?: models.ListRequest | undefined,
+    request?: models.ListPlansRequest | undefined,
     options?: RequestOptions,
-  ): Promise<models.ListResponse> {
+  ): Promise<models.ListPlansResponse> {
     return unwrapAsync(plansList(
       this,
       request,

@@ -18,6 +18,8 @@ export const handlePreviewUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
+		console.log("body", body);
+
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({
 				ctx,

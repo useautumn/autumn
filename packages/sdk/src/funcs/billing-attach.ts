@@ -25,13 +25,26 @@ import { SDKValidationError } from "../models/sdk-validation-error.js";
 import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
+/**
+ * Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+ *
+ * @example
+ * ```typescript
+ * // Attach a plan to a customer
+ * const response = await client.attach({ customerId: "cus_123", planId: "pro_plan" });
+ * ```
+ *
+ * @param customerId - The ID of the customer to attach the plan to.
+ * @param entityId - The ID of the entity to attach the plan to. (optional)
+ * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+ */
 export function billingAttach(
   client: AutumnCore,
-  request: models.AttachRequest,
+  request: models.BillingAttachRequest,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.AttachResponse,
+    models.BillingAttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -51,12 +64,12 @@ export function billingAttach(
 
 async function $do(
   client: AutumnCore,
-  request: models.AttachRequest,
+  request: models.BillingAttachRequest,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.AttachResponse,
+      models.BillingAttachResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -71,7 +84,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.AttachRequest$outboundSchema, value),
+    (value) => z.parse(models.BillingAttachRequest$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -80,7 +93,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/attach")();
+  const path = pathToFunc("/v1/billing.attach")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -99,7 +112,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "attach",
+    operationID: "billingAttach",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -138,7 +151,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.AttachResponse,
+    models.BillingAttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -148,7 +161,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.AttachResponse$inboundSchema),
+    M.json(200, models.BillingAttachResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

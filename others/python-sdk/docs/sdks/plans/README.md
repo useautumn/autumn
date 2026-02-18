@@ -4,15 +4,15 @@
 
 ### Available Operations
 
-* [list](#list) - List Plans
+* [list](#list) - List all plans
 
 ## list
 
-List Plans
+List all plans
 
 ### Example Usage
 
-<!-- UsageSnippet language="python" operationID="list" method="get" path="/v1/products" -->
+<!-- UsageSnippet language="python" operationID="listPlans" method="post" path="/v1/plans.list" -->
 ```python
 from autumn_sdk import Autumn
 
@@ -33,12 +33,12 @@ with Autumn(
 
 | Parameter                                                           | Type                                                                | Required                                                            | Description                                                         |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `request`                                                           | [models.ListRequest](../../models/listrequest.md)                   | :heavy_check_mark:                                                  | The request object to use for the request.                          |
+| `request`                                                           | [models.ListPlansRequest](../../models/listplansrequest.md)         | :heavy_check_mark:                                                  | The request object to use for the request.                          |
 | `retries`                                                           | [Optional[utils.RetryConfig]](../../models/utils/retryconfig.md)    | :heavy_minus_sign:                                                  | Configuration to override the default retry behavior of the client. |
 
 ### Response
 
-**[models.ListResponse](../../models/listresponse.md)**
+**[models.ListPlansResponse](../../models/listplansresponse.md)**
 
 ### Errors
 

@@ -12,11 +12,7 @@ import {
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
 } from "../core/coreOpModels.js";
-import {
-	CreateCustomerParamsV0Schema,
-	ExtAttachBodyV0Schema,
-	ExtCheckoutParamsV0Schema,
-} from "../models.js";
+import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models.js";
 /**
  * Centralized JSDoc declarations for all core API methods.
  * These are used by the OpenAPI spec generator and propagate to SDK documentation.
@@ -235,23 +231,4 @@ export const setUsageJsDoc = createJSDocDescription({
 			title: "Set Usage",
 		}),
 	],
-});
-
-export const getOrCreateCustomerJsDoc = createJSDocDescription({
-	description:
-		"Creates a customer if they do not exist, or returns the existing customer by your external customer ID.",
-	whenToUse:
-		"Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.",
-	body: CreateCustomerParamsV0Schema.partial(),
-	examples: [
-		example({
-			values: {
-				id: "cus_123",
-				name: "John Doe",
-				email: "john@example.com",
-			},
-			description: "Create or fetch a customer by external ID",
-		}),
-	],
-	methodName: "getOrCreate",
 });

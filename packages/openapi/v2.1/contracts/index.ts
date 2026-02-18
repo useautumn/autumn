@@ -1,5 +1,17 @@
 import { oc } from "@orpc/contract";
-import { attachContract } from "./attachContract.js";
+import {
+	balancesCheckContract,
+	balancesCreateContract,
+	balancesTrackContract,
+	balancesUpdateContract,
+} from "./balancesContract.js";
+import {
+	billingAttachContract,
+	billingPreviewAttachContract,
+	billingPreviewUpdateContract,
+	billingSetupPaymentContract,
+	billingUpdateContract,
+} from "./billingContract.js";
 import {
 	deleteCustomerContract,
 	getOrCreateCustomerContract,
@@ -19,5 +31,15 @@ export const v2_1ContractRouter = oc.router({
 	listPlans: listPlansContract,
 
 	// Billing
-	attach: attachContract,
+	billingAttach: billingAttachContract,
+	billingPreviewAttach: billingPreviewAttachContract,
+	billingUpdate: billingUpdateContract,
+	billingPreviewUpdate: billingPreviewUpdateContract,
+	billingSetupPayment: billingSetupPaymentContract,
+
+	// Balances
+	balancesCreate: balancesCreateContract,
+	balancesUpdate: balancesUpdateContract,
+	balancesCheck: balancesCheckContract,
+	balancesTrack: balancesTrackContract,
 });

@@ -1,5 +1,5 @@
 workflowVersion: 1.0.0
-speakeasyVersion: latest
+speakeasyVersion: pinned
 sources:
     Autumn API:
         inputs:
@@ -9,6 +9,13 @@ sources:
         output: .speakeasy/out.openapi.yaml
         registry:
             location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api
+    Autumn API Stripped:
+        inputs:
+            - location: ../openapi/openapi-stripped.yml
+        transformations:
+            - removeUnused: false
+        registry:
+            location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-stripped
 targets:
     autumn:
         target: typescript
@@ -22,7 +29,7 @@ targets:
             blocking: false
     autumn-python:
         target: python
-        source: Autumn API
+        source: Autumn API Stripped
         output: ../../others/python-sdk
         codeSamples:
             output: ../../others/python-sdk/.speakeasy/code-samples.overlay.yaml

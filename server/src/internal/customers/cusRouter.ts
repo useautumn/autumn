@@ -44,7 +44,7 @@ cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
 // RPC Routes
 export const customerRpcRouter = new Hono<HonoEnv>();
 customerRpcRouter.post(
-	"/customers.getOrCreate",
+	"/customers.get_or_create",
 	...handleGetOrCreateCustomerV2,
 );
 

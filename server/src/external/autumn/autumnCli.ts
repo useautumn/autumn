@@ -870,7 +870,7 @@ export class AutumnInt {
 			}
 
 			const data = await this.post(
-				`/billing/attach`,
+				`/billing,attach`,
 				{ redirect_mode: "if_required", ...params },
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
@@ -888,7 +888,7 @@ export class AutumnInt {
 		>(
 			params: TInput,
 		): Promise<any> => {
-			const data = await this.post(`/billing/preview_attach`, {
+			const data = await this.post(`/billing.preview_attach`, {
 				...params,
 				redirect_mode: "if_required",
 			});

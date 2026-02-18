@@ -24,3 +24,9 @@ balancesRouter.post("/check", ...handleCheck);
 
 // Legacy
 balancesRouter.post("/usage", ...handleSetUsage);
+
+export const balancesRpcRouter = new Hono<HonoEnv>();
+balancesRpcRouter.post("/balances.create", ...handleCreateBalance);
+balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
+balancesRpcRouter.post("/balances.track", ...handleTrack);
+balancesRpcRouter.post("/balances.check", ...handleCheck);

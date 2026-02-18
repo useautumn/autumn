@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, Optional, TYPE_CHECKING, Union, cast
 import weakref
 
 if TYPE_CHECKING:
+    from autumn_sdk.balances_sdk import BalancesSDK
     from autumn_sdk.billing import Billing
     from autumn_sdk.customers import Customers
     from autumn_sdk.plans import Plans
@@ -25,10 +26,12 @@ class Autumn(BaseSDK):
     customers: "Customers"
     plans: "Plans"
     billing: "Billing"
+    balances: "BalancesSDK"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
         "billing": ("autumn_sdk.billing", "Billing"),
+        "balances": ("autumn_sdk.balances_sdk", "BalancesSDK"),
     }
 
     def __init__(

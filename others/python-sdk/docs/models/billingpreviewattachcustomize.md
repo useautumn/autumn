@@ -1,0 +1,9 @@
+# BillingPreviewAttachCustomize
+
+
+## Fields
+
+| Field                                                                                                      | Type                                                                                                       | Required                                                                                                   | Description                                                                                                |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `price`                                                                                                    | [OptionalNullable[models.BillingPreviewAttachPriceRequest]](../models/billingpreviewattachpricerequest.md) | :heavy_minus_sign:                                                                                         | N/A                                                                                                        |
+| `items`                                                                                                    | List[[models.BillingPreviewAttachItem](../models/billingpreviewattachitem.md)]                             | :heavy_minus_sign:                                                                                         | N/A                                                                                                        |

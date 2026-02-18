@@ -9,7 +9,7 @@
 		"paths": {
 			"@/*": ["./src/*"],
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
-			"autumn-js/react": ["../packages/autumn-js/src/libraries/react/index.ts"]
+			"autumn-js/react": ["../packages/autumn-js/src/react/index.ts"]
 		}
 		// "noUnusedLocals": false
 	}

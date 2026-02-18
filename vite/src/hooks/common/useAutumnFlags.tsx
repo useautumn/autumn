@@ -4,7 +4,7 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const { customer } = useCustomer();
+	const { data: customer } = useCustomer();
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		pkey: false,

@@ -198,20 +198,33 @@ with Autumn(
 <details open>
 <summary>Available methods</summary>
 
+### [Balances](docs/sdks/balancessdk/README.md)
+
+* [create](docs/sdks/balancessdk/README.md#create) - Create a balance for a customer feature.
+* [update](docs/sdks/balancessdk/README.md#update) - Update a customer balance.
+* [check](docs/sdks/balancessdk/README.md#check) - Check whether usage is allowed for a customer feature.
+* [track](docs/sdks/balancessdk/README.md#track) - Track usage for a customer feature.
+
 ### [Billing](docs/sdks/billing/README.md)
 
-* [attach](docs/sdks/billing/README.md#attach)
+* [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+* [preview_attach](docs/sdks/billing/README.md#preview_attach) - Preview billing changes before attaching a plan.
+* [update](docs/sdks/billing/README.md#update) - Update an existing subscription.
+* [preview_update](docs/sdks/billing/README.md#preview_update) - Preview billing changes before updating a subscription.
+* [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a setup payment session for a customer.
 
 ### [Customers](docs/sdks/customers/README.md)
 
 * [get_or_create](docs/sdks/customers/README.md#get_or_create) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+
+Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
 ### [Plans](docs/sdks/plans/README.md)
 
-* [list](docs/sdks/plans/README.md#list) - List Plans
+* [list](docs/sdks/plans/README.md#list) - List all plans
 
 </details>
 <!-- End Available Resources and Operations [operations] -->

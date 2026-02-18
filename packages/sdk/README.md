@@ -149,20 +149,59 @@ run();
 <details open>
 <summary>Available methods</summary>
 
+### [Balances](docs/sdks/balances/README.md)
+
+* [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
+* [update](docs/sdks/balances/README.md#update) - Update a customer balance.
+* [check](docs/sdks/balances/README.md#check) - Check whether usage is allowed for a customer feature.
+* [track](docs/sdks/balances/README.md#track) - Track usage for a customer feature.
+
 ### [Billing](docs/sdks/billing/README.md)
 
-* [attach](docs/sdks/billing/README.md#attach)
+* [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+
+@example
+```typescript
+// Attach a plan to a customer
+const response = await client.attach({ customerId: "cus_123", planId: "pro_plan" });
+```
+
+@param customerId - The ID of the customer to attach the plan to.
+@param entityId - The ID of the entity to attach the plan to. (optional)
+@param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+* [previewAttach](docs/sdks/billing/README.md#previewattach) - Preview billing changes before attaching a plan.
+* [update](docs/sdks/billing/README.md#update) - Update an existing subscription.
+* [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Preview billing changes before updating a subscription.
+* [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a setup payment session for a customer.
 
 ### [Customers](docs/sdks/customers/README.md)
 
 * [getOrCreate](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+
+Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+
+@example
+```typescript
+// Create or fetch a customer by external ID
+const response = await client.getOrCreate({ customerId: "cus_123", name: "John Doe", email: "john@example.com" });
+```
+
+@param name - Customer's name (optional)
+@param email - Customer's email address (optional)
+@param fingerprint - Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse (optional)
+@param metadata - Additional metadata for the customer (optional)
+@param stripeId - Stripe customer ID if you already have one (optional)
+@param createInStripe - Whether to create the customer in Stripe (optional)
+@param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
+@param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param expand - Customer expand options (optional)
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
 ### [Plans](docs/sdks/plans/README.md)
 
-* [list](docs/sdks/plans/README.md#list) - List Plans
+* [list](docs/sdks/plans/README.md#list) - List all plans
 
 </details>
 <!-- End Available Resources and Operations [operations] -->
@@ -182,12 +221,48 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 
 <summary>Available standalone functions</summary>
 
-- [`billingAttach`](docs/sdks/billing/README.md#attach)
+- [`balancesCheck`](docs/sdks/balances/README.md#check) - Check whether usage is allowed for a customer feature.
+- [`balancesCreate`](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
+- [`balancesTrack`](docs/sdks/balances/README.md#track) - Track usage for a customer feature.
+- [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
+- [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+
+@example
+```typescript
+// Attach a plan to a customer
+const response = await client.attach({ customerId: "cus_123", planId: "pro_plan" });
+```
+
+@param customerId - The ID of the customer to attach the plan to.
+@param entityId - The ID of the entity to attach the plan to. (optional)
+@param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+- [`billingPreviewAttach`](docs/sdks/billing/README.md#previewattach) - Preview billing changes before attaching a plan.
+- [`billingPreviewUpdate`](docs/sdks/billing/README.md#previewupdate) - Preview billing changes before updating a subscription.
+- [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a setup payment session for a customer.
+- [`billingUpdate`](docs/sdks/billing/README.md#update) - Update an existing subscription.
 - [`customersDelete`](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 - [`customersGetOrCreate`](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+
+Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+
+@example
+```typescript
+// Create or fetch a customer by external ID
+const response = await client.getOrCreate({ customerId: "cus_123", name: "John Doe", email: "john@example.com" });
+```
+
+@param name - Customer's name (optional)
+@param email - Customer's email address (optional)
+@param fingerprint - Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse (optional)
+@param metadata - Additional metadata for the customer (optional)
+@param stripeId - Stripe customer ID if you already have one (optional)
+@param createInStripe - Whether to create the customer in Stripe (optional)
+@param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
+@param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param expand - Customer expand options (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
-- [`plansList`](docs/sdks/plans/README.md#list) - List Plans
+- [`plansList`](docs/sdks/plans/README.md#list) - List all plans
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->

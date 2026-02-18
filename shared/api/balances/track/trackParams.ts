@@ -52,30 +52,31 @@ export const TrackParamsSchema = z
 		properties: z.record(z.string(), z.any()).optional().meta({
 			description: trackDescriptions.properties,
 		}),
-		timestamp: z.number().optional().meta({
-			internal: true,
-		}),
+
 		idempotency_key: z.string().optional().meta({
 			description: trackDescriptions.idempotency_key,
 		}),
-		customer_data: CustomerDataSchema.optional().meta({
-			description: trackDescriptions.customer_data,
-		}),
-
-		// set_usage: z.boolean().nullish().meta({
-		// 	description:
-		// 		"Whether to set the usage to this value instead of increment",
-		// }),
 
 		entity_id: z.string().optional().meta({
 			description: trackDescriptions.entity_id,
 		}),
+
+		timestamp: z.number().optional().meta({
+			internal: true,
+		}),
+
+		overage_behavior: z.enum(["cap", "reject"]).optional().meta({
+			internal: true,
+		}),
+
+		customer_data: CustomerDataSchema.optional().meta({
+			description: trackDescriptions.customer_data,
+			internal: true,
+		}),
 		entity_data: EntityDataSchema.optional().meta({
 			internal: true,
 		}),
-		overage_behavior: z.enum(["cap", "reject"]).optional().meta({
-			description: trackDescriptions.overage_behavior,
-		}),
+
 		skip_event: z.boolean().optional().meta({
 			internal: true,
 		}),

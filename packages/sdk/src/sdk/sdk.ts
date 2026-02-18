@@ -3,6 +3,7 @@
  */
 
 import { ClientSDK } from "../lib/sdks.js";
+import { Balances } from "./balances.js";
 import { Billing } from "./billing.js";
 import { Customers } from "./customers.js";
 import { Plans } from "./plans.js";
@@ -21,5 +22,10 @@ export class Autumn extends ClientSDK {
   private _billing?: Billing;
   get billing(): Billing {
     return (this._billing ??= new Billing(this._options));
+  }
+
+  private _balances?: Balances;
+  get balances(): Balances {
+    return (this._balances ??= new Balances(this._options));
   }
 }

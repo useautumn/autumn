@@ -27,6 +27,24 @@ import { Result } from "../types/fp.js";
 
 /**
  * Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+ *
+ * Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+ *
+ * @example
+ * ```typescript
+ * // Create or fetch a customer by external ID
+ * const response = await client.getOrCreate({ customerId: "cus_123", name: "John Doe", email: "john@example.com" });
+ * ```
+ *
+ * @param name - Customer's name (optional)
+ * @param email - Customer's email address (optional)
+ * @param fingerprint - Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse (optional)
+ * @param metadata - Additional metadata for the customer (optional)
+ * @param stripeId - Stripe customer ID if you already have one (optional)
+ * @param createInStripe - Whether to create the customer in Stripe (optional)
+ * @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
+ * @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+ * @param expand - Customer expand options (optional)
  */
 export function customersGetOrCreate(
   client: AutumnCore,
@@ -83,7 +101,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/customers.getOrCreate")();
+  const path = pathToFunc("/v1/customers.get_or_create")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",

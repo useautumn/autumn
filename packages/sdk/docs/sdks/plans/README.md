@@ -4,15 +4,15 @@
 
 ### Available Operations
 
-* [list](#list) - List Plans
+* [list](#list) - List all plans
 
 ## list
 
-List Plans
+List all plans
 
 ### Example Usage
 
-<!-- UsageSnippet language="typescript" operationID="list" method="get" path="/v1/products" -->
+<!-- UsageSnippet language="typescript" operationID="listPlans" method="post" path="/v1/plans.list" -->
 ```typescript
 import { Autumn } from "@useautumn/sdk";
 
@@ -62,14 +62,14 @@ run();
 
 | Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `request`                                                                                                                                                                      | [models.ListRequest](../../models/list-request.md)                                                                                                                             | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
+| `request`                                                                                                                                                                      | [models.ListPlansRequest](../../models/list-plans-request.md)                                                                                                                  | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
 | `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
 | `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
 | `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
 
 ### Response
 
-**Promise\<[models.ListResponse](../../models/list-response.md)\>**
+**Promise\<[models.ListPlansResponse](../../models/list-plans-response.md)\>**
 
 ### Errors
 

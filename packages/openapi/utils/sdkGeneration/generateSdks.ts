@@ -46,7 +46,6 @@ async function generatePythonSdkQuiet({
 
 /**
  * Generates both TypeScript and Python SDKs in parallel.
- * Output is captured to prevent interleaving.
  */
 export async function generateSdksInParallel({
 	speakeasySdkDir,
@@ -57,12 +56,13 @@ export async function generateSdksInParallel({
 }): Promise<void> {
 	console.log("Generating TypeScript and Python SDKs in parallel...");
 
-	const [tsResult, pyResult] = await Promise.allSettled([
+	const results = await Promise.allSettled([
 		generateTypeScriptSdkQuiet({ speakeasySdkDir }),
 		generatePythonSdkQuiet({ speakeasySdkDir, pythonSdkDir }),
 	]);
 
-	// Report results
+	const [tsResult, pyResult] = results;
+
 	if (tsResult.status === "fulfilled") {
 		console.log("✓ TypeScript SDK generated and built successfully");
 	} else {
@@ -75,7 +75,7 @@ export async function generateSdksInParallel({
 		console.error("✗ Python SDK generation failed:", pyResult.reason);
 	}
 
-	// Throw if any failed
+	// Throw if either failed
 	if (tsResult.status === "rejected" || pyResult.status === "rejected") {
 		throw new Error("SDK generation failed");
 	}
