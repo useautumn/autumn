@@ -60,9 +60,13 @@ export const filterDeletedCouponDiscounts = async ({
 		discounts.map(async (d) => {
 			try {
 				await stripeCli.coupons.retrieve(d.source.coupon.id);
-				return true;
-			} catch {
-				return false;
+			} catch (error) {
+				if (
+					error instanceof Stripe.errors.StripeError &&
+					error.code?.includes("resource_missing")
+				) return false;
+				throw error;
+			}
 			}
 		}),
 	);
