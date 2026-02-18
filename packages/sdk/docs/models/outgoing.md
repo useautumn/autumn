@@ -42,7 +42,6 @@ let value: Outgoing = {
   featureQuantities: [],
   balances: {
     "key": {
-      object: "balance",
       featureId: "<id>",
       granted: 2003.63,
       remaining: 7112.33,

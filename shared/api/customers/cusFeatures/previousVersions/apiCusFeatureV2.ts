@@ -1,6 +1,6 @@
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
-import { ApiCusFeatureV3RolloverSchema } from "./apiCusFeatureV3.js";
+import { ApiCusFeatureV3RolloverSchema } from "./apiCusFeatureV3";
 
 // Version 2 of cus feature response
 export const ApiCusFeatureV2Schema = z.object({

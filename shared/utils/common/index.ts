@@ -1,2 +1,2 @@
-export * from "./formatUtils/index.js";
-export * from "./unixUtils.js";
+export * from "./formatUtils/index";
+export * from "./unixUtils";

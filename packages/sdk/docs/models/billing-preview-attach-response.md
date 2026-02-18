@@ -15,9 +15,9 @@ let value: BillingPreviewAttachResponse = {
       description:
         "what finally apparatus coaxingly atop inside amid heavily CD notwithstanding",
       amount: 8002.47,
+      planId: "<id>",
       totalQuantity: 1699.59,
       paidQuantity: 5709.75,
-      planId: "<id>",
     },
   ],
   total: 3142.76,
@@ -65,7 +65,6 @@ let value: BillingPreviewAttachResponse = {
       ],
       balances: {
         "key": {
-          object: "balance",
           featureId: "<id>",
           granted: 3858.89,
           remaining: 9478.44,
@@ -93,7 +92,6 @@ let value: BillingPreviewAttachResponse = {
 | `currency`                                                                             | *string*                                                                               | :heavy_check_mark:                                                                     | N/A                                                                                    |
 | `periodStart`                                                                          | *number*                                                                               | :heavy_minus_sign:                                                                     | N/A                                                                                    |
 | `periodEnd`                                                                            | *number*                                                                               | :heavy_minus_sign:                                                                     | N/A                                                                                    |
-| `credit`                                                                               | [models.BillingPreviewAttachCredit](../models/billing-preview-attach-credit.md)        | :heavy_minus_sign:                                                                     | N/A                                                                                    |
 | `nextCycle`                                                                            | [models.BillingPreviewAttachNextCycle](../models/billing-preview-attach-next-cycle.md) | :heavy_minus_sign:                                                                     | N/A                                                                                    |
 | `incoming`                                                                             | [models.Incoming](../models/incoming.md)[]                                             | :heavy_check_mark:                                                                     | N/A                                                                                    |
 | `outgoing`                                                                             | [models.Outgoing](../models/outgoing.md)[]                                             | :heavy_check_mark:                                                                     | N/A                                                                                    |

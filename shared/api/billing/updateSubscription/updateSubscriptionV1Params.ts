@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
-import { InvoiceModeParamsSchema } from "../common/invoiceModeParams.js";
+import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
 
 export const UpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({

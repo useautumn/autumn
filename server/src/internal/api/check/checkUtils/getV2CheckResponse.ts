@@ -1,7 +1,10 @@
-import { CheckResponseV3Schema, FeatureType } from "@autumn/shared";
+import {
+	apiBalanceToAllowed,
+	CheckResponseV3Schema,
+	FeatureType,
+} from "@autumn/shared";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
-import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
 
 export const getV2CheckResponse = async ({
 	checkData,

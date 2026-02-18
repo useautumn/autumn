@@ -377,11 +377,15 @@ class BillingAttachItem(BaseModel):
 
 
 class BillingAttachCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: NotRequired[Nullable[BillingAttachPriceTypedDict]]
     items: NotRequired[List[BillingAttachItemTypedDict]]
 
 
 class BillingAttachCustomize(BaseModel):
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+
     price: OptionalNullable[BillingAttachPrice] = UNSET
 
     items: Optional[List[BillingAttachItem]] = None
@@ -414,20 +418,20 @@ class BillingAttachCustomize(BaseModel):
 
 class BillingAttachInvoiceModeTypedDict(TypedDict):
     enabled: bool
-    enable_product_immediately: NotRequired[bool]
-    finalize_invoice: NotRequired[bool]
+    enable_plan_immediately: NotRequired[bool]
+    finalize: NotRequired[bool]
 
 
 class BillingAttachInvoiceMode(BaseModel):
     enabled: bool
 
-    enable_product_immediately: Optional[bool] = False
+    enable_plan_immediately: Optional[bool] = False
 
-    finalize_invoice: Optional[bool] = True
+    finalize: Optional[bool] = True
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_product_immediately", "finalize_invoice"])
+        optional_fields = set(["enable_plan_immediately", "finalize"])
         serialized = handler(self)
         m = {}
 
@@ -499,8 +503,10 @@ class BillingAttachRequestTypedDict(TypedDict):
     ]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
+    r"""The version of the plan to attach."""
     free_trial: NotRequired[Nullable[BillingAttachFreeTrialTypedDict]]
     customize: NotRequired[BillingAttachCustomizeTypedDict]
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
     invoice_mode: NotRequired[BillingAttachInvoiceModeTypedDict]
     discounts: NotRequired[List[BillingAttachDiscountUnionTypedDict]]
     redirect_mode: NotRequired[BillingAttachRedirectMode]
@@ -523,10 +529,12 @@ class BillingAttachRequest(BaseModel):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
 
     version: Optional[float] = None
+    r"""The version of the plan to attach."""
 
     free_trial: OptionalNullable[BillingAttachFreeTrial] = UNSET
 
     customize: Optional[BillingAttachCustomize] = None
+    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
 
     invoice_mode: Optional[BillingAttachInvoiceMode] = None
 

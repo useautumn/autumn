@@ -6,7 +6,6 @@
 import { BalancesTrackBreakdown } from "@useautumn/sdk";
 
 let value: BalancesTrackBreakdown = {
-  object: "balance_breakdown",
   planId: null,
   includedGrant: 9958.89,
   prepaidGrant: 8123.08,
@@ -30,7 +29,6 @@ let value: BalancesTrackBreakdown = {
 
 | Field                                                          | Type                                                           | Required                                                       | Description                                                    |
 | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
-| `object`                                                       | *"balance_breakdown"*                                          | :heavy_check_mark:                                             | N/A                                                            |
 | `id`                                                           | *string*                                                       | :heavy_minus_sign:                                             | N/A                                                            |
 | `planId`                                                       | *string*                                                       | :heavy_check_mark:                                             | N/A                                                            |
 | `includedGrant`                                                | *number*                                                       | :heavy_check_mark:                                             | N/A                                                            |

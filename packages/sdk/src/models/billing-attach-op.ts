@@ -162,6 +162,9 @@ export type BillingAttachItem = {
   rollover?: BillingAttachRollover | undefined;
 };
 
+/**
+ * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ */
 export type BillingAttachCustomize = {
   price?: BillingAttachPrice | null | undefined;
   items?: Array<BillingAttachItem> | undefined;
@@ -169,8 +172,8 @@ export type BillingAttachCustomize = {
 
 export type BillingAttachInvoiceMode = {
   enabled: boolean;
-  enableProductImmediately?: boolean | undefined;
-  finalizeInvoice?: boolean | undefined;
+  enablePlanImmediately?: boolean | undefined;
+  finalize?: boolean | undefined;
 };
 
 export type BillingAttachDiscount2 = {
@@ -223,8 +226,14 @@ export type BillingAttachRequest = {
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
   featureQuantities?: Array<BillingAttachFeatureQuantities> | null | undefined;
+  /**
+   * The version of the plan to attach.
+   */
   version?: number | undefined;
   freeTrial?: BillingAttachFreeTrial | null | undefined;
+  /**
+   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   */
   customize?: BillingAttachCustomize | undefined;
   planId: string;
   invoiceMode?: BillingAttachInvoiceMode | undefined;
@@ -652,8 +661,8 @@ export function billingAttachCustomizeToJSON(
 /** @internal */
 export type BillingAttachInvoiceMode$Outbound = {
   enabled: boolean;
-  enable_product_immediately: boolean;
-  finalize_invoice: boolean;
+  enable_plan_immediately: boolean;
+  finalize: boolean;
 };
 
 /** @internal */
@@ -663,13 +672,12 @@ export const BillingAttachInvoiceMode$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     enabled: z.boolean(),
-    enableProductImmediately: z._default(z.boolean(), false),
-    finalizeInvoice: z._default(z.boolean(), true),
+    enablePlanImmediately: z._default(z.boolean(), false),
+    finalize: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
     return remap$(v, {
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );

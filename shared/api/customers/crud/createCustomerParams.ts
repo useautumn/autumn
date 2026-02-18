@@ -1,9 +1,9 @@
 import {
 	CreateCustomerInternalOptionsSchema,
 	CustomerDataSchema,
-} from "@api/common/customerData.js";
-import { CustomerIdSchema } from "@api/common/customerId.js";
-import { EntityDataSchema } from "@api/common/entityData.js";
+} from "@api/common/customerData";
+import { CustomerIdSchema } from "@api/common/customerId";
+import { EntityDataSchema } from "@api/common/entityData";
 import { queryStringArray } from "@api/common/queryHelpers";
 import {
 	CustomerExpandArraySchema,

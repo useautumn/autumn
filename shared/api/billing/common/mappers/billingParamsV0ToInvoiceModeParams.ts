@@ -1,4 +1,4 @@
-import type { InvoiceModeParams } from "../invoiceModeParams.js";
+import type { InvoiceModeParams } from "../invoiceModeParams";
 
 /**
  * Converts V0 billing params invoice fields to V1 InvoiceModeParams.

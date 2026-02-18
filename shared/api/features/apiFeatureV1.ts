@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { FeatureType } from "../../models/featureModels/featureEnums.js";
+import { FeatureType } from "../../models/featureModels/featureEnums";
 
 export const ApiFeatureV1Schema = z.object({
 	id: z.string(),

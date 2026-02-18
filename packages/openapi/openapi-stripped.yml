@@ -198,8 +198,6 @@ components:
           additionalProperties:
             type: object
             properties:
-              object:
-                const: balance
               feature_id:
                 type: string
               feature:
@@ -275,8 +273,6 @@ components:
                 items:
                   type: object
                   properties:
-                    object:
-                      const: balance_breakdown
                     id:
                       type: string
                       default: ""
@@ -361,7 +357,6 @@ components:
                         - type: number
                         - type: "null"
                   required:
-                    - object
                     - plan_id
                     - included_grant
                     - prepaid_grant
@@ -384,7 +379,6 @@ components:
                     - balance
                     - expires_at
             required:
-              - object
               - feature_id
               - granted
               - remaining
@@ -1222,8 +1216,6 @@ paths:
                           additionalProperties:
                             type: object
                             properties:
-                              object:
-                                const: balance
                               feature_id:
                                 type: string
                               feature:
@@ -1299,8 +1291,6 @@ paths:
                                 items:
                                   type: object
                                   properties:
-                                    object:
-                                      const: balance_breakdown
                                     id:
                                       type: string
                                       default: ""
@@ -1384,7 +1374,6 @@ paths:
                                         - type: number
                                         - type: "null"
                                   required:
-                                    - object
                                     - plan_id
                                     - included_grant
                                     - prepaid_grant
@@ -1407,7 +1396,6 @@ paths:
                                     - balance
                                     - expires_at
                             required:
-                              - object
                               - feature_id
                               - granted
                               - remaining
@@ -1649,8 +1637,6 @@ paths:
                     additionalProperties:
                       type: object
                       properties:
-                        object:
-                          const: balance
                         feature_id:
                           type: string
                         feature:
@@ -1726,8 +1712,6 @@ paths:
                           items:
                             type: object
                             properties:
-                              object:
-                                const: balance_breakdown
                               id:
                                 type: string
                                 default: ""
@@ -1812,7 +1796,6 @@ paths:
                                   - type: number
                                   - type: "null"
                             required:
-                              - object
                               - plan_id
                               - included_grant
                               - prepaid_grant
@@ -1835,7 +1818,6 @@ paths:
                               - balance
                               - expires_at
                       required:
-                        - object
                         - feature_id
                         - granted
                         - remaining
@@ -1984,6 +1966,7 @@ paths:
                     up the plan.
                 version:
                   type: number
+                  description: The version of the plan to attach.
                 free_trial:
                   anyOf:
                     - type: object
@@ -2130,6 +2113,8 @@ paths:
                               - expiry_duration_type
                         required:
                           - feature_id
+                  description: Customize the plan to attach. Can either override the price of the
+                    plan, the items in the plan, or both.
                 plan_id:
                   type: string
                 invoice_mode:
@@ -2137,10 +2122,10 @@ paths:
                   properties:
                     enabled:
                       type: boolean
-                    enable_product_immediately:
+                    enable_plan_immediately:
                       type: boolean
                       default: false
-                    finalize_invoice:
+                    finalize:
                       type: boolean
                       default: true
                   required:
@@ -2283,6 +2268,7 @@ paths:
                     up the plan.
                 version:
                   type: number
+                  description: The version of the plan to attach.
                 free_trial:
                   anyOf:
                     - type: object
@@ -2429,6 +2415,8 @@ paths:
                               - expiry_duration_type
                         required:
                           - feature_id
+                  description: Customize the plan to attach. Can either override the price of the
+                    plan, the items in the plan, or both.
                 plan_id:
                   type: string
                 invoice_mode:
@@ -2436,10 +2424,10 @@ paths:
                   properties:
                     enabled:
                       type: boolean
-                    enable_product_immediately:
+                    enable_plan_immediately:
                       type: boolean
                       default: false
-                    finalize_invoice:
+                    finalize:
                       type: boolean
                       default: true
                   required:
@@ -2518,14 +2506,12 @@ paths:
                             required:
                               - amountOff
                           default: []
-                        is_base:
-                          type: boolean
+                        plan_id:
+                          type: string
                         total_quantity:
                           type: number
                         paid_quantity:
                           type: number
-                        plan_id:
-                          type: string
                         deferred_for_trial:
                           type: boolean
                         effective_period:
@@ -2538,13 +2524,15 @@ paths:
                           required:
                             - start
                             - end
+                        is_base:
+                          type: boolean
                       required:
                         - title
                         - description
                         - amount
+                        - plan_id
                         - total_quantity
                         - paid_quantity
-                        - plan_id
                   total:
                     type: number
                   currency:
@@ -2553,16 +2541,6 @@ paths:
                     type: number
                   period_end:
                     type: number
-                  credit:
-                    type: object
-                    properties:
-                      amount:
-                        type: number
-                      description:
-                        type: string
-                    required:
-                      - amount
-                      - description
                   next_cycle:
                     type: object
                     properties:
@@ -2597,14 +2575,12 @@ paths:
                                 required:
                                   - amountOff
                               default: []
-                            is_base:
-                              type: boolean
+                            plan_id:
+                              type: string
                             total_quantity:
                               type: number
                             paid_quantity:
                               type: number
-                            plan_id:
-                              type: string
                             deferred_for_trial:
                               type: boolean
                             effective_period:
@@ -2617,13 +2593,15 @@ paths:
                               required:
                                 - start
                                 - end
+                            is_base:
+                              type: boolean
                           required:
                             - title
                             - description
                             - amount
+                            - plan_id
                             - total_quantity
                             - paid_quantity
-                            - plan_id
                     required:
                       - starts_at
                       - total
@@ -2654,8 +2632,6 @@ paths:
                           additionalProperties:
                             type: object
                             properties:
-                              object:
-                                const: balance
                               feature_id:
                                 type: string
                               feature:
@@ -2731,8 +2707,6 @@ paths:
                                 items:
                                   type: object
                                   properties:
-                                    object:
-                                      const: balance_breakdown
                                     id:
                                       type: string
                                       default: ""
@@ -2816,7 +2790,6 @@ paths:
                                         - type: number
                                         - type: "null"
                                   required:
-                                    - object
                                     - plan_id
                                     - included_grant
                                     - prepaid_grant
@@ -2839,7 +2812,6 @@ paths:
                                     - balance
                                     - expires_at
                             required:
-                              - object
                               - feature_id
                               - granted
                               - remaining
@@ -2882,8 +2854,6 @@ paths:
                           additionalProperties:
                             type: object
                             properties:
-                              object:
-                                const: balance
                               feature_id:
                                 type: string
                               feature:
@@ -2959,8 +2929,6 @@ paths:
                                 items:
                                   type: object
                                   properties:
-                                    object:
-                                      const: balance_breakdown
                                     id:
                                       type: string
                                       default: ""
@@ -3044,7 +3012,6 @@ paths:
                                         - type: number
                                         - type: "null"
                                   required:
-                                    - object
                                     - plan_id
                                     - included_grant
                                     - prepaid_grant
@@ -3067,7 +3034,6 @@ paths:
                                     - balance
                                     - expires_at
                             required:
-                              - object
                               - feature_id
                               - granted
                               - remaining
@@ -3144,6 +3110,7 @@ paths:
                     up the plan.
                 version:
                   type: number
+                  description: The version of the plan to attach.
                 free_trial:
                   anyOf:
                     - type: object
@@ -3290,19 +3257,19 @@ paths:
                               - expiry_duration_type
                         required:
                           - feature_id
+                  description: Customize the plan to attach. Can either override the price of the
+                    plan, the items in the plan, or both.
                 plan_id:
-                  anyOf:
-                    - type: string
-                    - type: "null"
+                  type: string
                 invoice_mode:
                   type: object
                   properties:
                     enabled:
                       type: boolean
-                    enable_product_immediately:
+                    enable_plan_immediately:
                       type: boolean
                       default: false
-                    finalize_invoice:
+                    finalize:
                       type: boolean
                       default: true
                   required:
@@ -3419,6 +3386,7 @@ paths:
                     up the plan.
                 version:
                   type: number
+                  description: The version of the plan to attach.
                 free_trial:
                   anyOf:
                     - type: object
@@ -3565,19 +3533,19 @@ paths:
                               - expiry_duration_type
                         required:
                           - feature_id
+                  description: Customize the plan to attach. Can either override the price of the
+                    plan, the items in the plan, or both.
                 plan_id:
-                  anyOf:
-                    - type: string
-                    - type: "null"
+                  type: string
                 invoice_mode:
                   type: object
                   properties:
                     enabled:
                       type: boolean
-                    enable_product_immediately:
+                    enable_plan_immediately:
                       type: boolean
                       default: false
-                    finalize_invoice:
+                    finalize:
                       type: boolean
                       default: true
                   required:
@@ -3630,14 +3598,12 @@ paths:
                             required:
                               - amountOff
                           default: []
-                        is_base:
-                          type: boolean
+                        plan_id:
+                          type: string
                         total_quantity:
                           type: number
                         paid_quantity:
                           type: number
-                        plan_id:
-                          type: string
                         deferred_for_trial:
                           type: boolean
                         effective_period:
@@ -3650,13 +3616,15 @@ paths:
                           required:
                             - start
                             - end
+                        is_base:
+                          type: boolean
                       required:
                         - title
                         - description
                         - amount
+                        - plan_id
                         - total_quantity
                         - paid_quantity
-                        - plan_id
                   total:
                     type: number
                   currency:
@@ -3665,16 +3633,6 @@ paths:
                     type: number
                   period_end:
                     type: number
-                  credit:
-                    type: object
-                    properties:
-                      amount:
-                        type: number
-                      description:
-                        type: string
-                    required:
-                      - amount
-                      - description
                   next_cycle:
                     type: object
                     properties:
@@ -3709,14 +3667,12 @@ paths:
                                 required:
                                   - amountOff
                               default: []
-                            is_base:
-                              type: boolean
+                            plan_id:
+                              type: string
                             total_quantity:
                               type: number
                             paid_quantity:
                               type: number
-                            plan_id:
-                              type: string
                             deferred_for_trial:
                               type: boolean
                             effective_period:
@@ -3729,13 +3685,15 @@ paths:
                               required:
                                 - start
                                 - end
+                            is_base:
+                              type: boolean
                           required:
                             - title
                             - description
                             - amount
+                            - plan_id
                             - total_quantity
                             - paid_quantity
-                            - plan_id
                     required:
                       - starts_at
                       - total
@@ -4004,8 +3962,6 @@ paths:
                     anyOf:
                       - type: object
                         properties:
-                          object:
-                            const: balance
                           feature_id:
                             type: string
                           feature:
@@ -4081,8 +4037,6 @@ paths:
                             items:
                               type: object
                               properties:
-                                object:
-                                  const: balance_breakdown
                                 id:
                                   type: string
                                   default: ""
@@ -4167,7 +4121,6 @@ paths:
                                     - type: number
                                     - type: "null"
                               required:
-                                - object
                                 - plan_id
                                 - included_grant
                                 - prepaid_grant
@@ -4190,7 +4143,6 @@ paths:
                                 - balance
                                 - expires_at
                         required:
-                          - object
                           - feature_id
                           - granted
                           - remaining
@@ -4611,8 +4563,6 @@ paths:
                     anyOf:
                       - type: object
                         properties:
-                          object:
-                            const: balance
                           feature_id:
                             type: string
                           feature:
@@ -4688,8 +4638,6 @@ paths:
                             items:
                               type: object
                               properties:
-                                object:
-                                  const: balance_breakdown
                                 id:
                                   type: string
                                   default: ""
@@ -4774,7 +4722,6 @@ paths:
                                     - type: number
                                     - type: "null"
                               required:
-                                - object
                                 - plan_id
                                 - included_grant
                                 - prepaid_grant
@@ -4797,7 +4744,6 @@ paths:
                                 - balance
                                 - expires_at
                         required:
-                          - object
                           - feature_id
                           - granted
                           - remaining
@@ -4814,8 +4760,6 @@ paths:
                     additionalProperties:
                       type: object
                       properties:
-                        object:
-                          const: balance
                         feature_id:
                           type: string
                         feature:
@@ -4891,8 +4835,6 @@ paths:
                           items:
                             type: object
                             properties:
-                              object:
-                                const: balance_breakdown
                               id:
                                 type: string
                                 default: ""
@@ -4977,7 +4919,6 @@ paths:
                                   - type: number
                                   - type: "null"
                             required:
-                              - object
                               - plan_id
                               - included_grant
                               - prepaid_grant
@@ -5000,7 +4941,6 @@ paths:
                               - balance
                               - expires_at
                       required:
-                        - object
                         - feature_id
                         - granted
                         - remaining

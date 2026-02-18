@@ -1,4 +1,4 @@
-import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
+import { ApiPlanV1Schema } from "@api/products/apiPlanV1";
 import { z } from "zod/v4";
 
 export const ApiSubscriptionV1Schema = z.object({

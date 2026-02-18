@@ -1,10 +1,10 @@
-import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0.js";
-import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
+import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../../../common/customerData.js";
-import { EntityDataSchema } from "../../../common/entityData.js";
-import { CustomizePlanV1Schema } from "../customizePlan/customizePlanV1.js";
-import { TransitionRulesSchema } from "../transitionRules.js";
+import { CustomerDataSchema } from "../../../common/customerData";
+import { EntityDataSchema } from "../../../common/entityData";
+import { CustomizePlanV1Schema } from "../customizePlan/customizePlanV1";
+import { TransitionRulesSchema } from "../transitionRules";
 
 export const BillingParamsBaseV1Schema = z.object({
 	customer_id: z.string().meta({

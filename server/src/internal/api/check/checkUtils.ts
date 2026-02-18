@@ -1,4 +1,6 @@
 import {
+	type ApiCustomerV5,
+	apiCustomerToFeatures,
 	BillingInterval,
 	type Feature,
 	type FreeTrial,
@@ -18,6 +20,7 @@ import { notNullish } from "@/utils/genUtils.js";
 export const getOptions = ({
 	prodItems,
 	features,
+	apiCustomer,
 	anchor,
 	proration,
 	now,
@@ -25,7 +28,8 @@ export const getOptions = ({
 	cusProduct,
 }: {
 	prodItems: ProductItem[];
-	features: Feature[];
+	features?: Feature[];
+	apiCustomer?: ApiCustomerV5;
 	anchor?: number;
 	proration?: {
 		start: number;
@@ -36,6 +40,19 @@ export const getOptions = ({
 	cusProduct?: FullCusProduct;
 }) => {
 	now = now || Date.now();
+	const resolvedFeatures =
+		features ??
+		(apiCustomer
+			? (apiCustomerToFeatures({
+					apiCustomer,
+				}) as unknown as Feature[])
+			: []);
+
+	if (resolvedFeatures.length === 0) {
+		throw new Error(
+			"[getOptions] provide features or apiCustomer with balances.feature expanded",
+		);
+	}
 
 	return prodItems
 		.filter(
@@ -111,7 +128,7 @@ export const getOptions = ({
 
 			return {
 				feature_id: i.feature_id,
-				feature_name: features.find((f) => f.id === i.feature_id)?.name,
+				feature_name: resolvedFeatures.find((f) => f.id === i.feature_id)?.name,
 				billing_units: i.billing_units,
 				included_usage: i.included_usage || 0,
 				...priceData,

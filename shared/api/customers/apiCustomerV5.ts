@@ -1,11 +1,11 @@
 import { z } from "zod/v4";
-import { ApiCusExpandSchema } from "./apiCustomer.js";
-import { BaseApiCustomerSchema } from "./baseApiCustomer.js";
-import { ApiBalanceV1Schema } from "./cusFeatures/apiBalanceV1.js";
+import { ApiCusExpandSchema } from "./apiCustomer";
+import { BaseApiCustomerSchema } from "./baseApiCustomer";
+import { ApiBalanceV1Schema } from "./cusFeatures/apiBalanceV1";
 import {
 	ApiPurchaseV0Schema,
 	ApiSubscriptionV1Schema,
-} from "./cusPlans/apiSubscriptionV1.js";
+} from "./cusPlans/apiSubscriptionV1";
 
 export const API_CUSTOMER_V5_EXAMPLE = {
 	id: "cus_123",

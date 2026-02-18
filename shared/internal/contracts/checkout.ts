@@ -1,10 +1,10 @@
-import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
+import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels";
 import { oc } from "@orpc/contract";
 import { z } from "zod/v4";
 import {
 	ConfirmCheckoutResponseSchema,
 	GetCheckoutResponseSchema,
-} from "../checkout/checkoutResponses.js";
+} from "../checkout/checkoutResponses";
 
 export const getCheckoutContract = oc
 	.route({

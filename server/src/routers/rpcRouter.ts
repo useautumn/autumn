@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { responseFilterMiddleware } from "@/honoMiddlewares/responseFilter/responseFilterMiddleware.js";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter.js";
 import { billingRpcRouter } from "@/internal/billing/billingRouter.js";
 import { plansRpcRouter } from "@/internal/products/productRouter.js";
@@ -16,6 +17,7 @@ import { customerRpcRouter } from "../internal/customers/cusRouter";
 
 export const rpcRouter = new Hono<HonoEnv>();
 
+rpcRouter.use("*", responseFilterMiddleware);
 rpcRouter.use("*", secretKeyMiddleware);
 rpcRouter.use("*", orgConfigMiddleware);
 rpcRouter.use("*", apiVersionMiddleware);

@@ -1,4 +1,4 @@
-import { AppEnv } from "@models/genModels/genEnums.js";
+import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 
 export const BaseApiCustomerSchema = z.object({

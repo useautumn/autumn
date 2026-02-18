@@ -1,13 +1,15 @@
-import { sumValues } from "@utils/utils.js";
 import type {
-	ApiBalanceBreakdownV1,
-	ApiBalanceV1,
-} from "../../apiBalanceV1.js";
+	ApiBalanceBreakdownInput,
+	ApiBalanceInput,
+} from "./apiBalanceToAllowed";
+
+const sumValues = (values: number[]) =>
+	values.reduce((total, value) => total + value, 0);
 
 export const apiBalanceBreakdownV1ToOverage = ({
 	apiBalanceBreakdown,
 }: {
-	apiBalanceBreakdown: ApiBalanceBreakdownV1;
+	apiBalanceBreakdown: ApiBalanceBreakdownInput;
 }) => {
 	// const overage = Math.max(
 	// 	0,
@@ -23,7 +25,7 @@ export const apiBalanceBreakdownV1ToOverage = ({
 export const apiBalanceV1ToOverage = ({
 	apiBalance,
 }: {
-	apiBalance: ApiBalanceV1;
+	apiBalance: ApiBalanceInput;
 }) => {
 	const breakdownItems = apiBalance.breakdown ?? [];
 

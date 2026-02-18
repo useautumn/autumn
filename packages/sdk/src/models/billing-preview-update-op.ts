@@ -161,6 +161,9 @@ export type BillingPreviewUpdateItem = {
   rollover?: BillingPreviewUpdateRollover | undefined;
 };
 
+/**
+ * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ */
 export type BillingPreviewUpdateCustomize = {
   price?: BillingPreviewUpdatePrice | null | undefined;
   items?: Array<BillingPreviewUpdateItem> | undefined;
@@ -168,8 +171,8 @@ export type BillingPreviewUpdateCustomize = {
 
 export type BillingPreviewUpdateInvoiceMode = {
   enabled: boolean;
-  enableProductImmediately?: boolean | undefined;
-  finalizeInvoice?: boolean | undefined;
+  enablePlanImmediately?: boolean | undefined;
+  finalize?: boolean | undefined;
 };
 
 export const BillingPreviewUpdateCancelAction = {
@@ -205,10 +208,16 @@ export type BillingPreviewUpdateRequest = {
     | Array<BillingPreviewUpdateFeatureQuantities>
     | null
     | undefined;
+  /**
+   * The version of the plan to attach.
+   */
   version?: number | undefined;
   freeTrial?: BillingPreviewUpdateFreeTrial | null | undefined;
+  /**
+   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   */
   customize?: BillingPreviewUpdateCustomize | undefined;
-  planId?: string | null | undefined;
+  planId?: string | undefined;
   invoiceMode?: BillingPreviewUpdateInvoiceMode | undefined;
   cancelAction?: BillingPreviewUpdateCancelAction | undefined;
   billingBehavior?: BillingPreviewUpdateBillingBehavior | undefined;
@@ -231,17 +240,12 @@ export type BillingPreviewUpdateLineItem = {
   description: string;
   amount: number;
   discounts?: Array<BillingPreviewUpdateDiscount> | undefined;
-  isBase?: boolean | undefined;
+  planId: string;
   totalQuantity: number;
   paidQuantity: number;
-  planId: string;
   deferredForTrial?: boolean | undefined;
   effectivePeriod?: BillingPreviewUpdateEffectivePeriod | undefined;
-};
-
-export type BillingPreviewUpdateCredit = {
-  amount: number;
-  description: string;
+  isBase?: boolean | undefined;
 };
 
 export type BillingPreviewUpdateNextCycleDiscount = {
@@ -261,12 +265,12 @@ export type BillingPreviewUpdateNextCycleLineItem = {
   description: string;
   amount: number;
   discounts?: Array<BillingPreviewUpdateNextCycleDiscount> | undefined;
-  isBase?: boolean | undefined;
+  planId: string;
   totalQuantity: number;
   paidQuantity: number;
-  planId: string;
   deferredForTrial?: boolean | undefined;
   effectivePeriod?: BillingPreviewUpdateNextCycleEffectivePeriod | undefined;
+  isBase?: boolean | undefined;
 };
 
 export type BillingPreviewUpdateNextCycle = {
@@ -285,7 +289,6 @@ export type BillingPreviewUpdateResponse = {
   currency: string;
   periodStart?: number | undefined;
   periodEnd?: number | undefined;
-  credit?: BillingPreviewUpdateCredit | undefined;
   nextCycle?: BillingPreviewUpdateNextCycle | undefined;
 };
 
@@ -700,8 +703,8 @@ export function billingPreviewUpdateCustomizeToJSON(
 /** @internal */
 export type BillingPreviewUpdateInvoiceMode$Outbound = {
   enabled: boolean;
-  enable_product_immediately: boolean;
-  finalize_invoice: boolean;
+  enable_plan_immediately: boolean;
+  finalize: boolean;
 };
 
 /** @internal */
@@ -711,13 +714,12 @@ export const BillingPreviewUpdateInvoiceMode$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     enabled: z.boolean(),
-    enableProductImmediately: z._default(z.boolean(), false),
-    finalizeInvoice: z._default(z.boolean(), true),
+    enablePlanImmediately: z._default(z.boolean(), false),
+    finalize: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
     return remap$(v, {
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );
@@ -753,7 +755,7 @@ export type BillingPreviewUpdateRequest$Outbound = {
   version?: number | undefined;
   free_trial?: BillingPreviewUpdateFreeTrial$Outbound | null | undefined;
   customize?: BillingPreviewUpdateCustomize$Outbound | undefined;
-  plan_id?: string | null | undefined;
+  plan_id?: string | undefined;
   invoice_mode?: BillingPreviewUpdateInvoiceMode$Outbound | undefined;
   cancel_action?: string | undefined;
   billing_behavior?: string | undefined;
@@ -777,7 +779,7 @@ export const BillingPreviewUpdateRequest$outboundSchema: z.ZodMiniType<
     customize: z.optional(z.lazy(() =>
       BillingPreviewUpdateCustomize$outboundSchema
     )),
-    planId: z.optional(z.nullable(z.string())),
+    planId: z.optional(z.string()),
     invoiceMode: z.optional(z.lazy(() =>
       BillingPreviewUpdateInvoiceMode$outboundSchema
     )),
@@ -863,23 +865,23 @@ export const BillingPreviewUpdateLineItem$inboundSchema: z.ZodMiniType<
     discounts: types.optional(
       z.array(z.lazy(() => BillingPreviewUpdateDiscount$inboundSchema)),
     ),
-    is_base: types.optional(types.boolean()),
+    plan_id: types.string(),
     total_quantity: types.number(),
     paid_quantity: types.number(),
-    plan_id: types.string(),
     deferred_for_trial: types.optional(types.boolean()),
     effective_period: types.optional(
       z.lazy(() => BillingPreviewUpdateEffectivePeriod$inboundSchema),
     ),
+    is_base: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "is_base": "isBase",
+      "plan_id": "planId",
       "total_quantity": "totalQuantity",
       "paid_quantity": "paidQuantity",
-      "plan_id": "planId",
       "deferred_for_trial": "deferredForTrial",
       "effective_period": "effectivePeriod",
+      "is_base": "isBase",
     });
   }),
 );
@@ -891,25 +893,6 @@ export function billingPreviewUpdateLineItemFromJSON(
     jsonString,
     (x) => BillingPreviewUpdateLineItem$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'BillingPreviewUpdateLineItem' from JSON`,
-  );
-}
-
-/** @internal */
-export const BillingPreviewUpdateCredit$inboundSchema: z.ZodMiniType<
-  BillingPreviewUpdateCredit,
-  unknown
-> = z.object({
-  amount: types.number(),
-  description: types.string(),
-});
-
-export function billingPreviewUpdateCreditFromJSON(
-  jsonString: string,
-): SafeParseResult<BillingPreviewUpdateCredit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => BillingPreviewUpdateCredit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BillingPreviewUpdateCredit' from JSON`,
   );
 }
 
@@ -973,23 +956,23 @@ export const BillingPreviewUpdateNextCycleLineItem$inboundSchema: z.ZodMiniType<
         z.lazy(() => BillingPreviewUpdateNextCycleDiscount$inboundSchema),
       ),
     ),
-    is_base: types.optional(types.boolean()),
+    plan_id: types.string(),
     total_quantity: types.number(),
     paid_quantity: types.number(),
-    plan_id: types.string(),
     deferred_for_trial: types.optional(types.boolean()),
     effective_period: types.optional(
       z.lazy(() => BillingPreviewUpdateNextCycleEffectivePeriod$inboundSchema),
     ),
+    is_base: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "is_base": "isBase",
+      "plan_id": "planId",
       "total_quantity": "totalQuantity",
       "paid_quantity": "paidQuantity",
-      "plan_id": "planId",
       "deferred_for_trial": "deferredForTrial",
       "effective_period": "effectivePeriod",
+      "is_base": "isBase",
     });
   }),
 );
@@ -1049,9 +1032,6 @@ export const BillingPreviewUpdateResponse$inboundSchema: z.ZodMiniType<
     currency: types.string(),
     period_start: types.optional(types.number()),
     period_end: types.optional(types.number()),
-    credit: types.optional(
-      z.lazy(() => BillingPreviewUpdateCredit$inboundSchema),
-    ),
     next_cycle: types.optional(
       z.lazy(() => BillingPreviewUpdateNextCycle$inboundSchema),
     ),

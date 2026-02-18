@@ -1,5 +1,10 @@
 import type { BalancesCheckResponse, Customer } from "@useautumn/sdk";
-import type { CheckParams } from "../../../types";
+import {
+	type ApiBalanceInput,
+	apiBalanceToAllowed,
+} from "../../../../../../shared/api/customers/cusFeatures/utils/convert/apiBalanceToAllowed";
+import type { ClientCheckParams } from "../../../types/params";
+import { toSnakeCase } from "../../../utils/toSnakeCase";
 
 type CustomerBalance = Customer["balances"][string];
 
@@ -13,42 +18,6 @@ const resolveRequiredBalance = ({
 	return requiredBalance ?? requiredQuantity ?? 1;
 };
 
-const getAvailableOverage = ({
-	balance,
-}: {
-	balance: CustomerBalance;
-}): number | undefined => {
-	const breakdown = balance.breakdown ?? [];
-	const usageBasedBreakdown = breakdown.filter(
-		(item) => item.price?.billingMethod === "usage_based",
-	);
-
-	if (usageBasedBreakdown.length === 0) {
-		return balance.maxPurchase ?? undefined;
-	}
-
-	let maxOverage = 0;
-	let overageUsage = 0;
-
-	for (const item of usageBasedBreakdown) {
-		if (item.price?.maxPurchase === null) {
-			return undefined;
-		}
-
-		if (item.price?.maxPurchase !== undefined) {
-			maxOverage += item.price.maxPurchase;
-		}
-
-		const overage = Math.max(
-			0,
-			item.usage - item.includedGrant - item.prepaidGrant,
-		);
-		overageUsage += overage;
-	}
-
-	return Math.max(0, maxOverage - overageUsage);
-};
-
 const isBalanceAllowed = ({
 	balance,
 	requiredBalance,
@@ -56,28 +25,19 @@ const isBalanceAllowed = ({
 	balance: CustomerBalance;
 	requiredBalance: number;
 }) => {
-	if (balance.feature?.type === "boolean") {
-		return true;
-	}
+	const snakeCaseBalance = toSnakeCase({
+		obj: balance,
+	}) as unknown as ApiBalanceInput;
 
-	if (balance.unlimited) {
-		return true;
-	}
+	const featureForCheck = {
+		type: balance.feature?.type ?? "metered",
+	} as Parameters<typeof apiBalanceToAllowed>[0]["feature"];
 
-	if (requiredBalance < 0) {
-		return true;
-	}
-
-	if (balance.overageAllowed) {
-		const availableOverage = getAvailableOverage({ balance });
-		if (availableOverage === undefined) {
-			return true;
-		}
-
-		return balance.remaining + availableOverage >= requiredBalance;
-	}
-
-	return balance.remaining >= requiredBalance;
+	return apiBalanceToAllowed({
+		apiBalance: snakeCaseBalance,
+		feature: featureForCheck,
+		requiredBalance,
+	});
 };
 
 const getCreditBalanceRequired = ({
@@ -102,7 +62,7 @@ const getFeatureCheckResponse = ({
 	params,
 }: {
 	customer: Customer;
-	params: CheckParams;
+	params: ClientCheckParams;
 }): BalancesCheckResponse => {
 	const featureId = params.featureId;
 	if (!featureId) {
@@ -201,56 +161,12 @@ const getFeatureCheckResponse = ({
 	};
 };
 
-const getProductCheckResponse = ({
-	customer,
-	params,
-}: {
-	customer: Customer;
-	params: CheckParams;
-}): BalancesCheckResponse => {
-	const productId = params.productId;
-	const requiredBalance = resolveRequiredBalance({
-		requiredBalance: params.requiredBalance,
-		requiredQuantity: params.requiredQuantity,
-	});
-
-	if (!productId) {
-		return {
-			allowed: false,
-			customerId: customer.id ?? "",
-			entityId: params.entityId ?? null,
-			requiredBalance,
-			balance: null,
-		};
-	}
-
-	const now = Date.now();
-	const hasActiveSubscription = customer.subscriptions.some(
-		(subscription) =>
-			subscription.planId === productId &&
-			(subscription.status === "active" || subscription.status === "scheduled"),
-	);
-	const hasActivePurchase = customer.purchases.some(
-		(purchase) =>
-			purchase.planId === productId &&
-			(purchase.expiresAt === null || purchase.expiresAt > now),
-	);
-
-	return {
-		allowed: hasActiveSubscription || hasActivePurchase,
-		customerId: customer.id ?? "",
-		entityId: params.entityId ?? null,
-		requiredBalance,
-		balance: null,
-	};
-};
-
 export const getLocalCheckResponse = ({
 	customer,
 	params,
 }: {
 	customer: Customer | null;
-	params: CheckParams;
+	params: ClientCheckParams;
 }): BalancesCheckResponse => {
 	if (!customer) {
 		return {
@@ -265,12 +181,8 @@ export const getLocalCheckResponse = ({
 		};
 	}
 
-	if (!params.featureId && !params.productId) {
-		throw new Error("check() requires either featureId or productId");
-	}
-
-	if (params.productId && !params.featureId) {
-		return getProductCheckResponse({ customer, params });
+	if (!params.featureId) {
+		throw new Error("check() requires featureId");
 	}
 
 	return getFeatureCheckResponse({ customer, params });

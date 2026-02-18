@@ -9,10 +9,9 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -364,7 +363,6 @@ class BalancesCheckBreakdownTypedDict(TypedDict):
     reset: Nullable[BalancesCheckResetTypedDict]
     price: Nullable[BalancesCheckPriceTypedDict]
     expires_at: Nullable[float]
-    object: Literal["balance_breakdown"]
     id: NotRequired[str]
 
 
@@ -386,14 +384,6 @@ class BalancesCheckBreakdown(BaseModel):
     price: Nullable[BalancesCheckPrice]
 
     expires_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[
-            Literal["balance_breakdown"],
-            AfterValidator(validate_const("balance_breakdown")),
-        ],
-        pydantic.Field(alias="object"),
-    ] = "balance_breakdown"
 
     id: Optional[str] = ""
 
@@ -443,7 +433,6 @@ class BalancesCheckBalanceTypedDict(TypedDict):
     overage_allowed: bool
     max_purchase: Nullable[float]
     next_reset_at: Nullable[float]
-    object: Literal["balance"]
     feature: NotRequired[BalancesCheckFeatureTypedDict]
     breakdown: NotRequired[List[BalancesCheckBreakdownTypedDict]]
     rollovers: NotRequired[List[BalancesCheckBalanceRolloverTypedDict]]
@@ -465,11 +454,6 @@ class BalancesCheckBalance(BaseModel):
     max_purchase: Nullable[float]
 
     next_reset_at: Nullable[float]
-
-    object: Annotated[
-        Annotated[Literal["balance"], AfterValidator(validate_const("balance"))],
-        pydantic.Field(alias="object"),
-    ] = "balance"
 
     feature: Optional[BalancesCheckFeature] = None
 
@@ -1203,13 +1187,3 @@ class BalancesCheckResponse(BaseModel):
                     m[k] = val
 
         return m
-
-
-try:
-    BalancesCheckBreakdown.model_rebuild()
-except NameError:
-    pass
-try:
-    BalancesCheckBalance.model_rebuild()
-except NameError:
-    pass

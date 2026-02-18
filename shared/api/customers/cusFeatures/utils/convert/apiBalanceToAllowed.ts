@@ -1,19 +1,36 @@
-import {
-	type ApiBalanceV1,
-	apiBalanceV1ToAvailableOverage,
-	type Feature,
-	FeatureType,
-	notNullish,
-} from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { apiBalanceV1ToAvailableOverage } from "./apiBalanceV1ToAvailableOverage";
+
+export type ApiBalanceBreakdownInput = {
+	usage: number;
+	included_grant: number;
+	prepaid_grant: number;
+	price?: {
+		billing_method?: string;
+		max_purchase: number | null;
+	} | null;
+	overage?: number;
+};
+
+export type ApiBalanceInput = {
+	unlimited: boolean;
+	overage_allowed: boolean;
+	remaining: number;
+	max_purchase: number | null;
+	breakdown?: ApiBalanceBreakdownInput[];
+};
+
+export type FeatureInput = {
+	type?: string;
+};
 
 export const apiBalanceToAllowed = ({
 	apiBalance,
 	feature,
 	requiredBalance,
 }: {
-	apiBalance: ApiBalanceV1;
-	feature: Feature;
+	apiBalance: ApiBalanceInput;
+	feature: FeatureInput;
 	requiredBalance: number;
 }) => {
 	if (!apiBalance) {
@@ -21,7 +38,7 @@ export const apiBalanceToAllowed = ({
 	}
 
 	// 1. Boolean
-	if (feature.type === FeatureType.Boolean) {
+	if (feature.type === "boolean") {
 		return true;
 	}
 
@@ -40,7 +57,7 @@ export const apiBalanceToAllowed = ({
 		// 1. Available overage
 		const availableOverage = apiBalanceV1ToAvailableOverage({ apiBalance });
 
-		if (notNullish(availableOverage)) {
+		if (availableOverage !== null && availableOverage !== undefined) {
 			return new Decimal(availableOverage)
 				.add(apiBalance.remaining)
 				.gte(requiredBalance);

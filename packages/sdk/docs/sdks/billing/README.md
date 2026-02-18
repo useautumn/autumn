@@ -15,6 +15,8 @@ const response = await client.attach({ customerId: "cus_123", planId: "pro_plan"
 @param customerId - The ID of the customer to attach the plan to.
 @param entityId - The ID of the entity to attach the plan to. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+@param version - The version of the plan to attach. (optional)
+@param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
 * [previewAttach](#previewattach) - Preview billing changes before attaching a plan.
 * [update](#update) - Update an existing subscription.
 * [previewUpdate](#previewupdate) - Preview billing changes before updating a subscription.
@@ -33,6 +35,8 @@ const response = await client.attach({ customerId: "cus_123", planId: "pro_plan"
 @param customerId - The ID of the customer to attach the plan to.
 @param entityId - The ID of the entity to attach the plan to. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+@param version - The version of the plan to attach. (optional)
+@param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
 
 ### Example Usage
 

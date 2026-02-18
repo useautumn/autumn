@@ -1,5 +1,5 @@
-import { CustomerDataSchema } from "@api/common/customerData.js";
-import { CustomerIdSchema } from "@api/common/customerId.js";
+import { CustomerDataSchema } from "@api/common/customerData";
+import { CustomerIdSchema } from "@api/common/customerId";
 import { z } from "zod/v4";
 
 export const UpdateCustomerParamsV0Schema = z

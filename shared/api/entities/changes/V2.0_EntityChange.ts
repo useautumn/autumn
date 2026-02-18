@@ -1,17 +1,17 @@
-import type { ApiBalance } from "@api/customers/cusFeatures/apiBalance.js";
-import { balanceV1ToV0 } from "@api/customers/cusFeatures/mappers/balanceV1ToV0.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import type { ApiBalance } from "@api/customers/cusFeatures/apiBalance";
+import { balanceV1ToV0 } from "@api/customers/cusFeatures/mappers/balanceV1ToV0";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../types/sharedContext.js";
-import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
-import { apiPurchaseV0ToSubscriptionV0 } from "../../customers/cusPlans/mappers/apiPurchaseV0ToSubscriptionV0.js";
-import { apiSubscriptionV1ToV0 } from "../../customers/cusPlans/mappers/apiSubscriptionV1ToV0.js";
-import { ApiEntityV1Schema } from "../apiEntity.js";
-import { ApiEntityV2Schema } from "../apiEntityV2.js";
+import type { SharedContext } from "../../../types/sharedContext";
+import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription";
+import { apiPurchaseV0ToSubscriptionV0 } from "../../customers/cusPlans/mappers/apiPurchaseV0ToSubscriptionV0";
+import { apiSubscriptionV1ToV0 } from "../../customers/cusPlans/mappers/apiSubscriptionV1ToV0";
+import { ApiEntityV1Schema } from "../apiEntity";
+import { ApiEntityV2Schema } from "../apiEntityV2";
 
 /**
  * V2.0_EntityChange: Transforms entity response TO V1 format from V2 format
@@ -60,7 +60,9 @@ export const V2_0_EntityChange = defineVersionChange({
 		// Convert purchases to subscriptions and add to active subscriptions
 		const purchasesAsSubscriptions: ApiSubscription[] = (
 			input.purchases ?? []
-		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }));
+		).map((purchase) =>
+			apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }),
+		);
 
 		const balancesV0: Record<string, ApiBalance> = {};
 		if (input.balances) {

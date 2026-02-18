@@ -1,2 +1,2 @@
-export * from "./checkout/index.js";
-export * from "./contracts/index.js";
+export * from "./checkout/index";
+export * from "./contracts/index";

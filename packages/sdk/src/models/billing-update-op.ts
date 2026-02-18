@@ -162,6 +162,9 @@ export type BillingUpdateItem = {
   rollover?: BillingUpdateRollover | undefined;
 };
 
+/**
+ * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ */
 export type BillingUpdateCustomize = {
   price?: BillingUpdatePrice | null | undefined;
   items?: Array<BillingUpdateItem> | undefined;
@@ -169,8 +172,8 @@ export type BillingUpdateCustomize = {
 
 export type BillingUpdateInvoiceMode = {
   enabled: boolean;
-  enableProductImmediately?: boolean | undefined;
-  finalizeInvoice?: boolean | undefined;
+  enablePlanImmediately?: boolean | undefined;
+  finalize?: boolean | undefined;
 };
 
 export const BillingUpdateCancelAction = {
@@ -203,10 +206,16 @@ export type BillingUpdateRequest = {
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
   featureQuantities?: Array<BillingUpdateFeatureQuantities> | null | undefined;
+  /**
+   * The version of the plan to attach.
+   */
   version?: number | undefined;
   freeTrial?: BillingUpdateFreeTrial | null | undefined;
+  /**
+   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   */
   customize?: BillingUpdateCustomize | undefined;
-  planId?: string | null | undefined;
+  planId?: string | undefined;
   invoiceMode?: BillingUpdateInvoiceMode | undefined;
   cancelAction?: BillingUpdateCancelAction | undefined;
   billingBehavior?: BillingUpdateBillingBehavior | undefined;
@@ -626,8 +635,8 @@ export function billingUpdateCustomizeToJSON(
 /** @internal */
 export type BillingUpdateInvoiceMode$Outbound = {
   enabled: boolean;
-  enable_product_immediately: boolean;
-  finalize_invoice: boolean;
+  enable_plan_immediately: boolean;
+  finalize: boolean;
 };
 
 /** @internal */
@@ -637,13 +646,12 @@ export const BillingUpdateInvoiceMode$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     enabled: z.boolean(),
-    enableProductImmediately: z._default(z.boolean(), false),
-    finalizeInvoice: z._default(z.boolean(), true),
+    enablePlanImmediately: z._default(z.boolean(), false),
+    finalize: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
     return remap$(v, {
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );
@@ -677,7 +685,7 @@ export type BillingUpdateRequest$Outbound = {
   version?: number | undefined;
   free_trial?: BillingUpdateFreeTrial$Outbound | null | undefined;
   customize?: BillingUpdateCustomize$Outbound | undefined;
-  plan_id?: string | null | undefined;
+  plan_id?: string | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
   cancel_action?: string | undefined;
   billing_behavior?: string | undefined;
@@ -701,7 +709,7 @@ export const BillingUpdateRequest$outboundSchema: z.ZodMiniType<
     customize: z.optional(z.lazy(() =>
       BillingUpdateCustomize$outboundSchema
     )),
-    planId: z.optional(z.nullable(z.string())),
+    planId: z.optional(z.string()),
     invoiceMode: z.optional(
       z.lazy(() => BillingUpdateInvoiceMode$outboundSchema),
     ),

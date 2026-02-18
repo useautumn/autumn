@@ -1,8 +1,8 @@
-import type { CreatePlanItemParamsV1 } from "@api/models.js";
-import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel.js";
-import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
-import { featureUtils } from "@utils/featureUtils/index.js";
-import type { SharedContext } from "../../../../types/sharedContext.js";
+import type { CreatePlanItemParamsV1 } from "@api/models";
+import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
+import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
+import { featureUtils } from "@utils/featureUtils/index";
+import type { SharedContext } from "../../../../types/sharedContext";
 import type { ApiPlanItemV1 } from "../apiPlanItemV1";
 
 /** Transform ApiPlanItemV1 to ApiPlanItemV0 */

@@ -1,4 +1,4 @@
-import { CustomerIdSchema } from "@api/common/customerId.js";
+import { CustomerIdSchema } from "@api/common/customerId";
 import { z } from "zod/v4";
 
 export const DeleteCustomerParamsSchema = z.object({

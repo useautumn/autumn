@@ -1,21 +1,21 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
 import {
 	type ApiCusFeatureV1,
 	ApiCusFeatureV1Schema,
-} from "../cusFeatures/previousVersions/apiCusFeatureV1.js";
-import type { ApiCusFeatureV2 } from "../cusFeatures/previousVersions/apiCusFeatureV2.js";
-import { transformCusProductV2ToV1 } from "../cusPlans/changes/V0.2_CusProductChange.js";
+} from "../cusFeatures/previousVersions/apiCusFeatureV1";
+import type { ApiCusFeatureV2 } from "../cusFeatures/previousVersions/apiCusFeatureV2";
+import { transformCusProductV2ToV1 } from "../cusPlans/changes/V0.2_CusProductChange";
 import {
 	type CustomerLegacyData,
 	CustomerLegacyDataSchema,
-} from "../customerLegacyData.js";
-import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1.js";
-import { ApiCustomerV2Schema } from "../previousVersions/apiCustomerV2.js";
+} from "../customerLegacyData";
+import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1";
+import { ApiCustomerV2Schema } from "../previousVersions/apiCustomerV2";
 
 /**
  * V0_2_CustomerChange: Transforms customer response TO V0_2 format

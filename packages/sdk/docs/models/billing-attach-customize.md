@@ -1,5 +1,7 @@
 # BillingAttachCustomize
 
+Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+
 ## Example Usage
 
 ```typescript

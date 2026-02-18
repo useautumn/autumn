@@ -122,7 +122,6 @@ export type BalancesCheckPrice = {
 };
 
 export type BalancesCheckBreakdown = {
-  object: "balance_breakdown";
   id: string;
   planId: string | null;
   includedGrant: number;
@@ -141,7 +140,6 @@ export type BalancesCheckBalanceRollover = {
 };
 
 export type BalancesCheckBalance = {
-  object: "balance";
   featureId: string;
   feature?: BalancesCheckFeature | undefined;
   granted: number;
@@ -765,7 +763,6 @@ export const BalancesCheckBreakdown$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance_breakdown"),
     id: z._default(types.string(), ""),
     plan_id: types.nullable(types.string()),
     included_grant: types.number(),
@@ -829,7 +826,6 @@ export const BalancesCheckBalance$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    object: types.literal("balance"),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => BalancesCheckFeature$inboundSchema)),
     granted: types.number(),

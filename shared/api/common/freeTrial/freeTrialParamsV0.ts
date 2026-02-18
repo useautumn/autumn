@@ -1,4 +1,4 @@
-import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
+import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
 import { z } from "zod/v4";
 
 export const FreeTrialParamsV0Schema = z.object({
