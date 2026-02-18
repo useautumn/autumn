@@ -30,6 +30,13 @@ export function QuantityField({
 }) {
 	const field = useFieldContext<number>();
 	const stepSize = step > 0 ? step : 1;
+	const getPositiveModulo = ({
+		value,
+		divisor,
+	}: {
+		value: number;
+		divisor: number;
+	}) => ((value % divisor) + divisor) % divisor;
 
 	const getSteppedIncrementValue = ({
 		currentValue,
@@ -40,7 +47,10 @@ export function QuantityField({
 			return currentValue + 1;
 		}
 
-		const remainder = currentValue % stepSize;
+		const remainder = getPositiveModulo({
+			value: currentValue,
+			divisor: stepSize,
+		});
 		if (remainder === 0) {
 			return currentValue + stepSize;
 		}
@@ -57,7 +67,10 @@ export function QuantityField({
 			return currentValue - 1;
 		}
 
-		const remainder = currentValue % stepSize;
+		const remainder = getPositiveModulo({
+			value: currentValue,
+			divisor: stepSize,
+		});
 		if (remainder === 0) {
 			return currentValue - stepSize;
 		}
