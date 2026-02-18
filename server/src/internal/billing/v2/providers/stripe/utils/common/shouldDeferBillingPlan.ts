@@ -1,6 +1,8 @@
-import type { BillingResponseRequiredAction } from "@autumn/shared";
+import type {
+	BillingContext,
+	BillingResponseRequiredAction,
+} from "@autumn/shared";
 import type Stripe from "stripe";
-import type { BillingContext } from "@autumn/shared";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 
 export const shouldDeferBillingPlan = ({

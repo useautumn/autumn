@@ -16,19 +16,19 @@ export const handlePreviewAttach = createRoute({
 		[ApiVersion.V1_Beta]: AttachParamsV0Schema,
 	},
 	resource: AffectedResource.Attach,
-	lock:
-		process.env.NODE_ENV !== "development"
-			? {
-					ttlMs: 120000,
-					errorMessage:
-						"Attach already in progress for this customer, try again in a few seconds",
-					getKey: (c) => {
-						const ctx = c.get("ctx");
-						const body = c.req.valid("json");
-						return `lock:attach:${ctx.org.id}:${ctx.env}:${body.customer_id}`;
-					},
-				}
-			: undefined,
+	// lock:
+	// 	process.env.NODE_ENV !== "development"
+	// 		? {
+	// 				ttlMs: 120000,
+	// 				errorMessage:
+	// 					"Attach already in progress for this customer, try again in a few seconds",
+	// 				getKey: (c) => {
+	// 					const ctx = c.get("ctx");
+	// 					const body = c.req.valid("json");
+	// 					return `lock:attach:${ctx.org.id}:${ctx.env}:${body.customer_id}`;
+	// 				},
+	// 			}
+	// 		: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");

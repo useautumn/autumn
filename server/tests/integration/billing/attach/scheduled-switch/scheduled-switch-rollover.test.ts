@@ -82,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 1: downgrade wi
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
-			s.billing.attach({ productId: pro.id, timeout: 2000 }),
+			s.billing.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
 			s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 200 (500 - 300)
 			s.billing.attach({ productId: free.id, timeout: 2000 }), // Schedule downgrade

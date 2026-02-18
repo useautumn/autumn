@@ -127,8 +127,6 @@ export const createStripePrepaid = async ({
 			};
 		}
 
-		console.log("priceAmountData", priceAmountData);
-
 		stripePrice = await stripeCli.prices.create({
 			...productData,
 			currency: orgToCurrency({ org }),

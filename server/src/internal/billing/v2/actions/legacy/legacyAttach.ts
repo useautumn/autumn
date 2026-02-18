@@ -6,6 +6,7 @@ import type {
 import { BillingVersion } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { attachParamsToInvoiceModeParams } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToInvoiceModeParams";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
 import { setupLegacyTransitionContext } from "@/internal/billing/v2/actions/legacy/utils/setupLegacyFeatureQuantitiesContext";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
@@ -53,13 +54,7 @@ export const legacyAttach = async ({
 		entity_id: fullCustomer.entity?.id,
 		plan_id: fullProduct.id,
 
-		invoice_mode: attachParams.invoiceOnly
-			? {
-					enabled: attachParams.invoiceOnly,
-					enable_product_immediately: true,
-					finalize_invoice: attachParams.finalizeInvoice ?? true,
-				}
-			: undefined,
+		invoice_mode: attachParamsToInvoiceModeParams({ attachParams }),
 
 		redirect_mode: "if_required",
 

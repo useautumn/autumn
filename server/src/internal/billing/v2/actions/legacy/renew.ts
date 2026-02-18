@@ -71,8 +71,8 @@ export const renew = async ({
 		invoice_mode: body.invoice
 			? {
 					enabled: true,
-					enable_product_immediately: body.enable_product_immediately ?? false,
-					finalize_invoice: body.finalize_invoice ?? true,
+					enable_plan_immediately: body.enable_product_immediately ?? false,
+					finalize: body.finalize_invoice ?? true,
 				}
 			: undefined,
 

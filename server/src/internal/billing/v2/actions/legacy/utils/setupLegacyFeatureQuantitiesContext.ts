@@ -14,7 +14,7 @@ export const setupLegacyTransitionContext = ({
 		.map((ent) => ent.feature);
 
 	return {
-		resetAfterTrialEndFeaturIds: consumableFeatures.map((f) => f.id),
+		resetAfterTrialEndFeatureIds: consumableFeatures.map((f) => f.id),
 	};
 
 	// const newOptions: FeatureOptionsParamsV0[] = [];
