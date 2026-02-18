@@ -1,6 +1,5 @@
-import type { PlanTiming } from "@autumn/shared";
 import { CalendarIcon, GearIcon, LightningIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	Popover,
 	PopoverContent,
@@ -9,43 +8,24 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
-import { useAttachFormContext } from "../context/AttachFormProvider";
+import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
 
 export function AttachSettingsPopover() {
 	const [open, setOpen] = useState(false);
-	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { planSchedule } = formValues;
-	const previewData = previewQuery.data;
 
-	// Compute the default planSchedule based on upgrade vs downgrade
-	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData) return "immediate";
-
-		const hasOutgoing = previewData.outgoing.length > 0;
-		if (!hasOutgoing) return "immediate";
-
-		// Compare prices to determine upgrade vs downgrade
-		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
-		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
-		const isUpgrade = incomingPrice > outgoingPrice;
-
-		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData]);
-
-	// Effective value: user's choice or computed default
-	const effectivePlanSchedule = planSchedule ?? defaultPlanSchedule;
-
-	const handleScheduleChange = (value: PlanTiming) => {
-		form.setFieldValue("planSchedule", value);
-	};
-
-	const isImmediateSelected = effectivePlanSchedule === "immediate";
-	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
-
-	// Show blue highlight when user has overridden the default
-	const hasCustomSchedule =
-		planSchedule !== null && planSchedule !== defaultPlanSchedule;
+	const {
+		hasOutgoing,
+		hasCustomSchedule,
+		isImmediateSelected,
+		isEndOfCycleSelected,
+		handleScheduleChange,
+	} = usePlanScheduleField();
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -99,20 +79,34 @@ export function AttachSettingsPopover() {
 							>
 								Immediately
 							</IconCheckbox>
-							<IconCheckbox
-								icon={<CalendarIcon />}
-								iconOrientation="left"
-								variant="secondary"
-								size="sm"
-								checked={isEndOfCycleSelected}
-								onCheckedChange={() => handleScheduleChange("end_of_cycle")}
-								className={cn(
-									"rounded-l-none",
-									!isEndOfCycleSelected && "border-l-0",
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span className="inline-flex">
+										<IconCheckbox
+											icon={<CalendarIcon />}
+											iconOrientation="left"
+											variant="secondary"
+											size="sm"
+											checked={isEndOfCycleSelected}
+											disabled={!hasOutgoing}
+											onCheckedChange={() =>
+												handleScheduleChange("end_of_cycle")
+											}
+											className={cn(
+												"rounded-l-none",
+												!isEndOfCycleSelected && "border-l-0",
+											)}
+										>
+											End of cycle
+										</IconCheckbox>
+									</span>
+								</TooltipTrigger>
+								{!hasOutgoing && (
+									<TooltipContent>
+										Only available when transitioning from an existing plan
+									</TooltipContent>
 								)}
-							>
-								End of cycle
-							</IconCheckbox>
+							</Tooltip>
 						</div>
 					</div>
 				</div>

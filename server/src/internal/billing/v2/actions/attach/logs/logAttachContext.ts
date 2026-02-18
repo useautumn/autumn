@@ -18,7 +18,7 @@ export const logAttachContext = ({
 		endOfCycleMs,
 		checkoutMode,
 		featureQuantities,
-		transitionConfigs,
+		transitionConfig,
 		currentEpochMs,
 		invoiceMode,
 		stripeSubscription,
@@ -61,14 +61,10 @@ export const logAttachContext = ({
 								.join(", ")
 						: "none",
 
-				transitionConfigs: transitionConfigs
-					? transitionConfigs
-							.map(
-								(c) =>
-									`${c.feature_id}${c.reset_after_trial_end ? " (reset after trial)" : ""}`,
-							)
-							.join(", ")
-					: "none",
+				resetAfterTrialEndFeatureIds:
+					transitionConfig?.resetAfterTrialEndFeatureIds
+						? transitionConfig.resetAfterTrialEndFeatureIds.join(", ")
+						: "none",
 
 				trialContext: trialContext
 					? `trial ends at: ${formatMs(trialContext.trialEndsAt)} | free trial ID: ${trialContext.freeTrial?.id ?? "none"} | appliesToBilling: ${trialContext.appliesToBilling}`

@@ -16,6 +16,8 @@ export const ApiBalanceBreakdownPriceSchema = z.object({
 });
 
 export const ApiBalanceBreakdownV1Schema = z.object({
+	object: z.literal("balance_breakdown"),
+
 	id: z.string().default(""),
 	plan_id: z.string().nullable(),
 
@@ -31,9 +33,15 @@ export const ApiBalanceBreakdownV1Schema = z.object({
 
 	// Extra fields
 	expires_at: z.number().nullable(), // For loose entitlements with expiry
+
+	overage: z.number().meta({
+		internal: true,
+	}),
 });
 
 export const ApiBalanceV1Schema = z.object({
+	object: z.literal("balance"),
+
 	feature_id: z.string(),
 	feature: ApiFeatureV1Schema.optional(),
 

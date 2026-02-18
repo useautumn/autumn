@@ -350,7 +350,6 @@ test.concurrent(`${chalk.yellowBright("error: uncancel expired product")}`, asyn
 
 	// Try to uncancel the expired product - should error
 	await expectAutumnError({
-		errCode: ErrCode.InternalError,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,

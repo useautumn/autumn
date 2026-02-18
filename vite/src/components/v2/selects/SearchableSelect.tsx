@@ -1,6 +1,7 @@
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Command,
 	CommandEmpty,
@@ -32,6 +33,7 @@ export type SearchableSelectProps<T> = {
 	disabled?: boolean;
 	triggerClassName?: string;
 	contentClassName?: string;
+	defaultOpen?: boolean;
 };
 
 export function SearchableSelect<T>({
@@ -50,8 +52,15 @@ export function SearchableSelect<T>({
 	disabled = false,
 	triggerClassName,
 	contentClassName,
+	defaultOpen = false,
 }: SearchableSelectProps<T>) {
 	const [open, setOpen] = useState(false);
+
+	useEffect(() => {
+		if (!defaultOpen) return;
+		const timer = setTimeout(() => setOpen(true), 200);
+		return () => clearTimeout(timer);
+	}, [defaultOpen]);
 
 	const selectedOption = options.find((opt) => getOptionValue(opt) === value);
 
@@ -88,9 +97,7 @@ export function SearchableSelect<T>({
 					disabled={disabled}
 					className={cn(
 						"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
-						"input-base input-shadow-default",
-						open && "input-shadow-focus border-primary",
-						!open && "hover:input-shadow-hover",
+						"input-base input-shadow-default input-state-open transition-all duration-150",
 						triggerClassName,
 					)}
 				>
@@ -104,64 +111,78 @@ export function SearchableSelect<T>({
 					<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
 				</button>
 			</PopoverTrigger>
-			<PopoverContent
-				align="start"
-				className={cn(
-					"w-(--radix-popover-trigger-width) p-0 z-200 rounded-md overflow-hidden",
-					contentClassName,
-				)}
-			>
-				<Command
-					className="bg-interactive-secondary"
-					filter={
-						searchable
-							? (optionValue, search) => {
-									const option = options.find(
-										(opt) => getOptionValue(opt) === optionValue,
-									);
-									if (!option) return 0;
-									const searchLower = search.toLowerCase();
-									const labelMatch = getOptionLabel(option)
-										.toLowerCase()
-										.includes(searchLower);
-									const valueMatch = optionValue
-										.toLowerCase()
-										.includes(searchLower);
-									return labelMatch || valueMatch ? 1 : 0;
+			<AnimatePresence>
+				{open && (
+					<PopoverContent
+						forceMount
+						align="start"
+						className={cn(
+							"w-(--radix-popover-trigger-width) p-0 z-200 rounded-md overflow-hidden",
+							contentClassName,
+						)}
+						asChild
+					>
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.3 }}
+						>
+							<Command
+								className="bg-interactive-secondary"
+								filter={
+									searchable
+										? (optionValue, search) => {
+												const option = options.find(
+													(opt) => getOptionValue(opt) === optionValue,
+												);
+												if (!option) return 0;
+												const searchLower = search.toLowerCase();
+												const labelMatch = getOptionLabel(option)
+													.toLowerCase()
+													.includes(searchLower);
+												const valueMatch = optionValue
+													.toLowerCase()
+													.includes(searchLower);
+												return labelMatch || valueMatch ? 1 : 0;
+											}
+										: undefined
 								}
-							: undefined
-					}
-				>
-					{searchable && <CommandInput placeholder={searchPlaceholder} />}
-					<CommandList>
-						<CommandEmpty className="text-t3">{emptyText}</CommandEmpty>
-						<CommandGroup>
-							{options.map((option) => {
-								const optionValue = getOptionValue(option);
-								const isSelected = optionValue === value;
-								const isDisabled = getOptionDisabled?.(option) ?? false;
+							>
+								{searchable && <CommandInput placeholder={searchPlaceholder} />}
+								<CommandList>
+									<CommandEmpty className="text-t3">{emptyText}</CommandEmpty>
+									<CommandGroup>
+										{options.map((option) => {
+											const optionValue = getOptionValue(option);
+											const isSelected = optionValue === value;
+											const isDisabled = getOptionDisabled?.(option) ?? false;
 
-								return (
-									<CommandItem
-										key={optionValue}
-										value={optionValue}
-										onSelect={() => handleSelect(option)}
-										disabled={isDisabled}
-										className={cn(
-											"min-w-0",
-											isDisabled && "text-t4 pointer-events-none opacity-50",
-										)}
-									>
-										{renderOption
-											? renderOption(option, isSelected)
-											: defaultRenderOption(option, isSelected)}
-									</CommandItem>
-								);
-							})}
-						</CommandGroup>
-					</CommandList>
-				</Command>
-			</PopoverContent>
+											return (
+												<CommandItem
+													key={optionValue}
+													value={optionValue}
+													onSelect={() => handleSelect(option)}
+													disabled={isDisabled}
+													className={cn(
+														"min-w-0",
+														isDisabled &&
+															"text-t4 pointer-events-none opacity-50",
+													)}
+												>
+													{renderOption
+														? renderOption(option, isSelected)
+														: defaultRenderOption(option, isSelected)}
+												</CommandItem>
+											);
+										})}
+									</CommandGroup>
+								</CommandList>
+							</Command>
+						</motion.div>
+					</PopoverContent>
+				)}
+			</AnimatePresence>
 		</Popover>
 	);
 }

@@ -145,6 +145,10 @@ export const billingPlanToChanges = async ({
 				productId: customerProduct.product.id,
 			});
 
+			// For immediate expiration (upgrade), the plan ends now — not at end of billing cycle.
+			// The billingPeriod.end reflects the full cycle end (used for proration), not when the plan actually stops.
+			const isImmediateExpiration = updates.status === CusProductStatus.Expired;
+
 			outgoing.push({
 				plan: subscription.plan,
 				feature_quantities: cusProductToFeatureQuantities({
@@ -152,7 +156,12 @@ export const billingPlanToChanges = async ({
 				}),
 				balances,
 				period_start: billingPeriod?.start,
-				period_end: billingPeriod?.end,
+				period_end: isImmediateExpiration
+					? billingContext.currentEpochMs
+					: (billingPeriod?.end ??
+						updates.ended_at ??
+						subscription.current_period_end ??
+						undefined),
 			});
 		}
 	}

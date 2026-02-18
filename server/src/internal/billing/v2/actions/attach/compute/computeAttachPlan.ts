@@ -1,6 +1,6 @@
 import type {
 	AttachBillingContext,
-	AttachParamsV0,
+	AttachParamsV1,
 	AutumnBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -25,7 +25,7 @@ export const computeAttachPlan = ({
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 }): AutumnBillingPlan => {
 	const {
 		currentCustomerProduct,

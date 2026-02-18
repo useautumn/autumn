@@ -180,15 +180,15 @@ export const createCustomerPricesForProduct = ({
 
 /**
  * Gets all stripe price IDs from a product helper result.
- * Entity-level products use stripeEmptyPriceId for consumable prices.
+ * Note: As of current implementation, withEntity is hardcoded to false in customerProductToStripeItemSpecs,
+ * so consumable prices always use the regular (non-empty) price ID.
  */
 export const getStripePriceIds = (
 	product: ReturnType<typeof createProductWithAllPriceTypes>,
-	{ isEntityLevel = false }: { isEntityLevel?: boolean } = {},
+	{ isEntityLevel: _isEntityLevel = false }: { isEntityLevel?: boolean } = {},
 ): string[] => {
-	const consumablePriceId = isEntityLevel
-		? `stripe_${product.product.id}_consumable_empty`
-		: `stripe_${product.product.id}_consumable`;
+	// withEntity is hardcoded to false, so always use regular consumable price
+	const consumablePriceId = `stripe_${product.product.id}_consumable`;
 
 	return [
 		`stripe_${product.product.id}_fixed`,
@@ -232,21 +232,16 @@ export const expectPhaseItems = (
 export const getExpectedPhaseItems = (
 	product: ReturnType<typeof createProductWithAllPriceTypes>,
 	{
-		isEntityLevel = false,
+		isEntityLevel: _isEntityLevel = false,
 		fixedQuantityMultiplier = 1,
 	}: { isEntityLevel?: boolean; fixedQuantityMultiplier?: number } = {},
 ): ExpectedPhaseItem[] => {
 	const productId = product.product.id;
 	const { expectedQuantities } = product;
 
-	const consumablePriceId = isEntityLevel
-		? `stripe_${productId}_consumable_empty`
-		: `stripe_${productId}_consumable`;
-
-	// Entity consumable uses empty price with quantity 0
-	const consumableQuantity = isEntityLevel
-		? expectedQuantities.consumableEntity
-		: expectedQuantities.consumable;
+	// withEntity is hardcoded to false, so always use regular consumable price
+	const consumablePriceId = `stripe_${productId}_consumable`;
+	const consumableQuantity = expectedQuantities.consumable;
 
 	return [
 		{
@@ -298,24 +293,19 @@ export type ExpectedSubscriptionItemUpdate = {
  * Gets expected subscription item updates for creating a new product.
  * Uses the expectedQuantities from the product helper.
  *
- * @param isEntityLevel - If true, uses stripeEmptyPriceId for consumable (quantity 0)
+ * Note: As of current implementation, withEntity is hardcoded to false in customerProductToStripeItemSpecs,
+ * so consumable prices always use the regular (non-empty) price ID.
  */
 export const getExpectedNewProductItems = (
 	product: ReturnType<typeof createProductWithAllPriceTypes>,
-	{ isEntityLevel = false }: { isEntityLevel?: boolean } = {},
+	{ isEntityLevel: _isEntityLevel = false }: { isEntityLevel?: boolean } = {},
 ): ExpectedSubscriptionItemUpdate[] => {
 	const productId = product.product.id;
 	const { expectedQuantities } = product;
 
-	const consumablePriceId = isEntityLevel
-		? `stripe_${productId}_consumable_empty`
-		: `stripe_${productId}_consumable`;
-
-	// Entity consumable uses empty price with quantity 0
-	// Customer consumable is metered (no quantity)
-	const consumableQuantity = isEntityLevel
-		? expectedQuantities.consumableEntity
-		: expectedQuantities.consumable;
+	// withEntity is hardcoded to false, so always use regular consumable price (metered, no quantity)
+	const consumablePriceId = `stripe_${productId}_consumable`;
+	const consumableQuantity = expectedQuantities.consumable;
 
 	const items: ExpectedSubscriptionItemUpdate[] = [
 		{
@@ -370,17 +360,17 @@ export const expectSubscriptionItemsUpdate = (
  * Creates stripe subscription items from product's expected prices.
  * Useful for setting up existing subscription state.
  *
- * Note: For customer-level (non-entity) products, metered consumable prices
- * are excluded because they don't have a meaningful quantity to compare.
- * Entity-level products use the empty price with quantity 0.
+ * Note: As of current implementation, withEntity is hardcoded to false in customerProductToStripeItemSpecs,
+ * so consumable prices always use the regular (non-empty) price ID. Metered consumable prices
+ * are excluded by default because they don't have a meaningful quantity to compare.
  *
- * @param includeMetered - If true, includes metered consumable even for customer-level.
- *                         Use this when testing scenarios that need the full item set.
+ * @param includeMetered - If true, includes metered consumable. Use this when testing scenarios
+ *                         that need the full item set.
  */
 export const createStripeItemsFromProduct = (
 	product: ReturnType<typeof createProductWithAllPriceTypes>,
 	{
-		isEntityLevel = false,
+		isEntityLevel: _isEntityLevel = false,
 		itemIdPrefix = "si",
 		includeMetered = false,
 	}: {
@@ -410,15 +400,9 @@ export const createStripeItemsFromProduct = (
 		},
 	];
 
-	// For entity-level, always include empty price with quantity 0
-	// For customer-level, only include metered if explicitly requested
-	if (isEntityLevel) {
-		items.push({
-			id: `${itemIdPrefix}_${productId}_consumable`,
-			priceId: `stripe_${productId}_consumable_empty`,
-			quantity: expectedQuantities.consumableEntity ?? 0,
-		});
-	} else if (includeMetered) {
+	// Only include metered if explicitly requested (withEntity is hardcoded to false,
+	// so always use regular consumable price)
+	if (includeMetered) {
 		items.push({
 			id: `${itemIdPrefix}_${productId}_consumable`,
 			priceId: `stripe_${productId}_consumable`,

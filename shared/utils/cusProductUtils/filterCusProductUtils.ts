@@ -135,6 +135,10 @@ export const filterOutEntitiesFromFullCustomer = ({
 	} satisfies FullCustomer;
 };
 
+/**
+ * Returns true if a non-add-on product is already active for this customer/entity.
+ * Used to fully disable selection in the product dropdown.
+ */
 export const isProductAlreadyEnabled = ({
 	productId,
 	customer,
@@ -158,6 +162,46 @@ export const isProductAlreadyEnabled = ({
 		}
 
 		// If entityId exists (attaching to entity), only consider products for that entity
+		const entities = customer?.entities || [];
+		const entity = entities.find(
+			(e: Entity) => e.id === entityId || e.internal_id === entityId,
+		);
+
+		if (entity) {
+			return (
+				cp.internal_entity_id === entity.internal_id ||
+				cp.entity_id === entity.id
+			);
+		}
+
+		return false;
+	});
+};
+
+/**
+ * Returns true if any product (including add-ons) is already active for this customer/entity.
+ * Used to show a non-blocking "Already Enabled" badge in the product dropdown.
+ */
+export const isProductCurrentlyAttached = ({
+	productId,
+	customer,
+	entityId,
+}: {
+	productId: string;
+	customer: FullCustomer;
+	entityId?: string;
+}) => {
+	return filterCustomerProductsByActiveStatuses({
+		customerProducts: customer.customer_products,
+	}).some((cp: FullCusProduct) => {
+		if (cp.product_id !== productId) {
+			return false;
+		}
+
+		if (!entityId) {
+			return !cp.internal_entity_id && !cp.entity_id;
+		}
+
 		const entities = customer?.entities || [];
 		const entity = entities.find(
 			(e: Entity) => e.id === entityId || e.internal_id === entityId,

@@ -54,6 +54,7 @@ const createBilling = ({
 	currentEpochMs = Date.now(),
 	billingCycleAnchorMs = "now",
 	resetCycleAnchorMs = "now",
+	billingVersion = BillingVersion.V1,
 }: {
 	customerProducts?: FullCusProduct[];
 	fullProducts?: FullProduct[];
@@ -62,6 +63,7 @@ const createBilling = ({
 	currentEpochMs?: number;
 	billingCycleAnchorMs?: number | "now";
 	resetCycleAnchorMs?: number | "now";
+	billingVersion?: BillingVersion;
 }): BillingContext => ({
 	fullCustomer: customers.create({ customerProducts }),
 	stripeCustomer: stripeCustomers.create(),
@@ -75,7 +77,7 @@ const createBilling = ({
 	customPrices: [],
 	customEnts: [],
 	isCustom: false,
-	billingVersion: BillingVersion.V2,
+	billingVersion,
 });
 
 // ═══════════════════════════════════════════════════════════════════

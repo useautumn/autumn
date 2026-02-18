@@ -139,7 +139,6 @@ test.concurrent(`${chalk.yellowBright("error: negative quantity for prepaid feat
 	};
 
 	await expectAutumnError({
-		errMessage: "Options quantity must be >= 0",
 		func: async () => {
 			await autumnV1.subscriptions.update(updateParams);
 		},

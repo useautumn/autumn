@@ -1,13 +1,20 @@
 import {
+	AffectedResource,
+	ApiVersion,
 	InternalError,
 	UpdateSubscriptionV0ParamsSchema,
+	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleUpdateSubscription = createRoute({
-	body: UpdateSubscriptionV0ParamsSchema,
+	versionedBody: {
+		latest: UpdateSubscriptionV1ParamsSchema,
+		[ApiVersion.V1_Beta]: UpdateSubscriptionV0ParamsSchema,
+	},
+	resource: AffectedResource.ApiSubscriptionUpdate,
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {

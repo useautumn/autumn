@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { featureV0ToV1Type } from "../../../utils/featureUtils/convertFeatureUtils.js";
 import { CreateFeatureV1ParamsSchema } from "../featureV1OpModels.js";
 import { CreateFeatureV0ParamsSchema } from "../prevVersions/featureV0OpModels.js";
@@ -46,8 +47,10 @@ export const V1_2_CreateFeatureChange = defineVersionChange({
 
 	// Request: V0 → V1 (old format to new)
 	transformRequest: ({
+		ctx: _ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof CreateFeatureV0ParamsSchema>;
 	}): z.infer<typeof CreateFeatureV1ParamsSchema> => {
 		const { type, consumable } = featureV0ToV1Type({ type: input.type });

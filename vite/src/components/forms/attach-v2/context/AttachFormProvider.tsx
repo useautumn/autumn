@@ -18,6 +18,7 @@ import {
 } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import type { AttachForm } from "../attachFormSchema";
@@ -39,6 +40,8 @@ interface AttachFormContextValue {
 	originalItems: ProductItem[] | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	hasCustomizations: boolean;
+	numVersions: number;
+	initialPrepaidOptions: Record<string, number>;
 
 	previewQuery: UseAttachPreviewReturn;
 
@@ -80,6 +83,9 @@ export function AttachFormProvider({
 	children,
 }: AttachFormProviderProps) {
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
+	const [initialPrepaidOptions, setInitialPrepaidOptions] = useState<
+		Record<string, number>
+	>({});
 
 	const form = useAttachForm({ initialProductId });
 
@@ -96,12 +102,21 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
+		newBillingSubscription,
+		discounts,
 	} = formValues;
 
 	const product = useMemo(
 		() => products.find((p) => p.id === productId && !p.archived),
 		[products, productId],
 	);
+
+	const productVersionQuery = useProductVersionQuery({
+		productId: product?.id,
+	});
+	const numVersions =
+		productVersionQuery.data?.numVersions ?? product?.version ?? 1;
 
 	const { prepaidItems } = usePrepaidItems({ product });
 
@@ -127,13 +142,14 @@ export function AttachFormProvider({
 
 		// Initialize prepaid options for the selected product
 		if (product) {
-			const initialPrepaidOptions: Record<string, number> = {};
+			const newInitialPrepaidOptions: Record<string, number> = {};
 			for (const item of product.items) {
 				if (item.usage_model === UsageModel.Prepaid && item.feature_id) {
-					initialPrepaidOptions[item.feature_id] = 0;
+					newInitialPrepaidOptions[item.feature_id] = 0;
 				}
 			}
-			form.setFieldValue("prepaidOptions", initialPrepaidOptions);
+			form.setFieldValue("prepaidOptions", newInitialPrepaidOptions);
+			setInitialPrepaidOptions(newInitialPrepaidOptions);
 		}
 	}, [productId, product, form]);
 
@@ -169,6 +185,9 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		planSchedule,
+		billingBehavior,
+		newBillingSubscription,
+		discounts,
 	});
 
 	const previewQuery = useAttachPreview({ requestBody });
@@ -231,6 +250,8 @@ export function AttachFormProvider({
 			originalItems,
 			productWithFormItems,
 			hasCustomizations,
+			numVersions,
+			initialPrepaidOptions,
 			previewQuery,
 			showPlanEditor,
 			handleEditPlan,
@@ -249,6 +270,8 @@ export function AttachFormProvider({
 			originalItems,
 			productWithFormItems,
 			hasCustomizations,
+			numVersions,
+			initialPrepaidOptions,
 			previewQuery,
 			showPlanEditor,
 			handleEditPlan,

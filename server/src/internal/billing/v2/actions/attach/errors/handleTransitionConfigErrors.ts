@@ -15,18 +15,21 @@ export const handleTransitionConfigErrors = ({
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 }) => {
-	const { transitionConfigs } = billingContext;
+	const { transitionConfig } = billingContext;
 
-	for (const config of transitionConfigs ?? []) {
+	const resetAfterTrialEndFeatureIds =
+		transitionConfig?.resetAfterTrialEndFeatureIds ?? [];
+
+	for (const featureId of resetAfterTrialEndFeatureIds) {
 		const feature = featureUtils.find.byId({
 			features: ctx.features,
-			featureId: config.feature_id,
+			featureId,
 			errorOnNotFound: true,
 		});
 
-		if (featureUtils.isAllocated(feature) && config.reset_after_trial_end) {
+		if (featureUtils.isAllocated(feature)) {
 			throw new RecaseError({
-				message: `reset_after_trial_end is not supported for allocated features. Feature '${config.feature_id}' is an allocated feature (continuous_use) and does not have a reset cycle.`,
+				message: `reset_after_trial_end is not supported for allocated features. Feature '${featureId}' is an allocated feature (continuous_use) and does not have a reset cycle.`,
 			});
 		}
 	}

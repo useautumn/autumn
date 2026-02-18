@@ -1,6 +1,6 @@
 import {
 	type AttachBillingContext,
-	type AttachParamsV0,
+	type AttachParamsV1,
 	type BillingPlan,
 	type Checkout,
 	CheckoutAction,
@@ -16,7 +16,7 @@ import { generateId } from "@/utils/genUtils";
 const CHECKOUT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 // Current params version for attach
-const ATTACH_PARAMS_VERSION = 0;
+const ATTACH_PARAMS_VERSION = 1;
 
 /**
  * Creates an Autumn checkout from billing plan.
@@ -29,7 +29,7 @@ export async function billingPlanToAutumnCheckout({
 	billingContext,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV0;
+	params: AttachParamsV1;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<{ checkout: Checkout; checkoutUrl: string }> {

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
-import { cn } from "@/lib/utils";
+
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
@@ -68,10 +68,7 @@ function InlinePlanEditorContent({
 		>
 			<div className="flex w-full h-full overflow-hidden relative flex-1">
 				<motion.div
-					className={cn(
-						"h-full overflow-hidden absolute inset-0",
-						sheetType && "pointer-events-none",
-					)}
+					className="h-full overflow-hidden absolute inset-0"
 					animate={{ width: sheetType ? "calc(100% - 28rem)" : "100%" }}
 					transition={SHEET_ANIMATION}
 				>
@@ -99,9 +96,8 @@ function InlinePlanEditorContent({
 							</PlanEditorBar>
 						)}
 					</div>
+					<SheetOverlay inline />
 				</motion.div>
-
-				<SheetOverlay inline />
 
 				<ProductSheets />
 			</div>

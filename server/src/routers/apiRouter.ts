@@ -12,6 +12,7 @@ import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
 import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
 import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware.js";
+import { responseFilterMiddleware } from "../honoMiddlewares/responseFilter/responseFilterMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import {
@@ -36,6 +37,7 @@ import {
 
 export const apiRouter = new Hono<HonoEnv>();
 
+apiRouter.use("*", responseFilterMiddleware);
 apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);

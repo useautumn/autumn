@@ -6,6 +6,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
 import { apiPurchaseV0ToSubscriptionV0 } from "../../customers/cusPlans/mappers/apiPurchaseV0ToSubscriptionV0.js";
 import { apiSubscriptionV1ToV0 } from "../../customers/cusPlans/mappers/apiSubscriptionV1ToV0.js";
@@ -39,8 +40,10 @@ export const V2_0_EntityChange = defineVersionChange({
 	affectsResponse: true,
 
 	transformResponse: ({
+		ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof ApiEntityV2Schema>;
 	}): z.infer<typeof ApiEntityV1Schema> => {
 		// Transform subscriptions from V1 to V0
@@ -48,16 +51,16 @@ export const V2_0_EntityChange = defineVersionChange({
 
 		const activeSubscriptionsV0: ApiSubscription[] = allSubscriptions
 			.filter((sub) => sub.status === "active")
-			.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
+			.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
 
 		const scheduledSubscriptionsV0: ApiSubscription[] = allSubscriptions
 			.filter((sub) => sub.status === "scheduled")
-			.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
+			.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
 
 		// Convert purchases to subscriptions and add to active subscriptions
 		const purchasesAsSubscriptions: ApiSubscription[] = (
 			input.purchases ?? []
-		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ input: purchase }));
+		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }));
 
 		const balancesV0: Record<string, ApiBalance> = {};
 		if (input.balances) {

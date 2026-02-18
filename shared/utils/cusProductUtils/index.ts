@@ -17,7 +17,6 @@ export * from "./findCustomerProduct/findCustomerProduct.js";
 export * from "./findCustomerProduct/findScheduledCustomerProduct.js";
 export * from "./getCusProductFromCustomer.js";
 export * from "./productIdToCusProduct.js";
-export * from "./transitionConfigs/index.js";
 
 export const customerProductUtils = {
 	convert: {

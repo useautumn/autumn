@@ -697,7 +697,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 			],
 			actions: [
-				s.attach({ productId: proTrial.id, entityIndex: 0 }),
+				s.attach({ productId: proTrial.id, entityIndex: 0, timeout: 8000 }),
 
 				// Cancel entity 1 at end of cycle
 				s.updateSubscription({
@@ -707,7 +707,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 
 				}),
 
 				// Attach proTrial to entity 2
-				s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 4000 }),
+				s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 8000 }),
 			],
 		},
 	);

@@ -57,6 +57,17 @@ export const ApiPlanItemV0Schema = z
 				on_decrease: z.enum(OnDecrease).optional(),
 			})
 			.optional(),
+
+		entity_feature_id: z.string().optional().meta({
+			internal: true,
+		}),
+
+		entitlement_id: z.string().optional().meta({
+			internal: true,
+		}),
+		price_id: z.string().optional().meta({
+			internal: true,
+		}),
 	})
 	.check((ctx) => {
 		const resetInterval = ctx.value.reset?.interval;

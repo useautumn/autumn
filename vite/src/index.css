@@ -16,21 +16,21 @@ html {
 	overscroll-behavior: none;
 }
 
-/* ::-webkit-scrollbar {
-	width: 0.5rem;
+* {
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in oklch, var(--foreground) 20%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+	width: 6px;
 }
 ::-webkit-scrollbar-track {
-	background-color: var(--color-gray-100);
+	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-	background-color: var(--color-gray-300);
+	background: color-mix(in oklch, var(--foreground) 20%, transparent);
+	border-radius: 9999px;
 }
-.dark ::-webkit-scrollbar-track {
-	background-color: var(--color-neutral-700);
-}
-.dark ::-webkit-scrollbar-thumb {
-	background-color: var(--color-neutral-500);
-} */
 
 :root {
 	/* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */

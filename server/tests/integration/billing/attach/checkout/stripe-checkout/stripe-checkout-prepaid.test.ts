@@ -162,8 +162,13 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity updated
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
-		adjustable_quantity: true,
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: initialQuantity,
+				adjustable: true,
+			},
+		],
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -272,10 +277,17 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: multiple prepaid feature
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [
-			{ feature_id: TestFeature.Messages, quantity: initialMessagesQty },
-			{ feature_id: TestFeature.Words, quantity: initialWordsQty },
+			{
+				feature_id: TestFeature.Messages,
+				quantity: initialMessagesQty,
+				adjustable: true,
+			},
+			{
+				feature_id: TestFeature.Words,
+				quantity: initialWordsQty,
+				adjustable: true,
+			},
 		],
-		adjustable_quantity: true,
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -385,8 +397,13 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid quantity set to 
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
-		adjustable_quantity: true,
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: initialQuantity,
+				adjustable: true,
+			},
+		],
 	});
 
 	expect(result.payment_url).toBeDefined();
@@ -480,8 +497,13 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: tiered prepaid with quan
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: initialQuantity }],
-		adjustable_quantity: true,
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: initialQuantity,
+				adjustable: true,
+			},
+		],
 	});
 
 	expect(result.payment_url).toBeDefined();

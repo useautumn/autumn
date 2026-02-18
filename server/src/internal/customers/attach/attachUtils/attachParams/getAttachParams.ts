@@ -74,6 +74,8 @@ export const getAttachParams = async ({
 
 		// Others
 		apiVersion: ctx.apiVersion.value,
+		finalizeInvoice: attachBody.finalize_invoice,
+		enableProductImmediately: attachBody.enable_product_immediately ?? false,
 
 		newBillingSubscription: attachBody.new_billing_subscription || false,
 	};
