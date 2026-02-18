@@ -1,4 +1,4 @@
-import { add, format } from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
 import { useRef, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
@@ -126,9 +126,12 @@ export const DateInputUnix = ({
 		}
 
 		// Preserve the current time on the newly selected day.
-		const diff = newDay.getTime() - dateObj.getTime();
-		const diffInDays = diff / (1000 * 60 * 60 * 24);
-		const newDateFull = add(dateObj, { days: Math.ceil(diffInDays) });
+		const newDateFull = new Date(dateObj);
+		newDateFull.setFullYear(
+			newDay.getFullYear(),
+			newDay.getMonth(),
+			newDay.getDate(),
+		);
 		setUnixDate(newDateFull.getTime());
 	};
 

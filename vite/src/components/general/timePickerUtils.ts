@@ -6,6 +6,10 @@
 export type TimePickerType = "minutes" | "seconds" | "hours" | "12hours";
 export type Period = "AM" | "PM";
 
+function assertUnreachable(value: never): never {
+	throw new Error(`Unhandled TimePickerType: ${value}`);
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -114,6 +118,12 @@ function setMinutes({ date, value }: { date: Date; value: string }) {
 	return date;
 }
 
+function setSeconds({ date, value }: { date: Date; value: string }) {
+	const s = getValidMinuteOrSecond(value);
+	date.setSeconds(Number.parseInt(s, 10));
+	return date;
+}
+
 function setHours({ date, value }: { date: Date; value: string }) {
 	const h = getValidHour(value);
 	date.setHours(Number.parseInt(h, 10));
@@ -153,15 +163,16 @@ export function setDateByType({
 	switch (type) {
 		case "minutes":
 			return setMinutes({ date, value });
+		case "seconds":
+			return setSeconds({ date, value });
 		case "hours":
 			return setHours({ date, value });
 		case "12hours": {
 			if (!period) return date;
 			return set12Hours({ date, value, period });
 		}
-		default:
-			return date;
 	}
+	return assertUnreachable(type);
 }
 
 export function getDateByType({
@@ -174,15 +185,16 @@ export function getDateByType({
 	switch (type) {
 		case "minutes":
 			return getValidMinuteOrSecond(String(date.getMinutes()));
+		case "seconds":
+			return getValidMinuteOrSecond(String(date.getSeconds()));
 		case "hours":
 			return getValidHour(String(date.getHours()));
 		case "12hours": {
 			const hours = display12HourValue(date.getHours());
 			return getValid12Hour(String(hours));
 		}
-		default:
-			return "00";
 	}
+	return assertUnreachable(type);
 }
 
 export function getArrowByType({
@@ -197,13 +209,14 @@ export function getArrowByType({
 	switch (type) {
 		case "minutes":
 			return getValidArrowMinuteOrSecond({ value, step });
+		case "seconds":
+			return getValidArrowMinuteOrSecond({ value, step });
 		case "hours":
 			return getValidArrowHour({ value, step });
 		case "12hours":
 			return getValidArrow12Hour({ value, step });
-		default:
-			return "00";
 	}
+	return assertUnreachable(type);
 }
 
 // ---------------------------------------------------------------------------
