@@ -1,0 +1,14 @@
+# BillingAttachItem
+
+
+## Fields
+
+| Field                                                                          | Type                                                                           | Required                                                                       | Description                                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `feature_id`                                                                   | *str*                                                                          | :heavy_check_mark:                                                             | N/A                                                                            |
+| `included`                                                                     | *Optional[float]*                                                              | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `unlimited`                                                                    | *Optional[bool]*                                                               | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `reset`                                                                        | [Optional[models.BillingAttachReset]](../models/billingattachreset.md)         | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `price`                                                                        | [Optional[models.BillingAttachItemPrice]](../models/billingattachitemprice.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `proration`                                                                    | [Optional[models.BillingAttachProration]](../models/billingattachproration.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `rollover`                                                                     | [Optional[models.BillingAttachRollover]](../models/billingattachrollover.md)   | :heavy_minus_sign:                                                             | N/A                                                                            |

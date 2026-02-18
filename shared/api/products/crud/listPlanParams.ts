@@ -1,5 +1,13 @@
 import { z } from "zod/v4";
 
+export const ListPlanParamsSchema = z
+	.object({
+		customer_id: z.string().optional(),
+		entity_id: z.string().optional(),
+		include_archived: z.boolean().optional(),
+	})
+	.optional();
+
 export const ListPlansQuerySchema = z.object({
 	customer_id: z.string().optional(),
 	entity_id: z.string().optional().meta({

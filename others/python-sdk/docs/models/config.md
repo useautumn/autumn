@@ -1,0 +1,10 @@
+# Config
+
+
+## Fields
+
+| Field                                                                                    | Type                                                                                     | Required                                                                                 | Description                                                                              |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `rollover`                                                                               | [OptionalNullable[models.ConfigRollover]](../models/configrollover.md)                   | :heavy_minus_sign:                                                                       | N/A                                                                                      |
+| `on_increase`                                                                            | [OptionalNullable[models.BalancesCheckOnIncrease]](../models/balancescheckonincrease.md) | :heavy_minus_sign:                                                                       | N/A                                                                                      |
+| `on_decrease`                                                                            | [OptionalNullable[models.BalancesCheckOnDecrease]](../models/balancescheckondecrease.md) | :heavy_minus_sign:                                                                       | N/A                                                                                      |

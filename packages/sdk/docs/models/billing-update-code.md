@@ -1,0 +1,17 @@
+# BillingUpdateCode
+
+## Example Usage
+
+```typescript
+import { BillingUpdateCode } from "@useautumn/sdk";
+
+let value: BillingUpdateCode = "payment_method_required";
+```
+
+## Values
+
+This is an open enum. Unrecognized values will be captured as the `Unrecognized<string>` branded type.
+
+```typescript
+"3ds_required" | "payment_method_required" | "payment_failed" | Unrecognized<string>
+```

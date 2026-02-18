@@ -39,26 +39,26 @@ export const ExtCheckParamsSchema = z.object({
 		description: checkDescriptions.entity_id,
 	}),
 
-	customer_data: CustomerDataSchema.optional().meta({
-		description: checkDescriptions.customer_data,
-	}),
-	entity_data: EntityDataSchema.optional().meta({
-		internal: true,
-	}),
-
 	required_balance: z.number().optional().meta({
 		description: checkDescriptions.required_balance,
 	}),
 
-	properties: z.record(z.string(), z.any()).optional().meta({
-		internal: true,
-	}),
+	properties: z.record(z.string(), z.any()).optional(),
 
 	send_event: z.boolean().optional().meta({
 		description: checkDescriptions.send_event,
 	}),
+
 	with_preview: z.boolean().optional().meta({
 		description: checkDescriptions.with_preview,
+	}),
+
+	customer_data: CustomerDataSchema.optional().meta({
+		internal: true,
+	}),
+
+	entity_data: EntityDataSchema.optional().meta({
+		internal: true,
 	}),
 });
 

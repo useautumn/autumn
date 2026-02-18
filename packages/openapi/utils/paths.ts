@@ -7,6 +7,8 @@ export interface OpenApiPaths {
 	openApiDir: string;
 	/** packages/openapi/openapi.yml */
 	openApiOutput: string;
+	/** packages/openapi/openapi-stripped.yml (JSDoc examples stripped for non-TS SDKs) */
+	openApiStrippedOutput: string;
 	/** packages/sdk/ directory */
 	tsSdkDir: string;
 	/** others/python-sdk/ directory */
@@ -17,6 +19,10 @@ export interface OpenApiPaths {
 	docsOpenApiPath: string;
 	/** apps/docs/mintlify/ directory */
 	docsDir: string;
+	/** packages/autumn-js/src/generated/ directory */
+	autumnJsGeneratedDir: string;
+	/** packages/autumn-js/src/generated/schemas.ts */
+	autumnJsSchemasPath: string;
 }
 
 /**
@@ -33,18 +39,25 @@ export function resolvePaths(): OpenApiPaths {
 	const pythonSdkDir = path.resolve(openApiDir, "../../others/python-sdk");
 	const docsApiDir = path.resolve(openApiDir, "../../apps/docs/mintlify/api");
 	const docsDir = path.resolve(openApiDir, "../../apps/docs/mintlify");
-
+	const autumnJsGeneratedDir = path.resolve(
+		openApiDir,
+		"../autumn-js/src/generated",
+	);
 	// Ensure directories exist
 	mkdirSync(openApiDir, { recursive: true });
 	mkdirSync(docsApiDir, { recursive: true });
+	mkdirSync(autumnJsGeneratedDir, { recursive: true });
 
 	return {
 		openApiDir,
 		openApiOutput: path.join(openApiDir, "openapi.yml"),
+		openApiStrippedOutput: path.join(openApiDir, "openapi-stripped.yml"),
 		tsSdkDir,
 		pythonSdkDir,
 		docsApiDir,
 		docsOpenApiPath: path.join(docsApiDir, "openapi.yml"),
 		docsDir,
+		autumnJsGeneratedDir,
+		autumnJsSchemasPath: path.join(autumnJsGeneratedDir, "schemas.ts"),
 	};
 }

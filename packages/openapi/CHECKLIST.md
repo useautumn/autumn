@@ -27,17 +27,17 @@
 - [ ] redeemCode
 
 ### Balances
-- [ ] create
-- [ ] update
-- [ ] check
-- [ ] track
+- [x] create
+- [x] update
+- [x] check
+- [x] track
 
 ### Billing
 - [x] attach
-- [ ] previewAttach
-- [ ] update
-- [ ] previewUpdate
-- [ ] setupPayment
+- [x] previewAttach
+- [x] update
+- [x] previewUpdate
+- [x] setupPayment
 - [ ] openCustomerPortal
 
 ### Events

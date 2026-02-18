@@ -5,6 +5,8 @@
 ### Available Operations
 
 * [get_or_create](#get_or_create) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
+
+Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
 * [list](#list) - Lists customers with pagination and optional filters.
 * [update](#update) - Updates an existing customer by ID.
 * [delete](#delete) - Deletes a customer by ID.
@@ -13,9 +15,11 @@
 
 Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
+Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+
 ### Example Usage
 
-<!-- UsageSnippet language="python" operationID="getOrCreateCustomer" method="post" path="/v1/customers.getOrCreate" -->
+<!-- UsageSnippet language="python" operationID="getOrCreateCustomer" method="post" path="/v1/customers.get_or_create" -->
 ```python
 from autumn_sdk import Autumn
 

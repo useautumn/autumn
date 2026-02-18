@@ -4,16 +4,26 @@ import {
 	generateSdksInParallel,
 	mergeCodeSamples,
 } from "./utils/sdkGeneration.js";
+import { generateZodSchemas } from "./utils/zodSchemaGeneration.js";
 
 async function main() {
 	const paths = resolvePaths();
 
 	// Import and write OpenAPI spec (v2.1 only)
-	const { writeOpenApi_2_1_0 } = await import("./v2.1/openapi2.1.js");
+	const { writeOpenApi_2_1_0, writeOpenApi_2_1_0_Stripped } = await import(
+		"./v2.1/openapi2.1.js"
+	);
 
-	console.log("Generating OpenAPI spec v2.1...");
-	await writeOpenApi_2_1_0({ outputFilePath: paths.openApiOutput });
-	console.log(`OpenAPI document exported to ${paths.openApiOutput}`);
+	console.log("Generating OpenAPI specs v2.1 (full + stripped)...");
+	await Promise.all([
+		writeOpenApi_2_1_0({ outputFilePath: paths.openApiOutput }),
+		writeOpenApi_2_1_0_Stripped({
+			outputFilePath: paths.openApiStrippedOutput,
+		}),
+	]);
+	console.log(
+		`OpenAPI documents exported to ${paths.openApiOutput} and ${paths.openApiStrippedOutput}`,
+	);
 
 	// Generate TypeScript and Python SDKs in parallel
 	await generateSdksInParallel({
@@ -32,6 +42,12 @@ async function main() {
 	await generateMintlifyDocs({
 		openApiPath: paths.docsOpenApiPath,
 		docsDir: paths.docsDir,
+	});
+
+	// Generate Zod schemas for autumn-js from SDK types
+	await generateZodSchemas({
+		sdkDir: paths.tsSdkDir,
+		outputDir: paths.autumnJsGeneratedDir,
 	});
 
 	console.log("Done!");

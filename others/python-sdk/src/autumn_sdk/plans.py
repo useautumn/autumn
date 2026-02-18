@@ -12,15 +12,15 @@ class Plans(BaseSDK):
     def list(
         self,
         *,
-        request: Union[
-            models.ListRequest, models.ListRequestTypedDict
-        ] = models.ListRequest(),
+        request: Optional[
+            Union[models.ListPlansRequest, models.ListPlansRequestTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.ListResponse:
-        r"""List Plans
+    ) -> models.ListPlansResponse:
+        r"""List all plans
 
         :param request: The request object to send.
         :param retries: Override the default retry configuration for this method
@@ -39,12 +39,12 @@ class Plans(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, models.ListRequest)
-        request = cast(models.ListRequest, request)
+            request = utils.unmarshal(request, Optional[models.ListPlansRequest])
+        request = cast(Optional[models.ListPlansRequest], request)
 
         req = self._build_request(
-            method="GET",
-            path="/v1/products",
+            method="POST",
+            path="/v1/plans.list",
             base_url=base_url,
             url_variables=url_variables,
             request=request,
@@ -54,10 +54,13 @@ class Plans(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.ListGlobals(
+            _globals=models.ListPlansGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, True, "json", Optional[models.ListPlansRequest]
+            ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
         )
@@ -74,7 +77,7 @@ class Plans(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="list",
+                operation_id="listPlans",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -84,7 +87,7 @@ class Plans(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.ListResponse, http_res)
+            return unmarshal_json_response(models.ListPlansResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -101,15 +104,15 @@ class Plans(BaseSDK):
     async def list_async(
         self,
         *,
-        request: Union[
-            models.ListRequest, models.ListRequestTypedDict
-        ] = models.ListRequest(),
+        request: Optional[
+            Union[models.ListPlansRequest, models.ListPlansRequestTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.ListResponse:
-        r"""List Plans
+    ) -> models.ListPlansResponse:
+        r"""List all plans
 
         :param request: The request object to send.
         :param retries: Override the default retry configuration for this method
@@ -128,12 +131,12 @@ class Plans(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, models.ListRequest)
-        request = cast(models.ListRequest, request)
+            request = utils.unmarshal(request, Optional[models.ListPlansRequest])
+        request = cast(Optional[models.ListPlansRequest], request)
 
         req = self._build_request_async(
-            method="GET",
-            path="/v1/products",
+            method="POST",
+            path="/v1/plans.list",
             base_url=base_url,
             url_variables=url_variables,
             request=request,
@@ -143,10 +146,13 @@ class Plans(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.ListGlobals(
+            _globals=models.ListPlansGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, True, "json", Optional[models.ListPlansRequest]
+            ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
         )
@@ -163,7 +169,7 @@ class Plans(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="list",
+                operation_id="listPlans",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -173,7 +179,7 @@ class Plans(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.ListResponse, http_res)
+            return unmarshal_json_response(models.ListPlansResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

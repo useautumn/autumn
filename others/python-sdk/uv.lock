@@ -44,7 +44,7 @@ wheels = [
 
 [[package]]
 name = "autumn-sdk"
-version = "0.2.10"
+version = "0.2.21"
 source = { editable = "." }
 dependencies = [
     { name = "httpcore" },

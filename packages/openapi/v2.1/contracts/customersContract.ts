@@ -11,15 +11,15 @@ import {
 import { ListCustomersV2ParamsSchema } from "@api/customers/crud/listCustomersParamsV2.js";
 import { UpdateCustomerParamsV1Schema } from "@api/customers/crud/updateCustomerParams.js";
 import { oc } from "@orpc/contract";
+import { getOrCreateCustomerJsDoc } from "../jsDocs/customerJsDocs";
 
 export const getOrCreateCustomerContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/customers.getOrCreate",
+		path: "/v1/customers.get_or_create",
 		operationId: "getOrCreateCustomer",
 		tags: ["customers"],
-		description:
-			"Creates a customer if they do not exist, or returns the existing customer by your external customer ID.",
+		description: getOrCreateCustomerJsDoc,
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "getOrCreate",

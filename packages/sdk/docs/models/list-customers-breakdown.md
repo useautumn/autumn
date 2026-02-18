@@ -6,6 +6,7 @@
 import { ListCustomersBreakdown } from "@useautumn/sdk";
 
 let value: ListCustomersBreakdown = {
+  object: "balance_breakdown",
   planId: "<id>",
   includedGrant: 625.15,
   prepaidGrant: 422.07,
@@ -29,6 +30,7 @@ let value: ListCustomersBreakdown = {
 
 | Field                                                          | Type                                                           | Required                                                       | Description                                                    |
 | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `object`                                                       | *"balance_breakdown"*                                          | :heavy_check_mark:                                             | N/A                                                            |
 | `id`                                                           | *string*                                                       | :heavy_minus_sign:                                             | N/A                                                            |
 | `planId`                                                       | *string*                                                       | :heavy_check_mark:                                             | N/A                                                            |
 | `includedGrant`                                                | *number*                                                       | :heavy_check_mark:                                             | N/A                                                            |

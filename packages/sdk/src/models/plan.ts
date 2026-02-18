@@ -12,7 +12,7 @@ import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export const PriceInterval = {
+export const PlanPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -20,7 +20,7 @@ export const PriceInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PriceInterval = OpenEnum<typeof PriceInterval>;
+export type PlanPriceInterval = OpenEnum<typeof PlanPriceInterval>;
 
 export type PriceDisplay = {
   primaryText: string;
@@ -29,7 +29,7 @@ export type PriceDisplay = {
 
 export type PlanPrice = {
   amount: number;
-  interval: PriceInterval;
+  interval: PlanPriceInterval;
   intervalCount?: number | undefined;
   display?: PriceDisplay | undefined;
 };
@@ -49,7 +49,7 @@ export const PlanType = {
  */
 export type PlanType = OpenEnum<typeof PlanType>;
 
-export type ItemFeatureDisplay = {
+export type PlanFeatureDisplay = {
   /**
    * The singular display name for the feature.
    */
@@ -87,7 +87,7 @@ export type PlanFeature = {
   /**
    * Singular and plural display names for the feature.
    */
-  display?: ItemFeatureDisplay | null | undefined;
+  display?: PlanFeatureDisplay | null | undefined;
   /**
    * Credit cost schema for credit system features.
    */
@@ -123,7 +123,7 @@ export type PlanTier = {
   amount: number;
 };
 
-export const PriceItemInterval = {
+export const PlanPriceItemInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -131,7 +131,7 @@ export const PriceItemInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PriceItemInterval = OpenEnum<typeof PriceItemInterval>;
+export type PlanPriceItemInterval = OpenEnum<typeof PlanPriceItemInterval>;
 
 export const PlanBillingMethod = {
   Prepaid: "prepaid",
@@ -139,17 +139,17 @@ export const PlanBillingMethod = {
 } as const;
 export type PlanBillingMethod = OpenEnum<typeof PlanBillingMethod>;
 
-export type ItemPrice = {
+export type PlanItemPrice = {
   amount?: number | undefined;
   tiers?: Array<PlanTier> | undefined;
-  interval: PriceItemInterval;
+  interval: PlanPriceItemInterval;
   intervalCount?: number | undefined;
   billingUnits: number;
   billingMethod: PlanBillingMethod;
   maxPurchase: number | null;
 };
 
-export type ItemDisplay = {
+export type PlanItemDisplay = {
   primaryText: string;
   secondaryText?: string | undefined;
 };
@@ -194,8 +194,8 @@ export type Item = {
   included: number;
   unlimited: boolean;
   reset: PlanReset | null;
-  price: ItemPrice | null;
-  display?: ItemDisplay | undefined;
+  price: PlanItemPrice | null;
+  display?: PlanItemDisplay | undefined;
   rollover?: PlanRollover | undefined;
   proration?: Proration | undefined;
 };
@@ -256,10 +256,10 @@ export type Plan = {
 };
 
 /** @internal */
-export const PriceInterval$inboundSchema: z.ZodMiniType<
-  PriceInterval,
+export const PlanPriceInterval$inboundSchema: z.ZodMiniType<
+  PlanPriceInterval,
   unknown
-> = openEnums.inboundSchema(PriceInterval);
+> = openEnums.inboundSchema(PlanPriceInterval);
 
 /** @internal */
 export const PriceDisplay$inboundSchema: z.ZodMiniType<PriceDisplay, unknown> =
@@ -291,7 +291,7 @@ export const PlanPrice$inboundSchema: z.ZodMiniType<PlanPrice, unknown> = z
   .pipe(
     z.object({
       amount: types.number(),
-      interval: PriceInterval$inboundSchema,
+      interval: PlanPriceInterval$inboundSchema,
       interval_count: types.optional(types.number()),
       display: types.optional(z.lazy(() => PriceDisplay$inboundSchema)),
     }),
@@ -317,21 +317,21 @@ export const PlanType$inboundSchema: z.ZodMiniType<PlanType, unknown> =
   openEnums.inboundSchema(PlanType);
 
 /** @internal */
-export const ItemFeatureDisplay$inboundSchema: z.ZodMiniType<
-  ItemFeatureDisplay,
+export const PlanFeatureDisplay$inboundSchema: z.ZodMiniType<
+  PlanFeatureDisplay,
   unknown
 > = z.object({
   singular: types.string(),
   plural: types.string(),
 });
 
-export function itemFeatureDisplayFromJSON(
+export function planFeatureDisplayFromJSON(
   jsonString: string,
-): SafeParseResult<ItemFeatureDisplay, SDKValidationError> {
+): SafeParseResult<PlanFeatureDisplay, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ItemFeatureDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ItemFeatureDisplay' from JSON`,
+    (x) => PlanFeatureDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanFeatureDisplay' from JSON`,
   );
 }
 
@@ -370,7 +370,7 @@ export const PlanFeature$inboundSchema: z.ZodMiniType<PlanFeature, unknown> = z
       name: z.optional(z.nullable(types.string())),
       type: PlanType$inboundSchema,
       display: z.optional(
-        z.nullable(z.lazy(() => ItemFeatureDisplay$inboundSchema)),
+        z.nullable(z.lazy(() => PlanFeatureDisplay$inboundSchema)),
       ),
       credit_schema: z.optional(
         z.nullable(z.array(z.lazy(() => PlanCreditSchema$inboundSchema))),
@@ -458,10 +458,10 @@ export function planTierFromJSON(
 }
 
 /** @internal */
-export const PriceItemInterval$inboundSchema: z.ZodMiniType<
-  PriceItemInterval,
+export const PlanPriceItemInterval$inboundSchema: z.ZodMiniType<
+  PlanPriceItemInterval,
   unknown
-> = openEnums.inboundSchema(PriceItemInterval);
+> = openEnums.inboundSchema(PlanPriceItemInterval);
 
 /** @internal */
 export const PlanBillingMethod$inboundSchema: z.ZodMiniType<
@@ -470,59 +470,63 @@ export const PlanBillingMethod$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanBillingMethod);
 
 /** @internal */
-export const ItemPrice$inboundSchema: z.ZodMiniType<ItemPrice, unknown> = z
-  .pipe(
-    z.object({
-      amount: types.optional(types.number()),
-      tiers: types.optional(z.array(z.lazy(() => PlanTier$inboundSchema))),
-      interval: PriceItemInterval$inboundSchema,
-      interval_count: types.optional(types.number()),
-      billing_units: types.number(),
-      billing_method: PlanBillingMethod$inboundSchema,
-      max_purchase: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "interval_count": "intervalCount",
-        "billing_units": "billingUnits",
-        "billing_method": "billingMethod",
-        "max_purchase": "maxPurchase",
-      });
-    }),
-  );
+export const PlanItemPrice$inboundSchema: z.ZodMiniType<
+  PlanItemPrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.optional(types.number()),
+    tiers: types.optional(z.array(z.lazy(() => PlanTier$inboundSchema))),
+    interval: PlanPriceItemInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+    billing_units: types.number(),
+    billing_method: PlanBillingMethod$inboundSchema,
+    max_purchase: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "billing_units": "billingUnits",
+      "billing_method": "billingMethod",
+      "max_purchase": "maxPurchase",
+    });
+  }),
+);
 
-export function itemPriceFromJSON(
+export function planItemPriceFromJSON(
   jsonString: string,
-): SafeParseResult<ItemPrice, SDKValidationError> {
+): SafeParseResult<PlanItemPrice, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ItemPrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ItemPrice' from JSON`,
+    (x) => PlanItemPrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemPrice' from JSON`,
   );
 }
 
 /** @internal */
-export const ItemDisplay$inboundSchema: z.ZodMiniType<ItemDisplay, unknown> = z
-  .pipe(
-    z.object({
-      primary_text: types.string(),
-      secondary_text: types.optional(types.string()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "primary_text": "primaryText",
-        "secondary_text": "secondaryText",
-      });
-    }),
-  );
+export const PlanItemDisplay$inboundSchema: z.ZodMiniType<
+  PlanItemDisplay,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
 
-export function itemDisplayFromJSON(
+export function planItemDisplayFromJSON(
   jsonString: string,
-): SafeParseResult<ItemDisplay, SDKValidationError> {
+): SafeParseResult<PlanItemDisplay, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ItemDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ItemDisplay' from JSON`,
+    (x) => PlanItemDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemDisplay' from JSON`,
   );
 }
 
@@ -599,8 +603,8 @@ export const Item$inboundSchema: z.ZodMiniType<Item, unknown> = z.pipe(
     included: types.number(),
     unlimited: types.boolean(),
     reset: types.nullable(z.lazy(() => PlanReset$inboundSchema)),
-    price: types.nullable(z.lazy(() => ItemPrice$inboundSchema)),
-    display: types.optional(z.lazy(() => ItemDisplay$inboundSchema)),
+    price: types.nullable(z.lazy(() => PlanItemPrice$inboundSchema)),
+    display: types.optional(z.lazy(() => PlanItemDisplay$inboundSchema)),
     rollover: types.optional(z.lazy(() => PlanRollover$inboundSchema)),
     proration: types.optional(z.lazy(() => Proration$inboundSchema)),
   }),

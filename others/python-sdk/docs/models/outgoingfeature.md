@@ -1,0 +1,15 @@
+# OutgoingFeature
+
+
+## Fields
+
+| Field                                                                  | Type                                                                   | Required                                                               | Description                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `id`                                                                   | *str*                                                                  | :heavy_check_mark:                                                     | N/A                                                                    |
+| `name`                                                                 | *str*                                                                  | :heavy_check_mark:                                                     | N/A                                                                    |
+| `type`                                                                 | [models.OutgoingType](../models/outgoingtype.md)                       | :heavy_check_mark:                                                     | N/A                                                                    |
+| `consumable`                                                           | *bool*                                                                 | :heavy_check_mark:                                                     | N/A                                                                    |
+| `event_names`                                                          | List[*str*]                                                            | :heavy_minus_sign:                                                     | N/A                                                                    |
+| `credit_schema`                                                        | List[[models.OutgoingCreditSchema](../models/outgoingcreditschema.md)] | :heavy_minus_sign:                                                     | N/A                                                                    |
+| `display`                                                              | [Optional[models.OutgoingDisplay]](../models/outgoingdisplay.md)       | :heavy_minus_sign:                                                     | N/A                                                                    |
+| `archived`                                                             | *bool*                                                                 | :heavy_check_mark:                                                     | N/A                                                                    |

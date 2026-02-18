@@ -3,7 +3,7 @@ info:
   title: CodeSamples overlay for python target
   version: 0.0.0
 actions:
-  - target: $["paths"]["/v1/attach"]["post"]
+  - target: $["paths"]["/v1/balances.check"]["post"]
     update:
       x-codeSamples:
         - lang: python
@@ -17,7 +17,151 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.attach(product_id="<id>", redirect_mode="always")
+                res = autumn.balances.check(customer_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/balances.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.balances.create(feature_id="<id>", customer_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/balances.track"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.balances.track(customer_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/balances.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.balances.update(customer_id="<id>", feature_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.attach(customer_id="<id>", plan_id="<id>", redirect_mode="always")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.preview_attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.preview_attach(customer_id="<id>", plan_id="<id>", redirect_mode="always")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.preview_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.preview_update(customer_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.setup_payment"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.setup_payment(customer_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.update(customer_id="<id>")
 
                 # Handle response
                 print(res)
@@ -39,7 +183,7 @@ actions:
 
                 # Handle response
                 print(res)
-  - target: $["paths"]["/v1/customers.getOrCreate"]["post"]
+  - target: $["paths"]["/v1/customers.get_or_create"]["post"]
     update:
       x-codeSamples:
         - lang: python
@@ -93,7 +237,7 @@ actions:
 
                 # Handle response
                 print(res)
-  - target: $["paths"]["/v1/products"]["get"]
+  - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:
         - lang: python

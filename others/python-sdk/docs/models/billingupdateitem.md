@@ -1,0 +1,14 @@
+# BillingUpdateItem
+
+
+## Fields
+
+| Field                                                                          | Type                                                                           | Required                                                                       | Description                                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `feature_id`                                                                   | *str*                                                                          | :heavy_check_mark:                                                             | N/A                                                                            |
+| `included`                                                                     | *Optional[float]*                                                              | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `unlimited`                                                                    | *Optional[bool]*                                                               | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `reset`                                                                        | [Optional[models.BillingUpdateReset]](../models/billingupdatereset.md)         | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `price`                                                                        | [Optional[models.BillingUpdateItemPrice]](../models/billingupdateitemprice.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `proration`                                                                    | [Optional[models.BillingUpdateProration]](../models/billingupdateproration.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `rollover`                                                                     | [Optional[models.BillingUpdateRollover]](../models/billingupdaterollover.md)   | :heavy_minus_sign:                                                             | N/A                                                                            |

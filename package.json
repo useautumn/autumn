@@ -24,7 +24,8 @@
 			"@better-auth/dash": "0.1.6",
 			"@orpc/contract": "^1.0.0",
 			"@orpc/client": "^1.0.0",
-			"@orpc/openapi-client": "^1.0.0"
+			"@orpc/openapi-client": "^1.0.0",
+			"@tanstack/react-query": "5.85.6"
 		}
 	},
 	"overrides": {
@@ -75,7 +76,6 @@
 		"knip:fix": "knip --fix",
 		"knip:fix-all": "knip --fix --allow-remove-files",
 		"prepare": "husky",
-
 		"api": "cd packages/openapi && bun generate",
 		"docs:pull": "bun -F @autumn/docs pull",
 		"docs:dev": "bun -F @autumn/docs dev",
@@ -100,6 +100,7 @@
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
 		"husky": "^9.1.7",
-		"inquirer": "^12.10.0"
+		"inquirer": "^12.10.0",
+		"ts-to-zod": "^5.1.0"
 	}
 }

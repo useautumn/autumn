@@ -37,11 +37,18 @@
       "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
       "@utils/*": ["../../packages/autumn-js/src/utils/*"],
       "autumn-js": ["../../packages/autumn-js/src/sdk/index.ts"],
-      "autumn-js/react": [
-        "../../packages/autumn-js/src/libraries/react/index.ts"
-      ],
+      "autumn-js/react": ["../../packages/autumn-js/src/react/index.ts"],
       "autumn-js/next": [
         "../../packages/autumn-js/src/libraries/backend/next.ts"
+      ],
+      "autumn-js/backend/next": [
+        "../../packages/autumn-js/src/backend/adapters/next.ts"
+      ],
+      "autumn-js/better-auth": [
+        "../../packages/autumn-js/src/better-auth/index.ts"
+      ],
+      "autumn-js/better-auth/client": [
+        "../../packages/autumn-js/src/better-auth/client.ts"
       ]
     }
   },

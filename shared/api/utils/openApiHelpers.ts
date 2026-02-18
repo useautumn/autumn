@@ -1,4 +1,4 @@
-import type { z } from "zod/v4";
+import { z } from "zod/v4";
 
 export interface JSDocParam {
 	name: string;
@@ -31,38 +31,139 @@ interface JSDocOptions {
 }
 
 /**
+ * Unwraps optional/nullable wrappers to get the underlying type's description.
+ * In Zod v4, .partial() wraps fields in optional, losing the description on the wrapper.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: accessing Zod internal properties
+function getDescriptionFromField(zodField: any): string | undefined {
+	// Direct description (works for non-wrapped types)
+	if (zodField.description) {
+		return zodField.description;
+	}
+
+	// Check innerType for optional/nullable wrappers
+	const def = zodField._def;
+	if (def?.innerType?.description) {
+		return def.innerType.description;
+	}
+
+	// Recurse into innerType if it's also wrapped (e.g., optional(nullable(...)))
+	if (def?.innerType?._def?.innerType?.description) {
+		return def.innerType._def.innerType.description;
+	}
+
+	return undefined;
+}
+
+/**
+ * Checks if a Zod field is optional or nullable.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: accessing Zod internal properties
+function isOptionalField(zodField: any): boolean {
+	const def = zodField._def;
+	const typeName = def?.type || def?.typeName;
+
+	return (
+		typeName === "optional" ||
+		typeName === "nullable" ||
+		typeName === "ZodOptional" ||
+		typeName === "ZodNullable" ||
+		def?.defaultValue !== undefined
+	);
+}
+
+/**
+ * Checks if a Zod field is marked as internal via .meta({ internal: true }).
+ * Internal fields should be excluded from public documentation.
+ * In Zod v4, meta is stored in z.globalRegistry.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: accessing Zod internal properties
+function isInternalField(zodField: any): boolean {
+	// Check direct meta from global registry
+	const meta = z.globalRegistry.get(zodField);
+	if (meta?.internal === true) {
+		return true;
+	}
+
+	// Check innerType for wrapped fields (optional/nullable)
+	const def = zodField._def;
+	if (def?.innerType) {
+		const innerMeta = z.globalRegistry.get(def.innerType);
+		if (innerMeta?.internal === true) {
+			return true;
+		}
+
+		// Check deeper nesting (e.g., optional(nullable(...)))
+		if (def.innerType._def?.innerType) {
+			const deeperMeta = z.globalRegistry.get(def.innerType._def.innerType);
+			if (deeperMeta?.internal === true) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Converts snake_case to camelCase.
+ * Speakeasy generates TypeScript SDK with camelCase property names.
+ */
+function snakeToCamel(str: string): string {
+	return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Formats an object as a TypeScript-style object literal.
+ * Keeps formatting compact to avoid YAML serialization issues.
+ */
+function formatExampleObject(obj: Record<string, unknown>): string {
+	const entries = Object.entries(obj);
+	if (entries.length === 0) {
+		return "{}";
+	}
+
+	// For small objects (≤3 properties), use single line
+	if (entries.length <= 3) {
+		const props = entries
+			.map(([key, value]) => `${snakeToCamel(key)}: ${JSON.stringify(value)}`)
+			.join(", ");
+		return `{ ${props} }`;
+	}
+
+	// For larger objects, use multi-line but keep opening brace with first prop
+	const lines = entries.map(
+		([key, value]) => `  ${snakeToCamel(key)}: ${JSON.stringify(value)},`,
+	);
+	return `{\n${lines.join("\n")}\n}`;
+}
+
+/**
  * Generates a formatted JSDoc description string for OpenAPI specs
- * that Stainless will convert to SDK documentation.
+ * that Speakeasy will convert to SDK documentation.
  */
 export function createJSDocDescription(options: JSDocOptions): string {
 	const extractParamsFromSchema = (
 		schema: z.ZodObject<z.ZodRawShape>,
-		prefix?: string,
 	): JSDocParam[] => {
 		const params: JSDocParam[] = [];
 		const shape = schema.shape;
 
 		for (const [fieldName, fieldSchema] of Object.entries(shape)) {
-			// biome-ignore lint/suspicious/noExplicitAny: accessing Zod internal properties
-			const zodField = fieldSchema as any;
-			const def = zodField._def;
-
-			let description = "";
-			if (zodField.description) {
-				description = zodField.description;
-			} else if (def?.description) {
-				description = def.description;
+			// Skip internal fields
+			if (isInternalField(fieldSchema)) {
+				continue;
 			}
 
+			const description = getDescriptionFromField(fieldSchema);
+
 			if (description) {
-				const paramName = prefix ? `${prefix}.${fieldName}` : fieldName;
+				// Convert snake_case to camelCase for TypeScript SDK
+				const camelFieldName = snakeToCamel(fieldName);
 				params.push({
-					name: paramName,
+					name: camelFieldName,
 					description,
-					optional:
-						def?.typeName === "ZodOptional" ||
-						def?.typeName === "ZodNullable" ||
-						def?.defaultValue !== undefined,
+					optional: isOptionalField(fieldSchema),
 				});
 			}
 		}
@@ -95,57 +196,31 @@ export function createJSDocDescription(options: JSDocOptions): string {
 				parts.push(`// ${example.description}`);
 			}
 
-			// Format the example object
-			const exampleStr = JSON.stringify(example.values, null, 2)
-				.split("\n")
-				.map((line, idx) => (idx === 0 ? line : `  ${line}`))
-				.join("\n");
-
+			// Format the example object with proper TypeScript formatting
+			const exampleStr = formatExampleObject(
+				example.values as Record<string, unknown>,
+			);
 			parts.push(`const response = await client.${methodName}(${exampleStr});`);
 			parts.push("```");
 		}
 	}
 
-	// Parameters - determine prefix based on Stainless naming logic
+	// Parameters - no prefix needed, params go directly into function call
 	const allParams: JSDocParam[] = [];
-	const hasBody = !!options.body;
-	const hasQuery = !!options.query;
-	const hasPath = !!options.path;
 
-	// Path params always have no prefix
-	if (hasPath && options.path) {
+	// Extract path params
+	if (options.path) {
 		allParams.push(...extractParamsFromSchema(options.path));
 	}
 
-	// Determine prefix for body/query based on Stainless logic:
-	// - Only body → "body"
-	// - Only query → "query"
-	// - Query + Body (mixed) → "params"
-	// - Path + Body → "params"
-	let paramPrefix: string | undefined;
-
-	if (hasBody && hasQuery) {
-		// Mixed query + body → Stainless uses "params"
-		paramPrefix = "params";
-	} else if (hasBody && hasPath) {
-		// Path + body → Stainless uses "params" for body fields
-		paramPrefix = "params";
-	} else if (hasBody) {
-		// Only body → Stainless uses "body"
-		paramPrefix = "body";
-	} else if (hasQuery) {
-		// Only query → Stainless uses "query"
-		paramPrefix = "query";
+	// Extract body params
+	if (options.body) {
+		allParams.push(...extractParamsFromSchema(options.body));
 	}
 
-	// Extract body params with appropriate prefix
-	if (hasBody && options.body) {
-		allParams.push(...extractParamsFromSchema(options.body, paramPrefix));
-	}
-
-	// Extract query params with appropriate prefix
-	if (hasQuery && options.query) {
-		allParams.push(...extractParamsFromSchema(options.query, paramPrefix));
+	// Extract query params
+	if (options.query) {
+		allParams.push(...extractParamsFromSchema(options.query));
 	}
 
 	if (allParams.length > 0) {

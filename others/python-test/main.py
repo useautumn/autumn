@@ -6,6 +6,7 @@ load_dotenv()
 
 
 def main():
+
     # Initialize the Autumn SDK
     client = Autumn(secret_key=os.getenv("AUTUMN_SECRET_KEY"))
 

@@ -5,59 +5,67 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import List, Mapping, Optional, Union
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 
 class Billing(BaseSDK):
     def attach(
         self,
         *,
-        product_id: str,
+        customer_id: str,
+        plan_id: str,
         entity_id: OptionalNullable[str] = UNSET,
-        entity_data: Optional[
-            Union[models.EntityData, models.EntityDataTypedDict]
-        ] = None,
-        options: OptionalNullable[
-            Union[List[models.Options], List[models.OptionsTypedDict]]
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingAttachFeatureQuantities],
+                List[models.BillingAttachFeatureQuantitiesTypedDict],
+            ]
         ] = UNSET,
         version: Optional[float] = None,
         free_trial: OptionalNullable[
-            Union[models.AttachFreeTrial, models.AttachFreeTrialTypedDict]
+            Union[models.BillingAttachFreeTrial, models.BillingAttachFreeTrialTypedDict]
         ] = UNSET,
-        items: Optional[
-            Union[List[models.AttachItem], List[models.AttachItemTypedDict]]
+        customize: Optional[
+            Union[models.BillingAttachCustomize, models.BillingAttachCustomizeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
-        redirect_mode: Optional[models.RedirectMode] = "always",
+        invoice_mode: Optional[
+            Union[
+                models.BillingAttachInvoiceMode,
+                models.BillingAttachInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingAttachDiscountUnion],
+                List[models.BillingAttachDiscountUnionTypedDict],
+            ]
+        ] = None,
+        redirect_mode: Optional[models.BillingAttachRedirectMode] = "always",
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
-        plan_schedule: Optional[models.PlanSchedule] = None,
-        billing_behavior: Optional[models.BillingBehavior] = None,
-        adjustable_quantity: Optional[bool] = None,
+        plan_schedule: Optional[models.BillingAttachPlanSchedule] = None,
+        billing_behavior: Optional[models.BillingAttachBillingBehavior] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.AttachResponse:
-        r"""
-        :param product_id:
-        :param entity_id:
-        :param entity_data:
-        :param options:
+    ) -> models.BillingAttachResponse:
+        r"""Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param plan_id:
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version:
         :param free_trial:
-        :param items:
-        :param invoice:
-        :param enable_product_immediately:
-        :param finalize_invoice:
+        :param customize:
+        :param invoice_mode:
+        :param discounts:
         :param redirect_mode:
         :param success_url:
         :param new_billing_subscription:
         :param plan_schedule:
         :param billing_behavior:
-        :param adjustable_quantity:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -73,34 +81,37 @@ class Billing(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.AttachRequest(
+        request = models.BillingAttachRequest(
+            customer_id=customer_id,
             entity_id=entity_id,
-            entity_data=utils.get_pydantic_model(
-                entity_data, Optional[models.EntityData]
-            ),
-            options=utils.get_pydantic_model(
-                options, OptionalNullable[List[models.Options]]
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingAttachFeatureQuantities]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.AttachFreeTrial]
+                free_trial, OptionalNullable[models.BillingAttachFreeTrial]
             ),
-            items=utils.get_pydantic_model(items, Optional[List[models.AttachItem]]),
-            product_id=product_id,
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingAttachCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingAttachInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingAttachDiscountUnion]]
+            ),
             redirect_mode=redirect_mode,
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             billing_behavior=billing_behavior,
-            adjustable_quantity=adjustable_quantity,
         )
 
         req = self._build_request(
             method="POST",
-            path="/v1/attach",
+            path="/v1/billing.attach",
             base_url=base_url,
             url_variables=url_variables,
             request=request,
@@ -110,12 +121,12 @@ class Billing(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.AttachGlobals(
+            _globals=models.BillingAttachGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.AttachRequest
+                request, False, False, "json", models.BillingAttachRequest
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -133,7 +144,7 @@ class Billing(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="attach",
+                operation_id="billingAttach",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -143,7 +154,7 @@ class Billing(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.AttachResponse, http_res)
+            return unmarshal_json_response(models.BillingAttachResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -160,52 +171,60 @@ class Billing(BaseSDK):
     async def attach_async(
         self,
         *,
-        product_id: str,
+        customer_id: str,
+        plan_id: str,
         entity_id: OptionalNullable[str] = UNSET,
-        entity_data: Optional[
-            Union[models.EntityData, models.EntityDataTypedDict]
-        ] = None,
-        options: OptionalNullable[
-            Union[List[models.Options], List[models.OptionsTypedDict]]
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingAttachFeatureQuantities],
+                List[models.BillingAttachFeatureQuantitiesTypedDict],
+            ]
         ] = UNSET,
         version: Optional[float] = None,
         free_trial: OptionalNullable[
-            Union[models.AttachFreeTrial, models.AttachFreeTrialTypedDict]
+            Union[models.BillingAttachFreeTrial, models.BillingAttachFreeTrialTypedDict]
         ] = UNSET,
-        items: Optional[
-            Union[List[models.AttachItem], List[models.AttachItemTypedDict]]
+        customize: Optional[
+            Union[models.BillingAttachCustomize, models.BillingAttachCustomizeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
-        redirect_mode: Optional[models.RedirectMode] = "always",
+        invoice_mode: Optional[
+            Union[
+                models.BillingAttachInvoiceMode,
+                models.BillingAttachInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingAttachDiscountUnion],
+                List[models.BillingAttachDiscountUnionTypedDict],
+            ]
+        ] = None,
+        redirect_mode: Optional[models.BillingAttachRedirectMode] = "always",
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
-        plan_schedule: Optional[models.PlanSchedule] = None,
-        billing_behavior: Optional[models.BillingBehavior] = None,
-        adjustable_quantity: Optional[bool] = None,
+        plan_schedule: Optional[models.BillingAttachPlanSchedule] = None,
+        billing_behavior: Optional[models.BillingAttachBillingBehavior] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.AttachResponse:
-        r"""
-        :param product_id:
-        :param entity_id:
-        :param entity_data:
-        :param options:
+    ) -> models.BillingAttachResponse:
+        r"""Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param plan_id:
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version:
         :param free_trial:
-        :param items:
-        :param invoice:
-        :param enable_product_immediately:
-        :param finalize_invoice:
+        :param customize:
+        :param invoice_mode:
+        :param discounts:
         :param redirect_mode:
         :param success_url:
         :param new_billing_subscription:
         :param plan_schedule:
         :param billing_behavior:
-        :param adjustable_quantity:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -221,34 +240,37 @@ class Billing(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.AttachRequest(
+        request = models.BillingAttachRequest(
+            customer_id=customer_id,
             entity_id=entity_id,
-            entity_data=utils.get_pydantic_model(
-                entity_data, Optional[models.EntityData]
-            ),
-            options=utils.get_pydantic_model(
-                options, OptionalNullable[List[models.Options]]
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingAttachFeatureQuantities]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.AttachFreeTrial]
+                free_trial, OptionalNullable[models.BillingAttachFreeTrial]
             ),
-            items=utils.get_pydantic_model(items, Optional[List[models.AttachItem]]),
-            product_id=product_id,
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingAttachCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingAttachInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingAttachDiscountUnion]]
+            ),
             redirect_mode=redirect_mode,
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             billing_behavior=billing_behavior,
-            adjustable_quantity=adjustable_quantity,
         )
 
         req = self._build_request_async(
             method="POST",
-            path="/v1/attach",
+            path="/v1/billing.attach",
             base_url=base_url,
             url_variables=url_variables,
             request=request,
@@ -258,12 +280,12 @@ class Billing(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.AttachGlobals(
+            _globals=models.BillingAttachGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.AttachRequest
+                request, False, False, "json", models.BillingAttachRequest
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -281,7 +303,7 @@ class Billing(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="attach",
+                operation_id="billingAttach",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -291,7 +313,1123 @@ class Billing(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.AttachResponse, http_res)
+            return unmarshal_json_response(models.BillingAttachResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def preview_attach(
+        self,
+        *,
+        customer_id: str,
+        plan_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingPreviewAttachFeatureQuantities],
+                List[models.BillingPreviewAttachFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingPreviewAttachFreeTrial,
+                models.BillingPreviewAttachFreeTrialTypedDict,
+            ]
+        ] = UNSET,
+        customize: Optional[
+            Union[
+                models.BillingPreviewAttachCustomize,
+                models.BillingPreviewAttachCustomizeTypedDict,
+            ]
+        ] = None,
+        invoice_mode: Optional[
+            Union[
+                models.BillingPreviewAttachInvoiceMode,
+                models.BillingPreviewAttachInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingPreviewAttachDiscountUnion],
+                List[models.BillingPreviewAttachDiscountUnionTypedDict],
+            ]
+        ] = None,
+        redirect_mode: Optional[models.BillingPreviewAttachRedirectMode] = "always",
+        success_url: Optional[str] = None,
+        new_billing_subscription: Optional[bool] = None,
+        plan_schedule: Optional[models.BillingPreviewAttachPlanSchedule] = None,
+        billing_behavior: Optional[models.BillingPreviewAttachBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingPreviewAttachResponse:
+        r"""Preview billing changes before attaching a plan.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param plan_id:
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param invoice_mode:
+        :param discounts:
+        :param redirect_mode:
+        :param success_url:
+        :param new_billing_subscription:
+        :param plan_schedule:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingPreviewAttachRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingPreviewAttachFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingPreviewAttachFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingPreviewAttachCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingPreviewAttachInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingPreviewAttachDiscountUnion]]
+            ),
+            redirect_mode=redirect_mode,
+            success_url=success_url,
+            new_billing_subscription=new_billing_subscription,
+            plan_schedule=plan_schedule,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.preview_attach",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingPreviewAttachGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingPreviewAttachRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingPreviewAttach",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(
+                models.BillingPreviewAttachResponse, http_res
+            )
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def preview_attach_async(
+        self,
+        *,
+        customer_id: str,
+        plan_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingPreviewAttachFeatureQuantities],
+                List[models.BillingPreviewAttachFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingPreviewAttachFreeTrial,
+                models.BillingPreviewAttachFreeTrialTypedDict,
+            ]
+        ] = UNSET,
+        customize: Optional[
+            Union[
+                models.BillingPreviewAttachCustomize,
+                models.BillingPreviewAttachCustomizeTypedDict,
+            ]
+        ] = None,
+        invoice_mode: Optional[
+            Union[
+                models.BillingPreviewAttachInvoiceMode,
+                models.BillingPreviewAttachInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingPreviewAttachDiscountUnion],
+                List[models.BillingPreviewAttachDiscountUnionTypedDict],
+            ]
+        ] = None,
+        redirect_mode: Optional[models.BillingPreviewAttachRedirectMode] = "always",
+        success_url: Optional[str] = None,
+        new_billing_subscription: Optional[bool] = None,
+        plan_schedule: Optional[models.BillingPreviewAttachPlanSchedule] = None,
+        billing_behavior: Optional[models.BillingPreviewAttachBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingPreviewAttachResponse:
+        r"""Preview billing changes before attaching a plan.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param plan_id:
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param invoice_mode:
+        :param discounts:
+        :param redirect_mode:
+        :param success_url:
+        :param new_billing_subscription:
+        :param plan_schedule:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingPreviewAttachRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingPreviewAttachFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingPreviewAttachFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingPreviewAttachCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingPreviewAttachInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingPreviewAttachDiscountUnion]]
+            ),
+            redirect_mode=redirect_mode,
+            success_url=success_url,
+            new_billing_subscription=new_billing_subscription,
+            plan_schedule=plan_schedule,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.preview_attach",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingPreviewAttachGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingPreviewAttachRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingPreviewAttach",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(
+                models.BillingPreviewAttachResponse, http_res
+            )
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def update(
+        self,
+        *,
+        customer_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingUpdateFeatureQuantities],
+                List[models.BillingUpdateFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[models.BillingUpdateFreeTrial, models.BillingUpdateFreeTrialTypedDict]
+        ] = UNSET,
+        customize: Optional[
+            Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
+        ] = None,
+        plan_id: OptionalNullable[str] = UNSET,
+        invoice_mode: Optional[
+            Union[
+                models.BillingUpdateInvoiceMode,
+                models.BillingUpdateInvoiceModeTypedDict,
+            ]
+        ] = None,
+        cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        billing_behavior: Optional[models.BillingUpdateBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingUpdateResponse:
+        r"""Update an existing subscription.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param plan_id:
+        :param invoice_mode:
+        :param cancel_action:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingUpdateRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingUpdateFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingUpdateFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingUpdateCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingUpdateInvoiceMode]
+            ),
+            cancel_action=cancel_action,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingUpdateRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BillingUpdateResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def update_async(
+        self,
+        *,
+        customer_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingUpdateFeatureQuantities],
+                List[models.BillingUpdateFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[models.BillingUpdateFreeTrial, models.BillingUpdateFreeTrialTypedDict]
+        ] = UNSET,
+        customize: Optional[
+            Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
+        ] = None,
+        plan_id: OptionalNullable[str] = UNSET,
+        invoice_mode: Optional[
+            Union[
+                models.BillingUpdateInvoiceMode,
+                models.BillingUpdateInvoiceModeTypedDict,
+            ]
+        ] = None,
+        cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        billing_behavior: Optional[models.BillingUpdateBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingUpdateResponse:
+        r"""Update an existing subscription.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param plan_id:
+        :param invoice_mode:
+        :param cancel_action:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingUpdateRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingUpdateFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingUpdateFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingUpdateCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingUpdateInvoiceMode]
+            ),
+            cancel_action=cancel_action,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingUpdateRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BillingUpdateResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def preview_update(
+        self,
+        *,
+        customer_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingPreviewUpdateFeatureQuantities],
+                List[models.BillingPreviewUpdateFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingPreviewUpdateFreeTrial,
+                models.BillingPreviewUpdateFreeTrialTypedDict,
+            ]
+        ] = UNSET,
+        customize: Optional[
+            Union[
+                models.BillingPreviewUpdateCustomize,
+                models.BillingPreviewUpdateCustomizeTypedDict,
+            ]
+        ] = None,
+        plan_id: OptionalNullable[str] = UNSET,
+        invoice_mode: Optional[
+            Union[
+                models.BillingPreviewUpdateInvoiceMode,
+                models.BillingPreviewUpdateInvoiceModeTypedDict,
+            ]
+        ] = None,
+        cancel_action: Optional[models.BillingPreviewUpdateCancelAction] = None,
+        billing_behavior: Optional[models.BillingPreviewUpdateBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingPreviewUpdateResponse:
+        r"""Preview billing changes before updating a subscription.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param plan_id:
+        :param invoice_mode:
+        :param cancel_action:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingPreviewUpdateRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingPreviewUpdateFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingPreviewUpdateFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingPreviewUpdateCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingPreviewUpdateInvoiceMode]
+            ),
+            cancel_action=cancel_action,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.preview_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingPreviewUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingPreviewUpdateRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingPreviewUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(
+                models.BillingPreviewUpdateResponse, http_res
+            )
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def preview_update_async(
+        self,
+        *,
+        customer_id: str,
+        entity_id: OptionalNullable[str] = UNSET,
+        feature_quantities: OptionalNullable[
+            Union[
+                List[models.BillingPreviewUpdateFeatureQuantities],
+                List[models.BillingPreviewUpdateFeatureQuantitiesTypedDict],
+            ]
+        ] = UNSET,
+        version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingPreviewUpdateFreeTrial,
+                models.BillingPreviewUpdateFreeTrialTypedDict,
+            ]
+        ] = UNSET,
+        customize: Optional[
+            Union[
+                models.BillingPreviewUpdateCustomize,
+                models.BillingPreviewUpdateCustomizeTypedDict,
+            ]
+        ] = None,
+        plan_id: OptionalNullable[str] = UNSET,
+        invoice_mode: Optional[
+            Union[
+                models.BillingPreviewUpdateInvoiceMode,
+                models.BillingPreviewUpdateInvoiceModeTypedDict,
+            ]
+        ] = None,
+        cancel_action: Optional[models.BillingPreviewUpdateCancelAction] = None,
+        billing_behavior: Optional[models.BillingPreviewUpdateBillingBehavior] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingPreviewUpdateResponse:
+        r"""Preview billing changes before updating a subscription.
+
+        :param customer_id: The ID of the customer to attach the plan to.
+        :param entity_id: The ID of the entity to attach the plan to.
+        :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+        :param version:
+        :param free_trial:
+        :param customize:
+        :param plan_id:
+        :param invoice_mode:
+        :param cancel_action:
+        :param billing_behavior:
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingPreviewUpdateRequest(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_quantities=utils.get_pydantic_model(
+                feature_quantities,
+                OptionalNullable[List[models.BillingPreviewUpdateFeatureQuantities]],
+            ),
+            version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingPreviewUpdateFreeTrial]
+            ),
+            customize=utils.get_pydantic_model(
+                customize, Optional[models.BillingPreviewUpdateCustomize]
+            ),
+            plan_id=plan_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.BillingPreviewUpdateInvoiceMode]
+            ),
+            cancel_action=cancel_action,
+            billing_behavior=billing_behavior,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.preview_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingPreviewUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingPreviewUpdateRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingPreviewUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(
+                models.BillingPreviewUpdateResponse, http_res
+            )
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def setup_payment(
+        self,
+        *,
+        customer_id: str,
+        success_url: Optional[str] = None,
+        customer_data: Optional[
+            Union[models.CustomerData, models.CustomerDataTypedDict]
+        ] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingSetupPaymentResponse:
+        r"""Create a setup payment session for a customer.
+
+        :param customer_id: The ID of the customer
+        :param success_url: URL to redirect to after successful payment setup. Must start with either http:// or https://
+        :param customer_data: Customer details to set when creating a customer
+        :param checkout_session_params: Additional parameters for the checkout session
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingSetupPaymentRequest(
+            customer_id=customer_id,
+            success_url=success_url,
+            customer_data=utils.get_pydantic_model(
+                customer_data, Optional[models.CustomerData]
+            ),
+            checkout_session_params=checkout_session_params,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.setup_payment",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingSetupPaymentGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingSetupPaymentRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingSetupPayment",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BillingSetupPaymentResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def setup_payment_async(
+        self,
+        *,
+        customer_id: str,
+        success_url: Optional[str] = None,
+        customer_data: Optional[
+            Union[models.CustomerData, models.CustomerDataTypedDict]
+        ] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BillingSetupPaymentResponse:
+        r"""Create a setup payment session for a customer.
+
+        :param customer_id: The ID of the customer
+        :param success_url: URL to redirect to after successful payment setup. Must start with either http:// or https://
+        :param customer_data: Customer details to set when creating a customer
+        :param checkout_session_params: Additional parameters for the checkout session
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.BillingSetupPaymentRequest(
+            customer_id=customer_id,
+            success_url=success_url,
+            customer_data=utils.get_pydantic_model(
+                customer_data, Optional[models.CustomerData]
+            ),
+            checkout_session_params=checkout_session_params,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.setup_payment",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BillingSetupPaymentGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.BillingSetupPaymentRequest
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="billingSetupPayment",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BillingSetupPaymentResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

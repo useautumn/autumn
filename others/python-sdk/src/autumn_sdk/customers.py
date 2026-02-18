@@ -29,6 +29,8 @@ class Customers(BaseSDK):
     ) -> models.Customer:
         r"""Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
+        Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+
         :param customer_id:
         :param name: Customer's name
         :param email: Customer's email address
@@ -69,7 +71,7 @@ class Customers(BaseSDK):
 
         req = self._build_request(
             method="POST",
-            path="/v1/customers.getOrCreate",
+            path="/v1/customers.get_or_create",
             base_url=base_url,
             url_variables=url_variables,
             request=request,
@@ -146,6 +148,8 @@ class Customers(BaseSDK):
     ) -> models.Customer:
         r"""Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
+        Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+
         :param customer_id:
         :param name: Customer's name
         :param email: Customer's email address
@@ -186,7 +190,7 @@ class Customers(BaseSDK):
 
         req = self._build_request_async(
             method="POST",
-            path="/v1/customers.getOrCreate",
+            path="/v1/customers.get_or_create",
             base_url=base_url,
             url_variables=url_variables,
             request=request,

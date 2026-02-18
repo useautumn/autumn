@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { findScenarioByHref, scenarioSections } from "@/lib/scenarios";
 import { cn } from "@/lib/utils";
@@ -38,7 +37,7 @@ export const AppSidebarLayout = ({
             <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
               {section.title}
             </p>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {section.items.map((item) => {
                 const activeItem = pathname === item.href;
                 return (
@@ -47,26 +46,19 @@ export const AppSidebarLayout = ({
                     href={item.href}
                     onClick={() => setOpenMobile(false)}
                     className={cn(
-                      "block rounded-md border px-2 py-2 transition-colors",
+                      "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm",
                       activeItem
-                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-black"
-                        : "border-zinc-200 bg-white hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900",
+                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
+                        : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900",
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium">{item.title}</p>
-                      <Badge variant={item.status}>{item.status}</Badge>
-                    </div>
-                    <p
-                      className={cn(
-                        "mt-1 text-xs",
-                        activeItem
-                          ? "text-zinc-300 dark:text-zinc-700"
-                          : "text-zinc-500",
-                      )}
+                    <span className="font-medium">{item.title}</span>
+                    <Badge
+                      variant={item.status}
+                      className="text-[10px] px-1.5 py-0"
                     >
-                      {item.description}
-                    </p>
+                      {item.status}
+                    </Badge>
                   </Link>
                 );
               })}
@@ -80,7 +72,7 @@ export const AppSidebarLayout = ({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex h-screen">
-        <aside className="hidden w-72 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:block">
+        <aside className="hidden w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:block">
           {sidebarContent}
         </aside>
 
@@ -88,14 +80,14 @@ export const AppSidebarLayout = ({
           type="button"
           aria-label="Close menu"
           className={cn(
-            "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity md:hidden",
+            "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden",
             openMobile ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           onClick={() => setOpenMobile(false)}
         />
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-72 border-r border-zinc-200 bg-white transition-transform dark:border-zinc-800 dark:bg-zinc-950 md:hidden",
+            "fixed inset-y-0 left-0 z-50 w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:hidden",
             openMobile ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -107,7 +99,7 @@ export const AppSidebarLayout = ({
             <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:hover:bg-zinc-900"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-900 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:hover:bg-zinc-900"
               >
                 Menu
               </Link>

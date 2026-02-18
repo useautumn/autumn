@@ -1,0 +1,12 @@
+# Incoming
+
+
+## Fields
+
+| Field                                                                        | Type                                                                         | Required                                                                     | Description                                                                  |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `plan`                                                                       | [models.Plan](../models/plan.md)                                             | :heavy_check_mark:                                                           | N/A                                                                          |
+| `feature_quantities`                                                         | List[[models.IncomingFeatureQuantity](../models/incomingfeaturequantity.md)] | :heavy_check_mark:                                                           | N/A                                                                          |
+| `balances`                                                                   | Dict[str, [models.IncomingBalances](../models/incomingbalances.md)]          | :heavy_check_mark:                                                           | N/A                                                                          |
+| `period_start`                                                               | *Optional[float]*                                                            | :heavy_minus_sign:                                                           | N/A                                                                          |
+| `period_end`                                                                 | *Optional[float]*                                                            | :heavy_minus_sign:                                                           | N/A                                                                          |

@@ -10,9 +10,12 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
+from autumn_sdk.utils import validate_const
+import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
-from typing_extensions import NotRequired, TypeAliasType, TypedDict
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 CustomerEnv = Union[
@@ -405,6 +408,7 @@ class BreakdownTypedDict(TypedDict):
     reset: Nullable[CustomerResetTypedDict]
     price: Nullable[CustomerPriceTypedDict]
     expires_at: Nullable[float]
+    object: Literal["balance_breakdown"]
     id: NotRequired[str]
 
 
@@ -426,6 +430,14 @@ class Breakdown(BaseModel):
     price: Nullable[CustomerPrice]
 
     expires_at: Nullable[float]
+
+    object: Annotated[
+        Annotated[
+            Literal["balance_breakdown"],
+            AfterValidator(validate_const("balance_breakdown")),
+        ],
+        pydantic.Field(alias="object"),
+    ] = "balance_breakdown"
 
     id: Optional[str] = ""
 
@@ -475,6 +487,7 @@ class BalancesTypedDict(TypedDict):
     overage_allowed: bool
     max_purchase: Nullable[float]
     next_reset_at: Nullable[float]
+    object: Literal["balance"]
     feature: NotRequired[CustomerFeatureTypedDict]
     breakdown: NotRequired[List[BreakdownTypedDict]]
     rollovers: NotRequired[List[CustomerRolloverTypedDict]]
@@ -496,6 +509,11 @@ class Balances(BaseModel):
     max_purchase: Nullable[float]
 
     next_reset_at: Nullable[float]
+
+    object: Annotated[
+        Annotated[Literal["balance"], AfterValidator(validate_const("balance"))],
+        pydantic.Field(alias="object"),
+    ] = "balance"
 
     feature: Optional[CustomerFeature] = None
 
@@ -1017,3 +1035,13 @@ class Customer(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    Breakdown.model_rebuild()
+except NameError:
+    pass
+try:
+    Balances.model_rebuild()
+except NameError:
+    pass

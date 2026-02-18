@@ -1,0 +1,51 @@
+---
+title: "Balances Create"
+openapi: "openapi POST /v1/balances.create"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="feature_id" type="string" required>
+  The feature ID to create the balance for
+</DynamicParamField>
+
+<DynamicParamField body="customer_id" type="string" required>
+  The customer ID to assign the balance to
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Entity ID for entity-scoped balances
+</DynamicParamField>
+
+<DynamicParamField body="included" type="number">
+  The initial balance amount to grant
+</DynamicParamField>
+
+<DynamicParamField body="unlimited" type="boolean">
+  Whether the balance is unlimited
+</DynamicParamField>
+
+<DynamicParamField body="reset" type="object">
+  Reset configuration for the balance
+  <Expandable title="properties">
+    <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required />
+
+    <DynamicParamField body="interval_count" type="number" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="expires_at" type="number">
+  Unix timestamp (milliseconds) when the balance expires
+</DynamicParamField>
+
+<DynamicParamField body="granted_balance" type="number" />
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />

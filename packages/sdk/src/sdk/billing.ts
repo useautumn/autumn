@@ -3,16 +3,89 @@
  */
 
 import { billingAttach } from "../funcs/billing-attach.js";
+import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
+import { billingPreviewUpdate } from "../funcs/billing-preview-update.js";
+import { billingSetupPayment } from "../funcs/billing-setup-payment.js";
+import { billingUpdate } from "../funcs/billing-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Billing extends ClientSDK {
+  /**
+   * Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+   *
+   * @example
+   * ```typescript
+   * // Attach a plan to a customer
+   * const response = await client.attach({ customerId: "cus_123", planId: "pro_plan" });
+   * ```
+   *
+   * @param customerId - The ID of the customer to attach the plan to.
+   * @param entityId - The ID of the entity to attach the plan to. (optional)
+   * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+   */
   async attach(
-    request: models.AttachRequest,
+    request: models.BillingAttachRequest,
     options?: RequestOptions,
-  ): Promise<models.AttachResponse> {
+  ): Promise<models.BillingAttachResponse> {
     return unwrapAsync(billingAttach(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Preview billing changes before attaching a plan.
+   */
+  async previewAttach(
+    request: models.BillingPreviewAttachRequest,
+    options?: RequestOptions,
+  ): Promise<models.BillingPreviewAttachResponse> {
+    return unwrapAsync(billingPreviewAttach(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Update an existing subscription.
+   */
+  async update(
+    request: models.BillingUpdateRequest,
+    options?: RequestOptions,
+  ): Promise<models.BillingUpdateResponse> {
+    return unwrapAsync(billingUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Preview billing changes before updating a subscription.
+   */
+  async previewUpdate(
+    request: models.BillingPreviewUpdateRequest,
+    options?: RequestOptions,
+  ): Promise<models.BillingPreviewUpdateResponse> {
+    return unwrapAsync(billingPreviewUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Create a setup payment session for a customer.
+   */
+  async setupPayment(
+    request: models.BillingSetupPaymentRequest,
+    options?: RequestOptions,
+  ): Promise<models.BillingSetupPaymentResponse> {
+    return unwrapAsync(billingSetupPayment(
       this,
       request,
       options,

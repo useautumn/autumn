@@ -6,9 +6,9 @@ import { handleCreatePlan } from "./handlers/handleCreatePlan.js";
 import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handleDeleteProduct.js";
 import { handleGetPlan } from "./handlers/handleGetPlan.js";
 import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
+import { handleListPlansV2 } from "./handlers/handleListPlans/handleListPlansV2.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
-
 import { handleUpdatePlan } from "./handlers/handleUpdateProduct/handleUpdatePlan.js";
 
 export const honoProductBetaRouter = new Hono<HonoEnv>();
@@ -42,3 +42,7 @@ honoProductRouter.post(
 	...handlePlanHasCustomersV2,
 );
 honoProductRouter.get("/:product_id/deletion_info", ...handleGetPlanDeleteInfo);
+
+// RPC
+export const plansRpcRouter = new Hono<HonoEnv>();
+plansRpcRouter.post("/plans.list", ...handleListPlansV2);
