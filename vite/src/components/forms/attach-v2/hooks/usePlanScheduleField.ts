@@ -1,5 +1,12 @@
-import type { BillingBehavior, PlanTiming } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	type BillingBehavior,
+	type CusProduct,
+	CusProductStatus,
+	type PlanTiming,
+} from "@autumn/shared";
 import { useMemo } from "react";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 /** Encapsulates planSchedule + billingBehavior derived state and mutations. */
@@ -7,6 +14,19 @@ export function usePlanScheduleField() {
 	const { form, formValues, previewQuery } = useAttachFormContext();
 	const { planSchedule, billingBehavior } = formValues;
 	const previewData = previewQuery.data;
+	const { customer } = useCusQuery();
+
+	const hasActiveSubscription = useMemo(
+		() =>
+			((customer?.customer_products ?? []) as CusProduct[]).some(
+				(cp) =>
+					(ACTIVE_STATUSES.includes(cp.status) ||
+						cp.status === CusProductStatus.Trialing) &&
+					cp.subscription_ids &&
+					cp.subscription_ids.length > 0,
+			),
+		[customer?.customer_products],
+	);
 
 	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
 
@@ -24,7 +44,8 @@ export function usePlanScheduleField() {
 		? "immediate"
 		: (planSchedule ?? defaultPlanSchedule);
 
-	const showBillingBehavior = effectivePlanSchedule === "immediate";
+	const showBillingBehavior =
+		hasActiveSubscription && effectivePlanSchedule === "immediate";
 	const effectiveBillingBehavior = billingBehavior ?? "prorate_immediately";
 
 	const hasCustomSchedule =
@@ -50,6 +71,7 @@ export function usePlanScheduleField() {
 	};
 
 	return {
+		hasActiveSubscription,
 		hasOutgoing,
 		defaultPlanSchedule,
 		effectivePlanSchedule,
