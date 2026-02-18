@@ -74,6 +74,12 @@ export const getAttachScenario = ({
 		isFreeProduct(curFullProduct.prices) &&
 		isFreeProduct(fullProduct.prices)
 	) {
+		if (curSameProduct) {
+			if (isCustomerProductCanceling(curSameProduct)) {
+				return AttachScenario.Renew;
+			}
+			return AttachScenario.Active;
+		}
 		return AttachScenario.New;
 	}
 
