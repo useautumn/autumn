@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: ae28cba9f4a31ec39633cc683b159eab
+  docChecksum: fec27a570216b53ac684c105645b6173
   docVersion: 2.1.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
-  releaseVersion: 0.2.22
-  configChecksum: 05fe4cc58f958fa21b320a1cbb0ec4d8
+  releaseVersion: 0.2.23
+  configChecksum: b49d9388b24bfc90f604822ef8177d32
 persistentEdits:
-  generation_id: b8deb3e6-4376-4384-8fb8-d3742769316e
-  pristine_commit_hash: d81074b2463a2168ca16d2be775f9316dbcec5f0
-  pristine_tree_hash: b9f1e436d46ef67a51ccebe4176695d899ea2658
+  generation_id: 7ec28ef9-de11-4ffe-a994-4a2d11fa4783
+  pristine_commit_hash: 1cb483a63d6f596f6074489a6e9910875d391989
+  pristine_tree_hash: 44c77d4ff8b12e187ee9387f45bb54d132266c56
 features:
   python:
     additionalDependencies: 1.0.0
@@ -125,8 +125,8 @@ trackedFiles:
     pristine_git_object: 3e6f66868ff780f866d68fdd7875f51990446172
   docs/models/balancescheckrequest.md:
     id: 3f58aa2a0e56
-    last_write_checksum: sha1:da2a911efdfb3247c30564d9b44798ddc1064539
-    pristine_git_object: 88f4b9bd27b9fb0e9438c2b2ee95fb8d115bed5b
+    last_write_checksum: sha1:631eddef8c414fc980bee9b676dced772c276e24
+    pristine_git_object: 426327d989050aa71a9dc1d8e55f1e3b8bc9db4a
   docs/models/balancescheckreset.md:
     id: acd256151825
     last_write_checksum: sha1:aaeb8d3a138366e3c03c7e5c45c7adcb22062190
@@ -1465,8 +1465,8 @@ trackedFiles:
     pristine_git_object: 69dd549ec7f5f885101d08dd502e25748183aebf
   docs/sdks/balancessdk/README.md:
     id: 2484f934be2e
-    last_write_checksum: sha1:f7062478c95b5d1942725f202da8591b6997801d
-    pristine_git_object: 367d6f7e6677473533e5ec84423c6b92bb191627
+    last_write_checksum: sha1:a8dd55b3787ac362deacf763b0a211900a767e93
+    pristine_git_object: 7afb196a0fe5d64bbc8f5754febdc70e891f9783
   docs/sdks/billing/README.md:
     id: dc915331dd9d
     last_write_checksum: sha1:e3669a666eb87cb510f80973d756454cb5124433
@@ -1489,8 +1489,8 @@ trackedFiles:
     pristine_git_object: f13c2fb5532a06cfe87f594097bfbf72e8fc04a1
   pyproject.toml:
     id: 5d07e7d72637
-    last_write_checksum: sha1:1e1204524034eb1c9c0cbb4327c4ac5ad156a8e4
-    pristine_git_object: 38ecae9bb9c9bd37af5c19d7f6869e1a672f86bc
+    last_write_checksum: sha1:014fd5de1df29b5f35e76f1c635c021ad9a7a03b
+    pristine_git_object: 724b12dd08709c8cddac0a78d200b08ec654fc01
   scripts/publish.sh:
     id: fe273b08f514
     last_write_checksum: sha1:adc9b741c12ad1591ab4870eabe20f0d0a86cd1a
@@ -1513,12 +1513,12 @@ trackedFiles:
     pristine_git_object: 3e604651c1eae73d815b276806e73b2f1334bb79
   src/autumn_sdk/_version.py:
     id: a98babfdf4fc
-    last_write_checksum: sha1:956be51e7b757519eedbeb2ff25e3d59b24c8a18
-    pristine_git_object: 6e51775a922b9d5cdbd3cf7c928df326748a5255
+    last_write_checksum: sha1:587361ce6cbd0c8f082cc3835fe408873429de3b
+    pristine_git_object: 657096928db179a673873a7c2970bc56d0134bd9
   src/autumn_sdk/balances_sdk.py:
     id: a24aee6f517f
-    last_write_checksum: sha1:991efc1f4a5675c7c69983dc539b419fee18895b
-    pristine_git_object: 458d7a5d63adb489da6bb0292ae672085714e36b
+    last_write_checksum: sha1:92e60f2fca39931ac13bd2e9b76048c307a8393a
+    pristine_git_object: 10dad75191da7d12379beb6db1bce3a49a21361d
   src/autumn_sdk/basesdk.py:
     id: 8c9c35fe744d
     last_write_checksum: sha1:5d6abacbd251bd806538b19ab9662994bbfc6e24
@@ -1561,8 +1561,8 @@ trackedFiles:
     pristine_git_object: ef0446c2af1fb073acd7d9dbded6b04bfad1d0dd
   src/autumn_sdk/models/balancescheckop.py:
     id: 27ed9e0d5743
-    last_write_checksum: sha1:f76c84c4592ee5bee854d2d31ac55b589c54d86c
-    pristine_git_object: 3a48eb8b3bda977baaf9afa42abc969e736d649a
+    last_write_checksum: sha1:4c29af4c515b7d7248cb2bac03299483be523d7f
+    pristine_git_object: 23ee9fc6c157d5ed56a335112a7da96dfcee325c
   src/autumn_sdk/models/balancescreateop.py:
     id: 8509fb57571f
     last_write_checksum: sha1:406d57f4df7fb4eba2a7c8f906cf64ff0b31eb2c
@@ -1880,7 +1880,7 @@ examples:
         header:
           x-api-version: "2.1"
       requestBody:
-        application/json: {"customer_id": "<id>"}
+        application/json: {"customer_id": "<id>", "feature_id": "<id>"}
       responses:
         "200":
           application/json: {"allowed": true, "customer_id": "<id>", "balance": {"feature_id": "<id>", "granted": 7002.31, "remaining": 9536.21, "usage": 3270.65, "unlimited": false, "overage_allowed": true, "max_purchase": 8252.55, "next_reset_at": 9394.31}}

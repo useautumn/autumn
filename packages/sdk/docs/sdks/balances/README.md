@@ -181,6 +181,7 @@ const autumn = new Autumn({
 async function run() {
   const result = await autumn.balances.check({
     customerId: "<id>",
+    featureId: "<id>",
   });
 
   console.log(result);
@@ -207,6 +208,7 @@ const autumn = new AutumnCore({
 async function run() {
   const res = await balancesCheck(autumn, {
     customerId: "<id>",
+    featureId: "<id>",
   });
   if (res.ok) {
     const { value: result } = res;

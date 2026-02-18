@@ -1,8 +1,8 @@
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
-	CheckParamsSchema,
 	CheckResponseV3Schema,
 	CreateBalanceParamsV0Schema,
+	ExtCheckParamsSchema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
 	UpdateBalanceParamsSchema,
@@ -51,7 +51,7 @@ export const balancesCheckContract = oc
 			"x-speakeasy-name-override": "check",
 		}),
 	})
-	.input(CheckParamsSchema)
+	.input(ExtCheckParamsSchema)
 	.output(CheckResponseV3Schema);
 
 export const balancesTrackContract = oc

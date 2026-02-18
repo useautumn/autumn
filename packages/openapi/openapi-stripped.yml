@@ -3910,6 +3910,7 @@ paths:
                   description: ID which you provided when creating the customer
                 feature_id:
                   type: string
+                  description: ID of the feature to check access to.
                 entity_id:
                   type: string
                   description: If using entity balances (eg, seats), the entity ID to check access
@@ -3934,12 +3935,9 @@ paths:
                   description: If true, the response will include a preview object, which can be
                     used to display information such as a paywall or upgrade
                     confirmation.
-                product_id:
-                  type: string
-                required_quantity:
-                  type: number
               required:
                 - customer_id
+                - feature_id
       responses:
         "200":
           description: OK

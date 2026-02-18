@@ -1,1 +1,1 @@
-export * from "./apiCustomerToFeatures";
+export * from "./apiCustomerToFeatures.js";

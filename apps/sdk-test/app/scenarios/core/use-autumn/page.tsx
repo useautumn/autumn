@@ -64,11 +64,13 @@ export default function UseAutumnScenarioPage() {
   // Input state
   const [planId, setPlanId] = useState("");
   const [featureId, setFeatureId] = useState("");
+  const [requiredBalance, setRequiredBalance] = useState("");
   const [openInNewTab, setOpenInNewTab] = useState(false);
 
   // Form element IDs
   const planIdInputId = useId();
   const featureIdInputId = useId();
+  const requiredBalanceInputId = useId();
 
   const runAction = async ({
     name,
@@ -123,10 +125,16 @@ export default function UseAutumnScenarioPage() {
 
   const handleCheck = () => {
     if (!featureId) return;
+    const params = {
+      featureId,
+      requiredBalance: requiredBalance
+        ? parseFloat(requiredBalance)
+        : undefined,
+    };
     runAction({
       name: "check",
-      params: { featureId },
-      execute: () => check({ featureId }),
+      params,
+      execute: () => check(params),
     });
   };
 
@@ -222,6 +230,22 @@ export default function UseAutumnScenarioPage() {
                 placeholder="Enter feature ID"
                 value={featureId}
                 onChange={(e) => setFeatureId(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={requiredBalanceInputId}
+                className="text-xs text-zinc-500"
+              >
+                Required Balance (optional)
+              </Label>
+              <Input
+                id={requiredBalanceInputId}
+                type="number"
+                placeholder="Enter required balance"
+                value={requiredBalance}
+                onChange={(e) => setRequiredBalance(e.target.value)}
                 className="h-8 text-sm"
               />
             </div>

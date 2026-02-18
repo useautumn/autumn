@@ -1,16 +1,9 @@
 import {
-	type ApiBalanceInput,
+	type ApiCustomerV5,
+	type ApiEntityV2,
 	apiBalanceToAllowed,
-	type FeatureInput,
-} from "../convert/apiBalanceToAllowed";
-
-type CheckFeatureInput = FeatureInput & {
-	id: string;
-};
-
-type CheckEntityInput = {
-	balances?: Record<string, ApiBalanceInput | undefined>;
-};
+	type Feature,
+} from "../../../../../index";
 
 export const getFeatureToUseForCheck = ({
 	creditSystems,
@@ -18,9 +11,9 @@ export const getFeatureToUseForCheck = ({
 	apiEntity,
 	requiredBalance,
 }: {
-	creditSystems: CheckFeatureInput[];
-	feature: CheckFeatureInput;
-	apiEntity: CheckEntityInput;
+	creditSystems: Feature[];
+	feature: Feature;
+	apiEntity: ApiCustomerV5 | ApiEntityV2;
 	requiredBalance: number;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system

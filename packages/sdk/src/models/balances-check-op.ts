@@ -21,7 +21,10 @@ export type BalancesCheckRequest = {
    * ID which you provided when creating the customer
    */
   customerId: string;
-  featureId?: string | undefined;
+  /**
+   * ID of the feature to check access to.
+   */
+  featureId: string;
   /**
    * If using entity balances (eg, seats), the entity ID to check access for.
    */
@@ -39,8 +42,6 @@ export type BalancesCheckRequest = {
    * If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
    */
   withPreview?: boolean | undefined;
-  productId?: string | undefined;
-  requiredQuantity?: number | undefined;
 };
 
 export const BalancesCheckBalanceType = {
@@ -490,14 +491,12 @@ export type BalancesCheckResponse = {
 /** @internal */
 export type BalancesCheckRequest$Outbound = {
   customer_id: string;
-  feature_id?: string | undefined;
+  feature_id: string;
   entity_id?: string | undefined;
   required_balance?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   send_event?: boolean | undefined;
   with_preview?: boolean | undefined;
-  product_id?: string | undefined;
-  required_quantity?: number | undefined;
 };
 
 /** @internal */
@@ -507,14 +506,12 @@ export const BalancesCheckRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     customerId: z.string(),
-    featureId: z.optional(z.string()),
+    featureId: z.string(),
     entityId: z.optional(z.string()),
     requiredBalance: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
     sendEvent: z.optional(z.boolean()),
     withPreview: z.optional(z.boolean()),
-    productId: z.optional(z.string()),
-    requiredQuantity: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -524,8 +521,6 @@ export const BalancesCheckRequest$outboundSchema: z.ZodMiniType<
       requiredBalance: "required_balance",
       sendEvent: "send_event",
       withPreview: "with_preview",
-      productId: "product_id",
-      requiredQuantity: "required_quantity",
     });
   }),
 );

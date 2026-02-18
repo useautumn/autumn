@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 2599354f8d9fec10f95f15d1c9096b1d
+  docChecksum: 41614313bae2edc9e0e3bbb7da66a4d6
   docVersion: 2.1.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
-  releaseVersion: 0.8.26
-  configChecksum: b6c3c32777c82006d83440f8a980d2af
+  releaseVersion: 0.8.27
+  configChecksum: 58626b5f963b3bd6dae32861f7223e4e
 persistentEdits:
-  generation_id: ddc35772-b2eb-4820-b753-62525d82a8eb
-  pristine_commit_hash: 60a4122091e83ecafdd2621fef72c448d614bdf2
-  pristine_tree_hash: eea50d885bff1b9f808c6350c2e0ad0b877155a9
+  generation_id: e65473db-a4c6-4742-b95f-9b8012a90600
+  pristine_commit_hash: 9070b0faec440397f5c71122d64b390fcff54c5f
+  pristine_tree_hash: 2d507ad0bb4c7057b61076d8ab638fad99bd0e61
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -144,8 +144,8 @@ trackedFiles:
     pristine_git_object: 654cee9ccd3ac3ab7e478e50d5bb8e6689078728
   docs/models/balances-check-request.md:
     id: 9bc2f38fe309
-    last_write_checksum: sha1:84559e0a2c21e00b203b208b6e2c9f5b955652b0
-    pristine_git_object: 83840a6bac824db113dd2484c4819b65edaf68b1
+    last_write_checksum: sha1:0c05c1d4267bf87ccffbd12c2201ba77d3572b2e
+    pristine_git_object: 3c287ef0a9fb8ba29a9747f85cd7f75fe9deacdb
   docs/models/balances-check-reset.md:
     id: 0bc9bade2bd6
     last_write_checksum: sha1:e62a7f8a2d10aba44af96cb2013ae8ef04bddbe7
@@ -1480,8 +1480,8 @@ trackedFiles:
     pristine_git_object: 56e566eba7aeffa9422da7c6b4bcb80a123e5f14
   docs/sdks/balances/README.md:
     id: 6ca85866f00d
-    last_write_checksum: sha1:a9d2e85ca386a826d73b0d402cde2afcc2bab0b5
-    pristine_git_object: c7aa4176ebe0ecc174019273ac857b26e1986c2b
+    last_write_checksum: sha1:eece4ef5879f579768573ba82c46936733b88b1f
+    pristine_git_object: bf8790cb4364546e27a92b5705a0e7f25addeba1
   docs/sdks/billing/README.md:
     id: dc915331dd9d
     last_write_checksum: sha1:9e5ac33eb2f8161d4a9813184ce0bda310b5184e
@@ -1516,12 +1516,12 @@ trackedFiles:
     pristine_git_object: 900d545ed58929951e2208e1bec791cb264429a4
   jsr.json:
     id: 7f6ab7767282
-    last_write_checksum: sha1:81f59385b4f8527291ecad9b442981054bb1c9af
-    pristine_git_object: 498da37844b72100f84a7a0e8dab8e6011222af1
+    last_write_checksum: sha1:2f9caf84950826b0f80ea18b58f7a22fb1ff0b31
+    pristine_git_object: 1d4fc089e365e8a54c922d38d6937921e6d63ba0
   package.json:
     id: 7030d0b2f71b
-    last_write_checksum: sha1:1cf6dc171bd97df401d76a20b37cff97a8f79f2f
-    pristine_git_object: ac3ec23ec56922ecd27496c75330ab80bb4ce2c4
+    last_write_checksum: sha1:871236b8e1d9462e75ac2ba7a9e6654b2bc98a1d
+    pristine_git_object: a99b0d11bd80af6de52463ca1d05ef57bb5a831f
   src/core.ts:
     id: f431fdbcd144
     last_write_checksum: sha1:f8f24a3ca09c1efb285d7a75ad3697d0128f47e2
@@ -1604,8 +1604,8 @@ trackedFiles:
     pristine_git_object: 44be0eae8246521b230e8e711a88eff738fc015d
   src/lib/config.ts:
     id: 320761608fb3
-    last_write_checksum: sha1:cbc217ef66dbc1a7713cea3ed30b3afbe58f85f8
-    pristine_git_object: c80c88bd24b38e4183bb4602ef8df47e61d57381
+    last_write_checksum: sha1:600c912298c99f0e576d6ced27c9f13619a6e693
+    pristine_git_object: 7cb7a90dbda9a13ec9e20467e06cd2306df7146c
   src/lib/dlv.ts:
     id: b1988214835a
     last_write_checksum: sha1:1dd3e3fbb4550c4bf31f5ef997faff355d6f3250
@@ -1672,8 +1672,8 @@ trackedFiles:
     pristine_git_object: 7cfcf2c90f1cfaa152ee2f4033187aa20b1c696b
   src/models/balances-check-op.ts:
     id: b818c72b5764
-    last_write_checksum: sha1:43ba10dc6d3f77ac0c27566aa7da722be99b9b91
-    pristine_git_object: 202ad5a71f0bfd85e6d100d8aa477d2c106f4e35
+    last_write_checksum: sha1:ba49fee4c3f2246f0bb7ab82c4c737b64472e3d3
+    pristine_git_object: 00b739d168f088a2a6660855f985f6889ea7069f
   src/models/balances-create-op.ts:
     id: 0ac1d9c85f60
     last_write_checksum: sha1:93f8b8a57403da4a95b83dcb2c7a54029694d2a4
@@ -2258,7 +2258,7 @@ examples:
         header:
           x-api-version: "2.1"
       requestBody:
-        application/json: {"customer_id": "<id>"}
+        application/json: {"customer_id": "<id>", "feature_id": "<id>"}
       responses:
         "200":
           application/json: {"allowed": true, "customer_id": "<id>", "balance": {"feature_id": "<id>", "granted": 7002.31, "remaining": 9536.21, "usage": 3270.65, "unlimited": false, "overage_allowed": true, "max_purchase": 8252.55, "next_reset_at": 9394.31}}
