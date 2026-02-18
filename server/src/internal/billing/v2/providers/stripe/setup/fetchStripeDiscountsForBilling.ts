@@ -1,5 +1,5 @@
 import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
 	StripeCustomerWithDiscount,
@@ -60,13 +60,13 @@ export const filterDeletedCouponDiscounts = async ({
 		discounts.map(async (d) => {
 			try {
 				await stripeCli.coupons.retrieve(d.source.coupon.id);
+				return true;
 			} catch (error) {
 				if (
 					error instanceof Stripe.errors.StripeError &&
 					error.code?.includes("resource_missing")
 				) return false;
 				throw error;
-			}
 			}
 		}),
 	);
