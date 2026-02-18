@@ -52,5 +52,5 @@ export function getNoChargesDisabledReason({
 		return NO_CHARGES_FREE_TO_PAID_DISABLED_REASON;
 	}
 
-	return NO_CHARGES_NEW_CYCLE_DISABLED_REASON;
+	return undefined;
 }
