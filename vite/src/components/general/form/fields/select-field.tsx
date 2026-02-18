@@ -8,6 +8,8 @@ export type SelectFieldOption<T extends string | number = string> = {
 	label: string;
 	value: T;
 	disabledValue?: string;
+	/** Shows a badge without disabling the option */
+	badgeValue?: string;
 };
 
 export function SelectField<T extends string | number = string>({
@@ -22,6 +24,7 @@ export function SelectField<T extends string | number = string>({
 	searchable = false,
 	searchPlaceholder = "Search...",
 	emptyText = "No results found",
+	defaultOpen = false,
 }: {
 	label: string;
 	options: SelectFieldOption<T>[];
@@ -34,6 +37,7 @@ export function SelectField<T extends string | number = string>({
 	searchable?: boolean;
 	searchPlaceholder?: string;
 	emptyText?: string;
+	defaultOpen?: boolean;
 }) {
 	const field = useFieldContext<T>();
 	const stringValue = String(field.state.value);
@@ -60,6 +64,7 @@ export function SelectField<T extends string | number = string>({
 				searchPlaceholder={searchPlaceholder}
 				emptyText={emptyText}
 				disabled={disabled}
+				defaultOpen={defaultOpen}
 				renderValue={(opt) => (
 					<>
 						<span className={!opt ? "text-t3" : undefined}>
@@ -73,12 +78,12 @@ export function SelectField<T extends string | number = string>({
 				renderOption={(opt, isSelected) => (
 					<>
 						<span className="flex-1 truncate min-w-0">{opt.label}</span>
-						{opt.disabledValue && (
+						{(opt.disabledValue || opt.badgeValue) && (
 							<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
-								{opt.disabledValue}
+								{opt.disabledValue || opt.badgeValue}
 							</span>
 						)}
-						{isSelected && !opt.disabledValue && (
+						{isSelected && !opt.disabledValue && !opt.badgeValue && (
 							<CheckIcon className="size-4 shrink-0" />
 						)}
 					</>

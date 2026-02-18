@@ -5,6 +5,7 @@ import {
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import { CusExpand } from "@models/cusModels/cusExpand.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import {
 	type GetEntityQuery,
 	GetEntityQuerySchema,
@@ -46,8 +47,10 @@ export const V1_2_EntityQueryChange = defineVersionChange({
 
 	// Request: V1.2 → V2.0 (add expand options)
 	transformRequest: ({
+		ctx: _ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof GetEntityQuerySchema>;
 	}) => {
 		const existingExpand = input.expand || [];

@@ -41,20 +41,21 @@ export function planParamsV1ToProductV2({
 	return {
 		id: params.id, // fallback just for placeholders...
 		name: params.name,
-		description: params.description ?? null,
+		description: params.description,
 		is_add_on: params.add_on,
 		is_default: params.auto_enable,
 
 		group: params.group ?? "",
 		items,
-		free_trial: params.free_trial
-			? {
-					duration: params.free_trial.duration_type,
-					length: params.free_trial.duration_length,
-					unique_fingerprint: false,
-					card_required: params.free_trial.card_required,
-				}
-			: null,
+		free_trial:
+			params.free_trial !== undefined
+				? {
+						duration: params.free_trial.duration_type,
+						length: params.free_trial.duration_length,
+						unique_fingerprint: false,
+						card_required: params.free_trial.card_required,
+					}
+				: undefined,
 		...(archived !== undefined && { archived }),
 	};
 }

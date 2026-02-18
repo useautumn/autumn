@@ -1,5 +1,7 @@
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import { computeCustomerProductToDelete } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCustomerProductToDelete";
 
 /**
@@ -18,7 +20,7 @@ export const applyUncancelToPlan = ({
 
 	if (cancelAction !== "uncancel") return plan;
 
-	const cancelUpdates = {
+	const uncancelUpdates = {
 		canceled: false,
 		canceled_at: null,
 		ended_at: null,
@@ -37,12 +39,19 @@ export const applyUncancelToPlan = ({
 			existingUpdate?.customerProduct ?? billingContext.customerProduct,
 		updates: {
 			...existingUpdate?.updates,
-			...cancelUpdates,
+			...uncancelUpdates,
 		},
 	};
 
+	// // If there are new customer products being inserted, also add uncancel updates to them
+	// const insertCustomerProducts = plan.insertCustomerProducts.map((insert) => ({
+	// 	...insert,
+	// 	...uncancelUpdates,
+	// }));
+
 	return {
 		...plan,
+		// insertCustomerProducts,
 		updateCustomerProduct,
 		// Use the plan's deleteCustomerProduct if already set, otherwise use ours
 		deleteCustomerProduct: plan.deleteCustomerProduct ?? deleteCustomerProduct,

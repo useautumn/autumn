@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { ApiCustomerSchema } from "../apiCustomer.js";
 import { ApiCustomerV5Schema } from "../apiCustomerV5.js";
 import type { ApiBalance } from "../cusFeatures/apiBalance.js";
@@ -23,8 +24,10 @@ export const V2_0_CustomerChange = defineVersionChange({
 	affectsResponse: true,
 
 	transformResponse: ({
+		ctx,
 		input,
 	}: {
+		ctx: SharedContext;
 		input: z.infer<typeof ApiCustomerV5Schema>;
 	}): z.infer<typeof ApiCustomerSchema> => {
 		// Transform balances from V1 to V0
@@ -41,17 +44,17 @@ export const V2_0_CustomerChange = defineVersionChange({
 
 		const transformedSubscriptions: ApiSubscription[] = allSubscriptions
 			.filter((sub) => sub.status !== "scheduled")
-			.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
+			.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
 
 		const transformedScheduledSubscriptions: ApiSubscription[] =
 			allSubscriptions
 				.filter((sub) => sub.status === "scheduled")
-				.map((sub) => apiSubscriptionV1ToV0({ input: sub }));
+				.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
 
 		// Convert purchases to subscriptions and add to subscriptions array
 		const purchasesAsSubscriptions: ApiSubscription[] = (
 			input.purchases ?? []
-		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ input: purchase }));
+		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }));
 
 		// Return V0 customer format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;

@@ -192,8 +192,7 @@ export function SubscriptionItemRow({
 		return null;
 	};
 
-	const showPrepaidOutside =
-		isPrepaid && form && featureId && edits.length === 0;
+	const showPrepaidOutside = isPrepaid && form && featureId && !hasEditableEdit;
 
 	const handleRowClick = () => {
 		if (hasMultipleEdits) setIsAccordionOpen(!isAccordionOpen);

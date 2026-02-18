@@ -494,28 +494,24 @@ test.concurrent(`${chalk.yellowBright("uncancel + items + invoice mode")}`, asyn
 	const customMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const customPriceItem = items.monthlyPrice({ price: 40 });
 
-	// Preview
-	const preview = await autumnV1.subscriptions.previewUpdate({
+	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "uncancel",
 		items: [customMessagesItem, customPriceItem],
 		invoice: true,
 		finalize_invoice: true,
-	});
+		enable_product_immediately: true,
+	};
+
+	// Preview
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
 	// Should charge prorated difference ($40 - $20 = $20 prorated)
-	expect(preview.total).toBeGreaterThan(0);
+	expect(preview.total).toBe(20);
 
 	// Execute uncancel + items with invoice mode
-	const updateResult = await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "uncancel",
-		items: [customMessagesItem, customPriceItem],
-		invoice: true,
-		finalize_invoice: true,
-	});
+	const updateResult = await autumnV1.subscriptions.update(updateParams);
 
 	// Should return invoice info (finalized but awaiting payment)
 	expect(updateResult.invoice).toBeDefined();

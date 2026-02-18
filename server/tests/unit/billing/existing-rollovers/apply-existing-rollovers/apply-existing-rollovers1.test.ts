@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ExistingRollover } from "@autumn/shared";
+import { type ExistingRollover, RolloverExpiryDurationType } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
@@ -16,6 +16,7 @@ describe(chalk.yellowBright("applyExistingRollovers"), () => {
 				featureName: "Words",
 				allowance: 5000,
 				balance: 5000,
+				rollover: { max: null, duration: RolloverExpiryDurationType.Month, length: 1 },
 			});
 
 			const newCusProduct = customerProducts.create({

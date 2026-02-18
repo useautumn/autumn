@@ -1,4 +1,4 @@
-import type { UpdateSubscriptionV0Params } from "@shared/index";
+import type { UpdateSubscriptionV1Params } from "@shared/index";
 
 export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
@@ -10,9 +10,9 @@ export enum UpdateSubscriptionIntent {
  * Compute the intent for a subscription update
  */
 export const computeUpdateSubscriptionIntent = (
-	params: UpdateSubscriptionV0Params,
+	params: UpdateSubscriptionV1Params,
 ): UpdateSubscriptionIntent => {
-	const itemsChanged = params.items !== undefined;
+	const itemsChanged = params.customize !== undefined;
 	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = params.free_trial !== undefined;
 
@@ -21,7 +21,7 @@ export const computeUpdateSubscriptionIntent = (
 
 	// Version change = plan update (takes priority)
 	const featureQuantitiesChanges =
-		params.options?.length && params.options.length > 0;
+		params.feature_quantities?.length && params.feature_quantities.length > 0;
 
 	if (featureQuantitiesChanges) {
 		return UpdateSubscriptionIntent.UpdateQuantity;

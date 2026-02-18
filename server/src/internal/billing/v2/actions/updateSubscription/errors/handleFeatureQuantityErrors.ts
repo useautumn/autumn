@@ -1,6 +1,7 @@
 import type {
 	AutumnBillingPlan,
 	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import {
 	cusProductToPrices,
@@ -9,7 +10,6 @@ import {
 	nullish,
 	priceToFeature,
 	RecaseError,
-	type UpdateSubscriptionV0Params,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -22,7 +22,7 @@ const checkInputFeatureQuantitiesAreValid = ({
 	billingContext,
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }) => {
@@ -37,7 +37,7 @@ const checkInputFeatureQuantitiesAreValid = ({
 		cusProduct: targetCustomerProduct,
 	}).filter(isPrepaidPrice);
 
-	for (const option of params.options ?? []) {
+	for (const option of params.feature_quantities ?? []) {
 		if (nullish(option.quantity)) continue;
 
 		const targetPrepaidPrice = prepaidPrices.find((p) => {
@@ -66,7 +66,7 @@ export const handleFeatureQuantityErrors = ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 }) => {
 	// 1. Check if param feature IDs are valid
 	checkInputFeatureQuantitiesAreValid({

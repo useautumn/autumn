@@ -18,12 +18,18 @@ export const fetchStripeSubscriptionForBilling = async ({
 	fullCus,
 	product,
 	targetCusProductId,
+	newBillingSubscription,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	product?: Product;
 	targetCusProductId?: string;
+	newBillingSubscription?: boolean;
 }): Promise<StripeSubscriptionWithDiscounts | undefined> => {
+	if (newBillingSubscription) {
+		return undefined;
+	}
+
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 

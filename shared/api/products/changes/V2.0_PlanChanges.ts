@@ -5,6 +5,7 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+import type { SharedContext } from "../../../types/sharedContext.js";
 import { PlanLegacyDataSchema } from "../planLegacyData.js";
 import {
 	type ApiPlan,
@@ -28,7 +29,13 @@ export const V2_0_PlanChanges = defineVersionChange({
 	affectsRequest: false,
 	affectsResponse: true,
 
-	transformResponse: ({ input }: { input: ApiPlanV1 }): ApiPlan => {
-		return planV1ToV0(input);
+	transformResponse: ({
+		ctx,
+		input,
+	}: {
+		ctx: SharedContext;
+		input: ApiPlanV1;
+	}): ApiPlan => {
+		return planV1ToV0({ ctx, plan: input });
 	},
 });

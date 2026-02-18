@@ -1,12 +1,9 @@
 import type {
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionBillingContextOverride,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import {
-	BillingVersion,
-	notNullish,
-	type UpdateSubscriptionV0Params,
-} from "@autumn/shared";
+import { BillingVersion, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
@@ -31,7 +28,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
+	params: UpdateSubscriptionV1Params;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<UpdateSubscriptionBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
@@ -101,7 +98,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = notNullish(params.items);
+	const isCustom = notNullish(params.customize);
 
 	const defaultProduct = await setupDefaultProductContext({
 		ctx,

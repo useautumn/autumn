@@ -10,15 +10,7 @@ export function balanceBreakdownV1ToV0({
 }: {
 	input: ApiBalanceBreakdownV1;
 }): ApiBalanceBreakdown {
-	// For usage-based billing, purchased_balance includes prepaid + overage
-	// Overage = usage beyond what was granted and prepaid
-	const totalGrantedAndPrepaid = new Decimal(input.included_grant)
-		.add(input.prepaid_grant)
-		.toNumber();
-	const overage = Math.max(
-		0,
-		new Decimal(input.usage).sub(totalGrantedAndPrepaid).toNumber(),
-	);
+	const overage = input.overage ?? 0;
 	const purchasedBalance = new Decimal(input.prepaid_grant)
 		.add(overage)
 		.toNumber();
@@ -57,6 +49,7 @@ export function balanceV1ToV0({ input }: { input: ApiBalanceV1 }): ApiBalance {
 	const purchasedBalance = apiBalanceV1ToPurchasedBalance({
 		apiBalance: input,
 	});
+
 	const prepaidQuantity = apiBalanceV1ToPrepaidQuantity({ apiBalance: input });
 
 	// V0 granted_balance = V1 granted - prepaid_quantity

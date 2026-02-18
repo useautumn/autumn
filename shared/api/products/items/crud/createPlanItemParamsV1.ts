@@ -45,11 +45,23 @@ export const CreatePlanItemParamsV1Schema = z
 
 		rollover: z
 			.object({
-				max: z.number(),
+				max: z.number().optional(),
 				expiry_duration_type: z.enum(RolloverExpiryDurationType),
 				expiry_duration_length: z.number().optional(),
 			})
 			.optional(),
+
+		entity_feature_id: z.string().optional().meta({
+			internal: true,
+		}),
+
+		// Internal
+		entitlement_id: z.string().optional().meta({
+			internal: true,
+		}),
+		price_id: z.string().optional().meta({
+			internal: true,
+		}),
 	})
 	.check((ctx) => {
 		const resetInterval = ctx.value.reset?.interval;

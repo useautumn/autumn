@@ -33,7 +33,7 @@ export const runRedisUpdateBalanceV2 = async ({
 	const deductionOptions: DeductionOptions = {
 		overageBehaviour: "allow", // Allow bypasses granted_balance cap for balance updates
 		customerEntitlementFilters,
-		alterGrantedBalance: true,
+		alterGrantedBalance: false,
 	};
 
 	const { data: result, error } = await tryCatch(
