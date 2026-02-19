@@ -1,5 +1,5 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { ProductProvider } from "./PlanEditorContext";
 
@@ -24,15 +24,33 @@ export function InlineEditorProvider({
 	children,
 	initialProduct,
 }: InlineEditorProviderProps) {
-	const [product, setProduct] = useState<FrontendProduct>(initialProduct);
 	const [sheetType, setSheetType] = useState<SheetType>(null);
 	const [itemId, setItemId] = useState<string | null>(null);
 	const [initialItem, setInitialItemState] = useState<ProductItem | null>(null);
 
 	const itemDraft = useItemDraftController({
-		setProduct,
+		initialProduct,
 		setInitialItemState,
 	});
+
+	const product = itemDraft.draftProduct ?? initialProduct;
+
+	const setProduct = useCallback(
+		(
+			nextProduct:
+				| FrontendProduct
+				| ((prev: FrontendProduct) => FrontendProduct),
+		) => {
+			const previousProduct = itemDraft.draftProduct ?? initialProduct;
+			const resolvedProduct =
+				typeof nextProduct === "function"
+					? nextProduct(previousProduct)
+					: nextProduct;
+
+			itemDraft.patchProduct({ product: resolvedProduct });
+		},
+		[itemDraft, initialProduct],
+	);
 
 	const setSheet = useCallback(
 		({
@@ -44,7 +62,7 @@ export function InlineEditorProvider({
 		}) => {
 			setSheetType(type as SheetType);
 			setItemId(itemId);
-			itemDraft.clear();
+			itemDraft.clearItemSession();
 		},
 		[itemDraft],
 	);
@@ -56,14 +74,19 @@ export function InlineEditorProvider({
 	const closeSheet = useCallback(() => {
 		setSheetType(null);
 		setItemId(null);
-		itemDraft.clear();
+		itemDraft.clearItemSession();
 	}, [itemDraft]);
+
+	const normalizedInitialProduct = useMemo(
+		() => itemDraft.initialProduct ?? initialProduct,
+		[itemDraft.initialProduct, initialProduct],
+	);
 
 	return (
 		<ProductProvider
 			product={product}
 			setProduct={setProduct}
-			initialProduct={initialProduct}
+			initialProduct={normalizedInitialProduct}
 			sheetType={sheetType}
 			itemId={itemId}
 			initialItem={initialItem}

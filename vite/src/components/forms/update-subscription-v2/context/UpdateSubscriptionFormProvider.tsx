@@ -16,6 +16,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
 import {
 	type UseUpdateSubscriptionPreviewReturn,
 	useUpdateSubscriptionPreview,
@@ -37,6 +38,10 @@ import { useUpdateSubscriptionMutation } from "../hooks/useUpdateSubscriptionMut
 import { useUpdateSubscriptionRequestBody } from "../hooks/useUpdateSubscriptionRequestBody";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 import { getFreeTrial } from "../utils/getFreeTrial";
+import {
+	getProductWithSupportedFormValues,
+	getSupportedFormPatchFromDraftProduct,
+} from "../utils/subscriptionCustomization";
 
 export interface UpdateSubscriptionFormContext {
 	customerId: string | undefined;
@@ -73,7 +78,7 @@ interface UpdateSubscriptionFormContextValue {
 	// Plan editor state
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (items: ProductItem[]) => void;
+	handlePlanEditorSave: (product: FrontendProduct) => void;
 	handlePlanEditorCancel: () => void;
 
 	// Mutation
@@ -96,6 +101,27 @@ interface UpdateSubscriptionFormProviderProps {
 	onSuccess?: () => void;
 	children: ReactNode;
 }
+
+type UpdateEditablePatchFields = Pick<
+	UpdateSubscriptionForm,
+	| "items"
+	| "version"
+	| "trialEnabled"
+	| "removeTrial"
+	| "trialLength"
+	| "trialDuration"
+	| "trialCardRequired"
+>;
+
+const UPDATE_EDITABLE_PATCH_FIELDS = [
+	"items",
+	"version",
+	"trialEnabled",
+	"removeTrial",
+	"trialLength",
+	"trialDuration",
+	"trialCardRequired",
+] as const satisfies ReadonlyArray<keyof UpdateEditablePatchFields>;
 
 export function UpdateSubscriptionFormProvider({
 	formContext,
@@ -170,15 +196,11 @@ export function UpdateSubscriptionFormProvider({
 			product: effectiveProduct as ProductV2,
 		});
 
-		if (formValues.items) {
-			return {
-				...baseFrontendProduct,
-				items: formValues.items,
-			};
-		}
-
-		return baseFrontendProduct;
-	}, [effectiveProduct, formValues.items]);
+		return getProductWithSupportedFormValues({
+			baseProduct: baseFrontendProduct,
+			formValues,
+		});
+	}, [effectiveProduct, formValues]);
 
 	const baseProduct = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -192,28 +214,11 @@ export function UpdateSubscriptionFormProvider({
 			product: effectiveProduct as ProductV2,
 		});
 
-		const freeTrial = getFreeTrial({
-			removeTrial: formValues.removeTrial,
-			trialLength: formValues.trialLength,
-			trialDuration: formValues.trialDuration,
-			trialEnabled: formValues.trialEnabled,
+		return getProductWithSupportedFormValues({
+			baseProduct: base,
+			formValues,
 		});
-		const freeTrialValue =
-			freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
-
-		return {
-			...base,
-			items: formValues.items ?? base.items,
-			free_trial: freeTrialValue,
-		};
-	}, [
-		effectiveProduct,
-		formValues.items,
-		formValues.removeTrial,
-		formValues.trialLength,
-		formValues.trialDuration,
-		formValues.trialEnabled,
-	]);
+	}, [effectiveProduct, formValues]);
 
 	const hasBillingChanges = useHasBillingChanges({
 		baseProduct: baseProduct as FrontendProduct,
@@ -233,6 +238,7 @@ export function UpdateSubscriptionFormProvider({
 		trialLength: formValues.trialLength,
 		trialDuration: formValues.trialDuration,
 		trialEnabled: formValues.trialEnabled,
+		trialCardRequired: formValues.trialCardRequired,
 	});
 
 	const previewQuery = useUpdateSubscriptionPreview({
@@ -267,14 +273,45 @@ export function UpdateSubscriptionFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen]);
 
 	const handlePlanEditorSave = useCallback(
-		(items: ProductItem[]) => {
-			form.setFieldValue("items", items);
+		(draftProduct: FrontendProduct) => {
+			if (!productWithFormItems) {
+				setShowPlanEditor(false);
+				onPlanEditorClose?.();
+				return;
+			}
+
+			const patch = getSupportedFormPatchFromDraftProduct({
+				baseProduct: productWithFormItems,
+				draftProduct,
+				isCurrentlyTrialing: trialState.isCurrentlyTrialing,
+			});
+
+			const updatePatch = {
+				items: patch.items,
+				version: patch.version,
+				trialEnabled: patch.trialEnabled,
+				removeTrial: patch.removeTrial,
+				trialLength: patch.trialLength,
+				trialDuration: patch.trialDuration,
+				trialCardRequired: patch.trialCardRequired,
+			} satisfies Partial<UpdateEditablePatchFields>;
+
+			applyDefinedFormPatchFields<
+				UpdateEditablePatchFields,
+				keyof UpdateEditablePatchFields
+			>({
+				patch: updatePatch,
+				fields: UPDATE_EDITABLE_PATCH_FIELDS,
+				setFieldValue: ({ field, value }) => {
+					form.setFieldValue(field, value);
+				},
+			});
 
 			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
 			const updatedPrepaidOptions = { ...currentPrepaidOptions };
 			let hasNewPrepaidItems = false;
 
-			for (const item of items) {
+			for (const item of draftProduct.items) {
 				if (
 					item.usage_model === "prepaid" &&
 					item.feature_id &&
@@ -292,7 +329,12 @@ export function UpdateSubscriptionFormProvider({
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
 		},
-		[form, onPlanEditorClose],
+		[
+			form,
+			onPlanEditorClose,
+			productWithFormItems,
+			trialState.isCurrentlyTrialing,
+		],
 	);
 
 	const handlePlanEditorCancel = useCallback(() => {

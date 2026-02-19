@@ -1,4 +1,4 @@
-import type { FrontendProduct, ProductItem } from "@autumn/shared";
+import type { FrontendProduct } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
@@ -16,7 +16,7 @@ import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
-	onSave: (items: ProductItem[]) => void;
+	onSave: (product: FrontendProduct) => void;
 	onCancel: () => void;
 	isOpen: boolean;
 }
@@ -50,7 +50,7 @@ function InlinePlanEditorContent({
 	onSave,
 	onCancel,
 }: {
-	onSave: (items: ProductItem[]) => void;
+	onSave: (product: FrontendProduct) => void;
 	onCancel: () => void;
 }) {
 	const { product } = useProduct();
@@ -88,7 +88,7 @@ function InlinePlanEditorContent({
 								{hasPlanChanges && (
 									<ShortcutButton
 										metaShortcut="s"
-										onClick={() => onSave(product.items)}
+										onClick={() => onSave(product)}
 									>
 										Save Changes
 									</ShortcutButton>

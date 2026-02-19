@@ -29,6 +29,7 @@ export interface BuildAttachRequestBodyParams {
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
+	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
 	billingBehavior: BillingBehavior | null;
 	newBillingSubscription: boolean;
@@ -84,6 +85,7 @@ export function buildAttachRequestBody({
 	trialLength,
 	trialDuration,
 	trialEnabled,
+	trialCardRequired,
 	planSchedule,
 	billingBehavior,
 	newBillingSubscription,
@@ -129,6 +131,7 @@ export function buildAttachRequestBody({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		trialCardRequired,
 	});
 	if (freeTrial !== undefined) {
 		body.free_trial = freeTrial;
@@ -170,6 +173,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		trialCardRequired,
 		planSchedule,
 		billingBehavior,
 		newBillingSubscription,
@@ -188,6 +192,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialLength,
 				trialDuration,
 				trialEnabled,
+				trialCardRequired,
 				planSchedule,
 				billingBehavior,
 				newBillingSubscription,
@@ -203,6 +208,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialLength,
 			trialDuration,
 			trialEnabled,
+			trialCardRequired,
 			planSchedule,
 			billingBehavior,
 			newBillingSubscription,
