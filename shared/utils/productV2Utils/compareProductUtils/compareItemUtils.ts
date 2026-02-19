@@ -306,6 +306,10 @@ export const featurePriceItemsAreSame = ({
 			condition: tiersAreSame(item1.tiers || null, item2.tiers || null),
 			message: `Tiers different`,
 		},
+		tiers_type: {
+			condition: item1.tiers_type == item2.tiers_type,
+			message: `Tiers type different: ${item1.tiers_type} != ${item2.tiers_type}`,
+		},
 		billing_units: {
 			condition: item1.billing_units == item2.billing_units,
 			message: `Billing units different: ${item1.billing_units} !== ${item2.billing_units}`,

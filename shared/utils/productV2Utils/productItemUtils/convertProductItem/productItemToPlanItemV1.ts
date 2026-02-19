@@ -79,6 +79,7 @@ const itemToPlanFeaturePrice = ({
 	return {
 		amount: price ?? undefined,
 		tiers: tiers,
+		tiers_type: item.tiers_type ?? undefined,
 
 		interval: itemToBillingInterval({ item }),
 		interval_count:
