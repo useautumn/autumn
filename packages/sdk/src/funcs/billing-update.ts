@@ -26,11 +26,43 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Update an existing subscription.
+ * Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
+ *
+ * Use this endpoint to update prepaid quantities, cancel a subscription (immediately or at end of cycle), or modify subscription settings.
+ *
+ * @example
+ * ```typescript
+ * // Update prepaid feature quantity
+ * const response = await client.billing.update({ customerId: "cus_123", planId: "pro_plan", featureQuantities: [{"featureId":"seats","quantity":10}] });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Cancel a subscription at end of billing cycle
+ * const response = await client.billing.update({ customerId: "cus_123", planId: "pro_plan", cancelAction: "cancel_end_of_cycle" });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Uncancel a subscription at the end of the billing cycle
+ * const response = await client.billing.update({ customerId: "cus_123", planId: "pro_plan", cancelAction: "uncancel" });
+ * ```
+ *
+ * @param customerId - The ID of the customer to attach the plan to.
+ * @param entityId - The ID of the entity to attach the plan to. (optional)
+ * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+ * @param version - The version of the plan to attach. (optional)
+ * @param freeTrial - Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. (optional)
+ * @param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
+ * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+ * @param billingBehavior - How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle. (optional)
+ * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+ *
+ * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
  */
 export function billingUpdate(
   client: AutumnCore,
-  request: models.BillingUpdateRequest,
+  request: models.UpdateSubscriptionParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -54,7 +86,7 @@ export function billingUpdate(
 
 async function $do(
   client: AutumnCore,
-  request: models.BillingUpdateRequest,
+  request: models.UpdateSubscriptionParams,
   options?: RequestOptions,
 ): Promise<
   [
@@ -74,7 +106,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.BillingUpdateRequest$outboundSchema, value),
+    (value) => z.parse(models.UpdateSubscriptionParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {

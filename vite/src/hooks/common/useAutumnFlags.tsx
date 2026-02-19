@@ -16,15 +16,15 @@ export const useAutumnFlags = () => {
 	});
 
 	useEffect(() => {
-		if (!customer?.features) return;
+		if (!customer?.balances) return;
 
 		const nextFlags = {
-			pkey: notNullish(customer.features.pkey),
-			webhooks: notNullish(customer.features.webhooks),
-			stripe_key: notNullish(customer.features.stripe_key),
-			platform: notNullish(customer.features.platform),
-			vercel: notNullish(customer.features.vercel),
-			revenuecat: notNullish(customer.features.revenuecat),
+			pkey: notNullish(customer.balances.pkey),
+			webhooks: notNullish(customer.balances.webhooks),
+			stripe_key: notNullish(customer.balances.stripe_key),
+			platform: notNullish(customer.balances.platform),
+			vercel: notNullish(customer.balances.vercel),
+			revenuecat: notNullish(customer.balances.revenuecat),
 		};
 
 		// Only update storage/state when values actually change
@@ -38,7 +38,7 @@ export const useAutumnFlags = () => {
 		) {
 			setFlags(nextFlags);
 		}
-	}, [customer?.features]);
+	}, [customer?.balances]);
 
 	return flags;
 };

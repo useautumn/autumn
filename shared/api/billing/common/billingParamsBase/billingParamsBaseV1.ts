@@ -3,28 +3,45 @@ import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
 import { EntityDataSchema } from "../../../common/entityData";
+import { BillingBehaviorSchema } from "../billingBehavior";
 import { CustomizePlanV1Schema } from "../customizePlan/customizePlanV1";
+import { InvoiceModeParamsSchema } from "../invoiceModeParams";
 import { TransitionRulesSchema } from "../transitionRules";
 
 export const BillingParamsBaseV1Schema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer to attach the plan to.",
 	}),
-	entity_id: z.string().nullish().meta({
+	entity_id: z.string().optional().meta({
 		description: "The ID of the entity to attach the plan to.",
 	}),
+	plan_id: z.string().meta({
+		description: "The ID of the plan.",
+	}),
 
-	feature_quantities: z.array(FeatureQuantityParamsV0Schema).nullish().meta({
+	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:
 			"If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.",
 	}),
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),
-	free_trial: FreeTrialParamsV1Schema.nullable().optional(),
+	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
+		description:
+			"Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.",
+	}),
 	customize: CustomizePlanV1Schema.optional().meta({
 		description:
 			"Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.",
+	}),
+
+	invoice_mode: InvoiceModeParamsSchema.optional().meta({
+		description:
+			"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.",
+	}),
+	billing_behavior: BillingBehaviorSchema.optional().meta({
+		description:
+			"How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.",
 	}),
 
 	transition_rules: TransitionRulesSchema.optional().meta({

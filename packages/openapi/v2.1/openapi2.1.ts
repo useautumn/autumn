@@ -19,7 +19,7 @@ import {
 	SetupPaymentResultSchema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
-	UpdateBalanceParamsSchema,
+	UpdateBalanceParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 
@@ -52,7 +52,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(UpdateSubscriptionV1ParamsSchema);
 	registerInternalSchemas(SetupPaymentParamsSchema);
 	registerInternalSchemas(CreateBalanceParamsV0Schema);
-	registerInternalSchemas(UpdateBalanceParamsSchema);
+	registerInternalSchemas(UpdateBalanceParamsV0Schema);
 	registerInternalSchemas(CheckParamsSchema);
 	registerInternalSchemas(TrackParamsSchema);
 	registerInternalSchemas(BillingResponseSchema);

@@ -37,6 +37,8 @@ import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange";
 import { V1_2_AttachParamsChange } from "../../billing/attachV2/requestChanges/V1.2_AttachParamsChange";
 import { V1_2_UpdateSubscriptionParamsChange } from "../../billing/updateSubscription/requestChanges/V1.2_UpdateSubscriptionParamsChange";
+// Import events aggregate changes
+import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_AggregateEventsChange";
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
@@ -47,6 +49,7 @@ export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
 	V2_0_CheckChange, // Transforms Check TO V2.0 format from V2.1 format
 	V2_0_TrackChange, // Transforms Track TO V2.0 format from V2.1 format
+	V2_0_AggregateEventsChange, // Transforms EventsAggregate TO V2.0 format from V2.1 format
 ];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [

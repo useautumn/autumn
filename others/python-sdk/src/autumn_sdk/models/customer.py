@@ -29,52 +29,76 @@ Status = Union[
     Literal[
         "active",
         "scheduled",
-        "expired",
     ],
     UnrecognizedStr,
 ]
+r"""Current status of the subscription."""
 
 
 class SubscriptionTypedDict(TypedDict):
     plan_id: str
+    r"""The unique identifier of the subscribed plan."""
     auto_enable: bool
+    r"""Whether the plan was automatically enabled for the customer."""
     add_on: bool
+    r"""Whether this is an add-on plan rather than a base subscription."""
     status: Status
+    r"""Current status of the subscription."""
     past_due: bool
+    r"""Whether the subscription has overdue payments."""
     canceled_at: Nullable[float]
+    r"""Timestamp when the subscription was canceled, or null if not canceled."""
     expires_at: Nullable[float]
+    r"""Timestamp when the subscription will expire, or null if no expiry set."""
     trial_ends_at: Nullable[float]
+    r"""Timestamp when the trial period ends, or null if not on trial."""
     started_at: float
+    r"""Timestamp when the subscription started."""
     current_period_start: Nullable[float]
+    r"""Start timestamp of the current billing period."""
     current_period_end: Nullable[float]
+    r"""End timestamp of the current billing period."""
     quantity: float
+    r"""Number of units of this subscription (for per-seat plans)."""
     plan: NotRequired[PlanTypedDict]
 
 
 class Subscription(BaseModel):
     plan_id: str
+    r"""The unique identifier of the subscribed plan."""
 
     auto_enable: bool
+    r"""Whether the plan was automatically enabled for the customer."""
 
     add_on: bool
+    r"""Whether this is an add-on plan rather than a base subscription."""
 
     status: Status
+    r"""Current status of the subscription."""
 
     past_due: bool
+    r"""Whether the subscription has overdue payments."""
 
     canceled_at: Nullable[float]
+    r"""Timestamp when the subscription was canceled, or null if not canceled."""
 
     expires_at: Nullable[float]
+    r"""Timestamp when the subscription will expire, or null if no expiry set."""
 
     trial_ends_at: Nullable[float]
+    r"""Timestamp when the trial period ends, or null if not on trial."""
 
     started_at: float
+    r"""Timestamp when the subscription started."""
 
     current_period_start: Nullable[float]
+    r"""Start timestamp of the current billing period."""
 
     current_period_end: Nullable[float]
+    r"""End timestamp of the current billing period."""
 
     quantity: float
+    r"""Number of units of this subscription (for per-seat plans)."""
 
     plan: Optional[Plan] = None
 
@@ -114,20 +138,28 @@ class Subscription(BaseModel):
 
 class PurchaseTypedDict(TypedDict):
     plan_id: str
+    r"""The unique identifier of the purchased plan."""
     expires_at: Nullable[float]
+    r"""Timestamp when the purchase expires, or null for lifetime access."""
     started_at: float
+    r"""Timestamp when the purchase was made."""
     quantity: float
+    r"""Number of units purchased."""
     plan: NotRequired[PlanTypedDict]
 
 
 class Purchase(BaseModel):
     plan_id: str
+    r"""The unique identifier of the purchased plan."""
 
     expires_at: Nullable[float]
+    r"""Timestamp when the purchase expires, or null for lifetime access."""
 
     started_at: float
+    r"""Timestamp when the purchase was made."""
 
     quantity: float
+    r"""Number of units purchased."""
 
     plan: Optional[Plan] = None
 
@@ -215,6 +247,8 @@ class CustomerDisplay(BaseModel):
 
 
 class CustomerFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
     id: str
     name: str
     type: CustomerBalancesType
@@ -226,6 +260,8 @@ class CustomerFeatureTypedDict(TypedDict):
 
 
 class CustomerFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
     id: str
 
     name: str
@@ -278,25 +314,33 @@ CustomerIntervalEnum = Union[
 CustomerIntervalUnionTypedDict = TypeAliasType(
     "CustomerIntervalUnionTypedDict", Union[CustomerIntervalEnum, str]
 )
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
 CustomerIntervalUnion = TypeAliasType(
     "CustomerIntervalUnion", Union[CustomerIntervalEnum, str]
 )
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
 class CustomerResetTypedDict(TypedDict):
     interval: CustomerIntervalUnionTypedDict
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
     resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
     interval_count: NotRequired[float]
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
 
 
 class CustomerReset(BaseModel):
     interval: CustomerIntervalUnion
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
     resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -348,26 +392,37 @@ CustomerBillingMethod = Union[
     ],
     UnrecognizedStr,
 ]
+r"""Whether usage is prepaid or billed pay-per-use."""
 
 
 class CustomerPriceTypedDict(TypedDict):
     billing_units: float
+    r"""The number of units per billing increment (eg. $9 / 250 units)."""
     billing_method: CustomerBillingMethod
+    r"""Whether usage is prepaid or billed pay-per-use."""
     max_purchase: Nullable[float]
+    r"""Maximum quantity that can be purchased, or null for unlimited."""
     amount: NotRequired[float]
+    r"""The per-unit price amount."""
     tiers: NotRequired[List[CustomerTierTypedDict]]
+    r"""Tiered pricing configuration if applicable."""
 
 
 class CustomerPrice(BaseModel):
     billing_units: float
+    r"""The number of units per billing increment (eg. $9 / 250 units)."""
 
     billing_method: CustomerBillingMethod
+    r"""Whether usage is prepaid or billed pay-per-use."""
 
     max_purchase: Nullable[float]
+    r"""Maximum quantity that can be purchased, or null for unlimited."""
 
     amount: Optional[float] = None
+    r"""The per-unit price amount."""
 
     tiers: Optional[List[CustomerTier]] = None
+    r"""Tiered pricing configuration if applicable."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -397,37 +452,57 @@ class CustomerPrice(BaseModel):
 
 class BreakdownTypedDict(TypedDict):
     plan_id: Nullable[str]
+    r"""The plan ID this balance originates from, or null for standalone balances."""
     included_grant: float
+    r"""Amount granted from the plan's included usage."""
     prepaid_grant: float
+    r"""Amount granted from prepaid purchases or top-ups."""
     remaining: float
+    r"""Remaining balance available for use."""
     usage: float
+    r"""Amount consumed in the current period."""
     unlimited: bool
+    r"""Whether this balance has unlimited usage."""
     reset: Nullable[CustomerResetTypedDict]
+    r"""Reset configuration for this balance, or null if no reset."""
     price: Nullable[CustomerPriceTypedDict]
+    r"""Pricing configuration if this balance has usage-based pricing."""
     expires_at: Nullable[float]
+    r"""Timestamp when this balance expires, or null for no expiration."""
     id: NotRequired[str]
+    r"""The unique identifier for this balance breakdown."""
 
 
 class Breakdown(BaseModel):
     plan_id: Nullable[str]
+    r"""The plan ID this balance originates from, or null for standalone balances."""
 
     included_grant: float
+    r"""Amount granted from the plan's included usage."""
 
     prepaid_grant: float
+    r"""Amount granted from prepaid purchases or top-ups."""
 
     remaining: float
+    r"""Remaining balance available for use."""
 
     usage: float
+    r"""Amount consumed in the current period."""
 
     unlimited: bool
+    r"""Whether this balance has unlimited usage."""
 
     reset: Nullable[CustomerReset]
+    r"""Reset configuration for this balance, or null if no reset."""
 
     price: Nullable[CustomerPrice]
+    r"""Pricing configuration if this balance has usage-based pricing."""
 
     expires_at: Nullable[float]
+    r"""Timestamp when this balance expires, or null for no expiration."""
 
     id: Optional[str] = ""
+    r"""The unique identifier for this balance breakdown."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -457,51 +532,77 @@ class Breakdown(BaseModel):
 
 class CustomerRolloverTypedDict(TypedDict):
     balance: float
+    r"""Amount of balance rolled over from a previous period."""
     expires_at: float
+    r"""Timestamp when the rollover balance expires."""
 
 
 class CustomerRollover(BaseModel):
     balance: float
+    r"""Amount of balance rolled over from a previous period."""
 
     expires_at: float
+    r"""Timestamp when the rollover balance expires."""
 
 
 class BalancesTypedDict(TypedDict):
     feature_id: str
+    r"""The feature ID this balance is for."""
     granted: float
+    r"""Total balance granted (included + prepaid)."""
     remaining: float
+    r"""Remaining balance available for use."""
     usage: float
+    r"""Total usage consumed in the current period."""
     unlimited: bool
+    r"""Whether this feature has unlimited usage."""
     overage_allowed: bool
+    r"""Whether usage beyond the granted balance is allowed (with overage charges)."""
     max_purchase: Nullable[float]
+    r"""Maximum quantity that can be purchased as a top-up, or null for unlimited."""
     next_reset_at: Nullable[float]
+    r"""Timestamp when the balance will reset, or null for no reset."""
     feature: NotRequired[CustomerFeatureTypedDict]
+    r"""The full feature object if expanded."""
     breakdown: NotRequired[List[BreakdownTypedDict]]
+    r"""Detailed breakdown of balance sources when stacking multiple plans or grants."""
     rollovers: NotRequired[List[CustomerRolloverTypedDict]]
+    r"""Rollover balances carried over from previous periods."""
 
 
 class Balances(BaseModel):
     feature_id: str
+    r"""The feature ID this balance is for."""
 
     granted: float
+    r"""Total balance granted (included + prepaid)."""
 
     remaining: float
+    r"""Remaining balance available for use."""
 
     usage: float
+    r"""Total usage consumed in the current period."""
 
     unlimited: bool
+    r"""Whether this feature has unlimited usage."""
 
     overage_allowed: bool
+    r"""Whether usage beyond the granted balance is allowed (with overage charges)."""
 
     max_purchase: Nullable[float]
+    r"""Maximum quantity that can be purchased as a top-up, or null for unlimited."""
 
     next_reset_at: Nullable[float]
+    r"""Timestamp when the balance will reset, or null for no reset."""
 
     feature: Optional[CustomerFeature] = None
+    r"""The full feature object if expanded."""
 
     breakdown: Optional[List[Breakdown]] = None
+    r"""Detailed breakdown of balance sources when stacking multiple plans or grants."""
 
     rollovers: Optional[List[CustomerRollover]] = None
+    r"""Rollover balances carried over from previous periods."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -918,8 +1019,11 @@ class CustomerTypedDict(TypedDict):
     send_email_receipts: bool
     r"""Whether to send email receipts to the customer."""
     subscriptions: List[SubscriptionTypedDict]
+    r"""Active and scheduled recurring plans that this customer has attached."""
     purchases: List[PurchaseTypedDict]
+    r"""One-time purchases made by the customer."""
     balances: Dict[str, BalancesTypedDict]
+    r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     invoices: NotRequired[List[InvoiceTypedDict]]
     entities: NotRequired[List[EntityTypedDict]]
     trials_used: NotRequired[List[TrialsUsedTypedDict]]
@@ -957,10 +1061,13 @@ class Customer(BaseModel):
     r"""Whether to send email receipts to the customer."""
 
     subscriptions: List[Subscription]
+    r"""Active and scheduled recurring plans that this customer has attached."""
 
     purchases: List[Purchase]
+    r"""One-time purchases made by the customer."""
 
     balances: Dict[str, Balances]
+    r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
 
     invoices: Optional[List[Invoice]] = None
 

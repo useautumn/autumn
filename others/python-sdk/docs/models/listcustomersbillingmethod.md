@@ -1,5 +1,7 @@
 # ListCustomersBillingMethod
 
+Whether usage is prepaid or billed pay-per-use.
+
 
 ## Values
 

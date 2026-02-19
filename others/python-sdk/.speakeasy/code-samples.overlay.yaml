@@ -17,7 +17,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.check(customer_id="<id>", feature_id="<id>")
+                res = autumn.check(customer_id="cus_123", feature_id="messages")
 
                 # Handle response
                 print(res)
@@ -35,7 +35,9 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.create(feature_id="<id>", customer_id="<id>")
+                res = autumn.balances.create(customer_id="cus_123", feature_id="api_calls", included=1000, reset={
+                    "interval": "month",
+                })
 
                 # Handle response
                 print(res)
@@ -53,7 +55,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.track(customer_id="<id>")
+                res = autumn.track(customer_id="cus_123", feature_id="messages", value=1)
 
                 # Handle response
                 print(res)
@@ -71,7 +73,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.update(customer_id="<id>", feature_id="<id>")
+                res = autumn.balances.update(customer_id="cus_123", feature_id="api_calls", remaining=5)
 
                 # Handle response
                 print(res)
@@ -89,7 +91,25 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.attach(customer_id="<id>", plan_id="<id>", redirect_mode="always")
+                res = autumn.billing.attach(customer_id="cus_123", plan_id="pro_plan")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.open_customer_portal"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.open_customer_portal(customer_id="cus_123", return_url="https://useautumn.com")
 
                 # Handle response
                 print(res)
@@ -107,7 +127,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.preview_attach(customer_id="<id>", plan_id="<id>", redirect_mode="always")
+                res = autumn.billing.preview_attach(customer_id="cus_123", plan_id="pro_plan")
 
                 # Handle response
                 print(res)
@@ -125,25 +145,12 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.preview_update(customer_id="<id>")
-
-                # Handle response
-                print(res)
-  - target: $["paths"]["/v1/billing.setup_payment"]["post"]
-    update:
-      x-codeSamples:
-        - lang: python
-          label: Python (SDK)
-          source: |-
-            from autumn_sdk import Autumn
-
-
-            with Autumn(
-                x_api_version="2.1",
-                secret_key="<YOUR_BEARER_TOKEN_HERE>",
-            ) as autumn:
-
-                res = autumn.billing.setup_payment(customer_id="<id>")
+                res = autumn.billing.preview_update(customer_id="cus_123", plan_id="pro_plan", feature_quantities=[
+                    {
+                        "feature_id": "seats",
+                        "quantity": 15,
+                    },
+                ])
 
                 # Handle response
                 print(res)
@@ -161,7 +168,12 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.update(customer_id="<id>")
+                res = autumn.billing.update(customer_id="cus_123", plan_id="pro_plan", feature_quantities=[
+                    {
+                        "feature_id": "seats",
+                        "quantity": 10,
+                    },
+                ])
 
                 # Handle response
                 print(res)
@@ -237,6 +249,96 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/entities.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.entities.create(feature_id="seats", customer_id="cus_123", entity_id="seat_42", name="Seat 42")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/entities.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.entities.delete(entity_id="seat_42", customer_id="cus_123")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/entities.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.entities.get(entity_id="seat_42")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/events.aggregate"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.events.aggregate(customer_id="cus_123", feature_id="api_calls", range="30d", bin_size="day")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/events.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.events.list(offset=0, limit=50, customer_id="cus_123")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:
@@ -252,6 +354,42 @@ actions:
             ) as autumn:
 
                 res = autumn.plans.list()
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referrals.create_code"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.create_code(customer_id="cus_123", program_id="prog_123")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referrals.redeem_code"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.redeem_code(code="REF123", customer_id="cus_456")
 
                 # Handle response
                 print(res)

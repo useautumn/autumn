@@ -1,14 +1,20 @@
 import {
 	AttachParamsV1Schema,
-	AttachPreviewResponseSchema,
+	BILLING_PREVIEW_RESPONSE_EXAMPLE,
 	BillingResponseSchema,
-	PreviewUpdateSubscriptionResponseSchema,
-	SetupPaymentParamsSchema,
-	SetupPaymentResultSchema,
-	UpdateSubscriptionV1ParamsSchema,
+	ExtAttachPreviewResponseSchema,
+	ExtPreviewUpdateSubscriptionResponseSchema,
+	ExtUpdateSubscriptionV1ParamsSchema,
+	OpenCustomerPortalParamsV1Schema,
+	OpenCustomerPortalResponseSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
-import { billingAttachJsDoc } from "../jsDocs/billingJsDocs";
+import {
+	billingAttachJsDoc,
+	billingPreviewAttachJsDoc,
+	billingPreviewUpdateJsDoc,
+	billingUpdateJsDoc,
+} from "../jsDocs/billingJsDocs";
 
 export const billingAttachContract = oc
 	.route({
@@ -22,23 +28,27 @@ export const billingAttachContract = oc
 			"x-speakeasy-name-override": "attach",
 		}),
 	})
-	.input(AttachParamsV1Schema)
-	.output(BillingResponseSchema);
-
-export const billingPreviewAttachContract = oc
-	.route({
-		method: "POST",
-		path: "/v1/billing.preview_attach",
-		operationId: "billingPreviewAttach",
-		tags: ["billing"],
-		description: "Preview billing changes before attaching a plan.",
-		spec: (spec) => ({
-			...spec,
-			"x-speakeasy-name-override": "previewAttach",
+	.input(
+		AttachParamsV1Schema.meta({
+			title: "AttachParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plan_id: "pro_plan",
+				},
+			],
 		}),
-	})
-	.input(AttachParamsV1Schema)
-	.output(AttachPreviewResponseSchema);
+	)
+	.output(
+		BillingResponseSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					payment_url: "https://checkout.stripe.com/...",
+				},
+			],
+		}),
+	);
 
 export const billingUpdateContract = oc
 	.route({
@@ -46,41 +56,132 @@ export const billingUpdateContract = oc
 		path: "/v1/billing.update",
 		operationId: "billingUpdate",
 		tags: ["billing"],
-		description: "Update an existing subscription.",
+		description: billingUpdateJsDoc,
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "update",
 		}),
 	})
-	.input(UpdateSubscriptionV1ParamsSchema)
-	.output(BillingResponseSchema);
+	.input(
+		ExtUpdateSubscriptionV1ParamsSchema.meta({
+			title: "UpdateSubscriptionParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plan_id: "pro_plan",
+					feature_quantities: [{ feature_id: "seats", quantity: 10 }],
+				},
+			],
+		}),
+	)
+	.output(
+		BillingResponseSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					invoice: {
+						status: "paid",
+						stripe_id: "in_1234",
+						total: 1500,
+						currency: "usd",
+						hosted_invoice_url: "https://invoice.stripe.com/...",
+					},
+					payment_url: null,
+				},
+			],
+		}),
+	);
+
+export const billingPreviewAttachContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.preview_attach",
+		operationId: "previewAttach",
+		tags: ["billing"],
+		description: billingPreviewAttachJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "previewAttach",
+		}),
+	})
+	.input(
+		AttachParamsV1Schema.meta({
+			title: "PreviewAttachParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plan_id: "pro_plan",
+				},
+			],
+		}),
+	)
+	.output(
+		ExtAttachPreviewResponseSchema.meta({
+			examples: [BILLING_PREVIEW_RESPONSE_EXAMPLE],
+		}),
+	);
 
 export const billingPreviewUpdateContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/billing.preview_update",
-		operationId: "billingPreviewUpdate",
+		operationId: "previewUpdate",
 		tags: ["billing"],
-		description: "Preview billing changes before updating a subscription.",
+		description: billingPreviewUpdateJsDoc,
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "previewUpdate",
 		}),
 	})
-	.input(UpdateSubscriptionV1ParamsSchema)
-	.output(PreviewUpdateSubscriptionResponseSchema);
+	.input(
+		ExtUpdateSubscriptionV1ParamsSchema.meta({
+			title: "PreviewUpdateParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plan_id: "pro_plan",
+					feature_quantities: [{ feature_id: "seats", quantity: 15 }],
+				},
+			],
+		}),
+	)
+	.output(
+		ExtPreviewUpdateSubscriptionResponseSchema.meta({
+			examples: [BILLING_PREVIEW_RESPONSE_EXAMPLE],
+		}),
+	);
 
-export const billingSetupPaymentContract = oc
+export const billingOpenCustomerPortalContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/billing.setup_payment",
-		operationId: "billingSetupPayment",
+		path: "/v1/billing.open_customer_portal",
+		operationId: "openCustomerPortal",
 		tags: ["billing"],
-		description: "Create a setup payment session for a customer.",
+		description:
+			"Create a billing portal session for a customer to manage their subscription.",
 		spec: (spec) => ({
 			...spec,
-			"x-speakeasy-name-override": "setupPayment",
+			"x-speakeasy-name-override": "openCustomerPortal",
 		}),
 	})
-	.input(SetupPaymentParamsSchema)
-	.output(SetupPaymentResultSchema);
+	.input(
+		OpenCustomerPortalParamsV1Schema.meta({
+			title: "OpenCustomerPortalParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					return_url: "https://useautumn.com",
+				},
+			],
+		}),
+	)
+	.output(
+		OpenCustomerPortalResponseSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					url: "https://billing.stripe.com/session/...",
+				},
+			],
+		}),
+	);

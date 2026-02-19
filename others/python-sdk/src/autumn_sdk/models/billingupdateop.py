@@ -44,13 +44,13 @@ class BillingUpdateGlobals(BaseModel):
         return m
 
 
-class BillingUpdateFeatureQuantitiesTypedDict(TypedDict):
+class BillingUpdateFeatureQuantityTypedDict(TypedDict):
     feature_id: str
     quantity: NotRequired[float]
     adjustable: NotRequired[bool]
 
 
-class BillingUpdateFeatureQuantities(BaseModel):
+class BillingUpdateFeatureQuantity(BaseModel):
     feature_id: str
 
     quantity: Optional[float] = None
@@ -417,17 +417,27 @@ class BillingUpdateCustomize(BaseModel):
 
 
 class BillingUpdateInvoiceModeTypedDict(TypedDict):
+    r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
+
     enabled: bool
+    r"""When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method."""
     enable_plan_immediately: NotRequired[bool]
+    r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
+    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
 
 
 class BillingUpdateInvoiceMode(BaseModel):
+    r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
+
     enabled: bool
+    r"""When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method."""
 
     enable_plan_immediately: Optional[bool] = False
+    r"""If true, enables the plan immediately even though the invoice is not paid yet."""
 
     finalize: Optional[bool] = True
+    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -446,64 +456,74 @@ class BillingUpdateInvoiceMode(BaseModel):
         return m
 
 
+BillingUpdateBillingBehavior = Literal[
+    "prorate_immediately",
+    "next_cycle_only",
+]
+r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+
+
 BillingUpdateCancelAction = Literal[
     "cancel_immediately",
     "cancel_end_of_cycle",
     "uncancel",
 ]
+r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
-BillingUpdateBillingBehavior = Literal[
-    "prorate_immediately",
-    "next_cycle_only",
-]
-
-
-class BillingUpdateRequestTypedDict(TypedDict):
+class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
-    entity_id: NotRequired[Nullable[str]]
+    plan_id: str
+    r"""The ID of the plan."""
+    entity_id: NotRequired[str]
     r"""The ID of the entity to attach the plan to."""
-    feature_quantities: NotRequired[
-        Nullable[List[BillingUpdateFeatureQuantitiesTypedDict]]
-    ]
+    feature_quantities: NotRequired[List[BillingUpdateFeatureQuantityTypedDict]]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
     free_trial: NotRequired[Nullable[BillingUpdateFreeTrialTypedDict]]
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
     customize: NotRequired[BillingUpdateCustomizeTypedDict]
     r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
-    plan_id: NotRequired[str]
     invoice_mode: NotRequired[BillingUpdateInvoiceModeTypedDict]
-    cancel_action: NotRequired[BillingUpdateCancelAction]
+    r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     billing_behavior: NotRequired[BillingUpdateBillingBehavior]
+    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+    cancel_action: NotRequired[BillingUpdateCancelAction]
+    r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
-class BillingUpdateRequest(BaseModel):
+class UpdateSubscriptionParams(BaseModel):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
 
-    entity_id: OptionalNullable[str] = UNSET
+    plan_id: str
+    r"""The ID of the plan."""
+
+    entity_id: Optional[str] = None
     r"""The ID of the entity to attach the plan to."""
 
-    feature_quantities: OptionalNullable[List[BillingUpdateFeatureQuantities]] = UNSET
+    feature_quantities: Optional[List[BillingUpdateFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
 
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
     free_trial: OptionalNullable[BillingUpdateFreeTrial] = UNSET
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
     customize: Optional[BillingUpdateCustomize] = None
     r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
 
-    plan_id: Optional[str] = None
-
     invoice_mode: Optional[BillingUpdateInvoiceMode] = None
-
-    cancel_action: Optional[BillingUpdateCancelAction] = None
+    r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
     billing_behavior: Optional[BillingUpdateBillingBehavior] = None
+    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+
+    cancel_action: Optional[BillingUpdateCancelAction] = None
+    r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -514,13 +534,12 @@ class BillingUpdateRequest(BaseModel):
                 "version",
                 "free_trial",
                 "customize",
-                "plan_id",
                 "invoice_mode",
-                "cancel_action",
                 "billing_behavior",
+                "cancel_action",
             ]
         )
-        nullable_fields = set(["entity_id", "feature_quantities", "free_trial"])
+        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
@@ -544,23 +563,37 @@ class BillingUpdateRequest(BaseModel):
 
 
 class BillingUpdateInvoiceTypedDict(TypedDict):
+    r"""Invoice details if an invoice was created. Only present when a charge was made."""
+
     status: Nullable[str]
+    r"""The status of the invoice (e.g., 'paid', 'open', 'draft')."""
     stripe_id: str
+    r"""The Stripe invoice ID."""
     total: float
+    r"""The total amount of the invoice in cents."""
     currency: str
+    r"""The three-letter ISO currency code (e.g., 'usd')."""
     hosted_invoice_url: Nullable[str]
+    r"""URL to the hosted invoice page where the customer can view and pay the invoice."""
 
 
 class BillingUpdateInvoice(BaseModel):
+    r"""Invoice details if an invoice was created. Only present when a charge was made."""
+
     status: Nullable[str]
+    r"""The status of the invoice (e.g., 'paid', 'open', 'draft')."""
 
     stripe_id: str
+    r"""The Stripe invoice ID."""
 
     total: float
+    r"""The total amount of the invoice in cents."""
 
     currency: str
+    r"""The three-letter ISO currency code (e.g., 'usd')."""
 
     hosted_invoice_url: Nullable[str]
+    r"""URL to the hosted invoice page where the customer can view and pay the invoice."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -585,41 +618,60 @@ BillingUpdateCode = Union[
     ],
     UnrecognizedStr,
 ]
+r"""The type of action required to complete the payment."""
 
 
 class BillingUpdateRequiredActionTypedDict(TypedDict):
+    r"""Details about any action required to complete the payment. Present when the payment could not be processed automatically."""
+
     code: BillingUpdateCode
+    r"""The type of action required to complete the payment."""
     reason: str
+    r"""A human-readable explanation of why this action is required."""
 
 
 class BillingUpdateRequiredAction(BaseModel):
+    r"""Details about any action required to complete the payment. Present when the payment could not be processed automatically."""
+
     code: BillingUpdateCode
+    r"""The type of action required to complete the payment."""
 
     reason: str
+    r"""A human-readable explanation of why this action is required."""
 
 
 class BillingUpdateResponseTypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
+    r"""The ID of the customer."""
     payment_url: Nullable[str]
+    r"""URL to redirect the customer to complete payment. Null if no payment action is required."""
     entity_id: NotRequired[str]
+    r"""The ID of the entity, if the plan was attached to an entity."""
     invoice: NotRequired[BillingUpdateInvoiceTypedDict]
+    r"""Invoice details if an invoice was created. Only present when a charge was made."""
     required_action: NotRequired[BillingUpdateRequiredActionTypedDict]
+    r"""Details about any action required to complete the payment. Present when the payment could not be processed automatically."""
 
 
 class BillingUpdateResponse(BaseModel):
     r"""OK"""
 
     customer_id: str
+    r"""The ID of the customer."""
 
     payment_url: Nullable[str]
+    r"""URL to redirect the customer to complete payment. Null if no payment action is required."""
 
     entity_id: Optional[str] = None
+    r"""The ID of the entity, if the plan was attached to an entity."""
 
     invoice: Optional[BillingUpdateInvoice] = None
+    r"""Invoice details if an invoice was created. Only present when a charge was made."""
 
     required_action: Optional[BillingUpdateRequiredAction] = None
+    r"""Details about any action required to complete the payment. Present when the payment could not be processed automatically."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

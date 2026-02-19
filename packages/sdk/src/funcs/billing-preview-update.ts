@@ -26,15 +26,35 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Preview billing changes before updating a subscription.
+ * Previews the billing changes that would occur when updating a subscription, without actually making any changes.
+ *
+ * Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
+ *
+ * @example
+ * ```typescript
+ * // Preview updating seat quantity
+ * const response = await client.billing.previewUpdate({ customerId: "cus_123", planId: "pro_plan", featureQuantities: [{"featureId":"seats","quantity":15}] });
+ * ```
+ *
+ * @param customerId - The ID of the customer to attach the plan to.
+ * @param entityId - The ID of the entity to attach the plan to. (optional)
+ * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+ * @param version - The version of the plan to attach. (optional)
+ * @param freeTrial - Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. (optional)
+ * @param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
+ * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+ * @param billingBehavior - How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle. (optional)
+ * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+ *
+ * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
  */
 export function billingPreviewUpdate(
   client: AutumnCore,
-  request: models.BillingPreviewUpdateRequest,
+  request: models.PreviewUpdateParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.BillingPreviewUpdateResponse,
+    models.PreviewUpdateResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -54,12 +74,12 @@ export function billingPreviewUpdate(
 
 async function $do(
   client: AutumnCore,
-  request: models.BillingPreviewUpdateRequest,
+  request: models.PreviewUpdateParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.BillingPreviewUpdateResponse,
+      models.PreviewUpdateResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -74,8 +94,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) =>
-      z.parse(models.BillingPreviewUpdateRequest$outboundSchema, value),
+    (value) => z.parse(models.PreviewUpdateParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -103,7 +122,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "billingPreviewUpdate",
+    operationID: "previewUpdate",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -142,7 +161,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.BillingPreviewUpdateResponse,
+    models.PreviewUpdateResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -152,7 +171,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.BillingPreviewUpdateResponse$inboundSchema),
+    M.json(200, models.PreviewUpdateResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

@@ -1,5 +1,7 @@
 # BillingUpdateCode
 
+The type of action required to complete the payment.
+
 ## Example Usage
 
 ```typescript

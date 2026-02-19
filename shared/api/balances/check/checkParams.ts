@@ -1,25 +1,9 @@
 import { z } from "zod/v4";
+import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
 import { CheckExpand } from "./enums/CheckExpand";
-
-const checkDescriptions = {
-	customer_id: "ID which you provided when creating the customer",
-	product_id:
-		"ID of the product to check access to. Required if feature_id is not provided.",
-	feature_id: "ID of the feature to check access to.",
-	required_balance:
-		"If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.",
-	send_event:
-		"If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value.",
-	with_preview:
-		"If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.",
-	entity_id:
-		"If using entity balances (eg, seats), the entity ID to check access for.",
-	customer_data:
-		"Properties used if customer is automatically created. Will also update if the name or email is not already set.",
-};
 
 export const CheckQuerySchema = z.object({
 	skip_cache: z.boolean().optional(),
@@ -27,30 +11,25 @@ export const CheckQuerySchema = z.object({
 });
 
 // Check Feature Schemas
-export const ExtCheckParamsSchema = z.object({
-	customer_id: z.string().meta({
-		description: checkDescriptions.customer_id,
-	}),
-
-	feature_id: z.string().meta({
-		description: checkDescriptions.feature_id,
-	}),
-	entity_id: z.string().optional().meta({
-		description: checkDescriptions.entity_id,
-	}),
-
+export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 	required_balance: z.number().optional().meta({
-		description: checkDescriptions.required_balance,
+		description:
+			"Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.",
 	}),
 
-	properties: z.record(z.string(), z.any()).optional(),
+	properties: z.record(z.string(), z.any()).optional().meta({
+		description:
+			"Additional properties to attach to the usage event if send_event is true.",
+	}),
 
 	send_event: z.boolean().optional().meta({
-		description: checkDescriptions.send_event,
+		description:
+			"If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.",
 	}),
 
 	with_preview: z.boolean().optional().meta({
-		description: checkDescriptions.with_preview,
+		description:
+			"If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.",
 	}),
 
 	customer_data: CustomerDataSchema.optional().meta({

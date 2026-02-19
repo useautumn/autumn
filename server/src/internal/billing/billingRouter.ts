@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { handlePreviewAttach } from "@/internal/billing/v2/handlers/handlePreviewAttach.js";
 import { handleAttachPreview } from "@/internal/customers/attach/handleAttachPreview/handleAttachPreview.js";
 import { handleCancelV2 } from "@/internal/customers/cancel/handleCancelV2.js";
+import { handleOpenCustomerPortalV2 } from "@/internal/customers/handlers/handleBillingPortal/handleOpenCustomerPortalV2.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
@@ -37,3 +38,7 @@ billingRpcRouter.post(
 );
 billingRpcRouter.post("/billing.attach", ...handleAttachV2);
 billingRpcRouter.post("/billing.preview_attach", ...handlePreviewAttach);
+billingRpcRouter.post(
+	"/billing.open_customer_portal",
+	...handleOpenCustomerPortalV2,
+);

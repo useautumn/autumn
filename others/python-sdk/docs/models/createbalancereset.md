@@ -1,0 +1,11 @@
+# CreateBalanceReset
+
+Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
+
+
+## Fields
+
+| Field                                                                                                                     | Type                                                                                                                      | Required                                                                                                                  | Description                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `interval`                                                                                                                | [models.CreateBalanceInterval](../models/createbalanceinterval.md)                                                        | :heavy_check_mark:                                                                                                        | The interval at which the balance resets (e.g., 'month', 'day', 'year').                                                  |
+| `interval_count`                                                                                                          | *Optional[float]*                                                                                                         | :heavy_minus_sign:                                                                                                        | Number of intervals between resets. Defaults to 1 (e.g., interval_count: 2 with interval: 'month' resets every 2 months). |

@@ -41,6 +41,13 @@ export const scenarioSections: Array<ScenarioSection> = [
         status: "ready",
       },
       {
+        id: "use-referrals",
+        title: "useReferrals",
+        href: "/scenarios/core/use-referrals",
+        description: "Test create/redeem referral code action helpers.",
+        status: "ready",
+      },
+      {
         id: "use-entity",
         title: "useEntity",
         href: "/scenarios/core/use-entity",

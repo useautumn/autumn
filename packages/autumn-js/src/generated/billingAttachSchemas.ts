@@ -5,7 +5,7 @@ export const billingAttachGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const billingAttachFeatureQuantitiesSchema = z.object({
+export const billingAttachFeatureQuantitySchema = z.object({
 	featureId: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
@@ -45,7 +45,7 @@ export const billingAttachInvoiceSchema = z.object({
 	hostedInvoiceUrl: z.string().nullable(),
 });
 
-export const billingAttachFeatureQuantitiesOutboundSchema = z.object({
+export const billingAttachFeatureQuantityOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
@@ -143,16 +143,13 @@ export const billingAttachDiscountUnionOutboundSchema = z.union([
 	billingAttachDiscount2OutboundSchema,
 ]);
 
-export const billingAttachRequestOutboundSchema = z.object({
+export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
-	entity_id: z.union([z.string(), z.undefined()]).optional().nullable(),
+	entity_id: z.union([z.string(), z.undefined()]).optional(),
+	plan_id: z.string(),
 	feature_quantities: z
-		.union([
-			z.array(billingAttachFeatureQuantitiesOutboundSchema),
-			z.undefined(),
-		])
-		.optional()
-		.nullable(),
+		.union([z.array(billingAttachFeatureQuantityOutboundSchema), z.undefined()])
+		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	free_trial: z
 		.union([billingAttachFreeTrialOutboundSchema, z.undefined()])
@@ -161,10 +158,10 @@ export const billingAttachRequestOutboundSchema = z.object({
 	customize: z
 		.union([billingAttachCustomizeOutboundSchema, z.undefined()])
 		.optional(),
-	plan_id: z.string(),
 	invoice_mode: z
 		.union([billingAttachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
+	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([
 			z.array(
@@ -176,11 +173,9 @@ export const billingAttachRequestOutboundSchema = z.object({
 			z.undefined(),
 		])
 		.optional(),
-	redirect_mode: z.string(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
-	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -261,28 +256,28 @@ export const billingAttachCustomizeSchema = z.object({
 	items: z.union([z.array(billingAttachItemSchema), z.undefined()]).optional(),
 });
 
-export const billingAttachRedirectModeSchema = closedEnumSchema;
+export const billingAttachBillingBehaviorSchema = closedEnumSchema;
 
 export const billingAttachPlanScheduleSchema = closedEnumSchema;
 
-export const billingAttachBillingBehaviorSchema = closedEnumSchema;
-
-export const billingAttachRequestSchema = z.object({
+export const attachParamsSchema = z.object({
 	customerId: z.string(),
-	entityId: z.union([z.string(), z.undefined()]).optional().nullable(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
+	planId: z.string(),
 	featureQuantities: z
-		.union([z.array(billingAttachFeatureQuantitiesSchema), z.undefined()])
-		.optional()
-		.nullable(),
+		.union([z.array(billingAttachFeatureQuantitySchema), z.undefined()])
+		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	freeTrial: z
 		.union([billingAttachFreeTrialSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	customize: z.union([billingAttachCustomizeSchema, z.undefined()]).optional(),
-	planId: z.string(),
 	invoiceMode: z
 		.union([billingAttachInvoiceModeSchema, z.undefined()])
+		.optional(),
+	billingBehavior: z
+		.union([billingAttachBillingBehaviorSchema, z.undefined()])
 		.optional(),
 	discounts: z
 		.union([
@@ -292,16 +287,10 @@ export const billingAttachRequestSchema = z.object({
 			z.undefined(),
 		])
 		.optional(),
-	redirectMode: z
-		.union([billingAttachRedirectModeSchema, z.undefined()])
-		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
 	planSchedule: z
 		.union([billingAttachPlanScheduleSchema, z.undefined()])
-		.optional(),
-	billingBehavior: z
-		.union([billingAttachBillingBehaviorSchema, z.undefined()])
 		.optional(),
 });
 

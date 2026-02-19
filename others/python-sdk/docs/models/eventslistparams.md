@@ -1,0 +1,12 @@
+# EventsListParams
+
+
+## Fields
+
+| Field                                                                        | Type                                                                         | Required                                                                     | Description                                                                  |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `offset`                                                                     | *Optional[int]*                                                              | :heavy_minus_sign:                                                           | Number of items to skip                                                      |
+| `limit`                                                                      | *Optional[int]*                                                              | :heavy_minus_sign:                                                           | Number of items to return. Default 100, max 1000.                            |
+| `customer_id`                                                                | *Optional[str]*                                                              | :heavy_minus_sign:                                                           | Filter events by customer ID                                                 |
+| `feature_id`                                                                 | [Optional[models.ListEventsFeatureID]](../models/listeventsfeatureid.md)     | :heavy_minus_sign:                                                           | Filter by specific feature ID(s)                                             |
+| `custom_range`                                                               | [Optional[models.ListEventsCustomRange]](../models/listeventscustomrange.md) | :heavy_minus_sign:                                                           | Filter events by time range                                                  |

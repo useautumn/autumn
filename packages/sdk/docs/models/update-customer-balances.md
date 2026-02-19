@@ -6,29 +6,46 @@
 import { UpdateCustomerBalances } from "@useautumn/sdk";
 
 let value: UpdateCustomerBalances = {
-  featureId: "<id>",
-  granted: 3659.37,
-  remaining: 1762.52,
-  usage: 5915.11,
+  featureId: "messages",
+  granted: 100,
+  remaining: 72,
+  usage: 28,
   unlimited: false,
   overageAllowed: false,
-  maxPurchase: 8309.89,
-  nextResetAt: 3915.29,
+  maxPurchase: null,
+  nextResetAt: 1773851121437,
+  breakdown: [
+    {
+      id: "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
+      planId: "pro_plan",
+      includedGrant: 100,
+      prepaidGrant: 0,
+      remaining: 72,
+      usage: 28,
+      unlimited: false,
+      reset: {
+        interval: "month",
+        resetsAt: 1773851121437,
+      },
+      price: null,
+      expiresAt: null,
+    },
+  ],
 };
 ```
 
 ## Fields
 
-| Field                                                                      | Type                                                                       | Required                                                                   | Description                                                                |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `featureId`                                                                | *string*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `feature`                                                                  | [models.UpdateCustomerFeature](../models/update-customer-feature.md)       | :heavy_minus_sign:                                                         | N/A                                                                        |
-| `granted`                                                                  | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `remaining`                                                                | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `usage`                                                                    | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `unlimited`                                                                | *boolean*                                                                  | :heavy_check_mark:                                                         | N/A                                                                        |
-| `overageAllowed`                                                           | *boolean*                                                                  | :heavy_check_mark:                                                         | N/A                                                                        |
-| `maxPurchase`                                                              | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `nextResetAt`                                                              | *number*                                                                   | :heavy_check_mark:                                                         | N/A                                                                        |
-| `breakdown`                                                                | [models.UpdateCustomerBreakdown](../models/update-customer-breakdown.md)[] | :heavy_minus_sign:                                                         | N/A                                                                        |
-| `rollovers`                                                                | [models.UpdateCustomerRollover](../models/update-customer-rollover.md)[]   | :heavy_minus_sign:                                                         | N/A                                                                        |
+| Field                                                                         | Type                                                                          | Required                                                                      | Description                                                                   |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `featureId`                                                                   | *string*                                                                      | :heavy_check_mark:                                                            | The feature ID this balance is for.                                           |
+| `feature`                                                                     | [models.UpdateCustomerFeature](../models/update-customer-feature.md)          | :heavy_minus_sign:                                                            | The full feature object if expanded.                                          |
+| `granted`                                                                     | *number*                                                                      | :heavy_check_mark:                                                            | Total balance granted (included + prepaid).                                   |
+| `remaining`                                                                   | *number*                                                                      | :heavy_check_mark:                                                            | Remaining balance available for use.                                          |
+| `usage`                                                                       | *number*                                                                      | :heavy_check_mark:                                                            | Total usage consumed in the current period.                                   |
+| `unlimited`                                                                   | *boolean*                                                                     | :heavy_check_mark:                                                            | Whether this feature has unlimited usage.                                     |
+| `overageAllowed`                                                              | *boolean*                                                                     | :heavy_check_mark:                                                            | Whether usage beyond the granted balance is allowed (with overage charges).   |
+| `maxPurchase`                                                                 | *number*                                                                      | :heavy_check_mark:                                                            | Maximum quantity that can be purchased as a top-up, or null for unlimited.    |
+| `nextResetAt`                                                                 | *number*                                                                      | :heavy_check_mark:                                                            | Timestamp when the balance will reset, or null for no reset.                  |
+| `breakdown`                                                                   | [models.UpdateCustomerBreakdown](../models/update-customer-breakdown.md)[]    | :heavy_minus_sign:                                                            | Detailed breakdown of balance sources when stacking multiple plans or grants. |
+| `rollovers`                                                                   | [models.UpdateCustomerRollover](../models/update-customer-rollover.md)[]      | :heavy_minus_sign:                                                            | Rollover balances carried over from previous periods.                         |

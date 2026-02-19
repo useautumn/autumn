@@ -16,7 +16,24 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "getOrCreateCustomerSchemas.ts",
 	},
 	{ sdkFile: "billing-attach-op.ts", outputFile: "billingAttachSchemas.ts" },
+	{
+		sdkFile: "open-customer-portal-op.ts",
+		outputFile: "openCustomerPortalSchemas.ts",
+	},
 	{ sdkFile: "list-plans-op.ts", outputFile: "listPlansSchemas.ts" },
+	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },
+	{
+		sdkFile: "aggregate-events-op.ts",
+		outputFile: "aggregateEventsSchemas.ts",
+	},
+	{
+		sdkFile: "create-referral-code-op.ts",
+		outputFile: "createReferralCodeSchemas.ts",
+	},
+	{
+		sdkFile: "redeem-referral-code-op.ts",
+		outputFile: "redeemReferralCodeSchemas.ts",
+	},
 ];
 
 /**

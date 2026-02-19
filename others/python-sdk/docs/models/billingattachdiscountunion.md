@@ -1,5 +1,7 @@
 # BillingAttachDiscountUnion
 
+A discount to apply. Can be either a reward ID or a promotion code.
+
 
 ## Supported Types
 

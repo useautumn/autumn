@@ -7,9 +7,9 @@ import {
 } from "./balancesContract.js";
 import {
 	billingAttachContract,
+	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
 	billingPreviewUpdateContract,
-	billingSetupPaymentContract,
 	billingUpdateContract,
 } from "./billingContract.js";
 import {
@@ -18,7 +18,20 @@ import {
 	listCustomersContract,
 	updateCustomerContract,
 } from "./customersContract.js";
+import {
+	createEntityContract,
+	deleteEntityContract,
+	getEntityContract,
+} from "./entitiesContract.js";
+import {
+	eventsAggregateContract,
+	eventsListContract,
+} from "./eventsContract.js";
 import { listPlansContract } from "./plansContract.js";
+import {
+	referralsCreateCodeContract,
+	referralsRedeemCodeContract,
+} from "./referralsContract.js";
 
 export const v2_1ContractRouter = oc.router({
 	// Customers
@@ -35,11 +48,24 @@ export const v2_1ContractRouter = oc.router({
 	billingPreviewAttach: billingPreviewAttachContract,
 	billingUpdate: billingUpdateContract,
 	billingPreviewUpdate: billingPreviewUpdateContract,
-	billingSetupPayment: billingSetupPaymentContract,
+	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
 
 	// Balances
 	balancesCreate: balancesCreateContract,
 	balancesUpdate: balancesUpdateContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
+
+	// Events
+	eventsList: eventsListContract,
+	eventsAggregate: eventsAggregateContract,
+
+	// Entities
+	entitiesCreate: createEntityContract,
+	entitiesGet: getEntityContract,
+	entitiesDelete: deleteEntityContract,
+
+	// Referrals
+	referralsCreateCode: referralsCreateCodeContract,
+	referralsRedeemCode: referralsRedeemCodeContract,
 });

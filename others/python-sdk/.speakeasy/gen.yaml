@@ -30,7 +30,7 @@ generation:
     generateNewTests: true
     skipResponseBodyAssertions: false
 python:
-  version: 0.2.23
+  version: 0.4.4
   additionalDependencies:
     dev: {}
     main: {}
@@ -38,6 +38,7 @@ python:
     - id
     - object
     - input
+    - range
   asyncMode: both
   author: Autumn
   authors:

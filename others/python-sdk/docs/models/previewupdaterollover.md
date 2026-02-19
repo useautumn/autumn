@@ -1,0 +1,10 @@
+# PreviewUpdateRollover
+
+
+## Fields
+
+| Field                                                                                  | Type                                                                                   | Required                                                                               | Description                                                                            |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `max`                                                                                  | *Optional[float]*                                                                      | :heavy_minus_sign:                                                                     | N/A                                                                                    |
+| `expiry_duration_type`                                                                 | [models.PreviewUpdateExpiryDurationType](../models/previewupdateexpirydurationtype.md) | :heavy_check_mark:                                                                     | N/A                                                                                    |
+| `expiry_duration_length`                                                               | *Optional[float]*                                                                      | :heavy_minus_sign:                                                                     | N/A                                                                                    |

@@ -1,5 +1,6 @@
 import { createPagePaginatedResponseSchema } from "@api/common/pagePaginationSchemas.js";
 import {
+	API_CUSTOMER_V5_EXAMPLE,
 	ApiCustomerV5Schema,
 	BaseApiCustomerV5Schema,
 } from "@api/customers/apiCustomerV5.js";
@@ -62,7 +63,19 @@ export const listCustomersContract = oc
 			],
 		}),
 	)
-	.output(createPagePaginatedResponseSchema(BaseApiCustomerV5Schema));
+	.output(
+		createPagePaginatedResponseSchema(BaseApiCustomerV5Schema).meta({
+			examples: [
+				{
+					list: [API_CUSTOMER_V5_EXAMPLE],
+					has_more: false,
+					offset: 0,
+					total: 1,
+					limit: 10,
+				},
+			],
+		}),
+	);
 
 export const updateCustomerContract = oc
 	.route({

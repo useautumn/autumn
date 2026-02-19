@@ -1,5 +1,7 @@
 # ListCustomersStatus
 
+Current status of the subscription.
+
 
 ## Values
 
@@ -7,4 +9,3 @@
 | ----------- | ----------- |
 | `ACTIVE`    | active      |
 | `SCHEDULED` | scheduled   |
-| `EXPIRED`   | expired     |

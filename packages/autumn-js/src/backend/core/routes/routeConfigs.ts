@@ -1,8 +1,13 @@
-import { CustomerExpand } from "@sdk";
+import { CustomerExpand } from "@useautumn/sdk";
 import { z } from "zod/v4";
 import {
-	billingAttachRequestSchema,
+	attachParamsSchema,
+	createReferralCodeParamsSchema,
+	eventsAggregateParamsSchema,
+	eventsListParamsSchema,
 	listPlansRequestSchema,
+	openCustomerPortalParamsSchema,
+	redeemReferralCodeParamsSchema,
 } from "../../../generated";
 import type { RouteDefinition, RouteName } from "../types";
 import { backendError, backendSuccess, sanitizeBody } from "../utils";
@@ -50,12 +55,37 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "attach",
 		sdkMethod: (autumn, args) => autumn.billing.attach(args),
-		bodySchema: billingAttachRequestSchema,
+		bodySchema: attachParamsSchema,
+	},
+	{
+		route: "openCustomerPortal",
+		sdkMethod: (autumn, args) => autumn.billing.openCustomerPortal(args),
+		bodySchema: openCustomerPortalParamsSchema,
+	},
+	{
+		route: "createReferralCode",
+		sdkMethod: (autumn, args) => autumn.referrals.createCode(args),
+		bodySchema: createReferralCodeParamsSchema,
+	},
+	{
+		route: "redeemReferralCode",
+		sdkMethod: (autumn, args) => autumn.referrals.redeemCode(args),
+		bodySchema: redeemReferralCodeParamsSchema,
 	},
 	{
 		route: "listPlans",
 		sdkMethod: (autumn, args) => autumn.plans.list(args),
 		requireCustomer: false,
 		bodySchema: listPlansRequestSchema.optional(),
+	},
+	{
+		route: "listEvents",
+		sdkMethod: (autumn, args) => autumn.events.list(args),
+		bodySchema: eventsListParamsSchema.optional(),
+	},
+	{
+		route: "aggregateEvents",
+		sdkMethod: (autumn, args) => autumn.events.aggregate(args),
+		bodySchema: eventsAggregateParamsSchema.omit({ customerId: true }),
 	},
 ];

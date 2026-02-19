@@ -1,0 +1,10 @@
+# CreateEntityReset
+
+
+## Fields
+
+| Field                                                                                                 | Type                                                                                                  | Required                                                                                              | Description                                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `interval`                                                                                            | [models.CreateEntityIntervalUnion](../models/createentityintervalunion.md)                            | :heavy_check_mark:                                                                                    | The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals. |
+| `interval_count`                                                                                      | *Optional[float]*                                                                                     | :heavy_minus_sign:                                                                                    | Number of intervals between resets (eg. 2 for bi-monthly).                                            |
+| `resets_at`                                                                                           | *Nullable[float]*                                                                                     | :heavy_check_mark:                                                                                    | Timestamp when the balance will next reset.                                                           |

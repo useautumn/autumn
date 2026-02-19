@@ -5,20 +5,20 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Mapping, Optional, Union
 
 
 class BalancesSDK(BaseSDK):
     def create(
         self,
         *,
-        feature_id: str,
         customer_id: str,
+        feature_id: str,
         entity_id: Optional[str] = None,
         included: Optional[float] = None,
         unlimited: Optional[bool] = None,
         reset: Optional[
-            Union[models.BalancesCreateReset, models.BalancesCreateResetTypedDict]
+            Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
         granted_balance: Optional[float] = None,
@@ -26,16 +26,16 @@ class BalancesSDK(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesCreateResponse:
+    ) -> models.CreateBalanceResponse:
         r"""Create a balance for a customer feature.
 
-        :param feature_id: The feature ID to create the balance for
-        :param customer_id: The customer ID to assign the balance to
-        :param entity_id: Entity ID for entity-scoped balances
-        :param included: The initial balance amount to grant
-        :param unlimited: Whether the balance is unlimited
-        :param reset: Reset configuration for the balance
-        :param expires_at: Unix timestamp (milliseconds) when the balance expires
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param included: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
+        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included'.
+        :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
+        :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
         :param granted_balance:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -52,13 +52,13 @@ class BalancesSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.BalancesCreateRequest(
-            feature_id=feature_id,
+        request = models.CreateBalanceParams(
             customer_id=customer_id,
+            feature_id=feature_id,
             entity_id=entity_id,
             included=included,
             unlimited=unlimited,
-            reset=utils.get_pydantic_model(reset, Optional[models.BalancesCreateReset]),
+            reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
             expires_at=expires_at,
             granted_balance=granted_balance,
         )
@@ -75,12 +75,12 @@ class BalancesSDK(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.BalancesCreateGlobals(
+            _globals=models.CreateBalanceGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesCreateRequest
+                request, False, False, "json", models.CreateBalanceParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -98,7 +98,7 @@ class BalancesSDK(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="balancesCreate",
+                operation_id="createBalance",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -108,7 +108,7 @@ class BalancesSDK(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesCreateResponse, http_res)
+            return unmarshal_json_response(models.CreateBalanceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -125,13 +125,13 @@ class BalancesSDK(BaseSDK):
     async def create_async(
         self,
         *,
-        feature_id: str,
         customer_id: str,
+        feature_id: str,
         entity_id: Optional[str] = None,
         included: Optional[float] = None,
         unlimited: Optional[bool] = None,
         reset: Optional[
-            Union[models.BalancesCreateReset, models.BalancesCreateResetTypedDict]
+            Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
         granted_balance: Optional[float] = None,
@@ -139,16 +139,16 @@ class BalancesSDK(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesCreateResponse:
+    ) -> models.CreateBalanceResponse:
         r"""Create a balance for a customer feature.
 
-        :param feature_id: The feature ID to create the balance for
-        :param customer_id: The customer ID to assign the balance to
-        :param entity_id: Entity ID for entity-scoped balances
-        :param included: The initial balance amount to grant
-        :param unlimited: Whether the balance is unlimited
-        :param reset: Reset configuration for the balance
-        :param expires_at: Unix timestamp (milliseconds) when the balance expires
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param included: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
+        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included'.
+        :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
+        :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
         :param granted_balance:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -165,13 +165,13 @@ class BalancesSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.BalancesCreateRequest(
-            feature_id=feature_id,
+        request = models.CreateBalanceParams(
             customer_id=customer_id,
+            feature_id=feature_id,
             entity_id=entity_id,
             included=included,
             unlimited=unlimited,
-            reset=utils.get_pydantic_model(reset, Optional[models.BalancesCreateReset]),
+            reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
             expires_at=expires_at,
             granted_balance=granted_balance,
         )
@@ -188,12 +188,12 @@ class BalancesSDK(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.BalancesCreateGlobals(
+            _globals=models.CreateBalanceGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesCreateRequest
+                request, False, False, "json", models.CreateBalanceParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -211,7 +211,7 @@ class BalancesSDK(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="balancesCreate",
+                operation_id="createBalance",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -221,7 +221,7 @@ class BalancesSDK(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesCreateResponse, http_res)
+            return unmarshal_json_response(models.CreateBalanceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -241,30 +241,22 @@ class BalancesSDK(BaseSDK):
         customer_id: str,
         feature_id: str,
         entity_id: Optional[str] = None,
-        current_balance: Optional[float] = None,
-        interval: Optional[models.BalancesUpdateInterval] = None,
-        granted_balance: Optional[float] = None,
-        usage: Optional[float] = None,
-        customer_entitlement_id: Optional[str] = None,
-        next_reset_at: Optional[float] = None,
+        remaining: Optional[float] = None,
         add_to_balance: Optional[float] = None,
+        interval: Optional[models.UpdateBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesUpdateResponse:
+    ) -> models.UpdateBalanceResponse:
         r"""Update a customer balance.
 
         :param customer_id: The ID of the customer.
-        :param feature_id: The ID of the feature to update balance for.
-        :param entity_id: The ID of the entity to update balance for (if using entity balances).
-        :param current_balance: The new balance value to set.
-        :param interval: The interval to update balance for.
-        :param granted_balance:
-        :param usage:
-        :param customer_entitlement_id:
-        :param next_reset_at:
-        :param add_to_balance:
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param remaining: Set the remaining balance to this exact value. Cannot be combined with add_to_balance.
+        :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
+        :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -280,17 +272,13 @@ class BalancesSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.BalancesUpdateRequest(
+        request = models.UpdateBalanceParams(
             customer_id=customer_id,
-            entity_id=entity_id,
             feature_id=feature_id,
-            current_balance=current_balance,
-            interval=interval,
-            granted_balance=granted_balance,
-            usage=usage,
-            customer_entitlement_id=customer_entitlement_id,
-            next_reset_at=next_reset_at,
+            entity_id=entity_id,
+            remaining=remaining,
             add_to_balance=add_to_balance,
+            interval=interval,
         )
 
         req = self._build_request(
@@ -305,12 +293,12 @@ class BalancesSDK(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.BalancesUpdateGlobals(
+            _globals=models.UpdateBalanceGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesUpdateRequest
+                request, False, False, "json", models.UpdateBalanceParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -328,7 +316,7 @@ class BalancesSDK(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="balancesUpdate",
+                operation_id="updateBalance",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -338,7 +326,7 @@ class BalancesSDK(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesUpdateResponse, http_res)
+            return unmarshal_json_response(models.UpdateBalanceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -358,30 +346,22 @@ class BalancesSDK(BaseSDK):
         customer_id: str,
         feature_id: str,
         entity_id: Optional[str] = None,
-        current_balance: Optional[float] = None,
-        interval: Optional[models.BalancesUpdateInterval] = None,
-        granted_balance: Optional[float] = None,
-        usage: Optional[float] = None,
-        customer_entitlement_id: Optional[str] = None,
-        next_reset_at: Optional[float] = None,
+        remaining: Optional[float] = None,
         add_to_balance: Optional[float] = None,
+        interval: Optional[models.UpdateBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesUpdateResponse:
+    ) -> models.UpdateBalanceResponse:
         r"""Update a customer balance.
 
         :param customer_id: The ID of the customer.
-        :param feature_id: The ID of the feature to update balance for.
-        :param entity_id: The ID of the entity to update balance for (if using entity balances).
-        :param current_balance: The new balance value to set.
-        :param interval: The interval to update balance for.
-        :param granted_balance:
-        :param usage:
-        :param customer_entitlement_id:
-        :param next_reset_at:
-        :param add_to_balance:
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param remaining: Set the remaining balance to this exact value. Cannot be combined with add_to_balance.
+        :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
+        :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -397,17 +377,13 @@ class BalancesSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        request = models.BalancesUpdateRequest(
+        request = models.UpdateBalanceParams(
             customer_id=customer_id,
-            entity_id=entity_id,
             feature_id=feature_id,
-            current_balance=current_balance,
-            interval=interval,
-            granted_balance=granted_balance,
-            usage=usage,
-            customer_entitlement_id=customer_entitlement_id,
-            next_reset_at=next_reset_at,
+            entity_id=entity_id,
+            remaining=remaining,
             add_to_balance=add_to_balance,
+            interval=interval,
         )
 
         req = self._build_request_async(
@@ -422,12 +398,12 @@ class BalancesSDK(BaseSDK):
             user_agent_header="user-agent",
             accept_header_value="application/json",
             http_headers=http_headers,
-            _globals=models.BalancesUpdateGlobals(
+            _globals=models.UpdateBalanceGlobals(
                 x_api_version=self.sdk_configuration.globals.x_api_version,
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesUpdateRequest
+                request, False, False, "json", models.UpdateBalanceParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -445,7 +421,7 @@ class BalancesSDK(BaseSDK):
             hook_ctx=HookContext(
                 config=self.sdk_configuration,
                 base_url=base_url or "",
-                operation_id="balancesUpdate",
+                operation_id="updateBalance",
                 oauth2_scopes=None,
                 security_source=self.sdk_configuration.security,
             ),
@@ -455,439 +431,7 @@ class BalancesSDK(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesUpdateResponse, http_res)
-        if utils.match_response(http_res, "4XX", "*"):
-            http_res_text = await utils.stream_to_text_async(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-        if utils.match_response(http_res, "5XX", "*"):
-            http_res_text = await utils.stream_to_text_async(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-
-        raise errors.AutumnDefaultError("Unexpected response received", http_res)
-
-    def check(
-        self,
-        *,
-        customer_id: str,
-        feature_id: str,
-        entity_id: Optional[str] = None,
-        required_balance: Optional[float] = None,
-        properties: Optional[Dict[str, Any]] = None,
-        send_event: Optional[bool] = None,
-        with_preview: Optional[bool] = None,
-        retries: OptionalNullable[utils.RetryConfig] = UNSET,
-        server_url: Optional[str] = None,
-        timeout_ms: Optional[int] = None,
-        http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesCheckResponse:
-        r"""Check whether usage is allowed for a customer feature.
-
-        :param customer_id: ID which you provided when creating the customer
-        :param feature_id: ID of the feature to check access to.
-        :param entity_id: If using entity balances (eg, seats), the entity ID to check access for.
-        :param required_balance: If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.
-        :param properties:
-        :param send_event: If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value.
-        :param with_preview: If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
-        :param retries: Override the default retry configuration for this method
-        :param server_url: Override the default server URL for this method
-        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
-        :param http_headers: Additional headers to set or replace on requests.
-        """
-        base_url = None
-        url_variables = None
-        if timeout_ms is None:
-            timeout_ms = self.sdk_configuration.timeout_ms
-
-        if server_url is not None:
-            base_url = server_url
-        else:
-            base_url = self._get_url(base_url, url_variables)
-
-        request = models.BalancesCheckRequest(
-            customer_id=customer_id,
-            feature_id=feature_id,
-            entity_id=entity_id,
-            required_balance=required_balance,
-            properties=properties,
-            send_event=send_event,
-            with_preview=with_preview,
-        )
-
-        req = self._build_request(
-            method="POST",
-            path="/v1/balances.check",
-            base_url=base_url,
-            url_variables=url_variables,
-            request=request,
-            request_body_required=True,
-            request_has_path_params=False,
-            request_has_query_params=True,
-            user_agent_header="user-agent",
-            accept_header_value="application/json",
-            http_headers=http_headers,
-            _globals=models.BalancesCheckGlobals(
-                x_api_version=self.sdk_configuration.globals.x_api_version,
-            ),
-            security=self.sdk_configuration.security,
-            get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesCheckRequest
-            ),
-            allow_empty_value=None,
-            timeout_ms=timeout_ms,
-        )
-
-        if retries == UNSET:
-            if self.sdk_configuration.retry_config is not UNSET:
-                retries = self.sdk_configuration.retry_config
-
-        retry_config = None
-        if isinstance(retries, utils.RetryConfig):
-            retry_config = (retries, ["429", "500", "502", "503", "504"])
-
-        http_res = self.do_request(
-            hook_ctx=HookContext(
-                config=self.sdk_configuration,
-                base_url=base_url or "",
-                operation_id="balancesCheck",
-                oauth2_scopes=None,
-                security_source=self.sdk_configuration.security,
-            ),
-            request=req,
-            error_status_codes=["4XX", "5XX"],
-            retry_config=retry_config,
-        )
-
-        if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesCheckResponse, http_res)
-        if utils.match_response(http_res, "4XX", "*"):
-            http_res_text = utils.stream_to_text(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-        if utils.match_response(http_res, "5XX", "*"):
-            http_res_text = utils.stream_to_text(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-
-        raise errors.AutumnDefaultError("Unexpected response received", http_res)
-
-    async def check_async(
-        self,
-        *,
-        customer_id: str,
-        feature_id: str,
-        entity_id: Optional[str] = None,
-        required_balance: Optional[float] = None,
-        properties: Optional[Dict[str, Any]] = None,
-        send_event: Optional[bool] = None,
-        with_preview: Optional[bool] = None,
-        retries: OptionalNullable[utils.RetryConfig] = UNSET,
-        server_url: Optional[str] = None,
-        timeout_ms: Optional[int] = None,
-        http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesCheckResponse:
-        r"""Check whether usage is allowed for a customer feature.
-
-        :param customer_id: ID which you provided when creating the customer
-        :param feature_id: ID of the feature to check access to.
-        :param entity_id: If using entity balances (eg, seats), the entity ID to check access for.
-        :param required_balance: If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.
-        :param properties:
-        :param send_event: If true, a usage event will be recorded together with checking access. The required_balance field will be used as the usage value.
-        :param with_preview: If true, the response will include a preview object, which can be used to display information such as a paywall or upgrade confirmation.
-        :param retries: Override the default retry configuration for this method
-        :param server_url: Override the default server URL for this method
-        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
-        :param http_headers: Additional headers to set or replace on requests.
-        """
-        base_url = None
-        url_variables = None
-        if timeout_ms is None:
-            timeout_ms = self.sdk_configuration.timeout_ms
-
-        if server_url is not None:
-            base_url = server_url
-        else:
-            base_url = self._get_url(base_url, url_variables)
-
-        request = models.BalancesCheckRequest(
-            customer_id=customer_id,
-            feature_id=feature_id,
-            entity_id=entity_id,
-            required_balance=required_balance,
-            properties=properties,
-            send_event=send_event,
-            with_preview=with_preview,
-        )
-
-        req = self._build_request_async(
-            method="POST",
-            path="/v1/balances.check",
-            base_url=base_url,
-            url_variables=url_variables,
-            request=request,
-            request_body_required=True,
-            request_has_path_params=False,
-            request_has_query_params=True,
-            user_agent_header="user-agent",
-            accept_header_value="application/json",
-            http_headers=http_headers,
-            _globals=models.BalancesCheckGlobals(
-                x_api_version=self.sdk_configuration.globals.x_api_version,
-            ),
-            security=self.sdk_configuration.security,
-            get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesCheckRequest
-            ),
-            allow_empty_value=None,
-            timeout_ms=timeout_ms,
-        )
-
-        if retries == UNSET:
-            if self.sdk_configuration.retry_config is not UNSET:
-                retries = self.sdk_configuration.retry_config
-
-        retry_config = None
-        if isinstance(retries, utils.RetryConfig):
-            retry_config = (retries, ["429", "500", "502", "503", "504"])
-
-        http_res = await self.do_request_async(
-            hook_ctx=HookContext(
-                config=self.sdk_configuration,
-                base_url=base_url or "",
-                operation_id="balancesCheck",
-                oauth2_scopes=None,
-                security_source=self.sdk_configuration.security,
-            ),
-            request=req,
-            error_status_codes=["4XX", "5XX"],
-            retry_config=retry_config,
-        )
-
-        if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesCheckResponse, http_res)
-        if utils.match_response(http_res, "4XX", "*"):
-            http_res_text = await utils.stream_to_text_async(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-        if utils.match_response(http_res, "5XX", "*"):
-            http_res_text = await utils.stream_to_text_async(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-
-        raise errors.AutumnDefaultError("Unexpected response received", http_res)
-
-    def track(
-        self,
-        *,
-        customer_id: str,
-        feature_id: Optional[str] = None,
-        event_name: Optional[str] = None,
-        value: Optional[float] = None,
-        properties: Optional[Dict[str, Any]] = None,
-        idempotency_key: Optional[str] = None,
-        entity_id: Optional[str] = None,
-        retries: OptionalNullable[utils.RetryConfig] = UNSET,
-        server_url: Optional[str] = None,
-        timeout_ms: Optional[int] = None,
-        http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesTrackResponse:
-        r"""Track usage for a customer feature.
-
-        :param customer_id: ID which you provided when creating the customer
-        :param feature_id: ID of the feature to track usage for. Required if event_name is not provided. Use this for direct feature tracking.
-        :param event_name: An [event name](/features/tracking-usage#using-event-names) can be used in place of feature_id. This can be used if multiple features are tracked in the same event.
-        :param value: The amount of usage to record. Defaults to 1. Can be negative to increase the balance (e.g., when removing a seat).
-        :param properties: Additional properties to attach to this usage event.
-        :param idempotency_key: Unique key to prevent duplicate event recording. Use this to safely retry requests without creating duplicate usage records.
-        :param entity_id: If using [entity balances](/features/feature-entities) (eg, seats), the entity ID to track usage for.
-        :param retries: Override the default retry configuration for this method
-        :param server_url: Override the default server URL for this method
-        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
-        :param http_headers: Additional headers to set or replace on requests.
-        """
-        base_url = None
-        url_variables = None
-        if timeout_ms is None:
-            timeout_ms = self.sdk_configuration.timeout_ms
-
-        if server_url is not None:
-            base_url = server_url
-        else:
-            base_url = self._get_url(base_url, url_variables)
-
-        request = models.BalancesTrackRequest(
-            customer_id=customer_id,
-            feature_id=feature_id,
-            event_name=event_name,
-            value=value,
-            properties=properties,
-            idempotency_key=idempotency_key,
-            entity_id=entity_id,
-        )
-
-        req = self._build_request(
-            method="POST",
-            path="/v1/balances.track",
-            base_url=base_url,
-            url_variables=url_variables,
-            request=request,
-            request_body_required=True,
-            request_has_path_params=False,
-            request_has_query_params=True,
-            user_agent_header="user-agent",
-            accept_header_value="application/json",
-            http_headers=http_headers,
-            _globals=models.BalancesTrackGlobals(
-                x_api_version=self.sdk_configuration.globals.x_api_version,
-            ),
-            security=self.sdk_configuration.security,
-            get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesTrackRequest
-            ),
-            allow_empty_value=None,
-            timeout_ms=timeout_ms,
-        )
-
-        if retries == UNSET:
-            if self.sdk_configuration.retry_config is not UNSET:
-                retries = self.sdk_configuration.retry_config
-
-        retry_config = None
-        if isinstance(retries, utils.RetryConfig):
-            retry_config = (retries, ["429", "500", "502", "503", "504"])
-
-        http_res = self.do_request(
-            hook_ctx=HookContext(
-                config=self.sdk_configuration,
-                base_url=base_url or "",
-                operation_id="balancesTrack",
-                oauth2_scopes=None,
-                security_source=self.sdk_configuration.security,
-            ),
-            request=req,
-            error_status_codes=["4XX", "5XX"],
-            retry_config=retry_config,
-        )
-
-        if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesTrackResponse, http_res)
-        if utils.match_response(http_res, "4XX", "*"):
-            http_res_text = utils.stream_to_text(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-        if utils.match_response(http_res, "5XX", "*"):
-            http_res_text = utils.stream_to_text(http_res)
-            raise errors.AutumnDefaultError(
-                "API error occurred", http_res, http_res_text
-            )
-
-        raise errors.AutumnDefaultError("Unexpected response received", http_res)
-
-    async def track_async(
-        self,
-        *,
-        customer_id: str,
-        feature_id: Optional[str] = None,
-        event_name: Optional[str] = None,
-        value: Optional[float] = None,
-        properties: Optional[Dict[str, Any]] = None,
-        idempotency_key: Optional[str] = None,
-        entity_id: Optional[str] = None,
-        retries: OptionalNullable[utils.RetryConfig] = UNSET,
-        server_url: Optional[str] = None,
-        timeout_ms: Optional[int] = None,
-        http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.BalancesTrackResponse:
-        r"""Track usage for a customer feature.
-
-        :param customer_id: ID which you provided when creating the customer
-        :param feature_id: ID of the feature to track usage for. Required if event_name is not provided. Use this for direct feature tracking.
-        :param event_name: An [event name](/features/tracking-usage#using-event-names) can be used in place of feature_id. This can be used if multiple features are tracked in the same event.
-        :param value: The amount of usage to record. Defaults to 1. Can be negative to increase the balance (e.g., when removing a seat).
-        :param properties: Additional properties to attach to this usage event.
-        :param idempotency_key: Unique key to prevent duplicate event recording. Use this to safely retry requests without creating duplicate usage records.
-        :param entity_id: If using [entity balances](/features/feature-entities) (eg, seats), the entity ID to track usage for.
-        :param retries: Override the default retry configuration for this method
-        :param server_url: Override the default server URL for this method
-        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
-        :param http_headers: Additional headers to set or replace on requests.
-        """
-        base_url = None
-        url_variables = None
-        if timeout_ms is None:
-            timeout_ms = self.sdk_configuration.timeout_ms
-
-        if server_url is not None:
-            base_url = server_url
-        else:
-            base_url = self._get_url(base_url, url_variables)
-
-        request = models.BalancesTrackRequest(
-            customer_id=customer_id,
-            feature_id=feature_id,
-            event_name=event_name,
-            value=value,
-            properties=properties,
-            idempotency_key=idempotency_key,
-            entity_id=entity_id,
-        )
-
-        req = self._build_request_async(
-            method="POST",
-            path="/v1/balances.track",
-            base_url=base_url,
-            url_variables=url_variables,
-            request=request,
-            request_body_required=True,
-            request_has_path_params=False,
-            request_has_query_params=True,
-            user_agent_header="user-agent",
-            accept_header_value="application/json",
-            http_headers=http_headers,
-            _globals=models.BalancesTrackGlobals(
-                x_api_version=self.sdk_configuration.globals.x_api_version,
-            ),
-            security=self.sdk_configuration.security,
-            get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.BalancesTrackRequest
-            ),
-            allow_empty_value=None,
-            timeout_ms=timeout_ms,
-        )
-
-        if retries == UNSET:
-            if self.sdk_configuration.retry_config is not UNSET:
-                retries = self.sdk_configuration.retry_config
-
-        retry_config = None
-        if isinstance(retries, utils.RetryConfig):
-            retry_config = (retries, ["429", "500", "502", "503", "504"])
-
-        http_res = await self.do_request_async(
-            hook_ctx=HookContext(
-                config=self.sdk_configuration,
-                base_url=base_url or "",
-                operation_id="balancesTrack",
-                oauth2_scopes=None,
-                security_source=self.sdk_configuration.security,
-            ),
-            request=req,
-            error_status_codes=["4XX", "5XX"],
-            retry_config=retry_config,
-        )
-
-        if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.BalancesTrackResponse, http_res)
+            return unmarshal_json_response(models.UpdateBalanceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

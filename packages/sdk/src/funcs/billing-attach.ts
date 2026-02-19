@@ -28,21 +28,45 @@ import { Result } from "../types/fp.js";
 /**
  * Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
  *
+ * Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
+ *
  * @example
  * ```typescript
  * // Attach a plan to a customer
- * const response = await client.attach({ customerId: "cus_123", planId: "pro_plan" });
+ * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan" });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Attach with a free trial
+ * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", freeTrial: {"durationLength":14,"durationType":"day"} });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Attach with custom pricing
+ * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", customize: {"price":{"amount":4900,"interval":"month"}} });
  * ```
  *
  * @param customerId - The ID of the customer to attach the plan to.
  * @param entityId - The ID of the entity to attach the plan to. (optional)
+ * @param planId - The ID of the plan.
  * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
  * @param version - The version of the plan to attach. (optional)
+ * @param freeTrial - Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. (optional)
  * @param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
+ * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+ * @param billingBehavior - How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle. (optional)
+ * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+ * @param successUrl - URL to redirect to after successful checkout. (optional)
+ * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+ * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+ *
+ * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
  */
 export function billingAttach(
   client: AutumnCore,
-  request: models.BillingAttachRequest,
+  request: models.AttachParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -66,7 +90,7 @@ export function billingAttach(
 
 async function $do(
   client: AutumnCore,
-  request: models.BillingAttachRequest,
+  request: models.AttachParams,
   options?: RequestOptions,
 ): Promise<
   [
@@ -86,7 +110,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.BillingAttachRequest$outboundSchema, value),
+    (value) => z.parse(models.AttachParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {

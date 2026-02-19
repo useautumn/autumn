@@ -2,14 +2,20 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type {
-	BalancesCheckResponse,
 	BillingAttachResponse,
+	CheckResponse,
+	CreateReferralCodeResponse,
 	Customer,
+	OpenCustomerPortalResponse,
+	RedeemReferralCodeResponse,
 } from "@useautumn/sdk";
 import type {
 	AttachParams,
 	CheckParams,
+	CreateReferralCodeParams,
 	GetOrCreateCustomerClientParams,
+	OpenCustomerPortalParams,
+	RedeemReferralCodeParams,
 } from "../../types";
 import { useAutumnClient } from "../AutumnContext";
 import type { AutumnClientError } from "../client/AutumnClientError";
@@ -33,14 +39,29 @@ export type UseCustomerResult = HookResultWithMethods<
 		attach: (params: AttachParams) => Promise<BillingAttachResponse>;
 
 		/** Checks feature access and balance for the customer locally (no API call). */
-		check: (params: UseCustomerCheckParams) => BalancesCheckResponse;
+		check: (params: UseCustomerCheckParams) => CheckResponse;
+
+		/** Opens the Stripe customer billing portal for this customer and returns the portal session response. */
+		openCustomerPortal: (
+			params?: OpenCustomerPortalParams,
+		) => Promise<OpenCustomerPortalResponse>;
+
+		/** Creates or fetches a referral code for the current customer in a referral program. */
+		createReferralCode: (
+			params: CreateReferralCodeParams,
+		) => Promise<CreateReferralCodeResponse>;
+
+		/** Redeems a referral code for the current customer. */
+		redeemReferralCode: (
+			params: RedeemReferralCodeParams,
+		) => Promise<RedeemReferralCodeResponse>;
 	}
 >;
 
 /**
  * Fetches or creates an Autumn customer and provides billing actions.
  *
- * @returns Customer data along with `attach` and `check` methods for billing operations.
+ * @returns Customer data along with `attach`, `check`, `openCustomerPortal`, `createReferralCode`, and `redeemReferralCode` action methods.
  */
 export const useCustomer = (
 	params: UseCustomerParams = {},

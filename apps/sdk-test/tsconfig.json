@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -20,6 +19,7 @@
       }
     ],
     "paths": {
+      "*": ["./*"],
       "@/*": ["./*", "../../packages/autumn-js/src/libraries/react/*"],
       "@/components/*": [
         "./components/*",
@@ -35,7 +35,6 @@
       ],
       "@sdk": ["../../packages/autumn-js/src/sdk/index.ts"],
       "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
-      "@api/*": ["../../shared/api/*"],
       "@utils/*": ["../../packages/autumn-js/src/utils/*"],
       "autumn-js": ["../../packages/autumn-js/src/sdk/index.ts"],
       "autumn-js/react": ["../../packages/autumn-js/src/react/index.ts"],

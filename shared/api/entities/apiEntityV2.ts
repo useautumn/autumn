@@ -15,10 +15,16 @@ export const BaseApiEntityV2Schema = ApiBaseEntitySchema.extend({
 });
 
 export const ApiEntityExpandSchema = z.object({
-	invoices: z.array(ApiInvoiceV1Schema).optional().meta({
-		description:
-			"Invoices for this entity (only included when expand=invoices)",
-	}),
+	invoices: z
+		.array(ApiInvoiceV1Schema)
+		.optional()
+		.meta({
+			description:
+				"Invoices for this entity (only included when expand=invoices)",
+		})
+		.meta({
+			internal: true,
+		}),
 });
 
 export const ApiEntityV2Schema = BaseApiEntityV2Schema.extend(

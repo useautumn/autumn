@@ -30,11 +30,11 @@ import { Result } from "../types/fp.js";
  */
 export function balancesUpdate(
   client: AutumnCore,
-  request: models.BalancesUpdateRequest,
+  request: models.UpdateBalanceParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.BalancesUpdateResponse,
+    models.UpdateBalanceResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -54,12 +54,12 @@ export function balancesUpdate(
 
 async function $do(
   client: AutumnCore,
-  request: models.BalancesUpdateRequest,
+  request: models.UpdateBalanceParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.BalancesUpdateResponse,
+      models.UpdateBalanceResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -74,7 +74,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.BalancesUpdateRequest$outboundSchema, value),
+    (value) => z.parse(models.UpdateBalanceParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -102,7 +102,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "balancesUpdate",
+    operationID: "updateBalance",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -141,7 +141,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.BalancesUpdateResponse,
+    models.UpdateBalanceResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -151,7 +151,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.BalancesUpdateResponse$inboundSchema),
+    M.json(200, models.UpdateBalanceResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

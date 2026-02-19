@@ -129,16 +129,24 @@
 			{
 				"tab": "API Reference",
 				"icon": "rectangle-terminal",
-				"openapi": "api/openapi.yml",
 				"groups": [
 					{
-						"group": "Core",
+						"group": "Billing",
 						"pages": [
-							"api-reference/core/checkout",
-							"api-reference/core/attach",
+							"api-reference/billing/billingAttach",
+							"api-reference/billing/billingUpdate",
+							"api-reference/billing/previewAttach",
+							"api-reference/billing/previewUpdate",
+							"api-reference/billing/openCustomerPortal"
+						]
+					},
+					{
+						"group": "Balances",
+						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
-							"api-reference/core/cancel"
+							"api-reference/balances/createBalance",
+							"api-reference/balances/updateBalance"
 						]
 					},
 					{
@@ -147,25 +155,36 @@
 							"api-reference/customers/getOrCreateCustomer",
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
-							"api-reference/customers/deleteCustomer",
-							"api-reference/customers/open-billing-portal"
+							"api-reference/customers/deleteCustomer"
 						]
 					},
 					{
 						"group": "Events",
 						"pages": [
-							"api-reference/events/list-events",
-							"api-reference/events/aggregate-events"
+							"api-reference/events/listEvents",
+							"api-reference/events/aggregateEvents"
 						]
 					},
 					{
 						"group": "Entities",
 						"pages": [
-							"api-reference/entities/get-entity",
-							"api-reference/entities/create-entity",
-							"api-reference/entities/delete-entity"
+							"api-reference/entities/getEntity",
+							"api-reference/entities/createEntity",
+							"api-reference/entities/deleteEntity"
 						]
 					},
+					{
+						"group": "Referrals",
+						"pages": [
+							"api-reference/referrals/createReferralCode",
+							"api-reference/referrals/redeemReferralCode"
+						]
+					},
+					{
+						"group": "TODO",
+						"pages": ["api-reference/billing/setupPayment"]
+					},
+
 					{
 						"group": "Features",
 						"pages": [
@@ -189,18 +208,7 @@
 							"api-reference/products/delete-product"
 						]
 					},
-					{
-						"group": "Referrals",
-						"pages": [
-							"api-reference/referrals/referral-code",
-							"api-reference/referrals/referral-redeem"
-						]
-					},
 
-					{
-						"group": "CLI",
-						"pages": ["api-reference/cli/config"]
-					},
 					{
 						"group": "Platform (Beta)",
 						"pages": [
