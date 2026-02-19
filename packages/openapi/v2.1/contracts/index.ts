@@ -27,6 +27,13 @@ import {
 	eventsAggregateContract,
 	eventsListContract,
 } from "./eventsContract.js";
+import {
+	createFeatureContract,
+	deleteFeatureContract,
+	getFeatureContract,
+	listFeaturesContract,
+	updateFeatureContract,
+} from "./featuresContract.js";
 import { listPlansContract } from "./plansContract.js";
 import {
 	referralsCreateCodeContract,
@@ -42,6 +49,13 @@ export const v2_1ContractRouter = oc.router({
 
 	// Plans
 	listPlans: listPlansContract,
+
+	// Features
+	featuresCreate: createFeatureContract,
+	featuresGet: getFeatureContract,
+	featuresList: listFeaturesContract,
+	featuresUpdate: updateFeatureContract,
+	featuresDelete: deleteFeatureContract,
 
 	// Billing
 	billingAttach: billingAttachContract,

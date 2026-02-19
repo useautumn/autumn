@@ -562,35 +562,57 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     <DynamicResponseField name="feature" type="object">
       The full feature object if expanded.
       <Expandable title="properties">
-        <DynamicResponseField name="id" type="string" />
+        <DynamicResponseField name="id" type="string">
+          The unique identifier for this feature, used in /check and /track calls.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="name" type="string" />
+        <DynamicResponseField name="name" type="string">
+          Human-readable name displayed in the dashboard and billing UI.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'" />
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
+          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="consumable" type="boolean" />
+        <DynamicResponseField name="consumable" type="boolean">
+          For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+        </DynamicResponseField>
 
-        <DynamicResponseField name="event_names" type="string[]" />
+        <DynamicResponseField name="event_names" type="string[]">
+          Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+        </DynamicResponseField>
 
         <DynamicResponseField name="credit_schema" type="object[]">
+          For credit_system features: maps metered features to their credit costs.
           <Expandable title="properties">
-            <DynamicResponseField name="metered_feature_id" type="string" />
+            <DynamicResponseField name="metered_feature_id" type="string">
+              ID of the metered feature that draws from this credit system.
+            </DynamicResponseField>
 
-            <DynamicResponseField name="credit_cost" type="number" />
+            <DynamicResponseField name="credit_cost" type="number">
+              Credits consumed per unit of the metered feature.
+            </DynamicResponseField>
 
           </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="display" type="object">
+          Display names for the feature in billing UI and customer-facing components.
           <Expandable title="properties">
-            <DynamicResponseField name="singular" type="string | null" />
+            <DynamicResponseField name="singular" type="string | null">
+              Singular form for UI display (e.g., 'API call', 'seat').
+            </DynamicResponseField>
 
-            <DynamicResponseField name="plural" type="string | null" />
+            <DynamicResponseField name="plural" type="string | null">
+              Plural form for UI display (e.g., 'API calls', 'seats').
+            </DynamicResponseField>
 
           </Expandable>
         </DynamicResponseField>
 
-        <DynamicResponseField name="archived" type="boolean" />
+        <DynamicResponseField name="archived" type="boolean">
+          Whether the feature is archived and hidden from the dashboard.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>

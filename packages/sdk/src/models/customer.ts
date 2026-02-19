@@ -9,7 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
-import { smartUnion } from "../types/smart-union.js";
+import { Balance, Balance$inboundSchema } from "./balance.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
@@ -109,213 +109,6 @@ export type Purchase = {
   quantity: number;
 };
 
-export const CustomerBalancesType = {
-  Boolean: "boolean",
-  Metered: "metered",
-  CreditSystem: "credit_system",
-} as const;
-export type CustomerBalancesType = OpenEnum<typeof CustomerBalancesType>;
-
-export type CustomerCreditSchema = {
-  meteredFeatureId: string;
-  creditCost: number;
-};
-
-export type CustomerDisplay = {
-  singular?: string | null | undefined;
-  plural?: string | null | undefined;
-};
-
-/**
- * The full feature object if expanded.
- */
-export type CustomerFeature = {
-  id: string;
-  name: string;
-  type: CustomerBalancesType;
-  consumable: boolean;
-  eventNames?: Array<string> | undefined;
-  creditSchema?: Array<CustomerCreditSchema> | undefined;
-  display?: CustomerDisplay | undefined;
-  archived: boolean;
-};
-
-export const CustomerIntervalEnum = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type CustomerIntervalEnum = OpenEnum<typeof CustomerIntervalEnum>;
-
-/**
- * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
- */
-export type CustomerIntervalUnion = CustomerIntervalEnum | string;
-
-export type CustomerReset = {
-  /**
-   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
-   */
-  interval: CustomerIntervalEnum | string;
-  /**
-   * Number of intervals between resets (eg. 2 for bi-monthly).
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Timestamp when the balance will next reset.
-   */
-  resetsAt: number | null;
-};
-
-export type CustomerTo = number | string;
-
-export type CustomerTier = {
-  to: number | string;
-  amount: number;
-};
-
-/**
- * Whether usage is prepaid or billed pay-per-use.
- */
-export const CustomerBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * Whether usage is prepaid or billed pay-per-use.
- */
-export type CustomerBillingMethod = OpenEnum<typeof CustomerBillingMethod>;
-
-export type CustomerPrice = {
-  /**
-   * The per-unit price amount.
-   */
-  amount?: number | undefined;
-  /**
-   * Tiered pricing configuration if applicable.
-   */
-  tiers?: Array<CustomerTier> | undefined;
-  /**
-   * The number of units per billing increment (eg. $9 / 250 units).
-   */
-  billingUnits: number;
-  /**
-   * Whether usage is prepaid or billed pay-per-use.
-   */
-  billingMethod: CustomerBillingMethod;
-  /**
-   * Maximum quantity that can be purchased, or null for unlimited.
-   */
-  maxPurchase: number | null;
-};
-
-export type Breakdown = {
-  /**
-   * The unique identifier for this balance breakdown.
-   */
-  id: string;
-  /**
-   * The plan ID this balance originates from, or null for standalone balances.
-   */
-  planId: string | null;
-  /**
-   * Amount granted from the plan's included usage.
-   */
-  includedGrant: number;
-  /**
-   * Amount granted from prepaid purchases or top-ups.
-   */
-  prepaidGrant: number;
-  /**
-   * Remaining balance available for use.
-   */
-  remaining: number;
-  /**
-   * Amount consumed in the current period.
-   */
-  usage: number;
-  /**
-   * Whether this balance has unlimited usage.
-   */
-  unlimited: boolean;
-  /**
-   * Reset configuration for this balance, or null if no reset.
-   */
-  reset: CustomerReset | null;
-  /**
-   * Pricing configuration if this balance has usage-based pricing.
-   */
-  price: CustomerPrice | null;
-  /**
-   * Timestamp when this balance expires, or null for no expiration.
-   */
-  expiresAt: number | null;
-};
-
-export type CustomerRollover = {
-  /**
-   * Amount of balance rolled over from a previous period.
-   */
-  balance: number;
-  /**
-   * Timestamp when the rollover balance expires.
-   */
-  expiresAt: number;
-};
-
-export type Balances = {
-  /**
-   * The feature ID this balance is for.
-   */
-  featureId: string;
-  /**
-   * The full feature object if expanded.
-   */
-  feature?: CustomerFeature | undefined;
-  /**
-   * Total balance granted (included + prepaid).
-   */
-  granted: number;
-  /**
-   * Remaining balance available for use.
-   */
-  remaining: number;
-  /**
-   * Total usage consumed in the current period.
-   */
-  usage: number;
-  /**
-   * Whether this feature has unlimited usage.
-   */
-  unlimited: boolean;
-  /**
-   * Whether usage beyond the granted balance is allowed (with overage charges).
-   */
-  overageAllowed: boolean;
-  /**
-   * Maximum quantity that can be purchased as a top-up, or null for unlimited.
-   */
-  maxPurchase: number | null;
-  /**
-   * Timestamp when the balance will reset, or null for no reset.
-   */
-  nextResetAt: number | null;
-  /**
-   * Detailed breakdown of balance sources when stacking multiple plans or grants.
-   */
-  breakdown?: Array<Breakdown> | undefined;
-  /**
-   * Rollover balances carried over from previous periods.
-   */
-  rollovers?: Array<CustomerRollover> | undefined;
-};
-
 export type Invoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -396,7 +189,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const RewardsType = {
+export const CustomerType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -405,7 +198,7 @@ export const RewardsType = {
 /**
  * The type of reward
  */
-export type RewardsType = OpenEnum<typeof RewardsType>;
+export type CustomerType = OpenEnum<typeof CustomerType>;
 
 /**
  * How long the discount lasts
@@ -432,7 +225,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: RewardsType;
+  type: CustomerType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -535,7 +328,7 @@ export type Customer = {
   /**
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
-  balances: { [k: string]: Balances };
+  balances: { [k: string]: Balance };
   invoices?: Array<Invoice> | undefined;
   entities?: Array<Entity> | undefined;
   trialsUsed?: Array<TrialsUsed> | undefined;
@@ -621,309 +414,6 @@ export function purchaseFromJSON(
     jsonString,
     (x) => Purchase$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'Purchase' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerBalancesType$inboundSchema: z.ZodMiniType<
-  CustomerBalancesType,
-  unknown
-> = openEnums.inboundSchema(CustomerBalancesType);
-
-/** @internal */
-export const CustomerCreditSchema$inboundSchema: z.ZodMiniType<
-  CustomerCreditSchema,
-  unknown
-> = z.pipe(
-  z.object({
-    metered_feature_id: types.string(),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "metered_feature_id": "meteredFeatureId",
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function customerCreditSchemaFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerCreditSchema, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerCreditSchema' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerDisplay$inboundSchema: z.ZodMiniType<
-  CustomerDisplay,
-  unknown
-> = z.object({
-  singular: z.optional(z.nullable(types.string())),
-  plural: z.optional(z.nullable(types.string())),
-});
-
-export function customerDisplayFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerDisplay, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerDisplay' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerFeature$inboundSchema: z.ZodMiniType<
-  CustomerFeature,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    name: types.string(),
-    type: CustomerBalancesType$inboundSchema,
-    consumable: types.boolean(),
-    event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => CustomerCreditSchema$inboundSchema)),
-    ),
-    display: types.optional(z.lazy(() => CustomerDisplay$inboundSchema)),
-    archived: types.boolean(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "event_names": "eventNames",
-      "credit_schema": "creditSchema",
-    });
-  }),
-);
-
-export function customerFeatureFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerFeature, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerFeature$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerFeature' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerIntervalEnum$inboundSchema: z.ZodMiniType<
-  CustomerIntervalEnum,
-  unknown
-> = openEnums.inboundSchema(CustomerIntervalEnum);
-
-/** @internal */
-export const CustomerIntervalUnion$inboundSchema: z.ZodMiniType<
-  CustomerIntervalUnion,
-  unknown
-> = smartUnion([CustomerIntervalEnum$inboundSchema, types.string()]);
-
-export function customerIntervalUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerIntervalUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerIntervalUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerReset$inboundSchema: z.ZodMiniType<
-  CustomerReset,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: smartUnion([CustomerIntervalEnum$inboundSchema, types.string()]),
-    interval_count: types.optional(types.number()),
-    resets_at: types.nullable(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-      "resets_at": "resetsAt",
-    });
-  }),
-);
-
-export function customerResetFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerReset, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerReset$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerReset' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerTo$inboundSchema: z.ZodMiniType<CustomerTo, unknown> =
-  smartUnion([types.number(), types.string()]);
-
-export function customerToFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerTier$inboundSchema: z.ZodMiniType<CustomerTier, unknown> =
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-  });
-
-export function customerTierFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerTier, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerTier' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerBillingMethod$inboundSchema: z.ZodMiniType<
-  CustomerBillingMethod,
-  unknown
-> = openEnums.inboundSchema(CustomerBillingMethod);
-
-/** @internal */
-export const CustomerPrice$inboundSchema: z.ZodMiniType<
-  CustomerPrice,
-  unknown
-> = z.pipe(
-  z.object({
-    amount: types.optional(types.number()),
-    tiers: types.optional(z.array(z.lazy(() => CustomerTier$inboundSchema))),
-    billing_units: types.number(),
-    billing_method: CustomerBillingMethod$inboundSchema,
-    max_purchase: types.nullable(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "billing_units": "billingUnits",
-      "billing_method": "billingMethod",
-      "max_purchase": "maxPurchase",
-    });
-  }),
-);
-
-export function customerPriceFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerPrice, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerPrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerPrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const Breakdown$inboundSchema: z.ZodMiniType<Breakdown, unknown> = z
-  .pipe(
-    z.object({
-      id: z._default(types.string(), ""),
-      plan_id: types.nullable(types.string()),
-      included_grant: types.number(),
-      prepaid_grant: types.number(),
-      remaining: types.number(),
-      usage: types.number(),
-      unlimited: types.boolean(),
-      reset: types.nullable(z.lazy(() => CustomerReset$inboundSchema)),
-      price: types.nullable(z.lazy(() => CustomerPrice$inboundSchema)),
-      expires_at: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "plan_id": "planId",
-        "included_grant": "includedGrant",
-        "prepaid_grant": "prepaidGrant",
-        "expires_at": "expiresAt",
-      });
-    }),
-  );
-
-export function breakdownFromJSON(
-  jsonString: string,
-): SafeParseResult<Breakdown, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Breakdown$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Breakdown' from JSON`,
-  );
-}
-
-/** @internal */
-export const CustomerRollover$inboundSchema: z.ZodMiniType<
-  CustomerRollover,
-  unknown
-> = z.pipe(
-  z.object({
-    balance: types.number(),
-    expires_at: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "expires_at": "expiresAt",
-    });
-  }),
-);
-
-export function customerRolloverFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerRollover, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerRollover' from JSON`,
-  );
-}
-
-/** @internal */
-export const Balances$inboundSchema: z.ZodMiniType<Balances, unknown> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    feature: types.optional(z.lazy(() => CustomerFeature$inboundSchema)),
-    granted: types.number(),
-    remaining: types.number(),
-    usage: types.number(),
-    unlimited: types.boolean(),
-    overage_allowed: types.boolean(),
-    max_purchase: types.nullable(types.number()),
-    next_reset_at: types.nullable(types.number()),
-    breakdown: types.optional(z.array(z.lazy(() => Breakdown$inboundSchema))),
-    rollovers: types.optional(z.array(z.lazy(() =>
-      CustomerRollover$inboundSchema
-    ))),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "overage_allowed": "overageAllowed",
-      "max_purchase": "maxPurchase",
-      "next_reset_at": "nextResetAt",
-    });
-  }),
-);
-
-export function balancesFromJSON(
-  jsonString: string,
-): SafeParseResult<Balances, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Balances$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Balances' from JSON`,
   );
 }
 
@@ -1020,8 +510,8 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const RewardsType$inboundSchema: z.ZodMiniType<RewardsType, unknown> =
-  openEnums.inboundSchema(RewardsType);
+export const CustomerType$inboundSchema: z.ZodMiniType<CustomerType, unknown> =
+  openEnums.inboundSchema(CustomerType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1034,7 +524,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: RewardsType$inboundSchema,
+    type: CustomerType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),
@@ -1141,7 +631,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     send_email_receipts: types.boolean(),
     subscriptions: z.array(z.lazy(() => Subscription$inboundSchema)),
     purchases: z.array(z.lazy(() => Purchase$inboundSchema)),
-    balances: z.record(z.string(), z.lazy(() => Balances$inboundSchema)),
+    balances: z.record(z.string(), Balance$inboundSchema),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(

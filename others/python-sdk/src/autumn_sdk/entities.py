@@ -235,7 +235,7 @@ class Entities(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.GetEntityResponse:
-        r"""Fetches a single entity by entity ID.
+        r"""Fetches an entity by its ID.
 
         Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 
@@ -330,7 +330,7 @@ class Entities(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.GetEntityResponse:
-        r"""Fetches a single entity by entity ID.
+        r"""Fetches an entity by its ID.
 
         Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 

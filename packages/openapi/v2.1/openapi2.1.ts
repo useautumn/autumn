@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
+	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
 	ApiPlanV1Schema,
 	AttachParamsV1Schema,
@@ -61,6 +62,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(SetupPaymentResultSchema);
 	registerInternalSchemas(SuccessResponseSchema);
 	registerInternalSchemas(ApiCustomerV5Schema);
+	registerInternalSchemas(ApiBalanceV1Schema);
 	registerInternalSchemas(ApiPlanV1Schema);
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
@@ -90,6 +92,10 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 			},
 			Plan: {
 				schema: ApiPlanV1Schema,
+				strategy: "output",
+			},
+			Balance: {
+				schema: ApiBalanceV1Schema,
 				strategy: "output",
 			},
 		},

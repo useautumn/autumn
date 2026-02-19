@@ -3,9 +3,11 @@
 // Types
 export type {
 	CheckParams,
+	ClientAggregateEventsParams,
 	ClientAttachParams,
 	ClientCreateReferralCodeParams,
 	ClientGetOrCreateCustomerParams,
+	ClientListEventsParams,
 	ClientOpenCustomerPortalParams,
 	ClientRedeemReferralCodeParams,
 	ProtectedFields,
@@ -20,6 +22,10 @@ export {
 	createAutumnClient,
 	type IAutumnClient,
 } from "./client";
+export {
+	type UseAggregateEventsParams,
+	useAggregateEvents,
+} from "./hooks/useAggregateEvents";
 // Hooks
 export {
 	type UseCustomerCheckParams,
@@ -27,4 +33,10 @@ export {
 	type UseCustomerResult,
 	useCustomer,
 } from "./hooks/useCustomer";
+export { type UseListEventsParams, useListEvents } from "./hooks/useListEvents";
 export { type UseListPlansParams, useListPlans } from "./hooks/useListPlans";
+export {
+	type UseReferralsParams,
+	type UseReferralsResult,
+	useReferrals,
+} from "./hooks/useReferrals";

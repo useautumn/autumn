@@ -1,0 +1,9 @@
+# BalanceTier
+
+
+## Fields
+
+| Field                                      | Type                                       | Required                                   | Description                                |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| `to`                                       | [models.BalanceTo](../models/balanceto.md) | :heavy_check_mark:                         | N/A                                        |
+| `amount`                                   | *float*                                    | :heavy_check_mark:                         | N/A                                        |

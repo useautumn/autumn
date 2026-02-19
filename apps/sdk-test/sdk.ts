@@ -9,9 +9,9 @@ const autumn = new Autumn({
   secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-const res = await autumn.events.aggregate({
-  customerId: "john",
+const res = await autumn.features.update({
   featureId: "messages",
+  name: "Messages",
 });
 
 console.log(JSON.stringify(res, null, 2));

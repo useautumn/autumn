@@ -27,7 +27,7 @@ const response = await client.entities.create({
 @param entityId - The ID of the entity.
 
 @returns The created entity object including its current subscriptions, purchases, and balances.
-* [get](#get) - Fetches a single entity by entity ID.
+* [get](#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 
@@ -167,7 +167,7 @@ run();
 
 ## get
 
-Fetches a single entity by entity ID.
+Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 

@@ -76,7 +76,6 @@ export type CreateBalanceParams = {
    * Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
    */
   expiresAt?: number | undefined;
-  grantedBalance?: number | undefined;
 };
 
 /**
@@ -130,7 +129,6 @@ export type CreateBalanceParams$Outbound = {
   unlimited?: boolean | undefined;
   reset?: CreateBalanceReset$Outbound | undefined;
   expires_at?: number | undefined;
-  granted_balance?: number | undefined;
 };
 
 /** @internal */
@@ -146,7 +144,6 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => CreateBalanceReset$outboundSchema)),
     expiresAt: z.optional(z.number()),
-    grantedBalance: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -154,7 +151,6 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
       featureId: "feature_id",
       entityId: "entity_id",
       expiresAt: "expires_at",
-      grantedBalance: "granted_balance",
     });
   }),
 );

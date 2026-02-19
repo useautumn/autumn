@@ -10,6 +10,7 @@ import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import { Balance, Balance$inboundSchema } from "./balance.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type CheckGlobals = {
@@ -47,215 +48,6 @@ export type CheckParams = {
   withPreview?: boolean | undefined;
 };
 
-export const CheckBalanceType = {
-  Boolean: "boolean",
-  Metered: "metered",
-  CreditSystem: "credit_system",
-} as const;
-export type CheckBalanceType = OpenEnum<typeof CheckBalanceType>;
-
-export type CheckCreditSchema = {
-  meteredFeatureId: string;
-  creditCost: number;
-};
-
-export type CheckBalanceDisplay = {
-  singular?: string | null | undefined;
-  plural?: string | null | undefined;
-};
-
-/**
- * The full feature object if expanded.
- */
-export type CheckFeature = {
-  id: string;
-  name: string;
-  type: CheckBalanceType;
-  consumable: boolean;
-  eventNames?: Array<string> | undefined;
-  creditSchema?: Array<CheckCreditSchema> | undefined;
-  display?: CheckBalanceDisplay | undefined;
-  archived: boolean;
-};
-
-export const CheckBalanceIntervalEnum = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type CheckBalanceIntervalEnum = OpenEnum<
-  typeof CheckBalanceIntervalEnum
->;
-
-/**
- * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
- */
-export type CheckIntervalUnion = CheckBalanceIntervalEnum | string;
-
-export type CheckReset = {
-  /**
-   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
-   */
-  interval: CheckBalanceIntervalEnum | string;
-  /**
-   * Number of intervals between resets (eg. 2 for bi-monthly).
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Timestamp when the balance will next reset.
-   */
-  resetsAt: number | null;
-};
-
-export type CheckBalanceTo = number | string;
-
-export type CheckTier = {
-  to: number | string;
-  amount: number;
-};
-
-/**
- * Whether usage is prepaid or billed pay-per-use.
- */
-export const CheckBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * Whether usage is prepaid or billed pay-per-use.
- */
-export type CheckBillingMethod = OpenEnum<typeof CheckBillingMethod>;
-
-export type CheckPrice = {
-  /**
-   * The per-unit price amount.
-   */
-  amount?: number | undefined;
-  /**
-   * Tiered pricing configuration if applicable.
-   */
-  tiers?: Array<CheckTier> | undefined;
-  /**
-   * The number of units per billing increment (eg. $9 / 250 units).
-   */
-  billingUnits: number;
-  /**
-   * Whether usage is prepaid or billed pay-per-use.
-   */
-  billingMethod: CheckBillingMethod;
-  /**
-   * Maximum quantity that can be purchased, or null for unlimited.
-   */
-  maxPurchase: number | null;
-};
-
-export type CheckBreakdown = {
-  /**
-   * The unique identifier for this balance breakdown.
-   */
-  id: string;
-  /**
-   * The plan ID this balance originates from, or null for standalone balances.
-   */
-  planId: string | null;
-  /**
-   * Amount granted from the plan's included usage.
-   */
-  includedGrant: number;
-  /**
-   * Amount granted from prepaid purchases or top-ups.
-   */
-  prepaidGrant: number;
-  /**
-   * Remaining balance available for use.
-   */
-  remaining: number;
-  /**
-   * Amount consumed in the current period.
-   */
-  usage: number;
-  /**
-   * Whether this balance has unlimited usage.
-   */
-  unlimited: boolean;
-  /**
-   * Reset configuration for this balance, or null if no reset.
-   */
-  reset: CheckReset | null;
-  /**
-   * Pricing configuration if this balance has usage-based pricing.
-   */
-  price: CheckPrice | null;
-  /**
-   * Timestamp when this balance expires, or null for no expiration.
-   */
-  expiresAt: number | null;
-};
-
-export type CheckBalanceRollover = {
-  /**
-   * Amount of balance rolled over from a previous period.
-   */
-  balance: number;
-  /**
-   * Timestamp when the rollover balance expires.
-   */
-  expiresAt: number;
-};
-
-export type CheckBalance = {
-  /**
-   * The feature ID this balance is for.
-   */
-  featureId: string;
-  /**
-   * The full feature object if expanded.
-   */
-  feature?: CheckFeature | undefined;
-  /**
-   * Total balance granted (included + prepaid).
-   */
-  granted: number;
-  /**
-   * Remaining balance available for use.
-   */
-  remaining: number;
-  /**
-   * Total usage consumed in the current period.
-   */
-  usage: number;
-  /**
-   * Whether this feature has unlimited usage.
-   */
-  unlimited: boolean;
-  /**
-   * Whether usage beyond the granted balance is allowed (with overage charges).
-   */
-  overageAllowed: boolean;
-  /**
-   * Maximum quantity that can be purchased as a top-up, or null for unlimited.
-   */
-  maxPurchase: number | null;
-  /**
-   * Timestamp when the balance will reset, or null for no reset.
-   */
-  nextResetAt: number | null;
-  /**
-   * Detailed breakdown of balance sources when stacking multiple plans or grants.
-   */
-  breakdown?: Array<CheckBreakdown> | undefined;
-  /**
-   * Rollover balances carried over from previous periods.
-   */
-  rollovers?: Array<CheckBalanceRollover> | undefined;
-};
-
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
@@ -280,12 +72,12 @@ export const CheckEnv = {
  */
 export type CheckEnv = OpenEnum<typeof CheckEnv>;
 
-export const ProductType = {
+export const CheckType = {
   Feature: "feature",
   PricedFeature: "priced_feature",
   Price: "price",
 } as const;
-export type ProductType = OpenEnum<typeof ProductType>;
+export type CheckType = OpenEnum<typeof CheckType>;
 
 export const FeatureType = {
   SingleUse: "single_use",
@@ -297,7 +89,7 @@ export type FeatureType = OpenEnum<typeof FeatureType>;
 
 export type IncludedUsage = number | string;
 
-export const ProductInterval = {
+export const CheckInterval = {
   Minute: "minute",
   Hour: "hour",
   Day: "day",
@@ -307,12 +99,12 @@ export const ProductInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type ProductInterval = OpenEnum<typeof ProductInterval>;
+export type CheckInterval = OpenEnum<typeof CheckInterval>;
 
 /**
  * The maximum amount of usage for this tier.
  */
-export type TiersTo = number | string;
+export type CheckTo = number | string;
 
 export type Tiers = {
   /**
@@ -331,7 +123,7 @@ export const UsageModel = {
 } as const;
 export type UsageModel = OpenEnum<typeof UsageModel>;
 
-export type ProductDisplay = {
+export type CheckDisplay = {
   primaryText: string;
   secondaryText?: string | null | undefined;
 };
@@ -342,7 +134,7 @@ export const RolloverDuration = {
 } as const;
 export type RolloverDuration = OpenEnum<typeof RolloverDuration>;
 
-export type ConfigRollover = {
+export type CheckRollover = {
   max: number | null;
   duration: RolloverDuration;
   length: number;
@@ -366,7 +158,7 @@ export const CheckOnDecrease = {
 export type CheckOnDecrease = OpenEnum<typeof CheckOnDecrease>;
 
 export type Config = {
-  rollover?: ConfigRollover | null | undefined;
+  rollover?: CheckRollover | null | undefined;
   onIncrease?: CheckOnIncrease | null | undefined;
   onDecrease?: CheckOnDecrease | null | undefined;
 };
@@ -378,7 +170,7 @@ export type CheckItem = {
   /**
    * The type of the product item
    */
-  type?: ProductType | null | undefined;
+  type?: CheckType | null | undefined;
   /**
    * The feature ID of the product item. If the item is a fixed price, should be `null`
    */
@@ -394,7 +186,7 @@ export type CheckItem = {
   /**
    * The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
    */
-  interval?: ProductInterval | null | undefined;
+  interval?: CheckInterval | null | undefined;
   /**
    * The interval count of the product item.
    */
@@ -426,7 +218,7 @@ export type CheckItem = {
   /**
    * The display of the product item.
    */
-  display?: ProductDisplay | null | undefined;
+  display?: CheckDisplay | null | undefined;
   /**
    * Used in customer context. Quantity of the feature the customer has prepaid for.
    */
@@ -628,7 +420,7 @@ export type CheckResponse = {
   /**
    * The customer's balance for this feature. Null if the customer has no balance for this feature.
    */
-  balance: CheckBalance | null;
+  balance: Balance | null;
   /**
    * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
    */
@@ -677,313 +469,6 @@ export function checkParamsToJSON(checkParams: CheckParams): string {
 }
 
 /** @internal */
-export const CheckBalanceType$inboundSchema: z.ZodMiniType<
-  CheckBalanceType,
-  unknown
-> = openEnums.inboundSchema(CheckBalanceType);
-
-/** @internal */
-export const CheckCreditSchema$inboundSchema: z.ZodMiniType<
-  CheckCreditSchema,
-  unknown
-> = z.pipe(
-  z.object({
-    metered_feature_id: types.string(),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "metered_feature_id": "meteredFeatureId",
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function checkCreditSchemaFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckCreditSchema, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckCreditSchema' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBalanceDisplay$inboundSchema: z.ZodMiniType<
-  CheckBalanceDisplay,
-  unknown
-> = z.object({
-  singular: z.optional(z.nullable(types.string())),
-  plural: z.optional(z.nullable(types.string())),
-});
-
-export function checkBalanceDisplayFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckBalanceDisplay, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckBalanceDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckBalanceDisplay' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckFeature$inboundSchema: z.ZodMiniType<CheckFeature, unknown> =
-  z.pipe(
-    z.object({
-      id: types.string(),
-      name: types.string(),
-      type: CheckBalanceType$inboundSchema,
-      consumable: types.boolean(),
-      event_names: types.optional(z.array(types.string())),
-      credit_schema: types.optional(
-        z.array(z.lazy(() => CheckCreditSchema$inboundSchema)),
-      ),
-      display: types.optional(z.lazy(() => CheckBalanceDisplay$inboundSchema)),
-      archived: types.boolean(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "event_names": "eventNames",
-        "credit_schema": "creditSchema",
-      });
-    }),
-  );
-
-export function checkFeatureFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckFeature, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckFeature$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckFeature' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBalanceIntervalEnum$inboundSchema: z.ZodMiniType<
-  CheckBalanceIntervalEnum,
-  unknown
-> = openEnums.inboundSchema(CheckBalanceIntervalEnum);
-
-/** @internal */
-export const CheckIntervalUnion$inboundSchema: z.ZodMiniType<
-  CheckIntervalUnion,
-  unknown
-> = smartUnion([CheckBalanceIntervalEnum$inboundSchema, types.string()]);
-
-export function checkIntervalUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckIntervalUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckIntervalUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckReset$inboundSchema: z.ZodMiniType<CheckReset, unknown> = z
-  .pipe(
-    z.object({
-      interval: smartUnion([
-        CheckBalanceIntervalEnum$inboundSchema,
-        types.string(),
-      ]),
-      interval_count: types.optional(types.number()),
-      resets_at: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "interval_count": "intervalCount",
-        "resets_at": "resetsAt",
-      });
-    }),
-  );
-
-export function checkResetFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckReset, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckReset$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckReset' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBalanceTo$inboundSchema: z.ZodMiniType<
-  CheckBalanceTo,
-  unknown
-> = smartUnion([types.number(), types.string()]);
-
-export function checkBalanceToFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckBalanceTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckBalanceTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckBalanceTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckTier$inboundSchema: z.ZodMiniType<CheckTier, unknown> = z
-  .object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-  });
-
-export function checkTierFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckTier, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckTier' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBillingMethod$inboundSchema: z.ZodMiniType<
-  CheckBillingMethod,
-  unknown
-> = openEnums.inboundSchema(CheckBillingMethod);
-
-/** @internal */
-export const CheckPrice$inboundSchema: z.ZodMiniType<CheckPrice, unknown> = z
-  .pipe(
-    z.object({
-      amount: types.optional(types.number()),
-      tiers: types.optional(z.array(z.lazy(() => CheckTier$inboundSchema))),
-      billing_units: types.number(),
-      billing_method: CheckBillingMethod$inboundSchema,
-      max_purchase: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "billing_units": "billingUnits",
-        "billing_method": "billingMethod",
-        "max_purchase": "maxPurchase",
-      });
-    }),
-  );
-
-export function checkPriceFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckPrice, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckPrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckPrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBreakdown$inboundSchema: z.ZodMiniType<
-  CheckBreakdown,
-  unknown
-> = z.pipe(
-  z.object({
-    id: z._default(types.string(), ""),
-    plan_id: types.nullable(types.string()),
-    included_grant: types.number(),
-    prepaid_grant: types.number(),
-    remaining: types.number(),
-    usage: types.number(),
-    unlimited: types.boolean(),
-    reset: types.nullable(z.lazy(() => CheckReset$inboundSchema)),
-    price: types.nullable(z.lazy(() => CheckPrice$inboundSchema)),
-    expires_at: types.nullable(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "plan_id": "planId",
-      "included_grant": "includedGrant",
-      "prepaid_grant": "prepaidGrant",
-      "expires_at": "expiresAt",
-    });
-  }),
-);
-
-export function checkBreakdownFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckBreakdown, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckBreakdown$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckBreakdown' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBalanceRollover$inboundSchema: z.ZodMiniType<
-  CheckBalanceRollover,
-  unknown
-> = z.pipe(
-  z.object({
-    balance: types.number(),
-    expires_at: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "expires_at": "expiresAt",
-    });
-  }),
-);
-
-export function checkBalanceRolloverFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckBalanceRollover, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckBalanceRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckBalanceRollover' from JSON`,
-  );
-}
-
-/** @internal */
-export const CheckBalance$inboundSchema: z.ZodMiniType<CheckBalance, unknown> =
-  z.pipe(
-    z.object({
-      feature_id: types.string(),
-      feature: types.optional(z.lazy(() => CheckFeature$inboundSchema)),
-      granted: types.number(),
-      remaining: types.number(),
-      usage: types.number(),
-      unlimited: types.boolean(),
-      overage_allowed: types.boolean(),
-      max_purchase: types.nullable(types.number()),
-      next_reset_at: types.nullable(types.number()),
-      breakdown: types.optional(
-        z.array(z.lazy(() => CheckBreakdown$inboundSchema)),
-      ),
-      rollovers: types.optional(
-        z.array(z.lazy(() => CheckBalanceRollover$inboundSchema)),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "feature_id": "featureId",
-        "overage_allowed": "overageAllowed",
-        "max_purchase": "maxPurchase",
-        "next_reset_at": "nextResetAt",
-      });
-    }),
-  );
-
-export function checkBalanceFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckBalance, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckBalance$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckBalance' from JSON`,
-  );
-}
-
-/** @internal */
 export const CheckScenario$inboundSchema: z.ZodMiniType<
   CheckScenario,
   unknown
@@ -994,8 +479,8 @@ export const CheckEnv$inboundSchema: z.ZodMiniType<CheckEnv, unknown> =
   openEnums.inboundSchema(CheckEnv);
 
 /** @internal */
-export const ProductType$inboundSchema: z.ZodMiniType<ProductType, unknown> =
-  openEnums.inboundSchema(ProductType);
+export const CheckType$inboundSchema: z.ZodMiniType<CheckType, unknown> =
+  openEnums.inboundSchema(CheckType);
 
 /** @internal */
 export const FeatureType$inboundSchema: z.ZodMiniType<FeatureType, unknown> =
@@ -1018,22 +503,22 @@ export function includedUsageFromJSON(
 }
 
 /** @internal */
-export const ProductInterval$inboundSchema: z.ZodMiniType<
-  ProductInterval,
+export const CheckInterval$inboundSchema: z.ZodMiniType<
+  CheckInterval,
   unknown
-> = openEnums.inboundSchema(ProductInterval);
+> = openEnums.inboundSchema(CheckInterval);
 
 /** @internal */
-export const TiersTo$inboundSchema: z.ZodMiniType<TiersTo, unknown> =
+export const CheckTo$inboundSchema: z.ZodMiniType<CheckTo, unknown> =
   smartUnion([types.number(), types.string()]);
 
-export function tiersToFromJSON(
+export function checkToFromJSON(
   jsonString: string,
-): SafeParseResult<TiersTo, SDKValidationError> {
+): SafeParseResult<CheckTo, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TiersTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TiersTo' from JSON`,
+    (x) => CheckTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckTo' from JSON`,
   );
 }
 
@@ -1058,29 +543,27 @@ export const UsageModel$inboundSchema: z.ZodMiniType<UsageModel, unknown> =
   openEnums.inboundSchema(UsageModel);
 
 /** @internal */
-export const ProductDisplay$inboundSchema: z.ZodMiniType<
-  ProductDisplay,
-  unknown
-> = z.pipe(
-  z.object({
-    primary_text: types.string(),
-    secondary_text: z.optional(z.nullable(types.string())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "primary_text": "primaryText",
-      "secondary_text": "secondaryText",
-    });
-  }),
-);
+export const CheckDisplay$inboundSchema: z.ZodMiniType<CheckDisplay, unknown> =
+  z.pipe(
+    z.object({
+      primary_text: types.string(),
+      secondary_text: z.optional(z.nullable(types.string())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "primary_text": "primaryText",
+        "secondary_text": "secondaryText",
+      });
+    }),
+  );
 
-export function productDisplayFromJSON(
+export function checkDisplayFromJSON(
   jsonString: string,
-): SafeParseResult<ProductDisplay, SDKValidationError> {
+): SafeParseResult<CheckDisplay, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ProductDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ProductDisplay' from JSON`,
+    (x) => CheckDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDisplay' from JSON`,
   );
 }
 
@@ -1091,8 +574,8 @@ export const RolloverDuration$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(RolloverDuration);
 
 /** @internal */
-export const ConfigRollover$inboundSchema: z.ZodMiniType<
-  ConfigRollover,
+export const CheckRollover$inboundSchema: z.ZodMiniType<
+  CheckRollover,
   unknown
 > = z.object({
   max: types.nullable(types.number()),
@@ -1100,13 +583,13 @@ export const ConfigRollover$inboundSchema: z.ZodMiniType<
   length: types.number(),
 });
 
-export function configRolloverFromJSON(
+export function checkRolloverFromJSON(
   jsonString: string,
-): SafeParseResult<ConfigRollover, SDKValidationError> {
+): SafeParseResult<CheckRollover, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ConfigRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ConfigRollover' from JSON`,
+    (x) => CheckRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckRollover' from JSON`,
   );
 }
 
@@ -1125,9 +608,7 @@ export const CheckOnDecrease$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const Config$inboundSchema: z.ZodMiniType<Config, unknown> = z.pipe(
   z.object({
-    rollover: z.optional(
-      z.nullable(z.lazy(() => ConfigRollover$inboundSchema)),
-    ),
+    rollover: z.optional(z.nullable(z.lazy(() => CheckRollover$inboundSchema))),
     on_increase: z.optional(z.nullable(CheckOnIncrease$inboundSchema)),
     on_decrease: z.optional(z.nullable(CheckOnDecrease$inboundSchema)),
   }),
@@ -1153,13 +634,13 @@ export function configFromJSON(
 export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
   .pipe(
     z.object({
-      type: z.optional(z.nullable(ProductType$inboundSchema)),
+      type: z.optional(z.nullable(CheckType$inboundSchema)),
       feature_id: z.optional(z.nullable(types.string())),
       feature_type: z.optional(z.nullable(FeatureType$inboundSchema)),
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
-      interval: z.optional(z.nullable(ProductInterval$inboundSchema)),
+      interval: z.optional(z.nullable(CheckInterval$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
       tiers: z.optional(z.nullable(z.array(z.lazy(() => Tiers$inboundSchema)))),
@@ -1167,9 +648,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       billing_units: z.optional(z.nullable(types.number())),
       reset_usage_when_enabled: z.optional(z.nullable(types.boolean())),
       entity_feature_id: z.optional(z.nullable(types.string())),
-      display: z.optional(
-        z.nullable(z.lazy(() => ProductDisplay$inboundSchema)),
-      ),
+      display: z.optional(z.nullable(z.lazy(() => CheckDisplay$inboundSchema))),
       quantity: z.optional(z.nullable(types.number())),
       next_cycle_quantity: z.optional(z.nullable(types.number())),
       config: z.optional(z.nullable(z.lazy(() => Config$inboundSchema))),
@@ -1351,7 +830,7 @@ export const CheckResponse$inboundSchema: z.ZodMiniType<
     customer_id: types.string(),
     entity_id: z.optional(z.nullable(types.string())),
     required_balance: types.optional(types.number()),
-    balance: types.nullable(z.lazy(() => CheckBalance$inboundSchema)),
+    balance: types.nullable(Balance$inboundSchema),
     preview: types.optional(z.lazy(() => Preview$inboundSchema)),
   }),
   z.transform((v) => {

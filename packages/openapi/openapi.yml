@@ -217,255 +217,7 @@ components:
           propertyNames:
             type: string
           additionalProperties:
-            type: object
-            properties:
-              feature_id:
-                type: string
-                description: The feature ID this balance is for.
-              feature:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  type:
-                    enum:
-                      - boolean
-                      - metered
-                      - credit_system
-                  consumable:
-                    type: boolean
-                  event_names:
-                    type: array
-                    items:
-                      type: string
-                  credit_schema:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        metered_feature_id:
-                          type: string
-                        credit_cost:
-                          type: number
-                      required:
-                        - metered_feature_id
-                        - credit_cost
-                  display:
-                    type: object
-                    properties:
-                      singular:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      plural:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                  archived:
-                    type: boolean
-                required:
-                  - id
-                  - name
-                  - type
-                  - consumable
-                  - archived
-                description: The full feature object if expanded.
-              granted:
-                type: number
-                description: Total balance granted (included + prepaid).
-              remaining:
-                type: number
-                minimum: 0
-                description: Remaining balance available for use.
-              usage:
-                type: number
-                description: Total usage consumed in the current period.
-              unlimited:
-                type: boolean
-                description: Whether this feature has unlimited usage.
-              overage_allowed:
-                type: boolean
-                description: Whether usage beyond the granted balance is allowed (with overage
-                  charges).
-              max_purchase:
-                anyOf:
-                  - type: number
-                  - type: "null"
-                description: Maximum quantity that can be purchased as a top-up, or null for
-                  unlimited.
-              next_reset_at:
-                anyOf:
-                  - type: number
-                  - type: "null"
-                description: Timestamp when the balance will reset, or null for no reset.
-              breakdown:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      default: ""
-                      description: The unique identifier for this balance breakdown.
-                    plan_id:
-                      anyOf:
-                        - type: string
-                        - type: "null"
-                      description: The plan ID this balance originates from, or null for standalone
-                        balances.
-                    included_grant:
-                      type: number
-                      description: Amount granted from the plan's included usage.
-                    prepaid_grant:
-                      type: number
-                      description: Amount granted from prepaid purchases or top-ups.
-                    remaining:
-                      type: number
-                      description: Remaining balance available for use.
-                    usage:
-                      type: number
-                      description: Amount consumed in the current period.
-                    unlimited:
-                      type: boolean
-                      description: Whether this balance has unlimited usage.
-                    reset:
-                      anyOf:
-                        - type: object
-                          properties:
-                            interval:
-                              anyOf:
-                                - enum:
-                                    - one_off
-                                    - minute
-                                    - hour
-                                    - day
-                                    - week
-                                    - month
-                                    - quarter
-                                    - semi_annual
-                                    - year
-                                - const: multiple
-                              description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                combined from different intervals.
-                            interval_count:
-                              type: number
-                              description: Number of intervals between resets (eg. 2 for bi-monthly).
-                            resets_at:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                              description: Timestamp when the balance will next reset.
-                          required:
-                            - interval
-                            - resets_at
-                        - type: "null"
-                      description: Reset configuration for this balance, or null if no reset.
-                    price:
-                      anyOf:
-                        - type: object
-                          properties:
-                            amount:
-                              type: number
-                              description: The per-unit price amount.
-                            tiers:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  to:
-                                    anyOf:
-                                      - type: number
-                                      - const: inf
-                                  amount:
-                                    type: number
-                                required:
-                                  - to
-                                  - amount
-                              description: Tiered pricing configuration if applicable.
-                            billing_units:
-                              type: number
-                              description: The number of units per billing increment (eg. $9 / 250 units).
-                            billing_method:
-                              enum:
-                                - prepaid
-                                - usage_based
-                              description: Whether usage is prepaid or billed pay-per-use.
-                            max_purchase:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                              description: Maximum quantity that can be purchased, or null for unlimited.
-                          required:
-                            - billing_units
-                            - billing_method
-                            - max_purchase
-                        - type: "null"
-                      description: Pricing configuration if this balance has usage-based pricing.
-                    expires_at:
-                      anyOf:
-                        - type: number
-                        - type: "null"
-                      description: Timestamp when this balance expires, or null for no expiration.
-                  required:
-                    - plan_id
-                    - included_grant
-                    - prepaid_grant
-                    - remaining
-                    - usage
-                    - unlimited
-                    - reset
-                    - price
-                    - expires_at
-                description: Detailed breakdown of balance sources when stacking multiple plans
-                  or grants.
-              rollovers:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    balance:
-                      type: number
-                      description: Amount of balance rolled over from a previous period.
-                    expires_at:
-                      type: number
-                      description: Timestamp when the rollover balance expires.
-                  required:
-                    - balance
-                    - expires_at
-                description: Rollover balances carried over from previous periods.
-            required:
-              - feature_id
-              - granted
-              - remaining
-              - usage
-              - unlimited
-              - overage_allowed
-              - max_purchase
-              - next_reset_at
-            examples:
-              - feature_id: messages
-                granted: 100
-                remaining: 72
-                usage: 28
-                unlimited: false
-                overage_allowed: false
-                max_purchase: null
-                next_reset_at: 1773851121437
-                breakdown:
-                  - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                    plan_id: pro_plan
-                    included_grant: 100
-                    prepaid_grant: 0
-                    remaining: 72
-                    usage: 28
-                    unlimited: false
-                    reset:
-                      interval: month
-                      resets_at: 1773851121437
-                    price: null
-                    expires_at: null
+            $ref: "#/components/schemas/Balance"
           description: Feature balances keyed by feature ID, showing usage limits and
             remaining amounts.
         invoices:
@@ -1022,6 +774,276 @@ components:
         - env
         - archived
         - base_variant_id
+    Balance:
+      type: object
+      properties:
+        feature_id:
+          type: string
+          description: The feature ID this balance is for.
+        feature:
+          type: object
+          properties:
+            id:
+              type: string
+              description: The unique identifier for this feature, used in /check and /track
+                calls.
+            name:
+              type: string
+              description: Human-readable name displayed in the dashboard and billing UI.
+            type:
+              enum:
+                - boolean
+                - metered
+                - credit_system
+              description: "Feature type: 'boolean' for on/off access, 'metered' for
+                usage-tracked features, 'credit_system' for unified credit
+                pools."
+            consumable:
+              type: boolean
+              description: "For metered features: true if usage resets periodically (API
+                calls, credits), false if allocated persistently (seats,
+                storage)."
+            event_names:
+              type: array
+              items:
+                type: string
+              description: Event names that trigger this feature's balance. Allows multiple
+                features to respond to a single event.
+            credit_schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  metered_feature_id:
+                    type: string
+                    description: ID of the metered feature that draws from this credit system.
+                  credit_cost:
+                    type: number
+                    description: Credits consumed per unit of the metered feature.
+                required:
+                  - metered_feature_id
+                  - credit_cost
+              description: "For credit_system features: maps metered features to their credit
+                costs."
+            display:
+              type: object
+              properties:
+                singular:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                plural:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+              description: Display names for the feature in billing UI and customer-facing
+                components.
+            archived:
+              type: boolean
+              description: Whether the feature is archived and hidden from the dashboard.
+          required:
+            - id
+            - name
+            - type
+            - consumable
+            - archived
+          description: The full feature object if expanded.
+        granted:
+          type: number
+          description: Total balance granted (included + prepaid).
+        remaining:
+          type: number
+          minimum: 0
+          description: Remaining balance available for use.
+        usage:
+          type: number
+          description: Total usage consumed in the current period.
+        unlimited:
+          type: boolean
+          description: Whether this feature has unlimited usage.
+        overage_allowed:
+          type: boolean
+          description: Whether usage beyond the granted balance is allowed (with overage
+            charges).
+        max_purchase:
+          anyOf:
+            - type: number
+            - type: "null"
+          description: Maximum quantity that can be purchased as a top-up, or null for
+            unlimited.
+        next_reset_at:
+          anyOf:
+            - type: number
+            - type: "null"
+          description: Timestamp when the balance will reset, or null for no reset.
+        breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                default: ""
+                description: The unique identifier for this balance breakdown.
+              plan_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                description: The plan ID this balance originates from, or null for standalone
+                  balances.
+              included_grant:
+                type: number
+                description: Amount granted from the plan's included usage.
+              prepaid_grant:
+                type: number
+                description: Amount granted from prepaid purchases or top-ups.
+              remaining:
+                type: number
+                description: Remaining balance available for use.
+              usage:
+                type: number
+                description: Amount consumed in the current period.
+              unlimited:
+                type: boolean
+                description: Whether this balance has unlimited usage.
+              reset:
+                anyOf:
+                  - type: object
+                    properties:
+                      interval:
+                        anyOf:
+                          - enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                          - const: multiple
+                        description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                          combined from different intervals.
+                      interval_count:
+                        type: number
+                        description: Number of intervals between resets (eg. 2 for bi-monthly).
+                      resets_at:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        description: Timestamp when the balance will next reset.
+                    required:
+                      - interval
+                      - resets_at
+                  - type: "null"
+                description: Reset configuration for this balance, or null if no reset.
+              price:
+                anyOf:
+                  - type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: The per-unit price amount.
+                      tiers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            to:
+                              anyOf:
+                                - type: number
+                                - const: inf
+                            amount:
+                              type: number
+                          required:
+                            - to
+                            - amount
+                        description: Tiered pricing configuration if applicable.
+                      billing_units:
+                        type: number
+                        description: The number of units per billing increment (eg. $9 / 250 units).
+                      billing_method:
+                        enum:
+                          - prepaid
+                          - usage_based
+                        description: Whether usage is prepaid or billed pay-per-use.
+                      max_purchase:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        description: Maximum quantity that can be purchased, or null for unlimited.
+                    required:
+                      - billing_units
+                      - billing_method
+                      - max_purchase
+                  - type: "null"
+                description: Pricing configuration if this balance has usage-based pricing.
+              expires_at:
+                anyOf:
+                  - type: number
+                  - type: "null"
+                description: Timestamp when this balance expires, or null for no expiration.
+            required:
+              - plan_id
+              - included_grant
+              - prepaid_grant
+              - remaining
+              - usage
+              - unlimited
+              - reset
+              - price
+              - expires_at
+          description: Detailed breakdown of balance sources when stacking multiple plans
+            or grants.
+        rollovers:
+          type: array
+          items:
+            type: object
+            properties:
+              balance:
+                type: number
+                description: Amount of balance rolled over from a previous period.
+              expires_at:
+                type: number
+                description: Timestamp when the rollover balance expires.
+            required:
+              - balance
+              - expires_at
+          description: Rollover balances carried over from previous periods.
+      required:
+        - feature_id
+        - granted
+        - remaining
+        - usage
+        - unlimited
+        - overage_allowed
+        - max_purchase
+        - next_reset_at
+      examples:
+        - feature_id: messages
+          granted: 100
+          remaining: 72
+          usage: 28
+          unlimited: false
+          overage_allowed: false
+          max_purchase: null
+          next_reset_at: 1773851121437
+          breakdown:
+            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+              plan_id: pro_plan
+              included_grant: 100
+              prepaid_grant: 0
+              remaining: 72
+              usage: 28
+              unlimited: false
+              reset:
+                interval: month
+                resets_at: 1773851121437
+              price: null
+              expires_at: null
   securitySchemes:
     secretKey:
       type: http
@@ -1368,255 +1390,7 @@ paths:
                           propertyNames:
                             type: string
                           additionalProperties:
-                            type: object
-                            properties:
-                              feature_id:
-                                type: string
-                                description: The feature ID this balance is for.
-                              feature:
-                                type: object
-                                properties:
-                                  id:
-                                    type: string
-                                  name:
-                                    type: string
-                                  type:
-                                    enum:
-                                      - boolean
-                                      - metered
-                                      - credit_system
-                                  consumable:
-                                    type: boolean
-                                  event_names:
-                                    type: array
-                                    items:
-                                      type: string
-                                  credit_schema:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        metered_feature_id:
-                                          type: string
-                                        credit_cost:
-                                          type: number
-                                      required:
-                                        - metered_feature_id
-                                        - credit_cost
-                                  display:
-                                    type: object
-                                    properties:
-                                      singular:
-                                        anyOf:
-                                          - type: string
-                                          - type: "null"
-                                      plural:
-                                        anyOf:
-                                          - type: string
-                                          - type: "null"
-                                  archived:
-                                    type: boolean
-                                required:
-                                  - id
-                                  - name
-                                  - type
-                                  - consumable
-                                  - archived
-                                description: The full feature object if expanded.
-                              granted:
-                                type: number
-                                description: Total balance granted (included + prepaid).
-                              remaining:
-                                type: number
-                                minimum: 0
-                                description: Remaining balance available for use.
-                              usage:
-                                type: number
-                                description: Total usage consumed in the current period.
-                              unlimited:
-                                type: boolean
-                                description: Whether this feature has unlimited usage.
-                              overage_allowed:
-                                type: boolean
-                                description: Whether usage beyond the granted balance is allowed (with overage
-                                  charges).
-                              max_purchase:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Maximum quantity that can be purchased as a top-up, or null for
-                                  unlimited.
-                              next_reset_at:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when the balance will reset, or null for no reset.
-                              breakdown:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    id:
-                                      type: string
-                                      default: ""
-                                      description: The unique identifier for this balance breakdown.
-                                    plan_id:
-                                      anyOf:
-                                        - type: string
-                                        - type: "null"
-                                      description: The plan ID this balance originates from, or null for standalone
-                                        balances.
-                                    included_grant:
-                                      type: number
-                                      description: Amount granted from the plan's included usage.
-                                    prepaid_grant:
-                                      type: number
-                                      description: Amount granted from prepaid purchases or top-ups.
-                                    remaining:
-                                      type: number
-                                      description: Remaining balance available for use.
-                                    usage:
-                                      type: number
-                                      description: Amount consumed in the current period.
-                                    unlimited:
-                                      type: boolean
-                                      description: Whether this balance has unlimited usage.
-                                    reset:
-                                      anyOf:
-                                        - type: object
-                                          properties:
-                                            interval:
-                                              anyOf:
-                                                - enum:
-                                                    - one_off
-                                                    - minute
-                                                    - hour
-                                                    - day
-                                                    - week
-                                                    - month
-                                                    - quarter
-                                                    - semi_annual
-                                                    - year
-                                                - const: multiple
-                                              description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                                combined from different
-                                                intervals.
-                                            interval_count:
-                                              type: number
-                                              description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                            resets_at:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                              description: Timestamp when the balance will next reset.
-                                          required:
-                                            - interval
-                                            - resets_at
-                                        - type: "null"
-                                      description: Reset configuration for this balance, or null if no reset.
-                                    price:
-                                      anyOf:
-                                        - type: object
-                                          properties:
-                                            amount:
-                                              type: number
-                                              description: The per-unit price amount.
-                                            tiers:
-                                              type: array
-                                              items:
-                                                type: object
-                                                properties:
-                                                  to:
-                                                    anyOf:
-                                                      - {}
-                                                      - {}
-                                                  amount:
-                                                    type: number
-                                                required:
-                                                  - amount
-                                              description: Tiered pricing configuration if applicable.
-                                            billing_units:
-                                              type: number
-                                              description: The number of units per billing increment (eg. $9 / 250 units).
-                                            billing_method:
-                                              enum:
-                                                - prepaid
-                                                - usage_based
-                                              description: Whether usage is prepaid or billed pay-per-use.
-                                            max_purchase:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                              description: Maximum quantity that can be purchased, or null for unlimited.
-                                          required:
-                                            - billing_units
-                                            - billing_method
-                                            - max_purchase
-                                        - type: "null"
-                                      description: Pricing configuration if this balance has usage-based pricing.
-                                    expires_at:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
-                                      description: Timestamp when this balance expires, or null for no expiration.
-                                  required:
-                                    - plan_id
-                                    - included_grant
-                                    - prepaid_grant
-                                    - remaining
-                                    - usage
-                                    - unlimited
-                                    - reset
-                                    - price
-                                    - expires_at
-                                description: Detailed breakdown of balance sources when stacking multiple plans
-                                  or grants.
-                              rollovers:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    balance:
-                                      type: number
-                                      description: Amount of balance rolled over from a previous period.
-                                    expires_at:
-                                      type: number
-                                      description: Timestamp when the rollover balance expires.
-                                  required:
-                                    - balance
-                                    - expires_at
-                                description: Rollover balances carried over from previous periods.
-                            required:
-                              - feature_id
-                              - granted
-                              - remaining
-                              - usage
-                              - unlimited
-                              - overage_allowed
-                              - max_purchase
-                              - next_reset_at
-                            examples:
-                              - feature_id: messages
-                                granted: 100
-                                remaining: 72
-                                usage: 28
-                                unlimited: false
-                                overage_allowed: false
-                                max_purchase: null
-                                next_reset_at: 1773851121437
-                                breakdown:
-                                  - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                                    plan_id: pro_plan
-                                    included_grant: 100
-                                    prepaid_grant: 0
-                                    remaining: 72
-                                    usage: 28
-                                    unlimited: false
-                                    reset:
-                                      interval: month
-                                      resets_at: 1773851121437
-                                    price: null
-                                    expires_at: null
+                            $ref: "#/components/schemas/Balance"
                           description: Feature balances keyed by feature ID, showing usage limits and
                             remaining amounts.
                       required:
@@ -1969,255 +1743,7 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      type: object
-                      properties:
-                        feature_id:
-                          type: string
-                          description: The feature ID this balance is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                            consumable:
-                              type: boolean
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                  credit_cost:
-                                    type: number
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                            archived:
-                              type: boolean
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                        granted:
-                          type: number
-                          description: Total balance granted (included + prepaid).
-                        remaining:
-                          type: number
-                          minimum: 0
-                          description: Remaining balance available for use.
-                        usage:
-                          type: number
-                          description: Total usage consumed in the current period.
-                        unlimited:
-                          type: boolean
-                          description: Whether this feature has unlimited usage.
-                        overage_allowed:
-                          type: boolean
-                          description: Whether usage beyond the granted balance is allowed (with overage
-                            charges).
-                        max_purchase:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Maximum quantity that can be purchased as a top-up, or null for
-                            unlimited.
-                        next_reset_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the balance will reset, or null for no reset.
-                        breakdown:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                default: ""
-                                description: The unique identifier for this balance breakdown.
-                              plan_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The plan ID this balance originates from, or null for standalone
-                                  balances.
-                              included_grant:
-                                type: number
-                                description: Amount granted from the plan's included usage.
-                              prepaid_grant:
-                                type: number
-                                description: Amount granted from prepaid purchases or top-ups.
-                              remaining:
-                                type: number
-                                description: Remaining balance available for use.
-                              usage:
-                                type: number
-                                description: Amount consumed in the current period.
-                              unlimited:
-                                type: boolean
-                                description: Whether this balance has unlimited usage.
-                              reset:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      interval:
-                                        anyOf:
-                                          - enum:
-                                              - one_off
-                                              - minute
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                              - quarter
-                                              - semi_annual
-                                              - year
-                                          - const: multiple
-                                        description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                          combined from different intervals.
-                                      interval_count:
-                                        type: number
-                                        description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                      resets_at:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Timestamp when the balance will next reset.
-                                    required:
-                                      - interval
-                                      - resets_at
-                                  - type: "null"
-                                description: Reset configuration for this balance, or null if no reset.
-                              price:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      amount:
-                                        type: number
-                                        description: The per-unit price amount.
-                                      tiers:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                          required:
-                                            - to
-                                            - amount
-                                        description: Tiered pricing configuration if applicable.
-                                      billing_units:
-                                        type: number
-                                        description: The number of units per billing increment (eg. $9 / 250 units).
-                                      billing_method:
-                                        enum:
-                                          - prepaid
-                                          - usage_based
-                                        description: Whether usage is prepaid or billed pay-per-use.
-                                      max_purchase:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Maximum quantity that can be purchased, or null for unlimited.
-                                    required:
-                                      - billing_units
-                                      - billing_method
-                                      - max_purchase
-                                  - type: "null"
-                                description: Pricing configuration if this balance has usage-based pricing.
-                              expires_at:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when this balance expires, or null for no expiration.
-                            required:
-                              - plan_id
-                              - included_grant
-                              - prepaid_grant
-                              - remaining
-                              - usage
-                              - unlimited
-                              - reset
-                              - price
-                              - expires_at
-                          description: Detailed breakdown of balance sources when stacking multiple plans
-                            or grants.
-                        rollovers:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              balance:
-                                type: number
-                                description: Amount of balance rolled over from a previous period.
-                              expires_at:
-                                type: number
-                                description: Timestamp when the rollover balance expires.
-                            required:
-                              - balance
-                              - expires_at
-                          description: Rollover balances carried over from previous periods.
-                      required:
-                        - feature_id
-                        - granted
-                        - remaining
-                        - usage
-                        - unlimited
-                        - overage_allowed
-                        - max_purchase
-                        - next_reset_at
-                      examples:
-                        - feature_id: messages
-                          granted: 100
-                          remaining: 72
-                          usage: 28
-                          unlimited: false
-                          overage_allowed: false
-                          max_purchase: null
-                          next_reset_at: 1773851121437
-                          breakdown:
-                            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                              plan_id: pro_plan
-                              included_grant: 100
-                              prepaid_grant: 0
-                              remaining: 72
-                              usage: 28
-                              unlimited: false
-                              reset:
-                                interval: month
-                                resets_at: 1773851121437
-                              price: null
-                              expires_at: null
+                      $ref: "#/components/schemas/Balance"
                     description: Feature balances keyed by feature ID, showing usage limits and
                       remaining amounts.
                 required:
@@ -2359,6 +1885,768 @@ paths:
                 required:
                   - list
       x-speakeasy-name-override: list
+      parameters:
+        - *a1
+  /v1/features.create:
+    post:
+      operationId: createFeature
+      description: >-
+        Creates a new feature.
+
+
+        Use this to programmatically create features for metering usage,
+        managing access, or building credit systems.
+
+
+        @example
+
+        ```typescript
+
+        // Create a metered feature for API calls
+
+        const response = await client.features.create({
+          featureId: "api-calls",
+          name: "API Calls",
+          type: "metered",
+          consumable: true,
+        });
+
+        ```
+
+
+        @example
+
+        ```typescript
+
+        // Create a boolean feature for a premium feature flag
+
+        const response = await client.features.create({ featureId:
+        "advanced-analytics", name: "Advanced Analytics", type: "boolean" });
+
+        ```
+
+
+        @param name - The name of the feature.
+
+        @param type - The type of the feature. 'single_use' features are
+        consumed, like API calls, tokens, or messages. 'continuous_use' features
+        are allocated, like seats, workspaces, or projects. 'credit_system'
+        features are schemas that unify multiple 'single_use' features into a
+        single credit system.
+
+        @param consumable - Whether this feature is consumable. A consumable
+        feature is one that periodically resets and is consumed rather than
+        allocated (like credits, API requests, etc.). Applicable only for
+        'metered' features. (optional)
+
+        @param display - Singular and plural display names for the feature in
+        your user interface. (optional)
+
+        @param creditSchema - A schema that maps 'single_use' feature IDs to
+        credit costs. Applicable only for 'credit_system' features. (optional)
+
+        @param featureId - The ID of the feature to create.
+
+
+        @returns The created feature object.
+      tags:
+        - features
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The name of the feature.
+                type:
+                  enum:
+                    - boolean
+                    - metered
+                    - credit_system
+                  description: The type of the feature. 'single_use' features are consumed, like
+                    API calls, tokens, or messages. 'continuous_use' features
+                    are allocated, like seats, workspaces, or projects.
+                    'credit_system' features are schemas that unify multiple
+                    'single_use' features into a single credit system.
+                consumable:
+                  type: boolean
+                  description: Whether this feature is consumable. A consumable feature is one
+                    that periodically resets and is consumed rather than
+                    allocated (like credits, API requests, etc.). Applicable
+                    only for 'metered' features.
+                display:
+                  type: object
+                  properties:
+                    singular:
+                      type: string
+                    plural:
+                      type: string
+                  required:
+                    - singular
+                    - plural
+                  description: Singular and plural display names for the feature in your user
+                    interface.
+                credit_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metered_feature_id:
+                        type: string
+                      credit_cost:
+                        type: number
+                    required:
+                      - metered_feature_id
+                      - credit_cost
+                  description: A schema that maps 'single_use' feature IDs to credit costs.
+                    Applicable only for 'credit_system' features.
+                event_names:
+                  type: array
+                  items:
+                    type: string
+                feature_id:
+                  type: string
+                  description: The ID of the feature to create.
+              required:
+                - name
+                - type
+                - feature_id
+              title: CreateFeatureParams
+              examples:
+                - feature_id: api-calls
+                  name: API Calls
+                  type: metered
+                  consumable: true
+                - feature_id: credits
+                  name: Credits
+                  type: credit_system
+                  consumable: true
+                  credit_schema:
+                    - metered_feature_id: api-calls
+                      credit_cost: 1
+                    - metered_feature_id: image-generations
+                      credit_cost: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for this feature, used in /check and /track
+                      calls.
+                  name:
+                    type: string
+                    description: Human-readable name displayed in the dashboard and billing UI.
+                  type:
+                    enum:
+                      - boolean
+                      - metered
+                      - credit_system
+                    description: "Feature type: 'boolean' for on/off access, 'metered' for
+                      usage-tracked features, 'credit_system' for unified credit
+                      pools."
+                  consumable:
+                    type: boolean
+                    description: "For metered features: true if usage resets periodically (API
+                      calls, credits), false if allocated persistently (seats,
+                      storage)."
+                  event_names:
+                    type: array
+                    items:
+                      type: string
+                    description: Event names that trigger this feature's balance. Allows multiple
+                      features to respond to a single event.
+                  credit_schema:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metered_feature_id:
+                          type: string
+                          description: ID of the metered feature that draws from this credit system.
+                        credit_cost:
+                          type: number
+                          description: Credits consumed per unit of the metered feature.
+                      required:
+                        - metered_feature_id
+                        - credit_cost
+                    description: "For credit_system features: maps metered features to their credit
+                      costs."
+                  display:
+                    type: object
+                    properties:
+                      singular:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Singular form for UI display (e.g., 'API call', 'seat').
+                      plural:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Plural form for UI display (e.g., 'API calls', 'seats').
+                    description: Display names for the feature in billing UI and customer-facing
+                      components.
+                  archived:
+                    type: boolean
+                    description: Whether the feature is archived and hidden from the dashboard.
+                required:
+                  - id
+                  - name
+                  - type
+                  - consumable
+                  - archived
+                examples:
+                  - id: api-calls
+                    name: API Calls
+                    type: metered
+                    consumable: true
+                    archived: false
+                    display:
+                      singular: API call
+                      plural: API calls
+      x-speakeasy-name-override: create
+      parameters:
+        - *a1
+  /v1/features.get:
+    post:
+      operationId: getFeature
+      description: |-
+        Retrieves a single feature by its ID.
+
+        Use this when you need to fetch the details of a specific feature.
+
+        @example
+        ```typescript
+        // Get a feature by ID
+        const response = await client.features.get({ featureId: "api-calls" });
+        ```
+
+        @param featureId - The ID of the feature.
+
+        @returns The feature object with its full configuration.
+      tags:
+        - features
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feature_id:
+                  type: string
+                  description: The ID of the feature.
+              required:
+                - feature_id
+              title: GetFeatureParams
+              examples:
+                - feature_id: api-calls
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for this feature, used in /check and /track
+                      calls.
+                  name:
+                    type: string
+                    description: Human-readable name displayed in the dashboard and billing UI.
+                  type:
+                    enum:
+                      - boolean
+                      - metered
+                      - credit_system
+                    description: "Feature type: 'boolean' for on/off access, 'metered' for
+                      usage-tracked features, 'credit_system' for unified credit
+                      pools."
+                  consumable:
+                    type: boolean
+                    description: "For metered features: true if usage resets periodically (API
+                      calls, credits), false if allocated persistently (seats,
+                      storage)."
+                  event_names:
+                    type: array
+                    items:
+                      type: string
+                    description: Event names that trigger this feature's balance. Allows multiple
+                      features to respond to a single event.
+                  credit_schema:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metered_feature_id:
+                          type: string
+                          description: ID of the metered feature that draws from this credit system.
+                        credit_cost:
+                          type: number
+                          description: Credits consumed per unit of the metered feature.
+                      required:
+                        - metered_feature_id
+                        - credit_cost
+                    description: "For credit_system features: maps metered features to their credit
+                      costs."
+                  display:
+                    type: object
+                    properties:
+                      singular:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Singular form for UI display (e.g., 'API call', 'seat').
+                      plural:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Plural form for UI display (e.g., 'API calls', 'seats').
+                    description: Display names for the feature in billing UI and customer-facing
+                      components.
+                  archived:
+                    type: boolean
+                    description: Whether the feature is archived and hidden from the dashboard.
+                required:
+                  - id
+                  - name
+                  - type
+                  - consumable
+                  - archived
+                examples:
+                  - id: api-calls
+                    name: API Calls
+                    type: metered
+                    consumable: true
+                    archived: false
+                    display:
+                      singular: API call
+                      plural: API calls
+      x-speakeasy-name-override: get
+      parameters:
+        - *a1
+  /v1/features.list:
+    post:
+      operationId: listFeatures
+      description: >-
+        Lists all features in the current environment.
+
+
+        Use this to retrieve all features configured for your organization to
+        display in dashboards or for feature management.
+
+
+        @returns A list of all features with their configuration and metadata.
+      tags:
+        - features
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this feature, used in /check and /track
+                            calls.
+                        name:
+                          type: string
+                          description: Human-readable name displayed in the dashboard and billing UI.
+                        type:
+                          enum:
+                            - boolean
+                            - metered
+                            - credit_system
+                          description: "Feature type: 'boolean' for on/off access, 'metered' for
+                            usage-tracked features, 'credit_system' for unified
+                            credit pools."
+                        consumable:
+                          type: boolean
+                          description: "For metered features: true if usage resets periodically (API
+                            calls, credits), false if allocated persistently
+                            (seats, storage)."
+                        event_names:
+                          type: array
+                          items:
+                            type: string
+                          description: Event names that trigger this feature's balance. Allows multiple
+                            features to respond to a single event.
+                        credit_schema:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              metered_feature_id:
+                                type: string
+                                description: ID of the metered feature that draws from this credit system.
+                              credit_cost:
+                                type: number
+                                description: Credits consumed per unit of the metered feature.
+                            required:
+                              - metered_feature_id
+                              - credit_cost
+                          description: "For credit_system features: maps metered features to their credit
+                            costs."
+                        display:
+                          type: object
+                          properties:
+                            singular:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Singular form for UI display (e.g., 'API call', 'seat').
+                            plural:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Plural form for UI display (e.g., 'API calls', 'seats').
+                          description: Display names for the feature in billing UI and customer-facing
+                            components.
+                        archived:
+                          type: boolean
+                          description: Whether the feature is archived and hidden from the dashboard.
+                      required:
+                        - id
+                        - name
+                        - type
+                        - consumable
+                        - archived
+                required:
+                  - list
+                examples:
+                  - list:
+                      - id: api-calls
+                        name: API Calls
+                        type: metered
+                        consumable: true
+                        archived: false
+                        display:
+                          singular: API call
+                          plural: API calls
+                      - id: credits
+                        name: Credits
+                        type: credit_system
+                        consumable: true
+                        archived: false
+                        credit_schema:
+                          - metered_feature_id: api-calls
+                            credit_cost: 1
+                          - metered_feature_id: image-generations
+                            credit_cost: 10
+                        display:
+                          singular: credit
+                          plural: credits
+      x-speakeasy-name-override: list
+      parameters:
+        - *a1
+  /v1/features.update:
+    post:
+      operationId: updateFeature
+      description: >-
+        Updates an existing feature.
+
+
+        Use this to modify feature properties like name, display settings, or to
+        archive a feature.
+
+
+        @example
+
+        ```typescript
+
+        // Update a feature's display name
+
+        const response = await client.features.update({ featureId: "api-calls",
+        name: "API Requests", display: {"singular":"API request","plural":"API
+        requests"} });
+
+        ```
+
+
+        @example
+
+        ```typescript
+
+        // Archive a feature
+
+        const response = await client.features.update({ featureId:
+        "deprecated-feature", archived: true });
+
+        ```
+
+
+        @param name - The name of the feature. (optional)
+
+        @param type - The type of the feature. 'single_use' features are
+        consumed, like API calls, tokens, or messages. 'continuous_use' features
+        are allocated, like seats, workspaces, or projects. 'credit_system'
+        features are schemas that unify multiple 'single_use' features into a
+        single credit system. (optional)
+
+        @param consumable - Whether this feature is consumable. A consumable
+        feature is one that periodically resets and is consumed rather than
+        allocated (like credits, API requests, etc.). Applicable only for
+        'metered' features. (optional)
+
+        @param display - Singular and plural display names for the feature in
+        your user interface. (optional)
+
+        @param creditSchema - A schema that maps 'single_use' feature IDs to
+        credit costs. Applicable only for 'credit_system' features. (optional)
+
+        @param archived - Whether the feature is archived. Archived features are
+        hidden from the dashboard. (optional)
+
+        @param featureId - The ID of the feature to update.
+
+        @param newFeatureId - The new ID of the feature. Feature ID can only be
+        updated if it's not being used by any customers. (optional)
+
+
+        @returns The updated feature object.
+      tags:
+        - features
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: The name of the feature.
+                type:
+                  enum:
+                    - boolean
+                    - metered
+                    - credit_system
+                  description: The type of the feature. 'single_use' features are consumed, like
+                    API calls, tokens, or messages. 'continuous_use' features
+                    are allocated, like seats, workspaces, or projects.
+                    'credit_system' features are schemas that unify multiple
+                    'single_use' features into a single credit system.
+                consumable:
+                  type: boolean
+                  description: Whether this feature is consumable. A consumable feature is one
+                    that periodically resets and is consumed rather than
+                    allocated (like credits, API requests, etc.). Applicable
+                    only for 'metered' features.
+                display:
+                  type: object
+                  properties:
+                    singular:
+                      type: string
+                    plural:
+                      type: string
+                  required:
+                    - singular
+                    - plural
+                  description: Singular and plural display names for the feature in your user
+                    interface.
+                credit_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metered_feature_id:
+                        type: string
+                      credit_cost:
+                        type: number
+                    required:
+                      - metered_feature_id
+                      - credit_cost
+                  description: A schema that maps 'single_use' feature IDs to credit costs.
+                    Applicable only for 'credit_system' features.
+                event_names:
+                  type: array
+                  items:
+                    type: string
+                archived:
+                  type: boolean
+                  description: Whether the feature is archived. Archived features are hidden from
+                    the dashboard.
+                feature_id:
+                  type: string
+                  description: The ID of the feature to update.
+                new_feature_id:
+                  type: string
+                  description: The new ID of the feature. Feature ID can only be updated if it's
+                    not being used by any customers.
+              required:
+                - feature_id
+              title: UpdateFeatureParams
+              examples:
+                - feature_id: api-calls
+                  name: API Requests
+                  display:
+                    singular: API request
+                    plural: API requests
+                - feature_id: old-feature
+                  archived: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for this feature, used in /check and /track
+                      calls.
+                  name:
+                    type: string
+                    description: Human-readable name displayed in the dashboard and billing UI.
+                  type:
+                    enum:
+                      - boolean
+                      - metered
+                      - credit_system
+                    description: "Feature type: 'boolean' for on/off access, 'metered' for
+                      usage-tracked features, 'credit_system' for unified credit
+                      pools."
+                  consumable:
+                    type: boolean
+                    description: "For metered features: true if usage resets periodically (API
+                      calls, credits), false if allocated persistently (seats,
+                      storage)."
+                  event_names:
+                    type: array
+                    items:
+                      type: string
+                    description: Event names that trigger this feature's balance. Allows multiple
+                      features to respond to a single event.
+                  credit_schema:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metered_feature_id:
+                          type: string
+                          description: ID of the metered feature that draws from this credit system.
+                        credit_cost:
+                          type: number
+                          description: Credits consumed per unit of the metered feature.
+                      required:
+                        - metered_feature_id
+                        - credit_cost
+                    description: "For credit_system features: maps metered features to their credit
+                      costs."
+                  display:
+                    type: object
+                    properties:
+                      singular:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Singular form for UI display (e.g., 'API call', 'seat').
+                      plural:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Plural form for UI display (e.g., 'API calls', 'seats').
+                    description: Display names for the feature in billing UI and customer-facing
+                      components.
+                  archived:
+                    type: boolean
+                    description: Whether the feature is archived and hidden from the dashboard.
+                required:
+                  - id
+                  - name
+                  - type
+                  - consumable
+                  - archived
+                examples:
+                  - id: api-calls
+                    name: API Calls
+                    type: metered
+                    consumable: true
+                    archived: false
+                    display:
+                      singular: API call
+                      plural: API calls
+      x-speakeasy-name-override: update
+      parameters:
+        - *a1
+  /v1/features.delete:
+    post:
+      operationId: deleteFeature
+      description: >-
+        Deletes a feature by its ID.
+
+
+        Use this to permanently remove a feature. Note: features that are used
+        in products cannot be deleted - archive them instead.
+
+
+        @example
+
+        ```typescript
+
+        // Delete an unused feature
+
+        const response = await client.features.delete({ featureId: "old-feature"
+        });
+
+        ```
+
+
+        @param featureId - The ID of the feature to delete.
+
+
+        @returns A success flag indicating the feature was deleted.
+      tags:
+        - features
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feature_id:
+                  type: string
+                  description: The ID of the feature to delete.
+              required:
+                - feature_id
+              title: DeleteFeatureParams
+              examples:
+                - feature_id: old-feature
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+                examples:
+                  - success: true
+      x-speakeasy-name-override: delete
       parameters:
         - *a1
   /v1/billing.attach:
@@ -4119,8 +4407,6 @@ paths:
                   type: number
                   description: Unix timestamp (milliseconds) when the balance expires. Mutually
                     exclusive with reset.
-                granted_balance:
-                  type: number
               required:
                 - customer_id
                 - feature_id
@@ -4352,255 +4638,7 @@ paths:
                     description: The required balance that was checked against.
                   balance:
                     anyOf:
-                      - type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature ID this balance is for.
-                          feature:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              name:
-                                type: string
-                              type:
-                                enum:
-                                  - boolean
-                                  - metered
-                                  - credit_system
-                              consumable:
-                                type: boolean
-                              event_names:
-                                type: array
-                                items:
-                                  type: string
-                              credit_schema:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    metered_feature_id:
-                                      type: string
-                                    credit_cost:
-                                      type: number
-                                  required:
-                                    - metered_feature_id
-                                    - credit_cost
-                              display:
-                                type: object
-                                properties:
-                                  singular:
-                                    anyOf:
-                                      - type: string
-                                      - type: "null"
-                                  plural:
-                                    anyOf:
-                                      - type: string
-                                      - type: "null"
-                              archived:
-                                type: boolean
-                            required:
-                              - id
-                              - name
-                              - type
-                              - consumable
-                              - archived
-                            description: The full feature object if expanded.
-                          granted:
-                            type: number
-                            description: Total balance granted (included + prepaid).
-                          remaining:
-                            type: number
-                            minimum: 0
-                            description: Remaining balance available for use.
-                          usage:
-                            type: number
-                            description: Total usage consumed in the current period.
-                          unlimited:
-                            type: boolean
-                            description: Whether this feature has unlimited usage.
-                          overage_allowed:
-                            type: boolean
-                            description: Whether usage beyond the granted balance is allowed (with overage
-                              charges).
-                          max_purchase:
-                            anyOf:
-                              - type: number
-                              - type: "null"
-                            description: Maximum quantity that can be purchased as a top-up, or null for
-                              unlimited.
-                          next_reset_at:
-                            anyOf:
-                              - type: number
-                              - type: "null"
-                            description: Timestamp when the balance will reset, or null for no reset.
-                          breakdown:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                  default: ""
-                                  description: The unique identifier for this balance breakdown.
-                                plan_id:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: The plan ID this balance originates from, or null for standalone
-                                    balances.
-                                included_grant:
-                                  type: number
-                                  description: Amount granted from the plan's included usage.
-                                prepaid_grant:
-                                  type: number
-                                  description: Amount granted from prepaid purchases or top-ups.
-                                remaining:
-                                  type: number
-                                  description: Remaining balance available for use.
-                                usage:
-                                  type: number
-                                  description: Amount consumed in the current period.
-                                unlimited:
-                                  type: boolean
-                                  description: Whether this balance has unlimited usage.
-                                reset:
-                                  anyOf:
-                                    - type: object
-                                      properties:
-                                        interval:
-                                          anyOf:
-                                            - enum:
-                                                - one_off
-                                                - minute
-                                                - hour
-                                                - day
-                                                - week
-                                                - month
-                                                - quarter
-                                                - semi_annual
-                                                - year
-                                            - const: multiple
-                                          description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                            combined from different intervals.
-                                        interval_count:
-                                          type: number
-                                          description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                        resets_at:
-                                          anyOf:
-                                            - type: number
-                                            - type: "null"
-                                          description: Timestamp when the balance will next reset.
-                                      required:
-                                        - interval
-                                        - resets_at
-                                    - type: "null"
-                                  description: Reset configuration for this balance, or null if no reset.
-                                price:
-                                  anyOf:
-                                    - type: object
-                                      properties:
-                                        amount:
-                                          type: number
-                                          description: The per-unit price amount.
-                                        tiers:
-                                          type: array
-                                          items:
-                                            type: object
-                                            properties:
-                                              to:
-                                                anyOf:
-                                                  - type: number
-                                                  - const: inf
-                                              amount:
-                                                type: number
-                                            required:
-                                              - to
-                                              - amount
-                                          description: Tiered pricing configuration if applicable.
-                                        billing_units:
-                                          type: number
-                                          description: The number of units per billing increment (eg. $9 / 250 units).
-                                        billing_method:
-                                          enum:
-                                            - prepaid
-                                            - usage_based
-                                          description: Whether usage is prepaid or billed pay-per-use.
-                                        max_purchase:
-                                          anyOf:
-                                            - type: number
-                                            - type: "null"
-                                          description: Maximum quantity that can be purchased, or null for unlimited.
-                                      required:
-                                        - billing_units
-                                        - billing_method
-                                        - max_purchase
-                                    - type: "null"
-                                  description: Pricing configuration if this balance has usage-based pricing.
-                                expires_at:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: Timestamp when this balance expires, or null for no expiration.
-                              required:
-                                - plan_id
-                                - included_grant
-                                - prepaid_grant
-                                - remaining
-                                - usage
-                                - unlimited
-                                - reset
-                                - price
-                                - expires_at
-                            description: Detailed breakdown of balance sources when stacking multiple plans
-                              or grants.
-                          rollovers:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                balance:
-                                  type: number
-                                  description: Amount of balance rolled over from a previous period.
-                                expires_at:
-                                  type: number
-                                  description: Timestamp when the rollover balance expires.
-                              required:
-                                - balance
-                                - expires_at
-                            description: Rollover balances carried over from previous periods.
-                        required:
-                          - feature_id
-                          - granted
-                          - remaining
-                          - usage
-                          - unlimited
-                          - overage_allowed
-                          - max_purchase
-                          - next_reset_at
-                        examples:
-                          - feature_id: messages
-                            granted: 100
-                            remaining: 72
-                            usage: 28
-                            unlimited: false
-                            overage_allowed: false
-                            max_purchase: null
-                            next_reset_at: 1773851121437
-                            breakdown:
-                              - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                                plan_id: pro_plan
-                                included_grant: 100
-                                prepaid_grant: 0
-                                remaining: 72
-                                usage: 28
-                                unlimited: false
-                                reset:
-                                  interval: month
-                                  resets_at: 1773851121437
-                                price: null
-                                expires_at: null
+                      - $ref: "#/components/schemas/Balance"
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has
                       no balance for this feature.
@@ -5103,255 +5141,7 @@ paths:
                     description: The amount of usage that was recorded.
                   balance:
                     anyOf:
-                      - type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature ID this balance is for.
-                          feature:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              name:
-                                type: string
-                              type:
-                                enum:
-                                  - boolean
-                                  - metered
-                                  - credit_system
-                              consumable:
-                                type: boolean
-                              event_names:
-                                type: array
-                                items:
-                                  type: string
-                              credit_schema:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    metered_feature_id:
-                                      type: string
-                                    credit_cost:
-                                      type: number
-                                  required:
-                                    - metered_feature_id
-                                    - credit_cost
-                              display:
-                                type: object
-                                properties:
-                                  singular:
-                                    anyOf:
-                                      - type: string
-                                      - type: "null"
-                                  plural:
-                                    anyOf:
-                                      - type: string
-                                      - type: "null"
-                              archived:
-                                type: boolean
-                            required:
-                              - id
-                              - name
-                              - type
-                              - consumable
-                              - archived
-                            description: The full feature object if expanded.
-                          granted:
-                            type: number
-                            description: Total balance granted (included + prepaid).
-                          remaining:
-                            type: number
-                            minimum: 0
-                            description: Remaining balance available for use.
-                          usage:
-                            type: number
-                            description: Total usage consumed in the current period.
-                          unlimited:
-                            type: boolean
-                            description: Whether this feature has unlimited usage.
-                          overage_allowed:
-                            type: boolean
-                            description: Whether usage beyond the granted balance is allowed (with overage
-                              charges).
-                          max_purchase:
-                            anyOf:
-                              - type: number
-                              - type: "null"
-                            description: Maximum quantity that can be purchased as a top-up, or null for
-                              unlimited.
-                          next_reset_at:
-                            anyOf:
-                              - type: number
-                              - type: "null"
-                            description: Timestamp when the balance will reset, or null for no reset.
-                          breakdown:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                  default: ""
-                                  description: The unique identifier for this balance breakdown.
-                                plan_id:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: The plan ID this balance originates from, or null for standalone
-                                    balances.
-                                included_grant:
-                                  type: number
-                                  description: Amount granted from the plan's included usage.
-                                prepaid_grant:
-                                  type: number
-                                  description: Amount granted from prepaid purchases or top-ups.
-                                remaining:
-                                  type: number
-                                  description: Remaining balance available for use.
-                                usage:
-                                  type: number
-                                  description: Amount consumed in the current period.
-                                unlimited:
-                                  type: boolean
-                                  description: Whether this balance has unlimited usage.
-                                reset:
-                                  anyOf:
-                                    - type: object
-                                      properties:
-                                        interval:
-                                          anyOf:
-                                            - enum:
-                                                - one_off
-                                                - minute
-                                                - hour
-                                                - day
-                                                - week
-                                                - month
-                                                - quarter
-                                                - semi_annual
-                                                - year
-                                            - const: multiple
-                                          description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                            combined from different intervals.
-                                        interval_count:
-                                          type: number
-                                          description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                        resets_at:
-                                          anyOf:
-                                            - type: number
-                                            - type: "null"
-                                          description: Timestamp when the balance will next reset.
-                                      required:
-                                        - interval
-                                        - resets_at
-                                    - type: "null"
-                                  description: Reset configuration for this balance, or null if no reset.
-                                price:
-                                  anyOf:
-                                    - type: object
-                                      properties:
-                                        amount:
-                                          type: number
-                                          description: The per-unit price amount.
-                                        tiers:
-                                          type: array
-                                          items:
-                                            type: object
-                                            properties:
-                                              to:
-                                                anyOf:
-                                                  - type: number
-                                                  - const: inf
-                                              amount:
-                                                type: number
-                                            required:
-                                              - to
-                                              - amount
-                                          description: Tiered pricing configuration if applicable.
-                                        billing_units:
-                                          type: number
-                                          description: The number of units per billing increment (eg. $9 / 250 units).
-                                        billing_method:
-                                          enum:
-                                            - prepaid
-                                            - usage_based
-                                          description: Whether usage is prepaid or billed pay-per-use.
-                                        max_purchase:
-                                          anyOf:
-                                            - type: number
-                                            - type: "null"
-                                          description: Maximum quantity that can be purchased, or null for unlimited.
-                                      required:
-                                        - billing_units
-                                        - billing_method
-                                        - max_purchase
-                                    - type: "null"
-                                  description: Pricing configuration if this balance has usage-based pricing.
-                                expires_at:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: Timestamp when this balance expires, or null for no expiration.
-                              required:
-                                - plan_id
-                                - included_grant
-                                - prepaid_grant
-                                - remaining
-                                - usage
-                                - unlimited
-                                - reset
-                                - price
-                                - expires_at
-                            description: Detailed breakdown of balance sources when stacking multiple plans
-                              or grants.
-                          rollovers:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                balance:
-                                  type: number
-                                  description: Amount of balance rolled over from a previous period.
-                                expires_at:
-                                  type: number
-                                  description: Timestamp when the rollover balance expires.
-                              required:
-                                - balance
-                                - expires_at
-                            description: Rollover balances carried over from previous periods.
-                        required:
-                          - feature_id
-                          - granted
-                          - remaining
-                          - usage
-                          - unlimited
-                          - overage_allowed
-                          - max_purchase
-                          - next_reset_at
-                        examples:
-                          - feature_id: messages
-                            granted: 100
-                            remaining: 72
-                            usage: 28
-                            unlimited: false
-                            overage_allowed: false
-                            max_purchase: null
-                            next_reset_at: 1773851121437
-                            breakdown:
-                              - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                                plan_id: pro_plan
-                                included_grant: 100
-                                prepaid_grant: 0
-                                remaining: 72
-                                usage: 28
-                                unlimited: false
-                                reset:
-                                  interval: month
-                                  resets_at: 1773851121437
-                                price: null
-                                expires_at: null
+                      - $ref: "#/components/schemas/Balance"
                       - type: "null"
                     description: The updated balance for the tracked feature. Null if tracking by
                       event_name that affects multiple features.
@@ -5360,255 +5150,7 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      type: object
-                      properties:
-                        feature_id:
-                          type: string
-                          description: The feature ID this balance is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                            consumable:
-                              type: boolean
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                  credit_cost:
-                                    type: number
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                            archived:
-                              type: boolean
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                        granted:
-                          type: number
-                          description: Total balance granted (included + prepaid).
-                        remaining:
-                          type: number
-                          minimum: 0
-                          description: Remaining balance available for use.
-                        usage:
-                          type: number
-                          description: Total usage consumed in the current period.
-                        unlimited:
-                          type: boolean
-                          description: Whether this feature has unlimited usage.
-                        overage_allowed:
-                          type: boolean
-                          description: Whether usage beyond the granted balance is allowed (with overage
-                            charges).
-                        max_purchase:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Maximum quantity that can be purchased as a top-up, or null for
-                            unlimited.
-                        next_reset_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the balance will reset, or null for no reset.
-                        breakdown:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                default: ""
-                                description: The unique identifier for this balance breakdown.
-                              plan_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The plan ID this balance originates from, or null for standalone
-                                  balances.
-                              included_grant:
-                                type: number
-                                description: Amount granted from the plan's included usage.
-                              prepaid_grant:
-                                type: number
-                                description: Amount granted from prepaid purchases or top-ups.
-                              remaining:
-                                type: number
-                                description: Remaining balance available for use.
-                              usage:
-                                type: number
-                                description: Amount consumed in the current period.
-                              unlimited:
-                                type: boolean
-                                description: Whether this balance has unlimited usage.
-                              reset:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      interval:
-                                        anyOf:
-                                          - enum:
-                                              - one_off
-                                              - minute
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                              - quarter
-                                              - semi_annual
-                                              - year
-                                          - const: multiple
-                                        description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                          combined from different intervals.
-                                      interval_count:
-                                        type: number
-                                        description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                      resets_at:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Timestamp when the balance will next reset.
-                                    required:
-                                      - interval
-                                      - resets_at
-                                  - type: "null"
-                                description: Reset configuration for this balance, or null if no reset.
-                              price:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      amount:
-                                        type: number
-                                        description: The per-unit price amount.
-                                      tiers:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                          required:
-                                            - to
-                                            - amount
-                                        description: Tiered pricing configuration if applicable.
-                                      billing_units:
-                                        type: number
-                                        description: The number of units per billing increment (eg. $9 / 250 units).
-                                      billing_method:
-                                        enum:
-                                          - prepaid
-                                          - usage_based
-                                        description: Whether usage is prepaid or billed pay-per-use.
-                                      max_purchase:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Maximum quantity that can be purchased, or null for unlimited.
-                                    required:
-                                      - billing_units
-                                      - billing_method
-                                      - max_purchase
-                                  - type: "null"
-                                description: Pricing configuration if this balance has usage-based pricing.
-                              expires_at:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when this balance expires, or null for no expiration.
-                            required:
-                              - plan_id
-                              - included_grant
-                              - prepaid_grant
-                              - remaining
-                              - usage
-                              - unlimited
-                              - reset
-                              - price
-                              - expires_at
-                          description: Detailed breakdown of balance sources when stacking multiple plans
-                            or grants.
-                        rollovers:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              balance:
-                                type: number
-                                description: Amount of balance rolled over from a previous period.
-                              expires_at:
-                                type: number
-                                description: Timestamp when the rollover balance expires.
-                            required:
-                              - balance
-                              - expires_at
-                          description: Rollover balances carried over from previous periods.
-                      required:
-                        - feature_id
-                        - granted
-                        - remaining
-                        - usage
-                        - unlimited
-                        - overage_allowed
-                        - max_purchase
-                        - next_reset_at
-                      examples:
-                        - feature_id: messages
-                          granted: 100
-                          remaining: 72
-                          usage: 28
-                          unlimited: false
-                          overage_allowed: false
-                          max_purchase: null
-                          next_reset_at: 1773851121437
-                          breakdown:
-                            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                              plan_id: pro_plan
-                              included_grant: 100
-                              prepaid_grant: 0
-                              remaining: 72
-                              usage: 28
-                              unlimited: false
-                              reset:
-                                interval: month
-                                resets_at: 1773851121437
-                              price: null
-                              expires_at: null
+                      $ref: "#/components/schemas/Balance"
                     description: Map of feature_id to updated balance when tracking by event_name
                       affects multiple features.
                 required:
@@ -6185,255 +5727,7 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      type: object
-                      properties:
-                        feature_id:
-                          type: string
-                          description: The feature ID this balance is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                            consumable:
-                              type: boolean
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                  credit_cost:
-                                    type: number
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                            archived:
-                              type: boolean
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                        granted:
-                          type: number
-                          description: Total balance granted (included + prepaid).
-                        remaining:
-                          type: number
-                          minimum: 0
-                          description: Remaining balance available for use.
-                        usage:
-                          type: number
-                          description: Total usage consumed in the current period.
-                        unlimited:
-                          type: boolean
-                          description: Whether this feature has unlimited usage.
-                        overage_allowed:
-                          type: boolean
-                          description: Whether usage beyond the granted balance is allowed (with overage
-                            charges).
-                        max_purchase:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Maximum quantity that can be purchased as a top-up, or null for
-                            unlimited.
-                        next_reset_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the balance will reset, or null for no reset.
-                        breakdown:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                default: ""
-                                description: The unique identifier for this balance breakdown.
-                              plan_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The plan ID this balance originates from, or null for standalone
-                                  balances.
-                              included_grant:
-                                type: number
-                                description: Amount granted from the plan's included usage.
-                              prepaid_grant:
-                                type: number
-                                description: Amount granted from prepaid purchases or top-ups.
-                              remaining:
-                                type: number
-                                description: Remaining balance available for use.
-                              usage:
-                                type: number
-                                description: Amount consumed in the current period.
-                              unlimited:
-                                type: boolean
-                                description: Whether this balance has unlimited usage.
-                              reset:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      interval:
-                                        anyOf:
-                                          - enum:
-                                              - one_off
-                                              - minute
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                              - quarter
-                                              - semi_annual
-                                              - year
-                                          - const: multiple
-                                        description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                          combined from different intervals.
-                                      interval_count:
-                                        type: number
-                                        description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                      resets_at:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Timestamp when the balance will next reset.
-                                    required:
-                                      - interval
-                                      - resets_at
-                                  - type: "null"
-                                description: Reset configuration for this balance, or null if no reset.
-                              price:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      amount:
-                                        type: number
-                                        description: The per-unit price amount.
-                                      tiers:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                          required:
-                                            - to
-                                            - amount
-                                        description: Tiered pricing configuration if applicable.
-                                      billing_units:
-                                        type: number
-                                        description: The number of units per billing increment (eg. $9 / 250 units).
-                                      billing_method:
-                                        enum:
-                                          - prepaid
-                                          - usage_based
-                                        description: Whether usage is prepaid or billed pay-per-use.
-                                      max_purchase:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Maximum quantity that can be purchased, or null for unlimited.
-                                    required:
-                                      - billing_units
-                                      - billing_method
-                                      - max_purchase
-                                  - type: "null"
-                                description: Pricing configuration if this balance has usage-based pricing.
-                              expires_at:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when this balance expires, or null for no expiration.
-                            required:
-                              - plan_id
-                              - included_grant
-                              - prepaid_grant
-                              - remaining
-                              - usage
-                              - unlimited
-                              - reset
-                              - price
-                              - expires_at
-                          description: Detailed breakdown of balance sources when stacking multiple plans
-                            or grants.
-                        rollovers:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              balance:
-                                type: number
-                                description: Amount of balance rolled over from a previous period.
-                              expires_at:
-                                type: number
-                                description: Timestamp when the rollover balance expires.
-                            required:
-                              - balance
-                              - expires_at
-                          description: Rollover balances carried over from previous periods.
-                      required:
-                        - feature_id
-                        - granted
-                        - remaining
-                        - usage
-                        - unlimited
-                        - overage_allowed
-                        - max_purchase
-                        - next_reset_at
-                      examples:
-                        - feature_id: messages
-                          granted: 100
-                          remaining: 72
-                          usage: 28
-                          unlimited: false
-                          overage_allowed: false
-                          max_purchase: null
-                          next_reset_at: 1773851121437
-                          breakdown:
-                            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                              plan_id: pro_plan
-                              included_grant: 100
-                              prepaid_grant: 0
-                              remaining: 72
-                              usage: 28
-                              unlimited: false
-                              reset:
-                                interval: month
-                                resets_at: 1773851121437
-                              price: null
-                              expires_at: null
+                      $ref: "#/components/schemas/Balance"
                   invoices:
                     type: array
                     items:
@@ -6532,7 +5826,7 @@ paths:
     post:
       operationId: getEntity
       description: >-
-        Fetches a single entity by entity ID.
+        Fetches an entity by its ID.
 
 
         Use this to read one entity's current state. Pass customerId when you
@@ -6733,255 +6027,7 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      type: object
-                      properties:
-                        feature_id:
-                          type: string
-                          description: The feature ID this balance is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                            consumable:
-                              type: boolean
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                  credit_cost:
-                                    type: number
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                            archived:
-                              type: boolean
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                        granted:
-                          type: number
-                          description: Total balance granted (included + prepaid).
-                        remaining:
-                          type: number
-                          minimum: 0
-                          description: Remaining balance available for use.
-                        usage:
-                          type: number
-                          description: Total usage consumed in the current period.
-                        unlimited:
-                          type: boolean
-                          description: Whether this feature has unlimited usage.
-                        overage_allowed:
-                          type: boolean
-                          description: Whether usage beyond the granted balance is allowed (with overage
-                            charges).
-                        max_purchase:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Maximum quantity that can be purchased as a top-up, or null for
-                            unlimited.
-                        next_reset_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the balance will reset, or null for no reset.
-                        breakdown:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                default: ""
-                                description: The unique identifier for this balance breakdown.
-                              plan_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The plan ID this balance originates from, or null for standalone
-                                  balances.
-                              included_grant:
-                                type: number
-                                description: Amount granted from the plan's included usage.
-                              prepaid_grant:
-                                type: number
-                                description: Amount granted from prepaid purchases or top-ups.
-                              remaining:
-                                type: number
-                                description: Remaining balance available for use.
-                              usage:
-                                type: number
-                                description: Amount consumed in the current period.
-                              unlimited:
-                                type: boolean
-                                description: Whether this balance has unlimited usage.
-                              reset:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      interval:
-                                        anyOf:
-                                          - enum:
-                                              - one_off
-                                              - minute
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                              - quarter
-                                              - semi_annual
-                                              - year
-                                          - const: multiple
-                                        description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                          combined from different intervals.
-                                      interval_count:
-                                        type: number
-                                        description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                      resets_at:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Timestamp when the balance will next reset.
-                                    required:
-                                      - interval
-                                      - resets_at
-                                  - type: "null"
-                                description: Reset configuration for this balance, or null if no reset.
-                              price:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      amount:
-                                        type: number
-                                        description: The per-unit price amount.
-                                      tiers:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                          required:
-                                            - to
-                                            - amount
-                                        description: Tiered pricing configuration if applicable.
-                                      billing_units:
-                                        type: number
-                                        description: The number of units per billing increment (eg. $9 / 250 units).
-                                      billing_method:
-                                        enum:
-                                          - prepaid
-                                          - usage_based
-                                        description: Whether usage is prepaid or billed pay-per-use.
-                                      max_purchase:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: Maximum quantity that can be purchased, or null for unlimited.
-                                    required:
-                                      - billing_units
-                                      - billing_method
-                                      - max_purchase
-                                  - type: "null"
-                                description: Pricing configuration if this balance has usage-based pricing.
-                              expires_at:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when this balance expires, or null for no expiration.
-                            required:
-                              - plan_id
-                              - included_grant
-                              - prepaid_grant
-                              - remaining
-                              - usage
-                              - unlimited
-                              - reset
-                              - price
-                              - expires_at
-                          description: Detailed breakdown of balance sources when stacking multiple plans
-                            or grants.
-                        rollovers:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              balance:
-                                type: number
-                                description: Amount of balance rolled over from a previous period.
-                              expires_at:
-                                type: number
-                                description: Timestamp when the rollover balance expires.
-                            required:
-                              - balance
-                              - expires_at
-                          description: Rollover balances carried over from previous periods.
-                      required:
-                        - feature_id
-                        - granted
-                        - remaining
-                        - usage
-                        - unlimited
-                        - overage_allowed
-                        - max_purchase
-                        - next_reset_at
-                      examples:
-                        - feature_id: messages
-                          granted: 100
-                          remaining: 72
-                          usage: 28
-                          unlimited: false
-                          overage_allowed: false
-                          max_purchase: null
-                          next_reset_at: 1773851121437
-                          breakdown:
-                            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                              plan_id: pro_plan
-                              included_grant: 100
-                              prepaid_grant: 0
-                              remaining: 72
-                              usage: 28
-                              unlimited: false
-                              reset:
-                                interval: month
-                                resets_at: 1773851121437
-                              price: null
-                              expires_at: null
+                      $ref: "#/components/schemas/Balance"
                   invoices:
                     type: array
                     items:
