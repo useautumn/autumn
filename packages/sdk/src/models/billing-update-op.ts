@@ -22,21 +22,39 @@ export type BillingUpdateFeatureQuantity = {
   adjustable?: boolean | undefined;
 };
 
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
 export const BillingUpdateDurationType = {
   Day: "day",
   Month: "month",
   Year: "year",
 } as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
 export type BillingUpdateDurationType = ClosedEnum<
   typeof BillingUpdateDurationType
 >;
 
 export type BillingUpdateFreeTrial = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
   durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
   durationType?: BillingUpdateDurationType | undefined;
+  /**
+   * If true, payment method required to start trial. Customer is charged after trial ends.
+   */
   cardRequired?: boolean | undefined;
 };
 
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
 export const BillingUpdatePriceInterval = {
   OneOff: "one_off",
   Week: "week",
@@ -45,16 +63,31 @@ export const BillingUpdatePriceInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
 export type BillingUpdatePriceInterval = ClosedEnum<
   typeof BillingUpdatePriceInterval
 >;
 
 export type BillingUpdatePrice = {
+  /**
+   * Base price amount for the plan.
+   */
   amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
   interval: BillingUpdatePriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
   intervalCount?: number | undefined;
 };
 
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
 export const BillingUpdateResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
@@ -66,12 +99,24 @@ export const BillingUpdateResetInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
 export type BillingUpdateResetInterval = ClosedEnum<
   typeof BillingUpdateResetInterval
 >;
 
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
 export type BillingUpdateReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
   interval: BillingUpdateResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
   intervalCount?: number | undefined;
 };
 
@@ -82,6 +127,9 @@ export type BillingUpdateTier = {
   amount: number;
 };
 
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
 export const BillingUpdateItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
@@ -90,38 +138,80 @@ export const BillingUpdateItemPriceInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
 export type BillingUpdateItemPriceInterval = ClosedEnum<
   typeof BillingUpdateItemPriceInterval
 >;
 
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
 export const BillingUpdateBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
 export type BillingUpdateBillingMethod = ClosedEnum<
   typeof BillingUpdateBillingMethod
 >;
 
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
 export type BillingUpdateItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
   amount?: number | undefined;
+  /**
+   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   */
   tiers?: Array<BillingUpdateTier> | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
   interval: BillingUpdateItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
   intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
   billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
   billingMethod: BillingUpdateBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   */
   maxPurchase?: number | undefined;
 };
 
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
 export const BillingUpdateOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
   BillNextCycle: "bill_next_cycle",
 } as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
 export type BillingUpdateOnIncrease = ClosedEnum<
   typeof BillingUpdateOnIncrease
 >;
 
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
 export const BillingUpdateOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
@@ -129,36 +219,87 @@ export const BillingUpdateOnDecrease = {
   None: "none",
   NoProrations: "no_prorations",
 } as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
 export type BillingUpdateOnDecrease = ClosedEnum<
   typeof BillingUpdateOnDecrease
 >;
 
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
 export type BillingUpdateProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
   onIncrease: BillingUpdateOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
   onDecrease: BillingUpdateOnDecrease;
 };
 
+/**
+ * When rolled over units expire.
+ */
 export const BillingUpdateExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
+/**
+ * When rolled over units expire.
+ */
 export type BillingUpdateExpiryDurationType = ClosedEnum<
   typeof BillingUpdateExpiryDurationType
 >;
 
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
 export type BillingUpdateRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
   max?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
   expiryDurationType: BillingUpdateExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
   expiryDurationLength?: number | undefined;
 };
 
 export type BillingUpdateItem = {
+  /**
+   * The ID of the feature to configure.
+   */
   featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
   included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
   unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
   reset?: BillingUpdateReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
   price?: BillingUpdateItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
   proration?: BillingUpdateProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
   rollover?: BillingUpdateRollover | undefined;
 };
 

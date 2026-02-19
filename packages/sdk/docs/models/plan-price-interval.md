@@ -1,5 +1,7 @@
 # PlanPriceInterval
 
+Billing interval (e.g. 'month', 'year').
+
 ## Example Usage
 
 ```typescript

@@ -12,6 +12,9 @@ import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
 export const PlanPriceInterval = {
   OneOff: "one_off",
   Week: "week",
@@ -20,18 +23,42 @@ export const PlanPriceInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
 export type PlanPriceInterval = OpenEnum<typeof PlanPriceInterval>;
 
-export type PriceDisplay = {
+/**
+ * Display text for showing this price in pricing pages.
+ */
+export type PlanPriceDisplay = {
+  /**
+   * Main display text (e.g. '$10' or '100 messages').
+   */
   primaryText: string;
+  /**
+   * Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+   */
   secondaryText?: string | undefined;
 };
 
 export type PlanPrice = {
+  /**
+   * Base price amount for the plan.
+   */
   amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
   interval: PlanPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
   intervalCount?: number | undefined;
-  display?: PriceDisplay | undefined;
+  /**
+   * Display text for showing this price in pricing pages.
+   */
+  display?: PlanPriceDisplay | undefined;
 };
 
 /**
@@ -71,6 +98,9 @@ export type PlanCreditSchema = {
   creditCost: number;
 };
 
+/**
+ * The full feature object if expanded.
+ */
 export type PlanFeature = {
   /**
    * The ID of the feature, used to refer to it in other API calls like /track or /check.
@@ -98,6 +128,9 @@ export type PlanFeature = {
   archived?: boolean | null | undefined;
 };
 
+/**
+ * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+ */
 export const PlanResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
@@ -109,10 +142,19 @@ export const PlanResetInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+ */
 export type PlanResetInterval = OpenEnum<typeof PlanResetInterval>;
 
 export type PlanReset = {
+  /**
+   * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+   */
   interval: PlanResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
   intervalCount?: number | undefined;
 };
 
@@ -123,6 +165,9 @@ export type PlanTier = {
   amount: number;
 };
 
+/**
+ * Billing interval for this price. For consumable features, should match reset.interval.
+ */
 export const PlanPriceItemInterval = {
   OneOff: "one_off",
   Week: "week",
@@ -131,128 +176,233 @@ export const PlanPriceItemInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
+/**
+ * Billing interval for this price. For consumable features, should match reset.interval.
+ */
 export type PlanPriceItemInterval = OpenEnum<typeof PlanPriceItemInterval>;
 
+/**
+ * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+ */
 export const PlanBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
+/**
+ * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+ */
 export type PlanBillingMethod = OpenEnum<typeof PlanBillingMethod>;
 
 export type PlanItemPrice = {
+  /**
+   * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
+   */
   amount?: number | undefined;
+  /**
+   * Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+   */
   tiers?: Array<PlanTier> | undefined;
+  /**
+   * Billing interval for this price. For consumable features, should match reset.interval.
+   */
   interval: PlanPriceItemInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
   intervalCount?: number | undefined;
+  /**
+   * Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200).
+   */
   billingUnits: number;
+  /**
+   * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+   */
   billingMethod: PlanBillingMethod;
+  /**
+   * Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
+   */
   maxPurchase: number | null;
 };
 
+/**
+ * Display text for showing this item in pricing pages.
+ */
 export type PlanItemDisplay = {
+  /**
+   * Main display text (e.g. '$10' or '100 messages').
+   */
   primaryText: string;
+  /**
+   * Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+   */
   secondaryText?: string | undefined;
 };
 
+/**
+ * When rolled over units expire.
+ */
 export const ExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
+/**
+ * When rolled over units expire.
+ */
 export type ExpiryDurationType = OpenEnum<typeof ExpiryDurationType>;
 
+/**
+ * Rollover configuration for unused units. If set, unused included units roll over to the next period.
+ */
 export type PlanRollover = {
+  /**
+   * Maximum rollover units. Null for unlimited rollover.
+   */
   max: number | null;
+  /**
+   * When rolled over units expire.
+   */
   expiryDurationType: ExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
   expiryDurationLength?: number | undefined;
 };
 
-export const OnIncrease = {
-  BillImmediately: "bill_immediately",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  BillNextCycle: "bill_next_cycle",
-} as const;
-export type OnIncrease = OpenEnum<typeof OnIncrease>;
-
-export const OnDecrease = {
-  Prorate: "prorate",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  None: "none",
-  NoProrations: "no_prorations",
-} as const;
-export type OnDecrease = OpenEnum<typeof OnDecrease>;
-
-export type Proration = {
-  onIncrease?: OnIncrease | undefined;
-  onDecrease?: OnDecrease | undefined;
-};
-
 export type Item = {
+  /**
+   * The ID of the feature this item configures.
+   */
   featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
   feature?: PlanFeature | undefined;
+  /**
+   * Number of free units included. For consumable features, balance resets to this number each interval.
+   */
   included: number;
+  /**
+   * Whether the customer has unlimited access to this feature.
+   */
   unlimited: boolean;
+  /**
+   * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
+   */
   reset: PlanReset | null;
+  /**
+   * Pricing configuration for usage beyond included units. Null if feature is entirely free.
+   */
   price: PlanItemPrice | null;
+  /**
+   * Display text for showing this item in pricing pages.
+   */
   display?: PlanItemDisplay | undefined;
+  /**
+   * Rollover configuration for unused units. If set, unused included units roll over to the next period.
+   */
   rollover?: PlanRollover | undefined;
-  proration?: Proration | undefined;
 };
 
+/**
+ * Unit of time for the trial duration ('day', 'month', 'year').
+ */
 export const PlanDurationType = {
   Day: "day",
   Month: "month",
   Year: "year",
 } as const;
+/**
+ * Unit of time for the trial duration ('day', 'month', 'year').
+ */
 export type PlanDurationType = OpenEnum<typeof PlanDurationType>;
 
+/**
+ * Free trial configuration. If set, new customers can try this plan before being charged.
+ */
 export type FreeTrial = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
   durationLength: number;
+  /**
+   * Unit of time for the trial duration ('day', 'month', 'year').
+   */
   durationType: PlanDurationType;
+  /**
+   * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
+   */
   cardRequired: boolean;
 };
 
+/**
+ * Environment this plan belongs to ('sandbox' or 'live').
+ */
 export const PlanEnv = {
   Sandbox: "sandbox",
   Live: "live",
 } as const;
+/**
+ * Environment this plan belongs to ('sandbox' or 'live').
+ */
 export type PlanEnv = OpenEnum<typeof PlanEnv>;
 
-export const Scenario = {
-  Scheduled: "scheduled",
-  Active: "active",
-  New: "new",
-  Renew: "renew",
-  Upgrade: "upgrade",
-  Downgrade: "downgrade",
-  Cancel: "cancel",
-  Expired: "expired",
-  PastDue: "past_due",
-} as const;
-export type Scenario = OpenEnum<typeof Scenario>;
-
-export type CustomerEligibility = {
-  trialAvailable?: boolean | undefined;
-  scenario: Scenario;
-};
-
 export type Plan = {
+  /**
+   * Unique identifier for the plan.
+   */
   id: string;
+  /**
+   * Display name of the plan.
+   */
   name: string;
+  /**
+   * Optional description of the plan.
+   */
   description: string | null;
+  /**
+   * Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
+   */
   group: string | null;
+  /**
+   * Version number of the plan. Incremented when plan configuration changes.
+   */
   version: number;
+  /**
+   * Whether this is an add-on plan that can be attached alongside a main plan.
+   */
   addOn: boolean;
+  /**
+   * If true, this plan is automatically attached when a customer is created. Used for free plans.
+   */
   autoEnable: boolean;
+  /**
+   * Base recurring price for the plan. Null for free plans or usage-only plans.
+   */
   price: PlanPrice | null;
+  /**
+   * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
+   */
   items: Array<Item>;
+  /**
+   * Free trial configuration. If set, new customers can try this plan before being charged.
+   */
   freeTrial?: FreeTrial | undefined;
+  /**
+   * Unix timestamp (ms) when the plan was created.
+   */
   createdAt: number;
+  /**
+   * Environment this plan belongs to ('sandbox' or 'live').
+   */
   env: PlanEnv;
+  /**
+   * Whether the plan is archived. Archived plans cannot be attached to new customers.
+   */
   archived: boolean;
+  /**
+   * If this is a variant, the ID of the base plan it was created from.
+   */
   baseVariantId: string | null;
-  customerEligibility?: CustomerEligibility | undefined;
 };
 
 /** @internal */
@@ -262,27 +412,29 @@ export const PlanPriceInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanPriceInterval);
 
 /** @internal */
-export const PriceDisplay$inboundSchema: z.ZodMiniType<PriceDisplay, unknown> =
-  z.pipe(
-    z.object({
-      primary_text: types.string(),
-      secondary_text: types.optional(types.string()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "primary_text": "primaryText",
-        "secondary_text": "secondaryText",
-      });
-    }),
-  );
+export const PlanPriceDisplay$inboundSchema: z.ZodMiniType<
+  PlanPriceDisplay,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
 
-export function priceDisplayFromJSON(
+export function planPriceDisplayFromJSON(
   jsonString: string,
-): SafeParseResult<PriceDisplay, SDKValidationError> {
+): SafeParseResult<PlanPriceDisplay, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PriceDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PriceDisplay' from JSON`,
+    (x) => PlanPriceDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanPriceDisplay' from JSON`,
   );
 }
 
@@ -293,7 +445,7 @@ export const PlanPrice$inboundSchema: z.ZodMiniType<PlanPrice, unknown> = z
       amount: types.number(),
       interval: PlanPriceInterval$inboundSchema,
       interval_count: types.optional(types.number()),
-      display: types.optional(z.lazy(() => PriceDisplay$inboundSchema)),
+      display: types.optional(z.lazy(() => PlanPriceDisplay$inboundSchema)),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -563,39 +715,6 @@ export function planRolloverFromJSON(
 }
 
 /** @internal */
-export const OnIncrease$inboundSchema: z.ZodMiniType<OnIncrease, unknown> =
-  openEnums.inboundSchema(OnIncrease);
-
-/** @internal */
-export const OnDecrease$inboundSchema: z.ZodMiniType<OnDecrease, unknown> =
-  openEnums.inboundSchema(OnDecrease);
-
-/** @internal */
-export const Proration$inboundSchema: z.ZodMiniType<Proration, unknown> = z
-  .pipe(
-    z.object({
-      on_increase: types.optional(OnIncrease$inboundSchema),
-      on_decrease: types.optional(OnDecrease$inboundSchema),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "on_increase": "onIncrease",
-        "on_decrease": "onDecrease",
-      });
-    }),
-  );
-
-export function prorationFromJSON(
-  jsonString: string,
-): SafeParseResult<Proration, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Proration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Proration' from JSON`,
-  );
-}
-
-/** @internal */
 export const Item$inboundSchema: z.ZodMiniType<Item, unknown> = z.pipe(
   z.object({
     feature_id: types.string(),
@@ -606,7 +725,6 @@ export const Item$inboundSchema: z.ZodMiniType<Item, unknown> = z.pipe(
     price: types.nullable(z.lazy(() => PlanItemPrice$inboundSchema)),
     display: types.optional(z.lazy(() => PlanItemDisplay$inboundSchema)),
     rollover: types.optional(z.lazy(() => PlanRollover$inboundSchema)),
-    proration: types.optional(z.lazy(() => Proration$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -663,36 +781,6 @@ export const PlanEnv$inboundSchema: z.ZodMiniType<PlanEnv, unknown> = openEnums
   .inboundSchema(PlanEnv);
 
 /** @internal */
-export const Scenario$inboundSchema: z.ZodMiniType<Scenario, unknown> =
-  openEnums.inboundSchema(Scenario);
-
-/** @internal */
-export const CustomerEligibility$inboundSchema: z.ZodMiniType<
-  CustomerEligibility,
-  unknown
-> = z.pipe(
-  z.object({
-    trial_available: types.optional(types.boolean()),
-    scenario: Scenario$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "trial_available": "trialAvailable",
-    });
-  }),
-);
-
-export function customerEligibilityFromJSON(
-  jsonString: string,
-): SafeParseResult<CustomerEligibility, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CustomerEligibility$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerEligibility' from JSON`,
-  );
-}
-
-/** @internal */
 export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
   z.object({
     id: types.string(),
@@ -709,9 +797,6 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
     env: PlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
-    customer_eligibility: types.optional(z.lazy(() =>
-      CustomerEligibility$inboundSchema
-    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -720,7 +805,6 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
       "free_trial": "freeTrial",
       "created_at": "createdAt",
       "base_variant_id": "baseVariantId",
-      "customer_eligibility": "customerEligibility",
     });
   }),
 );

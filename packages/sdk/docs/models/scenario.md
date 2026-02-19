@@ -1,11 +1,13 @@
 # Scenario
 
+The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+
 ## Example Usage
 
 ```typescript
 import { Scenario } from "@useautumn/sdk";
 
-let value: Scenario = "active";
+let value: Scenario = "usage_limit";
 ```
 
 ## Values
@@ -13,5 +15,5 @@ let value: Scenario = "active";
 This is an open enum. Unrecognized values will be captured as the `Unrecognized<string>` branded type.
 
 ```typescript
-"scheduled" | "active" | "new" | "renew" | "upgrade" | "downgrade" | "cancel" | "expired" | "past_due" | Unrecognized<string>
+"usage_limit" | "feature_flag" | Unrecognized<string>
 ```

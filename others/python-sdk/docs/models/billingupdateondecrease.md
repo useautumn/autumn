@@ -1,5 +1,7 @@
 # BillingUpdateOnDecrease
 
+Credit behavior when quantity decreases mid-cycle.
+
 
 ## Values
 

@@ -168,7 +168,7 @@
     },
     "packages/sdk": {
       "name": "@useautumn/sdk",
-      "version": "0.10.8",
+      "version": "0.10.15",
       "dependencies": {
         "zod": "^3.25.65 || ^4.0.0",
       },

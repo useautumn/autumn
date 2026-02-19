@@ -1,0 +1,139 @@
+---
+title: "Create a plan"
+openapi: "openapi POST /v1/plans.create"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Creates a new plan with optional base price and feature configurations. See [How plans work](/documentation/pricing/plans) for concepts and [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
+
+### Plan Configuration
+
+A plan consists of:
+- **Base price** - optional recurring charge for the plan itself
+- **Items** - feature configurations defining what customers get and how they're billed
+
+### Configuring Items
+
+Each item in the `items` array configures a single feature. There are two types:
+
+**Consumable features** (API calls, messages, credits):
+- Set `included` for free units that reset each period
+- Set `reset.interval` to define when balance resets to `included`
+- Optionally add `price` for usage beyond included amount
+
+**Non-consumable features** (seats, storage):
+- Set `included` for the base allocation
+- Do NOT set `reset` - usage persists across billing cycles
+- Use `billing_method: "prepaid"` for upfront payment per unit
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Free plan with auto-enable
+await autumn.plans.create({
+  planId: "free_plan",
+  name: "Free",
+  autoEnable: true, // Automatically attached on customer creation
+  items: [
+    {
+      featureId: "messages",
+      included: 100,
+      reset: { interval: "month" }
+    }
+  ]
+});
+```
+
+```typescript Paid plan with base price + usage-based feature
+await autumn.plans.create({
+  planId: "pro_plan",
+  name: "Pro Plan",
+  price: { amount: 10, interval: "month" },
+  items: [
+    {
+      featureId: "messages",
+      included: 1000,
+      reset: { interval: "month" },
+      price: {
+        amount: 0.01,
+        interval: "month",
+        billingUnits: 1,
+        billingMethod: "usage_based"
+      }
+    }
+  ]
+});
+```
+
+```typescript Plan with prepaid seats
+await autumn.plans.create({
+  planId: "team_plan",
+  name: "Team Plan",
+  price: { amount: 49, interval: "month" },
+  items: [
+    {
+      featureId: "seats",
+      included: 5,
+      // No reset - seats persist across billing cycles
+      price: {
+        amount: 10,
+        interval: "month",
+        billingUnits: 1,
+        billingMethod: "prepaid"
+      }
+    }
+  ]
+});
+```
+
+```typescript Add-on plan
+await autumn.plans.create({
+  planId: "analytics_addon",
+  name: "Advanced Analytics",
+  addOn: true, // Can be attached alongside other plans
+  price: { amount: 20, interval: "month" }
+});
+```
+
+```typescript Plan with tiered pricing
+await autumn.plans.create({
+  planId: "api_plan",
+  name: "API Plan",
+  items: [
+    {
+      featureId: "api_calls",
+      included: 1000,
+      reset: { interval: "month" },
+      price: {
+        tiers: [
+          { to: 10000, amount: 0.001 },
+          { to: 100000, amount: 0.0005 },
+          { to: "inf", amount: 0.0001 }
+        ],
+        interval: "month",
+        billingUnits: 1,
+        billingMethod: "usage_based"
+      }
+    }
+  ]
+});
+```
+
+```typescript Plan with free trial
+await autumn.plans.create({
+  planId: "premium_plan",
+  name: "Premium",
+  price: { amount: 99, interval: "month" },
+  freeTrial: {
+    durationLength: 14,
+    durationType: "day",
+    cardRequired: true
+  }
+});
+```
+
+</CodeGroup>

@@ -329,6 +329,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
+* [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -512,7 +513,11 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 ### [Plans](docs/sdks/plans/README.md)
 
+* [create](docs/sdks/plans/README.md#create) - Create a plan
+* [get](docs/sdks/plans/README.md#get) - Get a plan
 * [list](docs/sdks/plans/README.md#list) - List all plans
+* [update](docs/sdks/plans/README.md#update) - Update a plan
+* [delete](docs/sdks/plans/README.md#delete) - Delete a plan
 
 ### [Referrals](docs/sdks/referrals/README.md)
 
@@ -623,6 +628,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
+- [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
 - [`billingUpdate`](docs/sdks/billing/README.md#update) - Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
 
 Use this endpoint to update prepaid quantities, cancel a subscription (immediately or at end of cycle), or modify subscription settings.
@@ -855,7 +861,11 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
 
 @returns The updated feature object.
+- [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
+- [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan
+- [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
 - [`plansList`](docs/sdks/plans/README.md#list) - List all plans
+- [`plansUpdate`](docs/sdks/plans/README.md#update) - Update a plan
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.

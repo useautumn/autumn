@@ -1,5 +1,7 @@
 # ExpiryDurationType
 
+When rolled over units expire.
+
 
 ## Values
 

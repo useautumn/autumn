@@ -1,5 +1,7 @@
 # PreviewUpdateOnIncrease
 
+Billing behavior when quantity increases mid-cycle.
+
 
 ## Values
 

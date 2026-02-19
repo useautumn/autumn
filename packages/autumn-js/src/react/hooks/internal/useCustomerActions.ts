@@ -29,6 +29,11 @@ const redirectToUrl = ({
 	}
 };
 
+type SetupPaymentParams = {
+	successUrl?: string;
+	openInNewTab?: boolean;
+};
+
 export const useCustomerActions = ({
 	client,
 	customer,
@@ -87,11 +92,43 @@ export const useCustomerActions = ({
 		[client],
 	);
 
+	const setupPayment = useCallback(
+		async (params: SetupPaymentParams = {}) => {
+			const setupPaymentClient = client as IAutumnClient & {
+				setupPayment: (args: { successUrl?: string }) => Promise<{
+					paymentUrl?: string | null;
+					url?: string;
+				}>;
+			};
+
+			const response = await setupPaymentClient.setupPayment({
+				successUrl: params.successUrl ?? window.location.href,
+			});
+
+			const redirectUrl = response.url ?? response.paymentUrl;
+			if (redirectUrl) {
+				redirectToUrl({
+					url: redirectUrl,
+					openInNewTab: params.openInNewTab,
+				});
+			}
+
+			return response;
+		},
+		[client],
+	);
+
 	return {
 		attach,
 		check,
 		openCustomerPortal,
+		setupPayment,
 	};
 };
 
-export type { AttachParams, CheckParams, OpenCustomerPortalParams };
+export type {
+	AttachParams,
+	CheckParams,
+	OpenCustomerPortalParams,
+	SetupPaymentParams,
+};

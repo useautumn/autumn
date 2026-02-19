@@ -1,5 +1,7 @@
 # PreviewAttachDurationType
 
+Unit of time for the trial ('day', 'month', 'year').
+
 
 ## Values
 

@@ -17,6 +17,7 @@ Use this endpoint to update prepaid quantities, cancel a subscription (immediate
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
 * [open_customer_portal](#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
+* [setup_payment](#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
 
 ## attach
 
@@ -273,6 +274,49 @@ with Autumn(
 ### Response
 
 **[models.OpenCustomerPortalResponse](../../models/opencustomerportalresponse.md)**
+
+### Errors
+
+| Error Type                | Status Code               | Content Type              |
+| ------------------------- | ------------------------- | ------------------------- |
+| errors.AutumnDefaultError | 4XX, 5XX                  | \*/\*                     |
+
+## setup_payment
+
+Create a payment setup session for a customer to add or update their payment method.
+
+### Example Usage
+
+<!-- UsageSnippet language="python" operationID="setupPayment" method="post" path="/v1/billing.setup_payment" -->
+```python
+from autumn_sdk import Autumn
+
+
+with Autumn(
+    x_api_version="2.1",
+    secret_key="<YOUR_BEARER_TOKEN_HERE>",
+) as autumn:
+
+    res = autumn.billing.setup_payment(customer_id="cus_123", success_url="https://example.com/account/billing")
+
+    # Handle response
+    print(res)
+
+```
+
+### Parameters
+
+| Parameter                                                                                     | Type                                                                                          | Required                                                                                      | Description                                                                                   |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `customer_id`                                                                                 | *str*                                                                                         | :heavy_check_mark:                                                                            | The ID of the customer                                                                        |
+| `success_url`                                                                                 | *Optional[str]*                                                                               | :heavy_minus_sign:                                                                            | URL to redirect to after successful payment setup. Must start with either http:// or https:// |
+| `customer_data`                                                                               | [Optional[models.CustomerData]](../../models/customerdata.md)                                 | :heavy_minus_sign:                                                                            | Customer details to set when creating a customer                                              |
+| `checkout_session_params`                                                                     | Dict[str, *Any*]                                                                              | :heavy_minus_sign:                                                                            | Additional parameters for the checkout session                                                |
+| `retries`                                                                                     | [Optional[utils.RetryConfig]](../../models/utils/retryconfig.md)                              | :heavy_minus_sign:                                                                            | Configuration to override the default retry behavior of the client.                           |
+
+### Response
+
+**[models.SetupPaymentResponse](../../models/setuppaymentresponse.md)**
 
 ### Errors
 

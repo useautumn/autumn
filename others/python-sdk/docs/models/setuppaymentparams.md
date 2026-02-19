@@ -1,0 +1,11 @@
+# SetupPaymentParams
+
+
+## Fields
+
+| Field                                                                                         | Type                                                                                          | Required                                                                                      | Description                                                                                   |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `customer_id`                                                                                 | *str*                                                                                         | :heavy_check_mark:                                                                            | The ID of the customer                                                                        |
+| `success_url`                                                                                 | *Optional[str]*                                                                               | :heavy_minus_sign:                                                                            | URL to redirect to after successful payment setup. Must start with either http:// or https:// |
+| `customer_data`                                                                               | [Optional[models.CustomerData]](../models/customerdata.md)                                    | :heavy_minus_sign:                                                                            | Customer details to set when creating a customer                                              |
+| `checkout_session_params`                                                                     | Dict[str, *Any*]                                                                              | :heavy_minus_sign:                                                                            | Additional parameters for the checkout session                                                |

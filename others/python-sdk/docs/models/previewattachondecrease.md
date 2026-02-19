@@ -1,5 +1,7 @@
 # PreviewAttachOnDecrease
 
+Credit behavior when quantity decreases mid-cycle.
+
 
 ## Values
 

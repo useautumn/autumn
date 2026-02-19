@@ -7,6 +7,8 @@ import {
 	ExtUpdateSubscriptionV1ParamsSchema,
 	OpenCustomerPortalParamsV1Schema,
 	OpenCustomerPortalResponseSchema,
+	SetupPaymentParamsSchema,
+	SetupPaymentResultSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import {
@@ -181,6 +183,41 @@ export const billingOpenCustomerPortalContract = oc
 				{
 					customer_id: "cus_123",
 					url: "https://billing.stripe.com/session/...",
+				},
+			],
+		}),
+	);
+
+export const billingSetupPaymentContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.setup_payment",
+		operationId: "setupPayment",
+		tags: ["billing"],
+		description:
+			"Create a payment setup session for a customer to add or update their payment method.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "setupPayment",
+		}),
+	})
+	.input(
+		SetupPaymentParamsSchema.meta({
+			title: "SetupPaymentParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					success_url: "https://example.com/account/billing",
+				},
+			],
+		}),
+	)
+	.output(
+		SetupPaymentResultSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					payment_url: "https://checkout.stripe.com/...",
 				},
 			],
 		}),

@@ -1,0 +1,15 @@
+# CreatePlanFeature
+
+The full feature object if expanded.
+
+
+## Fields
+
+| Field                                                                                      | Type                                                                                       | Required                                                                                   | Description                                                                                |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `id`                                                                                       | *str*                                                                                      | :heavy_check_mark:                                                                         | The ID of the feature, used to refer to it in other API calls like /track or /check.       |
+| `name`                                                                                     | *OptionalNullable[str]*                                                                    | :heavy_minus_sign:                                                                         | The name of the feature.                                                                   |
+| `type`                                                                                     | [models.CreatePlanType](../models/createplantype.md)                                       | :heavy_check_mark:                                                                         | The type of the feature                                                                    |
+| `display`                                                                                  | [OptionalNullable[models.CreatePlanFeatureDisplay]](../models/createplanfeaturedisplay.md) | :heavy_minus_sign:                                                                         | Singular and plural display names for the feature.                                         |
+| `credit_schema`                                                                            | List[[models.CreatePlanCreditSchema](../models/createplancreditschema.md)]                 | :heavy_minus_sign:                                                                         | Credit cost schema for credit system features.                                             |
+| `archived`                                                                                 | *OptionalNullable[bool]*                                                                   | :heavy_minus_sign:                                                                         | Whether or not the feature is archived.                                                    |

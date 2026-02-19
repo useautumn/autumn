@@ -1,5 +1,7 @@
 # PlanDurationType
 
+Unit of time for the trial duration ('day', 'month', 'year').
+
 ## Example Usage
 
 ```typescript

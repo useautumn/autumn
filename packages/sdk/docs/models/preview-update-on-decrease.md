@@ -1,5 +1,7 @@
 # PreviewUpdateOnDecrease
 
+Credit behavior when quantity decreases mid-cycle.
+
 ## Example Usage
 
 ```typescript

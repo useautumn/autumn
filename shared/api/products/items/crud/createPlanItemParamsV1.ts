@@ -11,51 +11,108 @@ import { z } from "zod/v4";
 
 export const CreatePlanItemParamsV1Schema = z
 	.object({
-		feature_id: z.string(),
-		included: z.number().optional(),
-		unlimited: z.boolean().optional(),
+		feature_id: z.string().meta({
+			description: "The ID of the feature to configure.",
+		}),
+		included: z.number().optional().meta({
+			description:
+				"Number of free units included. Balance resets to this each interval for consumable features.",
+		}),
+		unlimited: z.boolean().optional().meta({
+			description: "If true, customer has unlimited access to this feature.",
+		}),
 
 		reset: z
 			.object({
-				interval: z.enum(ResetInterval),
-				interval_count: z.number().optional(),
+				interval: z.enum(ResetInterval).meta({
+					description:
+						"Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.",
+				}),
+				interval_count: z.number().optional().meta({
+					description: "Number of intervals between resets. Defaults to 1.",
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description:
+					"Reset configuration for consumable features. Omit for non-consumable features like seats.",
+			}),
 
 		price: z
 			.object({
-				amount: z.number().optional(),
-				tiers: z.array(UsageTierSchema).optional(),
+				amount: z.number().optional().meta({
+					description:
+						"Price per billing_units after included usage. Either 'amount' or 'tiers' is required.",
+				}),
+				tiers: z.array(UsageTierSchema).optional().meta({
+					description:
+						"Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.",
+				}),
 
-				interval: z.enum(BillingInterval),
-				interval_count: z.number().default(1).optional(),
+				interval: z.enum(BillingInterval).meta({
+					description:
+						"Billing interval. For consumable features, should match reset.interval.",
+				}),
+				interval_count: z.number().default(1).optional().meta({
+					description: "Number of intervals per billing cycle. Defaults to 1.",
+				}),
 
-				billing_units: z.number().default(1).optional(),
-				billing_method: z.enum(BillingMethod),
-				max_purchase: z.number().optional(),
+				billing_units: z.number().default(1).optional().meta({
+					description:
+						"Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).",
+				}),
+				billing_method: z.enum(BillingMethod).meta({
+					description:
+						"'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.",
+				}),
+				max_purchase: z.number().optional().meta({
+					description:
+						"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.",
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description:
+					"Pricing for usage beyond included units. Omit for free features.",
+			}),
 
 		proration: z
 			.object({
-				on_increase: z.enum(OnIncrease),
-				on_decrease: z.enum(OnDecrease),
+				on_increase: z.enum(OnIncrease).meta({
+					description: "Billing behavior when quantity increases mid-cycle.",
+				}),
+				on_decrease: z.enum(OnDecrease).meta({
+					description: "Credit behavior when quantity decreases mid-cycle.",
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description:
+					"Proration settings for prepaid features. Controls mid-cycle quantity change billing.",
+			}),
 
 		rollover: z
 			.object({
-				max: z.number().optional(),
-				expiry_duration_type: z.enum(RolloverExpiryDurationType),
-				expiry_duration_length: z.number().optional(),
+				max: z.number().optional().meta({
+					description: "Max rollover units. Omit for unlimited rollover.",
+				}),
+				expiry_duration_type: z.enum(RolloverExpiryDurationType).meta({
+					description: "When rolled over units expire.",
+				}),
+				expiry_duration_length: z.number().optional().meta({
+					description: "Number of periods before expiry.",
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description:
+					"Rollover config for unused units. If set, unused included units carry over.",
+			}),
 
 		entity_feature_id: z.string().optional().meta({
 			internal: true,
 		}),
 
-		// Internal
 		entitlement_id: z.string().optional().meta({
 			internal: true,
 		}),
