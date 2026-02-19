@@ -69,7 +69,11 @@ export const getStripeInvoiceLink = ({
 	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
 	const withTest = env === AppEnv.Live ? "" : "/test";
-	return `${baseUrl}${accountPath}${withTest}/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
+	const invoiceId =
+		typeof stripeInvoice === "string"
+			? stripeInvoice
+			: stripeInvoice.id || stripeInvoice.stripe_id;
+	return `${baseUrl}${accountPath}${withTest}/invoices/${invoiceId}`;
 };
 
 export const getStripeDashboardLink = ({

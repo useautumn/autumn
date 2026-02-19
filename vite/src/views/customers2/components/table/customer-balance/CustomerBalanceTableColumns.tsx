@@ -3,6 +3,8 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
+import { EntInterval } from "@autumn/shared";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { cn } from "@/lib/utils";
@@ -11,8 +13,65 @@ import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
+import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 
-function UsageCell({
+/** Builds a descriptive label for a sub-row (plan + interval + entity) */
+function getSubRowLabel({
+	ent,
+	entities,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	entities: Entity[];
+}) {
+	const parts: string[] = [];
+
+	// Plan name
+	parts.push(ent.customer_product?.product.name || "No plan");
+
+	// Interval
+	const { interval, interval_count } = ent.entitlement;
+	if (!interval || interval === EntInterval.Lifetime) {
+		parts.push("Lifetime");
+	} else {
+		const count = interval_count || 1;
+		parts.push(count > 1 ? `${count} ${interval}s` : interval);
+	}
+
+	// Entity (if scoped)
+	const entity = entities.find((e) => {
+		if (ent.internal_entity_id) return e.internal_id === ent.internal_entity_id;
+		return (
+			e.internal_id === ent.customer_product?.internal_entity_id ||
+			e.id === ent.customer_product?.entity_id
+		);
+	});
+	if (entity) {
+		parts.push(entity.name || entity.id);
+	}
+
+	return parts.join(" · ");
+}
+
+/** Computes balance values from a single entitlement (for sub-rows) */
+function getIndividualEntValues({
+	ent,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	entityId: string | null;
+}) {
+	const balance =
+		entityId && ent.entities?.[entityId]
+			? (ent.entities[entityId].balance ?? ent.balance ?? 0)
+			: (ent.balance ?? 0);
+	const quantity = ent.customer_product?.quantity || 1;
+	const allowance = (ent.entitlement.allowance ?? 0) * quantity;
+	return { balance, allowance, quantity };
+}
+
+// --- Usage cells ---
+
+function ParentUsageCell({
 	ent,
 	fullCustomer,
 	entityId,
@@ -50,22 +109,67 @@ function UsageCell({
 	);
 }
 
-function BarCell({
+function SubRowUsageCell({
 	ent,
-	fullCustomer,
 	entityId,
 }: {
 	ent: FullCusEntWithFullCusProduct;
+	entityId: string | null;
+}) {
+	if (ent.unlimited) {
+		return <span className="text-t4">Unlimited</span>;
+	}
+
+	const { balance, allowance } = getIndividualEntValues({ ent, entityId });
+	const shouldShowOutOfBalance = allowance > 0 || balance > 0;
+	const shouldShowUsed = balance < 0 || (balance === 0 && allowance <= 0);
+
+	return (
+		<FeatureBalanceDisplay
+			allowance={allowance}
+			initialAllowance={allowance}
+			balance={balance}
+			shouldShowOutOfBalance={shouldShowOutOfBalance}
+			shouldShowUsed={shouldShowUsed}
+			usageType={ent.entitlement.feature.config?.usage_type}
+		/>
+	);
+}
+
+function UsageCell({
+	row,
+	fullCustomer,
+	entityId,
+}: {
+	row: Row<CustomerBalanceRowData>;
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 }) {
-	const { allowance, balance, quantity } = useFeatureUsageBalance({
-		fullCustomer,
-		featureId: ent.entitlement.feature.id,
-		entityId,
-	});
+	if (row.depth > 0) {
+		return <SubRowUsageCell ent={row.original} entityId={entityId} />;
+	}
+	return (
+		<ParentUsageCell
+			ent={row.original}
+			fullCustomer={fullCustomer}
+			entityId={entityId}
+		/>
+	);
+}
 
-	// Determine whether to show reset or expiry info
+// --- Bar cells ---
+
+function BarCellContent({
+	ent,
+	allowance,
+	balance,
+	quantity,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	allowance: number;
+	balance: number;
+	quantity: number;
+}) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
 
@@ -102,15 +206,83 @@ function BarCell({
 	);
 }
 
+function ParentBarCell({
+	ent,
+	fullCustomer,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+}) {
+	const { allowance, balance, quantity } = useFeatureUsageBalance({
+		fullCustomer,
+		featureId: ent.entitlement.feature.id,
+		entityId,
+	});
+
+	return (
+		<BarCellContent
+			ent={ent}
+			allowance={allowance}
+			balance={balance}
+			quantity={quantity}
+		/>
+	);
+}
+
+function SubRowBarCell({
+	ent,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	entityId: string | null;
+}) {
+	const { allowance, balance, quantity } = getIndividualEntValues({
+		ent,
+		entityId,
+	});
+
+	return (
+		<BarCellContent
+			ent={ent}
+			allowance={allowance}
+			balance={balance}
+			quantity={quantity}
+		/>
+	);
+}
+
+function BarCell({
+	row,
+	fullCustomer,
+	entityId,
+}: {
+	row: Row<CustomerBalanceRowData>;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+}) {
+	if (row.depth > 0) {
+		return <SubRowBarCell ent={row.original} entityId={entityId} />;
+	}
+	return (
+		<ParentBarCell
+			ent={row.original}
+			fullCustomer={fullCustomer}
+			entityId={entityId}
+		/>
+	);
+}
+
+// --- Column definitions ---
+
 export const CustomerBalanceTableColumns = ({
 	fullCustomer,
 	entityId,
-	aggregatedMap,
 	entities = [],
 }: {
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	entities?: unknown[];
 }) => [
 	{
@@ -118,18 +290,45 @@ export const CustomerBalanceTableColumns = ({
 		accessorKey: "feature",
 		enableResizing: true,
 		minSize: 100,
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => {
 			const ent = row.original;
-			const featureId = ent.entitlement.feature.id;
-			const originalEnts = aggregatedMap.get(featureId);
-			const isAggregated = originalEnts && originalEnts.length > 1;
-			const balanceCount = originalEnts?.length || 1;
+			const isSubRow = row.depth > 0;
+
+			if (isSubRow) {
+				return (
+					<div className="flex items-center gap-2 pl-5.5">
+						<AdminHover
+							texts={getCusEntHoverTexts({
+								cusEnt: ent,
+								entities: entities as Entity[],
+							})}
+						>
+							<span className="text-t2 truncate">
+								{getSubRowLabel({ ent, entities: entities as Entity[] })}
+							</span>
+						</AdminHover>
+					</div>
+				);
+			}
+
+			const canExpand = row.getCanExpand();
+			const isExpanded = row.getIsExpanded();
 
 			return (
 				<div className="flex items-center gap-2">
+					{canExpand && (
+						<span
+							className={cn(
+								"inline-flex text-t3 transition-transform duration-200",
+								isExpanded && "rotate-90",
+							)}
+						>
+							<CaretRightIcon size={14} weight="bold" />
+						</span>
+					)}
 					<AdminHover
 						texts={getCusEntHoverTexts({
-							cusEnt: row.original,
+							cusEnt: ent,
 							entities: entities as Entity[],
 						})}
 					>
@@ -137,11 +336,6 @@ export const CustomerBalanceTableColumns = ({
 							{ent.entitlement.feature.name}
 						</span>
 					</AdminHover>
-					{isAggregated && (
-						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-							{balanceCount}
-						</div>
-					)}
 				</div>
 			);
 		},
@@ -149,24 +343,16 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
-			<UsageCell
-				ent={row.original}
-				fullCustomer={fullCustomer}
-				entityId={entityId}
-			/>
+		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
+			<UsageCell row={row} fullCustomer={fullCustomer} entityId={entityId} />
 		),
 	},
 	{
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
-			<BarCell
-				ent={row.original}
-				fullCustomer={fullCustomer}
-				entityId={entityId}
-			/>
+		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
+			<BarCell row={row} fullCustomer={fullCustomer} entityId={entityId} />
 		),
 	},
 ];

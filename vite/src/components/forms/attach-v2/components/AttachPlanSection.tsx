@@ -37,8 +37,12 @@ export function AttachPlanSection() {
 	// Convert outgoing balances to ProductItem format for diff comparison
 	// This shows what the customer is losing (outgoing) vs gaining (incoming)
 	const outgoingItems = useMemo(
-		() => outgoingToProductItems(previewQuery.data?.outgoing),
-		[previewQuery.data?.outgoing],
+		() =>
+			outgoingToProductItems({
+				outgoing: previewQuery.data?.outgoing,
+				incomingItems: product?.items,
+			}),
+		[previewQuery.data?.outgoing, product?.items],
 	);
 
 	// Use outgoing items as the "original" for comparison when available

@@ -120,14 +120,16 @@ export const getCusEntHoverTexts = ({
 		});
 	}
 
-	if (cusEnt.rollovers.length > 0) {
+	const rollovers = cusEnt.rollovers ?? [];
+	if (rollovers.length > 0) {
 		hoverTexts.push({
 			key: "Rollovers",
-			value: cusEnt.rollovers
+			value: rollovers
 				.map((r: Rollover) => {
-					if (Object.values(r.entities).length > 0) {
+					const rolloverEntities = r.entities ? Object.values(r.entities) : [];
+					if (rolloverEntities.length > 0) {
 						return (
-							Object.values(r.entities)
+							rolloverEntities
 								.map((e: EntityRolloverBalance) => `${e.balance} (${e.id})`)
 								.join(", ") +
 							` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`

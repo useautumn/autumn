@@ -20,12 +20,15 @@ export function AttachSettingsPopover() {
 	const [open, setOpen] = useState(false);
 
 	const {
+		hasActiveSubscription,
 		hasOutgoing,
 		hasCustomSchedule,
 		isImmediateSelected,
 		isEndOfCycleSelected,
 		handleScheduleChange,
 	} = usePlanScheduleField();
+
+	if (!hasActiveSubscription) return null;
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
