@@ -4,7 +4,10 @@ import { DisplaySchema } from "@api/products/components/display.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import {
+	TiersType,
+	UsageTierSchema,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -30,6 +33,7 @@ export const ApiPlanItemV1Schema = z
 			.object({
 				amount: z.number().optional(),
 				tiers: z.array(UsageTierSchema).optional(),
+				tiers_type: z.enum(TiersType).optional(),
 
 				interval: z.enum(BillingInterval),
 				interval_count: z.number().optional(),

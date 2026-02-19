@@ -4,7 +4,10 @@ import {
 	OnIncrease,
 } from "../../productV2Models/productItemModels/productItemEnums.js";
 import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig.js";
-import { UsagePriceConfigSchema } from "./priceConfig/usagePriceConfig.js";
+import {
+	TiersType,
+	UsagePriceConfigSchema,
+} from "./priceConfig/usagePriceConfig.js";
 import { BillingType } from "./priceEnums.js";
 
 const ProrationConfigSchema = z.object({
@@ -19,6 +22,7 @@ export const PriceSchema = z.object({
 	org_id: z.string().optional(),
 	created_at: z.number().optional(),
 	billing_type: z.nativeEnum(BillingType).nullish(),
+	tiers_type: z.nativeEnum(TiersType).nullish(),
 	is_custom: z.boolean().optional(),
 	config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
 
