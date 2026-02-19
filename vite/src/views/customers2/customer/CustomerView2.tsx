@@ -8,6 +8,8 @@ import { Link } from "react-router";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -38,6 +40,7 @@ export default function CustomerView2() {
 	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
 	const hasCustomizedProduct = !!sheetData?.customizedProduct;
+	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
 	const env = useEnv();
@@ -74,22 +77,23 @@ export default function CustomerView2() {
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
 				<motion.div
-					className="h-full overflow-hidden absolute inset-0"
+					className="h-full overflow-hidden absolute inset-0 z-0"
 					animate={{
-						width: sheetType ? "calc(100% - 28rem)" : "100%",
+						width: sheetType && !isMobile ? "calc(100% - 28rem)" : "100%",
 					}}
 					transition={SHEET_ANIMATION}
 				>
 					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">
-						{/* Onboarding Guide - only render wrapper when visible */}
 						{showOnboarding && (
-							<div className="w-full max-w-5xl mx-auto pt-8 px-10">
+							<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-10">
 								<OnboardingGuide />
 							</div>
 						)}
-						{/* Rest of content */}
 						<div
-							className={`flex flex-col gap-4 w-full max-w-5xl mx-auto px-10 ${showOnboarding ? "pt-4" : "pt-8"}`}
+							className={cn(
+								"flex flex-col gap-4 w-full max-w-5xl mx-auto px-4 sm:px-10",
+								showOnboarding ? "pt-4" : "pt-4 sm:pt-8",
+							)}
 						>
 							<div className="flex flex-col gap-2 w-full">
 								<div className="flex flex-col w-full">
@@ -98,7 +102,7 @@ export default function CustomerView2() {
 									</div>
 									<div className="flex items-center justify-between w-full pt-2 gap-2">
 										<h3
-											className={`text-md font-semibold truncate ${
+											className={`text-md font-semibold truncate min-w-0 ${
 												customer.name
 													? "text-t1"
 													: customer.email
@@ -122,23 +126,24 @@ export default function CustomerView2() {
 							</div>
 						</div>
 					</div>
-					{createPortal(
-						<AnimatePresence>
-							{sheetType && !isInlineEditorOpen && (
-								<motion.div
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									exit={{ opacity: 0 }}
-									className="fixed inset-0 bg-white/60 dark:bg-black/60"
-									style={{ zIndex: 40 }}
-									onMouseDown={() => {
-										!hasCustomizedProduct && closeProductSheet();
-									}}
-								/>
-							)}
-						</AnimatePresence>,
-						document.body,
-					)}
+					{!isMobile &&
+						createPortal(
+							<AnimatePresence>
+								{sheetType && !isInlineEditorOpen && (
+									<motion.div
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										className="fixed inset-0 bg-white/60 dark:bg-black/60"
+										style={{ zIndex: 40 }}
+										onMouseDown={() => {
+											!hasCustomizedProduct && closeProductSheet();
+										}}
+									/>
+								)}
+							</AnimatePresence>,
+							document.body,
+						)}
 				</motion.div>
 
 				<CustomerSheets />

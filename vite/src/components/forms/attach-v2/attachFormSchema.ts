@@ -15,6 +15,7 @@ export const AttachFormSchema = z.object({
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
 	trialEnabled: z.boolean(),
+	trialCardRequired: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	billingBehavior: z.custom<BillingBehavior>().nullable(),
 	newBillingSubscription: z.boolean(),

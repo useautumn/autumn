@@ -16,6 +16,11 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
+import {
+	getProductWithSupportedPlanFormValues,
+	getSupportedPlanFormPatchFromDraftProduct,
+} from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
@@ -47,7 +52,7 @@ interface AttachFormContextValue {
 
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (items: ProductItem[]) => void;
+	handlePlanEditorSave: (product: FrontendProduct) => void;
 	handlePlanEditorCancel: () => void;
 
 	isPending: boolean;
@@ -70,6 +75,25 @@ interface AttachFormProviderProps {
 	onSuccess?: () => void;
 	children: ReactNode;
 }
+
+type AttachEditablePatchFields = Pick<
+	AttachForm,
+	| "items"
+	| "version"
+	| "trialEnabled"
+	| "trialLength"
+	| "trialDuration"
+	| "trialCardRequired"
+>;
+
+const ATTACH_EDITABLE_PATCH_FIELDS = [
+	"items",
+	"version",
+	"trialEnabled",
+	"trialLength",
+	"trialDuration",
+	"trialCardRequired",
+] as const satisfies ReadonlyArray<keyof AttachEditablePatchFields>;
 
 export function AttachFormProvider({
 	customerId,
@@ -101,6 +125,7 @@ export function AttachFormProvider({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		trialCardRequired,
 		planSchedule,
 		billingBehavior,
 		newBillingSubscription,
@@ -164,15 +189,26 @@ export function AttachFormProvider({
 			product: product as ProductV2,
 		});
 
-		if (items) {
-			return {
-				...baseFrontendProduct,
+		return getProductWithSupportedPlanFormValues({
+			baseProduct: baseFrontendProduct,
+			formValues: {
 				items,
-			};
-		}
-
-		return baseFrontendProduct;
-	}, [product, items]);
+				version,
+				trialLength,
+				trialDuration,
+				trialEnabled,
+				trialCardRequired,
+			},
+		});
+	}, [
+		product,
+		items,
+		version,
+		trialLength,
+		trialDuration,
+		trialEnabled,
+		trialCardRequired,
+	]);
 
 	const { requestBody, buildRequestBody } = useAttachRequestBody({
 		customerId,
@@ -184,6 +220,7 @@ export function AttachFormProvider({
 		trialLength,
 		trialDuration,
 		trialEnabled,
+		trialCardRequired,
 		planSchedule,
 		billingBehavior,
 		newBillingSubscription,
@@ -207,14 +244,43 @@ export function AttachFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen]);
 
 	const handlePlanEditorSave = useCallback(
-		(newItems: ProductItem[]) => {
-			form.setFieldValue("items", newItems);
+		(draftProduct: FrontendProduct) => {
+			if (!productWithFormItems) {
+				setShowPlanEditor(false);
+				onPlanEditorClose?.();
+				return;
+			}
+
+			const patch = getSupportedPlanFormPatchFromDraftProduct({
+				baseProduct: productWithFormItems,
+				draftProduct,
+			});
+
+			const attachPatch = {
+				items: patch.items,
+				version: patch.version,
+				trialEnabled: patch.trialEnabled,
+				trialLength: patch.trialLength,
+				trialDuration: patch.trialDuration,
+				trialCardRequired: patch.trialCardRequired,
+			} satisfies Partial<AttachEditablePatchFields>;
+
+			applyDefinedFormPatchFields<
+				AttachEditablePatchFields,
+				keyof AttachEditablePatchFields
+			>({
+				patch: attachPatch,
+				fields: ATTACH_EDITABLE_PATCH_FIELDS,
+				setFieldValue: ({ field, value }) => {
+					form.setFieldValue(field, value);
+				},
+			});
 
 			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
 			const updatedPrepaidOptions = { ...currentPrepaidOptions };
 			let hasNewPrepaidItems = false;
 
-			for (const item of newItems) {
+			for (const item of draftProduct.items) {
 				if (
 					item.usage_model === "prepaid" &&
 					item.feature_id &&
@@ -232,7 +298,7 @@ export function AttachFormProvider({
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
 		},
-		[form, onPlanEditorClose],
+		[form, onPlanEditorClose, productWithFormItems],
 	);
 
 	const handlePlanEditorCancel = useCallback(() => {

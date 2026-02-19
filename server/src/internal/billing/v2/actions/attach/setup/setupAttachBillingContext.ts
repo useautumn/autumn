@@ -3,7 +3,15 @@ import type {
 	AttachParamsV1,
 	BillingContextOverride,
 } from "@autumn/shared";
-import { BillingVersion, notNullish } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	BillingVersion,
+	CusProductStatus,
+	cusProductToPrices,
+	isFreeProduct,
+	isOneOffProduct,
+	notNullish,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -57,10 +65,43 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
+	const isAttachPaidRecurring =
+		!isOneOffProduct({ prices: attachProduct.prices }) &&
+		!isFreeProduct({ prices: attachProduct.prices });
+
+	const hasPaidRecurringSubscription = fullCustomer.customer_products.some(
+		(customerProduct) => {
+			const hasActiveOrTrialingStatus =
+				ACTIVE_STATUSES.includes(customerProduct.status) ||
+				customerProduct.status === CusProductStatus.Trialing;
+
+			if (!hasActiveOrTrialingStatus) return false;
+			if (!customerProduct.subscription_ids?.length) return false;
+
+			const prices = cusProductToPrices({
+				cusProduct: customerProduct,
+			});
+
+			return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+		},
+	);
+
+	const isTransitionFromFree =
+		notNullish(currentCustomerProduct) &&
+		isFreeProduct({
+			prices: cusProductToPrices({
+				cusProduct: currentCustomerProduct,
+			}),
+		});
+
 	// Only respect new_billing_subscription for non-transition scenarios
 	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
 	const shouldForceNewSubscription =
-		!currentCustomerProduct && params.new_billing_subscription;
+		(!currentCustomerProduct && params.new_billing_subscription) ||
+		(Boolean(params.new_billing_subscription) &&
+			isAttachPaidRecurring &&
+			isTransitionFromFree &&
+			hasPaidRecurringSubscription);
 
 	const {
 		stripeSubscription,

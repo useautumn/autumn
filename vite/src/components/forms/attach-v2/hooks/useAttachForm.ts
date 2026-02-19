@@ -18,6 +18,7 @@ export function useAttachForm({
 			trialLength: null,
 			trialDuration: FreeTrialDuration.Day,
 			trialEnabled: false,
+			trialCardRequired: true,
 			planSchedule: null,
 			billingBehavior: null,
 			newBillingSubscription: false,

@@ -23,13 +23,17 @@ function SheetClose({
 }
 
 function SheetPortal({
+	container,
 	...props
-}: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-	const mainContent = document.querySelector("[data-main-content]");
+}: React.ComponentProps<typeof SheetPrimitive.Portal> & {
+	container?: HTMLElement | null;
+}) {
+	const resolvedContainer =
+		container ?? document.querySelector("[data-main-content]");
 	return (
 		<SheetPrimitive.Portal
 			data-slot="sheet-portal"
-			container={mainContent ?? undefined}
+			container={resolvedContainer ?? undefined}
 			{...props}
 		/>
 	);
@@ -56,20 +60,22 @@ function SheetContent({
 	children,
 	side = "right",
 	hideCloseButton = false,
+	portalContainer,
 	...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
 	side?: "top" | "right" | "bottom" | "left";
 	hideCloseButton?: boolean;
+	portalContainer?: HTMLElement | null;
 }) {
 	return (
-		<SheetPortal>
+		<SheetPortal container={portalContainer}>
 			<SheetOverlay />
 			<SheetPrimitive.Content
 				data-slot="sheet-content"
 				className={cn(
 					"bg-card data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[150] flex flex-col gap-0 shadow-sm transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-300",
 					side === "right" &&
-						`data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right top-0 bottom-0 right-0 w-full min-w-xs max-w-md border-l border-border/40`,
+						`data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right top-0 bottom-0 right-0 w-full md:min-w-xs md:max-w-md md:border-l border-border/40`,
 					side === "left" &&
 						`data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left top-0 bottom-0 left-0 w-3/4 border-r border-border/40 sm:max-w-sm`,
 					side === "top" &&
@@ -82,8 +88,8 @@ function SheetContent({
 			>
 				{children}
 				{!hideCloseButton && (
-					<SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-						<XIcon className="size-4" />
+					<SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-3 right-3 md:top-4 md:right-4 flex items-center justify-center size-10 md:size-auto rounded-sm md:rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+						<XIcon className="size-5 md:size-4" />
 						<span className="sr-only">Close</span>
 					</SheetPrimitive.Close>
 				)}

@@ -28,17 +28,20 @@ export function generateTrialChanges({
 	trialLength,
 	trialDuration,
 	trialEnabled = true,
+	trialCardRequired,
 }: {
 	customerProduct: FullCusProduct;
 	removeTrial: boolean;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
 	trialEnabled?: boolean;
+	trialCardRequired?: boolean;
 }): ItemEdit[] {
 	const isCurrentlyTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingDays = getRemainingTrialDays({
 		trialEndsAt: customerProduct.trial_ends_at,
 	});
+	const currentTrialCardRequired = customerProduct.free_trial?.card_required;
 	const changes: ItemEdit[] = [];
 
 	if (removeTrial && isCurrentlyTrialing) {
@@ -64,24 +67,48 @@ export function generateTrialChanges({
 		const newTrialDays = getTrialLengthInDays({ trialLength, trialDuration });
 
 		if (isCurrentlyTrialing && remainingDays !== null) {
-			if (newTrialDays === remainingDays) return changes;
+			if (newTrialDays !== remainingDays) {
+				const isExtending = newTrialDays > remainingDays;
+				const oldFormatted = formatDaysAsReadable(remainingDays);
+				const newFormatted = formatDaysAsReadable(newTrialDays);
 
-			const isExtending = newTrialDays > remainingDays;
-			const oldFormatted = formatDaysAsReadable(remainingDays);
-			const newFormatted = formatDaysAsReadable(newTrialDays);
+				changes.push({
+					id: isExtending ? "trial-extend" : "trial-shorten",
+					type: "trial",
+					label: isExtending ? "Extend Trial" : "Shorten Trial",
+					icon: "trial",
+					description: isExtending
+						? `Trial extended from ${oldFormatted} to ${newFormatted}`
+						: `Trial shortened from ${oldFormatted} to ${newFormatted}`,
+					oldValue: oldFormatted,
+					newValue: newFormatted,
+					isUpgrade: isExtending,
+				});
+			}
 
-			changes.push({
-				id: isExtending ? "trial-extend" : "trial-shorten",
-				type: "trial",
-				label: isExtending ? "Extend Trial" : "Shorten Trial",
-				icon: "trial",
-				description: isExtending
-					? `Trial extended from ${oldFormatted} to ${newFormatted}`
-					: `Trial shortened from ${oldFormatted} to ${newFormatted}`,
-				oldValue: oldFormatted,
-				newValue: newFormatted,
-				isUpgrade: isExtending,
-			});
+			if (
+				typeof trialCardRequired === "boolean" &&
+				typeof currentTrialCardRequired === "boolean" &&
+				trialCardRequired !== currentTrialCardRequired
+			) {
+				const oldValue = currentTrialCardRequired
+					? "Card required"
+					: "No card required";
+				const newValue = trialCardRequired
+					? "Card required"
+					: "No card required";
+
+				changes.push({
+					id: "trial-card-required",
+					type: "trial",
+					label: "Trial Card Requirement",
+					icon: "trial",
+					description: `Trial card requirement changed from ${oldValue.toLowerCase()} to ${newValue.toLowerCase()}`,
+					oldValue,
+					newValue,
+					isUpgrade: !trialCardRequired,
+				});
+			}
 		} else {
 			const newFormatted = formatDaysAsReadable(newTrialDays);
 			changes.push({

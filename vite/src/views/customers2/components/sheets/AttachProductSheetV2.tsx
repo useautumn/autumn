@@ -122,7 +122,7 @@ export function AttachProductSheetV2() {
 				window.open(invoiceLink, "_blank");
 			}}
 			onCheckoutRedirect={(checkoutUrl) => {
-				window.location.href = checkoutUrl;
+				window.open(checkoutUrl, "_blank");
 			}}
 			onSuccess={closeSheet}
 		>

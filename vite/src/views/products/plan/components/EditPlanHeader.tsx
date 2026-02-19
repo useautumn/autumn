@@ -116,7 +116,7 @@ export const EditPlanHeader = () => {
 				startMigration={migrateCustomers}
 				version={version}
 			/>
-			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-8 px-12">
+			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
 				{isCusPlanEditor ? (
 					<CustomerBreadcrumbs />
 				) : (
