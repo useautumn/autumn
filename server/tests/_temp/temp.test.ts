@@ -22,24 +22,18 @@ test.concurrent(`${chalk.yellowBright("attach: pro plan with failed payment meth
 	const { autumnV1 } = await initScenario({
 		customerId: "test-failed-pm",
 		setup: [
-			s.customer({ paymentMethod: "success" }), // Failed payment method
+			s.customer({}), // Failed payment method
 			s.products({ list: [pro, premium] }),
 		],
 		actions: [],
 	});
 
-	const customerId = "test-failed-pm";
-	const result = await autumnV1.attach({
-		customer_id: customerId,
+	const result = await autumnV1.billing.attach({
+		customer_id: "test-failed-pm",
 		product_id: pro.id,
-	});
-	const res = await autumnV1.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-		finalize_invoice: true,
 		invoice: true,
-		enable_product_immediately: false,
+		finalize_invoice: false,
 	});
 
-	console.log("res", res);
+	console.log("result", result);
 });
