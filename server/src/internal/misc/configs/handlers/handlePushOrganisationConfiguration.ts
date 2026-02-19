@@ -10,7 +10,7 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { createFeature } from "@/internal/features/featureActions/createFeature";
-import { createProduct } from "@/internal/products/handlers/productActions/createProduct";
+import { createProduct } from "@/internal/product/actions/createProduct";
 import { ProductService } from "@/internal/products/ProductService";
 import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
