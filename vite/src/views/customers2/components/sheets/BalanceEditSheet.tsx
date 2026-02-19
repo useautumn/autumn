@@ -46,7 +46,6 @@ export function BalanceEditSheet() {
 	const [mode, setMode] = useState<"set" | "add">("set");
 	const [addValue, setAddValue] = useState<string>("");
 
-	const hasMultipleBalances = originalEntitlements.length > 1;
 	const [grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
 
 	// Get the selected entitlement
@@ -227,16 +226,7 @@ export function BalanceEditSheet() {
 						{feature.id}
 					</CopyButton>
 				}
-				breadcrumbs={
-					hasMultipleBalances
-						? [
-								{
-									name: "Balance List",
-									sheet: "balance-selection",
-								},
-							]
-						: undefined
-				}
+				breadcrumbs={undefined}
 			/>
 
 			<div className="flex-1 overflow-y-auto">
@@ -374,6 +364,8 @@ export function BalanceEditSheet() {
 													next_reset_at: unixDate,
 												});
 											}}
+											withTime
+											use24Hour
 										/>
 									</div>
 

@@ -1,14 +1,21 @@
-import type { FullCusProduct, ProductItem, ProductV2 } from "@autumn/shared";
+import type {
+	FrontendProduct,
+	FullCusProduct,
+	ProductItem,
+	ProductV2,
+} from "@autumn/shared";
 
 import { useMemo } from "react";
 import {
 	EditPlanSection,
 	UpdateSubscriptionFooter,
+	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
+import { getSupportedFormOverridesFromProductCustomization } from "@/components/forms/update-subscription-v2/utils/subscriptionCustomization";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,
@@ -96,6 +103,7 @@ function SheetContent() {
 
 export function SubscriptionUpdateSheet2() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
@@ -111,6 +119,18 @@ export function SubscriptionUpdateSheet2() {
 
 	const numVersions = productData?.numVersions ?? productV2?.version ?? 1;
 	const currentVersion = cusProduct?.product?.version ?? 1;
+	const customizedProduct = sheetData?.customizedProduct as
+		| FrontendProduct
+		| undefined;
+
+	const defaultOverrides = useMemo((): Partial<UpdateSubscriptionForm> => {
+		if (!productV2) return {};
+		return getSupportedFormOverridesFromProductCustomization({
+			customizedProduct,
+			baseProduct: productV2 as FrontendProduct,
+			currentVersion,
+		});
+	}, [customizedProduct, productV2, currentVersion]);
 
 	const formContext = useMemo(
 		(): UpdateSubscriptionFormContext | null =>
@@ -172,6 +192,7 @@ export function SubscriptionUpdateSheet2() {
 		<UpdateSubscriptionFormProvider
 			formContext={formContext}
 			originalItems={productV2?.items as ProductItem[] | undefined}
+			defaultOverrides={defaultOverrides}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onInvoiceCreated={(invoiceId) => {

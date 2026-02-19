@@ -26,6 +26,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialDuration,
 			removeTrial,
 			trialEnabled,
+			trialCardRequired,
 			version,
 			items,
 			cancelAction,
@@ -115,6 +116,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialLength,
 			trialDuration,
 			trialEnabled,
+			trialCardRequired,
 		});
 		if (freeTrial !== undefined) {
 			requestBody.free_trial = freeTrial;

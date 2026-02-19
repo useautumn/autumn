@@ -24,6 +24,8 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
+import { MobileSidebar } from "@/views/main-sidebar/MobileSidebar";
+import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
 import { AppContext } from "./AppContext";
 
 export function MainLayout() {
@@ -32,6 +34,7 @@ export function MainLayout() {
 	const { org, isLoading: orgLoading } = useOrg();
 	const { handleApiError } = useGlobalErrorHandler();
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
 	const navigate = useNavigate();
 
@@ -66,9 +69,11 @@ export function MainLayout() {
 				includeCredentials={true}
 			>
 				<div className="w-screen h-screen flex bg-outer-background">
-					<MainSidebar />
-					<div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
-						<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+					<div className="hidden sm:flex">
+						<MainSidebar />
+					</div>
+					<div className="w-full h-screen flex flex-col overflow-hidden sm:py-3 sm:pr-3">
+						<div className="w-full h-full flex flex-col overflow-hidden sm:rounded-lg sm:border">
 							{env === AppEnv.Sandbox && <SandboxBanner />}
 							<div className="flex bg-background flex-col h-full">
 								<LoadingScreen />
@@ -96,9 +101,18 @@ export function MainLayout() {
 				<PortalContainerContext.Provider value={containerRef}>
 					<div className="w-screen h-screen flex bg-outer-background">
 						<CustomToaster />
-						<MainSidebar />
+						<div className="hidden sm:flex">
+							<MainSidebar />
+						</div>
+						<MobileSidebar
+							open={mobileSidebarOpen}
+							onOpenChange={setMobileSidebarOpen}
+						/>
 						<InviteNotifications />
-						<MainContent containerRef={containerRef} />
+						<MainContent
+							containerRef={containerRef}
+							onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+						/>
 						{/* <ChatWidget /> */}
 						<CommandBar />
 					</div>
@@ -110,8 +124,10 @@ export function MainLayout() {
 
 const MainContent = ({
 	containerRef,
+	onOpenMobileSidebar,
 }: {
 	containerRef: React.RefObject<HTMLDivElement>;
+	onOpenMobileSidebar: () => void;
 }) => {
 	const env = useEnv();
 	const { org } = useOrg();
@@ -128,14 +144,14 @@ const MainContent = ({
 		<AppContext.Provider value={{}}>
 			<main
 				className={cn(
-					"w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative",
+					"w-full h-screen flex flex-col justify-center overflow-hidden sm:py-3 sm:pr-3 relative",
 					// Default font
 					"font-normal",
 				)}
 			>
 				<div
 					ref={containerRef}
-					className="w-full h-full flex flex-col overflow-hidden rounded-xl border relative"
+					className="w-full h-full flex flex-col overflow-hidden sm:rounded-xl sm:border relative"
 				>
 					{env === AppEnv.Sandbox && (
 						<SandboxBanner>
@@ -157,6 +173,7 @@ const MainContent = ({
 						open={showDeployDialog}
 						onOpenChange={setShowDeployDialog}
 					/>
+					<MobileTopBar onMenuClick={onOpenMobileSidebar} />
 					<div
 						data-main-content
 						className={cn(

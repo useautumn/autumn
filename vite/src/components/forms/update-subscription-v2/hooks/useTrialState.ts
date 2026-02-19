@@ -53,6 +53,7 @@ export function useTrialState({
 		isCurrentlyTrialing && customerProduct
 			? formatRemainingTrialTime({ trialEndsAt: customerProduct.trial_ends_at })
 			: null;
+	const initialTrialCardRequired = customerProduct?.free_trial?.card_required;
 
 	const trialEnabled = useStore(
 		form.store,
@@ -99,7 +100,8 @@ export function useTrialState({
 		form.setFieldValue("trialEnabled", true);
 		form.setFieldValue("trialLength", remainingTrialDays);
 		form.setFieldValue("trialDuration", FreeTrialDuration.Day);
-	}, [form, remainingTrialDays]);
+		form.setFieldValue("trialCardRequired", initialTrialCardRequired ?? true);
+	}, [form, remainingTrialDays, initialTrialCardRequired]);
 
 	const setIsTrialExpanded = useCallback(
 		(expanded: boolean) => {

@@ -38,7 +38,7 @@ const DialogOverlay = React.forwardRef<
 		ref={ref}
 		data-slot="dialog-overlay"
 		className={cn(
-			"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 dark:bg-black/80",
+			"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[170] bg-black/50 dark:bg-black/80",
 			className,
 		)}
 		{...props}
@@ -58,7 +58,7 @@ const DialogContent = React.forwardRef<
 			ref={ref}
 			data-slot="dialog-content"
 			className={cn(
-				"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[40%] left-[50%] z-50 grid translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg duration-200",
+				"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[40%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg duration-200",
 
 				"w-full max-w-md gap-3 bg-background",
 				"p-4",
