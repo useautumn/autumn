@@ -1,9 +1,9 @@
 import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { PlanExpand } from "@api/products/components/planExpand.js";
 import {
 	type ApiPlanItemV1,
 	ApiPlanItemV1Schema,
 } from "@api/products/items/apiPlanItemV1.js";
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	type ProductItem,
@@ -134,7 +134,7 @@ export const productItemsToPlanItemsV1 = ({
 
 	const shouldExpandFeature = expandIncludes({
 		expand,
-		includes: [CusExpand.PlanFeaturesFeature],
+		includes: [PlanExpand.ItemsFeature],
 	});
 
 	return items.map((item) => {

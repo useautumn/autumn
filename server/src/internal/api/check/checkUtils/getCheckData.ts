@@ -4,6 +4,8 @@ import {
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
+	findFeatureById,
+	getFeatureToUseForCheck,
 	InternalError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -12,7 +14,6 @@ import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/ful
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
-import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
 
 // Main functions
 const getFeatureAndCreditSystems = ({
@@ -32,55 +33,6 @@ const getFeatureAndCreditSystems = ({
 	});
 
 	return { feature, creditSystems, allFeatures: features };
-};
-
-const getFeatureToUse = ({
-	creditSystems,
-	feature,
-	apiEntity,
-	requiredBalance,
-}: {
-	creditSystems: Feature[];
-	feature: Feature;
-	apiEntity: ApiCustomerV5 | ApiEntityV2;
-	requiredBalance: number;
-}) => {
-	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
-	// 2. If there's cusEnts for the feature -> return feature
-	// 3. Otherwise, feaure to use is credit system if exists, otherwise return feature
-
-	if (creditSystems.length === 0) return feature;
-
-	// 1. Check if feature available
-	const mainBalance = apiEntity?.balances?.[feature.id];
-
-	if (
-		mainBalance &&
-		apiBalanceToAllowed({
-			apiBalance: mainBalance,
-			feature,
-			requiredBalance,
-		})
-	) {
-		return feature;
-	}
-
-	for (const creditSystem of creditSystems) {
-		const apiBalance = apiEntity?.balances?.[creditSystem.id];
-		if (!apiBalance) continue;
-
-		if (
-			apiBalanceToAllowed({
-				apiBalance,
-				feature: creditSystem,
-				requiredBalance,
-			})
-		) {
-			return creditSystem;
-		}
-	}
-
-	return creditSystems[0];
 };
 
 export const getCheckData = async ({
@@ -137,11 +89,17 @@ export const getCheckData = async ({
 		});
 	}
 
-	const featureToUse = getFeatureToUse({
+	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
 		feature,
 		apiEntity,
 		requiredBalance,
+	});
+
+	const featureToUse = findFeatureById({
+		features: ctx.features,
+		featureId: featureToUseMin.id,
+		errorOnNotFound: true,
 	});
 
 	const apiBalance = apiEntity.balances?.[featureToUse.id];

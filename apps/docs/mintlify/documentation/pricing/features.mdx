@@ -1,0 +1,29 @@
+---
+title: "How features work"
+description: "Learn about features in Autumn and how to create them"
+---
+
+Features represent the parts of your product that you want to control access to, based on the pricing plan a customer is on. There are 2 key types of features you can create:
+
+- **Metered features**: features that require you to keep track of a usage balance (eg, credits, API requests)
+- **Boolean features**: features that can be either enabled or disabled (eg, access to a premium analytics dashboard).
+
+When you create a feature, you can set a display name, and it's ID. This will be used to identify the feature when you make API calls to Autumn, to check or tracking usage of the feature.
+
+## Metered features
+
+Metered features can either be `consumable` or `non-consumable`.
+- **Consumable**: features that can be used up and replenished, either by recurring resets or purchases. For example, credits, API requests. 
+- **Non-consumable**: features that are used persistently. For example, seats, storage, workspaces.
+
+When adding features to a plan, you will be able to set reset cycles for `consumable` features, and proration behavior for `non-consumable` features.
+
+Under the "advanced" section of the feature creation sheet, you can also define [event names](/documentation/customers/tracking-usage#using-event-names). This gives you more control over how events interact with customer balances in Autumn. 
+
+Metered features can each act as their own, standlone balance, or be added to a [credit system](/documentation/pricing/credits). This lets you define credit costs per feature, and let many features draw from a common credit balance. 
+
+## Boolean features
+
+Boolean features are for your features that can be either enabled or disabled. Think of them like feature flags to gate specific parts of your application based on what product a user has (eg, access to a premium analytics dashboard).
+
+For these features, there is no configuration needed to be set. If you add them to a product, users on that product will be granted [access to the feature](/documentation/customers/check#checking-boolean-features).

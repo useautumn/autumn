@@ -1,13 +1,13 @@
 import {
 	type CustomerEntitlementFilters,
 	resetIntvToEntIntv,
-	type UpdateBalanceParams,
+	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
 
 export const buildCustomerEntitlementFilters = ({
 	params,
 }: {
-	params: UpdateBalanceParams;
+	params: UpdateBalanceParamsV0;
 }): CustomerEntitlementFilters | undefined => {
 	const { customer_entitlement_id: cusEntId, interval } = params;
 

@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	type ApiCustomerV5,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -33,7 +33,7 @@ export const getApiCustomer = async ({
 		...baseCustomer,
 		entities: undefined,
 		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
-		invoices: ctx.expand.includes(CusExpand.Invoices)
+		invoices: ctx.expand.includes(CustomerExpand.Invoices)
 			? (baseCustomer.invoices ?? [])
 			: undefined,
 	};

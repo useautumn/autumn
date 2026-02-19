@@ -1,0 +1,119 @@
+---
+title: "List Events"
+openapi: "openapi POST /v1/events.list"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="offset" type="integer">
+  Number of items to skip
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 100, max 1000.
+</DynamicParamField>
+
+<DynamicParamField body="customer_id" type="string">
+  Filter events by customer ID
+</DynamicParamField>
+
+<DynamicParamField body="feature_id" type="string">
+  Filter by specific feature ID(s)
+</DynamicParamField>
+
+<DynamicParamField body="custom_range" type="object">
+  Filter events by time range
+  <Expandable title="properties">
+    <DynamicParamField body="start" type="number">
+      Filter events after this timestamp (epoch milliseconds)
+    </DynamicParamField>
+
+    <DynamicParamField body="end" type="number">
+      Filter events before this timestamp (epoch milliseconds)
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Array of items for current page
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      Event ID (KSUID)
+    </DynamicResponseField>
+
+    <DynamicResponseField name="timestamp" type="number">
+      Event timestamp (epoch milliseconds)
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      ID of the feature that the event belongs to
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      Customer identifier
+    </DynamicResponseField>
+
+    <DynamicResponseField name="value" type="number">
+      Event value/count
+    </DynamicResponseField>
+
+    <DynamicResponseField name="properties" type="object">
+      Event properties (JSONB)
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist after this page
+</DynamicResponseField>
+
+<DynamicResponseField name="offset" type="number">
+  Current offset position
+</DynamicResponseField>
+
+<DynamicResponseField name="limit" type="number">
+  Limit passed in the request
+</DynamicResponseField>
+
+<DynamicResponseField name="total" type="number">
+  Total number of items returned in the current page
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg",
+      "timestamp": 1765958215459,
+      "feature_id": "credits",
+      "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
+      "value": 30,
+      "properties": {}
+    },
+    {
+      "id": "evt_36xmHxxjAkqxufDf9yHAPNfRrLM",
+      "timestamp": 1765956512057,
+      "feature_id": "credits",
+      "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
+      "value": 49,
+      "properties": {}
+    }
+  ],
+  "total": 2,
+  "has_more": false,
+  "offset": 0,
+  "limit": 100
+}
+```
+</ResponseExample>

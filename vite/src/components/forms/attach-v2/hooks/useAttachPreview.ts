@@ -41,7 +41,7 @@ export function useAttachPreview({
 			}
 
 			const response = await axiosInstance.post<AttachPreviewResponse>(
-				"/v1/billing/preview_attach",
+				"/v1/billing.preview_attach",
 				requestBody,
 			);
 

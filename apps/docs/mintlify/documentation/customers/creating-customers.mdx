@@ -1,0 +1,152 @@
+---
+title: "Creating Customers"
+description: "Learn about customers in Autumn and how to create them"
+---
+
+Customers represent the entities, usually users or organizations, of your application that can use and pay for your products.
+
+For each customer, Autumn will:
+
+- Keep record of the products they've purchased
+- Track the features they've used
+- Track the features they have access to
+- Bill them through Stripe for the prices you've set
+
+## Creating a customer via API
+
+<Accordion title="Creating a customer via attach, track, or check">
+
+Customers are automatically created when they interact with any Autumn's core endpoints. The most common ways customers get created are:
+
+#### Via checkout
+
+When a customer goes through the checkout flow to purchase a product, a customer record is automatically created. You can provide customer data like name and email by including it in the `/attach` endpoint request:
+
+```json
+POST /attach
+{
+  "customer_id": "your-customer-id",
+  "product_id": "pro-tier",
+  "customer_data": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "fingerprint": "unique-device-id"
+  }
+}
+```
+
+#### Via usage tracking
+
+When tracking feature usage via the `track` endpoint, a customer record will be created if one doesn't exist:
+
+```json
+POST /track
+{
+  "customer_id": "your-customer-id",
+  "feature_id": "api-calls",
+  "customer_data": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+```
+
+#### Via feature access checks
+
+Similarly, checking if a customer is allowed to use a feature via the `/check` endpoint will create a customer record:
+
+```json
+POST /check
+{
+  "customer_id": "your-customer-id",
+  "feature_id": "premium-feature",
+  "customer_data": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+```
+
+</Accordion>
+
+However, you may want to explicitly create a customer to keep your code clean and consistent. You can do so with the `customers` method.
+
+<CodeGroup>
+```shell cURL
+curl -X POST https://api.autumn.com/customers \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "your-customer-id", 
+  "name": "John Doe", 
+  "email": "john@example.com", 
+  "fingerprint": "unique-device-id"
+  }'
+```
+
+```javascript Typescript
+import { Autumn as autumn } from "autumn-js";
+
+autumn.customers.create({
+  id: "your-customer-id",
+  name: "John Doe",
+  email: "john@example.com",
+  fingerprint: "unique-device-id",
+});
+```
+
+</CodeGroup>
+
+Only the `id` field is required - this should be your unique identifier for the customer that you'll use to reference them in future API calls.
+
+<Note>
+  An Autumn customer does not map to a Stripe customer by default. A Stripe
+  customer will only be created when an `attach` request is made.
+</Note>
+
+## Creating a customer via the Autumn dashboard
+
+You can also create a customer via the Autumn dashboard. This is useful if you want to "pre-create" a customer for a user who hasn't interacted with your application yet.
+
+1. Navigate to the [Customers page](https://app.useautumn.com/customers)
+2. Click the "Create Customer" button
+3. Fill in the customer's details, such as name and email. <br/>
+   **Leave the `id` field blank**, as this will come from your application.
+4. Click "Create Customer"
+
+When the customer logs in for the first time, Autumn will match the user's `email` to the customer email you provided above.
+
+<Warning>
+  Make sure the email you provide is the same email that the customer will use
+  to log in to your application. You can update this from the customer details
+  page.
+</Warning>
+
+You can enable a product and set their properties in advance, so that when they do interact with your application, they're already have the right features available.
+
+This is especially useful for larger or enterprise deals where payment happens separately via invoice.
+
+## Customer Properties
+
+#### Customer ID
+
+This is your unique identifier for the customer. You'll use this ID in all future API calls to reference this customer. It could be:
+
+- Your database ID for the user
+- Their email address
+- Any other unique identifier in your system
+
+#### Name and Email
+
+Optional fields to help identify the customer in the Autumn dashboard and on invoices.
+
+#### Fingerprint
+
+An optional unique identifier used to prevent free trial abuse. This could be:
+
+- Device ID
+- Hardware serial number
+- Browser fingerprint
+- Any other unique identifier that represents the customer's device or instance
+
+When set, Autumn can limit free trials to one per fingerprint, preventing users from creating multiple accounts to get unlimited free trials.

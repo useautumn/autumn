@@ -1,0 +1,53 @@
+---
+title: "Update Subscription"
+openapi: "openapi POST /v1/billing.update"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  The update endpoint modifies an existing subscription. Use this to change prepaid quantities, cancel subscriptions, or modify plan configuration. For subscribing to a new plan, use [attach](/api-reference/billing/attach) instead.
+</Note>
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Update prepaid feature quantity">
+    Change the quantity of a prepaid feature (like seats) on an existing subscription.
+    
+    ```typescript
+    const response = await autumn.billing.update({
+      customerId: "cus_123",
+      planId: "pro_plan",
+      featureQuantities: [{ featureId: "seats", quantity: 10 }]
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Cancel at end of billing cycle">
+    Schedule a subscription to cancel at the end of the current billing period. The customer retains access until then.
+    
+    ```typescript
+    const response = await autumn.billing.update({
+      customerId: "cus_123",
+      planId: "pro_plan",
+      cancelAction: "cancel_end_of_cycle"
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Uncancel a subscription">
+    Reactivate a subscription that was scheduled for cancellation.
+    
+    ```typescript
+    const response = await autumn.billing.update({
+      customerId: "cus_123",
+      planId: "pro_plan",
+      cancelAction: "uncancel"
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+

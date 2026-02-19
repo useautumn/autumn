@@ -1,0 +1,72 @@
+speakeasyVersion: 1.719.0
+sources:
+    Autumn API:
+        sourceNamespace: autumn-api
+        sourceRevisionDigest: sha256:907452f52e7316fc31598c430bb2b2d1f511a3e4c1eb21462aa1de10b5d94460
+        sourceBlobDigest: sha256:0bf1d6695f34c96339037aa03001ea35b7b7361b45146865c9222d1586109448
+        tags:
+            - latest
+            - 2.1.0
+    Autumn API Stripped:
+        sourceNamespace: autumn-api-stripped
+        sourceRevisionDigest: sha256:1ba23ac0091b999dc6c9e794a75ac9c008fb937037cfc00ee7a6e5f875f547fe
+        sourceBlobDigest: sha256:8b4ebac21e57944966d95f11ea03411ab45d52bd21865f11259d6da37d462db6
+        tags:
+            - latest
+            - 2.1.0
+targets:
+    autumn:
+        source: Autumn API
+        sourceNamespace: autumn-api
+        sourceRevisionDigest: sha256:907452f52e7316fc31598c430bb2b2d1f511a3e4c1eb21462aa1de10b5d94460
+        sourceBlobDigest: sha256:0bf1d6695f34c96339037aa03001ea35b7b7361b45146865c9222d1586109448
+        codeSamplesNamespace: autumn-api-typescript-code-samples
+        codeSamplesRevisionDigest: sha256:fab88bba3ef521a0b14213268335ee949761ab98ee60698e9bad7463140563ab
+    autumn-python:
+        source: Autumn API Stripped
+        sourceNamespace: autumn-api-stripped
+        sourceRevisionDigest: sha256:1ba23ac0091b999dc6c9e794a75ac9c008fb937037cfc00ee7a6e5f875f547fe
+        sourceBlobDigest: sha256:8b4ebac21e57944966d95f11ea03411ab45d52bd21865f11259d6da37d462db6
+        codeSamplesNamespace: autumn-api-python-code-samples
+        codeSamplesRevisionDigest: sha256:ce4215f239e65976dbfffcd7e5d76f506dc0ba33a3046a99f846502ff192fe71
+workflow:
+    workflowVersion: 1.0.0
+    speakeasyVersion: pinned
+    sources:
+        Autumn API:
+            inputs:
+                - location: ../openapi/openapi.yml
+            transformations:
+                - removeUnused: false
+            output: .speakeasy/out.openapi.yaml
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api
+        Autumn API Stripped:
+            inputs:
+                - location: ../openapi/openapi-stripped.yml
+            transformations:
+                - removeUnused: false
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-stripped
+    targets:
+        autumn:
+            target: typescript
+            source: Autumn API
+            codeSamples:
+                output: .speakeasy/code-samples.overlay.yaml
+                registry:
+                    location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-typescript-code-samples
+                labelOverride:
+                    fixedValue: Typescript (SDK)
+                blocking: false
+        autumn-python:
+            target: python
+            source: Autumn API Stripped
+            output: ../../others/python-sdk
+            codeSamples:
+                output: ../../others/python-sdk/.speakeasy/code-samples.overlay.yaml
+                registry:
+                    location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-python-code-samples
+                labelOverride:
+                    fixedValue: Python (SDK)
+                blocking: false

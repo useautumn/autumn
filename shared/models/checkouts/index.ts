@@ -1,1 +1,1 @@
-export * from "./checkoutTable.js";
+export * from "./checkoutTable";

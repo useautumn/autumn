@@ -1,0 +1,20 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"target": "ES2020",
+		"noEmit": true,
+		"paths": {
+			"@autumn/shared": ["../../shared/index.ts"],
+			"@api/*": ["../../shared/api/*"],
+			"@models/*": ["../../shared/models/*"],
+			"@utils/*": ["../../shared/utils/*"]
+		}
+	},
+	"include": ["./**/*"],
+	"types": ["node"],
+	"exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,32 @@
+---
+title: "Introduction"
+description: "How Autumn's React hooks work"
+---
+
+## How Hooks Work
+
+Autumn's React hooks connect to your backend via the `autumnHandler`. When you call a hook, it makes a request to your backend route (e.g., `/api/autumn`), which securely communicates with Autumn's API using your secret key.
+
+All hooks are built on [TanStack Query](https://tanstack.com/query) and return standard query results (`data`, `isLoading`, `error`, `refetch`). You can pass `queryOptions` to customize caching, refetching, and other query behaviors.
+
+## Shared Options
+
+Every hook accepts a `queryOptions` parameter that forwards to TanStack Query's `useQuery`:
+
+```tsx
+const { data } = useCustomer({
+  queryOptions: {
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 1000 * 30, // 30 seconds
+  },
+});
+```
+
+Common options:
+- `enabled` - Whether the query should run automatically
+- `staleTime` - How long data is considered fresh (ms)
+- `refetchInterval` - Polling interval (ms)
+- `refetchOnWindowFocus` - Refetch when window regains focus
+
+See the [TanStack Query docs](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) for all available options.

@@ -1,4 +1,4 @@
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
 
 /**

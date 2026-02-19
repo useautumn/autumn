@@ -1,4 +1,4 @@
-import { VercelMarketplaceMode } from "@models/genModels/processorSchemas.js";
+import { VercelMarketplaceMode } from "@models/genModels/processorSchemas";
 import { z } from "zod/v4";
 
 export const FrontendOrgSchema = z.object({

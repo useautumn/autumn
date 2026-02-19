@@ -1,17 +1,17 @@
-import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
 import {
 	type ApiCusFeatureV2,
 	ApiCusFeatureV2Schema,
-} from "../cusFeatures/previousVersions/apiCusFeatureV2.js";
-import type { ApiCusFeatureV3BreakdownSchema } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
-import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3.js";
+} from "../cusFeatures/previousVersions/apiCusFeatureV2";
+import type { ApiCusFeatureV3BreakdownSchema } from "../cusFeatures/previousVersions/apiCusFeatureV3";
+import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3";
 
 /**
  * V1_2: Features changed from array to object AND merged multi-interval features

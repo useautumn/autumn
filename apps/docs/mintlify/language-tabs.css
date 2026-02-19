@@ -1,0 +1,20 @@
+/**
+ * Transform the language dropdown into horizontal tabs
+ * This targets the language selector in the API playground sidebar
+ */
+
+/* Hide the dropdown button/trigger */
+[data-testid="code-sample-language-select"],
+.code-sample-language-select,
+[aria-haspopup="listbox"] {
+	/* We'll need to identify the exact selector - leaving as placeholder */
+}
+
+/* 
+ * Note: Mintlify's language selector structure may vary.
+ * Use browser DevTools to inspect the exact element structure.
+ * 
+ * Common approaches:
+ * 1. Hide dropdown, show custom tabs via JS
+ * 2. Use CSS to restyle the dropdown menu as always-visible tabs
+ */

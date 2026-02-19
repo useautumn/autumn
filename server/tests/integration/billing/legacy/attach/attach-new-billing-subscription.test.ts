@@ -15,7 +15,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, CusExpand } from "@autumn/shared";
+import { type ApiCustomerV3, CustomerExpand } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
@@ -173,7 +173,7 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 
 	// Verify final state: customer pro active, both entity premiums active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
-		expand: [CusExpand.Invoices],
+		expand: [CustomerExpand.Invoices],
 	});
 	await expectProductActive({ customer, productId: pro.id });
 

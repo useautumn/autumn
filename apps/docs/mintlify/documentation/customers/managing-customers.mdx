@@ -1,0 +1,133 @@
+---
+title: "Managing Customers"
+description: "Learn how to view and manage customer information in Autumn"
+---
+
+The customer details page provides a comprehensive view of a customer's information, subscriptions, and usage. You can access this by clicking on any customer from the [Customers page](https://app.useautumn.com/customers).
+
+The customer details page shows:
+
+- **Products**: View active subscriptions, status, billing dates, and feature limits
+- **Features**: Track usage, limits, reset dates and history graphs
+- **Invoices**: See billing history, payment status, amounts and hosted invoice pages
+- **Events**: View feature usage events that have been tracked for the customer
+
+## Enabling a Product
+
+You can enable a product for a customer either via the API using the `attach` method or via the dashboard.
+
+
+If you're enabling a product for a customer that already has a product, Autumn will handle the upgrade or downgrade between the two products.
+
+#### Custom Product Versions
+
+When attaching a product via the Dashboard, you can optionally make changes to the product items before enabling it. This will create a custom version of the product.
+
+When enabling a custom product, what happens will depend on the changes you made:
+
+- **Changing features only**: this will take effect immediately, provisioning the new features while keeping the same reset dates
+- **Changing pricing**: this will follow Autumn's upgrade and downgrade logic, depending on whether the pricing is higher or lower than the existing product
+
+## Editing Feature Balances
+
+You can directly edit a customer's feature balances via the dashboard, to give them additional allowance or alter how much they'll be charged for their next invoice (typically in case of errors).
+
+1. Navigate to the Customer details page
+2. Under "Available Features", click on the feature you want to edit the balance for.
+3. In the popup, enter the new balance value:
+   - If you're giving them more allowance (`included_usage`) of a feature, enter a **positive** number
+   - If you're changing how much usage they'll be charged for, enter a **negative** number
+4. Optionally, set a new usage reset date for the feature
+5. Click "Update"
+
+<Note>
+  Editing a balance will only last until the next reset date of the feature. If
+  you want to permanently set a new allowance, you should create a custom
+  product with the new allowance.
+</Note>
+
+<Tip>
+  If you want to give a customer access to a feature that isn't present in the
+  product they're on, you can create a custom product with the new feature.
+</Tip>
+
+## Adding a Coupon
+
+To apply a discount to a customer:
+
+1. Go to the customer's details page
+2. Under the "Rewards" section of the sidebar, click "Add Coupon"
+3. Select a reward from the available options
+4. Click "Add Reward"
+
+The discount will show up when a Checkout URL is generated for the customer via `attach`, or from their next invoice.
+
+## Updating Customer Properties
+
+You can update a customer's basic information through either the dashboard or API:
+
+#### Via Dashboard
+
+1. Navigate to the customer's details page
+2. On the right-hand side, you'll see a "Details" section in the sidebar. Click on any of the fields.
+3. Update the desired fields (name, email, etc.)
+4. Click "Update"
+
+#### Via API
+
+You can also update a customer's properties via the API, useful for when a customer changes their details in your application.
+
+<CodeGroup>
+```shell cURL
+curl -X PUT https://api.useautumn.com/customers/{customer_id} \
+  -H "Authorization: Bearer {api_key}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mr New Name", 
+    "email": "newemail@example.com", 
+    "fingerprint": "new-device-id"
+    }'
+```
+
+```javascript TypeScript
+import { Autumn as autumn } from "autumn-js";
+
+await autumn.customers.update({
+  id: "customer_id",
+  name: "Mr New Name",
+  email: "newemail@example.com",
+  fingerprint: "new-device-id",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('secret_key')
+
+async def main():
+    await autumn.customers.update(
+        id="customer_id".
+        name="Mr New Name",
+        email="newemail@example.com",
+        fingerprint="new-device-id"
+    )
+
+asyncio.run(main())
+```
+
+</CodeGroup>
+
+#### Deleting a Customer
+
+To delete a customer:
+
+1. Go to the customer's details page
+2. Click the "Settings" icon in the top right
+3. Click "Delete"
+
+<Warning>
+  Deleting a customer will not delete it in Stripe. If they have existing
+  subscriptions, you should cancel them from Stripe if needed.
+</Warning>

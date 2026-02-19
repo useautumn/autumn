@@ -53,6 +53,11 @@ export const validator = <T extends ZodType>(
 				body = {};
 			}
 
+			// If body is null/undefined, default to empty object
+			if (body === null || body === undefined) {
+				body = {};
+			}
+
 			const result = schema.safeParse(body);
 			if (!result.success) {
 				throw result.error;

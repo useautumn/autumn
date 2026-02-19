@@ -1,0 +1,40 @@
+workflowVersion: 1.0.0
+speakeasyVersion: pinned
+sources:
+    Autumn API:
+        inputs:
+            - location: ../openapi/openapi.yml
+        transformations:
+            - removeUnused: false
+        output: .speakeasy/out.openapi.yaml
+        registry:
+            location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api
+    Autumn API Stripped:
+        inputs:
+            - location: ../openapi/openapi-stripped.yml
+        transformations:
+            - removeUnused: false
+        registry:
+            location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-stripped
+targets:
+    autumn:
+        target: typescript
+        source: Autumn API
+        codeSamples:
+            output: .speakeasy/code-samples.overlay.yaml
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-typescript-code-samples
+            labelOverride:
+                fixedValue: Typescript (SDK)
+            blocking: false
+    autumn-python:
+        target: python
+        source: Autumn API Stripped
+        output: ../../others/python-sdk
+        codeSamples:
+            output: ../../others/python-sdk/.speakeasy/code-samples.overlay.yaml
+            registry:
+                location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-api-python-code-samples
+            labelOverride:
+                fixedValue: Python (SDK)
+            blocking: false

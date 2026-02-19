@@ -1,0 +1,339 @@
+---
+title: "Entities"
+description: "Learn how to use feature entities to track balances per separate entity, such as a user or a workspace"
+---
+
+Feature entities are used to keep track of sub-balances for a feauture. For example, you may have a product that allows 500 credits **per user** per month.
+
+## Product setup
+
+There are two ways you can handle entities depending on your use case.
+
+1. **Entity product items**: this is the simplest way of handling entities, and keeps everything under 1 subscription.
+2. **Attaching a product to an entity**: if an entity can have its own subscription tiers, then you can attach a product directly at the entity level by passing the [entity ID](/api-reference/core/attach#body-entity-id) into an attach function. Each will be under its own subscription in Stripe with the billing cycles synced.
+
+<Info>
+**Example**
+
+Max has a team product, where each seat under the team gets access to 30 meeting note summaries per month. Since his seats all cost the same and get access to the same features, he can create a product with entity items.
+
+Jamie's also has a team product, but each user can either be under a Free tier or a Pro tier, where the pro tier gives the seat access to more meeting note summaries. In this case, Jamie can create a free tier and pro tier as normal, without entity items, and just `attach` these products at the entity level.
+
+</Info>
+
+## Creating entities
+
+You can manage feature entities via the `entities` route. This can be used to create, update and delete entities, such as when a seat or workspace is added or removed.
+
+When you create an entity, a **usage event** will automatically be sent that increments the count of the number of entities (eg seats) being used.
+
+This means if you create 2 entities for "seats", your usage of "seats" will be 2, allowing Autumn to bill accordingly if there's a price set.
+
+<Tip>
+  Creating an entity is only a required step if the entity is billable (eg if
+  there's a price per seat). If the entities don't have an associated price,
+  then you can skip this step and auto-create it from the `check` and `track`
+  functions.
+</Tip>
+
+ <CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { createEntity } = useCustomer();
+
+const { data, error } = await createEntity({
+  id: "user_abc",
+  name: "John Doe",
+  featureId: "seats",
+});
+```
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+const entity = await autumn.entities.create("org_123", {
+  id: "user_abc",
+  name: "Brandon Yeo",
+  feature_id: "seats",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    entity = await autumn.features.create_entity(
+        customer_id="org_123",
+        id="user_abc",
+        name="Brandon Yeo",
+        feature_id="seats",
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/org_123/entities" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"feature_id": "seats",
+"id": "user_abc",
+"name": "Brandon Yeo"
+}'
+```
+
+</CodeGroup>
+
+## Managing entity balances
+
+Just like with normal features, you can check feature access and track usage events for each entity.
+
+#### Check feature access
+
+<CodeGroup>
+
+```tsx React
+import { useEntity } from "autumn-js/react";
+
+const { allowed } = useEntity("user_abc");
+
+if (allowed({ featureId: "ai-messages" })) {
+  console.log("User has access to AI messages");
+}
+```
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+const { allowed } = await autumn.check({
+  customer_id: "org_123",
+  feature_id: "ai-messages",
+  entity_id: "user_abc",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    check = await autumn.check(
+        customer_id="org_123",
+        feature_id="ai-messages",
+        entity_id="user_abc",
+    )
+    allowed = check.allowed
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "org_123",
+"feature_id": "ai-messages",
+"entity_id": "user_abc"
+}'
+```
+
+</CodeGroup>
+
+#### Send usage event
+
+<CodeGroup>
+
+```tsx React
+import { useEntity } from "autumn-js/react";
+
+const { track } = useEntity("user_abc");
+
+track({ featureId: "ai-messages", value: 10 });
+```
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+const event = await autumn.track({
+  customer_id: "org_123",
+  feature_id: "ai-messages",
+  entity_id: "user_abc",
+  value: 10,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    event = await autumn.track(
+        customer_id="org_123",
+        feature_id="ai-messages",
+        entity_id="user_abc",
+        value=10,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "org_123",
+"feature_id": "ai-messages",
+"entity_id": "user_abc",
+"value": 10
+}'
+```
+
+</CodeGroup>
+
+<Accordion title="Auto-creating entities">
+  In the same way customers can be auto-created from `check`, `track` and
+  `attach` calls, entities can be created in the same way.
+
+<Warning>
+  This will only work if the entity has no price associated with it. If the
+  entity is billable (eg, 10 usd per seat), then you'll need to create the
+  entity via the `createEntity` function.
+</Warning>
+
+<CodeGroup>
+
+```tsx React
+import { useEntity } from "autumn-js/react";
+
+const { allowed } = useEntity("user_abc", {
+  entity_data: {
+    featureId: "seats",
+  },
+});
+
+if (allowed({ featureId: "ai-messages" })) {
+  console.log("User has access to AI messages");
+}
+```
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+const { allowed } = await autumn.check({
+  customer_id: "org_123",
+  feature_id: "ai-messages",
+  entity_id: "user_abc",
+  entity_data: {
+    featureId: "seats",
+  },
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    check = await autumn.check(
+        customer_id="org_123",
+        feature_id="ai-messages",
+        entity_id="user_abc",
+        entity_data={
+            "feature_id": "seats"
+        },
+    )
+    allowed = check.allowed
+
+    if allowed:
+      print("User has access to AI messages, let's SSR accordingly!")
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "org_123",
+"feature_id": "ai-messages",
+"entity_id": "user_abc",
+"entity_data": {
+  "feature_id": "seats"
+}
+}'
+```
+
+</CodeGroup>
+
+</Accordion>
+
+#### Customer-level vs entity-level balances
+
+A customer-level balances is the total balance for the feature across all entities. Entity-level balances are the balance for a specific entity. You can check access and track usage events either at the customer-level or entity-level.
+
+<Info>
+**Example**
+
+You have a product that allows 500 credits per user per month. However, the credits are shared across all users in the account.
+
+You can create a feature entity for "seats" and then check access and send usage events at the top-level.
+
+</Info>
+
+To use top-level balances, just omit the `entity_id` from your check request.
+
+<Note>
+  This will increment the usage counter for the top-level balance, and also
+  deduct from the first-created entity so that the sum of the the entity
+  balances is always the same as the top-level balance.
+</Note>
+
+## Deleting Entities
+
+<Check>
+  Just as creating an entity sent a usage event for the associated feature,
+  deleting an entity will decrease the usage.
+</Check>
+
+<CodeGroup>
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+await autumn.entities.delete("org_123", "user_abc");
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    await autumn.features.delete_entity("org_123", "user_abc")
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X DELETE "https://api.useautumn.com/v1/customers/org_123/entities/user_abc" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+```
+
+</CodeGroup>

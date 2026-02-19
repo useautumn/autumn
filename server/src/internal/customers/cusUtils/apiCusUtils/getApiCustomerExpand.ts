@@ -1,7 +1,7 @@
 import {
 	ApiBaseEntitySchema,
 	type ApiCusExpand,
-	CusExpand,
+	CustomerExpand,
 	type FullCusProduct,
 	type FullCustomer,
 	filterExpand,
@@ -27,9 +27,9 @@ export const getApiCustomerExpand = async ({
 	const filteredExpand = filterExpand({
 		expand,
 		filter: [
-			CusExpand.BalancesFeature,
-			CusExpand.SubscriptionsPlan,
-			CusExpand.Invoices,
+			CustomerExpand.BalancesFeature,
+			CustomerExpand.SubscriptionsPlan,
+			CustomerExpand.Invoices,
 		],
 	});
 
@@ -41,14 +41,14 @@ export const getApiCustomerExpand = async ({
 			idOrInternalId: customerId || "",
 			orgId: org.id,
 			env,
-			expand: expand as CusExpand[],
-			withEntities: expand.includes(CusExpand.Entities),
+			expand: expand as CustomerExpand[],
+			withEntities: expand.includes(CustomerExpand.Entities),
 			withSubs: true,
 		});
 	}
 
 	const getCusTrialsUsed = () => {
-		if (expand.includes(CusExpand.TrialsUsed)) {
+		if (expand.includes(CustomerExpand.TrialsUsed)) {
 			return (
 				fullCus.trials_used?.map((t) => ({
 					plan_id: t.product_id,
@@ -61,13 +61,13 @@ export const getApiCustomerExpand = async ({
 	};
 
 	const getApiCusEntities = () => {
-		if (expand.includes(CusExpand.Entities)) {
+		if (expand.includes(CustomerExpand.Entities)) {
 			return fullCus.entities.map((e) => ApiBaseEntitySchema.parse(e));
 		}
 		return undefined;
 	};
 
-	const cusExpand = expand as CusExpand[];
+	const cusExpand = expand as CustomerExpand[];
 
 	const [rewards, referrals, paymentMethod] = await Promise.all([
 		getCusRewards({

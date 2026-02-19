@@ -1,1 +1,1 @@
-export * from "./checkoutResponses.js";
+export * from "./checkoutResponses";

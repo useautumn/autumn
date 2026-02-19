@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import type { Reward } from "../rewardModels/rewardModels.js";
-import { RewardReceivedBy, RewardTriggerEvent } from "./rewardProgramEnums.js";
+import type { Reward } from "../rewardModels/rewardModels";
+import { RewardReceivedBy, RewardTriggerEvent } from "./rewardProgramEnums";
 
 export const RewardProgram = z.object({
 	internal_id: z.string(),

@@ -1,4 +1,4 @@
-import type { ApiPurchaseV0, ApiSubscriptionV1 } from "../apiSubscriptionV1.js";
+import type { ApiPurchaseV0, ApiSubscriptionV1 } from "../apiSubscriptionV1";
 
 export function apiSubscriptionV1ToPurchaseV0({
 	apiSubscriptionV1,

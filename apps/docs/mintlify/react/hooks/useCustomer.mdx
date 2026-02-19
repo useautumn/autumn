@@ -1,0 +1,258 @@
+---
+title: "useCustomer"
+description: "Access a customer's state and billing actions in your React app"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useCustomer` hook fetches customer data and provides billing actions like attaching plans and checking feature access.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="errorOnNotFound" type="boolean">
+  Whether to throw an error if the customer is not found. Defaults to `false`.
+</ParamField>
+
+<ParamField body="expand" type="CustomerExpand[]">
+  Array of additional data to include in the response. Options: `invoices`, `trials_used`, `rewards`, `entities`, `referrals`, `payment_method`, `subscriptions.plan`, `purchases.plan`, `balances.feature`.
+</ParamField>
+
+<ParamField body="queryOptions" type="UseQueryOptions">
+  Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
+</ParamField>
+
+## Returns
+
+### `data`
+
+The customer object containing subscriptions, purchases, and balances.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerProfile() {
+  const { data, isLoading } = useCustomer();
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <p>Name: {data?.name}</p>
+      <p>Email: {data?.email}</p>
+      <p>Messages remaining: {data?.balances?.messages?.remaining}</p>
+    </div>
+  );
+}
+```
+
+<Expandable title="Customer object">
+
+```json
+{
+  "id": "user_123",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "createdAt": 1771409161016,
+  "fingerprint": null,
+  "stripeId": "cus_stripe123",
+  "env": "sandbox",
+  "metadata": {},
+  "sendEmailReceipts": false,
+  "subscriptions": [
+    {
+      "planId": "pro_plan",
+      "autoEnable": false,
+      "addOn": false,
+      "status": "active",
+      "pastDue": false,
+      "canceledAt": null,
+      "expiresAt": null,
+      "trialEndsAt": null,
+      "startedAt": 1771431921437,
+      "currentPeriodStart": 1771431921437,
+      "currentPeriodEnd": 1771999921437,
+      "quantity": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "messages": {
+      "featureId": "messages",
+      "granted": 100,
+      "remaining": 72,
+      "usage": 28,
+      "unlimited": false,
+      "overageAllowed": false,
+      "maxPurchase": null,
+      "nextResetAt": 1773851121437
+    }
+  }
+}
+```
+
+</Expandable>
+
+### `attach()`
+
+Attaches a plan to the customer. Handles new subscriptions, upgrades, and downgrades. Automatically redirects to checkout if payment is required.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function UpgradeButton() {
+  const { attach } = useCustomer();
+
+  return (
+    <button onClick={() => attach({ planId: "pro" })}>
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="planId" type="string" required>
+  The ID of the plan to attach.
+</ParamField>
+
+<ParamField body="successUrl" type="string">
+  URL to redirect to after successful checkout.
+</ParamField>
+
+<ParamField body="openInNewTab" type="boolean">
+  Open checkout URL in a new tab instead of redirecting.
+</ParamField>
+
+See the [API reference](/api-reference/billing/billingAttach) for all available parameters.
+
+### `check()`
+
+Checks feature access and balance for the customer locally (no API call).
+
+<Note>
+  This reads from the local `data` state. Combine with a backend `check` call for security.
+</Note>
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function SendMessageButton() {
+  const { check } = useCustomer();
+
+  const handleSend = () => {
+    const result = check({ featureId: "messages" });
+    
+    if (!result.allowed) {
+      alert("You've run out of messages!");
+      return;
+    }
+    
+    // Send the message...
+  };
+
+  return <button onClick={handleSend}>Send Message</button>;
+}
+```
+
+**Parameters**
+
+<ParamField body="featureId" type="string">
+  The ID of the feature to check access for.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  The ID of the entity to check access for.
+</ParamField>
+
+<ParamField body="requiredBalance" type="number">
+  The required balance amount to check against.
+</ParamField>
+
+### `openCustomerPortal()`
+
+Opens the Stripe customer billing portal for managing subscriptions and payment methods.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function BillingSettings() {
+  const { openCustomerPortal } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await openCustomerPortal({
+          returnUrl: window.location.href,
+        });
+      }}
+    >
+      Manage Billing
+    </button>
+  );
+}
+```
+
+**Parameters**
+
+<ParamField body="returnUrl" type="string">
+  URL to redirect to when the customer exits the billing portal.
+</ParamField>
+
+<ParamField body="openInNewTab" type="boolean">
+  Open portal in a new tab instead of redirecting.
+</ParamField>
+
+### `isLoading`
+
+Boolean indicating whether the customer data is currently being fetched.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerLoader() {
+  const { data, isLoading } = useCustomer();
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return <div>Welcome, {data?.name}!</div>;
+}
+```
+
+### `error`
+
+Any error that occurred while fetching customer data.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerWithError() {
+  const { data, error, isLoading } = useCustomer();
+
+  if (error) return <div>Error: {error.message}</div>;
+  if (isLoading) return <div>Loading...</div>;
+
+  return <div>Customer: {data?.name}</div>;
+}
+```
+
+### `refetch()`
+
+Function to manually refetch the customer data.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+export default function CustomerWithRefresh() {
+  const { data, refetch } = useCustomer();
+
+  return (
+    <div>
+      <p>Balance: {data?.balances?.messages?.remaining}</p>
+      <button onClick={() => refetch()}>Refresh</button>
+    </div>
+  );
+}
+```

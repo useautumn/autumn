@@ -8,10 +8,10 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { collatePgColumn } from "../../db/utils.js";
-import { organizations } from "../orgModels/orgTable.js";
-import type { CreditSystemConfig } from "./featureConfig/creditConfig.js";
-import type { MeteredConfig } from "./featureConfig/meteredConfig.js";
+import { collatePgColumn } from "../../db/utils";
+import { organizations } from "../orgModels/orgTable";
+import type { CreditSystemConfig } from "./featureConfig/creditConfig";
+import type { MeteredConfig } from "./featureConfig/meteredConfig";
 
 type FeatureDisplay = {
 	singular: string;

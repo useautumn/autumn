@@ -1,8 +1,8 @@
 import {
 	AppEnv,
-	CusExpand,
 	type CusProductStatus,
 	type Customer,
+	CustomerExpand,
 	CustomerNotFoundError,
 	customers,
 	type EntityExpand,
@@ -51,13 +51,13 @@ export class CusService {
 		inStatuses?: CusProductStatus[];
 		withEntities?: boolean;
 		entityId?: string;
-		expand?: (CusExpand | EntityExpand)[];
+		expand?: (CustomerExpand | EntityExpand)[];
 		withSubs?: boolean;
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 	}): Promise<FullCustomer> {
-		const includeInvoices = expand?.includes(CusExpand.Invoices) || false;
-		const withTrialsUsed = expand?.includes(CusExpand.TrialsUsed) || false;
+		const includeInvoices = expand?.includes(CustomerExpand.Invoices) || false;
+		const withTrialsUsed = expand?.includes(CustomerExpand.TrialsUsed) || false;
 
 		return withSpan<FullCustomer>({
 			name: "CusService.getFull",
@@ -428,7 +428,7 @@ export class CusService {
 		vercelInstallationId: string;
 		orgId: string;
 		env: AppEnv;
-		expand?: (CusExpand | EntityExpand)[];
+		expand?: (CustomerExpand | EntityExpand)[];
 	}) {
 		// This assumes the "processors" column is a JSONB object that can have a "vercel" object with "installation_id"
 		const results = await db

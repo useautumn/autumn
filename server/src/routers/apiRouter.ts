@@ -34,6 +34,7 @@ import {
 	honoProductRouter,
 	migrationRouter,
 } from "../internal/products/productRouter.js";
+import { rpcRouter } from "./rpcRouter.js";
 
 export const apiRouter = new Hono<HonoEnv>();
 
@@ -48,10 +49,13 @@ apiRouter.use("*", rateLimitMiddleware);
 apiRouter.use("*", queryMiddleware());
 apiRouter.use("*", idempotencyMiddleware);
 
+apiRouter.route("", rpcRouter);
+
 apiRouter.route("", billingRouter);
 apiRouter.route("", balancesRouter);
 apiRouter.route("", migrationRouter);
 apiRouter.route("", entityRouter);
+apiRouter.route("", rpcRouter);
 apiRouter.route("/customers", cusRouter);
 apiRouter.route("/invoices", invoiceRouter);
 

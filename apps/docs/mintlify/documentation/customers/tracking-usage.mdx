@@ -1,0 +1,212 @@
+---
+title: "Tracking usage"
+description: "Keep track of your customer's feature usage with the `track` route"
+---
+
+When customers use features in your product, you'll need to record their usage so Autumn can track it against their limits or bill them for usage.
+
+There are two ways to record usage: sending events or setting usage directly.
+
+## Sending Events
+
+The track route is recommended for tracking consumable features, like AI messages, credits or API calls. Each time a customer uses a feature, send an event to count their usage.
+
+<Tip>
+  Before recording usage, you may want to check if the customer is [allowed to
+  use the feature](/documentation/customers/check). This prevents them from exceeding usage
+  limits defined in the product.
+</Tip>
+
+<CodeGroup>
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+await autumn.track({
+  customer_id: "user-123",
+  feature_id: "ai-messages",
+  value: 1,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    await autumn.track(
+        customer_id="user-123",
+        feature_id="ai-messages",
+        value=1,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "user-123",
+"feature_id": "ai-messages",
+"value": 1
+}'
+```
+
+</CodeGroup>
+```json
+{
+"message": "Event recorded successfully",
+"event_id": "event_123",
+"customer_id": "user-123",
+"feature_id": "ai-messages"
+}
+```
+
+<Check>
+  You can also send a negative `value` to increase the balance counter, which is
+  useful for increasing a feature limit (eg, if a customer removes a seat).
+</Check>
+
+## Setting Usage Directly
+
+For non-consumable features (such as seats or workspaces), you may prefer to set usage directly, rather than incrementing Autumn's feature balance. This enables you to sync a source of truth up on your side with Autumn, preventing any discrepancies.
+
+<CodeGroup>
+
+```javascript Node.js
+import { Autumn as autumn } from "autumn-js";
+
+await autumn.usage({
+  customer_id: "user-123",
+  feature_id: "seats",
+  value: 3,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+    await autumn.features.set_usage(
+        customer_id="user-123",
+        feature_id="seats",
+        value=3,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL {1}
+curl -X POST "https://api.useautumn.com/v1/usage" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "user-123",
+"feature_id": "seats",
+"value": 3
+}'
+```
+
+</CodeGroup>
+
+```json
+{
+  "message": "Usage set successfully",
+  "customer_id": "user-123",
+  "feature_id": "seats"
+}
+```
+
+<Warning>
+  The usage route overwrites the current usage value. Use this carefully, as it
+  can reset or override incremental usage recorded through events.
+</Warning>
+
+## Using Event Names
+
+In the above examples, we used the `feature_id` to identify the feature. You can instead use the `event_name` parameter to link balances to different events in your application. This can be useful when:
+
+- Multiple balances are affected by the same user action
+- Different user actions should be tracked against the same balance
+
+<Info>
+**Example Use Case:**
+
+Your AI chatbot has a daily limit of 10 messages, with a maximum monthly limit of 100 messages. Recording a message in Autumn should decrease both balances simultaneously.
+
+In Autumn, you can create two features: `daily-messages` and `monthly-messages`. You can add the same event name to both features: `message-sent`. Then, assign both features to a plan with the correct included amounts.
+
+Every time that event name is recorded, both the daily-messages and monthly-messages balances will be decremented.
+
+If you were to use the same feature for both in this case, the daily and monthly balances would sum, allowing the user to send 10 messages a day, with an "overage" balance of 100 messages per month if they go over the daily limit.
+</Info>
+
+You can define event names in the Autumn dashboard:
+
+1. Go to the [Features Page](https://app.useautumn.com/sandbox/products?tab=features).
+2. Click on the feature you want to add an event to.
+3. In the sheet, under the "advanced" section, add your event names.
+4. Save the feature.
+
+You can then record usage for these events from your application:
+
+<CodeGroup>
+
+```javascript Node.js {10}
+import { Autumn as autumn } from "autumn-js";
+
+await autumn.track({
+  customer_id: "user-123",
+  value: 1,
+  event_name: "blog_post_generation",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_1234567890")
+
+async def main():
+  await autumn.track(
+    customer_id="user-123",
+    value=1,
+    event_name="blog_post_generation",
+  )
+```
+
+```bash cURL {8}
+curl -X POST "https://api.useautumn.com/v1/track" \
+-H "Authorization: Bearer am_sk_1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+"customer_id": "user-123",
+"value": 1,
+"event_name": "blog_post_generation"
+}'
+```
+
+</CodeGroup>
+
+```json
+{
+  "message": "Event recorded successfully",
+  "event_id": "event_123",
+  "customer_id": "user-123",
+  "event_name": "blog_post_generation"
+}
+```
+
+<Warning>
+  You can only use one of `event_name` or `feature_id` when recording usage.
+  Check that you're sending the correct one in the request, especially if you're
+  using a mix of `snake_case` and `kebab-case`.
+</Warning>

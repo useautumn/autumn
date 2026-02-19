@@ -1,20 +1,20 @@
-import { type ApiProductItem } from "@api/models.js";
-import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { type ApiProductItem } from "@api/models";
+import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
-import { getProductItemResponse } from "@utils/productV2Utils/productItemUtils/getProductItemRes.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
+import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
+import { getProductItemResponse } from "@utils/productV2Utils/productItemUtils/getProductItemRes";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../../types/sharedContext.js";
+import type { SharedContext } from "../../../../types/sharedContext";
 import {
 	type ApiSubscription,
 	ApiSubscriptionSchema,
-} from "../apiSubscription.js";
-import { CusProductLegacyDataSchema } from "../cusProductLegacyData.js";
-import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3.js";
+} from "../apiSubscription";
+import { CusProductLegacyDataSchema } from "../cusProductLegacyData";
+import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3";
 
 /**
  * Transform plan from V2.0 format to V1.2 product format

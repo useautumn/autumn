@@ -1,11 +1,11 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
-import { organizations } from "../../orgModels/orgTable.js";
+import { organizations } from "../../orgModels/orgTable";
 import type {
 	DiscountConfig,
 	FreeProductConfig,
 	PromoCode,
-} from "./rewardModels.js";
+} from "./rewardModels";
 
 export const rewards = pgTable(
 	"rewards",

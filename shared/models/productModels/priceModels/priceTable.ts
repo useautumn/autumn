@@ -9,12 +9,12 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { collatePgColumn } from "../../../db/utils.js";
-import { entitlements } from "../entModels/entTable.js";
-import { products } from "../productTable.js";
-import type { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
-import type { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
-import type { ProrationConfig } from "./priceModels.js";
+import { collatePgColumn } from "../../../db/utils";
+import { entitlements } from "../entModels/entTable";
+import { products } from "../productTable";
+import type { FixedPriceConfig } from "./priceConfig/fixedPriceConfig";
+import type { UsagePriceConfig } from "./priceConfig/usagePriceConfig";
+import type { ProrationConfig } from "./priceModels";
 
 export const prices = pgTable(
 	"prices",

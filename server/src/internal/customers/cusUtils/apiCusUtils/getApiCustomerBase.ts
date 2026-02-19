@@ -1,7 +1,7 @@
 import {
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -63,7 +63,7 @@ export const getApiCustomerBase = async ({
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 
 		invoices:
-			fullCus.invoices && ctx.expand.includes(CusExpand.Invoices)
+			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)
 				? invoicesToResponse({
 						invoices: fullCus.invoices,
 					})

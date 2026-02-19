@@ -1,4 +1,4 @@
-import { type AppEnv, CusExpand, RecaseError } from "@autumn/shared";
+import { type AppEnv, CustomerExpand, RecaseError } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
@@ -26,7 +26,7 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			vercelInstallationId: integrationConfigurationId,
 			orgId,
 			env: env as AppEnv,
-			expand: [CusExpand.Entities],
+			expand: [CustomerExpand.Entities],
 		});
 
 		if (!customer) {

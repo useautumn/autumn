@@ -6,9 +6,9 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { customers } from "../../cusModels/cusTable.js";
-import { organizations } from "../../orgModels/orgTable.js";
-import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable.js";
+import { customers } from "../../cusModels/cusTable";
+import { organizations } from "../../orgModels/orgTable";
+import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable";
 
 export const referralCodes = pgTable(
 	"referral_codes",

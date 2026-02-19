@@ -1,0 +1,88 @@
+---
+title: "useListPlans"
+description: "Fetch the list of available plans"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useListPlans` hook fetches all available plans configured in your Autumn dashboard. Use this to build custom pricing pages or plan selectors.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="queryOptions" type="UseQueryOptions">
+  Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
+</ParamField>
+
+## Returns
+
+### `data`
+
+Array of plan objects.
+
+```tsx
+import { useListPlans } from "autumn-js/react";
+
+export default function PlansList() {
+  const { data, isLoading } = useListPlans();
+
+  if (isLoading) return <div>Loading plans...</div>;
+
+  return (
+    <ul>
+      {data?.map((plan) => (
+        <li key={plan.id}>
+          {plan.name} - {plan.price ? `$${plan.price.amount}/${plan.price.interval}` : 'Free'}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+<Expandable title="Plan object">
+
+```json
+{
+  "id": "pro",
+  "name": "Pro Plan",
+  "description": null,
+  "group": null,
+  "version": 1,
+  "addOn": false,
+  "autoEnable": false,
+  "price": {
+    "amount": 10,
+    "interval": "month"
+  },
+  "items": [
+    {
+      "featureId": "messages",
+      "included": 1000,
+      "unlimited": false,
+      "reset": { "interval": "month" },
+      "price": null
+    }
+  ],
+  "freeTrial": null,
+  "createdAt": 1771513979217,
+  "env": "sandbox",
+  "archived": false,
+  "baseVariantId": null
+}
+```
+
+</Expandable>
+
+### `isLoading`
+
+Boolean indicating whether the plans are currently being fetched.
+
+### `error`
+
+Any error that occurred while fetching plans.
+
+### `refetch()`
+
+Function to manually refetch the plans list.
