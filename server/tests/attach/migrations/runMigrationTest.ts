@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { Organization, ProductV2 } from "@autumn/shared";
+import type { AppEnv, Organization, ProductV2 } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectResetAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
 import { expectTrialEndsAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
@@ -8,7 +8,6 @@ import {
 	expectSubItemsCorrect,
 	getSubsFromCusId,
 } from "@tests/utils/expectUtils/expectSubUtils.js";
-import type { AppEnv } from "autumn-js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";

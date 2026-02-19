@@ -7,14 +7,19 @@ import {
 	type ApiBaseEntity,
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
+	type ApiCustomerV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0Input,
-	type BalancesUpdateParams,
+	type CancelBody,
+	type CheckoutParamsV0,
+	type CheckoutResponseV0,
+	type CheckParams,
 	type CheckQuery,
+	type CheckResponseV1,
 	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
-	type CreateCustomerParams,
+	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
 	CustomerExpand,
@@ -24,20 +29,13 @@ import {
 	type OrgConfig,
 	type ProductItem,
 	type RewardRedemption,
+	type SetUsageParams,
 	type SetupPaymentParams,
 	type TrackParams,
+	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
-import type {
-	CancelParams,
-	CheckoutParams,
-	CheckoutResult,
-	CheckParams,
-	CheckResult,
-	Customer,
-	UsageParams,
-} from "autumn-js";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -306,11 +304,11 @@ export class AutumnInt {
 	}
 
 	async checkout(
-		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
+		params: CheckoutParamsV0 & { invoice?: boolean; force_checkout?: boolean },
 	) {
 		const data = await this.post(`/checkout`, params);
 
-		return data as CheckoutResult;
+		return data as CheckoutResponseV0;
 	}
 	async transfer(
 		customerId: string,
@@ -322,7 +320,7 @@ export class AutumnInt {
 	) {
 		const data = await this.post(`/customers/${customerId}/transfer`, params);
 
-		return data as CheckoutResult;
+		return data;
 	}
 
 	async sendEvent({
@@ -390,7 +388,7 @@ export class AutumnInt {
 		},
 
 		get: async <
-			T = Customer & {
+			T = ApiCustomerV3 & {
 				invoices: any[];
 				autumn_id?: string;
 				entities?: ApiBaseEntity[];
@@ -440,7 +438,7 @@ export class AutumnInt {
 			expand?: CustomerExpand[];
 			internalOptions?: CreateCustomerInternalOptions;
 			skipWebhooks?: boolean;
-		} & Omit<CreateCustomerParams, "internal_options">) => {
+		} & Omit<CreateCustomerParamsV0Input, "internal_options">) => {
 			const headers: Record<string, string> = {};
 			if (skipWebhooks !== undefined) {
 				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
@@ -753,12 +751,12 @@ export class AutumnInt {
 		return data;
 	};
 
-	usage = async (params: UsageParams) => {
+	usage = async (params: SetUsageParams) => {
 		const data = await this.post(`/usage`, params);
 		return data;
 	};
 
-	check = async <T = CheckResult>(
+	check = async <T = CheckResponseV1>(
 		params: CheckParams & CheckQuery & { skip_event?: boolean },
 		{ headers }: { headers?: Record<string, string> } = {},
 	): Promise<T> => {
@@ -780,7 +778,7 @@ export class AutumnInt {
 		return data;
 	};
 
-	cancel = async (params: CancelParams) => {
+	cancel = async (params: CancelBody) => {
 		const data = await this.post(`/cancel`, params);
 		return data;
 	};
@@ -806,7 +804,7 @@ export class AutumnInt {
 			);
 			return data;
 		},
-		update: async (params: BalancesUpdateParams) => {
+		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
 			return data;
 		},

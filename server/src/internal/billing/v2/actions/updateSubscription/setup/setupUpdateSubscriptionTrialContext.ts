@@ -1,10 +1,8 @@
-import type {
-	BillingParamsBaseV1,
-	FullCusProduct,
-	FullProduct,
-	TrialContext,
+import type { FullCusProduct, FullProduct, TrialContext } from "@autumn/shared";
+import {
+	type FreeTrialParamsV1,
+	isProductPaidAndRecurring,
 } from "@autumn/shared";
-import { isProductPaidAndRecurring } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import {
@@ -33,7 +31,7 @@ export const setupUpdateSubscriptionTrialContext = ({
 	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
 	fullProduct: FullProduct;
-	params: BillingParamsBaseV1;
+	params: { free_trial?: FreeTrialParamsV1 | null };
 }): TrialContext | undefined => {
 	// Handle explicit free_trial param (null or value)
 	if (params.free_trial !== undefined) {

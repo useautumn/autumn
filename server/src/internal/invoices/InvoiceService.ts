@@ -200,12 +200,9 @@ export class InvoiceService {
 
 			const autumn = new Autumn();
 			await autumn.track({
-				customer_id: org.id,
-				event_name: "revenue",
+				customerId: org.id,
+				eventName: "revenue",
 				value: atmnTotal,
-				customer_data: {
-					name: org.slug,
-				},
 			});
 			console.log("   ✅ Sent revenue event");
 		} catch (error) {

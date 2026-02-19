@@ -8,12 +8,12 @@ import { EntityDataSchema } from "../../../common/entityData";
 
 export const BillingParamsBaseV0Schema = z.object({
 	customer_id: z.string(),
-	entity_id: z.string().nullish(),
+	entity_id: z.string().optional(),
 	customer_data: CustomerDataSchema.optional(),
 	entity_data: EntityDataSchema.optional(),
 
 	// Used for both update and attach
-	options: z.array(FeatureQuantityParamsV0Schema).nullish(),
+	options: z.array(FeatureQuantityParamsV0Schema).optional(),
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),

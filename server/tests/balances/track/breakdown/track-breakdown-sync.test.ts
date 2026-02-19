@@ -194,8 +194,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 		await timeout(2000);
 	});
 
-	return;
-
 	test("track 150: should deduct from lifetime prepaid, NOT add to overage", async () => {
 		const deductValue = 150;
 
@@ -246,10 +244,10 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 
 		// Sum of breakdown balances should equal top-level balance
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === "month",
 		);
 		const lifetimeBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === "lifetime",
 		);
 
 		const sumOfBreakdownBalances =
@@ -352,10 +350,10 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 
 		// Verify sum of breakdown balances
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === "month",
 		);
 		const lifetimeBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === "lifetime",
 		);
 
 		expect(monthlyBreakdownV1?.usage).toBe(650);

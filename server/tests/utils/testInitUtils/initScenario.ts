@@ -8,7 +8,7 @@ import {
 	type ReferralCode,
 	type RewardRedemption,
 } from "@autumn/shared";
-import { resetAndGetCusEnt } from "@tests/advanced/rollovers/rolloverTestUtils.js";
+import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
