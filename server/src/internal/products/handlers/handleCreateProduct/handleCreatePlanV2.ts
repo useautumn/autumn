@@ -2,13 +2,12 @@ import {
 	AffectedResource,
 	apiPlan,
 	CreatePlanParamsV1Schema,
-	type CreateProductV2Params,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
-import { createProduct } from "../productActions/createProduct.js";
+import { createProduct } from "../../actions/productActions/createProduct.js";
 
 export const handleCreatePlanV2 = createRoute({
 	body: CreatePlanParamsV1Schema,
@@ -20,7 +19,7 @@ export const handleCreatePlanV2 = createRoute({
 		const createParams = apiPlan.map.paramsV1ToProductV2({
 			ctx,
 			params: body,
-		}) as CreateProductV2Params;
+		});
 
 		await createProduct({
 			ctx,

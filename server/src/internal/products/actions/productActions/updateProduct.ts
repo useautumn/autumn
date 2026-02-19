@@ -22,8 +22,8 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { handleUpdateProductDetails } from "../handleUpdateProduct/updateProductDetails.js";
-import { handleVersionProductV2 } from "../handleVersionProduct.js";
+import { handleUpdateProductDetails } from "../../handlers/handleUpdateProduct/updateProductDetails.js";
+import { handleVersionProductV2 } from "../../handlers/handleVersionProduct.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 interface UpdateProductParams {
