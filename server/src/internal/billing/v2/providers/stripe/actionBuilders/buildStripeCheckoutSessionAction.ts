@@ -54,7 +54,7 @@ export const buildStripeCheckoutSessionAction = ({
 		mode === "subscription"
 			? {
 					trial_end: trialEnd,
-					...(trialContext?.cardRequired && {
+					...(!trialContext?.cardRequired && trialEnd && {
 						trial_settings: {
 							end_behavior: { missing_payment_method: "cancel" },
 						},

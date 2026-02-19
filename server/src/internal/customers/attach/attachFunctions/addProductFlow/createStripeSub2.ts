@@ -74,7 +74,7 @@ export const createStripeSub2 = async ({
 			// The subscription will become active after external payment is confirmed via Payment Records API
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
-				: "allow_incomplete",
+				: "default_incomplete",
 			// payment_behavior: "default_incomplete",
 
 			add_invoice_items: invoiceItems,
