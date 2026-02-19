@@ -14,7 +14,11 @@ import { expect } from "chai";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
-type CustomerLike = ApiCustomerV3 | ApiEntityV0 | { products?: any[]; invoices?: any[]; id?: string; features?: any };
+type CustomerLike =
+	| ApiCustomerV3
+	| ApiEntityV0
+	| { products?: any[]; invoices?: any[]; id?: string; features?: any };
+
 import { timeout } from "@/utils/genUtils.js";
 import {
 	completeInvoiceCheckout,
@@ -130,7 +134,7 @@ export const expectResultsCorrect = async ({
 }) => {
 	autumn = autumn || new AutumnInt({ version: LegacyVersion.v1_2 });
 	for (const result of results) {
-		let customer;
+		let customer: CustomerLike;
 		if (result.entityId) {
 			customer = await autumn.entities.get(customerId, result.entityId);
 		} else {
