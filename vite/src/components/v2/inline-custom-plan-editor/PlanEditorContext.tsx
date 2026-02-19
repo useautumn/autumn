@@ -187,7 +187,7 @@ function useSetCurrentItem() {
 	return useCallback(
 		(updatedItem: ProductItem) => {
 			if (itemDraft.session && itemDraft.session.itemId === itemId) {
-				itemDraft.update({ item: updatedItem });
+				itemDraft.updateItem({ item: updatedItem });
 				return;
 			}
 
@@ -251,7 +251,7 @@ export function useDiscardItemAndClose() {
 
 	return useCallback(() => {
 		if (itemDraft.session) {
-			itemDraft.discard();
+			itemDraft.discardItem();
 			closeSheet();
 			return;
 		}
@@ -265,18 +265,25 @@ export function useDiscardItemAndClose() {
 
 /** Hook to check if the product has unsaved changes compared to initial state. Only works in context mode. */
 export function useHasPlanChanges() {
+	const context = useContext(ProductContext);
 	const { product, initialProduct } = useProduct();
 	const { features = [] } = useFeaturesQuery();
 
 	return useMemo(() => {
+		if (context?.itemDraft.enabled) {
+			return context.itemDraft.isDirtySupported;
+		}
+
 		if (!initialProduct) return false;
 
-		const { itemsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: product as unknown as ProductV2,
 			curProductV2: initialProduct as unknown as ProductV2,
 			features,
 		});
 
-		return !itemsSame;
-	}, [product, initialProduct, features]);
+		const versionsSame = product.version === initialProduct.version;
+
+		return !(itemsSame && freeTrialsSame && versionsSame);
+	}, [context?.itemDraft, product, initialProduct, features]);
 }

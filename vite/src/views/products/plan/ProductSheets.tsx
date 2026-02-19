@@ -33,10 +33,10 @@ export const ProductSheets = () => {
 	const {
 		enabled: hasDraftItemSessionSupport,
 		session: draftItemSession,
-		start: startItemDraft,
-		update: updateItemDraft,
-		commit: commitItemDraft,
-		clear: clearItemDraft,
+		startItem: startItemDraft,
+		updateItem: updateItemDraft,
+		commitItem: commitItemDraft,
+		clearItemSession: clearItemDraftSession,
 	} = itemDraft;
 
 	const discardAndClose = useDiscardItemAndClose();
@@ -72,7 +72,7 @@ export const ProductSheets = () => {
 		if (itemId === null) {
 			lastItemIdRef.current = null;
 			if (hasDraftItemSessionSupport) {
-				clearItemDraft();
+				clearItemDraftSession();
 			}
 		}
 	}, [
@@ -82,14 +82,14 @@ export const ProductSheets = () => {
 		setInitialItem,
 		hasDraftItemSessionSupport,
 		startItemDraft,
-		clearItemDraft,
+		clearItemDraftSession,
 	]);
 
 	useEffect(() => {
 		if (hasDraftItemSessionSupport && sheetType !== "edit-feature") {
-			clearItemDraft();
+			clearItemDraftSession();
 		}
-	}, [hasDraftItemSessionSupport, sheetType, clearItemDraft]);
+	}, [hasDraftItemSessionSupport, sheetType, clearItemDraftSession]);
 
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (
