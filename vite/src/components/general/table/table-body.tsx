@@ -59,6 +59,7 @@ export function TableBody() {
 							flexibleTableColumns={flexibleTableColumns}
 							rowHref={rowHref}
 							visibleColumnKey={visibleColumnKey}
+							isExpanded={row.getIsExpanded()}
 						/>
 					</TableRow>
 				);

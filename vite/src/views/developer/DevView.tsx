@@ -24,7 +24,7 @@ export default function DevScreen() {
 	if (isLoading) return <LoadingScreen />;
 
 	return (
-		<div className="flex flex-col gap-4 h-fit relative w-full max-w-5xl mx-auto text-sm pt-8 pb-8 px-10">
+		<div className="flex flex-col gap-4 h-fit relative w-full max-w-5xl mx-auto text-sm pt-4 sm:pt-8 pb-8 px-4 sm:px-10">
 			<OnboardingGuide />
 
 			{(tab === "api_keys" || !tab) && (

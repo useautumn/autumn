@@ -9,7 +9,7 @@ interface ProductItemContextType {
 	showCreateFeature: boolean;
 	setShowCreateFeature: (show: boolean) => void;
 	isUpdate: boolean;
-	handleUpdateProductItem: () => Promise<any>;
+	handleUpdateProductItem: () => Promise<unknown>;
 }
 
 export const ProductItemContext = createContext<ProductItemContextType>({

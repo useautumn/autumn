@@ -8,11 +8,13 @@ export function getFreeTrial({
 	trialLength,
 	trialDuration,
 	trialEnabled,
+	trialCardRequired = true,
 }: {
 	removeTrial: boolean;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
+	trialCardRequired?: boolean;
 }): CreateFreeTrial | null | undefined {
 	if (removeTrial) return null;
 	if (!trialEnabled) return undefined;
@@ -20,7 +22,7 @@ export function getFreeTrial({
 		return {
 			length: trialLength,
 			duration: trialDuration,
-			card_required: true,
+			card_required: trialCardRequired,
 			unique_fingerprint: false,
 		};
 	}

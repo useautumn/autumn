@@ -193,18 +193,20 @@ export function CustomerListTable({
 			}}
 		>
 			<div>
-				<div className="flex w-full items-center h-10 pb-4 gap-5">
-					<div className="flex items-center gap-2">
+				<div className="flex flex-col lg:flex-row w-full lg:items-center gap-2 lg:gap-5 pb-4">
+					<div className="flex items-center gap-2 lg:flex-1">
 						<CustomerListSearchBar />
 						<CustomerListFilterButton />
 						<Table.ColumnVisibility />
 					</div>
-					<div className="flex items-center gap-2">
-						<CustomerListPagination />
-						<CustomerListPageSizeSelector />
-					</div>
-					<div className="flex items-center gap-2 ml-auto">
-						<CustomerListCreateButton />
+					<div className="flex items-center justify-between lg:contents">
+						<div className="flex items-center gap-2 lg:justify-center">
+							<CustomerListPagination />
+							<CustomerListPageSizeSelector />
+						</div>
+						<div className="flex items-center lg:flex-1 justify-end">
+							<CustomerListCreateButton />
+						</div>
 					</div>
 				</div>
 				{!hasRows && hasActiveFiltersOrSearch ? (

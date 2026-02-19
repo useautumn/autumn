@@ -27,7 +27,7 @@ export function AttachPreviewSection() {
 	if (previewData) {
 		totals.push({
 			label: "Total Due Now",
-			amount: previewData.total,
+			amount: Math.max(previewData.total, 0),
 			variant: "primary" as const,
 		});
 
