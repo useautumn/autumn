@@ -198,10 +198,6 @@
 						]
 					},
 					{
-						"group": "TODO",
-						"pages": ["api-reference/billing/setupPayment"]
-					},
-					{
 						"group": "Platform (Beta)",
 						"pages": [
 							"api-reference/platform/overview",

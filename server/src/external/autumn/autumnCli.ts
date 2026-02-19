@@ -824,7 +824,7 @@ export class AutumnInt {
 			}
 
 			const data = await this.post(
-				`/subscriptions/update`,
+				`/billing.update`,
 				params,
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
@@ -837,7 +837,7 @@ export class AutumnInt {
 		previewUpdate: async <TInput = UpdateSubscriptionV0Params>(
 			params: TInput,
 		): Promise<any> => {
-			const data = await this.post(`/subscriptions/preview_update`, params);
+			const data = await this.post(`/billing.preview_update`, params);
 			return data;
 		},
 	};
@@ -852,7 +852,7 @@ export class AutumnInt {
 			{
 				skipWebhooks,
 				idempotencyKey,
-				timeout = 2000,
+				timeout,
 			}: {
 				skipWebhooks?: boolean;
 				idempotencyKey?: string;
@@ -868,13 +868,16 @@ export class AutumnInt {
 			}
 
 			const data = await this.post(
-				`/billing,attach`,
+				`/billing.attach`,
 				{ redirect_mode: "if_required", ...params },
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 
-			if (timeout) {
-				await new Promise((resolve) => setTimeout(resolve, timeout));
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
 			}
 			return data;
 		},

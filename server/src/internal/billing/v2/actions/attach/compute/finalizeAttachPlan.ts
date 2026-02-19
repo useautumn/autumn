@@ -29,7 +29,7 @@ export const finalizeAttachPlan = ({
 	});
 
 	// Guard: if billing_behavior is 'next_cycle_only', clear line items (skip proration charges)
-	if (params.billing_behavior === "next_cycle_only") {
+	if (params.billing_behavior === "none") {
 		plan.lineItems = [];
 	}
 

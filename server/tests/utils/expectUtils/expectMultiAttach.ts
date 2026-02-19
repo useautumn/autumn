@@ -76,7 +76,6 @@ export const expectMultiAttachCorrect = async ({
 		if (attachParams?.invoice) {
 			await completeInvoiceCheckout({
 				url: attachRes.checkout_url,
-				isLocal: true,
 			});
 		}
 		await completeStripeCheckoutForm({ url: attachRes.checkout_url });

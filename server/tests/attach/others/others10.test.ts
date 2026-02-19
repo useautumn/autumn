@@ -25,7 +25,6 @@ const testCase = "others10";
 describe(`${chalk.yellowBright(`${testCase}/idempotency: idempotency key already exists`)}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-	const idempotencyKey = generateId("it");
 
 	let results: PromiseSettledResult<
 		Awaited<ReturnType<typeof autumnV1.attach>>
@@ -44,6 +43,8 @@ describe(`${chalk.yellowBright(`${testCase}/idempotency: idempotency key already
 			products: [pro],
 			prefix: testCase,
 		});
+
+		const idempotencyKey = generateId("it");
 
 		results = await Promise.allSettled([
 			autumnV1.attach(

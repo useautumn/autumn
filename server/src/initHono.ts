@@ -7,7 +7,6 @@ import { getRequestListener } from "@hono/node-server";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { rpcRouter } from "@/routers/rpcRouter.js";
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
@@ -150,7 +149,6 @@ const createHonoApp = () => {
 	// Public routes (no auth required)
 	app.route("", publicRouter);
 	// API Middleware
-	app.route("/v1", rpcRouter);
 	app.route("/v1", apiRouter);
 	app.route("", internalRouter);
 

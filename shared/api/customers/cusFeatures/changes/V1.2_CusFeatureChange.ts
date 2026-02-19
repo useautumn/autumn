@@ -96,12 +96,16 @@ const toV3BalanceParams = ({
 	const isBoolean = feature?.type === FeatureType.Boolean;
 
 	if (isBoolean || unlimited) {
+		const expiresAt =
+			"expires_at" in input ? (input as ApiBalanceBreakdown).expires_at : null;
+
 		return {
 			includedUsage: 0,
 			balance: 0,
 			usage: 0,
 			overageAllowed: false,
 			usageLimit: undefined,
+			expiresAt,
 		};
 	}
 

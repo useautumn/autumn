@@ -49,7 +49,7 @@ export async function migrate({
 		customer_product_id: currentCustomerProduct.id,
 		entity_id: entity?.id,
 
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 		version: newProduct.version, // to trigger update custom plan intent
 
 		transition_rules: transitionRules,
