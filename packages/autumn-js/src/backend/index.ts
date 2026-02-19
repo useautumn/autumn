@@ -47,7 +47,7 @@ export async function autumnHandler(
 			customerData,
 		}),
 		secretKey: clientOptions?.secretKey,
-		baseURL: clientOptions?.baseURL,
+		autumnURL: clientOptions?.baseURL,
 		pathPrefix,
 		routes,
 	});

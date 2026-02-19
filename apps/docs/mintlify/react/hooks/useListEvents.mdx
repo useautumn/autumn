@@ -3,7 +3,7 @@ title: "useListEvents"
 description: "List and paginate through individual customer events"
 ---
 
-import SWRConfigParam from '/snippets/swr-config-param.mdx';
+import QueryOptionsParam from '/snippets/swr-config-param.mdx';
 import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
 The `useListEvents` hook provides access to individual event records with pagination. 
@@ -40,7 +40,7 @@ It fetches data from the [/events/list](/api-reference/events/list-events) endpo
   </Expandable>
 </ParamField>
 
-<SWRConfigParam />
+<QueryOptionsParam />
 
 ## Returns
 
@@ -49,8 +49,8 @@ It fetches data from the [/events/list](/api-reference/events/list-events) endpo
 Array of individual event records. Each event object includes:
 - `id`: Unique event identifier
 - `timestamp`: Unix timestamp in milliseconds when the event occurred
-- `feature_id`: The feature associated with the event recorded
-- `customer_id`: The customer that recorded this event
+- `featureId`: The feature associated with the event recorded
+- `customerId`: The customer that recorded this event
 - `value`: The numeric value recorded with the event
 - `properties`: Metadata and custom properties for the event
 
@@ -61,8 +61,8 @@ Array of individual event records. Each event object includes:
     {
         "id": "evt_abc123",
         "timestamp": 1765411200000,
-        "feature_id": "api_calls",
-        "customer_id": "cust_xyz789",
+        "featureId": "api_calls",
+        "customerId": "cust_xyz789",
         "value": 1,
         "properties": {
             "endpoint": "/api/users",
@@ -73,8 +73,8 @@ Array of individual event records. Each event object includes:
     {
         "id": "evt_def456",
         "timestamp": 1765411260000,
-        "feature_id": "api_calls",
-        "customer_id": "cust_xyz789",
+        "featureId": "api_calls",
+        "customerId": "cust_xyz789",
         "value": 1,
         "properties": {
             "endpoint": "/api/posts",
@@ -97,7 +97,7 @@ Boolean indicating whether there are previous events available on earlier pages.
 
 ### `page`
 
-Current page number (1-based indexing).
+Current page number (0-based indexing).
 
 ### `isLoading`
 

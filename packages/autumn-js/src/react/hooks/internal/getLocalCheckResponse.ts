@@ -1,4 +1,4 @@
-import type { BalancesCheckResponse, Customer } from "@useautumn/sdk";
+import type { CheckResponse, Customer } from "@useautumn/sdk";
 import type { ClientCheckParams } from "../../../types/params";
 import { balanceToAllowed } from "./check/balanceToAllowed";
 import { customerToFeatures } from "./check/customerToFeatures";
@@ -70,7 +70,7 @@ const getFeatureCheckResponse = ({
 }: {
 	customer: Customer;
 	params: ClientCheckParams;
-}): BalancesCheckResponse => {
+}): CheckResponse => {
 	const { featureId, requiredBalance = 1 } = params;
 
 	const features = customerToFeatures({ customer });
@@ -118,7 +118,7 @@ const getFeatureCheckResponse = ({
 		customerId: customer.id ?? "",
 		entityId: params.entityId ?? null,
 		requiredBalance: requiredBalanceToUse,
-		balance: balanceToUse as BalancesCheckResponse["balance"],
+		balance: balanceToUse as CheckResponse["balance"],
 	};
 };
 
@@ -128,7 +128,7 @@ export const getLocalCheckResponse = ({
 }: {
 	customer: Customer | null;
 	params: ClientCheckParams;
-}): BalancesCheckResponse => {
+}): CheckResponse => {
 	if (!customer) {
 		return {
 			allowed: false,

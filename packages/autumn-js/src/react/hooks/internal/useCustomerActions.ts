@@ -2,15 +2,21 @@
 
 import type {
 	BillingAttachResponse,
+	BillingUpdateResponse,
 	CheckResponse,
 	Customer,
 	OpenCustomerPortalResponse,
+	PreviewAttachResponse,
+	PreviewUpdateResponse,
 } from "@useautumn/sdk";
 import { useCallback } from "react";
 import type {
 	AttachParams,
 	CheckParams,
 	OpenCustomerPortalParams,
+	PreviewAttachParams,
+	PreviewUpdateSubscriptionParams,
+	UpdateSubscriptionParams,
 } from "../../../types";
 import type { IAutumnClient } from "../../client/IAutumnClient";
 import { getLocalCheckResponse } from "./getLocalCheckResponse";
@@ -43,14 +49,10 @@ export const useCustomerActions = ({
 }) => {
 	const attach = useCallback(
 		async (params: AttachParams): Promise<BillingAttachResponse> => {
-			const response = await client
-				.attach({
-					...params,
-					successUrl: window.location.href,
-				})
-				.then((response) => {
-					return response;
-				});
+			const response = await client.attach({
+				...params,
+				successUrl: params.successUrl ?? window.location.href,
+			});
 
 			if (response.paymentUrl) {
 				redirectToUrl({
@@ -59,6 +61,39 @@ export const useCustomerActions = ({
 				});
 			}
 			return response;
+		},
+		[client],
+	);
+
+	const previewAttach = useCallback(
+		async (params: PreviewAttachParams): Promise<PreviewAttachResponse> => {
+			return client.previewAttach(params);
+		},
+		[client],
+	);
+
+	const updateSubscription = useCallback(
+		async (
+			params: UpdateSubscriptionParams,
+		): Promise<BillingUpdateResponse> => {
+			const response = await client.updateSubscription(params);
+
+			if (response.paymentUrl) {
+				redirectToUrl({
+					url: response.paymentUrl,
+					openInNewTab: params.openInNewTab,
+				});
+			}
+			return response;
+		},
+		[client],
+	);
+
+	const previewUpdateSubscription = useCallback(
+		async (
+			params: PreviewUpdateSubscriptionParams,
+		): Promise<PreviewUpdateResponse> => {
+			return client.previewUpdateSubscription(params);
 		},
 		[client],
 	);
@@ -120,6 +155,9 @@ export const useCustomerActions = ({
 
 	return {
 		attach,
+		previewAttach,
+		updateSubscription,
+		previewUpdateSubscription,
 		check,
 		openCustomerPortal,
 		setupPayment,
@@ -130,5 +168,8 @@ export type {
 	AttachParams,
 	CheckParams,
 	OpenCustomerPortalParams,
+	PreviewAttachParams,
+	PreviewUpdateSubscriptionParams,
 	SetupPaymentParams,
+	UpdateSubscriptionParams,
 };

@@ -2,14 +2,16 @@
 
 // Types
 export type {
-	CheckParams,
 	ClientAggregateEventsParams,
 	ClientAttachParams,
 	ClientCreateReferralCodeParams,
 	ClientGetOrCreateCustomerParams,
 	ClientListEventsParams,
 	ClientOpenCustomerPortalParams,
+	ClientPreviewAttachParams,
+	ClientPreviewUpdateSubscriptionParams,
 	ClientRedeemReferralCodeParams,
+	ClientUpdateSubscriptionParams,
 	ProtectedFields,
 } from "../types/params";
 // Context

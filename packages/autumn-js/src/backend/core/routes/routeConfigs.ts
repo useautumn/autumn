@@ -58,6 +58,18 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 		bodySchema: attachParamsSchema,
 	},
 	{
+		route: "previewAttach",
+		sdkMethod: (autumn, args) => autumn.billing.previewAttach(args),
+	},
+	{
+		route: "updateSubscription",
+		sdkMethod: (autumn, args) => autumn.billing.update(args),
+	},
+	{
+		route: "previewUpdateSubscription",
+		sdkMethod: (autumn, args) => autumn.billing.previewUpdate(args),
+	},
+	{
 		route: "openCustomerPortal",
 		sdkMethod: (autumn, args) => autumn.billing.openCustomerPortal(args),
 		bodySchema: openCustomerPortalParamsSchema,

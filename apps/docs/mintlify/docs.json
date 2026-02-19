@@ -108,20 +108,15 @@
 					{
 						"group": "React Hooks",
 						"pages": [
+							"react/hooks/introduction",
 							"react/hooks/autumn-provider",
 							"react/hooks/autumn-handler",
 							"react/hooks/useCustomer",
 							"react/hooks/useEntity",
 							"react/hooks/useListEvents",
-							"react/hooks/useAggregateEvents"
-						]
-					},
-					{
-						"group": "Component Library",
-						"pages": [
-							"react/components/pricing-table",
-							"react/components/checkout-dialog",
-							"react/components/paywall-dialog"
+							"react/hooks/useAggregateEvents",
+							"react/hooks/useListPlans",
+							"react/hooks/useReferrals"
 						]
 					}
 				]

@@ -1,12 +1,15 @@
 import type {
-	BalancesCheckRequest,
-	BillingAttachRequest,
+	AttachParams,
+	CheckParams,
 	CreateReferralCodeParams,
 	CustomerExpand,
 	EventsAggregateParams,
 	EventsListParams,
 	OpenCustomerPortalParams,
+	PreviewAttachParams,
+	PreviewUpdateParams,
 	RedeemReferralCodeParams,
+	UpdateSubscriptionParams,
 } from "@useautumn/sdk";
 
 /** Fields injected by backend - stripped from frontend params */
@@ -19,11 +22,11 @@ export type ClientGetOrCreateCustomerParams = {
 };
 
 /** Check params for local balance check */
-export type ClientCheckParams = Omit<BalancesCheckRequest, ProtectedFields>;
+export type ClientCheckParams = Omit<CheckParams, ProtectedFields>;
 
 /** Attach params without protected fields (for frontend use) */
 export type ClientAttachParams = Omit<
-	BillingAttachRequest,
+	AttachParams,
 	ProtectedFields | "sendEvent" | "properties" | "withPreview"
 > & {
 	openInNewTab?: boolean;
@@ -55,5 +58,25 @@ export type ClientListEventsParams = Omit<EventsListParams, ProtectedFields>;
 /** Aggregate events params without protected fields (for frontend use) */
 export type ClientAggregateEventsParams = Omit<
 	EventsAggregateParams,
+	ProtectedFields
+>;
+
+/** Preview attach params without protected fields (for frontend use) */
+export type ClientPreviewAttachParams = Omit<
+	PreviewAttachParams,
+	ProtectedFields
+>;
+
+/** Update subscription params without protected fields (for frontend use) */
+export type ClientUpdateSubscriptionParams = Omit<
+	UpdateSubscriptionParams,
+	ProtectedFields
+> & {
+	openInNewTab?: boolean;
+};
+
+/** Preview update subscription params without protected fields (for frontend use) */
+export type ClientPreviewUpdateSubscriptionParams = Omit<
+	PreviewUpdateParams,
 	ProtectedFields
 >;

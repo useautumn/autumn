@@ -1044,7 +1044,7 @@ The default server can be overridden globally by passing a URL to the `serverURL
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  serverURL: "http://localhost:8080",
+  serverURL: "https://api.useautumn.com",
   xApiVersion: "2.1",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });

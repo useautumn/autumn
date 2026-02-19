@@ -5,39 +5,49 @@ description: "Provider component for your React application"
 
 import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
-The `AutumnProvider` component is used to wrap your React application and provides the `autumnHandler` with the customer ID.
+The `AutumnProvider` component wraps your React application and provides the Autumn client to all hooks.
 
 <LearnHooksTip />
 
+## Usage
+
+```tsx
+// app/layout.tsx
+import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider>{children}</AutumnProvider>
+      </body>
+    </html>
+  );
+}
+```
+
 ## Parameters
 
-<ParamField body="suppressLogs" type="boolean" optional>
-  If true, suppresses all console warnings and logs from Autumn hooks and provider. Useful for reducing noise in production environments.
+<ParamField body="backendUrl" type="string">
+  Base URL for your backend server (e.g., `https://api.example.com`). Defaults to current origin. Set this when your backend is hosted on a separate domain.
 </ParamField>
 
-<ParamField body="getBearerToken" type="() =&gt; Promise&lt;string | null&gt;" optional>
-  Optional function that returns a bearer token for authenticated requests. Use this when you need to pass the user's auth token in the <code>Authorization</code> header to your backend (e.g., Clerk, Supabase).
+<ParamField body="pathPrefix" type="string">
+  Path prefix for Autumn routes. Defaults to `/api/autumn`, or `/api/auth/autumn` if `useBetterAuth` is true.
 </ParamField>
 
-<ParamField body="headers" type="Record&lt;string, string&gt;" optional>
-  Additional HTTP headers to send with each request, which can be accessed in the `autumnHandler` (e.g., for custom authentication flows).
+<ParamField body="useBetterAuth" type="boolean">
+  Use [better-auth](https://www.better-auth.com/docs/plugins/autumn) integration. Sets `pathPrefix` to `/api/auth/autumn` and `includeCredentials` to true.
 </ParamField>
 
-<ParamField body="backendUrl" type="string" optional>
-  Optional absolute URL for your backend endpoint. Set this when your backend is hosted on a separate domain (e.g., when using Vite with a custom server).
+<ParamField body="includeCredentials" type="boolean">
+  Include credentials (cookies) in cross-origin requests. Defaults to true if `useBetterAuth` is true.
 </ParamField>
 
-<ParamField body="customerData" type="CustomerData" optional>
-  Optional object containing additional metadata about the current customer, such as <code>email</code> or <code>name</code>.
+<ParamField body="queryClient" type="QueryClient">
+  Custom TanStack Query client. Uses a default client if not provided.
 </ParamField>
 
-<ParamField body="includeCredentials" type="boolean" optional>
-  If true, passes credentials in fetch requests to the backend (e.g., cookies, HTTP auth). Autumn will warn you in the console if this is needed.
+<ParamField body="suppressLogs" type="boolean">
+  If true, suppresses console warnings and logs.
 </ParamField>
-
-<ParamField body="betterAuthUrl" type="string" optional>
-  URL for use with the [better-auth plugin](https://www.better-auth.com/docs/plugins/autumn).
-</ParamField>
-
-
-

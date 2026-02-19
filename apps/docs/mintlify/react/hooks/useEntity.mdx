@@ -1,11 +1,11 @@
 ---
 title: "useEntity"
-description: "Access an entity's state and use it to display information in your React app"
+description: "Access an entity's state in your React app"
 ---
 
 import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
-The `useEntity` hook provides access to [entity data](/documentation/customers/feature-entities) and related operations. You can use it from your frontend to retrieve entity information and manage loading states.
+The `useEntity` hook fetches [entity data](/documentation/customers/feature-entities). Entities are sub-resources of customers, typically used for per-seat or per-resource billing.
 
 <LearnHooksTip />
 
@@ -15,89 +15,85 @@ The `useEntity` hook provides access to [entity data](/documentation/customers/f
   The ID of the entity to retrieve.
 </ParamField>
 
-<ParamField body="expand" type="string[]">
-  Array of additional data to include in the entity response. Currently supports
-  `invoices`.
+<ParamField body="queryOptions" type="UseQueryOptions">
+  Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
 </ParamField>
 
 ## Returns
 
-### `entity`
+### `data`
 
-The entity object containing all entity data.
+The entity object containing subscriptions, purchases, and balances for that entity.
 
-```jsx
+```tsx
 import { useEntity } from "autumn-js/react";
 
-export default function EntityProfile() {
-  const { entity } = useEntity("entity_abc", { expand: ["invoices"] });
+export default function SeatDetails() {
+  const { data, isLoading } = useEntity({ entityId: "seat_42" });
+
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>
-      <h2>User Profile</h2>
-      <p>Name: {entity?.name}</p>
-      <p>Balance: {entity?.features.chat_messages?.balance}</p>
+      <p>Name: {data?.name}</p>
+      <p>Messages remaining: {data?.balances?.messages?.remaining}</p>
     </div>
   );
 }
 ```
 
-### `refetch()`
+<Expandable title="Entity object">
 
-Function to manually refetch the entity data, eg when updating an entity's state or metadata to display.
-
-```jsx
-import { useEntity, useCustomer } from "autumn-js/react";
-
-export default function EntityWithRefresh() {
-  const { entity, refetch } = useEntity("entity_abc");
-  const { track } = useCustomer();
-
-  const updateEntity = async () => {
-    // Perform some entity update operation
-    await refetch({ expand: ["metadata"] });
-  };
-
-  return <button onClick={updateEntity}>Refresh Entity</button>;
+```json
+{
+  "id": "seat_42",
+  "name": "Seat 42",
+  "customerId": "cus_123",
+  "featureId": "seats",
+  "createdAt": 1771409161016,
+  "env": "sandbox",
+  "subscriptions": [
+    {
+      "planId": "pro_plan",
+      "autoEnable": true,
+      "addOn": false,
+      "status": "active",
+      "pastDue": false,
+      "canceledAt": null,
+      "expiresAt": null,
+      "trialEndsAt": null,
+      "startedAt": 1771431921437,
+      "currentPeriodStart": 1771431921437,
+      "currentPeriodEnd": 1771999921437,
+      "quantity": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "messages": {
+      "featureId": "messages",
+      "granted": 100,
+      "remaining": 72,
+      "usage": 28,
+      "unlimited": false,
+      "overageAllowed": false,
+      "maxPurchase": null,
+      "nextResetAt": 1773851121437
+    }
+  }
 }
 ```
+
+</Expandable>
 
 ### `isLoading`
 
 Boolean indicating whether the entity data is currently being fetched.
 
-```jsx
-import { useEntity } from "autumn-js/react";
-
-export default function EntityLoader() {
-  const { entity, isLoading } = useEntity("entity_abc");
-
-  if (isLoading) {
-    return <div>Loading entity data...</div>;
-  }
-
-  return <div>Entity: {entity?.name}</div>;
-}
-```
-
 ### `error`
 
 Any error that occurred while fetching entity data.
 
-```jsx
-import { useEntity } from "autumn-js/react";
+### `refetch()`
 
-export default function EntityWithError() {
-  const { entity, error, isLoading } = useEntity("entity_abc");
-
-  if (error) {
-    return <div>Error loading entity: {error.message}</div>;
-  }
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  return <div>Entity: {entity?.name}</div>;
-}
-```
+Function to manually refetch the entity data.

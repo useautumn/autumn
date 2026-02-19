@@ -1,8 +1,6 @@
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: process.env.AUTUMN_SECRET_KEY,
-});
+const autumn = new Autumn();
 
 const res = await autumn.plans.create({
   planId: "pro_plan",

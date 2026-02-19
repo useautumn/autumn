@@ -5,45 +5,53 @@ description: "Server-side handler for managing Autumn API endpoints and customer
 
 import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
-The `autumnHandler` creates server-side endpoints that handle communication between your frontend React hooks and Autumn's API. It manages customer authentication and data flow for all Autumn operations.
+The `autumnHandler` creates server-side endpoints that handle communication between your frontend React hooks and Autumn's API. It manages customer authentication and proxies requests securely using your secret key.
 
 <LearnHooksTip />
 
+## Usage
+
+```ts
+// app/api/autumn/[...all]/route.ts
+import { autumnHandler } from "autumn-js/next";
+import { auth } from "@clerk/nextjs/server";
+
+export const { GET, POST } = autumnHandler({
+  identify: async () => {
+    const { userId } = await auth();
+    return { customerId: userId };
+  },
+});
+```
+
 ## Parameters
 
-<ParamField body="identify" type="(request: any) => AuthResult" required>
-  Function that receives the incoming request and returns customer identification data. This function should extract the user/customer ID from your authentication provider and return both the ID and optional customer metadata.
+<ParamField body="identify" type="(request: Request) => AuthResult" required>
+  Function that receives the incoming request and returns customer identification data.
   
-  <Expandable title="AuthResult properties">
+  <Expandable title="AuthResult">
     <ParamField body="customerId" type="string" required>
-      The unique identifier for the customer. This should be the user ID or organization ID from your authentication system.
+      The unique identifier for the customer.
     </ParamField>
 
-    <ParamField body="customerData" type="object" optional>
-      Additional metadata about the customer that will be stored in Autumn.
-      
-      <Expandable title="customerData properties">
-        <ParamField body="name" type="string" optional>
-          The customer's display name
-        </ParamField>
-        
-        <ParamField body="email" type="string" optional>
-          The customer's email address
-        </ParamField>
-      </Expandable>
+    <ParamField body="customerData" type="CustomerData">
+      Additional metadata about the customer (e.g., `name`, `email`).
     </ParamField>
   </Expandable>
 </ParamField>
 
-<ParamField body="url" type="string" optional>
-  Override the default Autumn API base URL (api.useautumn.com/v1). Use this when self-hosting Autumn or when you need to connect to a different API endpoint.
+<ParamField body="secretKey" type="string">
+  Autumn API secret key. Defaults to `AUTUMN_SECRET_KEY` environment variable.
 </ParamField>
 
-<ParamField body="secretKey" type="string" optional>
-  Override the Autumn secret key. If not provided, the handler will use the `AUTUMN_SECRET_KEY` environment variable.
+<ParamField body="autumnURL" type="string">
+  Override the Autumn API URL. Use when self-hosting.
 </ParamField>
 
-<ParamField body="suppressLogs" type="boolean" optional>
-  If true, suppresses console warnings and logs from the Autumn handler. Useful for reducing noise in production environments.
+<ParamField body="pathPrefix" type="string">
+  Path prefix for routes. Defaults to `/api/autumn`.
 </ParamField>
 
+<ParamField body="suppressLogs" type="boolean">
+  If true, suppresses console warnings and logs.
+</ParamField>

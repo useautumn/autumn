@@ -35,6 +35,12 @@ export function autumn(options: AutumnOptions = {}): AutumnPlugin {
 			handleRoute,
 		),
 		attach: createAutumnEndpoint("attach", handleRoute),
+		previewAttach: createAutumnEndpoint("previewAttach", handleRoute),
+		updateSubscription: createAutumnEndpoint("updateSubscription", handleRoute),
+		previewUpdateSubscription: createAutumnEndpoint(
+			"previewUpdateSubscription",
+			handleRoute,
+		),
 		openCustomerPortal: createAutumnEndpoint("openCustomerPortal", handleRoute),
 		createReferralCode: createAutumnEndpoint("createReferralCode", handleRoute),
 		redeemReferralCode: createAutumnEndpoint("redeemReferralCode", handleRoute),
