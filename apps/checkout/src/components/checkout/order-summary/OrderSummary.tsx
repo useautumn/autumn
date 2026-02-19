@@ -17,12 +17,10 @@ export function OrderSummary() {
 	const { preview, incoming = [], outgoing = [], freeTrial, hasActiveTrial, total, currency } =
 		useCheckoutContext();
 
-	if (!preview) return null;
-
-	const { line_items, next_cycle } = preview;
-
+	// All hooks must be called before any early returns
 	// Build a map of next cycle line items by plan_id (for trial plans that have no immediate charges)
 	const nextCycleItemsByPlan = useMemo(() => {
+		const next_cycle = preview?.next_cycle;
 		if (!next_cycle?.line_items) return new Map<string, PreviewLineItem[]>();
 		const map = new Map<string, PreviewLineItem[]>();
 		for (const item of next_cycle.line_items) {
@@ -32,15 +30,7 @@ export function OrderSummary() {
 			map.get(item.plan_id)!.push(item);
 		}
 		return map;
-	}, [next_cycle]);
-
-	const hasNoImmediateCharges = line_items.length === 0 && total === 0;
-	const showNextCycleBreakdown = hasNoImmediateCharges && next_cycle;
-
-	// Use next cycle line items when showing next cycle breakdown, otherwise use immediate line items
-	const displayLineItems: PreviewLineItem[] = showNextCycleBreakdown
-		? next_cycle.line_items
-		: line_items;
+	}, [preview?.next_cycle]);
 
 	// Build a map of plan_id -> plan_name from incoming and outgoing
 	const planNameMap = useMemo(() => {
@@ -53,6 +43,15 @@ export function OrderSummary() {
 
 	// Group line items by plan_id
 	const planGroups = useMemo((): PlanGroup[] => {
+		if (!preview) return [];
+
+		const { line_items, next_cycle } = preview;
+		const hasNoImmediateCharges = line_items.length === 0 && total === 0;
+		const showNextCycleBreakdown = hasNoImmediateCharges && next_cycle;
+		const displayLineItems: PreviewLineItem[] = showNextCycleBreakdown
+			? next_cycle.line_items
+			: line_items;
+
 		const groupMap = new Map<string, PreviewLineItem[]>();
 
 		for (const item of displayLineItems) {
@@ -106,7 +105,9 @@ export function OrderSummary() {
 		}
 
 		return groups;
-	}, [displayLineItems, outgoing, incoming, planNameMap]);
+	}, [preview, total, outgoing, incoming, planNameMap]);
+
+	if (!preview) return null;
 
 	return (
 		<motion.div

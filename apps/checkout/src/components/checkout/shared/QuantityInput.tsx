@@ -20,7 +20,7 @@ export function QuantityInput({
 	step = 1,
 	disabled = false,
 }: QuantityInputProps) {
-	const [inputValue, setInputValue] = useState(value.toString());
+	const [inputValue, setInputValue] = useState(() => value.toString());
 	const prevValue = useRef(value);
 
 	const handleDecrement = () => {
