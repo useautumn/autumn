@@ -1,4 +1,4 @@
-import puppeteer, { type Browser } from "puppeteer-core";
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { timeout } from "../genUtils.js";
 import { browserPool } from "./browserPool.js";
 
@@ -19,7 +19,7 @@ export const completeInvoiceCheckout = async ({
 	console.log("[completeInvoiceCheckout] Starting invoice checkout...");
 
 	let browser: Browser | undefined;
-	let page;
+	let page: Page;
 	if (isolatedBrowser) {
 		browser = await puppeteer.launch({
 			headless: true,
