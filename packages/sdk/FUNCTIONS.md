@@ -20,7 +20,7 @@ specific category of applications.
 
 ```typescript
 import { AutumnCore } from "@useautumn/sdk/core.js";
-import { customersGetOrCreate } from "@useautumn/sdk/funcs/customers-get-or-create.js";
+import { check } from "@useautumn/sdk/funcs/check.js";
 
 // Use `AutumnCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -30,16 +30,15 @@ const autumn = new AutumnCore({
 });
 
 async function run() {
-  const res = await customersGetOrCreate(autumn, {
+  const res = await check(autumn, {
     customerId: "cus_123",
-    name: "John Doe",
-    email: "john@example.com",
+    featureId: "messages",
   });
   if (res.ok) {
     const { value: result } = res;
     console.log(result);
   } else {
-    console.log("customersGetOrCreate failed:", res.error);
+    console.log("check failed:", res.error);
   }
 }
 

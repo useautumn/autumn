@@ -13,7 +13,8 @@ export * from "./checkout/prevVersions/checkoutResponseV0";
 
 // Common
 export * from "./common/index";
-
+export * from "./openBillingPortal/openBillingPortalParamsV1";
+export * from "./openBillingPortal/openBillingPortalResponse";
 // Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./updateSubscription/updateSubscriptionV0Params";

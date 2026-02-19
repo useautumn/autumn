@@ -1,12 +1,21 @@
 "use client";
 
 import type {
-	BalancesCheckResponse,
 	BillingAttachResponse,
+	CheckResponse,
+	CreateReferralCodeResponse,
 	Customer,
+	OpenCustomerPortalResponse,
+	RedeemReferralCodeResponse,
 } from "@useautumn/sdk";
 import { useCallback } from "react";
-import type { AttachParams, CheckParams } from "../../../types";
+import type {
+	AttachParams,
+	CheckParams,
+	CreateReferralCodeParams,
+	OpenCustomerPortalParams,
+	RedeemReferralCodeParams,
+} from "../../../types";
 import type { IAutumnClient } from "../../client/IAutumnClient";
 import { getLocalCheckResponse } from "./getLocalCheckResponse";
 
@@ -54,7 +63,7 @@ export const useCustomerActions = ({
 	);
 
 	const check = useCallback(
-		(params: CheckParams): BalancesCheckResponse => {
+		(params: CheckParams): CheckResponse => {
 			return getLocalCheckResponse({
 				customer,
 				params,
@@ -63,10 +72,56 @@ export const useCustomerActions = ({
 		[customer],
 	);
 
+	const openCustomerPortal = useCallback(
+		async (
+			params: OpenCustomerPortalParams = {},
+		): Promise<OpenCustomerPortalResponse> => {
+			const response = await client.openCustomerPortal({
+				...params,
+				returnUrl: params.returnUrl ?? window.location.href,
+			});
+
+			redirectToUrl({
+				url: response.url,
+				openInNewTab: params.openInNewTab,
+			});
+
+			return response;
+		},
+		[client],
+	);
+
+	const createReferralCode = useCallback(
+		async (
+			params: CreateReferralCodeParams,
+		): Promise<CreateReferralCodeResponse> => {
+			return client.createReferralCode(params);
+		},
+		[client],
+	);
+
+	const redeemReferralCode = useCallback(
+		async (
+			params: RedeemReferralCodeParams,
+		): Promise<RedeemReferralCodeResponse> => {
+			return client.redeemReferralCode(params);
+		},
+		[client],
+	);
+
 	return {
 		attach,
 		check,
+		createReferralCode,
+		openCustomerPortal,
+		redeemReferralCode,
 	};
 };
 
-export type { CheckParams, AttachParams };
+export type {
+	AttachParams,
+	CheckParams,
+	CreateReferralCodeParams,
+	OpenCustomerPortalParams,
+	RedeemReferralCodeParams,
+};

@@ -12,6 +12,6 @@ let value: BillingAttachDiscount2 = {
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `promotionCode`    | *string*           | :heavy_check_mark: | N/A                |
+| Field                                      | Type                                       | Required                                   | Description                                |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| `promotionCode`                            | *string*                                   | :heavy_check_mark:                         | The promotion code to apply as a discount. |

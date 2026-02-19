@@ -641,7 +641,7 @@ additional-builtins=
 allow-global-unused-variables=yes
 
 # List of names allowed to shadow builtins
-allowed-redefined-builtins=id,object,input
+allowed-redefined-builtins=id,object,input,range
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.

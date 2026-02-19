@@ -1,5 +1,15 @@
 // Provider
 
+// Types
+export type {
+	CheckParams,
+	ClientAttachParams,
+	ClientCreateReferralCodeParams,
+	ClientGetOrCreateCustomerParams,
+	ClientOpenCustomerPortalParams,
+	ClientRedeemReferralCodeParams,
+	ProtectedFields,
+} from "../types/params";
 // Context
 export { useAutumnClient } from "./AutumnContext";
 export { AutumnProvider, type AutumnProviderProps } from "./AutumnProvider";
@@ -18,10 +28,3 @@ export {
 	useCustomer,
 } from "./hooks/useCustomer";
 export { type UseListPlansParams, useListPlans } from "./hooks/useListPlans";
-// Types
-export type {
-	CheckParams,
-	ClientAttachParams,
-	ClientGetOrCreateCustomerParams,
-	ProtectedFields,
-} from "../types/params";

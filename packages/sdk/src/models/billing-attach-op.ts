@@ -16,7 +16,7 @@ export type BillingAttachGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type BillingAttachFeatureQuantities = {
+export type BillingAttachFeatureQuantity = {
   featureId: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
@@ -170,50 +170,74 @@ export type BillingAttachCustomize = {
   items?: Array<BillingAttachItem> | undefined;
 };
 
+/**
+ * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+ */
 export type BillingAttachInvoiceMode = {
+  /**
+   * When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method.
+   */
   enabled: boolean;
+  /**
+   * If true, enables the plan immediately even though the invoice is not paid yet.
+   */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+   */
   finalize?: boolean | undefined;
 };
 
-export type BillingAttachDiscount2 = {
-  promotionCode: string;
-};
-
-export type BillingAttachDiscount1 = {
-  rewardId: string;
-};
-
-export type BillingAttachDiscountUnion =
-  | BillingAttachDiscount1
-  | BillingAttachDiscount2;
-
-export const BillingAttachRedirectMode = {
-  Always: "always",
-  IfRequired: "if_required",
-  Never: "never",
-} as const;
-export type BillingAttachRedirectMode = ClosedEnum<
-  typeof BillingAttachRedirectMode
->;
-
-export const BillingAttachPlanSchedule = {
-  Immediate: "immediate",
-  EndOfCycle: "end_of_cycle",
-} as const;
-export type BillingAttachPlanSchedule = ClosedEnum<
-  typeof BillingAttachPlanSchedule
->;
-
+/**
+ * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ */
 export const BillingAttachBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   NextCycleOnly: "next_cycle_only",
 } as const;
+/**
+ * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ */
 export type BillingAttachBillingBehavior = ClosedEnum<
   typeof BillingAttachBillingBehavior
 >;
 
-export type BillingAttachRequest = {
+export type BillingAttachDiscount2 = {
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode: string;
+};
+
+export type BillingAttachDiscount1 = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId: string;
+};
+
+/**
+ * A discount to apply. Can be either a reward ID or a promotion code.
+ */
+export type BillingAttachDiscountUnion =
+  | BillingAttachDiscount1
+  | BillingAttachDiscount2;
+
+/**
+ * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+ */
+export const BillingAttachPlanSchedule = {
+  Immediate: "immediate",
+  EndOfCycle: "end_of_cycle",
+} as const;
+/**
+ * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+ */
+export type BillingAttachPlanSchedule = ClosedEnum<
+  typeof BillingAttachPlanSchedule
+>;
+
+export type AttachParams = {
   /**
    * The ID of the customer to attach the plan to.
    */
@@ -221,49 +245,105 @@ export type BillingAttachRequest = {
   /**
    * The ID of the entity to attach the plan to.
    */
-  entityId?: string | null | undefined;
+  entityId?: string | undefined;
+  /**
+   * The ID of the plan.
+   */
+  planId: string;
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
-  featureQuantities?: Array<BillingAttachFeatureQuantities> | null | undefined;
+  featureQuantities?: Array<BillingAttachFeatureQuantity> | undefined;
   /**
    * The version of the plan to attach.
    */
   version?: number | undefined;
+  /**
+   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
+   */
   freeTrial?: BillingAttachFreeTrial | null | undefined;
   /**
    * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
    */
   customize?: BillingAttachCustomize | undefined;
-  planId: string;
+  /**
+   * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+   */
   invoiceMode?: BillingAttachInvoiceMode | undefined;
+  /**
+   * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+   */
+  billingBehavior?: BillingAttachBillingBehavior | undefined;
+  /**
+   * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+   */
   discounts?:
     | Array<BillingAttachDiscount1 | BillingAttachDiscount2>
     | undefined;
-  redirectMode?: BillingAttachRedirectMode | undefined;
+  /**
+   * URL to redirect to after successful checkout.
+   */
   successUrl?: string | undefined;
+  /**
+   * Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+   */
   newBillingSubscription?: boolean | undefined;
+  /**
+   * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+   */
   planSchedule?: BillingAttachPlanSchedule | undefined;
-  billingBehavior?: BillingAttachBillingBehavior | undefined;
 };
 
+/**
+ * Invoice details if an invoice was created. Only present when a charge was made.
+ */
 export type BillingAttachInvoice = {
+  /**
+   * The status of the invoice (e.g., 'paid', 'open', 'draft').
+   */
   status: string | null;
+  /**
+   * The Stripe invoice ID.
+   */
   stripeId: string;
+  /**
+   * The total amount of the invoice in cents.
+   */
   total: number;
+  /**
+   * The three-letter ISO currency code (e.g., 'usd').
+   */
   currency: string;
+  /**
+   * URL to the hosted invoice page where the customer can view and pay the invoice.
+   */
   hostedInvoiceUrl: string | null;
 };
 
+/**
+ * The type of action required to complete the payment.
+ */
 export const BillingAttachCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
 } as const;
+/**
+ * The type of action required to complete the payment.
+ */
 export type BillingAttachCode = OpenEnum<typeof BillingAttachCode>;
 
+/**
+ * Details about any action required to complete the payment. Present when the payment could not be processed automatically.
+ */
 export type BillingAttachRequiredAction = {
+  /**
+   * The type of action required to complete the payment.
+   */
   code: BillingAttachCode;
+  /**
+   * A human-readable explanation of why this action is required.
+   */
   reason: string;
 };
 
@@ -271,24 +351,39 @@ export type BillingAttachRequiredAction = {
  * OK
  */
 export type BillingAttachResponse = {
+  /**
+   * The ID of the customer.
+   */
   customerId: string;
+  /**
+   * The ID of the entity, if the plan was attached to an entity.
+   */
   entityId?: string | undefined;
+  /**
+   * Invoice details if an invoice was created. Only present when a charge was made.
+   */
   invoice?: BillingAttachInvoice | undefined;
+  /**
+   * URL to redirect the customer to complete payment. Null if no payment action is required.
+   */
   paymentUrl: string | null;
+  /**
+   * Details about any action required to complete the payment. Present when the payment could not be processed automatically.
+   */
   requiredAction?: BillingAttachRequiredAction | undefined;
 };
 
 /** @internal */
-export type BillingAttachFeatureQuantities$Outbound = {
+export type BillingAttachFeatureQuantity$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const BillingAttachFeatureQuantities$outboundSchema: z.ZodMiniType<
-  BillingAttachFeatureQuantities$Outbound,
-  BillingAttachFeatureQuantities
+export const BillingAttachFeatureQuantity$outboundSchema: z.ZodMiniType<
+  BillingAttachFeatureQuantity$Outbound,
+  BillingAttachFeatureQuantity
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -302,12 +397,12 @@ export const BillingAttachFeatureQuantities$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingAttachFeatureQuantitiesToJSON(
-  billingAttachFeatureQuantities: BillingAttachFeatureQuantities,
+export function billingAttachFeatureQuantityToJSON(
+  billingAttachFeatureQuantity: BillingAttachFeatureQuantity,
 ): string {
   return JSON.stringify(
-    BillingAttachFeatureQuantities$outboundSchema.parse(
-      billingAttachFeatureQuantities,
+    BillingAttachFeatureQuantity$outboundSchema.parse(
+      billingAttachFeatureQuantity,
     ),
   );
 }
@@ -691,6 +786,11 @@ export function billingAttachInvoiceModeToJSON(
 }
 
 /** @internal */
+export const BillingAttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BillingAttachBillingBehavior
+> = z.enum(BillingAttachBillingBehavior);
+
+/** @internal */
 export type BillingAttachDiscount2$Outbound = {
   promotion_code: string;
 };
@@ -769,103 +869,78 @@ export function billingAttachDiscountUnionToJSON(
 }
 
 /** @internal */
-export const BillingAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
-  typeof BillingAttachRedirectMode
-> = z.enum(BillingAttachRedirectMode);
-
-/** @internal */
 export const BillingAttachPlanSchedule$outboundSchema: z.ZodMiniEnum<
   typeof BillingAttachPlanSchedule
 > = z.enum(BillingAttachPlanSchedule);
 
 /** @internal */
-export const BillingAttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingAttachBillingBehavior
-> = z.enum(BillingAttachBillingBehavior);
-
-/** @internal */
-export type BillingAttachRequest$Outbound = {
+export type AttachParams$Outbound = {
   customer_id: string;
-  entity_id?: string | null | undefined;
-  feature_quantities?:
-    | Array<BillingAttachFeatureQuantities$Outbound>
-    | null
-    | undefined;
+  entity_id?: string | undefined;
+  plan_id: string;
+  feature_quantities?: Array<BillingAttachFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   free_trial?: BillingAttachFreeTrial$Outbound | null | undefined;
   customize?: BillingAttachCustomize$Outbound | undefined;
-  plan_id: string;
   invoice_mode?: BillingAttachInvoiceMode$Outbound | undefined;
+  billing_behavior?: string | undefined;
   discounts?:
     | Array<BillingAttachDiscount1$Outbound | BillingAttachDiscount2$Outbound>
     | undefined;
-  redirect_mode: string;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
-  billing_behavior?: string | undefined;
 };
 
 /** @internal */
-export const BillingAttachRequest$outboundSchema: z.ZodMiniType<
-  BillingAttachRequest$Outbound,
-  BillingAttachRequest
+export const AttachParams$outboundSchema: z.ZodMiniType<
+  AttachParams$Outbound,
+  AttachParams
 > = z.pipe(
   z.object({
     customerId: z.string(),
-    entityId: z.optional(z.nullable(z.string())),
-    featureQuantities: z.optional(z.nullable(z.array(z.lazy(() =>
-      BillingAttachFeatureQuantities$outboundSchema
-    )))),
-    version: z.optional(z.number()),
-    freeTrial: z.optional(z.nullable(z.lazy(() =>
-      BillingAttachFreeTrial$outboundSchema
-    ))),
-    customize: z.optional(z.lazy(() =>
-      BillingAttachCustomize$outboundSchema
-    )),
+    entityId: z.optional(z.string()),
     planId: z.string(),
+    featureQuantities: z.optional(
+      z.array(z.lazy(() => BillingAttachFeatureQuantity$outboundSchema)),
+    ),
+    version: z.optional(z.number()),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => BillingAttachFreeTrial$outboundSchema)),
+    ),
+    customize: z.optional(z.lazy(() => BillingAttachCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => BillingAttachInvoiceMode$outboundSchema),
     ),
+    billingBehavior: z.optional(BillingAttachBillingBehavior$outboundSchema),
     discounts: z.optional(z.array(smartUnion([
       z.lazy(() => BillingAttachDiscount1$outboundSchema),
       z.lazy(() =>
         BillingAttachDiscount2$outboundSchema
       ),
     ]))),
-    redirectMode: z._default(
-      BillingAttachRedirectMode$outboundSchema,
-      "always",
-    ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(BillingAttachPlanSchedule$outboundSchema),
-    billingBehavior: z.optional(BillingAttachBillingBehavior$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      planId: "plan_id",
       featureQuantities: "feature_quantities",
       freeTrial: "free_trial",
-      planId: "plan_id",
       invoiceMode: "invoice_mode",
-      redirectMode: "redirect_mode",
+      billingBehavior: "billing_behavior",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
-      billingBehavior: "billing_behavior",
     });
   }),
 );
 
-export function billingAttachRequestToJSON(
-  billingAttachRequest: BillingAttachRequest,
-): string {
-  return JSON.stringify(
-    BillingAttachRequest$outboundSchema.parse(billingAttachRequest),
-  );
+export function attachParamsToJSON(attachParams: AttachParams): string {
+  return JSON.stringify(AttachParams$outboundSchema.parse(attachParams));
 }
 
 /** @internal */

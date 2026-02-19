@@ -1,5 +1,16 @@
 When writing the docs, always make sure to add it to `docs.json` for it to appear
 
+## Manual API Documentation
+
+Manual documentation (explanations, examples, use cases) should go in `api-reference-generator/` folder, NOT in `mintlify/api-reference/`. The generator merges manual content from `api-reference-generator/` with auto-generated body params and outputs the final result to `mintlify/api-reference/`.
+
+**Workflow:**
+1. Create/edit manual docs in `apps/docs/api-reference-generator/<category>/<operationId>.mdx`
+2. Run the generator to merge with generated params
+3. Output goes to `apps/docs/mintlify/api-reference/<category>/<operationId>.mdx`
+
+**Never edit files directly in `mintlify/api-reference/`** - they will be overwritten by the generator.
+
 ## DynamicParamField Component
 
 **Location:** `snippets/dynamic-param-field.jsx`

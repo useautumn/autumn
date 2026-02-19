@@ -5,21 +5,25 @@ from .httpclient import AsyncHttpClient, ClientOwner, HttpClient, close_clients
 from .sdkconfiguration import SDKConfiguration
 from .utils.logger import Logger, get_default_logger
 from .utils.retries import RetryConfig
-from autumn_sdk import models, utils
-from autumn_sdk._hooks import SDKHooks
+from autumn_sdk import errors, models, utils
+from autumn_sdk._hooks import HookContext, SDKHooks
 from autumn_sdk.models import internal
 from autumn_sdk.types import OptionalNullable, UNSET
+from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
 import httpx
 import importlib
 import sys
-from typing import Any, Callable, Dict, Optional, TYPE_CHECKING, Union, cast
+from typing import Any, Callable, Dict, Mapping, Optional, TYPE_CHECKING, Union, cast
 import weakref
 
 if TYPE_CHECKING:
     from autumn_sdk.balances_sdk import BalancesSDK
     from autumn_sdk.billing import Billing
     from autumn_sdk.customers import Customers
+    from autumn_sdk.entities import Entities
+    from autumn_sdk.events import Events
     from autumn_sdk.plans import Plans
+    from autumn_sdk.referrals import Referrals
 
 
 class Autumn(BaseSDK):
@@ -27,11 +31,17 @@ class Autumn(BaseSDK):
     plans: "Plans"
     billing: "Billing"
     balances: "BalancesSDK"
+    events: "Events"
+    entities: "Entities"
+    referrals: "Referrals"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
         "billing": ("autumn_sdk.billing", "Billing"),
         "balances": ("autumn_sdk.balances_sdk", "BalancesSDK"),
+        "events": ("autumn_sdk.events", "Events"),
+        "entities": ("autumn_sdk.entities", "Entities"),
+        "referrals": ("autumn_sdk.referrals", "Referrals"),
     }
 
     def __init__(
@@ -188,3 +198,437 @@ class Autumn(BaseSDK):
         ):
             await self.sdk_configuration.async_client.aclose()
         self.sdk_configuration.async_client = None
+
+    def check(
+        self,
+        *,
+        customer_id: str,
+        feature_id: str,
+        entity_id: Optional[str] = None,
+        required_balance: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        send_event: Optional[bool] = None,
+        with_preview: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.CheckResponse:
+        r"""Checks whether a customer currently has enough balance to use a feature.
+
+        Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
+
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param required_balance: Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.
+        :param properties: Additional properties to attach to the usage event if send_event is true.
+        :param send_event: If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+        :param with_preview: If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.CheckParams(
+            customer_id=customer_id,
+            feature_id=feature_id,
+            entity_id=entity_id,
+            required_balance=required_balance,
+            properties=properties,
+            send_event=send_event,
+            with_preview=with_preview,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/balances.check",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.CheckGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.CheckParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="check",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.CheckResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def check_async(
+        self,
+        *,
+        customer_id: str,
+        feature_id: str,
+        entity_id: Optional[str] = None,
+        required_balance: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        send_event: Optional[bool] = None,
+        with_preview: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.CheckResponse:
+        r"""Checks whether a customer currently has enough balance to use a feature.
+
+        Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
+
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param required_balance: Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.
+        :param properties: Additional properties to attach to the usage event if send_event is true.
+        :param send_event: If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+        :param with_preview: If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.CheckParams(
+            customer_id=customer_id,
+            feature_id=feature_id,
+            entity_id=entity_id,
+            required_balance=required_balance,
+            properties=properties,
+            send_event=send_event,
+            with_preview=with_preview,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/balances.check",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.CheckGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.CheckParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="check",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.CheckResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def track(
+        self,
+        *,
+        customer_id: str,
+        feature_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        event_name: Optional[str] = None,
+        value: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.TrackResponse:
+        r"""Records usage for a customer feature and returns updated balances.
+
+        Use this after an action happens to decrement usage, or send a negative value to credit balance back.
+
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature to track usage for. Required if event_name is not provided.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
+        :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
+        :param properties: Additional properties to attach to this usage event.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.TrackParams(
+            customer_id=customer_id,
+            feature_id=feature_id,
+            entity_id=entity_id,
+            event_name=event_name,
+            value=value,
+            properties=properties,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/balances.track",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.TrackGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.TrackParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="track",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.TrackResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def track_async(
+        self,
+        *,
+        customer_id: str,
+        feature_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        event_name: Optional[str] = None,
+        value: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.TrackResponse:
+        r"""Records usage for a customer feature and returns updated balances.
+
+        Use this after an action happens to decrement usage, or send a negative value to credit balance back.
+
+        :param customer_id: The ID of the customer.
+        :param feature_id: The ID of the feature to track usage for. Required if event_name is not provided.
+        :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+        :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
+        :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
+        :param properties: Additional properties to attach to this usage event.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.TrackParams(
+            customer_id=customer_id,
+            feature_id=feature_id,
+            entity_id=entity_id,
+            event_name=event_name,
+            value=value,
+            properties=properties,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/balances.track",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.TrackGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.TrackParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="track",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.TrackResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)

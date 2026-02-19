@@ -64,34 +64,87 @@ export const UpdateCustomerEnv = {
  */
 export type UpdateCustomerEnv = OpenEnum<typeof UpdateCustomerEnv>;
 
+/**
+ * Current status of the subscription.
+ */
 export const UpdateCustomerStatus = {
   Active: "active",
   Scheduled: "scheduled",
-  Expired: "expired",
 } as const;
+/**
+ * Current status of the subscription.
+ */
 export type UpdateCustomerStatus = OpenEnum<typeof UpdateCustomerStatus>;
 
 export type UpdateCustomerSubscription = {
   plan?: Plan | undefined;
+  /**
+   * The unique identifier of the subscribed plan.
+   */
   planId: string;
+  /**
+   * Whether the plan was automatically enabled for the customer.
+   */
   autoEnable: boolean;
+  /**
+   * Whether this is an add-on plan rather than a base subscription.
+   */
   addOn: boolean;
+  /**
+   * Current status of the subscription.
+   */
   status: UpdateCustomerStatus;
+  /**
+   * Whether the subscription has overdue payments.
+   */
   pastDue: boolean;
+  /**
+   * Timestamp when the subscription was canceled, or null if not canceled.
+   */
   canceledAt: number | null;
+  /**
+   * Timestamp when the subscription will expire, or null if no expiry set.
+   */
   expiresAt: number | null;
+  /**
+   * Timestamp when the trial period ends, or null if not on trial.
+   */
   trialEndsAt: number | null;
+  /**
+   * Timestamp when the subscription started.
+   */
   startedAt: number;
+  /**
+   * Start timestamp of the current billing period.
+   */
   currentPeriodStart: number | null;
+  /**
+   * End timestamp of the current billing period.
+   */
   currentPeriodEnd: number | null;
+  /**
+   * Number of units of this subscription (for per-seat plans).
+   */
   quantity: number;
 };
 
 export type UpdateCustomerPurchase = {
   plan?: Plan | undefined;
+  /**
+   * The unique identifier of the purchased plan.
+   */
   planId: string;
+  /**
+   * Timestamp when the purchase expires, or null for lifetime access.
+   */
   expiresAt: number | null;
+  /**
+   * Timestamp when the purchase was made.
+   */
   startedAt: number;
+  /**
+   * Number of units purchased.
+   */
   quantity: number;
 };
 
@@ -112,6 +165,9 @@ export type UpdateCustomerDisplay = {
   plural?: string | null | undefined;
 };
 
+/**
+ * The full feature object if expanded.
+ */
 export type UpdateCustomerFeature = {
   id: string;
   name: string;
@@ -138,11 +194,23 @@ export type UpdateCustomerIntervalEnum = OpenEnum<
   typeof UpdateCustomerIntervalEnum
 >;
 
+/**
+ * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+ */
 export type UpdateCustomerIntervalUnion = UpdateCustomerIntervalEnum | string;
 
 export type UpdateCustomerReset = {
+  /**
+   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+   */
   interval: UpdateCustomerIntervalEnum | string;
+  /**
+   * Number of intervals between resets (eg. 2 for bi-monthly).
+   */
   intervalCount?: number | undefined;
+  /**
+   * Timestamp when the balance will next reset.
+   */
   resetsAt: number | null;
 };
 
@@ -153,51 +221,141 @@ export type UpdateCustomerTier = {
   amount: number;
 };
 
+/**
+ * Whether usage is prepaid or billed pay-per-use.
+ */
 export const UpdateCustomerBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
+/**
+ * Whether usage is prepaid or billed pay-per-use.
+ */
 export type UpdateCustomerBillingMethod = OpenEnum<
   typeof UpdateCustomerBillingMethod
 >;
 
 export type UpdateCustomerPrice = {
+  /**
+   * The per-unit price amount.
+   */
   amount?: number | undefined;
+  /**
+   * Tiered pricing configuration if applicable.
+   */
   tiers?: Array<UpdateCustomerTier> | undefined;
+  /**
+   * The number of units per billing increment (eg. $9 / 250 units).
+   */
   billingUnits: number;
+  /**
+   * Whether usage is prepaid or billed pay-per-use.
+   */
   billingMethod: UpdateCustomerBillingMethod;
+  /**
+   * Maximum quantity that can be purchased, or null for unlimited.
+   */
   maxPurchase: number | null;
 };
 
 export type UpdateCustomerBreakdown = {
+  /**
+   * The unique identifier for this balance breakdown.
+   */
   id: string;
+  /**
+   * The plan ID this balance originates from, or null for standalone balances.
+   */
   planId: string | null;
+  /**
+   * Amount granted from the plan's included usage.
+   */
   includedGrant: number;
+  /**
+   * Amount granted from prepaid purchases or top-ups.
+   */
   prepaidGrant: number;
+  /**
+   * Remaining balance available for use.
+   */
   remaining: number;
+  /**
+   * Amount consumed in the current period.
+   */
   usage: number;
+  /**
+   * Whether this balance has unlimited usage.
+   */
   unlimited: boolean;
+  /**
+   * Reset configuration for this balance, or null if no reset.
+   */
   reset: UpdateCustomerReset | null;
+  /**
+   * Pricing configuration if this balance has usage-based pricing.
+   */
   price: UpdateCustomerPrice | null;
+  /**
+   * Timestamp when this balance expires, or null for no expiration.
+   */
   expiresAt: number | null;
 };
 
 export type UpdateCustomerRollover = {
+  /**
+   * Amount of balance rolled over from a previous period.
+   */
   balance: number;
+  /**
+   * Timestamp when the rollover balance expires.
+   */
   expiresAt: number;
 };
 
 export type UpdateCustomerBalances = {
+  /**
+   * The feature ID this balance is for.
+   */
   featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
   feature?: UpdateCustomerFeature | undefined;
+  /**
+   * Total balance granted (included + prepaid).
+   */
   granted: number;
+  /**
+   * Remaining balance available for use.
+   */
   remaining: number;
+  /**
+   * Total usage consumed in the current period.
+   */
   usage: number;
+  /**
+   * Whether this feature has unlimited usage.
+   */
   unlimited: boolean;
+  /**
+   * Whether usage beyond the granted balance is allowed (with overage charges).
+   */
   overageAllowed: boolean;
+  /**
+   * Maximum quantity that can be purchased as a top-up, or null for unlimited.
+   */
   maxPurchase: number | null;
+  /**
+   * Timestamp when the balance will reset, or null for no reset.
+   */
   nextResetAt: number | null;
+  /**
+   * Detailed breakdown of balance sources when stacking multiple plans or grants.
+   */
   breakdown?: Array<UpdateCustomerBreakdown> | undefined;
+  /**
+   * Rollover balances carried over from previous periods.
+   */
   rollovers?: Array<UpdateCustomerRollover> | undefined;
 };
 
@@ -241,8 +399,17 @@ export type UpdateCustomerResponse = {
    * Whether to send email receipts to the customer.
    */
   sendEmailReceipts: boolean;
+  /**
+   * Active and scheduled recurring plans that this customer has attached.
+   */
   subscriptions: Array<UpdateCustomerSubscription>;
+  /**
+   * One-time purchases made by the customer.
+   */
   purchases: Array<UpdateCustomerPurchase>;
+  /**
+   * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
+   */
   balances: { [k: string]: UpdateCustomerBalances };
 };
 

@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	type CustomerData,
 	CustomerExpand,
+	CustomerNotFoundError,
 	type Entity,
 	type EntityData,
 	type FullCustomer,
@@ -29,6 +30,7 @@ export const getOrCreateCustomer = async ({
 	entityId,
 	entityData,
 	skipUpdate = false,
+	skipCreate = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
@@ -40,6 +42,7 @@ export const getOrCreateCustomer = async ({
 	entityId?: string;
 	entityData?: EntityData;
 	skipUpdate?: boolean;
+	skipCreate?: boolean;
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
@@ -65,6 +68,10 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!customer) {
+		if (skipCreate) {
+			throw new CustomerNotFoundError({ customerId: customerId || "" });
+		}
+
 		customer = await customerActions.createWithDefaults({
 			ctx,
 			customerId,

@@ -1,5 +1,7 @@
 # CustomerBillingMethod
 
+Whether usage is prepaid or billed pay-per-use.
+
 ## Example Usage
 
 ```typescript

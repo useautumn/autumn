@@ -1,0 +1,14 @@
+# PreviewAttachItem
+
+
+## Fields
+
+| Field                                                                          | Type                                                                           | Required                                                                       | Description                                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `feature_id`                                                                   | *str*                                                                          | :heavy_check_mark:                                                             | N/A                                                                            |
+| `included`                                                                     | *Optional[float]*                                                              | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `unlimited`                                                                    | *Optional[bool]*                                                               | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `reset`                                                                        | [Optional[models.PreviewAttachReset]](../models/previewattachreset.md)         | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `price`                                                                        | [Optional[models.PreviewAttachItemPrice]](../models/previewattachitemprice.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `proration`                                                                    | [Optional[models.PreviewAttachProration]](../models/previewattachproration.md) | :heavy_minus_sign:                                                             | N/A                                                                            |
+| `rollover`                                                                     | [Optional[models.PreviewAttachRollover]](../models/previewattachrollover.md)   | :heavy_minus_sign:                                                             | N/A                                                                            |

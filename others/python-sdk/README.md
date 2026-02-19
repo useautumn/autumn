@@ -132,7 +132,7 @@ with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+    res = autumn.check(customer_id="cus_123", feature_id="messages")
 
     # Handle response
     print(res)
@@ -154,7 +154,7 @@ async def main():
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
-        res = await autumn.customers.get_or_create_async(customer_id="cus_123", name="John Doe", email="john@example.com")
+        res = await autumn.check_async(customer_id="cus_123", feature_id="messages")
 
         # Handle response
         print(res)
@@ -184,7 +184,7 @@ with Autumn(
     x_api_version="2.1",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+    res = autumn.check(customer_id="cus_123", feature_id="messages")
 
     # Handle response
     print(res)
@@ -198,20 +198,35 @@ with Autumn(
 <details open>
 <summary>Available methods</summary>
 
+### [Autumn SDK](docs/sdks/autumn/README.md)
+
+* [check](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
+
+Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
+* [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
+
+Use this after an action happens to decrement usage, or send a negative value to credit balance back.
+
 ### [Balances](docs/sdks/balancessdk/README.md)
 
 * [create](docs/sdks/balancessdk/README.md#create) - Create a balance for a customer feature.
 * [update](docs/sdks/balancessdk/README.md#update) - Update a customer balance.
-* [check](docs/sdks/balancessdk/README.md#check) - Check whether usage is allowed for a customer feature.
-* [track](docs/sdks/balancessdk/README.md#track) - Track usage for a customer feature.
 
 ### [Billing](docs/sdks/billing/README.md)
 
 * [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
-* [preview_attach](docs/sdks/billing/README.md#preview_attach) - Preview billing changes before attaching a plan.
-* [update](docs/sdks/billing/README.md#update) - Update an existing subscription.
-* [preview_update](docs/sdks/billing/README.md#preview_update) - Preview billing changes before updating a subscription.
-* [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a setup payment session for a customer.
+
+Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
+* [preview_attach](docs/sdks/billing/README.md#preview_attach) - Previews the billing changes that would occur when attaching a plan, without actually making any changes.
+
+Use this endpoint to show customers what they will be charged before confirming a subscription change.
+* [update](docs/sdks/billing/README.md#update) - Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
+
+Use this endpoint to update prepaid quantities, cancel a subscription (immediately or at end of cycle), or modify subscription settings.
+* [preview_update](docs/sdks/billing/README.md#preview_update) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
+
+Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
+* [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -222,9 +237,31 @@ Use this as the primary entrypoint before billing operations so the customer rec
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
+### [Entities](docs/sdks/entities/README.md)
+
+* [create](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
+
+Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.
+* [get](docs/sdks/entities/README.md#get) - Fetches a single entity by entity ID.
+
+Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
+* [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
+
+Use this when the underlying resource is removed and you no longer want entity-scoped balances or subscriptions tracked for it.
+
+### [Events](docs/sdks/events/README.md)
+
+* [list](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
+* [aggregate](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
+
 ### [Plans](docs/sdks/plans/README.md)
 
 * [list](docs/sdks/plans/README.md#list) - List all plans
+
+### [Referrals](docs/sdks/referrals/README.md)
+
+* [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
+* [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
 
 </details>
 <!-- End Available Resources and Operations [operations] -->
@@ -245,7 +282,7 @@ with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com",
+    res = autumn.check(customer_id="cus_123", feature_id="messages",
         RetryConfig("backoff", BackoffStrategy(1, 50, 1.1, 100), False))
 
     # Handle response
@@ -265,7 +302,7 @@ with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+    res = autumn.check(customer_id="cus_123", feature_id="messages")
 
     # Handle response
     print(res)
@@ -298,7 +335,7 @@ with Autumn(
     res = None
     try:
 
-        res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+        res = autumn.check(customer_id="cus_123", feature_id="messages")
 
         # Handle response
         print(res)
@@ -350,7 +387,7 @@ with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+    res = autumn.check(customer_id="cus_123", feature_id="messages")
 
     # Handle response
     print(res)

@@ -15,15 +15,12 @@
 		"lib": ["DOM", "DOM.Iterable", "ESNext"],
 		"skipLibCheck": true,
 
-		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/libraries/react/*"],
-			"@/hooks/*": ["src/libraries/react/hooks/*"],
-			"@sdk": ["src/sdk/index"],
-			"@sdk/*": ["src/sdk/*"],
+			"@/*": ["./src/libraries/react/*"],
+			"@/hooks/*": ["./src/libraries/react/hooks/*"],
 			"@useautumn/sdk": ["../sdk/dist/esm/index.d.ts"],
 			"@useautumn/sdk/*": ["../sdk/dist/esm/*"],
-			"@utils/*": ["src/utils/*"]
+			"@utils/*": ["./src/utils/*"]
 		}
 	},
 	"include": ["src"],

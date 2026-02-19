@@ -1,5 +1,7 @@
 # BillingAttachCode
 
+The type of action required to complete the payment.
+
 
 ## Values
 

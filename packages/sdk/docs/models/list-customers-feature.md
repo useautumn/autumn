@@ -1,5 +1,7 @@
 # ListCustomersFeature
 
+The full feature object if expanded.
+
 ## Example Usage
 
 ```typescript

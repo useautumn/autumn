@@ -8,10 +8,9 @@ const autumn = new Autumn({
 });
 
 async function run() {
-  const result = await autumn.customers.getOrCreate({
+  const result = await autumn.check({
     customerId: "cus_123",
-    name: "John Doe",
-    email: "john@example.com",
+    featureId: "messages",
   });
 
   console.log(result);

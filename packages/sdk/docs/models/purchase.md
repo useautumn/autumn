@@ -15,10 +15,10 @@ let value: Purchase = {
 
 ## Fields
 
-| Field                            | Type                             | Required                         | Description                      |
-| -------------------------------- | -------------------------------- | -------------------------------- | -------------------------------- |
-| `plan`                           | [models.Plan](../models/plan.md) | :heavy_minus_sign:               | N/A                              |
-| `planId`                         | *string*                         | :heavy_check_mark:               | N/A                              |
-| `expiresAt`                      | *number*                         | :heavy_check_mark:               | N/A                              |
-| `startedAt`                      | *number*                         | :heavy_check_mark:               | N/A                              |
-| `quantity`                       | *number*                         | :heavy_check_mark:               | N/A                              |
+| Field                                                             | Type                                                              | Required                                                          | Description                                                       |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `plan`                                                            | [models.Plan](../models/plan.md)                                  | :heavy_minus_sign:                                                | N/A                                                               |
+| `planId`                                                          | *string*                                                          | :heavy_check_mark:                                                | The unique identifier of the purchased plan.                      |
+| `expiresAt`                                                       | *number*                                                          | :heavy_check_mark:                                                | Timestamp when the purchase expires, or null for lifetime access. |
+| `startedAt`                                                       | *number*                                                          | :heavy_check_mark:                                                | Timestamp when the purchase was made.                             |
+| `quantity`                                                        | *number*                                                          | :heavy_check_mark:                                                | Number of units purchased.                                        |

@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { responseFilterMiddleware } from "@/honoMiddlewares/responseFilter/responseFilterMiddleware.js";
+import { referralRpcRouter } from "@/internal/api/rewards/referralRouter.js";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter.js";
 import { billingRpcRouter } from "@/internal/billing/billingRouter.js";
+import { entityRpcRouter } from "@/internal/entities/entityRouter.js";
+import { eventsRpcRouter } from "@/internal/events/eventsRouter.js";
 import { plansRpcRouter } from "@/internal/products/productRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
@@ -32,3 +35,6 @@ rpcRouter.route("", customerRpcRouter);
 rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", billingRpcRouter);
 rpcRouter.route("", balancesRpcRouter);
+rpcRouter.route("", eventsRpcRouter);
+rpcRouter.route("", referralRpcRouter);
+rpcRouter.route("", entityRpcRouter);

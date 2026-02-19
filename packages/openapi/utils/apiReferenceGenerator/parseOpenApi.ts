@@ -61,7 +61,7 @@ export function parseOpenApi({
 			const operation = operationObj as Record<string, unknown>;
 			const operationId = operation.operationId as string | undefined;
 			const tags = operation.tags as string[] | undefined;
-			const tag = tags?.[0] ?? "misc";
+			const tag = tags?.[0] ?? "core";
 
 			if (!operationId) continue;
 
@@ -130,9 +130,10 @@ export function parseOpenApi({
 					}
 
 					// Extract response example (could be at content level or schema level)
+					const examples = jsonContent?.examples as unknown[] | undefined;
 					const example =
 						jsonContent?.example ??
-						jsonContent?.examples?.[0] ??
+						(Array.isArray(examples) ? examples[0] : undefined) ??
 						resolveSchemaExample({ schema: schema ?? {}, schemas });
 					if (example) {
 						parsed.responseExamples[statusCode] = example;
@@ -245,25 +246,13 @@ function parseSchema({
 	}
 
 	// Handle object type
-	if (schema.type === "object" && schema.properties) {
-		const properties = schema.properties as Record<string, unknown>;
-		const fields: SchemaField[] = [];
-
-		for (const [propName, propSchema] of Object.entries(properties)) {
-			const prop = propSchema as Record<string, unknown>;
-			const field = parseField({
-				name: propName,
-				schema: prop,
-				schemas,
-				required: requiredFields.includes(propName),
-				visited: new Set(visited),
-			});
-			if (field) {
-				fields.push(field);
-			}
-		}
-
-		return fields;
+	if (schema.type === "object") {
+		return parseObjectFields({
+			schema,
+			schemas,
+			requiredFields,
+			visited,
+		});
 	}
 
 	// Handle array type - return the items as a single field
@@ -309,6 +298,7 @@ function parseField({
 	required: boolean;
 	visited: Set<string>;
 }): SchemaField | null {
+	let resolvedName = name;
 	let type = resolveType(schema, schemas);
 	let description = schema.description as string | undefined;
 	let children: SchemaField[] | undefined;
@@ -392,13 +382,32 @@ function parseField({
 	}
 
 	// Handle nested object
-	if (schema.type === "object" && schema.properties) {
-		children = parseSchema({
+	if (schema.type === "object") {
+		children = parseObjectFields({
 			schema,
 			schemas,
 			requiredFields: (schema.required as string[]) ?? [],
 			visited,
 		});
+
+		// Flatten pure record objects from:
+		// field -> {key} -> value fields
+		// into:
+		// field.{key} -> value fields
+		const hasInlineProperties =
+			!!schema.properties &&
+			typeof schema.properties === "object" &&
+			!Array.isArray(schema.properties) &&
+			Object.keys(schema.properties as Record<string, unknown>).length > 0;
+		if (
+			!hasInlineProperties &&
+			children.length === 1 &&
+			children[0]?.name === "{key}"
+		) {
+			resolvedName = `${name}.{key}`;
+			type = children[0].type;
+			children = children[0].children;
+		}
 	}
 
 	// Handle array
@@ -433,25 +442,210 @@ function parseField({
 			}
 		}
 
-		// Check if array items have properties (inline object)
-		if (items.type === "object" && items.properties) {
-			children = parseSchema({
-				schema: items,
-				schemas,
-				requiredFields: (items.required as string[]) ?? [],
-				visited,
-			});
-		}
+		children = getArrayItemChildren({
+			items,
+			schemas,
+			visited,
+		});
 	}
 
 	return {
-		name,
+		name: resolvedName,
 		type,
 		description,
 		required,
 		children,
 		enumValues,
 	};
+}
+
+function parseObjectFields({
+	schema,
+	schemas,
+	requiredFields,
+	visited,
+}: {
+	schema: Record<string, unknown>;
+	schemas: Record<string, unknown>;
+	requiredFields: string[];
+	visited: Set<string>;
+}): SchemaField[] {
+	const fields: SchemaField[] = [];
+	const properties = schema.properties as Record<string, unknown> | undefined;
+
+	if (properties) {
+		for (const [propName, propSchema] of Object.entries(properties)) {
+			const prop = propSchema as Record<string, unknown>;
+			const field = parseField({
+				name: propName,
+				schema: prop,
+				schemas,
+				required: requiredFields.includes(propName),
+				visited: new Set(visited),
+			});
+			if (field) {
+				fields.push(field);
+			}
+		}
+	}
+
+	const additionalProperties = schema.additionalProperties;
+	const recordValueSchema = getRecordValueSchema({
+		additionalProperties,
+	});
+	if (recordValueSchema) {
+		const keyField = parseField({
+			name: "{key}",
+			schema: recordValueSchema,
+			schemas,
+			required: false,
+			visited: new Set(visited),
+		});
+		if (keyField) {
+			fields.push(keyField);
+		}
+	}
+
+	return fields;
+}
+
+function getRecordValueSchema({
+	additionalProperties,
+}: {
+	additionalProperties: unknown;
+}): Record<string, unknown> | null {
+	if (
+		!additionalProperties ||
+		typeof additionalProperties !== "object" ||
+		Array.isArray(additionalProperties)
+	) {
+		return null;
+	}
+
+	const recordValueSchema = additionalProperties as Record<string, unknown>;
+	if (Object.keys(recordValueSchema).length === 0) {
+		return null;
+	}
+
+	return recordValueSchema;
+}
+
+function getArrayItemChildren({
+	items,
+	schemas,
+	visited,
+}: {
+	items: Record<string, unknown>;
+	schemas: Record<string, unknown>;
+	visited: Set<string>;
+}): SchemaField[] | undefined {
+	// Direct object items
+	if (items.type === "object") {
+		const objectChildren = parseObjectFields({
+			schema: items,
+			schemas,
+			requiredFields: (items.required as string[]) ?? [],
+			visited: new Set(visited),
+		});
+		if (objectChildren.length > 0) {
+			return objectChildren;
+		}
+	}
+
+	// Referenced object items
+	if (items.$ref) {
+		const refPath = items.$ref as string;
+		const refName = refPath.replace("#/components/schemas/", "");
+		const refSchema = schemas[refName] as Record<string, unknown> | undefined;
+		if (refSchema?.type === "object") {
+			const objectChildren = parseObjectFields({
+				schema: refSchema,
+				schemas,
+				requiredFields: (refSchema.required as string[]) ?? [],
+				visited: new Set(visited),
+			});
+			if (objectChildren.length > 0) {
+				return objectChildren;
+			}
+		}
+	}
+
+	// Union object items (e.g. anyOf reward_id | promotion_code)
+	const variantsRaw = items.anyOf ?? items.oneOf;
+	if (Array.isArray(variantsRaw) && variantsRaw.length > 0) {
+		const mergedByName = new Map<string, SchemaField>();
+
+		for (const variant of variantsRaw) {
+			if (typeof variant !== "object" || variant === null) {
+				continue;
+			}
+			const variantSchema = variant as Record<string, unknown>;
+			const variantType = resolveType(variantSchema, schemas);
+			if (variantType !== "object") {
+				continue;
+			}
+
+			const variantFields = parseSchema({
+				schema: variantSchema,
+				schemas,
+				requiredFields: (variantSchema.required as string[]) ?? [],
+				visited: new Set(visited),
+			});
+
+			for (const variantField of variantFields) {
+				const existing = mergedByName.get(variantField.name);
+				if (!existing) {
+					mergedByName.set(variantField.name, {
+						...variantField,
+						required: false,
+					});
+					continue;
+				}
+
+				const mergedType = mergeFieldTypes({
+					left: existing.type,
+					right: variantField.type,
+				});
+				mergedByName.set(variantField.name, {
+					...existing,
+					type: mergedType,
+					description: existing.description ?? variantField.description,
+					children: existing.children ?? variantField.children,
+					enumValues: existing.enumValues ?? variantField.enumValues,
+					required: false,
+				});
+			}
+		}
+
+		const mergedFields = [...mergedByName.values()];
+		if (mergedFields.length > 0) {
+			return mergedFields;
+		}
+	}
+
+	return undefined;
+}
+
+function mergeFieldTypes({
+	left,
+	right,
+}: {
+	left: string;
+	right: string;
+}): string {
+	if (left === right) {
+		return left;
+	}
+
+	const typeSet = new Set<string>();
+	for (const part of [...left.split("|"), ...right.split("|")]) {
+		const trimmed = part.trim();
+		if (trimmed.length > 0) {
+			typeSet.add(trimmed);
+		}
+	}
+
+	return [...typeSet].join(" | ");
 }
 
 /**
@@ -482,11 +676,18 @@ function resolveType(
 			string,
 			unknown
 		>[];
-		const nonNullVariant = variants.find((v) => v.type !== "null");
-		if (nonNullVariant) {
-			return resolveType(nonNullVariant, schemas);
+		const nonNullVariants = variants.filter((v) => v.type !== "null");
+
+		if (nonNullVariants.length === 0) {
+			return "any";
 		}
-		return "any";
+
+		if (nonNullVariants.length === 1) {
+			return resolveType(nonNullVariants[0], schemas);
+		}
+
+		const types = nonNullVariants.map((v) => resolveType(v, schemas));
+		return types.join(" | ");
 	}
 
 	if (schema.type === "array") {

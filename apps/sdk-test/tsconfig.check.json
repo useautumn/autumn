@@ -2,8 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./*"],
-      "@api/*": ["../../shared/api/*"]
+      "@/*": ["./*"]
     }
   },
   "include": [

@@ -1,6 +1,9 @@
 "use client";
 
-import type { ClientAttachParams } from "autumn-js/react";
+import type {
+  ClientAttachParams,
+  ClientOpenCustomerPortalParams,
+} from "autumn-js/react";
 import { useCustomer } from "autumn-js/react";
 import { useId, useState } from "react";
 import { DataViewer } from "@/components/debug/DataViewer";
@@ -10,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type ActionTab = "attach" | "check";
+type ActionTab = "attach" | "check" | "openCustomerPortal";
 
 type LastActionState = {
   name: string;
@@ -43,16 +46,10 @@ const toErrorPayload = ({ error }: { error: unknown }) => {
 };
 
 export default function UseAutumnScenarioPage() {
-  const {
-    data: customer,
-    isLoading,
-    error,
-    refetch,
-    attach,
-    check,
-  } = useCustomer({
-    errorOnNotFound: false,
-  });
+  const { isLoading, error, refetch, attach, check, openCustomerPortal } =
+    useCustomer({
+      errorOnNotFound: false,
+    });
 
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -66,11 +63,13 @@ export default function UseAutumnScenarioPage() {
   const [featureId, setFeatureId] = useState("");
   const [requiredBalance, setRequiredBalance] = useState("");
   const [openInNewTab, setOpenInNewTab] = useState(false);
+  const [portalReturnUrl, setPortalReturnUrl] = useState("");
 
   // Form element IDs
   const planIdInputId = useId();
   const featureIdInputId = useId();
   const requiredBalanceInputId = useId();
+  const portalReturnUrlInputId = useId();
 
   const runAction = async ({
     name,
@@ -138,6 +137,18 @@ export default function UseAutumnScenarioPage() {
     });
   };
 
+  const handleOpenCustomerPortal = () => {
+    const params: ClientOpenCustomerPortalParams = {
+      returnUrl: portalReturnUrl || undefined,
+      openInNewTab,
+    };
+    runAction({
+      name: "openCustomerPortal",
+      params,
+      execute: () => openCustomerPortal(params),
+    });
+  };
+
   return (
     <div className="space-y-4">
       <DebugCard
@@ -179,6 +190,17 @@ export default function UseAutumnScenarioPage() {
             }`}
           >
             Check
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("openCustomerPortal")}
+            className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "openCustomerPortal"
+                ? "border-zinc-900 text-zinc-900"
+                : "border-transparent text-zinc-500 hover:text-zinc-700"
+            }`}
+          >
+            Portal
           </button>
         </div>
 
@@ -255,6 +277,45 @@ export default function UseAutumnScenarioPage() {
               onClick={handleCheck}
             >
               {isRunning ? "Running..." : "Check"}
+            </Button>
+          </div>
+        )}
+
+        {activeTab === "openCustomerPortal" && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={portalReturnUrlInputId}
+                className="text-xs text-zinc-500"
+              >
+                Return URL (optional)
+              </Label>
+              <Input
+                id={portalReturnUrlInputId}
+                placeholder="https://app.example.com/settings/billing"
+                value={portalReturnUrl}
+                onChange={(e) => setPortalReturnUrl(e.target.value)}
+                className="h-8 text-sm"
+              />
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Defaults to the current page URL when left empty.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <input
+                type="checkbox"
+                checked={openInNewTab}
+                onChange={(e) => setOpenInNewTab(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              Open in new tab
+            </label>
+            <Button
+              size="sm"
+              disabled={isRunning}
+              onClick={handleOpenCustomerPortal}
+            >
+              {isRunning ? "Running..." : "Open portal"}
             </Button>
           </div>
         )}

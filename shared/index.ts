@@ -9,6 +9,9 @@ export * from "./api/billing/common/billingBehavior";
 export * from "./api/billing/common/billingPreviewResponse";
 export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
+export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
+export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
+export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/customers/components/customerExpand/customerExpand";

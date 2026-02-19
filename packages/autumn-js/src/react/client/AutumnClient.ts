@@ -1,4 +1,13 @@
-import type { BillingAttachResponse, Customer, Plan } from "@useautumn/sdk";
+import type {
+	AggregateEventsResponse,
+	BillingAttachResponse,
+	CreateReferralCodeResponse,
+	Customer,
+	ListEventsResponse,
+	ListPlansResponse,
+	OpenCustomerPortalResponse,
+	RedeemReferralCodeResponse,
+} from "@useautumn/sdk";
 import type { IAutumnClient } from "./IAutumnClient";
 import { createHttpClient } from "./internal/httpClient";
 
@@ -9,7 +18,9 @@ export type AutumnClientConfig = {
 	includeCredentials?: boolean;
 };
 
-export const createAutumnClient = (config: AutumnClientConfig): IAutumnClient => {
+export const createAutumnClient = (
+	config: AutumnClientConfig,
+): IAutumnClient => {
 	const http = createHttpClient({
 		backendUrl: config.backendUrl,
 		pathPrefix: config.pathPrefix,
@@ -27,6 +38,31 @@ export const createAutumnClient = (config: AutumnClientConfig): IAutumnClient =>
 				route: "attach",
 				body: params,
 			}),
-		listPlans: () => http.request<Plan[]>({ route: "listPlans" }),
+		openCustomerPortal: (params) =>
+			http.request<OpenCustomerPortalResponse>({
+				route: "openCustomerPortal",
+				body: params,
+			}),
+		createReferralCode: (params) =>
+			http.request<CreateReferralCodeResponse>({
+				route: "createReferralCode",
+				body: params,
+			}),
+		redeemReferralCode: (params) =>
+			http.request<RedeemReferralCodeResponse>({
+				route: "redeemReferralCode",
+				body: params,
+			}),
+		listPlans: () => http.request<ListPlansResponse>({ route: "listPlans" }),
+		listEvents: (params) =>
+			http.request<ListEventsResponse>({
+				route: "listEvents",
+				body: params,
+			}),
+		aggregateEvents: (params) =>
+			http.request<AggregateEventsResponse>({
+				route: "aggregateEvents",
+				body: params,
+			}),
 	};
 };

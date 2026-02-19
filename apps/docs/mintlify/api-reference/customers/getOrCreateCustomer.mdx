@@ -93,8 +93,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="subscriptions" type="object[]">
+  Active and scheduled recurring plans that this customer has attached.
   <Expandable title="properties">
     <DynamicResponseField name="plan" type="object">
+      The full plan object if expanded.
       <Expandable title="properties">
         <DynamicResponseField name="id" type="string" />
 
@@ -285,36 +287,62 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="plan_id" type="string" />
+    <DynamicResponseField name="plan_id" type="string">
+      The unique identifier of the subscribed plan.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="auto_enable" type="boolean" />
+    <DynamicResponseField name="auto_enable" type="boolean">
+      Whether the plan was automatically enabled for the customer.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="add_on" type="boolean" />
+    <DynamicResponseField name="add_on" type="boolean">
+      Whether this is an add-on plan rather than a base subscription.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="status" type="'active' | 'scheduled' | 'expired'" />
+    <DynamicResponseField name="status" type="'active' | 'scheduled'">
+      Current status of the subscription.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="past_due" type="boolean" />
+    <DynamicResponseField name="past_due" type="boolean">
+      Whether the subscription has overdue payments.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="canceled_at" type="number | null" />
+    <DynamicResponseField name="canceled_at" type="number | null">
+      Timestamp when the subscription was canceled, or null if not canceled.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="expires_at" type="number | null" />
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when the subscription will expire, or null if no expiry set.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="trial_ends_at" type="number | null" />
+    <DynamicResponseField name="trial_ends_at" type="number | null">
+      Timestamp when the trial period ends, or null if not on trial.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="started_at" type="number" />
+    <DynamicResponseField name="started_at" type="number">
+      Timestamp when the subscription started.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="current_period_start" type="number | null" />
+    <DynamicResponseField name="current_period_start" type="number | null">
+      Start timestamp of the current billing period.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="current_period_end" type="number | null" />
+    <DynamicResponseField name="current_period_end" type="number | null">
+      End timestamp of the current billing period.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="quantity" type="number" />
+    <DynamicResponseField name="quantity" type="number">
+      Number of units of this subscription (for per-seat plans).
+    </DynamicResponseField>
 
   </Expandable>
 </DynamicResponseField>
 
 <DynamicResponseField name="purchases" type="object[]">
+  One-time purchases made by the customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan" type="object">
+      The full plan object if expanded.
       <Expandable title="properties">
         <DynamicResponseField name="id" type="string" />
 
@@ -505,18 +533,200 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="plan_id" type="string" />
+    <DynamicResponseField name="plan_id" type="string">
+      The unique identifier of the purchased plan.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="expires_at" type="number | null" />
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when the purchase expires, or null for lifetime access.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="started_at" type="number" />
+    <DynamicResponseField name="started_at" type="number">
+      Timestamp when the purchase was made.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="quantity" type="number" />
+    <DynamicResponseField name="quantity" type="number">
+      Number of units purchased.
+    </DynamicResponseField>
 
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="balances" type="object" />
+<DynamicResponseField name="balances.{key}" type="object">
+  Feature balances keyed by feature ID, showing usage limits and remaining amounts.
+  <Expandable title="properties">
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this balance is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature" type="object">
+      The full feature object if expanded.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string" />
+
+        <DynamicResponseField name="name" type="string" />
+
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'" />
+
+        <DynamicResponseField name="consumable" type="boolean" />
+
+        <DynamicResponseField name="event_names" type="string[]" />
+
+        <DynamicResponseField name="credit_schema" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="metered_feature_id" type="string" />
+
+            <DynamicResponseField name="credit_cost" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="display" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="singular" type="string | null" />
+
+            <DynamicResponseField name="plural" type="string | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="archived" type="boolean" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total balance granted (included + prepaid).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Remaining balance available for use.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Total usage consumed in the current period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unlimited" type="boolean">
+      Whether this feature has unlimited usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="boolean">
+      Whether usage beyond the granted balance is allowed (with overage charges).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="max_purchase" type="number | null">
+      Maximum quantity that can be purchased as a top-up, or null for unlimited.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="next_reset_at" type="number | null">
+      Timestamp when the balance will reset, or null for no reset.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="breakdown" type="object[]">
+      Detailed breakdown of balance sources when stacking multiple plans or grants.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The unique identifier for this balance breakdown.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string | null">
+          The plan ID this balance originates from, or null for standalone balances.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="included_grant" type="number">
+          Amount granted from the plan's included usage.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="prepaid_grant" type="number">
+          Amount granted from prepaid purchases or top-ups.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="remaining" type="number">
+          Remaining balance available for use.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="usage" type="number">
+          Amount consumed in the current period.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="unlimited" type="boolean">
+          Whether this balance has unlimited usage.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="reset" type="object | null">
+          Reset configuration for this balance, or null if no reset.
+          <Expandable title="properties">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval_count" type="number">
+              Number of intervals between resets (eg. 2 for bi-monthly).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="resets_at" type="number | null">
+              Timestamp when the balance will next reset.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="price" type="object | null">
+          Pricing configuration if this balance has usage-based pricing.
+          <Expandable title="properties">
+            <DynamicResponseField name="amount" type="number">
+              The per-unit price amount.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tiers" type="object[]">
+              Tiered pricing configuration if applicable.
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number" />
+
+                <DynamicResponseField name="amount" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_units" type="number">
+              The number of units per billing increment (eg. $9 / 250 units).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+              Whether usage is prepaid or billed pay-per-use.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="max_purchase" type="number | null">
+              Maximum quantity that can be purchased, or null for unlimited.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expires_at" type="number | null">
+          Timestamp when this balance expires, or null for no expiration.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="rollovers" type="object[]">
+      Rollover balances carried over from previous periods.
+      <Expandable title="properties">
+        <DynamicResponseField name="balance" type="number">
+          Amount of balance rolled over from a previous period.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expires_at" type="number">
+          Timestamp when the rollover balance expires.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
 
 <DynamicResponseField name="invoices" type="object[]">
   <Expandable title="properties">
@@ -676,33 +886,59 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <ResponseExample>
 ```json 200
 {
-  "id": "cus_123",
-  "created_at": 1717000000,
-  "name": "John Doe",
-  "email": "john@example.com",
-  "fingerprint": "1234567890",
-  "stripe_id": "cus_123",
+  "id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58",
+  "name": "Patrick",
+  "email": "patrick@useautumn.com",
+  "createdAt": 1771409161016,
+  "fingerprint": null,
+  "stripeId": "cus_U0BKxpq1mFhuJO",
   "env": "sandbox",
   "metadata": {},
+  "sendEmailReceipts": false,
   "subscriptions": [
     {
-      "id": "sub_123",
-      "created_at": 1717000000,
-      "plan_id": "plan_123",
+      "planId": "pro_plan",
+      "autoEnable": true,
+      "addOn": false,
       "status": "active",
-      "quantity": 1,
-      "interval": "month",
-      "interval_count": 1
+      "pastDue": false,
+      "canceledAt": null,
+      "expiresAt": null,
+      "trialEndsAt": null,
+      "startedAt": 1771431921437,
+      "currentPeriodStart": 1771431921437,
+      "currentPeriodEnd": 1771999921437,
+      "quantity": 1
     }
   ],
   "purchases": [],
   "balances": {
-    "balance_1": {
-      "id": "balance_1",
-      "amount": 100,
-      "currency": "USD",
-      "created_at": 1717000000,
-      "updated_at": 1717000000
+    "messages": {
+      "featureId": "messages",
+      "granted": 100,
+      "remaining": 0,
+      "usage": 100,
+      "unlimited": false,
+      "overageAllowed": false,
+      "maxPurchase": null,
+      "nextResetAt": 1773851121437,
+      "breakdown": [
+        {
+          "id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
+          "planId": "pro_plan",
+          "includedGrant": 100,
+          "prepaidGrant": 0,
+          "remaining": 0,
+          "usage": 100,
+          "unlimited": false,
+          "reset": {
+            "interval": "month",
+            "resetsAt": 1773851121437
+          },
+          "price": null,
+          "expiresAt": null
+        }
+      ]
     }
   }
 }

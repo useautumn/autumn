@@ -1,11 +1,13 @@
 # ListCustomersStatus
 
+Current status of the subscription.
+
 ## Example Usage
 
 ```typescript
 import { ListCustomersStatus } from "@useautumn/sdk";
 
-let value: ListCustomersStatus = "expired";
+let value: ListCustomersStatus = "scheduled";
 ```
 
 ## Values
@@ -13,5 +15,5 @@ let value: ListCustomersStatus = "expired";
 This is an open enum. Unrecognized values will be captured as the `Unrecognized<string>` branded type.
 
 ```typescript
-"active" | "scheduled" | "expired" | Unrecognized<string>
+"active" | "scheduled" | Unrecognized<string>
 ```

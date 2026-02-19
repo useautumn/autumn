@@ -1,0 +1,12 @@
+# TrackBalancesPrice
+
+
+## Fields
+
+| Field                                                                        | Type                                                                         | Required                                                                     | Description                                                                  |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `amount`                                                                     | *Optional[float]*                                                            | :heavy_minus_sign:                                                           | The per-unit price amount.                                                   |
+| `tiers`                                                                      | List[[models.TrackBalancesTier](../models/trackbalancestier.md)]             | :heavy_minus_sign:                                                           | Tiered pricing configuration if applicable.                                  |
+| `billing_units`                                                              | *float*                                                                      | :heavy_check_mark:                                                           | The number of units per billing increment (eg. $9 / 250 units).              |
+| `billing_method`                                                             | [models.TrackBalancesBillingMethod](../models/trackbalancesbillingmethod.md) | :heavy_check_mark:                                                           | Whether usage is prepaid or billed pay-per-use.                              |
+| `max_purchase`                                                               | *Nullable[float]*                                                            | :heavy_check_mark:                                                           | Maximum quantity that can be purchased, or null for unlimited.               |

@@ -16,7 +16,7 @@ export type BillingUpdateGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type BillingUpdateFeatureQuantities = {
+export type BillingUpdateFeatureQuantity = {
   featureId: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
@@ -170,30 +170,54 @@ export type BillingUpdateCustomize = {
   items?: Array<BillingUpdateItem> | undefined;
 };
 
+/**
+ * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+ */
 export type BillingUpdateInvoiceMode = {
+  /**
+   * When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method.
+   */
   enabled: boolean;
+  /**
+   * If true, enables the plan immediately even though the invoice is not paid yet.
+   */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+   */
   finalize?: boolean | undefined;
 };
 
+/**
+ * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ */
+export const BillingUpdateBillingBehavior = {
+  ProrateImmediately: "prorate_immediately",
+  NextCycleOnly: "next_cycle_only",
+} as const;
+/**
+ * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ */
+export type BillingUpdateBillingBehavior = ClosedEnum<
+  typeof BillingUpdateBillingBehavior
+>;
+
+/**
+ * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+ */
 export const BillingUpdateCancelAction = {
   CancelImmediately: "cancel_immediately",
   CancelEndOfCycle: "cancel_end_of_cycle",
   Uncancel: "uncancel",
 } as const;
+/**
+ * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+ */
 export type BillingUpdateCancelAction = ClosedEnum<
   typeof BillingUpdateCancelAction
 >;
 
-export const BillingUpdateBillingBehavior = {
-  ProrateImmediately: "prorate_immediately",
-  NextCycleOnly: "next_cycle_only",
-} as const;
-export type BillingUpdateBillingBehavior = ClosedEnum<
-  typeof BillingUpdateBillingBehavior
->;
-
-export type BillingUpdateRequest = {
+export type UpdateSubscriptionParams = {
   /**
    * The ID of the customer to attach the plan to.
    */
@@ -201,43 +225,91 @@ export type BillingUpdateRequest = {
   /**
    * The ID of the entity to attach the plan to.
    */
-  entityId?: string | null | undefined;
+  entityId?: string | undefined;
+  /**
+   * The ID of the plan.
+   */
+  planId: string;
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
-  featureQuantities?: Array<BillingUpdateFeatureQuantities> | null | undefined;
+  featureQuantities?: Array<BillingUpdateFeatureQuantity> | undefined;
   /**
    * The version of the plan to attach.
    */
   version?: number | undefined;
+  /**
+   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
+   */
   freeTrial?: BillingUpdateFreeTrial | null | undefined;
   /**
    * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
    */
   customize?: BillingUpdateCustomize | undefined;
-  planId?: string | undefined;
+  /**
+   * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+   */
   invoiceMode?: BillingUpdateInvoiceMode | undefined;
-  cancelAction?: BillingUpdateCancelAction | undefined;
+  /**
+   * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+   */
   billingBehavior?: BillingUpdateBillingBehavior | undefined;
+  /**
+   * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+   */
+  cancelAction?: BillingUpdateCancelAction | undefined;
 };
 
+/**
+ * Invoice details if an invoice was created. Only present when a charge was made.
+ */
 export type BillingUpdateInvoice = {
+  /**
+   * The status of the invoice (e.g., 'paid', 'open', 'draft').
+   */
   status: string | null;
+  /**
+   * The Stripe invoice ID.
+   */
   stripeId: string;
+  /**
+   * The total amount of the invoice in cents.
+   */
   total: number;
+  /**
+   * The three-letter ISO currency code (e.g., 'usd').
+   */
   currency: string;
+  /**
+   * URL to the hosted invoice page where the customer can view and pay the invoice.
+   */
   hostedInvoiceUrl: string | null;
 };
 
+/**
+ * The type of action required to complete the payment.
+ */
 export const BillingUpdateCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
 } as const;
+/**
+ * The type of action required to complete the payment.
+ */
 export type BillingUpdateCode = OpenEnum<typeof BillingUpdateCode>;
 
+/**
+ * Details about any action required to complete the payment. Present when the payment could not be processed automatically.
+ */
 export type BillingUpdateRequiredAction = {
+  /**
+   * The type of action required to complete the payment.
+   */
   code: BillingUpdateCode;
+  /**
+   * A human-readable explanation of why this action is required.
+   */
   reason: string;
 };
 
@@ -245,24 +317,39 @@ export type BillingUpdateRequiredAction = {
  * OK
  */
 export type BillingUpdateResponse = {
+  /**
+   * The ID of the customer.
+   */
   customerId: string;
+  /**
+   * The ID of the entity, if the plan was attached to an entity.
+   */
   entityId?: string | undefined;
+  /**
+   * Invoice details if an invoice was created. Only present when a charge was made.
+   */
   invoice?: BillingUpdateInvoice | undefined;
+  /**
+   * URL to redirect the customer to complete payment. Null if no payment action is required.
+   */
   paymentUrl: string | null;
+  /**
+   * Details about any action required to complete the payment. Present when the payment could not be processed automatically.
+   */
   requiredAction?: BillingUpdateRequiredAction | undefined;
 };
 
 /** @internal */
-export type BillingUpdateFeatureQuantities$Outbound = {
+export type BillingUpdateFeatureQuantity$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const BillingUpdateFeatureQuantities$outboundSchema: z.ZodMiniType<
-  BillingUpdateFeatureQuantities$Outbound,
-  BillingUpdateFeatureQuantities
+export const BillingUpdateFeatureQuantity$outboundSchema: z.ZodMiniType<
+  BillingUpdateFeatureQuantity$Outbound,
+  BillingUpdateFeatureQuantity
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -276,12 +363,12 @@ export const BillingUpdateFeatureQuantities$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateFeatureQuantitiesToJSON(
-  billingUpdateFeatureQuantities: BillingUpdateFeatureQuantities,
+export function billingUpdateFeatureQuantityToJSON(
+  billingUpdateFeatureQuantity: BillingUpdateFeatureQuantity,
 ): string {
   return JSON.stringify(
-    BillingUpdateFeatureQuantities$outboundSchema.parse(
-      billingUpdateFeatureQuantities,
+    BillingUpdateFeatureQuantity$outboundSchema.parse(
+      billingUpdateFeatureQuantity,
     ),
   );
 }
@@ -665,76 +752,71 @@ export function billingUpdateInvoiceModeToJSON(
 }
 
 /** @internal */
-export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateCancelAction
-> = z.enum(BillingUpdateCancelAction);
-
-/** @internal */
 export const BillingUpdateBillingBehavior$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateBillingBehavior
 > = z.enum(BillingUpdateBillingBehavior);
 
 /** @internal */
-export type BillingUpdateRequest$Outbound = {
+export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateCancelAction
+> = z.enum(BillingUpdateCancelAction);
+
+/** @internal */
+export type UpdateSubscriptionParams$Outbound = {
   customer_id: string;
-  entity_id?: string | null | undefined;
-  feature_quantities?:
-    | Array<BillingUpdateFeatureQuantities$Outbound>
-    | null
-    | undefined;
+  entity_id?: string | undefined;
+  plan_id: string;
+  feature_quantities?: Array<BillingUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   free_trial?: BillingUpdateFreeTrial$Outbound | null | undefined;
   customize?: BillingUpdateCustomize$Outbound | undefined;
-  plan_id?: string | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
-  cancel_action?: string | undefined;
   billing_behavior?: string | undefined;
+  cancel_action?: string | undefined;
 };
 
 /** @internal */
-export const BillingUpdateRequest$outboundSchema: z.ZodMiniType<
-  BillingUpdateRequest$Outbound,
-  BillingUpdateRequest
+export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
+  UpdateSubscriptionParams$Outbound,
+  UpdateSubscriptionParams
 > = z.pipe(
   z.object({
     customerId: z.string(),
-    entityId: z.optional(z.nullable(z.string())),
-    featureQuantities: z.optional(z.nullable(z.array(z.lazy(() =>
-      BillingUpdateFeatureQuantities$outboundSchema
-    )))),
+    entityId: z.optional(z.string()),
+    planId: z.string(),
+    featureQuantities: z.optional(
+      z.array(z.lazy(() => BillingUpdateFeatureQuantity$outboundSchema)),
+    ),
     version: z.optional(z.number()),
-    freeTrial: z.optional(z.nullable(z.lazy(() =>
-      BillingUpdateFreeTrial$outboundSchema
-    ))),
-    customize: z.optional(z.lazy(() =>
-      BillingUpdateCustomize$outboundSchema
-    )),
-    planId: z.optional(z.string()),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => BillingUpdateFreeTrial$outboundSchema)),
+    ),
+    customize: z.optional(z.lazy(() => BillingUpdateCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => BillingUpdateInvoiceMode$outboundSchema),
     ),
-    cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
     billingBehavior: z.optional(BillingUpdateBillingBehavior$outboundSchema),
+    cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      planId: "plan_id",
       featureQuantities: "feature_quantities",
       freeTrial: "free_trial",
-      planId: "plan_id",
       invoiceMode: "invoice_mode",
-      cancelAction: "cancel_action",
       billingBehavior: "billing_behavior",
+      cancelAction: "cancel_action",
     });
   }),
 );
 
-export function billingUpdateRequestToJSON(
-  billingUpdateRequest: BillingUpdateRequest,
+export function updateSubscriptionParamsToJSON(
+  updateSubscriptionParams: UpdateSubscriptionParams,
 ): string {
   return JSON.stringify(
-    BillingUpdateRequest$outboundSchema.parse(billingUpdateRequest),
+    UpdateSubscriptionParams$outboundSchema.parse(updateSubscriptionParams),
   );
 }
 

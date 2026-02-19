@@ -12,6 +12,6 @@ let value: BillingAttachDiscount1 = {
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `rewardId`         | *string*           | :heavy_check_mark: | N/A                |
+| Field                                        | Type                                         | Required                                     | Description                                  |
+| -------------------------------------------- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| `rewardId`                                   | *string*                                     | :heavy_check_mark:                           | The ID of the reward to apply as a discount. |

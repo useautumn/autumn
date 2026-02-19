@@ -17,9 +17,9 @@ actions:
             });
 
             async function run() {
-              const result = await autumn.balances.check({
-                customerId: "<id>",
-                featureId: "<id>",
+              const result = await autumn.check({
+                customerId: "cus_123",
+                featureId: "messages",
               });
 
               console.log(result);
@@ -41,8 +41,12 @@ actions:
 
             async function run() {
               const result = await autumn.balances.create({
-                featureId: "<id>",
-                customerId: "<id>",
+                customerId: "cus_123",
+                featureId: "api_calls",
+                included: 1000,
+                reset: {
+                  interval: "month",
+                },
               });
 
               console.log(result);
@@ -63,8 +67,10 @@ actions:
             });
 
             async function run() {
-              const result = await autumn.balances.track({
-                customerId: "<id>",
+              const result = await autumn.track({
+                customerId: "cus_123",
+                featureId: "messages",
+                value: 1,
               });
 
               console.log(result);
@@ -86,8 +92,9 @@ actions:
 
             async function run() {
               const result = await autumn.balances.update({
-                customerId: "<id>",
-                featureId: "<id>",
+                customerId: "cus_123",
+                featureId: "api_calls",
+                remaining: 5,
               });
 
               console.log(result);
@@ -109,8 +116,31 @@ actions:
 
             async function run() {
               const result = await autumn.billing.attach({
-                customerId: "<id>",
-                planId: "<id>",
+                customerId: "cus_123",
+                planId: "pro_plan",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/billing.open_customer_portal"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.openCustomerPortal({
+                customerId: "cus_123",
+                returnUrl: "https://useautumn.com",
               });
 
               console.log(result);
@@ -132,8 +162,8 @@ actions:
 
             async function run() {
               const result = await autumn.billing.previewAttach({
-                customerId: "<id>",
-                planId: "<id>",
+                customerId: "cus_123",
+                planId: "pro_plan",
               });
 
               console.log(result);
@@ -155,29 +185,14 @@ actions:
 
             async function run() {
               const result = await autumn.billing.previewUpdate({
-                customerId: "<id>",
-              });
-
-              console.log(result);
-            }
-
-            run();
-  - target: $["paths"]["/v1/billing.setup_payment"]["post"]
-    update:
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from "@useautumn/sdk";
-
-            const autumn = new Autumn({
-              xApiVersion: "2.1",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-            });
-
-            async function run() {
-              const result = await autumn.billing.setupPayment({
-                customerId: "<id>",
+                customerId: "cus_123",
+                planId: "pro_plan",
+                featureQuantities: [
+                  {
+                    featureId: "seats",
+                    quantity: 15,
+                  },
+                ],
               });
 
               console.log(result);
@@ -199,7 +214,14 @@ actions:
 
             async function run() {
               const result = await autumn.billing.update({
-                customerId: "<id>",
+                customerId: "cus_123",
+                planId: "pro_plan",
+                featureQuantities: [
+                  {
+                    featureId: "seats",
+                    quantity: 10,
+                  },
+                ],
               });
 
               console.log(result);
@@ -296,6 +318,123 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/entities.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.entities.create({
+                name: "Seat 42",
+                featureId: "seats",
+                customerId: "cus_123",
+                entityId: "seat_42",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/entities.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.entities.delete({
+                customerId: "cus_123",
+                entityId: "seat_42",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/entities.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.entities.get({
+                entityId: "seat_42",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/events.aggregate"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.events.aggregate({
+                customerId: "cus_123",
+                featureId: "api_calls",
+                range: "30d",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/events.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.events.list({
+                limit: 50,
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:
@@ -311,6 +450,52 @@ actions:
 
             async function run() {
               const result = await autumn.plans.list();
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/referrals.create_code"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.referrals.createCode({
+                customerId: "cus_123",
+                programId: "prog_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/referrals.redeem_code"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.referrals.redeemCode({
+                code: "REF123",
+                customerId: "cus_456",
+              });
 
               console.log(result);
             }

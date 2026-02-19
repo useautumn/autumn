@@ -7,7 +7,12 @@ import type { BackendResult } from "./responseTypes";
 export const ROUTE_NAMES = {
 	getOrCreateCustomer: "getOrCreateCustomer",
 	attach: "attach",
+	openCustomerPortal: "openCustomerPortal",
+	createReferralCode: "createReferralCode",
+	redeemReferralCode: "redeemReferralCode",
 	listPlans: "listPlans",
+	listEvents: "listEvents",
+	aggregateEvents: "aggregateEvents",
 } as const;
 
 /** Union of all route names */

@@ -6,42 +6,59 @@
 import { Customer } from "@useautumn/sdk";
 
 let value: Customer = {
-  id: "cus_123",
-  name: "John Doe",
-  email: "john@example.com",
-  createdAt: 1717000000,
-  fingerprint: "1234567890",
-  stripeId: "cus_123",
+  id: "2ee25a41-0d81-4ad2-8451-ec1aadaefe58",
+  name: "Patrick",
+  email: "patrick@useautumn.com",
+  createdAt: 8386.3,
+  fingerprint: null,
+  stripeId: null,
   env: "sandbox",
   metadata: {},
   sendEmailReceipts: false,
   subscriptions: [
     {
-      planId: "plan_123",
-      autoEnable: true,
+      planId: "<id>",
+      autoEnable: false,
       addOn: false,
       status: "active",
       pastDue: false,
-      canceledAt: 9016.07,
-      expiresAt: 7919.45,
-      trialEndsAt: 9802.8,
-      startedAt: 9956.34,
-      currentPeriodStart: 4924.95,
-      currentPeriodEnd: 7855.7,
+      canceledAt: 7919.45,
+      expiresAt: 9802.8,
+      trialEndsAt: 3055.97,
+      startedAt: 4924.95,
+      currentPeriodStart: 7855.7,
+      currentPeriodEnd: 7441.15,
       quantity: 1,
     },
   ],
   purchases: [],
   balances: {
-    "balance_1": {
+    "messages": {
       featureId: "<id>",
-      granted: 7438.76,
-      remaining: 7441.15,
-      usage: 5903.02,
-      unlimited: true,
+      granted: 100,
+      remaining: 0,
+      usage: 100,
+      unlimited: false,
       overageAllowed: false,
-      maxPurchase: 934.85,
-      nextResetAt: 1710.61,
+      maxPurchase: 8444.68,
+      nextResetAt: 934.85,
+      breakdown: [
+        {
+          id: "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
+          planId: "<id>",
+          includedGrant: 1710.61,
+          prepaidGrant: 3221.05,
+          remaining: 0,
+          usage: 100,
+          unlimited: false,
+          reset: {
+            interval: "month",
+            resetsAt: 72.25,
+          },
+          price: null,
+          expiresAt: 8651.43,
+        },
+      ],
     },
   },
 };
@@ -60,9 +77,9 @@ let value: Customer = {
 | `env`                                                                                                                       | [models.CustomerEnv](../models/customer-env.md)                                                                             | :heavy_check_mark:                                                                                                          | The environment this customer was created in.                                                                               |
 | `metadata`                                                                                                                  | Record<string, *any*>                                                                                                       | :heavy_check_mark:                                                                                                          | The metadata for the customer.                                                                                              |
 | `sendEmailReceipts`                                                                                                         | *boolean*                                                                                                                   | :heavy_check_mark:                                                                                                          | Whether to send email receipts to the customer.                                                                             |
-| `subscriptions`                                                                                                             | [models.Subscription](../models/subscription.md)[]                                                                          | :heavy_check_mark:                                                                                                          | N/A                                                                                                                         |
-| `purchases`                                                                                                                 | [models.Purchase](../models/purchase.md)[]                                                                                  | :heavy_check_mark:                                                                                                          | N/A                                                                                                                         |
-| `balances`                                                                                                                  | Record<string, [models.Balances](../models/balances.md)>                                                                    | :heavy_check_mark:                                                                                                          | N/A                                                                                                                         |
+| `subscriptions`                                                                                                             | [models.Subscription](../models/subscription.md)[]                                                                          | :heavy_check_mark:                                                                                                          | Active and scheduled recurring plans that this customer has attached.                                                       |
+| `purchases`                                                                                                                 | [models.Purchase](../models/purchase.md)[]                                                                                  | :heavy_check_mark:                                                                                                          | One-time purchases made by the customer.                                                                                    |
+| `balances`                                                                                                                  | Record<string, [models.Balances](../models/balances.md)>                                                                    | :heavy_check_mark:                                                                                                          | Feature balances keyed by feature ID, showing usage limits and remaining amounts.                                           |
 | `invoices`                                                                                                                  | [models.Invoice](../models/invoice.md)[]                                                                                    | :heavy_minus_sign:                                                                                                          | N/A                                                                                                                         |
 | `entities`                                                                                                                  | [models.Entity](../models/entity.md)[]                                                                                      | :heavy_minus_sign:                                                                                                          | N/A                                                                                                                         |
 | `trialsUsed`                                                                                                                | [models.TrialsUsed](../models/trials-used.md)[]                                                                             | :heavy_minus_sign:                                                                                                          | N/A                                                                                                                         |

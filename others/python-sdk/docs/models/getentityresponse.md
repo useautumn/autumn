@@ -1,0 +1,20 @@
+# GetEntityResponse
+
+OK
+
+
+## Fields
+
+| Field                                                                    | Type                                                                     | Required                                                                 | Description                                                              |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `autumn_id`                                                              | *Optional[str]*                                                          | :heavy_minus_sign:                                                       | N/A                                                                      |
+| `id`                                                                     | *Nullable[str]*                                                          | :heavy_check_mark:                                                       | The unique identifier of the entity                                      |
+| `name`                                                                   | *Nullable[str]*                                                          | :heavy_check_mark:                                                       | The name of the entity                                                   |
+| `customer_id`                                                            | *OptionalNullable[str]*                                                  | :heavy_minus_sign:                                                       | The customer ID this entity belongs to                                   |
+| `feature_id`                                                             | *OptionalNullable[str]*                                                  | :heavy_minus_sign:                                                       | The feature ID this entity belongs to                                    |
+| `created_at`                                                             | *float*                                                                  | :heavy_check_mark:                                                       | Unix timestamp when the entity was created                               |
+| `env`                                                                    | [models.GetEntityEnv](../models/getentityenv.md)                         | :heavy_check_mark:                                                       | The environment (sandbox/live)                                           |
+| `subscriptions`                                                          | List[[models.GetEntitySubscription](../models/getentitysubscription.md)] | :heavy_check_mark:                                                       | N/A                                                                      |
+| `purchases`                                                              | List[[models.GetEntityPurchase](../models/getentitypurchase.md)]         | :heavy_check_mark:                                                       | N/A                                                                      |
+| `balances`                                                               | Dict[str, [models.GetEntityBalances](../models/getentitybalances.md)]    | :heavy_check_mark:                                                       | N/A                                                                      |
+| `invoices`                                                               | List[[models.GetEntityInvoice](../models/getentityinvoice.md)]           | :heavy_minus_sign:                                                       | Invoices for this entity (only included when expand=invoices)            |

@@ -14,7 +14,10 @@ export const useListPlans = (params: UseListPlansParams = {}) => {
 
 	return useQuery<Plan[], AutumnClientError>({
 		queryKey: ["autumn", "plans"],
-		queryFn: () => client.listPlans(),
+		queryFn: async () => {
+			const response = await client.listPlans();
+			return response.list;
+		},
 		...queryOptions,
 	});
 };

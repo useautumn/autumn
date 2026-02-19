@@ -9,7 +9,7 @@ with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
-    res = autumn.customers.get_or_create(customer_id="cus_123", name="John Doe", email="john@example.com")
+    res = autumn.check(customer_id="cus_123", feature_id="messages")
 
     # Handle response
     print(res)
@@ -31,7 +31,7 @@ async def main():
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
-        res = await autumn.customers.get_or_create_async(customer_id="cus_123", name="John Doe", email="john@example.com")
+        res = await autumn.check_async(customer_id="cus_123", feature_id="messages")
 
         # Handle response
         print(res)
