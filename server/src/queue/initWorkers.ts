@@ -30,12 +30,12 @@ let lastStatsTime = Date.now();
 // Stale connection detection
 let consecutiveEmptyPolls = 0;
 let lastHeartbeatTime = Date.now();
-const EMPTY_POLL_THRESHOLD = 15; // ~5 min of empty polls (15 * 20s wait)
+const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
 const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
 
 // Zero-message alert tracking
 let consecutiveZeroMessageIntervals = 0;
-const ZERO_MESSAGE_ALERT_THRESHOLD = 15; // ~15 min of 0 messages
+const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 
 // ============ Helper Functions ============
 
