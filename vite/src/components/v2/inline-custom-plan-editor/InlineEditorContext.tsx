@@ -1,5 +1,6 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
 import { type ReactNode, useCallback, useState } from "react";
+import { useItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { ProductProvider } from "./PlanEditorContext";
 
 type SheetType =
@@ -28,6 +29,11 @@ export function InlineEditorProvider({
 	const [itemId, setItemId] = useState<string | null>(null);
 	const [initialItem, setInitialItemState] = useState<ProductItem | null>(null);
 
+	const itemDraft = useItemDraftController({
+		setProduct,
+		setInitialItemState,
+	});
+
 	const setSheet = useCallback(
 		({
 			type,
@@ -38,9 +44,9 @@ export function InlineEditorProvider({
 		}) => {
 			setSheetType(type as SheetType);
 			setItemId(itemId);
-			setInitialItemState(null);
+			itemDraft.clear();
 		},
-		[],
+		[itemDraft],
 	);
 
 	const setInitialItem = useCallback((item: ProductItem | null) => {
@@ -50,8 +56,8 @@ export function InlineEditorProvider({
 	const closeSheet = useCallback(() => {
 		setSheetType(null);
 		setItemId(null);
-		setInitialItemState(null);
-	}, []);
+		itemDraft.clear();
+	}, [itemDraft]);
 
 	return (
 		<ProductProvider
@@ -64,6 +70,7 @@ export function InlineEditorProvider({
 			setSheet={setSheet}
 			setInitialItem={setInitialItem}
 			closeSheet={closeSheet}
+			itemDraft={itemDraft}
 		>
 			{children}
 		</ProductProvider>

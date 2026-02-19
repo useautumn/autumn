@@ -22,7 +22,22 @@ import { SHEET_ANIMATION } from "./planAnimations";
 export const ProductSheets = () => {
 	const isMobile = useIsMobile();
 	const { product, setProduct } = useProduct();
-	const { sheetType, itemId, initialItem, setInitialItem } = useSheet();
+	const {
+		sheetType,
+		itemId,
+		initialItem,
+		setInitialItem,
+		closeSheet,
+		itemDraft,
+	} = useSheet();
+	const {
+		enabled: hasDraftItemSessionSupport,
+		session: draftItemSession,
+		start: startItemDraft,
+		update: updateItemDraft,
+		commit: commitItemDraft,
+		clear: clearItemDraft,
+	} = itemDraft;
 
 	const discardAndClose = useDiscardItemAndClose();
 
@@ -39,16 +54,53 @@ export const ProductSheets = () => {
 	const lastItemIdRef = useRef<string | null>(null);
 
 	useEffect(() => {
-		if (itemId !== null && itemId !== lastItemIdRef.current && currentItem) {
-			setInitialItem(structuredClone(currentItem));
+		if (
+			sheetType === "edit-feature" &&
+			itemId !== null &&
+			itemId !== lastItemIdRef.current &&
+			currentItem
+		) {
+			if (hasDraftItemSessionSupport) {
+				startItemDraft({ itemId, item: currentItem });
+			} else {
+				setInitialItem(structuredClone(currentItem));
+			}
+
 			lastItemIdRef.current = itemId;
 		}
+
 		if (itemId === null) {
 			lastItemIdRef.current = null;
+			if (hasDraftItemSessionSupport) {
+				clearItemDraft();
+			}
 		}
-	}, [itemId, currentItem, setInitialItem]);
+	}, [
+		sheetType,
+		itemId,
+		currentItem,
+		setInitialItem,
+		hasDraftItemSessionSupport,
+		startItemDraft,
+		clearItemDraft,
+	]);
+
+	useEffect(() => {
+		if (hasDraftItemSessionSupport && sheetType !== "edit-feature") {
+			clearItemDraft();
+		}
+	}, [hasDraftItemSessionSupport, sheetType, clearItemDraft]);
 
 	const setCurrentItem = (updatedItem: ProductItem) => {
+		if (
+			hasDraftItemSessionSupport &&
+			draftItemSession &&
+			draftItemSession.itemId === itemId
+		) {
+			updateItemDraft({ item: updatedItem });
+			return;
+		}
+
 		if (!product || !product.items) return;
 
 		const currentItemIndex = product.items.findIndex(isCurrentItem);
@@ -60,6 +112,18 @@ export const ProductSheets = () => {
 		setProduct({ ...product, items: updatedItems });
 	};
 
+	const activeItem =
+		hasDraftItemSessionSupport &&
+		draftItemSession &&
+		draftItemSession.itemId === itemId
+			? draftItemSession.draftItem
+			: (currentItem ?? null);
+
+	const activeInitialItem =
+		hasDraftItemSessionSupport && draftItemSession
+			? draftItemSession.initialItem
+			: initialItem;
+
 	const renderSheet = () => {
 		switch (sheetType) {
 			case "edit-plan":
@@ -70,14 +134,20 @@ export const ProductSheets = () => {
 				return (
 					<ProductItemContext.Provider
 						value={{
-							item: currentItem ?? null,
-							initialItem,
+							item: activeItem,
+							initialItem: activeInitialItem,
 							setItem: setCurrentItem,
 							selectedIndex: 0,
 							showCreateFeature: false,
 							setShowCreateFeature: () => {},
 							isUpdate: false,
-							handleUpdateProductItem: async () => null,
+							handleUpdateProductItem: async () => {
+								if (hasDraftItemSessionSupport) {
+									commitItemDraft();
+								}
+								closeSheet();
+								return null;
+							},
 						}}
 					>
 						<EditPlanFeatureSheet />
