@@ -33,7 +33,7 @@ import { handleNewProductItems } from "../../product-items/productItemUtils/hand
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
-import { validateDefaultFlag } from "../productActions/validateDefaultFlag.js";
+import { validateDefaultFlag } from "../../actions/productActions/validateDefaultFlag.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlan = createRoute({

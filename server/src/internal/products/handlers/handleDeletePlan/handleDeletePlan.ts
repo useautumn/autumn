@@ -1,19 +1,19 @@
 import { AffectedResource } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { deleteProduct } from "../productActions/deleteProduct.js";
+import { deleteProduct } from "../../actions/productActions/deleteProduct.js";
 
-const DeleteProductParamsSchema = z.object({
+const DeletePlanParamsSchema = z.object({
 	product_id: z.string(),
 });
 
-const DeleteProductQuerySchema = z.object({
+const DeletePlanQuerySchema = z.object({
 	all_versions: z.boolean().default(false),
 });
 
-export const handleDeleteProduct = createRoute({
-	params: DeleteProductParamsSchema,
-	query: DeleteProductQuerySchema,
+export const handleDeletePlan = createRoute({
+	params: DeletePlanParamsSchema,
+	query: DeletePlanQuerySchema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {
 		const { product_id } = c.req.param();

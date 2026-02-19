@@ -3,7 +3,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
 import { handleCreatePlan } from "./handlers/handleCreateProduct/handleCreatePlan.js";
-import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handleDeleteProduct/handleDeleteProduct.js";
+import { handleDeletePlan as handleDeletePlanHono } from "./handlers/handleDeletePlan/handleDeletePlan.js";
 import { handleGetPlan } from "./handlers/handleGetProduct/handleGetPlan.js";
 import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
@@ -27,7 +27,7 @@ honoProductRouter.post("", ...handleCreatePlan);
 honoProductRouter.get("/:product_id", ...handleGetPlan);
 honoProductRouter.post("/:product_id", ...handleUpdatePlan); // will be deprecated
 honoProductRouter.patch("/:product_id", ...handleUpdatePlan); // will be deprecated
-honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);
+honoProductRouter.delete("/:product_id", ...handleDeletePlanHono);
 
 // Others
 honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
