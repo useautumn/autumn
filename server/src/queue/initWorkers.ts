@@ -254,12 +254,14 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				Sentry.getCurrentScope().clear();
 
 				// Recycle process to prevent memory leaks from long-running workers
+				// Exit with code 0 so cluster primary respawns a fresh worker
 				if (totalMessagesProcessed >= MAX_MESSAGES_BEFORE_RECYCLE) {
+					const mem = process.memoryUsage();
 					console.log(
-						`${logPrefix()} Recycling after ${totalMessagesProcessed} messages to prevent memory leaks`,
+						`${logPrefix()} Recycling after ${totalMessagesProcessed} messages (rss=${(mem.rss / 1024 / 1024).toFixed(0)}MB heap=${(mem.heapUsed / 1024 / 1024).toFixed(0)}MB)`,
 					);
-					isRunning = false;
-					break;
+					clearInterval(statsInterval);
+					process.exit(0);
 				}
 			} else {
 				const newClient = handleEmptyPoll();
