@@ -1,4 +1,4 @@
-import type { CheckoutMode, TrialContext } from "@autumn/shared";
+import type { CheckoutMode, InvoiceMode, TrialContext } from "@autumn/shared";
 import {
 	type FullCusProduct,
 	type FullProduct,
@@ -19,6 +19,7 @@ export const setupAttachCheckoutMode = ({
 	currentCustomerProduct,
 	stripeSubscription,
 	trialContext,
+	invoiceMode,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	currentCustomerProduct?: FullCusProduct;
@@ -26,6 +27,7 @@ export const setupAttachCheckoutMode = ({
 	attachProduct: FullProduct;
 	stripeSubscription?: Stripe.Subscription;
 	trialContext?: TrialContext;
+	invoiceMode?: InvoiceMode;
 }): CheckoutMode => {
 	const hasPaymentMethod = !!paymentMethod;
 	const hasExistingSubscription = !!stripeSubscription;
@@ -40,8 +42,10 @@ export const setupAttachCheckoutMode = ({
 	}
 
 	const getStripeCheckoutOrDirectBilling = () => {
+		// If invoice mode
+
 		// A. if no payment method
-		if (hasPaymentMethod) return null;
+		if (hasPaymentMethod || invoiceMode) return null;
 
 		if (productIsOneOff) return "stripe_checkout";
 
