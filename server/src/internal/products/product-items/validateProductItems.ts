@@ -15,10 +15,10 @@ import {
 	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
+	TiersType,
 	UsageModel,
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
-
 import { StatusCodes } from "http-status-codes";
 import {
 	isBooleanFeatureItem,
@@ -169,6 +169,18 @@ const validateProductItem = ({
 		if (item.billing_units && item.billing_units <= 0) {
 			throw new RecaseError({
 				message: `Billing units must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		if (
+			item.tiers_type === TiersType.VolumeBased &&
+			item.tiers.length > 1 &&
+			item.usage_model !== UsageModel.Prepaid
+		) {
+			throw new RecaseError({
+				message: `Volume-based pricing is only supported for prepaid items`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -368,6 +380,7 @@ export const validateProductItems = ({
 				});
 			}
 		}
+
 	}
 
 	// 6. Can't have both weekly and monthly price items in the same product
