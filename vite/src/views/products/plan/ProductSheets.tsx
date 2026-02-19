@@ -112,17 +112,18 @@ export const ProductSheets = () => {
 		setProduct({ ...product, items: updatedItems });
 	};
 
-	const activeItem =
+	const hasActiveDraftItemSession =
 		hasDraftItemSessionSupport &&
-		draftItemSession &&
-		draftItemSession.itemId === itemId
-			? draftItemSession.draftItem
-			: (currentItem ?? null);
+		draftItemSession !== null &&
+		draftItemSession.itemId === itemId;
 
-	const activeInitialItem =
-		hasDraftItemSessionSupport && draftItemSession
-			? draftItemSession.initialItem
-			: initialItem;
+	const activeItem = hasActiveDraftItemSession
+		? draftItemSession.draftItem
+		: (currentItem ?? null);
+
+	const activeInitialItem = hasActiveDraftItemSession
+		? draftItemSession.initialItem
+		: initialItem;
 
 	const renderSheet = () => {
 		switch (sheetType) {
