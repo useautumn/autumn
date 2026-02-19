@@ -36,6 +36,7 @@ import { Result } from "../types/fp.js";
  * const response = await client.getOrCreate({ customerId: "cus_123", name: "John Doe", email: "john@example.com" });
  * ```
  *
+ * @param id - Your unique identifier for the customer (optional)
  * @param name - Customer's name (optional)
  * @param email - Customer's email address (optional)
  * @param fingerprint - Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse (optional)

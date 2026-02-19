@@ -36,7 +36,7 @@ export const handleBillingBehaviorErrors = ({
 	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
 	// Only validate when billing_behavior is 'next_cycle_only' (defer charges)
-	if (params.billing_behavior !== "next_cycle_only") return;
+	if (params.billing_behavior !== "none") return;
 
 	const { autumn: autumnBillingPlan } = billingPlan;
 

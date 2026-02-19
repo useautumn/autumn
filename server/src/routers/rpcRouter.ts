@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { responseFilterMiddleware } from "@/honoMiddlewares/responseFilter/responseFilterMiddleware";
 import { referralRpcRouter } from "@/internal/api/rewards/referralRouter";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter";
 import { billingRpcRouter } from "@/internal/billing/billingRouter";
@@ -7,30 +6,21 @@ import { entityRpcRouter } from "@/internal/entities/entityRouter";
 import { eventsRpcRouter } from "@/internal/events/eventsRouter";
 import { featureRpcRouter } from "@/internal/features/featureRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
-import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware";
-import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware";
-import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware";
-import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware";
-import { queryMiddleware } from "../honoMiddlewares/queryMiddleware";
-import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware";
-import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware";
-import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware";
-import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware";
 import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { customerRpcRouter } from "../internal/customers/cusRouter";
 
 export const rpcRouter = new Hono<HonoEnv>();
 
-rpcRouter.use("*", responseFilterMiddleware);
-rpcRouter.use("*", secretKeyMiddleware);
-rpcRouter.use("*", orgConfigMiddleware);
-rpcRouter.use("*", apiVersionMiddleware);
-rpcRouter.use("*", refreshCacheMiddleware);
-rpcRouter.use("*", refreshProductsCacheMiddleware);
-rpcRouter.use("*", analyticsMiddleware);
-rpcRouter.use("*", rateLimitMiddleware);
-rpcRouter.use("*", queryMiddleware());
-rpcRouter.use("*", idempotencyMiddleware);
+// rpcRouter.use("*", responseFilterMiddleware);
+// rpcRouter.use("*", secretKeyMiddleware);
+// rpcRouter.use("*", orgConfigMiddleware);
+// rpcRouter.use("*", apiVersionMiddleware);
+// rpcRouter.use("*", refreshCacheMiddleware);
+// rpcRouter.use("*", refreshProductsCacheMiddleware);
+// rpcRouter.use("*", analyticsMiddleware);
+// rpcRouter.use("*", rateLimitMiddleware);
+// rpcRouter.use("*", queryMiddleware());
+// rpcRouter.use("*", idempotencyMiddleware);
 
 rpcRouter.route("", customerRpcRouter);
 rpcRouter.route("", plansRpcRouter);

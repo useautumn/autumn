@@ -24,7 +24,7 @@ export function normalizeAttachBillingBehavior({
 	newBillingSubscription: boolean;
 	blocksNextCycleOnly?: boolean;
 }) {
-	if (billingBehavior !== "next_cycle_only") {
+	if (billingBehavior !== "none") {
 		return billingBehavior;
 	}
 

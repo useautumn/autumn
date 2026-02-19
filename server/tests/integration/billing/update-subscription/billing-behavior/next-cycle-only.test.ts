@@ -71,14 +71,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no i
 	// Preview WITH next_cycle_only shows 0 (nothing charged now)
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 	expect(deferredPreview.total).toBe(0); // Nothing charged immediately
 
 	// Execute update with next_cycle_only
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -139,14 +139,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no i
 	// Preview WITH next_cycle_only shows 0 (nothing credited now)
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 	expect(deferredPreview.total).toBe(0); // Nothing credited immediately
 
 	// Execute update with next_cycle_only
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -202,14 +202,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 	// Preview WITH next_cycle_only shows 0
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 	expect(deferredPreview.total).toBe(0); // Nothing charged now
 
 	// Execute update with next_cycle_only
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -267,14 +267,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 	// Preview WITH next_cycle_only shows 0
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 	expect(deferredPreview.total).toBe(0); // Nothing credited now
 
 	// Execute update with next_cycle_only
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -365,7 +365,7 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 		customer_id: customerDeferred,
 		product_id: proDeferred.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 10 }],
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 	expect(deferredPreview.total).toBe(0);
 
@@ -381,7 +381,7 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 		customer_id: customerDeferred,
 		product_id: proDeferred.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 10 }],
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	const customerImmediateAfter =

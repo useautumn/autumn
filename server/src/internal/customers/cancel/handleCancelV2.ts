@@ -30,7 +30,7 @@ export const handleCancelV2 = createRoute({
 			cancel_action: cancel_immediately
 				? "cancel_immediately"
 				: "cancel_end_of_cycle",
-			billing_behavior: bodyProrate ? "prorate_immediately" : "next_cycle_only",
+			billing_behavior: bodyProrate ? "prorate_immediately" : "none",
 		};
 
 		ctx.logger.info(

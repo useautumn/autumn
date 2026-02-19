@@ -1111,6 +1111,8 @@ paths:
         ```
 
 
+        @param id - Your unique identifier for the customer (optional)
+
         @param name - Customer's name (optional)
 
         @param email - Customer's email address (optional)
@@ -5386,7 +5388,7 @@ paths:
                 billing_behavior:
                   enum:
                     - prorate_immediately
-                    - next_cycle_only
+                    - none
                   description: How to handle billing when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'next_cycle_only' skips creating any charges and applies the
@@ -5837,7 +5839,7 @@ paths:
                 billing_behavior:
                   enum:
                     - prorate_immediately
-                    - next_cycle_only
+                    - none
                   description: How to handle billing when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'next_cycle_only' skips creating any charges and applies the
@@ -6308,7 +6310,7 @@ paths:
                 billing_behavior:
                   enum:
                     - prorate_immediately
-                    - next_cycle_only
+                    - none
                   description: How to handle billing when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'next_cycle_only' skips creating any charges and applies the
@@ -6728,7 +6730,7 @@ paths:
                 billing_behavior:
                   enum:
                     - prorate_immediately
-                    - next_cycle_only
+                    - none
                   description: How to handle billing when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'next_cycle_only' skips creating any charges and applies the

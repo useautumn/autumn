@@ -535,7 +535,7 @@ class PreviewAttachInvoiceMode(BaseModel):
 
 PreviewAttachBillingBehavior = Literal[
     "prorate_immediately",
-    "next_cycle_only",
+    "none",
 ]
 r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
 

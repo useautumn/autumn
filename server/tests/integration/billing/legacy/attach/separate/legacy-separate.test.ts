@@ -88,7 +88,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		invoice: true,
 		entity_id: entities[0].id,
 	});
-	await completeInvoiceCheckout({ url: res1.checkout_url });
+	await completeInvoiceCheckout({ url: res1.checkout_url, isolatedBrowser: true });
 
 	// Attach Pro to entity 2 with invoice: true
 	const res2 = await autumnV1_2.attach({
@@ -97,7 +97,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		invoice: true,
 		entity_id: entities[1].id,
 	});
-	await completeInvoiceCheckout({ url: res2.checkout_url });
+	await completeInvoiceCheckout({ url: res2.checkout_url, isolatedBrowser: true });
 
 	// Verify different subscription IDs per entity
 	const fullCus = await CusService.getFull({

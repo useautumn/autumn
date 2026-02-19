@@ -20,15 +20,6 @@ billingRouter.post("/cancel", ...handleCancelV2);
 billingRouter.post("/setup_payment", ...handleSetupPayment);
 billingRouter.post("/checkout", ...handleCheckoutV2);
 billingRouter.post("/attach", ...handleAttach);
-billingRouter.post("/subscriptions/update", ...handleUpdateSubscription);
-billingRouter.post(
-	"/subscriptions/preview_update",
-	...handlePreviewUpdateSubscription,
-);
-
-// V2 Attach
-// billingRouter.post("/billing/attach", ...handleAttachV2);
-// billingRouter.post("/billing/preview_attach", ...handlePreviewAttach);
 
 export const billingRpcRouter = new Hono<HonoEnv>();
 billingRpcRouter.post("/billing.update", ...handleUpdateSubscription);

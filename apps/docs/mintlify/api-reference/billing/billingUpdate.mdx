@@ -233,7 +233,7 @@ const response = await autumn.billing.update({
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'next_cycle_only'">
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
   How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
 </DynamicParamField>
 

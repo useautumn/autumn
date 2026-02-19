@@ -126,7 +126,7 @@ export function usePlanScheduleField() {
 	}, [canChooseBillingCycle, form, newBillingSubscription]);
 
 	useEffect(() => {
-		if (billingBehavior !== "next_cycle_only") return;
+		if (billingBehavior !== "none") return;
 		if (isNoChargesAllowed) return;
 		form.setFieldValue("billingBehavior", null);
 	}, [billingBehavior, form, isNoChargesAllowed]);

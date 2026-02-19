@@ -22,6 +22,7 @@ export const handleGetCustomerV2 = createRoute({
 		const { expand } = ctx;
 		const { with_autumn_id } = c.req.valid("query");
 
+
 		// SIDE EFFECT
 		// !ctx.org.config.disable_v1_invoices &&
 		if (
