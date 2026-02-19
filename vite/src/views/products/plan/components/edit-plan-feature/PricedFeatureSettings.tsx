@@ -30,7 +30,7 @@ export function PricedFeatureSettings() {
 	};
 
 	return (
-		<div className="mt-3">
+		<div>
 			<FormLabel>Billing Method</FormLabel>
 			<RadioGroup
 				value={item.usage_model}
