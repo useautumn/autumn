@@ -235,7 +235,7 @@ export function PriceTiers() {
 			})}
 			<IconButton
 				variant="muted"
-				className="w-full text-t3 text-xs mb-2 mt-1"
+				className="w-full text-t3 text-xs"
 				size="sm"
 				onClick={() => addTier({ item, setItem })}
 				icon={<PlusIcon size={8} />}

@@ -1,5 +1,9 @@
-import { FeatureType } from "@autumn/shared";
-import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { FeatureType, TiersType } from "@autumn/shared";
+import {
+	DropSimpleIcon,
+	PencilSimpleIcon,
+	RulerIcon,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
@@ -7,6 +11,13 @@ import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -27,7 +38,7 @@ export function EditPlanFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const { item } = useProductItemContext();
+	const { item, setItem } = useProductItemContext();
 	const { features, refetch } = useFeaturesQuery();
 	const { product, setProduct } = useProduct();
 	const { setInitialItem } = useSheet();
@@ -107,7 +118,59 @@ export function EditPlanFeatureSheet({
 						</SheetSection>
 
 						{isFeaturePrice && (
-							<SheetSection title="Price" className="space-y-8">
+							<SheetSection
+								title={
+									item.tiers && item.tiers.length > 1 ? (
+										<div className="flex items-center justify-between w-full">
+											<span>Price</span>
+											<Select
+												value={item.tiers_type ?? TiersType.Graduated}
+												onValueChange={(val) =>
+													setItem({ ...item, tiers_type: val as TiersType })
+												}
+											>
+												<SelectTrigger className="w-40 h-6 text-xs" size="sm">
+													<SelectValue>
+														{item.tiers_type === TiersType.VolumeBased ? (
+															<span className="flex items-center gap-2">
+																<DropSimpleIcon
+																	className="size-3.5"
+																	weight="regular"
+																/>
+																Volume-based
+															</span>
+														) : (
+															<span className="flex items-center gap-2">
+																<RulerIcon
+																	className="size-3.5"
+																	weight="regular"
+																/>
+																Graduated
+															</span>
+														)}
+													</SelectValue>
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value={TiersType.Graduated}>
+														<RulerIcon className="size-4" weight="regular" />
+														Graduated
+													</SelectItem>
+													<SelectItem value={TiersType.VolumeBased}>
+														<DropSimpleIcon
+															className="size-4"
+															weight="regular"
+														/>
+														Volume-based
+													</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+									) : (
+										"Price"
+									)
+								}
+								className="space-y-3"
+							>
 								<div>
 									<PriceTiers />
 									<UsageReset showBillingLabel={true} />

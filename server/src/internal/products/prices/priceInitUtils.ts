@@ -217,6 +217,10 @@ export const pricesAreSame = (
 					prorationConfig1?.on_decrease != prorationConfig2?.on_decrease,
 				message: `On decrease different: ${prorationConfig1?.on_decrease} != ${prorationConfig2?.on_decrease}`,
 			},
+			tiers_type: {
+				condition: price1.tiers_type != price2.tiers_type,
+				message: `Tiers type different: ${price1.tiers_type} != ${price2.tiers_type}`,
+			},
 		};
 
 		const pricesAreDiff =
