@@ -1,0 +1,661 @@
+---
+title: Monetary credits
+description: Grant your users a currency-based balance of credits, that various features can draw from
+---
+
+When you have multiple features that cost different amounts, you can use a credit system to deduct usage from a single balance. This can be great to simplify billing and usage tracking, especially when you have lots of features.
+
+## Example case
+
+We have a AI chatbot product with 2 different models, and each model costs a different amount to use.
+
+- Basic message: $1 per 100 messages
+- Premium message: $10 per 100 messages
+
+And we have the following plans:
+
+- Free tier: $5 credits per month for free
+- Pro tier: \$10 credits per month, at \$10 per month
+
+Users should also be able to top up their balance with more credits.
+
+## Configure Pricing
+
+<Steps>
+<Step>
+#### Create Features
+
+Create a `metered` `consumable` feature for each message type, so that we can track the usage of each:
+
+<Frame>
+<img src="/assets/guides/monetary-credits/features-light.png" className="block dark:hidden" />
+<img src="/assets/guides/monetary-credits/features-dark.png" className="hidden dark:block" />
+</Frame>
+</Step>
+
+<Step>
+#### Create Credit System
+
+Now, we'll create a credit system, where we'll define the cost of each message type. We'll define the cost per message in USD:
+
+| Feature               | Cost per message (USD)         | Credit cost per message (USD)|
+|-----------------------|--------------------------------|----------------------------|
+| Basic message         | $1 per 100 messages            | 0.01                   |
+| Premium message       | $10 per 100 messages           | 0.10                   |
+
+<Frame style={{ width: "400px" }}>
+<img src="/assets/guides/monetary-credits/credit-system-light.png" className="block dark:hidden" />
+<img src="/assets/guides/monetary-credits/credit-system-dark.png" className="hidden dark:block" />
+</Frame>
+</Step>
+
+<Step>
+#### Create Free, Pro and Top-up Plans
+
+Let's create our free and pro plans, and add the credits amounts to each.
+
+<Tip>
+Make sure to set the `auto-enable` flag on the free plan, so that it is automatically assigned to new customers.
+</Tip>
+<Frame style={{ width: "400px" }}>
+<img src="/assets/guides/monetary-credits/free-light.png" className="block dark:hidden" />
+<img src="/assets/guides/monetary-credits/free-dark.png" className="hidden dark:block" />
+</Frame>
+<br />
+<Frame style={{ width: "400px" }}>
+<img src="/assets/guides/monetary-credits/pro-light.png" className="block dark:hidden" />
+<img src="/assets/guides/monetary-credits/pro-dark.png" className="hidden dark:block" />
+</Frame>
+
+Then, we'll create our top-up plan. We'll add a price to our credit feature, where each credit is worth $1. These top up credits will be `one-off` `prepaid` purchases that never expire.
+
+<Frame style={{ width: "500px" }}>
+<img src="/assets/guides/monetary-credits/top-up-light.png" className="block dark:hidden" />
+<img src="/assets/guides/monetary-credits/top-up-dark.png" className="hidden dark:block" />
+</Frame>
+
+</Step>
+</Steps>
+
+
+
+## Implementation
+
+<Steps>
+<Step>
+#### Create an Autumn Customer
+
+When your user signs up, create an Autumn customer. This will automatically assign them the Free plan, and grant them $5 credits per month.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const App = () => {
+  const { customer } = useCustomer();
+
+  console.log("Autumn customer:", customer);
+
+  return <h1>Welcome, {customer?.name || "user"}!</h1>;
+};
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data, error } = await autumn.customers.create({
+  id: "user_or_org_id_from_auth",
+  name: "John Yeo",
+  email: "john@example.com",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.create(
+        id="user_or_org_id_from_auth",
+        name="John Yeo",
+        email="john@example.com",
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request POST \
+  --url https://api.useautumn.com/customers \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": "user_or_org_id_from_auth",
+    "name": "John Yeo",
+    "email": "john@example.com"
+  }'
+```
+
+</CodeGroup>
+</Step>
+
+<Step>
+#### Checking for access
+
+Every time our user sends a message to the chatbot, we'll first check if they have enough credits remaining to send the message.
+
+The `required_balance` parameter will convert the number of messages to credits. Eg, if you pass `required_balance: 5` for basic messages, then check will return `allowed: true` if the user has at least 0.05 USD credits remaining.
+
+<Note>
+  Note how we're interacting with the underlying features (`basic_messages`,
+  `premium_messages`) here--not the credit system.
+</Note>
+
+<CodeGroup>
+
+```jsx React wrap
+import { useCustomer } from "autumn-js/react";
+
+export function CheckBasicMessage() {
+  const { check, refetch } = useCustomer();
+
+  const handleCheckAccess = async () => {
+    const { data } = await check({ featureId: "basic_messages", requiredBalance: 1 });
+
+    if (!data?.allowed) {
+      alert("You've run out of basic message credits");
+    } else {
+      // proceed with sending message
+      await refetch();
+    }
+  };
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.check({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "basic_messages",
+  required_balance: 1,
+});
+
+if (!data.allowed) {
+  console.log("User has run out of basic message credits");
+  return;
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.check(
+        customer_id="user_or_org_id_from_auth",
+        feature_id="basic_messages",
+        required_balance=1,
+    )
+    
+    if not response.allowed:
+        print("User has run out of basic message credits")
+        return
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "basic_messages",
+    "required_balance": 1
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+The credit system ID will be returned in the `balances` field.
+```json {8}
+{
+    "allowed": true,
+    "code": "feature_found",
+    "customer_id": "ayush",
+    "feature_id": "usd_credits",
+    "required_balance": 0.01,
+    "interval": "month",
+    "interval_count": 1,
+    "unlimited": false,
+    "balance": 5,
+    "usage": 0,
+    "included_usage": 5,
+    "next_reset_at": 1769110978704,
+    "overage_allowed": false,
+    "credit_schema": [
+        {
+            "feature_id": "basic_messages",
+            "credit_amount": 0.01
+        },
+        {
+            "feature_id": "premium_messages",
+            "credit_amount": 0.1
+        }
+    ]
+}
+```
+</Expandable>
+</Step>
+
+<Step>
+#### Tracking messages and using credits
+
+Now let's implement our usage tracking and use up our credits. In this example, we're using 2 basic messages, which will cost us 0.02 USD credits.
+
+<CodeGroup>
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+await autumn.track({
+  customer_id: "user_or_org_id_from_auth",
+  feature_id: "basic_messages",
+  value: 2,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    await autumn.track(
+        customer_id="user_or_org_id_from_auth",
+        feature_id="basic_messages",
+        value=2,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "basic_messages",
+    "value": 2
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="track response">
+```json
+{
+    "code": "event_received",
+    "customer_id": "user_or_org_id_from_auth",
+    "feature_id": "basic_messages"
+}
+```
+</Expandable>
+</Step>
+
+<Step>
+#### Upgrading to Pro
+
+We can prompt the user to upgrade. When they click our "upgrade" button, we can use the `checkout` route to get a Stripe Checkout URL for them to make a payment.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function UpgradeButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "pro",
+          dialog: CheckoutDialog,
+        });
+      }}
+    >
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.checkout({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "pro",
+});
+
+if (data.url) {
+  // Redirect user to Stripe checkout URL
+} else {
+  // Show upgrade preview to user
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.checkout(
+        customer_id="user_or_org_id_from_auth",
+        product_id="pro"
+    )
+    
+    if response.url:
+        # Redirect user to Stripe checkout URL
+        pass
+    else:
+        # Show upgrade preview to user
+        pass
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "product_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="checkout response">
+```json
+{
+    "customer_id": "user_or_org_id_from_auth",
+    "lines": [
+        {
+            "description": "Pro - $10 / month",
+            "amount": 10,
+            "item": {
+                "type": "price",
+                "feature_id": null,
+                "feature": null,
+                "interval": "month",
+                "interval_count": 1,
+                "price": 10,
+                "display": {
+                    "primary_text": "$10",
+                    "secondary_text": "per month"
+                }
+            }
+        }
+    ],
+    "product": {
+        "id": "pro",
+        "name": "Pro",
+        "group": null,
+        "env": "sandbox",
+        "is_add_on": false,
+        "is_default": false,
+        "archived": false,
+        "version": 1,
+        "created_at": 1766428038264,
+        "items": [
+            {
+                "type": "price",
+                "feature_id": null,
+                "feature": null,
+                "interval": "month",
+                "interval_count": 1,
+                "price": 10,
+                "display": {
+                    "primary_text": "$10",
+                    "secondary_text": "per month"
+                }
+            },
+            {
+                "type": "feature",
+                "feature_id": "usd_credits",
+                "feature_type": "single_use",
+                "feature": {
+                    "id": "usd_credits",
+                    "name": "USD credits",
+                    "type": "credit_system",
+                    "display": {
+                        "singular": "USD credits",
+                        "plural": "USD credits"
+                    },
+                    "credit_schema": [
+                        {
+                            "metered_feature_id": "basic_messages",
+                            "credit_cost": 0.01
+                        },
+                        {
+                            "metered_feature_id": "premium_messages",
+                            "credit_cost": 0.1
+                        }
+                    ]
+                },
+                "included_usage": 10,
+                "interval": "month",
+                "interval_count": 1,
+                "reset_usage_when_enabled": true,
+                "entity_feature_id": null,
+                "display": {
+                    "primary_text": "10 USD credits"
+                }
+            }
+        ],
+        "free_trial": null,
+        "base_variant_id": null,
+        "scenario": "upgrade",
+        "properties": {
+            "is_free": false,
+            "is_one_off": false,
+            "interval_group": "month",
+            "has_trial": false,
+            "updateable": false
+        }
+    },
+    "current_product": {
+        "id": "free",
+        "name": "Free",
+        "group": null,
+        "env": "sandbox",
+        "is_add_on": false,
+        "is_default": true,
+        "archived": false,
+        "version": 1,
+        "created_at": 1766427877578,
+        "items": [
+            {
+                "type": "feature",
+                "feature_id": "usd_credits",
+                "feature_type": "single_use",
+                "feature": {
+                    "id": "usd_credits",
+                    "name": "USD credits",
+                    "type": "credit_system",
+                    "display": {
+                        "singular": "USD credits",
+                        "plural": "USD credits"
+                    },
+                    "credit_schema": [
+                        {
+                            "metered_feature_id": "basic_messages",
+                            "credit_cost": 0.01
+                        },
+                        {
+                            "metered_feature_id": "premium_messages",
+                            "credit_cost": 0.1
+                        }
+                    ]
+                },
+                "included_usage": 5,
+                "interval": "month",
+                "interval_count": 1,
+                "reset_usage_when_enabled": true,
+                "entity_feature_id": null,
+                "display": {
+                    "primary_text": "5 USD credits",
+                    "secondary_text": "per month"
+                }
+            }
+        ],
+        "free_trial": null,
+        "base_variant_id": null,
+        "scenario": "new",
+        "properties": {
+            "is_free": true,
+            "is_one_off": false,
+            "has_trial": false,
+            "updateable": false
+        }
+    },
+    "options": [],
+    "total": 10,
+    "currency": "usd",
+    "url": "https://checkout.stripe.com/c/pay/.......",
+    "has_prorations": false
+}
+```
+</Expandable>
+</Step>
+
+<Step>  
+#### Purchasing Top-ups
+
+When users run low on credits, they can purchase additional credits using our top-up plan. In this example, the user is purchasing 20 USD credits, which will cost them $20.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function TopUpButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "top_up",
+          dialog: CheckoutDialog,
+          options: [{
+            featureId: "usd_credits",
+            quantity: 20,
+          }],
+        });
+      }}
+    >
+      Buy More Credits
+    </button>
+  );
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.attach({
+  customer_id: "user_or_org_id_from_auth",
+  product_id: "top_up",
+  options: [{
+    feature_id: "usd_credits",
+    quantity: 20,
+  }],
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.attach(
+        customer_id="user_or_org_id_from_auth",
+        product_id="top_up",
+        options=[{
+          "feature_id": "usd_credits",
+          "quantity": 20,
+        }],
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "product_id": "top_up",
+    "options": [{
+      "feature_id": "usd_credits",
+      "quantity": 20,
+    }]
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="attach response">
+```json
+{
+    "success": true,
+    "customer_id": "user_or_org_id_from_auth",
+    "product_ids": [
+        "top_up"
+    ],
+    "code": "one_off_product_attached",
+    "message": "Successfully purchased product(s) Top up and attached to customer John"
+}
+```
+</Expandable>
+
+</Step>
+</Steps>

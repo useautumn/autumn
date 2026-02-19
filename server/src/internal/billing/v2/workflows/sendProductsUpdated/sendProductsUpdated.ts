@@ -14,7 +14,7 @@ import {
 	ApiVersionClass,
 	addToExpand,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	cusProductToProduct,
 	type EntityLegacyData,
@@ -81,9 +81,9 @@ export const sendProductsUpdated = async ({
 		ctx = addToExpand({
 			ctx,
 			add: [
-				CusExpand.BalancesFeature,
-				CusExpand.SubscriptionsPlan,
-				CusExpand.PurchasesPlan,
+				CustomerExpand.BalancesFeature,
+				CustomerExpand.SubscriptionsPlan,
+				CustomerExpand.PurchasesPlan,
 			],
 		});
 	}

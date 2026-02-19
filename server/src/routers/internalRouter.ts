@@ -1,4 +1,4 @@
-import { autumnHandler } from "autumn-js/hono";
+import { autumnHandler } from "autumn-js/backend/hono";
 import { Hono } from "hono";
 import { internalTrmnlRouter } from "@/internal/misc/trmnl/trmnlRouter.js";
 import { adminAuthMiddleware } from "../honoMiddlewares/adminAuthMiddleware";

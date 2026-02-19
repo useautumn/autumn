@@ -1,0 +1,57 @@
+---
+title: "autumnHandler"
+description: "Server-side handler for managing Autumn API endpoints and customer authentication"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `autumnHandler` creates server-side endpoints that handle communication between your frontend React hooks and Autumn's API. It manages customer authentication and proxies requests securely using your secret key.
+
+<LearnHooksTip />
+
+## Usage
+
+```ts
+// app/api/autumn/[...all]/route.ts
+import { autumnHandler } from "autumn-js/next";
+import { auth } from "@clerk/nextjs/server";
+
+export const { GET, POST } = autumnHandler({
+  identify: async () => {
+    const { userId } = await auth();
+    return { customerId: userId };
+  },
+});
+```
+
+## Parameters
+
+<ParamField body="identify" type="(request: Request) => AuthResult" required>
+  Function that receives the incoming request and returns customer identification data.
+  
+  <Expandable title="AuthResult">
+    <ParamField body="customerId" type="string" required>
+      The unique identifier for the customer.
+    </ParamField>
+
+    <ParamField body="customerData" type="CustomerData">
+      Additional metadata about the customer (e.g., `name`, `email`).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="secretKey" type="string">
+  Autumn API secret key. Defaults to `AUTUMN_SECRET_KEY` environment variable.
+</ParamField>
+
+<ParamField body="autumnURL" type="string">
+  Override the Autumn API URL. Use when self-hosting.
+</ParamField>
+
+<ParamField body="pathPrefix" type="string">
+  Path prefix for routes. Defaults to `/api/autumn`.
+</ParamField>
+
+<ParamField body="suppressLogs" type="boolean">
+  If true, suppresses console warnings and logs.
+</ParamField>

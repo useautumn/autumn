@@ -1,5 +1,8 @@
 {
 	"typescript.tsdk": "node_modules/typescript/lib",
+	"python.defaultInterpreterPath": "others/python-test/.venv/bin/python",
+	"python.analysis.extraPaths": ["others/python-sdk/src"],
+	"python.autoComplete.extraPaths": ["others/python-sdk/src"],
 	"editor.defaultFormatter": "biomejs.biome",
 	"editor.formatOnSave": true,
 	"editor.formatOnPaste": true,
@@ -29,6 +32,6 @@
 		// "**/.claude": true,
 		"**/.cursor": true,
 		"**/.github": true,
-		"**/.superset": true,
+		"**/.superset": true
 	}
 }

@@ -1,5 +1,9 @@
-import { CustomerNotFoundError, ErrCode, RecaseError } from "@autumn/shared";
-import { z } from "zod/v4";
+import {
+	CreateReferralCodeParamsSchema,
+	CustomerNotFoundError,
+	ErrCode,
+	RecaseError,
+} from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { generateReferralCode } from "@/internal/rewards/referralUtils.js";
@@ -7,10 +11,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
 export const handleGetReferralCode = createRoute({
-	body: z.object({
-		program_id: z.string(),
-		customer_id: z.string(),
-	}),
+	body: CreateReferralCodeParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;

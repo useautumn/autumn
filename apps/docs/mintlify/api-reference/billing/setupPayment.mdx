@@ -1,0 +1,81 @@
+---
+title: "Setup Payment"
+openapi: "openapi POST /v1/billing.setup_payment"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer
+</DynamicParamField>
+
+<DynamicParamField body="success_url" type="string">
+  URL to redirect to after successful payment setup. Must start with either http:// or https://
+</DynamicParamField>
+
+<DynamicParamField body="customer_data" type="object">
+  Customer details to set when creating a customer
+  <Expandable title="properties">
+    <DynamicParamField body="name" type="string | null">
+      Customer's name
+    </DynamicParamField>
+
+    <DynamicParamField body="email" type="string | null">
+      Customer's email address
+    </DynamicParamField>
+
+    <DynamicParamField body="fingerprint" type="string | null">
+      Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse
+    </DynamicParamField>
+
+    <DynamicParamField body="metadata" type="object | null">
+      Additional metadata for the customer
+    </DynamicParamField>
+
+    <DynamicParamField body="stripe_id" type="string | null">
+      Stripe customer ID if you already have one
+    </DynamicParamField>
+
+    <DynamicParamField body="create_in_stripe" type="boolean">
+      Whether to create the customer in Stripe
+    </DynamicParamField>
+
+    <DynamicParamField body="auto_enable_plan_id" type="string">
+      The ID of the free plan to auto-enable for the customer
+    </DynamicParamField>
+
+    <DynamicParamField body="send_email_receipts" type="boolean">
+      Whether to send email receipts to this customer
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="checkout_session_params" type="object">
+  Additional parameters for the checkout session
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer
+</DynamicResponseField>
+
+<DynamicResponseField name="url" type="string">
+  URL to the payment setup page
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "payment_url": "https://checkout.stripe.com/..."
+}
+```
+</ResponseExample>

@@ -3,6 +3,7 @@ import {
 	type ApiCustomer,
 	ApiVersion,
 	type CheckResponseV2,
+	EntInterval,
 	type TrackResponseV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -111,10 +112,10 @@ describe(`${chalk.yellowBright("track-breakdown3: pay-per-use + lifetime deducti
 
 		// V1 breakdown uses 'interval' field
 		const monthlyBreakdown = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === EntInterval.Month,
 		);
 		const lifetimeBreakdown = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === EntInterval.Lifetime,
 		);
 
 		expect(monthlyBreakdown?.balance).toBe(500);
@@ -313,10 +314,10 @@ describe(`${chalk.yellowBright("track-breakdown3: pay-per-use + lifetime deducti
 
 		// V1 breakdown uses 'interval' field
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === EntInterval.Month,
 		);
 		const lifetimeBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === EntInterval.Lifetime,
 		);
 
 		expect(monthlyBreakdownV1?.usage).toBe(600);

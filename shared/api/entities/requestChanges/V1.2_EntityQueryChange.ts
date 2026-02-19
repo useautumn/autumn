@@ -1,15 +1,15 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { CusExpand } from "@models/cusModels/cusExpand.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../types/sharedContext.js";
+import type { SharedContext } from "../../../types/sharedContext";
+import { CustomerExpand } from "../../customers/components/customerExpand/customerExpand";
 import {
 	type GetEntityQuery,
 	GetEntityQuerySchema,
-} from "../entityOpModels.js";
+} from "../entityOpModels";
 
 /**
  * V1_2_EntityQueryChange: Transforms entity query TO latest format
@@ -58,9 +58,9 @@ export const V1_2_EntityQueryChange = defineVersionChange({
 		// Add `plan` and `feature` to expand array
 		const newExpand = [
 			...existingExpand,
-			CusExpand.SubscriptionsPlan,
-			CusExpand.BalancesFeature,
-			CusExpand.PurchasesPlan,
+			CustomerExpand.SubscriptionsPlan,
+			CustomerExpand.BalancesFeature,
+			CustomerExpand.PurchasesPlan,
 		] as GetEntityQuery["expand"];
 
 		return {

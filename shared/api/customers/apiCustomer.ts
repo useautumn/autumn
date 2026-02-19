@@ -1,17 +1,17 @@
-import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
-import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
-import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1.js";
+import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity";
+import { ApiCusRewardsSchema } from "@api/others/apiDiscount";
+import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1";
 import { z } from "zod/v4";
-import { BaseApiCustomerSchema } from "./baseApiCustomer.js";
-import { ApiCusReferralSchema } from "./components/apiCusReferral.js";
-import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1.js";
-import { ApiBalanceSchema } from "./cusFeatures/apiBalance.js";
-import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription.js";
+import { BaseApiCustomerSchema } from "./baseApiCustomer";
+import { ApiCusReferralSchema } from "./components/apiCusReferral";
+import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1";
+import { ApiBalanceSchema } from "./cusFeatures/apiBalance";
+import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription";
 
 export {
 	type BaseApiCustomer,
 	BaseApiCustomerSchema,
-} from "./baseApiCustomer.js";
+} from "./baseApiCustomer";
 
 export const ApiCusExpandSchema = z.object({
 	invoices: z.array(ApiInvoiceV1Schema).optional(),

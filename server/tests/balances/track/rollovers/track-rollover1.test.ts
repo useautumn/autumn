@@ -201,9 +201,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		const msgesFeature = cus.features[TestFeature.Messages];
 
 		const rollovers = msgesFeature.rollovers;
-		// @ts-expect-error (rollovers is an array of rollovers)
 		expect(rollovers![0].balance).toBe(0);
-		// @ts-expect-error (rollovers is an array of rollovers)
 		expect(rollovers![1].balance).toBe(0);
 		expect(msgesFeature.balance).toBe(messagesItem.included_usage - 50);
 
@@ -215,9 +213,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		const nonCachedMsgesFeature =
 			nonCachedCustomer.features[TestFeature.Messages];
 		const nonCachedRollovers = nonCachedMsgesFeature.rollovers;
-		// @ts-expect-error
 		expect(nonCachedRollovers![0].balance).toBe(0);
-		// @ts-expect-error
 		expect(nonCachedRollovers![1].balance).toBe(0);
 		expect(nonCachedMsgesFeature.balance).toBe(
 			messagesItem.included_usage - 50,

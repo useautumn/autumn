@@ -1,9 +1,9 @@
 import { z } from "zod/v4";
-import { FeatureSchema } from "../featureModels/featureModels.js";
-import { AppEnv } from "../genModels/genEnums.js";
-import { EntitlementSchema } from "./entModels/entModels.js";
-import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels.js";
-import { PriceSchema } from "./priceModels/priceModels.js";
+import { FeatureSchema } from "../featureModels/featureModels";
+import { AppEnv } from "../genModels/genEnums";
+import { EntitlementSchema } from "./entModels/entModels";
+import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
+import { PriceSchema } from "./priceModels/priceModels";
 
 export const ProductSchema = z.object({
 	id: z.string(),

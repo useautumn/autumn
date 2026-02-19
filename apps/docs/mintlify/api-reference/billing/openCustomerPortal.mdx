@@ -1,0 +1,43 @@
+---
+title: "Open Customer Portal"
+openapi: "openapi POST /v1/billing.open_customer_portal"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer to open the billing portal for.
+</DynamicParamField>
+
+<DynamicParamField body="configuration_id" type="string">
+  Stripe billing portal configuration ID. Create configurations in your Stripe dashboard.
+</DynamicParamField>
+
+<DynamicParamField body="return_url" type="string">
+  URL to redirect to when back button is clicked in the billing portal
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the billing portal session
+</DynamicResponseField>
+
+<DynamicResponseField name="url" type="string">
+  URL to the billing portal
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "url": "https://billing.stripe.com/session/..."
+}
+```
+</ResponseExample>

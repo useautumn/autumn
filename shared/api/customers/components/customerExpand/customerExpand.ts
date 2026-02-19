@@ -13,4 +13,10 @@ export enum CustomerExpand {
 	BalancesFeature = "balances.feature",
 }
 
-export const CustomerExpandEnum = z.enum(CustomerExpand);
+export const CustomerExpandEnum = z.enum(CustomerExpand).meta({
+	title: "CustomerExpand",
+});
+
+export const CustomerExpandArraySchema = z.array(CustomerExpandEnum).meta({
+	description: "Customer expand options",
+});

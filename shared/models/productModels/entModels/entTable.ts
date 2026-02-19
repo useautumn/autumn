@@ -9,9 +9,9 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import type { RolloverConfig } from "../../../index.js";
-import { features } from "../../featureModels/featureTable.js";
-import { products } from "../productTable.js";
+import type { RolloverConfig } from "../../../index";
+import { features } from "../../featureModels/featureTable";
+import { products } from "../productTable";
 
 export const entitlements = pgTable(
 	"entitlements",

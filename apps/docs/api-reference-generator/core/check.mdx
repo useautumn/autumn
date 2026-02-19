@@ -1,0 +1,40 @@
+---
+title: "Check Permissions"
+openapi: "openapi POST /v1/balances.check"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  Check determines if a customer has access to a feature based on their current balance. Returns `allowed: true` if they have sufficient balance, the feature is unlimited, or it's a boolean feature included in their plan.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Check feature access
+const { allowed, balance } = await autumn.check({
+  customerId: "cus_123",
+  featureId: "ai_messages"
+});
+
+if (!allowed) {
+  // Show upgrade prompt or paywall
+}
+
+console.log(`You have ${balance.remaining} messages left`);
+```
+
+```typescript Check and track atomically
+const { allowed } = await autumn.check({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  requiredBalance: 1,
+  sendEvent: true // Deducts usage if allowed
+});
+```
+
+</CodeGroup>

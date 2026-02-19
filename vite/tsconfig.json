@@ -7,7 +7,9 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
+			"autumn-js/react": ["../packages/autumn-js/src/react/index.ts"]
 		}
 		// "noUnusedLocals": false
 	}

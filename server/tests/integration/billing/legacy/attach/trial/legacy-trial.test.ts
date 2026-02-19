@@ -229,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 2: upgrade after trial ends 
 
 	// Invoice total should match checkout preview
 	expect(customer.invoices?.[1]?.total).toBe(
-		new Decimal(checkoutRes.total).toDP(2).toNumber(),
+		new Decimal(checkoutRes.total ?? 0).toDP(2).toNumber(),
 	);
 
 	await expectSubToBeCorrect({

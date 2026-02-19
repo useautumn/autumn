@@ -1,0 +1,48 @@
+---
+title: "Delete a plan"
+openapi: "openapi POST /v1/plans.delete"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Deletes a plan or a specific version of a plan.
+
+<Warning>
+  Deleting a plan cannot be undone. Existing subscriptions to this plan will remain active until canceled.
+</Warning>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Delete latest version
+await autumn.plans.delete({
+  planId: "old_plan"
+});
+```
+
+```typescript Delete all versions
+await autumn.plans.delete({
+  planId: "old_plan",
+  allVersions: true
+});
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="plan_id" type="string" required>
+  The ID of the plan to delete.
+</DynamicParamField>
+
+<DynamicParamField body="all_versions" type="boolean">
+  If true, deletes all versions of the plan. Otherwise, only deletes the latest version.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />

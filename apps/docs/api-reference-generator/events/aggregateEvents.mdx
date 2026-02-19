@@ -1,0 +1,95 @@
+---
+title: "Aggregate Events"
+openapi: "openapi POST /v1/events.aggregate"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
+
+## Working with Properties
+
+When tracking events, you can attach custom properties that can later be used for grouping aggregations:
+
+```typescript
+// Track an event with properties
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  value: 1,
+  properties: {
+    model: "gpt-4",
+    source: "api",
+    region: "us-east"
+  }
+});
+```
+
+You can then aggregate events grouped by any property using the `group_by` parameter:
+
+```typescript
+const result = await autumn.events.aggregate({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  range: "7d",
+  groupBy: "properties.model"  // Group by the "model" property
+});
+```
+
+## Response Format
+
+The response structure changes based on whether `group_by` is provided:
+
+### Without `group_by` (Flat Response)
+
+When no grouping is specified, `values` contains the aggregated sum for each feature:
+
+```json
+{
+  "list": [
+    {
+      "period": 1762905600000,
+      "values": {
+        "api_calls": 150,
+        "messages": 45
+      }
+    }
+  ],
+  "total": {
+    "api_calls": { "count": 10, "sum": 150 },
+    "messages": { "count": 5, "sum": 45 }
+  }
+}
+```
+
+### With `group_by` (Grouped Response)
+
+When grouping is specified, `values` contains the total sum while `grouped_values` breaks down values by group:
+
+```json
+{
+  "list": [
+    {
+      "period": 1762905600000,
+      "values": {
+        "api_calls": 150
+      },
+      "grouped_values": {
+        "api_calls": {
+          "gpt-4": 100,
+          "gpt-3.5": 50
+        }
+      }
+    }
+  ],
+  "total": {
+    "api_calls": { "count": 10, "sum": 150 }
+  }
+}
+```
+
+<Note>
+  The `grouped_values` field is only present when `group_by` is provided in the request.
+</Note>

@@ -1,23 +1,34 @@
 import type { MiddlewareHandler } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
+type ExpandCarrier = {
+	expand?: string | string[];
+	skip_cache?: boolean | string;
+};
+
 /**
- * Extracts expand from validated query and sets it in context.
- * Must run AFTER versionedValidator so expand has been transformed.
- * Uses c.req.valid("query") to access the transformed/validated expand field.
+ * Extracts expand from query params and request body, sets it in context.
+ * Runs before validator, so accesses raw query and cloned body directly.
  */
 export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 	return async (c, next) => {
-		// Get validated query (which includes transformed values from version changes)
-		// Fallback to raw query if validation hasn't happened yet
-		const validatedQuery = (c.req as any).valid?.("query") as
-			| { expand?: string | string[]; skip_cache?: boolean }
-			| undefined;
 		const rawQuery = c.req.query();
 
-		// Prefer validated query (transformed), fallback to raw query
-		const expandValue = validatedQuery?.expand ?? rawQuery?.expand;
-		const skipCacheQuery = validatedQuery?.skip_cache ?? rawQuery?.skip_cache;
+		// Try to parse body for POST/PUT/PATCH requests
+		let body: ExpandCarrier | undefined;
+		if (["POST", "PUT", "PATCH"].includes(c.req.method)) {
+			try {
+				body = await c.req.json();
+				// Re-set the body so downstream handlers can read it
+				// Hono caches the parsed body, so this should work
+			} catch {
+				body = undefined;
+			}
+		}
+
+		// Precedence: body expand > query expand
+		const expandValue = body?.expand ?? rawQuery?.expand;
+		const skipCacheQuery = body?.skip_cache ?? rawQuery?.skip_cache;
 
 		const skipCacheValue =
 			(typeof skipCacheQuery === "boolean" && skipCacheQuery === true) ||

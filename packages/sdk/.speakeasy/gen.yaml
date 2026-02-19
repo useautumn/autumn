@@ -1,0 +1,120 @@
+configVersion: 2.0.0
+generation:
+  devContainers:
+    enabled: true
+    schemaPath: .speakeasy/out.openapi.yaml
+  sdkClassName: Autumn
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+    sdkInitStyle: constructor
+  useClassNamesForArrayFields: true
+  fixes:
+    nameResolutionDec2023: true
+    nameResolutionFeb2025: true
+    parameterOrderingFeb2024: true
+    requestResponseComponentNamesFeb2024: true
+    securityFeb2025: true
+    sharedErrorComponentsApr2025: true
+    sharedNestedComponentsJan2026: true
+  auth:
+    oAuth2ClientCredentialsEnabled: true
+    oAuth2PasswordEnabled: true
+    hoistGlobalSecurity: true
+  inferSSEOverload: true
+  sdkHooksConfigAccess: true
+  schemas:
+    allOfMergeStrategy: shallowMerge
+  requestBodyFieldName: body
+  versioningStrategy: automatic
+  persistentEdits: {}
+  tests:
+    generateTests: false
+    generateNewTests: true
+    skipResponseBodyAssertions: false
+typescript:
+  version: 0.10.16
+  acceptHeaderEnum: false
+  additionalDependencies:
+    dependencies: {}
+    devDependencies: {}
+    peerDependencies: {}
+  additionalPackageJSON:
+    exports:
+      .:
+        import: ./dist/esm/index.js
+        require: ./dist/commonjs/index.js
+        types: ./dist/esm/index.d.ts
+      ./models:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
+      ./models/errors:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
+      ./models/operations:
+        import: ./dist/esm/models/index.js
+        require: ./dist/commonjs/models/index.js
+        types: ./dist/esm/models/index.d.ts
+      ./package.json: ./package.json
+      ./types:
+        import: ./dist/esm/types/index.js
+        require: ./dist/commonjs/types/index.js
+        types: ./dist/esm/types/index.d.ts
+    main: ./dist/commonjs/index.js
+    module: ./dist/esm/index.js
+    types: ./dist/esm/index.d.ts
+  additionalScripts: {}
+  alwaysIncludeInboundAndOutbound: false
+  author: Speakeasy
+  baseErrorName: AutumnError
+  clientServerStatusCodesAsErrors: true
+  compileCommand:
+    - bun
+    - install
+    - --ignore-scripts
+  constFieldsAlwaysOptional: false
+  defaultErrorName: AutumnDefaultError
+  enableCustomCodeRegions: false
+  enableMCPServer: false
+  enableReactQuery: false
+  enumFormat: union
+  envVarPrefix: AUTUMN
+  exportZodModelNamespace: false
+  flatAdditionalProperties: true
+  flattenGlobalSecurity: true
+  flatteningOrder: parameters-first
+  formStringArrayEncodeMode: array
+  forwardCompatibleEnumsByDefault: true
+  forwardCompatibleUnionsByDefault: tagged-only
+  generateExamples: true
+  imports:
+    option: openapi
+    paths:
+      callbacks: models
+      errors: models
+      operations: models
+      shared: models
+      webhooks: models
+  inferUnionDiscriminators: true
+  inputModelSuffix: input
+  jsonpath: rfc9535
+  laxMode: lax
+  legacyFileNaming: false
+  maxMethodParams: 0
+  methodArguments: infer-optional-args
+  modelPropertyCasing: camel
+  moduleFormat: dual
+  multipartArrayFormat: standard
+  outputModelSuffix: output
+  packageName: '@useautumn/sdk'
+  preApplyUnionDiscriminators: true
+  preserveModelFieldNames: false
+  responseFormat: flat
+  sseFlatResponse: false
+  templateVersion: v2
+  unionStrategy: populated-fields
+  usageSDKInitImports: []
+  useIndexModules: true
+  zodVersion: v4-mini

@@ -1,45 +1,47 @@
 // Import customer feature changes
-import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange.js";
+import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange";
 // Import customer changes
-import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange.js";
-import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded.js";
-import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject.js";
+import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange";
+import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded";
+import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject";
 // Import trials used changes
-import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/changes/V1.2_TrialsUsedChange.js";
+import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/changes/V1.2_TrialsUsedChange";
 
 // Import customer product changes
 
-import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.js";
-import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
+import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange";
+import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange";
 // Import entity changes
-import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange.js";
-import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange.js";
-import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange.js";
+import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange";
+import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange";
+import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange";
 // Import feature changes
-import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js";
-import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange.js";
+import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange";
+import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange";
 // Import invoice changes
-import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange.js";
+import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange";
 
 // Import product changes
 
-import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange.js";
-import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
-import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges.js";
-import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
-import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
-import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
-import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange.js";
-import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange.js";
-import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange.js";
-import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange.js";
+import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange";
+import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges";
+import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges";
+import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange";
+import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange";
+import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange";
+import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange";
+import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange";
+import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange";
+import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange";
 // Import attach changes
-import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange.js";
-import { V1_2_AttachParamsChange } from "../../billing/attachV2/requestChanges/V1.2_AttachParamsChange.js";
-import { V1_2_UpdateSubscriptionParamsChange } from "../../billing/updateSubscription/requestChanges/V1.2_UpdateSubscriptionParamsChange.js";
-import { ApiVersion } from "../ApiVersion.js";
-import type { VersionChangeConstructor } from "./VersionChange.js";
-import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
+import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange";
+import { V1_2_AttachParamsChange } from "../../billing/attachV2/requestChanges/V1.2_AttachParamsChange";
+import { V1_2_UpdateSubscriptionParamsChange } from "../../billing/updateSubscription/requestChanges/V1.2_UpdateSubscriptionParamsChange";
+// Import events aggregate changes
+import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_AggregateEventsChange";
+import { ApiVersion } from "../ApiVersion";
+import type { VersionChangeConstructor } from "./VersionChange";
+import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_PlanChanges, // Transforms Plan TO V2.0 format from V2.1 format
@@ -47,6 +49,7 @@ export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
 	V2_0_CheckChange, // Transforms Check TO V2.0 format from V2.1 format
 	V2_0_TrackChange, // Transforms Track TO V2.0 format from V2.1 format
+	V2_0_AggregateEventsChange, // Transforms EventsAggregate TO V2.0 format from V2.1 format
 ];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [

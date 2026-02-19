@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, CusExpand } from "@autumn/shared";
+import { ApiVersion, CustomerExpand } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -66,7 +66,7 @@ describe(`${chalk.yellowBright("check-misc2: testing check auto creates customer
 
 	test("get customer with entities, should return created entity?", async () => {
 		const customer = await autumnV1.customers.get(customerId, {
-			expand: [CusExpand.Entities],
+			expand: [CustomerExpand.Entities],
 		});
 
 		expect(customer.entities).toBeDefined();

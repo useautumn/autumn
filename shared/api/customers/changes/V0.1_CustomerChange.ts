@@ -1,15 +1,15 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
 import {
 	type ApiCusFeatureV0,
 	ApiCusFeatureV0Schema,
-} from "../cusFeatures/previousVersions/apiCusFeatureV0.js";
-import { ApiCustomerV0Schema } from "../previousVersions/apiCustomerV0.js";
-import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1.js";
+} from "../cusFeatures/previousVersions/apiCusFeatureV0";
+import { ApiCustomerV0Schema } from "../previousVersions/apiCustomerV0";
+import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1";
 
 /**
  * V0_1_CustomerChange: Transforms customer TO V0_1 format

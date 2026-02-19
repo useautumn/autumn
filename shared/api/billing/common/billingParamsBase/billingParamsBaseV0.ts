@@ -1,19 +1,19 @@
-import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0.js";
-import { TransitionRulesSchema } from "@api/billing/common/transitionRules.js";
-import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0.js";
-import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { TransitionRulesSchema } from "@api/billing/common/transitionRules";
+import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0";
+import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels";
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../../../common/customerData.js";
-import { EntityDataSchema } from "../../../common/entityData.js";
+import { CustomerDataSchema } from "../../../common/customerData";
+import { EntityDataSchema } from "../../../common/entityData";
 
 export const BillingParamsBaseV0Schema = z.object({
 	customer_id: z.string(),
-	entity_id: z.string().nullish(),
+	entity_id: z.string().optional(),
 	customer_data: CustomerDataSchema.optional(),
 	entity_data: EntityDataSchema.optional(),
 
 	// Used for both update and attach
-	options: z.array(FeatureQuantityParamsV0Schema).nullish(),
+	options: z.array(FeatureQuantityParamsV0Schema).optional(),
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),

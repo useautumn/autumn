@@ -13,7 +13,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createProduct } from "@/internal/products/handlers/productActions/createProduct.js";
+import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { buildPreviewOrgSlug } from "./handleSetupPreviewOrg.js";

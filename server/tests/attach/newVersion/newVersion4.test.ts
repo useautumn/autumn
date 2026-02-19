@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { BillingInterval, LegacyVersion } from "@autumn/shared";
+import { AttachScenario, BillingInterval, LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -108,7 +108,7 @@ describe(`${chalk.yellowBright("newVersion4: Testing add ons")}`, () => {
 			product_id: pro.id,
 		});
 
-		expect(res.product?.scenario).toBe("renew");
+		expect(res.product?.scenario).toBe(AttachScenario.Renew);
 
 		await autumn.attach({
 			customer_id: customerId,
