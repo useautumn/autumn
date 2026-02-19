@@ -13,6 +13,10 @@ import {
 	useContext,
 	useMemo,
 } from "react";
+import {
+	disabledItemDraftController,
+	type ItemDraftController,
+} from "@/hooks/inline-editor/useItemDraftController";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -30,6 +34,7 @@ interface ProductContextValue {
 	setSheet: (params: { type: string | null; itemId?: string | null }) => void;
 	setInitialItem: (item: ProductItem | null) => void;
 	closeSheet: () => void;
+	itemDraft: ItemDraftController;
 }
 
 const ProductContext = createContext<ProductContextValue | null>(null);
@@ -50,6 +55,7 @@ export function ProductProvider({
 	setSheet,
 	setInitialItem,
 	closeSheet,
+	itemDraft,
 }: {
 	children: ReactNode;
 	product: FrontendProduct;
@@ -63,6 +69,7 @@ export function ProductProvider({
 	setSheet: (params: { type: string | null; itemId?: string | null }) => void;
 	setInitialItem: (item: ProductItem | null) => void;
 	closeSheet: () => void;
+	itemDraft: ItemDraftController;
 }) {
 	return (
 		<ProductContext.Provider
@@ -76,6 +83,7 @@ export function ProductProvider({
 				setSheet,
 				setInitialItem,
 				closeSheet,
+				itemDraft,
 			}}
 		>
 			{children}
@@ -122,6 +130,7 @@ export function useSheet() {
 			setSheet: context.setSheet,
 			setInitialItem: context.setInitialItem,
 			closeSheet: context.closeSheet,
+			itemDraft: context.itemDraft,
 		};
 	}
 
@@ -132,16 +141,24 @@ export function useSheet() {
 		setSheet: storeSetSheet,
 		setInitialItem: storeSetInitialItem,
 		closeSheet: storeCloseSheet,
+		itemDraft: disabledItemDraftController,
 	};
 }
 
 /** Hook to get current item being edited. Uses context if available, otherwise Zustand. */
 export function useCurrentItem() {
+	const context = useContext(ProductContext);
 	const { product } = useProduct();
 	const { itemId } = useSheet();
 
 	return useMemo(() => {
 		if (!itemId || !product?.items) return null;
+		if (
+			context?.itemDraft.session &&
+			context.itemDraft.session.itemId === itemId
+		) {
+			return context.itemDraft.session.draftItem;
+		}
 
 		const featureItems = productV2ToFeatureItems({ items: product.items });
 
@@ -159,16 +176,21 @@ export function useCurrentItem() {
 		}
 
 		return null;
-	}, [product, itemId]);
+	}, [context?.itemDraft.session, product, itemId]);
 }
 
 /** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
 function useSetCurrentItem() {
 	const { product, setProduct } = useProduct();
-	const { itemId } = useSheet();
+	const { itemId, itemDraft } = useSheet();
 
 	return useCallback(
 		(updatedItem: ProductItem) => {
+			if (itemDraft.session && itemDraft.session.itemId === itemId) {
+				itemDraft.update({ item: updatedItem });
+				return;
+			}
+
 			if (!product || !product.items || !itemId) return;
 
 			let originalIndex = -1;
@@ -189,17 +211,27 @@ function useSetCurrentItem() {
 			updatedItems[originalIndex] = updatedItem;
 			setProduct({ ...product, items: updatedItems });
 		},
-		[product, setProduct, itemId],
+		[itemDraft, itemId, product, setProduct],
 	);
 }
 
 /** Hook to check if the current item has unsaved changes. Uses context if available, otherwise Zustand. */
 export function useHasItemChanges() {
 	const item = useCurrentItem();
-	const { initialItem } = useSheet();
+	const { initialItem, itemDraft } = useSheet();
 	const { features = [] } = useFeaturesQuery();
 
 	return useMemo(() => {
+		if (itemDraft.session) {
+			const { same } = itemsAreSame({
+				item1: itemDraft.session.draftItem,
+				item2: itemDraft.session.initialItem,
+				features,
+			});
+
+			return !same;
+		}
+
 		if (!item || !initialItem) return false;
 
 		const { same } = itemsAreSame({
@@ -209,20 +241,26 @@ export function useHasItemChanges() {
 		});
 
 		return !same;
-	}, [item, initialItem, features]);
+	}, [itemDraft.session, item, initialItem, features]);
 }
 
 /** Hook to discard item changes (restore to initial state) and close the sheet. Uses context if available, otherwise Zustand. */
 export function useDiscardItemAndClose() {
 	const setCurrentItem = useSetCurrentItem();
-	const { initialItem, closeSheet } = useSheet();
+	const { initialItem, closeSheet, itemDraft } = useSheet();
 
 	return useCallback(() => {
+		if (itemDraft.session) {
+			itemDraft.discard();
+			closeSheet();
+			return;
+		}
+
 		if (initialItem) {
 			setCurrentItem(initialItem);
 		}
 		closeSheet();
-	}, [initialItem, setCurrentItem, closeSheet]);
+	}, [itemDraft, initialItem, setCurrentItem, closeSheet]);
 }
 
 /** Hook to check if the product has unsaved changes compared to initial state. Only works in context mode. */
