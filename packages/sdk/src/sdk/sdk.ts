@@ -12,6 +12,7 @@ import { Billing } from "./billing.js";
 import { Customers } from "./customers.js";
 import { Entities } from "./entities.js";
 import { Events } from "./events.js";
+import { Features } from "./features.js";
 import { Plans } from "./plans.js";
 import { Referrals } from "./referrals.js";
 
@@ -24,6 +25,11 @@ export class Autumn extends ClientSDK {
   private _plans?: Plans;
   get plans(): Plans {
     return (this._plans ??= new Plans(this._options));
+  }
+
+  private _features?: Features;
+  get features(): Features {
+    return (this._features ??= new Features(this._options));
   }
 
   private _billing?: Billing;

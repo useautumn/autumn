@@ -26,7 +26,7 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Fetches a single entity by entity ID.
+ * Fetches an entity by its ID.
  *
  * Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
  *

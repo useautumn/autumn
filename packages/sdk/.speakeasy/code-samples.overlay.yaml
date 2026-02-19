@@ -435,6 +435,122 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/features.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.features.create({
+                name: "API Calls",
+                type: "metered",
+                consumable: true,
+                featureId: "api-calls",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/features.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.features.delete({
+                featureId: "old-feature",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/features.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.features.get({
+                featureId: "api-calls",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/features.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.features.list();
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/features.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.features.update({
+                name: "API Requests",
+                display: {
+                  singular: "API request",
+                  plural: "API requests",
+                },
+                featureId: "api-calls",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:

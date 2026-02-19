@@ -4,18 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import type {
 	BillingAttachResponse,
 	CheckResponse,
-	CreateReferralCodeResponse,
 	Customer,
 	OpenCustomerPortalResponse,
-	RedeemReferralCodeResponse,
 } from "@useautumn/sdk";
 import type {
 	AttachParams,
 	CheckParams,
-	CreateReferralCodeParams,
 	GetOrCreateCustomerClientParams,
 	OpenCustomerPortalParams,
-	RedeemReferralCodeParams,
 } from "../../types";
 import { useAutumnClient } from "../AutumnContext";
 import type { AutumnClientError } from "../client/AutumnClientError";
@@ -45,23 +41,13 @@ export type UseCustomerResult = HookResultWithMethods<
 		openCustomerPortal: (
 			params?: OpenCustomerPortalParams,
 		) => Promise<OpenCustomerPortalResponse>;
-
-		/** Creates or fetches a referral code for the current customer in a referral program. */
-		createReferralCode: (
-			params: CreateReferralCodeParams,
-		) => Promise<CreateReferralCodeResponse>;
-
-		/** Redeems a referral code for the current customer. */
-		redeemReferralCode: (
-			params: RedeemReferralCodeParams,
-		) => Promise<RedeemReferralCodeResponse>;
 	}
 >;
 
 /**
  * Fetches or creates an Autumn customer and provides billing actions.
  *
- * @returns Customer data along with `attach`, `check`, `openCustomerPortal`, `createReferralCode`, and `redeemReferralCode` action methods.
+ * @returns Customer data along with `attach`, `check`, and `openCustomerPortal` methods for billing operations.
  */
 export const useCustomer = (
 	params: UseCustomerParams = {},

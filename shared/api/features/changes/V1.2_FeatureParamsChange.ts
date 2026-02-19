@@ -6,7 +6,7 @@ import {
 import type { z } from "zod/v4";
 import type { SharedContext } from "../../../types/sharedContext.js";
 import { featureV0ToV1Type } from "../../../utils/featureUtils/convertFeatureUtils.js";
-import { CreateFeatureV1ParamsSchema } from "../featureV1OpModels.js";
+import { CreateFeatureV1ParamsSchema } from "../crud/createFeatureParams.js";
 import { CreateFeatureV0ParamsSchema } from "../prevVersions/featureV0OpModels.js";
 
 /**

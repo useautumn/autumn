@@ -380,7 +380,7 @@ const response = await client.entities.create({
 @param entityId - The ID of the entity.
 
 @returns The created entity object including its current subscriptions, purchases, and balances.
-* [get](docs/sdks/entities/README.md#get) - Fetches a single entity by entity ID.
+* [get](docs/sdks/entities/README.md#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 
@@ -419,6 +419,96 @@ const response = await client.entities.delete({ entityId: "seat_42" });
 
 * [list](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
 * [aggregate](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
+
+### [Features](docs/sdks/features/README.md)
+
+* [create](docs/sdks/features/README.md#create) - Creates a new feature.
+
+Use this to programmatically create features for metering usage, managing access, or building credit systems.
+
+@example
+```typescript
+// Create a metered feature for API calls
+const response = await client.features.create({
+
+  featureId: "api-calls",
+  name: "API Calls",
+  type: "metered",
+  consumable: true,
+});
+```
+
+@example
+```typescript
+// Create a boolean feature for a premium feature flag
+const response = await client.features.create({ featureId: "advanced-analytics", name: "Advanced Analytics", type: "boolean" });
+```
+
+@param name - The name of the feature.
+@param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
+@param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
+@param display - Singular and plural display names for the feature in your user interface. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param featureId - The ID of the feature to create.
+
+@returns The created feature object.
+* [get](docs/sdks/features/README.md#get) - Retrieves a single feature by its ID.
+
+Use this when you need to fetch the details of a specific feature.
+
+@example
+```typescript
+// Get a feature by ID
+const response = await client.features.get({ featureId: "api-calls" });
+```
+
+@param featureId - The ID of the feature.
+
+@returns The feature object with its full configuration.
+* [list](docs/sdks/features/README.md#list) - Lists all features in the current environment.
+
+Use this to retrieve all features configured for your organization to display in dashboards or for feature management.
+
+@returns A list of all features with their configuration and metadata.
+* [update](docs/sdks/features/README.md#update) - Updates an existing feature.
+
+Use this to modify feature properties like name, display settings, or to archive a feature.
+
+@example
+```typescript
+// Update a feature's display name
+const response = await client.features.update({ featureId: "api-calls", name: "API Requests", display: {"singular":"API request","plural":"API requests"} });
+```
+
+@example
+```typescript
+// Archive a feature
+const response = await client.features.update({ featureId: "deprecated-feature", archived: true });
+```
+
+@param name - The name of the feature. (optional)
+@param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
+@param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
+@param display - Singular and plural display names for the feature in your user interface. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
+@param featureId - The ID of the feature to update.
+@param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
+
+@returns The updated feature object.
+* [delete](docs/sdks/features/README.md#delete) - Deletes a feature by its ID.
+
+Use this to permanently remove a feature. Note: features that are used in products cannot be deleted - archive them instead.
+
+@example
+```typescript
+// Delete an unused feature
+const response = await client.features.delete({ featureId: "old-feature" });
+```
+
+@param featureId - The ID of the feature to delete.
+
+@returns A success flag indicating the feature was deleted.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -656,7 +746,7 @@ const response = await client.entities.delete({ entityId: "seat_42" });
 @param entityId - The ID of the entity.
 
 @returns A success flag indicating the entity was deleted.
-- [`entitiesGet`](docs/sdks/entities/README.md#get) - Fetches a single entity by entity ID.
+- [`entitiesGet`](docs/sdks/entities/README.md#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 
@@ -678,6 +768,93 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @returns The entity object including its current subscriptions, purchases, and balances.
 - [`eventsAggregate`](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 - [`eventsList`](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
+- [`featuresCreate`](docs/sdks/features/README.md#create) - Creates a new feature.
+
+Use this to programmatically create features for metering usage, managing access, or building credit systems.
+
+@example
+```typescript
+// Create a metered feature for API calls
+const response = await client.features.create({
+
+  featureId: "api-calls",
+  name: "API Calls",
+  type: "metered",
+  consumable: true,
+});
+```
+
+@example
+```typescript
+// Create a boolean feature for a premium feature flag
+const response = await client.features.create({ featureId: "advanced-analytics", name: "Advanced Analytics", type: "boolean" });
+```
+
+@param name - The name of the feature.
+@param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
+@param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
+@param display - Singular and plural display names for the feature in your user interface. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param featureId - The ID of the feature to create.
+
+@returns The created feature object.
+- [`featuresDelete`](docs/sdks/features/README.md#delete) - Deletes a feature by its ID.
+
+Use this to permanently remove a feature. Note: features that are used in products cannot be deleted - archive them instead.
+
+@example
+```typescript
+// Delete an unused feature
+const response = await client.features.delete({ featureId: "old-feature" });
+```
+
+@param featureId - The ID of the feature to delete.
+
+@returns A success flag indicating the feature was deleted.
+- [`featuresGet`](docs/sdks/features/README.md#get) - Retrieves a single feature by its ID.
+
+Use this when you need to fetch the details of a specific feature.
+
+@example
+```typescript
+// Get a feature by ID
+const response = await client.features.get({ featureId: "api-calls" });
+```
+
+@param featureId - The ID of the feature.
+
+@returns The feature object with its full configuration.
+- [`featuresList`](docs/sdks/features/README.md#list) - Lists all features in the current environment.
+
+Use this to retrieve all features configured for your organization to display in dashboards or for feature management.
+
+@returns A list of all features with their configuration and metadata.
+- [`featuresUpdate`](docs/sdks/features/README.md#update) - Updates an existing feature.
+
+Use this to modify feature properties like name, display settings, or to archive a feature.
+
+@example
+```typescript
+// Update a feature's display name
+const response = await client.features.update({ featureId: "api-calls", name: "API Requests", display: {"singular":"API request","plural":"API requests"} });
+```
+
+@example
+```typescript
+// Archive a feature
+const response = await client.features.update({ featureId: "deprecated-feature", archived: true });
+```
+
+@param name - The name of the feature. (optional)
+@param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
+@param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
+@param display - Singular and plural display names for the feature in your user interface. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
+@param featureId - The ID of the feature to update.
+@param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
+
+@returns The updated feature object.
 - [`plansList`](docs/sdks/plans/README.md#list) - List all plans
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.

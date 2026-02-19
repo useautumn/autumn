@@ -101,7 +101,6 @@ class CreateBalanceParamsTypedDict(TypedDict):
     r"""Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets."""
     expires_at: NotRequired[float]
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
-    granted_balance: NotRequired[float]
 
 
 class CreateBalanceParams(BaseModel):
@@ -126,19 +125,10 @@ class CreateBalanceParams(BaseModel):
     expires_at: Optional[float] = None
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
 
-    granted_balance: Optional[float] = None
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            [
-                "entity_id",
-                "included",
-                "unlimited",
-                "reset",
-                "expires_at",
-                "granted_balance",
-            ]
+            ["entity_id", "included", "unlimited", "reset", "expires_at"]
         )
         serialized = handler(self)
         m = {}

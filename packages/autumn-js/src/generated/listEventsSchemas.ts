@@ -2,54 +2,66 @@
 import { z } from "zod/v4";
 
 export const listEventsGlobalsSchema = z.object({
-    xApiVersion: z.union([z.string(), z.undefined()]).optional()
+	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const listEventsFeatureIdSchema = z.union([z.string(), z.array(z.string())]);
+export const listEventsFeatureIdSchema = z.union([
+	z.string(),
+	z.array(z.string()),
+]);
 
 export const listEventsCustomRangeSchema = z.object({
-    start: z.union([z.number(), z.undefined()]).optional(),
-    end: z.union([z.number(), z.undefined()]).optional()
+	start: z.union([z.number(), z.undefined()]).optional(),
+	end: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const eventsListParamsSchema = z.object({
-    offset: z.union([z.number(), z.undefined()]).optional(),
-    limit: z.union([z.number(), z.undefined()]).optional(),
-    customerId: z.union([z.string(), z.undefined()]).optional(),
-    featureId: z.union([z.string(), z.array(z.string()), z.undefined()]).optional(),
-    customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional()
+	offset: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.union([z.number(), z.undefined()]).optional(),
+	customerId: z.union([z.string(), z.undefined()]).optional(),
+	featureId: z
+		.union([z.string(), z.array(z.string()), z.undefined()])
+		.optional(),
+	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
 });
 
 export const listEventsPropertiesSchema = z.object({});
 
 export const listEventsListSchema = z.object({
-    id: z.string(),
-    timestamp: z.number(),
-    featureId: z.string(),
-    customerId: z.string(),
-    value: z.number(),
-    properties: listEventsPropertiesSchema
+	id: z.string(),
+	timestamp: z.number(),
+	featureId: z.string(),
+	customerId: z.string(),
+	value: z.number(),
+	properties: listEventsPropertiesSchema,
 });
 
 export const listEventsResponseSchema = z.object({
-    list: z.array(listEventsListSchema),
-    hasMore: z.boolean(),
-    offset: z.number(),
-    limit: z.number(),
-    total: z.number()
+	list: z.array(listEventsListSchema),
+	hasMore: z.boolean(),
+	offset: z.number(),
+	limit: z.number(),
+	total: z.number(),
 });
 
-export const listEventsFeatureIdOutboundSchema = z.union([z.string(), z.array(z.string())]);
+export const listEventsFeatureIdOutboundSchema = z.union([
+	z.string(),
+	z.array(z.string()),
+]);
 
 export const listEventsCustomRangeOutboundSchema = z.object({
-    start: z.union([z.number(), z.undefined()]).optional(),
-    end: z.union([z.number(), z.undefined()]).optional()
+	start: z.union([z.number(), z.undefined()]).optional(),
+	end: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const eventsListParamsOutboundSchema = z.object({
-    offset: z.number(),
-    limit: z.number(),
-    customer_id: z.union([z.string(), z.undefined()]).optional(),
-    feature_id: z.union([z.string(), z.array(z.string()), z.undefined()]).optional(),
-    custom_range: z.union([listEventsCustomRangeOutboundSchema, z.undefined()]).optional()
+	offset: z.number(),
+	limit: z.number(),
+	customer_id: z.union([z.string(), z.undefined()]).optional(),
+	feature_id: z
+		.union([z.string(), z.array(z.string()), z.undefined()])
+		.optional(),
+	custom_range: z
+		.union([listEventsCustomRangeOutboundSchema, z.undefined()])
+		.optional(),
 });

@@ -7,7 +7,7 @@
 * [create](#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
 
 Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.
-* [get](#get) - Fetches a single entity by entity ID.
+* [get](#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 * [delete](#delete) - Deletes an entity by entity ID.
@@ -62,7 +62,7 @@ with Autumn(
 
 ## get
 
-Fetches a single entity by entity ID.
+Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 

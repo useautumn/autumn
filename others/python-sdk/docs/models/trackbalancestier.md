@@ -1,9 +1,0 @@
-# TrackBalancesTier
-
-
-## Fields
-
-| Field                                                  | Type                                                   | Required                                               | Description                                            |
-| ------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
-| `to`                                                   | [models.TrackBalancesTo](../models/trackbalancesto.md) | :heavy_check_mark:                                     | N/A                                                    |
-| `amount`                                               | *float*                                                | :heavy_check_mark:                                     | N/A                                                    |

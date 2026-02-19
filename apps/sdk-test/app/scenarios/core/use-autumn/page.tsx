@@ -168,11 +168,11 @@ export default function UseAutumnScenarioPage() {
 
       <DebugCard title="Actions">
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-zinc-200 mb-4">
+        <div className="mb-4 flex gap-1 border-b border-zinc-200">
           <button
             type="button"
             onClick={() => setActiveTab("attach")}
-            className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "attach"
                 ? "border-zinc-900 text-zinc-900"
                 : "border-transparent text-zinc-500 hover:text-zinc-700"
@@ -183,7 +183,7 @@ export default function UseAutumnScenarioPage() {
           <button
             type="button"
             onClick={() => setActiveTab("check")}
-            className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "check"
                 ? "border-zinc-900 text-zinc-900"
                 : "border-transparent text-zinc-500 hover:text-zinc-700"
@@ -194,7 +194,7 @@ export default function UseAutumnScenarioPage() {
           <button
             type="button"
             onClick={() => setActiveTab("openCustomerPortal")}
-            className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "openCustomerPortal"
                 ? "border-zinc-900 text-zinc-900"
                 : "border-transparent text-zinc-500 hover:text-zinc-700"
@@ -297,7 +297,7 @@ export default function UseAutumnScenarioPage() {
                 onChange={(e) => setPortalReturnUrl(e.target.value)}
                 className="h-8 text-sm"
               />
-              <p className="text-[11px] text-zinc-500 leading-tight">
+              <p className="text-[11px] leading-tight text-zinc-500">
                 Defaults to the current page URL when left empty.
               </p>
             </div>

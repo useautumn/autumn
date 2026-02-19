@@ -207,10 +207,10 @@ Use this to gate access before a feature action. Enable sendEvent when you want 
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 
-### [Balances](docs/sdks/balancessdk/README.md)
+### [Balances](docs/sdks/balances/README.md)
 
-* [create](docs/sdks/balancessdk/README.md#create) - Create a balance for a customer feature.
-* [update](docs/sdks/balancessdk/README.md#update) - Update a customer balance.
+* [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
+* [update](docs/sdks/balances/README.md#update) - Update a customer balance.
 
 ### [Billing](docs/sdks/billing/README.md)
 
@@ -242,7 +242,7 @@ Use this as the primary entrypoint before billing operations so the customer rec
 * [create](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
 
 Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.
-* [get](docs/sdks/entities/README.md#get) - Fetches a single entity by entity ID.
+* [get](docs/sdks/entities/README.md#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
 * [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
@@ -253,6 +253,24 @@ Use this when the underlying resource is removed and you no longer want entity-s
 
 * [list](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
 * [aggregate](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
+
+### [Features](docs/sdks/features/README.md)
+
+* [create](docs/sdks/features/README.md#create) - Creates a new feature.
+
+Use this to programmatically create features for metering usage, managing access, or building credit systems.
+* [get](docs/sdks/features/README.md#get) - Retrieves a single feature by its ID.
+
+Use this when you need to fetch the details of a specific feature.
+* [list](docs/sdks/features/README.md#list) - Lists all features in the current environment.
+
+Use this to retrieve all features configured for your organization to display in dashboards or for feature management.
+* [update](docs/sdks/features/README.md#update) - Updates an existing feature.
+
+Use this to modify feature properties like name, display settings, or to archive a feature.
+* [delete](docs/sdks/features/README.md#delete) - Deletes a feature by its ID.
+
+Use this to permanently remove a feature. Note: features that are used in products cannot be deleted - archive them instead.
 
 ### [Plans](docs/sdks/plans/README.md)
 

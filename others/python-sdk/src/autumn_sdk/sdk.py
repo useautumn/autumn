@@ -17,11 +17,12 @@ from typing import Any, Callable, Dict, Mapping, Optional, TYPE_CHECKING, Union,
 import weakref
 
 if TYPE_CHECKING:
-    from autumn_sdk.balances_sdk import BalancesSDK
+    from autumn_sdk.balances import Balances
     from autumn_sdk.billing import Billing
     from autumn_sdk.customers import Customers
     from autumn_sdk.entities import Entities
     from autumn_sdk.events import Events
+    from autumn_sdk.features import Features
     from autumn_sdk.plans import Plans
     from autumn_sdk.referrals import Referrals
 
@@ -29,16 +30,18 @@ if TYPE_CHECKING:
 class Autumn(BaseSDK):
     customers: "Customers"
     plans: "Plans"
+    features: "Features"
     billing: "Billing"
-    balances: "BalancesSDK"
+    balances: "Balances"
     events: "Events"
     entities: "Entities"
     referrals: "Referrals"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
+        "features": ("autumn_sdk.features", "Features"),
         "billing": ("autumn_sdk.billing", "Billing"),
-        "balances": ("autumn_sdk.balances_sdk", "BalancesSDK"),
+        "balances": ("autumn_sdk.balances", "Balances"),
         "events": ("autumn_sdk.events", "Events"),
         "entities": ("autumn_sdk.entities", "Entities"),
         "referrals": ("autumn_sdk.referrals", "Referrals"),

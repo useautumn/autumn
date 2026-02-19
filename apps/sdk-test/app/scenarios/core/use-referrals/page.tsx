@@ -1,10 +1,7 @@
 "use client";
 
-import type {
-  ClientCreateReferralCodeParams,
-  ClientRedeemReferralCodeParams,
-} from "autumn-js/react";
-import { useCustomer } from "autumn-js/react";
+import type { ClientRedeemReferralCodeParams } from "autumn-js/react";
+import { useReferrals } from "autumn-js/react";
 import { useId, useState } from "react";
 import { DataViewer } from "@/components/debug/DataViewer";
 import { DebugCard } from "@/components/debug/DebugCard";
@@ -47,11 +44,6 @@ const toErrorPayload = ({ error }: { error: unknown }) => {
 };
 
 export default function UseReferralsScenarioPage() {
-  const { isLoading, error, refetch, createReferralCode, redeemReferralCode } =
-    useCustomer({
-      errorOnNotFound: false,
-    });
-
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [lastAction, setLastAction] = useState<LastActionState>(null);
@@ -59,6 +51,11 @@ export default function UseReferralsScenarioPage() {
 
   const [programId, setProgramId] = useState("");
   const [referralCode, setReferralCode] = useState("");
+
+  const { data, isLoading, isFetching, error, refetch, redeemCode } =
+    useReferrals({
+      programId,
+    });
 
   const programIdInputId = useId();
   const referralCodeInputId = useId();
@@ -103,14 +100,16 @@ export default function UseReferralsScenarioPage() {
   const handleCreateReferralCode = () => {
     if (!programId) return;
 
-    const params: ClientCreateReferralCodeParams = {
-      programId,
-    };
-
     runAction({
       name: "createReferralCode",
-      params,
-      execute: () => createReferralCode(params),
+      params: { programId },
+      execute: async () => {
+        const result = await refetch();
+        if (result.error) {
+          throw result.error;
+        }
+        return result.data ?? null;
+      },
     });
   };
 
@@ -124,7 +123,7 @@ export default function UseReferralsScenarioPage() {
     runAction({
       name: "redeemReferralCode",
       params,
-      execute: () => redeemReferralCode(params),
+      execute: () => redeemCode(params),
     });
   };
 
@@ -139,7 +138,7 @@ export default function UseReferralsScenarioPage() {
         }
       >
         <HookStatePanel
-          isLoading={isLoading}
+          isLoading={isLoading || isFetching}
           error={error}
           lastUpdatedAt={lastUpdatedAt}
         />
@@ -228,24 +227,30 @@ export default function UseReferralsScenarioPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <DataViewer
+          title="createReferralCode.data"
+          value={data ?? null}
+          defaultExpandedDepth={3}
+        />
+        <DataViewer
           title="lastAction"
           value={lastAction}
           defaultExpandedDepth={3}
         />
-        <DataViewer
-          title="error"
-          value={
-            error
-              ? {
-                  message: error.message,
-                  code: error.code,
-                  statusCode: error.statusCode,
-                }
-              : null
-          }
-          defaultExpandedDepth={2}
-        />
       </div>
+
+      <DataViewer
+        title="error"
+        value={
+          error
+            ? {
+                message: error.message,
+                code: error.code,
+                statusCode: error.statusCode,
+              }
+            : (lastAction?.error ?? null)
+        }
+        defaultExpandedDepth={2}
+      />
     </div>
   );
 }

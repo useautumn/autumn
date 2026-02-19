@@ -34,6 +34,13 @@ export const scenarioSections: Array<ScenarioSection> = [
         status: "ready",
       },
       {
+        id: "use-events",
+        title: "useEvents",
+        href: "/scenarios/core/use-events",
+        description: "Inspect list/aggregate events hooks and pagination.",
+        status: "ready",
+      },
+      {
         id: "use-autumn",
         title: "useAutumn",
         href: "/scenarios/core/use-autumn",

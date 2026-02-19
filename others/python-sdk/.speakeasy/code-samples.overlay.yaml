@@ -339,6 +339,99 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/features.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.features.create(name="API Calls", type_="metered", feature_id="api-calls", consumable=True)
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/features.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.features.delete(feature_id="old-feature")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/features.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.features.get(feature_id="api-calls")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/features.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.features.list()
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/features.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.features.update(feature_id="api-calls", name="API Requests", display={
+                    "singular": "API request",
+                    "plural": "API requests",
+                })
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:

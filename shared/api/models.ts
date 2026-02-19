@@ -72,7 +72,7 @@ export * from "./events/list/eventsListParams.js";
 export * from "./events/list/eventsListResponse.js";
 // Features
 export * from "./features/apiFeatureV1.js";
-export * from "./features/featureV1OpModels.js";
+export * from "./features/crud/index.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiInvoice/apiInvoiceItem.js";
