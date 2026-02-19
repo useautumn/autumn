@@ -8,11 +8,9 @@ import {
 	BillingVersion,
 	CusProductStatus,
 	cusProductToPrices,
-	ErrCode,
 	isFreeProduct,
 	isOneOffProduct,
 	notNullish,
-	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -104,22 +102,6 @@ export const setupAttachBillingContext = async ({
 			isAttachPaidRecurring &&
 			isTransitionFromFree &&
 			hasPaidRecurringSubscription);
-
-	const requirePaidSubscriptionTarget =
-		isAttachPaidRecurring && !shouldForceNewSubscription;
-
-	if (
-		params.new_billing_subscription === false &&
-		requirePaidSubscriptionTarget &&
-		!hasPaidRecurringSubscription
-	) {
-		throw new RecaseError({
-			message:
-				"Cannot merge with an existing billing cycle because the customer has no active paid recurring subscription. Set new_billing_subscription to true to create a new cycle.",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
 
 	const {
 		stripeSubscription,
