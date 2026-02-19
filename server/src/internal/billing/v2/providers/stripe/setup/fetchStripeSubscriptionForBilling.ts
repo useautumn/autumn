@@ -19,14 +19,12 @@ export const fetchStripeSubscriptionForBilling = async ({
 	product,
 	targetCusProductId,
 	newBillingSubscription,
-	requirePaidSubscriptionTarget,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	product?: Product;
 	targetCusProductId?: string;
 	newBillingSubscription?: boolean;
-	requirePaidSubscriptionTarget?: boolean;
 }): Promise<StripeSubscriptionWithDiscounts | undefined> => {
 	if (newBillingSubscription) {
 		return undefined;
@@ -40,7 +38,6 @@ export const fetchStripeSubscriptionForBilling = async ({
 		productId: product?.id ?? "",
 		productGroup: product?.group ?? "",
 		cusProductId: targetCusProductId,
-		includeFreeProducts: !requirePaidSubscriptionTarget,
 	});
 
 	const subId = cusProductWithSub?.subscription_ids?.[0];

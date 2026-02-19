@@ -136,7 +136,6 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 		paramDiscounts: params.discounts,
 		newBillingSubscription: shouldForceNewSubscription || undefined,
-		requirePaidSubscriptionTarget: requirePaidSubscriptionTarget || undefined,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
