@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { createHardcodedKey } from "@server/internal/dev/api-keys/apiKeyUtils.js";
+import { generateId } from "@server/utils/genUtils.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 
@@ -17,6 +18,108 @@ const TEST_ORG_CONFIG = {
 	createdAt: new Date(1738583937426).toISOString(),
 	created_at: 1738583937426,
 };
+
+/**
+ * Creates a PR-specific test organization for CI isolation
+ */
+export async function createTestOrgForPR({
+	db,
+	prNumber,
+}: {
+	db: DrizzleCli;
+	prNumber: string;
+}): Promise<{ apiKey: string; orgId: string; alreadyExisted: boolean }> {
+	console.log(
+		chalk.magentaBright(
+			`\n================ Creating Test Organization for PR #${prNumber} ================\n`,
+		),
+	);
+
+	const TEST_API_KEY = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
+	if (!TEST_API_KEY) {
+		throw new Error(
+			"UNIT_TEST_AUTUMN_SECRET_KEY is not set (is infisical running?)",
+		);
+	}
+
+	const orgId = `org_ci_pr_${prNumber}`;
+	const orgSlug = `ci-test-org-pr-${prNumber}`;
+
+	// Check if org already exists
+	const existingOrg = await db.query.organizations.findFirst({
+		where: eq(organizations.id, orgId),
+	});
+
+	if (existingOrg) {
+		console.log(
+			chalk.yellowBright(`Test organization '${orgSlug}' already exists.`),
+		);
+
+		// Create API key for existing org (will skip if already exists)
+		const { key, alreadyExists } = await createHardcodedKey({
+			db,
+			env: AppEnv.Sandbox,
+			name: `CI Test Key PR #${prNumber}`,
+			orgId,
+			hardcodedKey: TEST_API_KEY,
+			meta: {
+				createdBy: "setup-test-org-ci",
+				createdAt: new Date().toISOString(),
+				prNumber,
+			},
+		});
+
+		if (alreadyExists) {
+			console.log(chalk.greenBright("✅ API key already exists in database"));
+		} else {
+			console.log(
+				chalk.greenBright("✅ Created API key for existing organization"),
+			);
+		}
+		return { apiKey: key, orgId, alreadyExisted: true };
+	}
+
+	// Create the test organization
+	const org = {
+		id: orgId,
+		slug: orgSlug,
+		name: `CI Test Org PR #${prNumber}`,
+		createdAt: new Date(),
+		created_at: Date.now(),
+		stripe_connected: false,
+		default_currency: "usd",
+		config: {} as OrgConfig,
+		onboarded: true,
+	};
+
+	await db.insert(organizations).values(org);
+
+	console.log(
+		chalk.greenBright(`✅ Created test organization: ${orgSlug} (${orgId})`),
+	);
+
+	// Create API key for the new org (use same hardcoded key for simplicity)
+	const { key, alreadyExists } = await createHardcodedKey({
+		db,
+		env: AppEnv.Sandbox,
+		name: `CI Test Key PR #${prNumber}`,
+		orgId,
+		hardcodedKey: TEST_API_KEY,
+		meta: {
+			createdBy: "setup-test-org-ci",
+			createdAt: new Date().toISOString(),
+			prNumber,
+		},
+	});
+
+	if (alreadyExists) {
+		console.log(chalk.greenBright("✅ API key already exists in database"));
+	} else {
+		console.log(chalk.greenBright("✅ Created API key for test organization"));
+	}
+
+	return { apiKey: key, orgId, alreadyExisted: false };
+}
 
 /**
  * Creates a test organization in the database and generates an API key
