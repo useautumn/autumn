@@ -21,7 +21,7 @@ export const CreateCustomerQuerySchema = z.object({
 // Create Customer Params (based on handlePostCustomer logic)
 export const CreateCustomerParamsV0Schema = z
 	.object({
-		id: CustomerIdSchema.optional().nullable(),
+		id: CustomerIdSchema.nullable(),
 		...CustomerDataSchema.shape,
 	})
 	.extend({
@@ -52,5 +52,9 @@ export const CreateCustomerParamsV1Schema = z
 	});
 
 export type CreateCustomerParamsV0 = z.infer<
+	typeof CreateCustomerParamsV0Schema
+>;
+
+export type CreateCustomerParamsV0Input = z.input<
 	typeof CreateCustomerParamsV0Schema
 >;

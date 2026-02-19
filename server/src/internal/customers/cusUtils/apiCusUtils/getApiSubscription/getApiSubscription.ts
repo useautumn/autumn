@@ -106,7 +106,7 @@ export const getApiSubscription = async <
 		add_on: fullProduct.is_add_on,
 		auto_enable: fullProduct.is_default,
 
-		status,
+		status: status === CusProductStatus.Active ? "active" : "scheduled",
 		past_due: cusProduct.status === CusProductStatus.PastDue,
 		canceled_at: cusProduct.canceled_at || null,
 		expires_at: cusProduct.ended_at || null,

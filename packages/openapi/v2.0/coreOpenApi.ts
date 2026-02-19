@@ -1,4 +1,16 @@
 import {
+	attachJsDoc,
+	billingPortalJsDoc,
+	cancelJsDoc,
+	checkoutJsDoc,
+	queryJsDoc,
+	setupPaymentJsDoc,
+} from "@api/common/jsDocs.js";
+import {
+	GetBillingPortalBodySchema,
+	GetBillingPortalResponseSchema,
+} from "@api/customers/customerOpModels.js";
+import {
 	AttachBodyV0Schema,
 	AttachResponseV1Schema,
 	CancelBodySchema,
@@ -16,18 +28,6 @@ import {
 } from "@api/models.js";
 import { z } from "zod/v4";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
-import {
-	attachJsDoc,
-	billingPortalJsDoc,
-	cancelJsDoc,
-	checkoutJsDoc,
-	queryJsDoc,
-	setupPaymentJsDoc,
-} from "../../common/jsDocs.js";
-import {
-	GetBillingPortalBodySchema,
-	GetBillingPortalResponseSchema,
-} from "../../customers/customerOpModels.js";
 
 export const coreOps: ZodOpenApiPathsObject = {
 	"/attach": {

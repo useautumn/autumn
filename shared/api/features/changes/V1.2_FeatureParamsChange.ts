@@ -57,7 +57,7 @@ export const V1_2_CreateFeatureChange = defineVersionChange({
 
 		const result: z.infer<typeof CreateFeatureV1ParamsSchema> = {
 			id: input.id,
-			name: input.name,
+			name: input.name ?? undefined,
 			type,
 			consumable,
 			display: input.display

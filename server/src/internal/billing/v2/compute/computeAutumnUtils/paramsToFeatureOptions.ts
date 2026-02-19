@@ -1,7 +1,7 @@
 import type {
-	BillingParamsBaseV1,
 	EntitlementWithFeature,
 	FeatureOptions,
+	FeatureQuantityParamsV0,
 	Price,
 } from "@autumn/shared";
 import { notNullish, roundUsageToNearestBillingUnit } from "@autumn/shared";
@@ -12,7 +12,7 @@ export const paramsToFeatureOptions = ({
 	price,
 	entitlement,
 }: {
-	params: BillingParamsBaseV1;
+	params: { feature_quantities?: FeatureQuantityParamsV0[] };
 	price: Price;
 	entitlement: EntitlementWithFeature;
 }): FeatureOptions | undefined => {

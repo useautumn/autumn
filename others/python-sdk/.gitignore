@@ -11,3 +11,4 @@ pyrightconfig.json
 .speakeasy/reports
 .env
 .env.local
+.mypy_cache/
