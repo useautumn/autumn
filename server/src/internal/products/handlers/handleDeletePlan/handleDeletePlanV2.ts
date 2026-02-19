@@ -1,6 +1,6 @@
 import { AffectedResource, DeletePlanV2BodySchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { deleteProduct } from "../../actions/productActions/deleteProduct.js";
+import { deleteProduct } from "../../../product/actions/deleteProduct.js";
 
 export const handleDeletePlanV2 = createRoute({
 	body: DeletePlanV2BodySchema,

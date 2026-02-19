@@ -8,7 +8,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
-import { updateProduct } from "../../actions/productActions/updateProduct.js";
+import { updateProduct } from "../../../product/actions/updateProduct.js";
 
 export const handleUpdatePlanV2 = createRoute({
 	body: UpdatePlanParamsV2Schema,

@@ -28,7 +28,7 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { constructProduct, initProductInStripe } from "../../productUtils.js";
-import { validateDefaultFlag } from "../../actions/productActions/validateDefaultFlag.js";
+import { validateDefaultFlag } from "../../../product/actions/validateDefaultFlag.js";
 
 /**
  * Route: POST /products - Create a product

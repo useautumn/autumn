@@ -1,7 +1,7 @@
 import { ProductNotFoundError, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
-import { ProductService } from "../../ProductService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 export const deleteProduct = async ({
 	ctx,

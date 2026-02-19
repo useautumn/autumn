@@ -1,7 +1,7 @@
 import { AffectedResource } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { deleteProduct } from "../../actions/productActions/deleteProduct.js";
+import { deleteProduct } from "../../../product/actions/deleteProduct.js";
 
 const DeletePlanParamsSchema = z.object({
 	product_id: z.string(),
