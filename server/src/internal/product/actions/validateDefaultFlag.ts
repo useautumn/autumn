@@ -8,13 +8,13 @@ import {
 	RecaseError,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { ProductService } from "../../ProductService";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	getGroupToDefaults,
 	isFreeProduct,
 	isOneOff,
-} from "../../productUtils";
+} from "@/internal/products/productUtils.js";
 
 const disableCurrentDefault = async ({
 	ctx,
