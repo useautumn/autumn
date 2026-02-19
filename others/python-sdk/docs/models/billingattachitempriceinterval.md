@@ -1,5 +1,7 @@
 # BillingAttachItemPriceInterval
 
+Billing interval. For consumable features, should match reset.interval.
+
 
 ## Values
 

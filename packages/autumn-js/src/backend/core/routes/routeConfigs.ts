@@ -5,7 +5,7 @@ import {
 	createReferralCodeParamsSchema,
 	eventsAggregateParamsSchema,
 	eventsListParamsSchema,
-	listPlansRequestSchema,
+	listPlansParamsSchema,
 	openCustomerPortalParamsSchema,
 	redeemReferralCodeParamsSchema,
 } from "../../../generated";
@@ -76,7 +76,7 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 		route: "listPlans",
 		sdkMethod: (autumn, args) => autumn.plans.list(args),
 		requireCustomer: false,
-		bodySchema: listPlansRequestSchema.optional(),
+		bodySchema: listPlansParamsSchema.optional(),
 	},
 	{
 		route: "listEvents",

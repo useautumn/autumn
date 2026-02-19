@@ -5,38 +5,450 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
+import * as openEnums from "../types/enums.js";
+import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
-import { Plan, Plan$inboundSchema } from "./plan.js";
+import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type ListPlansGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type ListPlansRequest = {
+export type ListPlansParams = {
+  /**
+   * Customer ID to include eligibility info (trial availability, attach scenario).
+   */
   customerId?: string | undefined;
+  /**
+   * Entity ID for entity-scoped plans.
+   */
   entityId?: string | undefined;
+  /**
+   * If true, includes archived plans in the response.
+   */
   includeArchived?: boolean | undefined;
+};
+
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const ListPlansPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type ListPlansPriceInterval = OpenEnum<typeof ListPlansPriceInterval>;
+
+/**
+ * Display text for showing this price in pricing pages.
+ */
+export type ListPlansPriceDisplay = {
+  /**
+   * Main display text (e.g. '$10' or '100 messages').
+   */
+  primaryText: string;
+  /**
+   * Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+   */
+  secondaryText?: string | undefined;
+};
+
+export type ListPlansPrice = {
+  /**
+   * Base price amount for the plan.
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: ListPlansPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Display text for showing this price in pricing pages.
+   */
+  display?: ListPlansPriceDisplay | undefined;
+};
+
+/**
+ * The type of the feature
+ */
+export const ListPlansType = {
+  Static: "static",
+  Boolean: "boolean",
+  SingleUse: "single_use",
+  ContinuousUse: "continuous_use",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * The type of the feature
+ */
+export type ListPlansType = OpenEnum<typeof ListPlansType>;
+
+export type ListPlansFeatureDisplay = {
+  /**
+   * The singular display name for the feature.
+   */
+  singular: string;
+  /**
+   * The plural display name for the feature.
+   */
+  plural: string;
+};
+
+export type ListPlansCreditSchema = {
+  /**
+   * The ID of the metered feature (should be a single_use feature).
+   */
+  meteredFeatureId: string;
+  /**
+   * The credit cost of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type ListPlansFeature = {
+  /**
+   * The ID of the feature, used to refer to it in other API calls like /track or /check.
+   */
+  id: string;
+  /**
+   * The name of the feature.
+   */
+  name?: string | null | undefined;
+  /**
+   * The type of the feature
+   */
+  type: ListPlansType;
+  /**
+   * Singular and plural display names for the feature.
+   */
+  display?: ListPlansFeatureDisplay | null | undefined;
+  /**
+   * Credit cost schema for credit system features.
+   */
+  creditSchema?: Array<ListPlansCreditSchema> | null | undefined;
+  /**
+   * Whether or not the feature is archived.
+   */
+  archived?: boolean | null | undefined;
+};
+
+/**
+ * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+ */
+export const ListPlansResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+ */
+export type ListPlansResetInterval = OpenEnum<typeof ListPlansResetInterval>;
+
+export type ListPlansReset = {
+  /**
+   * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+   */
+  interval: ListPlansResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type ListPlansTo = number | string;
+
+export type ListPlansTier = {
+  to: number | string;
+  amount: number;
+};
+
+/**
+ * Billing interval for this price. For consumable features, should match reset.interval.
+ */
+export const ListPlansPriceItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval for this price. For consumable features, should match reset.interval.
+ */
+export type ListPlansPriceItemInterval = OpenEnum<
+  typeof ListPlansPriceItemInterval
+>;
+
+/**
+ * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+ */
+export const ListPlansBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+ */
+export type ListPlansBillingMethod = OpenEnum<typeof ListPlansBillingMethod>;
+
+export type ListPlansItemPrice = {
+  /**
+   * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+   */
+  tiers?: Array<ListPlansTier> | undefined;
+  /**
+   * Billing interval for this price. For consumable features, should match reset.interval.
+   */
+  interval: ListPlansPriceItemInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200).
+   */
+  billingUnits: number;
+  /**
+   * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+   */
+  billingMethod: ListPlansBillingMethod;
+  /**
+   * Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
+   */
+  maxPurchase: number | null;
+};
+
+/**
+ * Display text for showing this item in pricing pages.
+ */
+export type ListPlansItemDisplay = {
+  /**
+   * Main display text (e.g. '$10' or '100 messages').
+   */
+  primaryText: string;
+  /**
+   * Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+   */
+  secondaryText?: string | undefined;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const ListPlansExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type ListPlansExpiryDurationType = OpenEnum<
+  typeof ListPlansExpiryDurationType
+>;
+
+/**
+ * Rollover configuration for unused units. If set, unused included units roll over to the next period.
+ */
+export type ListPlansRollover = {
+  /**
+   * Maximum rollover units. Null for unlimited rollover.
+   */
+  max: number | null;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: ListPlansExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+export type ListPlansItem = {
+  /**
+   * The ID of the feature this item configures.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: ListPlansFeature | undefined;
+  /**
+   * Number of free units included. For consumable features, balance resets to this number each interval.
+   */
+  included: number;
+  /**
+   * Whether the customer has unlimited access to this feature.
+   */
+  unlimited: boolean;
+  /**
+   * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
+   */
+  reset: ListPlansReset | null;
+  /**
+   * Pricing configuration for usage beyond included units. Null if feature is entirely free.
+   */
+  price: ListPlansItemPrice | null;
+  /**
+   * Display text for showing this item in pricing pages.
+   */
+  display?: ListPlansItemDisplay | undefined;
+  /**
+   * Rollover configuration for unused units. If set, unused included units roll over to the next period.
+   */
+  rollover?: ListPlansRollover | undefined;
+};
+
+/**
+ * Unit of time for the trial duration ('day', 'month', 'year').
+ */
+export const ListPlansDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial duration ('day', 'month', 'year').
+ */
+export type ListPlansDurationType = OpenEnum<typeof ListPlansDurationType>;
+
+/**
+ * Free trial configuration. If set, new customers can try this plan before being charged.
+ */
+export type ListPlansFreeTrial = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial duration ('day', 'month', 'year').
+   */
+  durationType: ListPlansDurationType;
+  /**
+   * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
+   */
+  cardRequired: boolean;
+};
+
+/**
+ * Environment this plan belongs to ('sandbox' or 'live').
+ */
+export const ListPlansEnv = {
+  Sandbox: "sandbox",
+  Live: "live",
+} as const;
+/**
+ * Environment this plan belongs to ('sandbox' or 'live').
+ */
+export type ListPlansEnv = OpenEnum<typeof ListPlansEnv>;
+
+/**
+ * A plan defines a set of features, pricing, and entitlements that can be attached to customers.
+ */
+export type ListPlansList = {
+  /**
+   * Unique identifier for the plan.
+   */
+  id: string;
+  /**
+   * Display name of the plan.
+   */
+  name: string;
+  /**
+   * Optional description of the plan.
+   */
+  description: string | null;
+  /**
+   * Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
+   */
+  group: string | null;
+  /**
+   * Version number of the plan. Incremented when plan configuration changes.
+   */
+  version: number;
+  /**
+   * Whether this is an add-on plan that can be attached alongside a main plan.
+   */
+  addOn: boolean;
+  /**
+   * If true, this plan is automatically attached when a customer is created. Used for free plans.
+   */
+  autoEnable: boolean;
+  /**
+   * Base recurring price for the plan. Null for free plans or usage-only plans.
+   */
+  price: ListPlansPrice | null;
+  /**
+   * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
+   */
+  items: Array<ListPlansItem>;
+  /**
+   * Free trial configuration. If set, new customers can try this plan before being charged.
+   */
+  freeTrial?: ListPlansFreeTrial | undefined;
+  /**
+   * Unix timestamp (ms) when the plan was created.
+   */
+  createdAt: number;
+  /**
+   * Environment this plan belongs to ('sandbox' or 'live').
+   */
+  env: ListPlansEnv;
+  /**
+   * Whether the plan is archived. Archived plans cannot be attached to new customers.
+   */
+  archived: boolean;
+  /**
+   * If this is a variant, the ID of the base plan it was created from.
+   */
+  baseVariantId: string | null;
 };
 
 /**
  * OK
  */
 export type ListPlansResponse = {
-  list: Array<Plan>;
+  list: Array<ListPlansList>;
 };
 
 /** @internal */
-export type ListPlansRequest$Outbound = {
+export type ListPlansParams$Outbound = {
   customer_id?: string | undefined;
   entity_id?: string | undefined;
   include_archived?: boolean | undefined;
 };
 
 /** @internal */
-export const ListPlansRequest$outboundSchema: z.ZodMiniType<
-  ListPlansRequest$Outbound,
-  ListPlansRequest
+export const ListPlansParams$outboundSchema: z.ZodMiniType<
+  ListPlansParams$Outbound,
+  ListPlansParams
 > = z.pipe(
   z.object({
     customerId: z.optional(z.string()),
@@ -52,11 +464,441 @@ export const ListPlansRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listPlansRequestToJSON(
-  listPlansRequest: ListPlansRequest,
+export function listPlansParamsToJSON(
+  listPlansParams: ListPlansParams,
 ): string {
-  return JSON.stringify(
-    ListPlansRequest$outboundSchema.parse(listPlansRequest),
+  return JSON.stringify(ListPlansParams$outboundSchema.parse(listPlansParams));
+}
+
+/** @internal */
+export const ListPlansPriceInterval$inboundSchema: z.ZodMiniType<
+  ListPlansPriceInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansPriceInterval);
+
+/** @internal */
+export const ListPlansPriceDisplay$inboundSchema: z.ZodMiniType<
+  ListPlansPriceDisplay,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
+
+export function listPlansPriceDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPriceDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPriceDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPriceDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansPrice$inboundSchema: z.ZodMiniType<
+  ListPlansPrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.number(),
+    interval: ListPlansPriceInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+    display: types.optional(z.lazy(() => ListPlansPriceDisplay$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listPlansPriceFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansType$inboundSchema: z.ZodMiniType<
+  ListPlansType,
+  unknown
+> = openEnums.inboundSchema(ListPlansType);
+
+/** @internal */
+export const ListPlansFeatureDisplay$inboundSchema: z.ZodMiniType<
+  ListPlansFeatureDisplay,
+  unknown
+> = z.object({
+  singular: types.string(),
+  plural: types.string(),
+});
+
+export function listPlansFeatureDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFeatureDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFeatureDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFeatureDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansCreditSchema$inboundSchema: z.ZodMiniType<
+  ListPlansCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listPlansCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansFeature$inboundSchema: z.ZodMiniType<
+  ListPlansFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: z.optional(z.nullable(types.string())),
+    type: ListPlansType$inboundSchema,
+    display: z.optional(
+      z.nullable(z.lazy(() => ListPlansFeatureDisplay$inboundSchema)),
+    ),
+    credit_schema: z.optional(
+      z.nullable(z.array(z.lazy(() => ListPlansCreditSchema$inboundSchema))),
+    ),
+    archived: z.optional(z.nullable(types.boolean())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function listPlansFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansResetInterval$inboundSchema: z.ZodMiniType<
+  ListPlansResetInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansResetInterval);
+
+/** @internal */
+export const ListPlansReset$inboundSchema: z.ZodMiniType<
+  ListPlansReset,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: ListPlansResetInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listPlansResetFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansReset, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansReset' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansTo$inboundSchema: z.ZodMiniType<ListPlansTo, unknown> =
+  smartUnion([types.number(), types.string()]);
+
+export function listPlansToFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansTo, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansTo' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansTier$inboundSchema: z.ZodMiniType<
+  ListPlansTier,
+  unknown
+> = z.object({
+  to: smartUnion([types.number(), types.string()]),
+  amount: types.number(),
+});
+
+export function listPlansTierFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansPriceItemInterval$inboundSchema: z.ZodMiniType<
+  ListPlansPriceItemInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansPriceItemInterval);
+
+/** @internal */
+export const ListPlansBillingMethod$inboundSchema: z.ZodMiniType<
+  ListPlansBillingMethod,
+  unknown
+> = openEnums.inboundSchema(ListPlansBillingMethod);
+
+/** @internal */
+export const ListPlansItemPrice$inboundSchema: z.ZodMiniType<
+  ListPlansItemPrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.optional(types.number()),
+    tiers: types.optional(z.array(z.lazy(() => ListPlansTier$inboundSchema))),
+    interval: ListPlansPriceItemInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+    billing_units: types.number(),
+    billing_method: ListPlansBillingMethod$inboundSchema,
+    max_purchase: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "billing_units": "billingUnits",
+      "billing_method": "billingMethod",
+      "max_purchase": "maxPurchase",
+    });
+  }),
+);
+
+export function listPlansItemPriceFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemPrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemPrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemPrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItemDisplay$inboundSchema: z.ZodMiniType<
+  ListPlansItemDisplay,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
+
+export function listPlansItemDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansExpiryDurationType$inboundSchema: z.ZodMiniType<
+  ListPlansExpiryDurationType,
+  unknown
+> = openEnums.inboundSchema(ListPlansExpiryDurationType);
+
+/** @internal */
+export const ListPlansRollover$inboundSchema: z.ZodMiniType<
+  ListPlansRollover,
+  unknown
+> = z.pipe(
+  z.object({
+    max: types.nullable(types.number()),
+    expiry_duration_type: ListPlansExpiryDurationType$inboundSchema,
+    expiry_duration_length: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "expiry_duration_type": "expiryDurationType",
+      "expiry_duration_length": "expiryDurationLength",
+    });
+  }),
+);
+
+export function listPlansRolloverFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansRollover, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItem$inboundSchema: z.ZodMiniType<
+  ListPlansItem,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => ListPlansFeature$inboundSchema)),
+    included: types.number(),
+    unlimited: types.boolean(),
+    reset: types.nullable(z.lazy(() => ListPlansReset$inboundSchema)),
+    price: types.nullable(z.lazy(() => ListPlansItemPrice$inboundSchema)),
+    display: types.optional(z.lazy(() => ListPlansItemDisplay$inboundSchema)),
+    rollover: types.optional(z.lazy(() => ListPlansRollover$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listPlansItemFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansDurationType$inboundSchema: z.ZodMiniType<
+  ListPlansDurationType,
+  unknown
+> = openEnums.inboundSchema(ListPlansDurationType);
+
+/** @internal */
+export const ListPlansFreeTrial$inboundSchema: z.ZodMiniType<
+  ListPlansFreeTrial,
+  unknown
+> = z.pipe(
+  z.object({
+    duration_length: types.number(),
+    duration_type: ListPlansDurationType$inboundSchema,
+    card_required: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "duration_length": "durationLength",
+      "duration_type": "durationType",
+      "card_required": "cardRequired",
+    });
+  }),
+);
+
+export function listPlansFreeTrialFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFreeTrial, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFreeTrial$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFreeTrial' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansEnv$inboundSchema: z.ZodMiniType<ListPlansEnv, unknown> =
+  openEnums.inboundSchema(ListPlansEnv);
+
+/** @internal */
+export const ListPlansList$inboundSchema: z.ZodMiniType<
+  ListPlansList,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    description: types.nullable(types.string()),
+    group: types.nullable(types.string()),
+    version: types.number(),
+    add_on: types.boolean(),
+    auto_enable: types.boolean(),
+    price: types.nullable(z.lazy(() => ListPlansPrice$inboundSchema)),
+    items: z.array(z.lazy(() => ListPlansItem$inboundSchema)),
+    free_trial: types.optional(z.lazy(() => ListPlansFreeTrial$inboundSchema)),
+    created_at: types.number(),
+    env: ListPlansEnv$inboundSchema,
+    archived: types.boolean(),
+    base_variant_id: types.nullable(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "add_on": "addOn",
+      "auto_enable": "autoEnable",
+      "free_trial": "freeTrial",
+      "created_at": "createdAt",
+      "base_variant_id": "baseVariantId",
+    });
+  }),
+);
+
+export function listPlansListFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansList, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansList$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansList' from JSON`,
   );
 }
 
@@ -65,7 +907,7 @@ export const ListPlansResponse$inboundSchema: z.ZodMiniType<
   ListPlansResponse,
   unknown
 > = z.object({
-  list: z.array(Plan$inboundSchema),
+  list: z.array(z.lazy(() => ListPlansList$inboundSchema)),
 });
 
 export function listPlansResponseFromJSON(

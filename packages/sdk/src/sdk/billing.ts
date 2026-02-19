@@ -6,6 +6,7 @@ import { billingAttach } from "../funcs/billing-attach.js";
 import { billingOpenCustomerPortal } from "../funcs/billing-open-customer-portal.js";
 import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
 import { billingPreviewUpdate } from "../funcs/billing-preview-update.js";
+import { billingSetupPayment } from "../funcs/billing-setup-payment.js";
 import { billingUpdate } from "../funcs/billing-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -188,6 +189,20 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.OpenCustomerPortalResponse> {
     return unwrapAsync(billingOpenCustomerPortal(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Create a payment setup session for a customer to add or update their payment method.
+   */
+  async setupPayment(
+    request: models.SetupPaymentParams,
+    options?: RequestOptions,
+  ): Promise<models.SetupPaymentResponse> {
+    return unwrapAsync(billingSetupPayment(
       this,
       request,
       options,

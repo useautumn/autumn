@@ -1,5 +1,7 @@
 # PreviewUpdateExpiryDurationType
 
+When rolled over units expire.
+
 ## Example Usage
 
 ```typescript

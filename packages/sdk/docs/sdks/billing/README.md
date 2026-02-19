@@ -121,6 +121,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
+* [setupPayment](#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
 
 ## attach
 
@@ -636,6 +637,83 @@ run();
 ### Response
 
 **Promise\<[models.OpenCustomerPortalResponse](../../models/open-customer-portal-response.md)\>**
+
+### Errors
+
+| Error Type                | Status Code               | Content Type              |
+| ------------------------- | ------------------------- | ------------------------- |
+| models.AutumnDefaultError | 4XX, 5XX                  | \*/\*                     |
+
+## setupPayment
+
+Create a payment setup session for a customer to add or update their payment method.
+
+### Example Usage
+
+<!-- UsageSnippet language="typescript" operationID="setupPayment" method="post" path="/v1/billing.setup_payment" -->
+```typescript
+import { Autumn } from "@useautumn/sdk";
+
+const autumn = new Autumn({
+  xApiVersion: "2.1",
+  secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+});
+
+async function run() {
+  const result = await autumn.billing.setupPayment({
+    customerId: "cus_123",
+    successUrl: "https://example.com/account/billing",
+  });
+
+  console.log(result);
+}
+
+run();
+```
+
+### Standalone function
+
+The standalone function version of this method:
+
+```typescript
+import { AutumnCore } from "@useautumn/sdk/core.js";
+import { billingSetupPayment } from "@useautumn/sdk/funcs/billing-setup-payment.js";
+
+// Use `AutumnCore` for best tree-shaking performance.
+// You can create one instance of it to use across an application.
+const autumn = new AutumnCore({
+  xApiVersion: "2.1",
+  secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+});
+
+async function run() {
+  const res = await billingSetupPayment(autumn, {
+    customerId: "cus_123",
+    successUrl: "https://example.com/account/billing",
+  });
+  if (res.ok) {
+    const { value: result } = res;
+    console.log(result);
+  } else {
+    console.log("billingSetupPayment failed:", res.error);
+  }
+}
+
+run();
+```
+
+### Parameters
+
+| Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `request`                                                                                                                                                                      | [models.SetupPaymentParams](../../models/setup-payment-params.md)                                                                                                              | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
+| `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
+| `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
+| `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
+
+### Response
+
+**Promise\<[models.SetupPaymentResponse](../../models/setup-payment-response.md)\>**
 
 ### Errors
 

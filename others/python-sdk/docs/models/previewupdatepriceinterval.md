@@ -1,5 +1,7 @@
 # PreviewUpdatePriceInterval
 
+Billing interval (e.g. 'month', 'year').
+
 
 ## Values
 

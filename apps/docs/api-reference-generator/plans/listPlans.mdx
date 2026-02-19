@@ -1,0 +1,40 @@
+---
+title: "List all plans"
+openapi: "openapi POST /v1/plans.list"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Lists all plans in the current environment.
+
+<Tip>
+  Pass a `customer_id` to include customer-specific eligibility info like whether a free trial is available and the attach scenario (new, upgrade, downgrade).
+</Tip>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript List all plans
+const plans = await autumn.plans.list();
+```
+
+```typescript List plans with customer eligibility
+const plans = await autumn.plans.list({
+  customerId: "cus_123"
+});
+
+// Each plan will include customerEligibility:
+// - trialAvailable: whether customer can use the trial
+// - scenario: 'new', 'upgrade', 'downgrade', etc.
+```
+
+```typescript Include archived plans
+const plans = await autumn.plans.list({
+  includeArchived: true
+});
+```
+
+</CodeGroup>

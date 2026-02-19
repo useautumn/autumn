@@ -137,7 +137,8 @@
 							"api-reference/billing/billingUpdate",
 							"api-reference/billing/previewAttach",
 							"api-reference/billing/previewUpdate",
-							"api-reference/billing/openCustomerPortal"
+							"api-reference/billing/openCustomerPortal",
+							"api-reference/billing/setupPayment"
 						]
 					},
 					{
@@ -174,6 +175,16 @@
 						]
 					},
 					{
+						"group": "Plans",
+						"pages": [
+							"api-reference/plans/getPlan",
+							"api-reference/plans/listPlans",
+							"api-reference/plans/createPlan",
+							"api-reference/plans/updatePlan",
+							"api-reference/plans/deletePlan"
+						]
+					},
+					{
 						"group": "Features",
 						"pages": [
 							"api-reference/features/getFeature",
@@ -183,6 +194,7 @@
 							"api-reference/features/deleteFeature"
 						]
 					},
+
 					{
 						"group": "Referrals",
 						"pages": [
@@ -194,18 +206,6 @@
 						"group": "TODO",
 						"pages": ["api-reference/billing/setupPayment"]
 					},
-
-					{
-						"group": "Products",
-						"pages": [
-							"api-reference/products/get-product",
-							"api-reference/products/list-products",
-							"api-reference/products/create-product",
-							"api-reference/products/update-product",
-							"api-reference/products/delete-product"
-						]
-					},
-
 					{
 						"group": "Platform (Beta)",
 						"pages": [

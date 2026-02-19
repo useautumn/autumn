@@ -1,5 +1,7 @@
 # PreviewAttachProration
 
+Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+
 ## Example Usage
 
 ```typescript
@@ -15,5 +17,5 @@ let value: PreviewAttachProration = {
 
 | Field                                                                     | Type                                                                      | Required                                                                  | Description                                                               |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `onIncrease`                                                              | [models.PreviewAttachOnIncrease](../models/preview-attach-on-increase.md) | :heavy_check_mark:                                                        | N/A                                                                       |
-| `onDecrease`                                                              | [models.PreviewAttachOnDecrease](../models/preview-attach-on-decrease.md) | :heavy_check_mark:                                                        | N/A                                                                       |
+| `onIncrease`                                                              | [models.PreviewAttachOnIncrease](../models/preview-attach-on-increase.md) | :heavy_check_mark:                                                        | Billing behavior when quantity increases mid-cycle.                       |
+| `onDecrease`                                                              | [models.PreviewAttachOnDecrease](../models/preview-attach-on-decrease.md) | :heavy_check_mark:                                                        | Credit behavior when quantity decreases mid-cycle.                        |

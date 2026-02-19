@@ -25,17 +25,26 @@ PlanPriceInterval = Union[
     ],
     UnrecognizedStr,
 ]
+r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class PriceDisplayTypedDict(TypedDict):
+class PlanPriceDisplayTypedDict(TypedDict):
+    r"""Display text for showing this price in pricing pages."""
+
     primary_text: str
+    r"""Main display text (e.g. '$10' or '100 messages')."""
     secondary_text: NotRequired[str]
+    r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
 
-class PriceDisplay(BaseModel):
+class PlanPriceDisplay(BaseModel):
+    r"""Display text for showing this price in pricing pages."""
+
     primary_text: str
+    r"""Main display text (e.g. '$10' or '100 messages')."""
 
     secondary_text: Optional[str] = None
+    r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -56,19 +65,27 @@ class PriceDisplay(BaseModel):
 
 class PlanPriceTypedDict(TypedDict):
     amount: float
+    r"""Base price amount for the plan."""
     interval: PlanPriceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
-    display: NotRequired[PriceDisplayTypedDict]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    display: NotRequired[PlanPriceDisplayTypedDict]
+    r"""Display text for showing this price in pricing pages."""
 
 
 class PlanPrice(BaseModel):
     amount: float
+    r"""Base price amount for the plan."""
 
     interval: PlanPriceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    display: Optional[PriceDisplay] = None
+    display: Optional[PlanPriceDisplay] = None
+    r"""Display text for showing this price in pricing pages."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -131,6 +148,8 @@ class PlanCreditSchema(BaseModel):
 
 
 class PlanFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
     type: PlanType
@@ -146,6 +165,8 @@ class PlanFeatureTypedDict(TypedDict):
 
 
 class PlanFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
 
@@ -204,17 +225,22 @@ PlanResetInterval = Union[
     ],
     UnrecognizedStr,
 ]
+r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
 
 
 class PlanResetTypedDict(TypedDict):
     interval: PlanResetInterval
+    r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
     interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
 
 
 class PlanReset(BaseModel):
     interval: PlanResetInterval
+    r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -261,6 +287,7 @@ PlanPriceItemInterval = Union[
     ],
     UnrecognizedStr,
 ]
+r"""Billing interval for this price. For consumable features, should match reset.interval."""
 
 
 PlanBillingMethod = Union[
@@ -270,32 +297,47 @@ PlanBillingMethod = Union[
     ],
     UnrecognizedStr,
 ]
+r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
 
 class PlanItemPriceTypedDict(TypedDict):
     interval: PlanPriceItemInterval
+    r"""Billing interval for this price. For consumable features, should match reset.interval."""
     billing_units: float
+    r"""Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200)."""
     billing_method: PlanBillingMethod
+    r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
     max_purchase: Nullable[float]
+    r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
+    r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
     tiers: NotRequired[List[PlanTierTypedDict]]
+    r"""Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required."""
     interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
 class PlanItemPrice(BaseModel):
     interval: PlanPriceItemInterval
+    r"""Billing interval for this price. For consumable features, should match reset.interval."""
 
     billing_units: float
+    r"""Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200)."""
 
     billing_method: PlanBillingMethod
+    r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
     max_purchase: Nullable[float]
+    r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
 
     amount: Optional[float] = None
+    r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
     tiers: Optional[List[PlanTier]] = None
+    r"""Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -324,14 +366,22 @@ class PlanItemPrice(BaseModel):
 
 
 class PlanItemDisplayTypedDict(TypedDict):
+    r"""Display text for showing this item in pricing pages."""
+
     primary_text: str
+    r"""Main display text (e.g. '$10' or '100 messages')."""
     secondary_text: NotRequired[str]
+    r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
 
 class PlanItemDisplay(BaseModel):
+    r"""Display text for showing this item in pricing pages."""
+
     primary_text: str
+    r"""Main display text (e.g. '$10' or '100 messages')."""
 
     secondary_text: Optional[str] = None
+    r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -357,20 +407,31 @@ ExpiryDurationType = Union[
     ],
     UnrecognizedStr,
 ]
+r"""When rolled over units expire."""
 
 
 class PlanRolloverTypedDict(TypedDict):
+    r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
+
     max: Nullable[float]
+    r"""Maximum rollover units. Null for unlimited rollover."""
     expiry_duration_type: ExpiryDurationType
+    r"""When rolled over units expire."""
     expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
 
 
 class PlanRollover(BaseModel):
+    r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
+
     max: Nullable[float]
+    r"""Maximum rollover units. Null for unlimited rollover."""
 
     expiry_duration_type: ExpiryDurationType
+    r"""When rolled over units expire."""
 
     expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -398,90 +459,53 @@ class PlanRollover(BaseModel):
         return m
 
 
-OnIncrease = Union[
-    Literal[
-        "bill_immediately",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "bill_next_cycle",
-    ],
-    UnrecognizedStr,
-]
-
-
-OnDecrease = Union[
-    Literal[
-        "prorate",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "none",
-        "no_prorations",
-    ],
-    UnrecognizedStr,
-]
-
-
-class ProrationTypedDict(TypedDict):
-    on_increase: NotRequired[OnIncrease]
-    on_decrease: NotRequired[OnDecrease]
-
-
-class Proration(BaseModel):
-    on_increase: Optional[OnIncrease] = None
-
-    on_decrease: Optional[OnDecrease] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["on_increase", "on_decrease"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class ItemTypedDict(TypedDict):
     feature_id: str
+    r"""The ID of the feature this item configures."""
     included: float
+    r"""Number of free units included. For consumable features, balance resets to this number each interval."""
     unlimited: bool
+    r"""Whether the customer has unlimited access to this feature."""
     reset: Nullable[PlanResetTypedDict]
+    r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
     price: Nullable[PlanItemPriceTypedDict]
+    r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
     feature: NotRequired[PlanFeatureTypedDict]
+    r"""The full feature object if expanded."""
     display: NotRequired[PlanItemDisplayTypedDict]
+    r"""Display text for showing this item in pricing pages."""
     rollover: NotRequired[PlanRolloverTypedDict]
-    proration: NotRequired[ProrationTypedDict]
+    r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
 
 class Item(BaseModel):
     feature_id: str
+    r"""The ID of the feature this item configures."""
 
     included: float
+    r"""Number of free units included. For consumable features, balance resets to this number each interval."""
 
     unlimited: bool
+    r"""Whether the customer has unlimited access to this feature."""
 
     reset: Nullable[PlanReset]
+    r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
 
     price: Nullable[PlanItemPrice]
+    r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
 
     feature: Optional[PlanFeature] = None
+    r"""The full feature object if expanded."""
 
     display: Optional[PlanItemDisplay] = None
+    r"""Display text for showing this item in pricing pages."""
 
     rollover: Optional[PlanRollover] = None
-
-    proration: Optional[Proration] = None
+    r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature", "display", "rollover", "proration"])
+        optional_fields = set(["feature", "display", "rollover"])
         nullable_fields = set(["reset", "price"])
         serialized = handler(self)
         m = {}
@@ -513,20 +537,31 @@ PlanDurationType = Union[
     ],
     UnrecognizedStr,
 ]
+r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
 
 class FreeTrialTypedDict(TypedDict):
+    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
+
     duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
     duration_type: PlanDurationType
+    r"""Unit of time for the trial duration ('day', 'month', 'year')."""
     card_required: bool
+    r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
 
 
 class FreeTrial(BaseModel):
+    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
+
     duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
 
     duration_type: PlanDurationType
+    r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
     card_required: bool
+    r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
 
 
 PlanEnv = Union[
@@ -536,103 +571,86 @@ PlanEnv = Union[
     ],
     UnrecognizedStr,
 ]
-
-
-Scenario = Union[
-    Literal[
-        "scheduled",
-        "active",
-        "new",
-        "renew",
-        "upgrade",
-        "downgrade",
-        "cancel",
-        "expired",
-        "past_due",
-    ],
-    UnrecognizedStr,
-]
-
-
-class CustomerEligibilityTypedDict(TypedDict):
-    scenario: Scenario
-    trial_available: NotRequired[bool]
-
-
-class CustomerEligibility(BaseModel):
-    scenario: Scenario
-
-    trial_available: Optional[bool] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["trial_available"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
+r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
 class PlanTypedDict(TypedDict):
     id: str
+    r"""Unique identifier for the plan."""
     name: str
+    r"""Display name of the plan."""
     description: Nullable[str]
+    r"""Optional description of the plan."""
     group: Nullable[str]
+    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
     version: float
+    r"""Version number of the plan. Incremented when plan configuration changes."""
     add_on: bool
+    r"""Whether this is an add-on plan that can be attached alongside a main plan."""
     auto_enable: bool
+    r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
     price: Nullable[PlanPriceTypedDict]
+    r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
     items: List[ItemTypedDict]
+    r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
     created_at: float
+    r"""Unix timestamp (ms) when the plan was created."""
     env: PlanEnv
+    r"""Environment this plan belongs to ('sandbox' or 'live')."""
     archived: bool
+    r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
+    r"""If this is a variant, the ID of the base plan it was created from."""
     free_trial: NotRequired[FreeTrialTypedDict]
-    customer_eligibility: NotRequired[CustomerEligibilityTypedDict]
+    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
 
 class Plan(BaseModel):
     id: str
+    r"""Unique identifier for the plan."""
 
     name: str
+    r"""Display name of the plan."""
 
     description: Nullable[str]
+    r"""Optional description of the plan."""
 
     group: Nullable[str]
+    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
 
     version: float
+    r"""Version number of the plan. Incremented when plan configuration changes."""
 
     add_on: bool
+    r"""Whether this is an add-on plan that can be attached alongside a main plan."""
 
     auto_enable: bool
+    r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
 
     price: Nullable[PlanPrice]
+    r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
 
     items: List[Item]
+    r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
 
     created_at: float
+    r"""Unix timestamp (ms) when the plan was created."""
 
     env: PlanEnv
+    r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
     archived: bool
+    r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
 
     base_variant_id: Nullable[str]
+    r"""If this is a variant, the ID of the base plan it was created from."""
 
     free_trial: Optional[FreeTrial] = None
-
-    customer_eligibility: Optional[CustomerEligibility] = None
+    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["free_trial", "customer_eligibility"])
+        optional_fields = set(["free_trial"])
         nullable_fields = set(["description", "group", "price", "base_variant_id"])
         serialized = handler(self)
         m = {}

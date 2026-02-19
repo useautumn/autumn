@@ -1,5 +1,7 @@
 # BillingAttachExpiryDurationType
 
+When rolled over units expire.
+
 
 ## Values
 

@@ -1,6 +1,6 @@
 {
   "name": "@useautumn/sdk",
-  "version": "0.10.8",
+  "version": "0.10.15",
   "author": "Speakeasy",
   "main": "./dist/commonjs/index.js",
   "module": "./dist/esm/index.js",

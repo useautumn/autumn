@@ -1,5 +1,7 @@
 # PlanEnv
 
+Environment this plan belongs to ('sandbox' or 'live').
+
 ## Example Usage
 
 ```typescript

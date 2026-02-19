@@ -199,6 +199,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.setup_payment"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.setupPayment({
+                customerId: "cus_123",
+                successUrl: "https://example.com/account/billing",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.update"]["post"]
     update:
       x-codeSamples:
@@ -551,6 +574,83 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/plans.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.plans.create({
+                planId: "free_plan",
+                name: "Free",
+                autoEnable: true,
+                items: [
+                  {
+                    featureId: "messages",
+                    included: 100,
+                    reset: {
+                      interval: "month",
+                    },
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/plans.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.plans.delete({
+                planId: "unused_plan",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/plans.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.plans.get({
+                planId: "pro_plan",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:
@@ -565,7 +665,34 @@ actions:
             });
 
             async function run() {
-              const result = await autumn.plans.list();
+              const result = await autumn.plans.list({});
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/plans.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.plans.update({
+                planId: "pro_plan",
+                name: "Pro Plan (Updated)",
+                price: {
+                  amount: 15,
+                  interval: "month",
+                },
+              });
 
               console.log(result);
             }

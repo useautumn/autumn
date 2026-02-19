@@ -227,6 +227,7 @@ Use this endpoint to update prepaid quantities, cancel a subscription (immediate
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
+* [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -274,7 +275,11 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Plans](docs/sdks/plans/README.md)
 
+* [create](docs/sdks/plans/README.md#create) - Create a plan
+* [get](docs/sdks/plans/README.md#get) - Get a plan
 * [list](docs/sdks/plans/README.md#list) - List all plans
+* [update](docs/sdks/plans/README.md#update) - Update a plan
+* [delete](docs/sdks/plans/README.md#delete) - Delete a plan
 
 ### [Referrals](docs/sdks/referrals/README.md)
 

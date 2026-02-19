@@ -1,16 +1,11 @@
 # Scenario
 
+The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+
 
 ## Values
 
-| Name        | Value       |
-| ----------- | ----------- |
-| `SCHEDULED` | scheduled   |
-| `ACTIVE`    | active      |
-| `NEW`       | new         |
-| `RENEW`     | renew       |
-| `UPGRADE`   | upgrade     |
-| `DOWNGRADE` | downgrade   |
-| `CANCEL`    | cancel      |
-| `EXPIRED`   | expired     |
-| `PAST_DUE`  | past_due    |
+| Name           | Value          |
+| -------------- | -------------- |
+| `USAGE_LIMIT`  | usage_limit    |
+| `FEATURE_FLAG` | feature_flag   |

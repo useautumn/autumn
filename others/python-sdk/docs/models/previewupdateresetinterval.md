@@ -1,5 +1,7 @@
 # PreviewUpdateResetInterval
 
+Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+
 
 ## Values
 

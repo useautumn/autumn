@@ -44,57 +44,149 @@ export function transformTypeScriptCodeSample(source: string): string {
 
 /**
  * Formats a Python function call with proper indentation if it has multiple arguments.
- * Converts: func(arg1="val1", arg2="val2", arg3="val3")
+ * Handles nested brackets (lists, dicts) correctly.
+ * Converts: func(arg1="val1", arg2=[{...}], arg3="val3")
  * To:       func(
  *               arg1="val1",
- *               arg2="val2",
+ *               arg2=[{...}],
  *               arg3="val3",
  *           )
  */
 function formatPythonFunctionCall(code: string): string {
-	// Match function calls like: res = autumn.something.method(args...)
-	// or just: autumn.something.method(args...)
-	return code.replace(
-		/((?:res\s*=\s*)?autumn\.[a-z_.]+)\(([^)]+)\)/gi,
-		(_match, funcCall: string, argsStr: string) => {
-			// Parse arguments - split by comma but respect strings
-			const args: string[] = [];
-			let current = "";
-			let inString = false;
-			let stringChar = "";
+	// Find function calls like: res = autumn.something.method(...)
+	// We need to find the matching closing paren, accounting for nested brackets
+	const funcCallPattern = /((?:res\s*=\s*)?autumn\.[a-z_.]+)\(/gi;
+	let result = code;
+	let match: RegExpExecArray | null = null;
 
-			for (const char of argsStr) {
-				if ((char === '"' || char === "'") && !inString) {
-					inString = true;
-					stringChar = char;
+	// Process from end to start to preserve indices
+	const matches: { start: number; end: number; funcCall: string }[] = [];
+	match = funcCallPattern.exec(code);
+	while (match !== null) {
+		const funcCall = match[1];
+		const argsStart = match.index + match[0].length;
+
+		// Find the matching closing paren
+		let depth = 1;
+		let i = argsStart;
+		let inString = false;
+		let stringChar = "";
+
+		while (i < code.length && depth > 0) {
+			const char = code[i];
+			const prevChar = i > 0 ? code[i - 1] : "";
+
+			if ((char === '"' || char === "'") && !inString && prevChar !== "\\") {
+				inString = true;
+				stringChar = char;
+			} else if (char === stringChar && inString && prevChar !== "\\") {
+				inString = false;
+				stringChar = "";
+			} else if (!inString) {
+				if (char === "(" || char === "[" || char === "{") {
+					depth++;
+				} else if (char === ")" || char === "]" || char === "}") {
+					depth--;
+				}
+			}
+			i++;
+		}
+
+		if (depth === 0) {
+			matches.push({
+				start: match.index,
+				end: i,
+				funcCall,
+			});
+		}
+		match = funcCallPattern.exec(code);
+	}
+
+	// Process matches from end to start
+	for (let m = matches.length - 1; m >= 0; m--) {
+		const { start, end, funcCall } = matches[m];
+		const argsStr = code.slice(start + funcCall.length + 1, end - 1);
+
+		// Parse top-level arguments - split by comma but respect strings and nested brackets
+		const args: string[] = [];
+		let current = "";
+		let inString = false;
+		let stringChar = "";
+		let bracketDepth = 0;
+
+		for (let j = 0; j < argsStr.length; j++) {
+			const char = argsStr[j];
+			const prevChar = j > 0 ? argsStr[j - 1] : "";
+
+			if ((char === '"' || char === "'") && !inString && prevChar !== "\\") {
+				inString = true;
+				stringChar = char;
+				current += char;
+			} else if (char === stringChar && inString && prevChar !== "\\") {
+				inString = false;
+				stringChar = "";
+				current += char;
+			} else if (!inString) {
+				if (char === "(" || char === "[" || char === "{") {
+					bracketDepth++;
 					current += char;
-				} else if (char === stringChar && inString) {
-					inString = false;
-					stringChar = "";
+				} else if (char === ")" || char === "]" || char === "}") {
+					bracketDepth--;
 					current += char;
-				} else if (char === "," && !inString) {
+				} else if (char === "," && bracketDepth === 0) {
 					args.push(current.trim());
 					current = "";
 				} else {
 					current += char;
 				}
+			} else {
+				current += char;
 			}
-			if (current.trim()) {
-				args.push(current.trim());
-			}
+		}
+		if (current.trim()) {
+			args.push(current.trim());
+		}
 
-			// If 2 or fewer args and short enough, keep on one line
-			const singleLine = `${funcCall}(${args.join(", ")})`;
-			if (args.length <= 2 && singleLine.length <= 60) {
-				return singleLine;
-			}
+		// If 2 or fewer simple args and short enough, keep on one line
+		const hasComplexArg = args.some(
+			(arg) => arg.includes("[") || arg.includes("{") || arg.includes("\n"),
+		);
+		const singleLine = `${funcCall}(${args.join(", ")})`;
+		if (args.length <= 2 && singleLine.length <= 60 && !hasComplexArg) {
+			result = result.slice(0, start) + singleLine + result.slice(end);
+			continue;
+		}
 
-			// Format with each arg on its own line
-			const indent = "    ";
-			const formattedArgs = args.map((arg) => `${indent}${arg},`).join("\n");
-			return `${funcCall}(\n${formattedArgs}\n)`;
-		},
-	);
+		// Format with each arg on its own line, properly indenting nested structures
+		const indent = "    ";
+		const formattedArgs = args
+			.map((arg) => {
+				// If arg contains nested structures, re-indent them
+				if (arg.includes("\n")) {
+					const lines = arg.split("\n");
+					const reindented = lines
+						.map((line, lineIndex) => {
+							if (lineIndex === 0) {
+								return `${indent}${line.trim()}`;
+							}
+							// Preserve relative indentation of nested content
+							const trimmed = line.trimStart();
+							const originalIndent = line.length - line.trimStart().length;
+							// Calculate how many levels deep this line is (each level = 4 spaces)
+							const levels = Math.floor(originalIndent / 4);
+							return `${indent}${indent.repeat(levels)}${trimmed}`;
+						})
+						.join("\n");
+					return `${reindented},`;
+				}
+				return `${indent}${arg},`;
+			})
+			.join("\n");
+		const formatted = `${funcCall}(\n${formattedArgs}\n)`;
+		result = result.slice(0, start) + formatted + result.slice(end);
+	}
+
+	return result;
 }
 
 /**

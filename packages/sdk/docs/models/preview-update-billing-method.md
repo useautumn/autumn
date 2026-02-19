@@ -1,5 +1,7 @@
 # PreviewUpdateBillingMethod
 
+'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+
 ## Example Usage
 
 ```typescript

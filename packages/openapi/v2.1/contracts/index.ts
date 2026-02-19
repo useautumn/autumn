@@ -10,6 +10,7 @@ import {
 	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
 	billingPreviewUpdateContract,
+	billingSetupPaymentContract,
 	billingUpdateContract,
 } from "./billingContract.js";
 import {
@@ -34,7 +35,13 @@ import {
 	listFeaturesContract,
 	updateFeatureContract,
 } from "./featuresContract.js";
-import { listPlansContract } from "./plansContract.js";
+import {
+	createPlanContract,
+	deletePlanContract,
+	getPlanContract,
+	listPlansContract,
+	updatePlanContract,
+} from "./plansContract.js";
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
@@ -48,7 +55,11 @@ export const v2_1ContractRouter = oc.router({
 	deleteCustomer: deleteCustomerContract,
 
 	// Plans
-	listPlans: listPlansContract,
+	plansCreate: createPlanContract,
+	plansGet: getPlanContract,
+	plansList: listPlansContract,
+	plansUpdate: updatePlanContract,
+	plansDelete: deletePlanContract,
 
 	// Features
 	featuresCreate: createFeatureContract,
@@ -63,6 +74,7 @@ export const v2_1ContractRouter = oc.router({
 	billingUpdate: billingUpdateContract,
 	billingPreviewUpdate: billingPreviewUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
+	billingSetupPayment: billingSetupPaymentContract,
 
 	// Balances
 	balancesCreate: balancesCreateContract,

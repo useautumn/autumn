@@ -154,6 +154,24 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/billing.setup_payment"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.setup_payment(customer_id="cus_123", success_url="https://example.com/account/billing")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/billing.update"]["post"]
     update:
       x-codeSamples:
@@ -432,6 +450,68 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/plans.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.plans.create(plan_id="free_plan", name="Free", group="", add_on=False, auto_enable=True, items=[
+                    {
+                        "feature_id": "messages",
+                        "included": 100,
+                        "reset": {
+                            "interval": "month",
+                        },
+                    },
+                ])
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/plans.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.plans.delete(plan_id="unused_plan", all_versions=False)
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/plans.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.plans.get(plan_id="pro_plan")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/plans.list"]["post"]
     update:
       x-codeSamples:
@@ -446,7 +526,28 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.plans.list()
+                res = autumn.plans.list(request={})
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/plans.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.plans.update(plan_id="pro_plan", group="", name="Pro Plan (Updated)", price={
+                    "amount": 15,
+                    "interval": "month",
+                }, archived=False)
 
                 # Handle response
                 print(res)

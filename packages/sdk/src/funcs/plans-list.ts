@@ -27,10 +27,17 @@ import { Result } from "../types/fp.js";
 
 /**
  * List all plans
+ *
+ * @remarks
+ * Lists all plans in the current environment.
+ *
+ * Use this to retrieve all plans for displaying pricing pages or managing plan configurations.
+ *
+ * @returns A list of all plans with their pricing and feature configurations.
  */
 export function plansList(
   client: AutumnCore,
-  request?: models.ListPlansRequest | undefined,
+  request?: models.ListPlansParams | undefined,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -54,7 +61,7 @@ export function plansList(
 
 async function $do(
   client: AutumnCore,
-  request?: models.ListPlansRequest | undefined,
+  request?: models.ListPlansParams | undefined,
   options?: RequestOptions,
 ): Promise<
   [
@@ -75,7 +82,7 @@ async function $do(
   const parsed = safeParse(
     request,
     (value) =>
-      z.parse(z.optional(models.ListPlansRequest$outboundSchema), value),
+      z.parse(z.optional(models.ListPlansParams$outboundSchema), value),
     "Input validation failed",
   );
   if (!parsed.ok) {

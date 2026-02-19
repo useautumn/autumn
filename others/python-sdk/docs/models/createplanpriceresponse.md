@@ -1,0 +1,11 @@
+# CreatePlanPriceResponse
+
+
+## Fields
+
+| Field                                                                                  | Type                                                                                   | Required                                                                               | Description                                                                            |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `amount`                                                                               | *float*                                                                                | :heavy_check_mark:                                                                     | Base price amount for the plan.                                                        |
+| `interval`                                                                             | [models.CreatePlanPriceIntervalResponse](../models/createplanpriceintervalresponse.md) | :heavy_check_mark:                                                                     | Billing interval (e.g. 'month', 'year').                                               |
+| `interval_count`                                                                       | *Optional[float]*                                                                      | :heavy_minus_sign:                                                                     | Number of intervals per billing cycle. Defaults to 1.                                  |
+| `display`                                                                              | [Optional[models.CreatePlanPriceDisplay]](../models/createplanpricedisplay.md)         | :heavy_minus_sign:                                                                     | Display text for showing this price in pricing pages.                                  |

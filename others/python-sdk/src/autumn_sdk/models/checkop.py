@@ -109,7 +109,7 @@ class CheckParams(BaseModel):
         return m
 
 
-CheckScenario = Union[
+Scenario = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -740,7 +740,7 @@ class Product(BaseModel):
 class PreviewTypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario
+    scenario: Scenario
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -757,7 +757,7 @@ class PreviewTypedDict(TypedDict):
 class Preview(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario
+    scenario: Scenario
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str

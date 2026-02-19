@@ -1,5 +1,7 @@
 # PreviewUpdateItemPriceInterval
 
+Billing interval. For consumable features, should match reset.interval.
+
 ## Example Usage
 
 ```typescript

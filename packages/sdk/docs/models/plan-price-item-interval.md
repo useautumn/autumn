@@ -1,5 +1,7 @@
 # PlanPriceItemInterval
 
+Billing interval for this price. For consumable features, should match reset.interval.
+
 ## Example Usage
 
 ```typescript

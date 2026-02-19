@@ -79,20 +79,27 @@ BillingUpdateDurationType = Literal[
     "month",
     "year",
 ]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
 class BillingUpdateFreeTrialTypedDict(TypedDict):
     duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
     duration_type: NotRequired[BillingUpdateDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
 
 class BillingUpdateFreeTrial(BaseModel):
     duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
 
     duration_type: Optional[BillingUpdateDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
 
     card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -119,20 +126,27 @@ BillingUpdatePriceInterval = Literal[
     "semi_annual",
     "year",
 ]
+r"""Billing interval (e.g. 'month', 'year')."""
 
 
 class BillingUpdatePriceTypedDict(TypedDict):
     amount: float
+    r"""Base price amount for the plan."""
     interval: BillingUpdatePriceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
 class BillingUpdatePrice(BaseModel):
     amount: float
+    r"""Base price amount for the plan."""
 
     interval: BillingUpdatePriceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -162,17 +176,26 @@ BillingUpdateResetInterval = Literal[
     "semi_annual",
     "year",
 ]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
 class BillingUpdateResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
     interval: BillingUpdateResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
 
 
 class BillingUpdateReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
     interval: BillingUpdateResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -216,38 +239,58 @@ BillingUpdateItemPriceInterval = Literal[
     "semi_annual",
     "year",
 ]
+r"""Billing interval. For consumable features, should match reset.interval."""
 
 
 BillingUpdateBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
 class BillingUpdateItemPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
     interval: BillingUpdateItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
     billing_method: BillingUpdateBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     tiers: NotRequired[List[BillingUpdateTierTypedDict]]
+    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
     interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
     max_purchase: NotRequired[float]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
 class BillingUpdateItemPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
     interval: BillingUpdateItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
 
     billing_method: BillingUpdateBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     tiers: Optional[List[BillingUpdateTier]] = None
+    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
 
     interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
 
     billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
     max_purchase: Optional[float] = None
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -274,6 +317,7 @@ BillingUpdateOnIncrease = Literal[
     "prorate_next_cycle",
     "bill_next_cycle",
 ]
+r"""Billing behavior when quantity increases mid-cycle."""
 
 
 BillingUpdateOnDecrease = Literal[
@@ -283,37 +327,57 @@ BillingUpdateOnDecrease = Literal[
     "none",
     "no_prorations",
 ]
+r"""Credit behavior when quantity decreases mid-cycle."""
 
 
 class BillingUpdateProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
     on_increase: BillingUpdateOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
     on_decrease: BillingUpdateOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
 
 
 class BillingUpdateProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
     on_increase: BillingUpdateOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
 
     on_decrease: BillingUpdateOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
 
 
 BillingUpdateExpiryDurationType = Literal[
     "month",
     "forever",
 ]
+r"""When rolled over units expire."""
 
 
 class BillingUpdateRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
     expiry_duration_type: BillingUpdateExpiryDurationType
+    r"""When rolled over units expire."""
     max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
     expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
 
 
 class BillingUpdateRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
     expiry_duration_type: BillingUpdateExpiryDurationType
+    r"""When rolled over units expire."""
 
     max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
 
     expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -334,28 +398,42 @@ class BillingUpdateRollover(BaseModel):
 
 class BillingUpdateItemTypedDict(TypedDict):
     feature_id: str
+    r"""The ID of the feature to configure."""
     included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
     reset: NotRequired[BillingUpdateResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[BillingUpdateItemPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[BillingUpdateProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[BillingUpdateRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
 class BillingUpdateItem(BaseModel):
     feature_id: str
+    r"""The ID of the feature to configure."""
 
     included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
 
     unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
 
     reset: Optional[BillingUpdateReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
     price: Optional[BillingUpdateItemPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
 
     proration: Optional[BillingUpdateProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
     rollover: Optional[BillingUpdateRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
