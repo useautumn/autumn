@@ -8,6 +8,11 @@ export enum BillWhen {
 	EndOfPeriod = "end_of_period",
 }
 
+export enum TiersType {
+	Graduated = "graduated",
+	VolumeBased = "volume",
+}
+
 export const UsageTierSchema = z.object({
 	to: z.number().or(z.literal(Infinite)),
 	amount: z.number(),
