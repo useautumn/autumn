@@ -65,7 +65,7 @@ export const createHandleBetterAuthRoute = ({
 				identify,
 			}),
 			secretKey,
-			baseURL,
+			autumnURL: baseURL,
 		});
 	};
 };

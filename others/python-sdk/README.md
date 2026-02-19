@@ -405,7 +405,7 @@ from autumn_sdk import Autumn
 
 
 with Autumn(
-    server_url="http://localhost:8080",
+    server_url="https://api.useautumn.com",
     x_api_version="2.1",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:

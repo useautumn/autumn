@@ -136,6 +136,18 @@ export const useCustomer = (params: UseCustomerParams = {}) => {
 };
 ```
 
+### SDK Casing Convention
+
+**Important:** The TypeScript SDK and React hooks use **camelCase** for all properties. Speakeasy automatically transforms snake_case API responses to camelCase.
+
+- API response: `{ plan_id: "pro", created_at: 123, auto_enable: true }`
+- SDK/Hook response: `{ planId: "pro", createdAt: 123, autoEnable: true }`
+
+When writing documentation examples for React hooks or the TypeScript SDK, always use camelCase:
+- `data?.balances?.messages?.featureId` (not `feature_id`)
+- `subscription.planId` (not `plan_id`)
+- `plan.createdAt` (not `created_at`)
+
 ---
 
 ## 6. Testing (sdk-test)

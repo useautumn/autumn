@@ -16,8 +16,6 @@
 		"skipLibCheck": true,
 
 		"paths": {
-			"@/*": ["./src/libraries/react/*"],
-			"@/hooks/*": ["./src/libraries/react/hooks/*"],
 			"@useautumn/sdk": ["../sdk/dist/esm/index.d.ts"],
 			"@useautumn/sdk/*": ["../sdk/dist/esm/*"],
 			"@utils/*": ["./src/utils/*"]

@@ -1,11 +1,14 @@
 import type {
 	AggregateEventsResponse,
 	BillingAttachResponse,
+	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
 	ListEventsResponse,
 	ListPlansResponse,
 	OpenCustomerPortalResponse,
+	PreviewAttachResponse,
+	PreviewUpdateResponse,
 	RedeemReferralCodeResponse,
 } from "@useautumn/sdk";
 import type { IAutumnClient } from "./IAutumnClient";
@@ -36,6 +39,21 @@ export const createAutumnClient = (
 		attach: (params) =>
 			http.request<BillingAttachResponse>({
 				route: "attach",
+				body: params,
+			}),
+		previewAttach: (params) =>
+			http.request<PreviewAttachResponse>({
+				route: "previewAttach",
+				body: params,
+			}),
+		updateSubscription: (params) =>
+			http.request<BillingUpdateResponse>({
+				route: "updateSubscription",
+				body: params,
+			}),
+		previewUpdateSubscription: (params) =>
+			http.request<PreviewUpdateResponse>({
+				route: "previewUpdateSubscription",
 				body: params,
 			}),
 		openCustomerPortal: (params) =>

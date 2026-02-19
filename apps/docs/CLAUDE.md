@@ -1,5 +1,16 @@
 When writing the docs, always make sure to add it to `docs.json` for it to appear
 
+## React Hook Documentation
+
+**Always read the actual types** in `packages/autumn-js/src/` before writing hook docs:
+- Hook params: `packages/autumn-js/src/react/hooks/<hookName>.ts`
+- Client params: `packages/autumn-js/src/types/params.ts`
+- SDK types: `packages/sdk/src/models/`
+
+**Casing:** The TypeScript SDK uses camelCase (Speakeasy transforms snake_case API responses). All JSON examples in docs must use camelCase (`planId`, `createdAt`, `featureId`).
+
+**Keep it concise:** Only document the most important parameters. Link to API reference for the full list.
+
 ## Manual API Documentation
 
 Manual documentation (explanations, examples, use cases) should go in `api-reference-generator/` folder, NOT in `mintlify/api-reference/`. The generator merges manual content from `api-reference-generator/` with auto-generated body params and outputs the final result to `mintlify/api-reference/`.

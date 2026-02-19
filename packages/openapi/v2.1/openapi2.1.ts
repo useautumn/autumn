@@ -101,8 +101,8 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		},
 		servers: [
 			{
-				// url: "https://api.useautumn.com/v1",
-				url: "http://localhost:8080",
+				// url: "http://localhost:8080",
+				url: "https://api.useautumn.com",
 				description: "Production server",
 			},
 		],

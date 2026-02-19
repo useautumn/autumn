@@ -7,6 +7,9 @@ import type { BackendResult } from "./responseTypes";
 export const ROUTE_NAMES = {
 	getOrCreateCustomer: "getOrCreateCustomer",
 	attach: "attach",
+	previewAttach: "previewAttach",
+	updateSubscription: "updateSubscription",
+	previewUpdateSubscription: "previewUpdateSubscription",
 	openCustomerPortal: "openCustomerPortal",
 	createReferralCode: "createReferralCode",
 	redeemReferralCode: "redeemReferralCode",

@@ -1,8 +1,0 @@
-{
-	"mcpServers": {
-		"mintlify": {
-			"type": "http",
-			"url": "https://mintlify.com/docs/mcp"
-		}
-	}
-}
