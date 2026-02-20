@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test/sdk-publish  # TEMP: Remove after testing
     paths:
       - 'packages/autumn-js/**'
       - 'packages/openapi/**'
@@ -12,14 +13,6 @@ on:
     inputs:
       dry-run:
         description: 'Dry run (no actual publish)'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
-      test-package:
-        description: 'Publish to @useautumn/js-test instead'
         required: false
         default: 'false'
         type: choice
@@ -38,8 +31,7 @@ on:
 
 env:
   PACKAGE_DIR: packages/autumn-js
-  REAL_PACKAGE_NAME: autumn-js
-  TEST_PACKAGE_NAME: '@useautumn/js-test'
+  PACKAGE_NAME: autumn-js
 
 jobs:
   publish:
@@ -145,19 +137,7 @@ jobs:
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "Next version: $NEXT_VERSION"
       
-      - name: Determine package name
-        if: steps.version-type.outputs.bump != 'skip'
-        id: package
-        run: |
-          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
-            echo "name=${{ env.TEST_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
-            echo "Publishing to test package: ${{ env.TEST_PACKAGE_NAME }}"
-          else
-            echo "name=${{ env.REAL_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
-            echo "Publishing to real package: ${{ env.REAL_PACKAGE_NAME }}"
-          fi
-      
-      - name: Update package.json version and name
+      - name: Update package.json version
         if: steps.version-type.outputs.bump != 'skip'
         run: |
           cd ${{ env.PACKAGE_DIR }}
@@ -167,15 +147,8 @@ jobs:
              '.version = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
           
-          # Update package name if using test package
-          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
-            jq --arg name "${{ env.TEST_PACKAGE_NAME }}" \
-               '.name = $name' package.json > package.json.tmp
-            mv package.json.tmp package.json
-          fi
-          
           echo "Updated package.json:"
-          cat package.json | head -20
+          cat package.json | head -10
       
       - name: Regenerate SDK from OpenAPI
         if: steps.version-type.outputs.bump != 'skip'
@@ -203,10 +176,10 @@ jobs:
         run: |
           cd ${{ env.PACKAGE_DIR }}
           npm publish --provenance --access public
-          echo "✅ Published ${{ steps.package.outputs.name }}@${{ steps.next-version.outputs.version }}"
+          echo "✅ Published ${{ env.PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
       
       - name: Create git tag
-        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true' && github.event.inputs.test-package != 'true'
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true'
         run: |
           TAG_NAME="autumn-js-v${{ steps.next-version.outputs.version }}"
           git tag "$TAG_NAME"
@@ -220,7 +193,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | ${{ steps.package.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | ${{ env.PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${{ steps.next-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | ${{ steps.version-type.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Dry Run | ${{ github.event.inputs.dry-run || 'false' }} |" >> $GITHUB_STEP_SUMMARY
