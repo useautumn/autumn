@@ -10,6 +10,7 @@ import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/provid
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { cleanupOldSubscriptionItems } from "@/internal/billing/v2/providers/stripe/execute/cleanupOldSubscriptionItems";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 
 export const executeStripeBillingPlan = async ({
@@ -94,6 +95,13 @@ export const executeStripeBillingPlan = async ({
 		if (subscriptionResult?.deferred) return subscriptionResult;
 		stripeSubscription =
 			subscriptionResult.stripeSubscription ?? stripeSubscription;
+
+		// Clean up expired product items from old subscription when transitioning across subscriptions
+		await cleanupOldSubscriptionItems({
+			ctx,
+			billingPlan,
+			newStripeSubscription: subscriptionResult.stripeSubscription,
+		});
 	}
 
 	if (stripeSubscriptionScheduleAction && !isReleaseAction) {

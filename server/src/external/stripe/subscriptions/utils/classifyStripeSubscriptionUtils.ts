@@ -56,6 +56,27 @@ export const isStripeSubscriptionCanceled = (
 	return stripeSubscription.status === "canceled";
 };
 
+const UNHEALTHY_STATUSES: Stripe.Subscription.Status[] = [
+	"past_due",
+	"incomplete",
+	"incomplete_expired",
+	"unpaid",
+	"paused",
+];
+
+/**
+ * Checks if a Stripe subscription has a payment-problematic status.
+ * These statuses all map to CusProductStatus.PastDue and indicate the subscription
+ * should not be used as a merge target for new products.
+ */
+export const isStripeSubscriptionUnhealthy = (
+	stripeSubscription?: Stripe.Subscription,
+): boolean => {
+	if (!stripeSubscription) return false;
+
+	return UNHEALTHY_STATUSES.includes(stripeSubscription.status);
+};
+
 /**
  * Checks if a Stripe subscription has any metered price items.
  */
