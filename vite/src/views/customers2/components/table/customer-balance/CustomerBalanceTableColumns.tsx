@@ -67,7 +67,9 @@ function getIndividualEntValues({
 	const quantity = ent.customer_product?.quantity || 1;
 	const allowance =
 		(ent.entitlement.allowance ?? 0) * quantity +
-		(ent.adjustment ?? 0) +
+		(entityId && ent.entities?.[entityId]
+			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
+			: (ent.adjustment ?? 0)) +
 		cusEntToPrepaidQuantity({ cusEnt: ent });
 	return { balance, allowance, quantity };
 }
