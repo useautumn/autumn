@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
+import { FreeTrialDuration } from "@autumn/shared";
 import { completeSetupPaymentForm } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { FreeTrialDuration } from "@autumn/shared";
 import chalk from "chalk";
 
 /**
