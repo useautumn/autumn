@@ -6,7 +6,7 @@ import {
 	type FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
-	ProductItemInterval,
+	type ProductItemInterval,
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
@@ -117,8 +117,7 @@ export function buildAttachRequestBody({
 	if (items !== null) {
 		body.items = items.map((item) => ({
 			...item,
-			interval: (item.interval ||
-				ProductItemInterval.Month) as ProductItemInterval,
+			interval: (item.interval ?? null) as ProductItemInterval | null,
 		}));
 	}
 
