@@ -28,10 +28,19 @@ on:
           - 'patch'
           - 'minor'
           - 'major'
+      test-package:
+        description: 'Publish to @useautumn/js-test instead (for testing)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 env:
   PACKAGE_DIR: packages/autumn-js
   PACKAGE_NAME: autumn-js
+  TEST_PACKAGE_NAME: '@useautumn/js-test'
 
 jobs:
   publish:
@@ -164,22 +173,50 @@ jobs:
         if: steps.version-type.outputs.bump != 'skip'
         run: bun js:ts
       
+      - name: Prepare test package
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.test-package == 'true'
+        run: |
+          # Create temp publish directory
+          mkdir -p /tmp/js-test-publish
+          
+          # Copy dist and package.json
+          cp -r ${{ env.PACKAGE_DIR }}/dist /tmp/js-test-publish/
+          cp ${{ env.PACKAGE_DIR }}/package.json /tmp/js-test-publish/
+          
+          # Update package name to test package
+          cd /tmp/js-test-publish
+          jq --arg name "${{ env.TEST_PACKAGE_NAME }}" '.name = $name' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          
+          echo "Prepared test package:"
+          cat package.json | head -10
+      
       - name: Publish (dry-run)
         if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run == 'true'
         run: |
-          cd ${{ env.PACKAGE_DIR }}
+          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            cd /tmp/js-test-publish
+          else
+            cd ${{ env.PACKAGE_DIR }}
+          fi
           npm publish --dry-run --provenance --access public
           echo "✅ Dry run completed successfully"
       
       - name: Publish to npm
         if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true'
         run: |
-          cd ${{ env.PACKAGE_DIR }}
-          npm publish --provenance --access public
-          echo "✅ Published ${{ env.PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
+          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            cd /tmp/js-test-publish
+            npm publish --provenance --access public
+            echo "✅ Published ${{ env.TEST_PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
+          else
+            cd ${{ env.PACKAGE_DIR }}
+            npm publish --provenance --access public
+            echo "✅ Published ${{ env.PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
+          fi
       
       - name: Create git tag
-        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true'
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true' && github.event.inputs.test-package != 'true'
         run: |
           TAG_NAME="autumn-js-v${{ steps.next-version.outputs.version }}"
           git tag "$TAG_NAME"
@@ -193,7 +230,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | ${{ env.PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            echo "| Package | ${{ env.TEST_PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Package | ${{ env.PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Version | ${{ steps.next-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | ${{ steps.version-type.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Dry Run | ${{ github.event.inputs.dry-run || 'false' }} |" >> $GITHUB_STEP_SUMMARY
