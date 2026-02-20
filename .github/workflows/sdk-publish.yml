@@ -72,6 +72,11 @@ jobs:
       - name: Install dependencies
         run: bun install
       
+      - name: Install Speakeasy CLI
+        uses: speakeasy-api/speakeasy-action@v1
+        with:
+          speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}
+      
       - name: Determine version bump type
         id: version-type
         run: |
