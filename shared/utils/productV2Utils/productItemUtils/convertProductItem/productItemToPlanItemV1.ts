@@ -125,10 +125,12 @@ export const productItemsToPlanItemsV1 = ({
 	items,
 	features,
 	expand = [],
+	currency,
 }: {
 	items: ProductItem[];
 	features: Feature[];
 	expand?: string[];
+	currency?: string;
 }): ApiPlanItemV1[] => {
 	if (!items) return [];
 
@@ -172,7 +174,7 @@ export const productItemsToPlanItemsV1 = ({
 			rollover,
 			proration,
 
-			display: getProductItemDisplay({ item, features }),
+			display: getProductItemDisplay({ item, features, currency }),
 		});
 	});
 };

@@ -328,7 +328,9 @@ class CreatePlanRolloverRequest(BaseModel):
         return m
 
 
-class CreatePlanItemRequestTypedDict(TypedDict):
+class CreatePlanPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
     included: NotRequired[float]
@@ -345,7 +347,9 @@ class CreatePlanItemRequestTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class CreatePlanItemRequest(BaseModel):
+class CreatePlanPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
 
@@ -394,7 +398,7 @@ CreatePlanDurationTypeRequest = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-class CreatePlanFreeTrialRequestTypedDict(TypedDict):
+class FreeTrialRequestTypedDict(TypedDict):
     r"""Free trial configuration. Customers can try this plan before being charged."""
 
     duration_length: float
@@ -405,7 +409,7 @@ class CreatePlanFreeTrialRequestTypedDict(TypedDict):
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
 
-class CreatePlanFreeTrialRequest(BaseModel):
+class FreeTrialRequest(BaseModel):
     r"""Free trial configuration. Customers can try this plan before being charged."""
 
     duration_length: float
@@ -449,9 +453,9 @@ class CreatePlanParamsTypedDict(TypedDict):
     r"""If true, plan is automatically attached when a customer is created. Use for free tiers."""
     price: NotRequired[CreatePlanPriceRequestTypedDict]
     r"""Base recurring price for the plan. Omit for free or usage-only plans."""
-    items: NotRequired[List[CreatePlanItemRequestTypedDict]]
+    items: NotRequired[List[CreatePlanPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
-    free_trial: NotRequired[CreatePlanFreeTrialRequestTypedDict]
+    free_trial: NotRequired[FreeTrialRequestTypedDict]
     r"""Free trial configuration. Customers can try this plan before being charged."""
 
 
@@ -477,10 +481,10 @@ class CreatePlanParams(BaseModel):
     price: Optional[CreatePlanPriceRequest] = None
     r"""Base recurring price for the plan. Omit for free or usage-only plans."""
 
-    items: Optional[List[CreatePlanItemRequest]] = None
+    items: Optional[List[CreatePlanPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
 
-    free_trial: Optional[CreatePlanFreeTrialRequest] = None
+    free_trial: Optional[FreeTrialRequest] = None
     r"""Free trial configuration. Customers can try this plan before being charged."""
 
     @model_serializer(mode="wrap")
@@ -966,7 +970,7 @@ class CreatePlanRolloverResponse(BaseModel):
         return m
 
 
-class CreatePlanItemResponseTypedDict(TypedDict):
+class CreatePlanItemTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this item configures."""
     included: float
@@ -985,7 +989,7 @@ class CreatePlanItemResponseTypedDict(TypedDict):
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
 
-class CreatePlanItemResponse(BaseModel):
+class CreatePlanItem(BaseModel):
     feature_id: str
     r"""The ID of the feature this item configures."""
 
@@ -1100,7 +1104,7 @@ class CreatePlanResponseTypedDict(TypedDict):
     r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
     price: Nullable[CreatePlanPriceResponseTypedDict]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
-    items: List[CreatePlanItemResponseTypedDict]
+    items: List[CreatePlanItemTypedDict]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
     created_at: float
     r"""Unix timestamp (ms) when the plan was created."""
@@ -1141,7 +1145,7 @@ class CreatePlanResponse(BaseModel):
     price: Nullable[CreatePlanPriceResponse]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
 
-    items: List[CreatePlanItemResponse]
+    items: List[CreatePlanItem]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
 
     created_at: float

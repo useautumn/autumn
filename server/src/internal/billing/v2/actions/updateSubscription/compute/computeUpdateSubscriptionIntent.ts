@@ -1,3 +1,4 @@
+import { hasCustomItems } from "@api/billing/common/customizePlan/customizePlanV1";
 import type { UpdateSubscriptionV1Params } from "@shared/index";
 
 export enum UpdateSubscriptionIntent {
@@ -12,9 +13,9 @@ export enum UpdateSubscriptionIntent {
 export const computeUpdateSubscriptionIntent = (
 	params: UpdateSubscriptionV1Params,
 ): UpdateSubscriptionIntent => {
-	const itemsChanged = params.customize !== undefined;
+	const itemsChanged = hasCustomItems(params.customize);
 	const versionChanged = params.version !== undefined;
-	const freeTrialChanged = params.free_trial !== undefined;
+	const freeTrialChanged = params.customize?.free_trial !== undefined;
 
 	if (itemsChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;

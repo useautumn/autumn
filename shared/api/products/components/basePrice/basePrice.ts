@@ -19,18 +19,23 @@ export const BasePriceSchema = z.object({
 
 export const BasePriceParamsSchema = BasePriceSchema.omit({
 	display: true,
-}).extend({
-	interval_count: z.number().optional().meta({
-		description: "Number of intervals per billing cycle. Defaults to 1.",
-	}),
+})
+	.extend({
+		interval_count: z.number().optional().meta({
+			description: "Number of intervals per billing cycle. Defaults to 1.",
+		}),
 
-	entitlement_id: z.string().optional().meta({
-		internal: true,
-	}),
-	price_id: z.string().optional().meta({
-		internal: true,
-	}),
-});
+		entitlement_id: z.string().optional().meta({
+			internal: true,
+		}),
+		price_id: z.string().optional().meta({
+			internal: true,
+		}),
+	})
+	.meta({
+		title: "BasePrice",
+		description: "Base price configuration for a plan.",
+	});
 
 export type BasePrice = z.infer<typeof BasePriceSchema>;
 export type BasePriceParams = z.infer<typeof BasePriceParamsSchema>;

@@ -31,7 +31,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof AttachParamsV0Schema>;
 	}): z.infer<typeof AttachParamsV1Schema> => {
-		const customizeV1 = input.items
+		const itemsCustomize = input.items
 			? productItemsToCustomizePlanV1({
 					ctx,
 					items: input.items,
@@ -41,6 +41,14 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 		const freeTrialV1 = freeTrialParamsV0ToV1({
 			freeTrialParamsV0: input.free_trial,
 		});
+
+		const customizeV1 =
+			itemsCustomize || freeTrialV1 !== undefined
+				? {
+						...itemsCustomize,
+						free_trial: freeTrialV1,
+					}
+				: undefined;
 
 		const newPlanId = input.product_id ?? undefined;
 		const featureQuantities = input.options;
@@ -52,8 +60,8 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 			plan_id: newPlanId,
 			feature_quantities: featureQuantities,
 			invoice_mode: invoiceMode,
-			free_trial: freeTrialV1,
 			customize: customizeV1,
+			proration_behavior: input.billing_behavior,
 		};
 	},
 });
