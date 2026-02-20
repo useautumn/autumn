@@ -35,7 +35,11 @@
 			"@autumn/shared/*": ["../shared/*"],
 			"@api/*": ["../shared/api/*"],
 			"@models/*": ["../shared/models/*"],
-			"@utils/*": ["../shared/utils/*"]
+			"@utils/*": ["../shared/utils/*"],
+
+			// Explicitly set drizzle-orm path to avoid monorepo issues
+			"drizzle-orm": ["../node_modules/drizzle-orm"],
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]			
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments"],
