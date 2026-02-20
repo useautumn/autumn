@@ -72,7 +72,13 @@ interface IndividualTest {
 
 interface TestFileResult {
 	file: string;
-	status: "pending" | "running" | "passed" | "failed" | "retrying";
+	status:
+		| "pending"
+		| "running"
+		| "passed"
+		| "failed"
+		| "retry_queued"
+		| "retrying";
 	tests: IndividualTest[];
 	currentTest?: string;
 	duration: number;
@@ -451,9 +457,10 @@ function RunningFile({ result }: RunningFileProps) {
 
 interface RetryingFileProps {
 	result: TestFileResult;
+	queuedCount: number;
 }
 
-function RetryingFile({ result }: RetryingFileProps) {
+function RetryingFile({ result, queuedCount }: RetryingFileProps) {
 	const fileName = basename(result.file);
 	return (
 		<Box>
@@ -461,6 +468,7 @@ function RetryingFile({ result }: RetryingFileProps) {
 			<Spinner />
 			<Text color="yellow"> {fileName} </Text>
 			<Text color="yellow">(retrying...)</Text>
+			{queuedCount > 0 && <Text dimColor> ({queuedCount} more queued)</Text>}
 		</Box>
 	);
 }
@@ -564,31 +572,33 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 			);
 
 			if (failedFiles.length > 0) {
-				// Mark files as retrying
+				// Mark all failed files as queued for retry
 				for (const result of failedFiles) {
+					const queuedResult: TestFileResult = {
+						...result,
+						status: "retry_queued",
+					};
+					pendingRef.current.set(result.file, queuedResult);
+				}
+				dirtyRef.current = true;
+
+				// Run retries sequentially to avoid resource contention
+				for (const result of failedFiles) {
+					// Mark this specific file as actively retrying
 					const retryingResult: TestFileResult = {
 						...result,
 						status: "retrying",
 					};
 					pendingRef.current.set(result.file, retryingResult);
-				}
-				dirtyRef.current = true;
+					dirtyRef.current = true;
 
-				// Run retries sequentially to avoid resource contention
-				const retryLimit = pLimit(1);
-				const retryPromises = failedFiles.map((result) =>
-					retryLimit(async () => {
-						const retryResult = await runTestFile(result.file, updateResult, 2);
-						// If passed on retry, mark it
-						if (retryResult.status === "passed") {
-							retryResult.passedOnRetry = true;
-							pendingRef.current.set(result.file, retryResult);
-							dirtyRef.current = true;
-						}
-						return retryResult;
-					}),
-				);
-				await Promise.all(retryPromises);
+					const retryResult = await runTestFile(result.file, updateResult, 2);
+					if (retryResult.status === "passed") {
+						retryResult.passedOnRetry = true;
+						pendingRef.current.set(result.file, retryResult);
+						dirtyRef.current = true;
+					}
+				}
 			}
 
 			// Mark retry phase as complete so failed files can be emitted to static
@@ -639,6 +649,9 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 	const allResults = Array.from(results.values());
 	const runningFiles = allResults.filter((r) => r.status === "running");
 	const retryingFiles = allResults.filter((r) => r.status === "retrying");
+	const retryQueuedFiles = allResults.filter(
+		(r) => r.status === "retry_queued",
+	);
 
 	const completedFiles = allResults.filter(
 		(r) => r.status === "passed" || r.status === "failed",
@@ -675,11 +688,15 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				</Box>
 			)}
 
-			{/* Retrying files */}
+			{/* Retrying file (only 1 at a time, show queued count) */}
 			{retryingFiles.length > 0 && (
 				<Box flexDirection="column">
 					{retryingFiles.map((r) => (
-						<RetryingFile key={r.file} result={r} />
+						<RetryingFile
+							key={r.file}
+							result={r}
+							queuedCount={retryQueuedFiles.length}
+						/>
 					))}
 				</Box>
 			)}
@@ -701,7 +718,10 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 						<Text dimColor> | {runningFiles.length} running</Text>
 					)}
 					{retryingFiles.length > 0 && (
-						<Text color="yellow"> | {retryingFiles.length} retrying</Text>
+						<Text color="yellow"> | 1 retrying</Text>
+					)}
+					{retryQueuedFiles.length > 0 && (
+						<Text dimColor> | {retryQueuedFiles.length} queued</Text>
 					)}
 				</Text>
 			</Box>

@@ -5,12 +5,12 @@ import {
 	type ApiProduct,
 	ApiVersion,
 	BillingInterval,
-	type CreatePlanParamsInput,
+	type CreatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
-import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -24,8 +24,11 @@ test.concurrent(`${chalk.yellowBright("rpc create: minimal plan (id + name only)
 		await autumnRpc.plans.delete(productId, { allVersions: true });
 	} catch (_error) {}
 
-	const created = await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: productId,
+	const created = await autumnRpc.plans.create<
+		ApiPlanV1,
+		CreatePlanParamsV2Input
+	>({
+		plan_id: productId,
 		name: "RPC Minimal Plan",
 		group,
 		auto_enable: false,
@@ -47,8 +50,11 @@ test.concurrent(`${chalk.yellowBright("rpc create: with base price and flags")}`
 		await autumnRpc.plans.delete(productId, { allVersions: true });
 	} catch (_error) {}
 
-	const created = await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: productId,
+	const created = await autumnRpc.plans.create<
+		ApiPlanV1,
+		CreatePlanParamsV2Input
+	>({
+		plan_id: productId,
 		name: "RPC Flags Plan",
 		group,
 		add_on: true,
@@ -76,8 +82,11 @@ test.concurrent(`${chalk.yellowBright("rpc create: boolean feature")}`, async ()
 		await autumnRpc.plans.delete(productId, { allVersions: true });
 	} catch (_error) {}
 
-	const created = await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: productId,
+	const created = await autumnRpc.plans.create<
+		ApiPlanV1,
+		CreatePlanParamsV2Input
+	>({
+		plan_id: productId,
 		name: "RPC Boolean Plan",
 		group,
 		auto_enable: false,
@@ -86,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("rpc create: boolean feature")}`, async ()
 
 	expect(created.items.length).toBeGreaterThanOrEqual(1);
 	const booleanItem = created.items.find(
-		(item: any) => item.feature_id === TestFeature.Dashboard,
+		(item) => item.feature_id === TestFeature.Dashboard,
 	);
 	expect(booleanItem).toBeDefined();
 

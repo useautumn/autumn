@@ -6,7 +6,7 @@ import {
 	type CreateProductV2ParamsInput,
 	ProductItemInterval,
 	ResetInterval,
-	type UpdatePlanParamsInput,
+	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -19,6 +19,7 @@ const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const { db, org, env } = ctx;
+type UpdatePlanRpcInput = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
 test.concurrent(`${chalk.yellowBright("rpc update: match existing entitlement by feature_id (no entitlement_id)")}`, async () => {
 	const productId = "rpc_update_match_1";
@@ -52,7 +53,7 @@ test.concurrent(`${chalk.yellowBright("rpc update: match existing entitlement by
 			?.id,
 	).toBeDefined();
 
-	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanParamsInput>(productId, {
+	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(productId, {
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -96,7 +97,7 @@ test.concurrent(`${chalk.yellowBright("rpc update: match entitlement with same f
 		],
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanParamsInput>(productId, {
+	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(productId, {
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -140,7 +141,7 @@ test.concurrent(`${chalk.yellowBright("rpc update: create NEW entitlement when i
 		],
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanParamsInput>(productId, {
+	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(productId, {
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -189,7 +190,7 @@ test.concurrent(`${chalk.yellowBright("rpc update: handle multiple features with
 		],
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanParamsInput>(productId, {
+	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(productId, {
 		items: [
 			{
 				feature_id: TestFeature.Messages,
