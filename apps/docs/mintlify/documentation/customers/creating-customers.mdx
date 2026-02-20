@@ -14,90 +14,48 @@ For each customer, Autumn will:
 
 ## Creating a customer via API
 
-<Accordion title="Creating a customer via attach, track, or check">
-
-Customers are automatically created when they interact with any Autumn's core endpoints. The most common ways customers get created are:
-
-#### Via checkout
-
-When a customer goes through the checkout flow to purchase a product, a customer record is automatically created. You can provide customer data like name and email by including it in the `/attach` endpoint request:
-
-```json
-POST /attach
-{
-  "customer_id": "your-customer-id",
-  "product_id": "pro-tier",
-  "customer_data": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "fingerprint": "unique-device-id"
-  }
-}
-```
-
-#### Via usage tracking
-
-When tracking feature usage via the `track` endpoint, a customer record will be created if one doesn't exist:
-
-```json
-POST /track
-{
-  "customer_id": "your-customer-id",
-  "feature_id": "api-calls",
-  "customer_data": {
-    "name": "John Doe",
-    "email": "john@example.com"
-  }
-}
-```
-
-#### Via feature access checks
-
-Similarly, checking if a customer is allowed to use a feature via the `/check` endpoint will create a customer record:
-
-```json
-POST /check
-{
-  "customer_id": "your-customer-id",
-  "feature_id": "premium-feature",
-  "customer_data": {
-    "name": "John Doe",
-    "email": "john@example.com"
-  }
-}
-```
-
-</Accordion>
-
-However, you may want to explicitly create a customer to keep your code clean and consistent. You can do so with the `customers` method.
+You can create a customer with the `customers.getOrCreate` method. This will create the customer if they don't exist, or return the existing customer if they do.
 
 <CodeGroup>
-```shell cURL
-curl -X POST https://api.autumn.com/customers \
-  -H "Authorization: Bearer your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "your-customer-id", 
-  "name": "John Doe", 
-  "email": "john@example.com", 
-  "fingerprint": "unique-device-id"
-  }'
-```
 
-```javascript Typescript
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
 
-autumn.customers.create({
-  id: "your-customer-id",
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
   name: "John Doe",
   email: "john@example.com",
-  fingerprint: "unique-device-id",
 });
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    name="John Doe",
+    email="john@example.com",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "name": "John Doe",
+    "email": "john@example.com"
+  }'
 ```
 
 </CodeGroup>
 
-Only the `id` field is required - this should be your unique identifier for the customer that you'll use to reference them in future API calls.
+Only the `customerId` field is required - this should be your unique identifier for the customer that you'll use to reference them in future API calls.
 
 <Note>
   An Autumn customer does not map to a Stripe customer by default. A Stripe
@@ -140,13 +98,32 @@ This is your unique identifier for the customer. You'll use this ID in all futur
 
 Optional fields to help identify the customer in the Autumn dashboard and on invoices.
 
-#### Fingerprint
+## Stripe Integration
 
-An optional unique identifier used to prevent free trial abuse. This could be:
+By default, Autumn does not create a Stripe customer when you create an Autumn customer. A Stripe customer is only created on the first billing call (like `billing.attach` or `billing.openCustomerPortal`).
 
-- Device ID
-- Hardware serial number
-- Browser fingerprint
-- Any other unique identifier that represents the customer's device or instance
+You can change this behavior with the following options:
 
-When set, Autumn can limit free trials to one per fingerprint, preventing users from creating multiple accounts to get unlimited free trials.
+#### Create in Stripe immediately
+
+Pass `createInStripe: true` to create the Stripe customer at the same time as the Autumn customer:
+
+```typescript
+await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  name: "John Doe",
+  email: "john@example.com",
+  createInStripe: true,
+});
+```
+
+#### Link to an existing Stripe customer
+
+If you already have a Stripe customer, pass `stripeId` to link it to the Autumn customer:
+
+```typescript
+await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  stripeId: "cus_abc123", // Your existing Stripe customer ID
+});
+```

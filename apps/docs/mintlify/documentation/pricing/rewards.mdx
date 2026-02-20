@@ -73,77 +73,137 @@ Referral programs allow you to automatically grant rewards to customers who brin
 5. Specify a max redemption number (a limit number of times one customer can be rewarded for referring another customer)
 6. Decide whether this reward should be granted to the referrer only, or both the referrer and the redeemer (new customer)
 
-You can then implement the referral program from your application with just 2 routes. First, generate a referral code for the customer making the referral.
+You can then implement the referral program from your application with just 2 routes.
+
+### Creating a referral code
+
+Generate a referral code for the customer making the referral:
 
 <CodeGroup>
-```shell cURL
-curl --request POST \
-  --url https://api.useautumn.com/v1/referrals/code \
-  --header 'Authorization: Bearer <token>' \
-  --header 'Content-Type: application/json' \
-  --data '{
-  "customer_id": "user_123",
-  "program_id": "free-month"
-}'
-```
-{/* prettier-ignore */}
-{/* ```javascript Typescript
-import { Autumn } from "@useautumn/js";
-const autumn = new Autumn();
 
-const referral = autumn.getReferralCode({
-customer_id: "user_123",
-program_id: "free-month",
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+// Pass the program ID to the hook
+const { data, refetch } = useReferrals({ programId: "free-month" });
+
+// Call refetch() to create/fetch the code
+await refetch();
+
+// Access the code
+console.log(data?.code); // "4EXWV1"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.createCode({
+  customerId: "user_123",
+  programId: "free-month",
 });
 
-````*/}
+console.log(response.code); // "4EXWV1"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.create_code(
+    customer_id="user_123",
+    program_id="free-month",
+)
+print(response.code)  # "4EXWV1"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.create_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "program_id": "free-month"
+  }'
+```
 
 </CodeGroup>
 
+<Expandable title="Response">
 ```json
 {
   "code": "4EXWV1",
-  "customer_id": "user_123",
-  "created_at": 1744797427206
+  "customerId": "user_123",
+  "createdAt": 1744797427206
 }
-````
+```
+</Expandable>
 
-Then, from the new customer, redeem the referral code from your application.
+### Redeeming a referral code
+
+From the new customer, redeem the referral code:
 
 <CodeGroup>
-```shell cURL
-curl --request POST \
-  --url https://api.useautumn.com/v1/referrals/redeem \
-  --header 'Authorization: Bearer <token>' \
-  --header 'Content-Type: application/json' \
-  --data '{
-  "code": "<string>",
-  "customer_id": "<string>"
-}'
-```
-{/* prettier-ignore */}
-{/* ```javascript Typescript
-import { Autumn } from "@useautumn/js";
-const autumn = new Autumn();
 
-const redeem = autumn.redeem({
-code: "4EXWV1",
-customer_id: "new_user_123",
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+const { redeemCode } = useReferrals({ programId: "free-month" });
+
+const response = await redeemCode({ code: "4EXWV1" });
+
+console.log(response.rewardId); // "free-month"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.redeemCode({
+  code: "4EXWV1",
+  customerId: "new_user_123",
 });
 
-````*/}
+console.log(response.rewardId); // "free-month"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.redeem_code(
+    code="4EXWV1",
+    customer_id="new_user_123",
+)
+print(response.reward_id)  # "free-month"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.redeem_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "code": "4EXWV1",
+    "customer_id": "new_user_123"
+  }'
+```
 
 </CodeGroup>
 
+<Expandable title="Response">
 ```json
 {
   "id": "rr_2vo3Jt9oqF6XgAlWI1MjYktv4dB",
-  "customer_id": "new_user_123",
-  "applied": false,
-  "reward_id": "free-month"
+  "customerId": "new_user_123",
+  "rewardId": "free-month"
 }
-````
+```
+</Expandable>
 
-The reward will automatically apply on the event that you set (customer creation or product purchase). Whether the reward has been applied is marked by the `applied` field in the response.
+The reward will automatically apply on the event that you set (customer creation or product purchase).
 
 In the customer details page, you'll be able to see which customers have made referrals and been referred.
