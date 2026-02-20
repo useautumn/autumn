@@ -10,7 +10,7 @@ import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/action
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
-import { handleBillingBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
@@ -51,8 +51,8 @@ export const handleAttachV2Errors = ({
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
 
-	// 8. Billing behavior errors (next_cycle_only restrictions)
-	handleBillingBehaviorErrors({
+	// 8. Proration behavior errors (none restrictions)
+	handleProrationBehaviorErrors({
 		billingContext,
 		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,

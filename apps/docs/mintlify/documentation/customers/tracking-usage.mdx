@@ -19,52 +19,60 @@ The track route is recommended for tracking consumable features, like AI message
 
 <CodeGroup>
 
-```javascript Node.js
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
 
-await autumn.track({
-  customer_id: "user-123",
-  feature_id: "ai-messages",
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "ai-messages",
   value: 1,
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_1234567890")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    await autumn.track(
-        customer_id="user-123",
-        feature_id="ai-messages",
-        value=1,
-    )
-
-asyncio.run(main())
+await autumn.customers.track(
+    customer_id="user_123",
+    feature_id="ai-messages",
+    value=1,
+)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/track" \
--H "Authorization: Bearer am_sk_1234567890" \
--H "Content-Type: application/json" \
--d '{
-"customer_id": "user-123",
-"feature_id": "ai-messages",
-"value": 1
-}'
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "ai-messages",
+    "value": 1
+  }'
 ```
 
 </CodeGroup>
+
+<Expandable title="track response">
 ```json
 {
-"message": "Event recorded successfully",
-"event_id": "event_123",
-"customer_id": "user-123",
-"feature_id": "ai-messages"
+  "customerId": "user_123",
+  "value": 1,
+  "balance": {
+    "featureId": "ai-messages",
+    "granted": 100,
+    "remaining": 99,
+    "usage": 1,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1767610960519
+  }
 }
 ```
+</Expandable>
 
 <Check>
   You can also send a negative `value` to increase the balance counter, which is
@@ -77,52 +85,42 @@ For non-consumable features (such as seats or workspaces), you may prefer to set
 
 <CodeGroup>
 
-```javascript Node.js
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
 
-await autumn.usage({
-  customer_id: "user-123",
-  feature_id: "seats",
-  value: 3,
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.balances.update({
+  customerId: "user_123",
+  featureId: "seats",
+  usage: 3,
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_1234567890")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    await autumn.features.set_usage(
-        customer_id="user-123",
-        feature_id="seats",
-        value=3,
-    )
-
-asyncio.run(main())
+await autumn.balances.update(
+    customer_id="user_123",
+    feature_id="seats",
+    usage=3,
+)
 ```
 
-```bash cURL {1}
-curl -X POST "https://api.useautumn.com/v1/usage" \
--H "Authorization: Bearer am_sk_1234567890" \
--H "Content-Type: application/json" \
--d '{
-"customer_id": "user-123",
-"feature_id": "seats",
-"value": 3
-}'
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats",
+    "usage": 3
+  }'
 ```
 
 </CodeGroup>
-
-```json
-{
-  "message": "Usage set successfully",
-  "customer_id": "user-123",
-  "feature_id": "seats"
-}
-```
 
 <Warning>
   The usage route overwrites the current usage value. Use this carefully, as it
@@ -131,7 +129,7 @@ curl -X POST "https://api.useautumn.com/v1/usage" \
 
 ## Using Event Names
 
-In the above examples, we used the `feature_id` to identify the feature. You can instead use the `event_name` parameter to link balances to different events in your application. This can be useful when:
+In the above examples, we used the `featureId` to identify the feature. You can instead use the `eventName` parameter to link balances to different events in your application. This can be useful when:
 
 - Multiple balances are affected by the same user action
 - Different user actions should be tracked against the same balance
@@ -159,54 +157,45 @@ You can then record usage for these events from your application:
 
 <CodeGroup>
 
-```javascript Node.js {10}
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
 
-await autumn.track({
-  customer_id: "user-123",
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.customers.track({
+  customerId: "user_123",
+  eventName: "blog_post_generation",
   value: 1,
-  event_name: "blog_post_generation",
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_1234567890")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-  await autumn.track(
-    customer_id="user-123",
-    value=1,
+await autumn.customers.track(
+    customer_id="user_123",
     event_name="blog_post_generation",
-  )
+    value=1,
+)
 ```
 
-```bash cURL {8}
+```bash cURL
 curl -X POST "https://api.useautumn.com/v1/track" \
--H "Authorization: Bearer am_sk_1234567890" \
--H "Content-Type: application/json" \
--d '{
-"customer_id": "user-123",
-"value": 1,
-"event_name": "blog_post_generation"
-}'
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "event_name": "blog_post_generation",
+    "value": 1
+  }'
 ```
 
 </CodeGroup>
 
-```json
-{
-  "message": "Event recorded successfully",
-  "event_id": "event_123",
-  "customer_id": "user-123",
-  "event_name": "blog_post_generation"
-}
-```
-
 <Warning>
-  You can only use one of `event_name` or `feature_id` when recording usage.
+  You can only use one of `eventName` or `featureId` when recording usage.
   Check that you're sending the correct one in the request, especially if you're
   using a mix of `snake_case` and `kebab-case`.
 </Warning>

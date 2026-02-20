@@ -48,7 +48,7 @@ yarn add autumn-js
 ```
 
 ```bash pip
-pip install autumn-py
+pip install autumn-sdk
 ```
 
 </CodeGroup>
@@ -66,11 +66,11 @@ When the customer signs up, create an Autumn customer for them. Autumn will auto
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-	secretKey:'am_sk_42424242',
+	secretKey: 'am_sk_42424242',
 });
 
-const { data, error } = await autumn.customers.create({
-	id: "user_or_org_id_from_auth",
+const customer = await autumn.customers.getOrCreate({
+	customerId: "user_or_org_id_from_auth",
 	name: "John Doe",
 	email: "john@example.com",
 });
@@ -78,13 +78,13 @@ const { data, error } = await autumn.customers.create({
 
 ```python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-    customer = await autumn.customers.create(
-        id="user_or_org_id_from_auth",
+    customer = await autumn.customers.get_or_create(
+        customer_id="user_or_org_id_from_auth",
         name="John Doe",
         email="john@example.com",
     )
@@ -92,13 +92,13 @@ async def main():
 asyncio.run(main())
 ```
 
-```bash
+```bash cURL
 curl --request POST \
-  --url https://api.useautumn.com/customers \
+  --url https://api.useautumn.com/v1/customers \
   --header 'Authorization: Bearer am_sk_42424242' \
   --header 'Content-Type: application/json' \
   --data '{
-  "id": "user_or_org_id_from_auth",
+  "customer_id": "user_or_org_id_from_auth",
   "name": "John Doe",
   "email": "john@example.com"
 }'
@@ -117,42 +117,7 @@ In the Autumn dashboard, you will see your user under the [customers](https://ap
 <Step>
 ### Stripe Payment Flow
 
-
-Handling payments and enabling plans is a 2-step process:
-- `checkout` to get "checkout" information (either a Checkout URL, or purchase confirmation data)
-- `attach` to enable the product for the customer and charge a saved payment method.
-
-<Expandable title="payment flowchart">
-```mermaid
-graph TD
-  A(("checkout")) -->|"url"| B["Stripe Checkout"]
-  A -->|"preview"| C["Display preview info"]
-  B --> D["Payment complete"]
-  D --> E["Plan enabled"]
-  C --> F["User confirms"]
-  F --> G(("attach"))
-  G --> D
-
-  classDef checkoutStyle fill:#3b82f6,stroke:#1e40af,stroke-width:2px,color:#fff
-  classDef attachStyle fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-  classDef successStyle fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-
-  class A checkoutStyle
-  class G attachStyle
-  class E successStyle
-```
-</Expandable>
-
-
-
-**Checkout**
-
-Call the `checkout` function to get Stripe checkout page when the customer wants to purchase the <Badge color="blue">Pro</Badge> plan, and pass it to your frontend.
-
-If their payment details are already on file, a Checkout URL will **not** be returned. Instead, checkout preview data (eg, prices) will be returned, which you can use to display to the user. 
-
-This lets them confirm their upgrade, downgrade or new purchase.
-
+Call `billing.attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. Redirect the customer to the returned `paymentUrl` to complete payment or confirm the plan change.
 
 <CodeGroup dropdown>
 
@@ -163,40 +128,37 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242' 
 });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
+const response = await autumn.billing.attach({
+  customerId: "user_or_org_id_from_auth",
+  planId: "pro",
 });
 
-if (data.url) {
-  // Return Stripe checkout URL to frontend
-} else {
-  // Return upgrade preview data to frontend
-}
+// Redirect customer to complete payment or confirm plan change
+redirect(response.paymentUrl);
 ```
 
-```python Python
+```python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-  response = await autumn.checkout(
+  response = await autumn.billing.attach(
       customer_id='user_or_org_id_from_auth',
-      product_id='pro'
+      plan_id='pro'
   )
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/checkout' \
+curl -X POST 'https://api.useautumn.com/v1/attach' \
 -H 'Authorization: Bearer am_sk_42424242' \
 -H 'Content-Type: application/json' \
 -d '{
   "customer_id": "user_or_org_id_from_auth",
-  "product_id": "pro"
+  "plan_id": "pro"
 }'
 ```
 
@@ -206,62 +168,17 @@ curl -X POST 'https://api.useautumn.com/v1/checkout' \
 Use Stripe's test card `4242 4242 4242 4242` to make a purchase in sandbox. You can enter any Expiry and CVV.
 </Note>
 
-
-**Attach**
-
-If the payment details are on file and the customer has confirmed their upgrade, use the `attach` function to charge their card and enable the plan.
-
-This call is only needed if there was no URL returned from the `checkout` step.
-
-<CodeGroup dropdown>
-
-```typescript
-import { Autumn } from "autumn-js";
-
-const autumn = new Autumn({ 
-  secretKey: 'am_sk_42424242' 
-});
-
-const { data } = await autumn.attach({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
-});
-```
-
-```python
-import asyncio
-from autumn import Autumn
-
-autumn = Autumn('am_sk_42424242')
-
-async def main():
-  response = await autumn.attach(
-      customer_id='user_or_org_id_from_auth',
-      product_id='pro'
-  )
-
-asyncio.run(main())
-```
-
-```bash
-curl -X POST 'https://api.useautumn.com/v1/attach' \
--H 'Authorization: Bearer am_sk_42424242' \
--H 'Content-Type: application/json' \
--d '{
-  "customer_id": "user_or_org_id_from_auth",
-  "product_id": "pro"
-}'
-```
-
-</CodeGroup>
-
-
-
-
-This 2-step process can be used for any plan changes scenario (upgrades, downgrades, one-time topups, renewals, etc).
+This can be used for any plan changes scenario (upgrades, downgrades, one-time topups, renewals, etc).
 
 Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
 
+<Note>
+  **Default behavior:** For new subscriptions, `paymentUrl` points to **Stripe Checkout**. For plan changes (upgrades/downgrades), it points to **Autumn Checkout** where customers can review prorations before confirming.
+
+  **Build your own UI:** If you want to handle the checkout for plan changes yourself:
+  1. Call [previewAttach](/api-reference/billing/previewAttach) to get line items and pricing details
+  2. Call `attach` with `redirectMode: "if_required"` — this charges the customer automatically if they have a payment method on file
+</Note>
 
 </Step>
 </Steps>

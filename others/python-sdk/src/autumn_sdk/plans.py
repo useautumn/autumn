@@ -23,15 +23,12 @@ class Plans(BaseSDK):
         ] = None,
         items: Optional[
             Union[
-                List[models.CreatePlanItemRequest],
-                List[models.CreatePlanItemRequestTypedDict],
+                List[models.CreatePlanPlanItem],
+                List[models.CreatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: Optional[
-            Union[
-                models.CreatePlanFreeTrialRequest,
-                models.CreatePlanFreeTrialRequestTypedDict,
-            ]
+            Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -79,10 +76,10 @@ class Plans(BaseSDK):
                 price, Optional[models.CreatePlanPriceRequest]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.CreatePlanItemRequest]]
+                items, Optional[List[models.CreatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, Optional[models.CreatePlanFreeTrialRequest]
+                free_trial, Optional[models.FreeTrialRequest]
             ),
         )
 
@@ -159,15 +156,12 @@ class Plans(BaseSDK):
         ] = None,
         items: Optional[
             Union[
-                List[models.CreatePlanItemRequest],
-                List[models.CreatePlanItemRequestTypedDict],
+                List[models.CreatePlanPlanItem],
+                List[models.CreatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: Optional[
-            Union[
-                models.CreatePlanFreeTrialRequest,
-                models.CreatePlanFreeTrialRequestTypedDict,
-            ]
+            Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -215,10 +209,10 @@ class Plans(BaseSDK):
                 price, Optional[models.CreatePlanPriceRequest]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.CreatePlanItemRequest]]
+                items, Optional[List[models.CreatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, Optional[models.CreatePlanFreeTrialRequest]
+                free_trial, Optional[models.FreeTrialRequest]
             ),
         )
 
@@ -677,18 +671,18 @@ class Plans(BaseSDK):
         add_on: Optional[bool] = None,
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
-            Union[models.UpdatePlanPriceRequest, models.UpdatePlanPriceRequestTypedDict]
+            Union[models.UpdatePlanBasePrice, models.UpdatePlanBasePriceTypedDict]
         ] = UNSET,
         items: Optional[
             Union[
-                List[models.UpdatePlanItemRequest],
-                List[models.UpdatePlanItemRequestTypedDict],
+                List[models.UpdatePlanPlanItem],
+                List[models.UpdatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialRequest,
-                models.UpdatePlanFreeTrialRequestTypedDict,
+                models.UpdatePlanFreeTrialParams,
+                models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
         version: Optional[float] = None,
@@ -740,13 +734,13 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanPriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePrice]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.UpdatePlanItemRequest]]
+                items, Optional[List[models.UpdatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialRequest]
+                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
             ),
             version=version,
             archived=archived,
@@ -822,18 +816,18 @@ class Plans(BaseSDK):
         add_on: Optional[bool] = None,
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
-            Union[models.UpdatePlanPriceRequest, models.UpdatePlanPriceRequestTypedDict]
+            Union[models.UpdatePlanBasePrice, models.UpdatePlanBasePriceTypedDict]
         ] = UNSET,
         items: Optional[
             Union[
-                List[models.UpdatePlanItemRequest],
-                List[models.UpdatePlanItemRequestTypedDict],
+                List[models.UpdatePlanPlanItem],
+                List[models.UpdatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialRequest,
-                models.UpdatePlanFreeTrialRequestTypedDict,
+                models.UpdatePlanFreeTrialParams,
+                models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
         version: Optional[float] = None,
@@ -885,13 +879,13 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanPriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePrice]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.UpdatePlanItemRequest]]
+                items, Optional[List[models.UpdatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialRequest]
+                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
             ),
             version=version,
             archived=archived,

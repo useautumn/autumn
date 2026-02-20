@@ -1,5 +1,5 @@
 import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -8,6 +8,31 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MISSING UPDATE PARAMS ERROR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("error: no update params provided")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const base = products.base({ items: [messagesItem] });
+
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "err-no-update-params",
+		setup: [s.customer({}), s.products({ list: [base] })],
+		actions: [s.attach({ productId: "base" })],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidInputs,
+		func: async () => {
+			await autumnV2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: base.id,
+			});
+		},
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRODUCT TYPE TRANSITION ERRORS

@@ -43,7 +43,11 @@ export const basePriceToProductItem = ({
 	} satisfies ProductItem;
 
 	const display = basePriceDisplay
-		? getProductItemDisplay({ item, features: ctx.features })
+		? getProductItemDisplay({
+				item,
+				features: ctx.features,
+				currency: ctx.org.default_currency ?? undefined,
+			})
 		: undefined;
 
 	return {

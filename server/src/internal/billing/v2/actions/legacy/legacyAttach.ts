@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToInvoiceModeParams } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToInvoiceModeParams";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
+import { legacyRewardToAttachDiscounts } from "@/internal/billing/v2/actions/legacy/utils/legacyRewardToAttachDiscounts";
 import { setupLegacyTransitionContext } from "@/internal/billing/v2/actions/legacy/utils/setupLegacyFeatureQuantitiesContext";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
@@ -28,6 +29,8 @@ export const legacyAttach = async ({
 		prices: attachParams.prices,
 		entitlements: attachParams.entitlements,
 	};
+
+	const paramDiscounts = legacyRewardToAttachDiscounts({ attachParams });
 
 	const stripeBillingContext = await attachParamsToStripeBillingContext({
 		ctx,
@@ -59,6 +62,7 @@ export const legacyAttach = async ({
 		redirect_mode: "if_required",
 
 		plan_schedule: planTiming,
+		discounts: paramDiscounts,
 	};
 
 	const res = await billingActions.attach({
