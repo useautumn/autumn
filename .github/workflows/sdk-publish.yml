@@ -72,6 +72,11 @@ jobs:
       - name: Install dependencies
         run: bun install
       
+      - name: Install Speakeasy CLI
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          echo "$HOME/.speakeasy/bin" >> $GITHUB_PATH
+      
       - name: Determine version bump type
         id: version-type
         run: |
