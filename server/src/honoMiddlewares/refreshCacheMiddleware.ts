@@ -69,6 +69,22 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		url: "/balances/create",
 		source: "handleCreateBalance",
 	},
+
+	{
+		method: "POST",
+		url: "/billing.attach",
+		source: "attach",
+	},
+	{
+		method: "POST",
+		url: "/billing.update",
+		source: "updateSubscription",
+	},
+	{
+		method: "POST",
+		url: "/balances.create",
+		source: "createBalance",
+	},
 ];
 
 /**

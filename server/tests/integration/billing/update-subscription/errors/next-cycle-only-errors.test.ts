@@ -51,7 +51,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only error: free to paid upgra
 				customer_id: customerId,
 				product_id: freeProduct.id,
 				items: [paidMessagesItem, paidPriceItem],
-				billing_behavior: "next_cycle_only",
+				billing_behavior: "none",
 			});
 		},
 	});
@@ -87,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only error: removing free tria
 				customer_id: customerId,
 				product_id: proTrial.id,
 				free_trial: null,
-				billing_behavior: "next_cycle_only",
+				billing_behavior: "none",
 			});
 		},
 	});
@@ -117,7 +117,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid to paid upgrade is 
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [messagesItem, newPriceItem],
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	// If we get here without error, test passes
@@ -150,7 +150,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: extending trial is allow
 			duration: FreeTrialDuration.Day,
 			card_required: true,
 		},
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	// If we get here without error, test passes

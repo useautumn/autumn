@@ -1,4 +1,8 @@
-import { type ApiCustomerV5, type AppEnv, CusExpand } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	type AppEnv,
+	CustomerExpand,
+} from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
@@ -99,7 +103,7 @@ verifyCacheConsistency?.task({
 				env: autumnContext.env,
 				withEntities: true,
 				withSubs: true,
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			});
 
 			const { apiCustomer: dbCustomer } = await getApiCustomerBase({

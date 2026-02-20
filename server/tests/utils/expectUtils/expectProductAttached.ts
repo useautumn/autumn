@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import {
 	type ApiCustomer,
+	type ApiCustomerV3,
 	type ApiEntityV0,
 	type ApiEntityV1,
 	type ApiSubscription,
@@ -8,15 +9,12 @@ import {
 	type CreateFreeTrial,
 	CusProductStatus,
 	type Entitlement,
+	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
-import type {
-	Customer,
-	CustomerInvoice,
-	ProductItem,
-	ProductStatus,
-} from "autumn-js";
-import { AutumnInt } from "../../../src/external/autumn/autumnCli";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+
+type CustomerLike = ApiCustomerV3 | ApiEntityV0 | { products?: any[]; invoices?: any[]; id?: string };
 
 export const expectProductAttached = ({
 	customer,
@@ -27,7 +25,7 @@ export const expectProductAttached = ({
 	isCanceled = false,
 	quantity,
 }: {
-	customer: Customer | ApiEntityV0;
+	customer: CustomerLike;
 	product?: ProductV2;
 	productId?: string;
 	status?: CusProductStatus;
@@ -51,7 +49,7 @@ export const expectProductAttached = ({
 		expect(
 			productAttached?.status,
 			`product ${finalProductId} should have status ${status}`,
-		).toEqual(status as unknown as ProductStatus);
+		).toEqual(status);
 	} else {
 		expect(
 			productAttached?.status,
@@ -79,11 +77,11 @@ export const expectProductNotAttached = ({
 	product,
 	productId,
 }: {
-	customer: Customer;
+	customer: CustomerLike;
 	product?: ProductV2;
 	productId?: string;
 }) => {
-	const cusProducts = customer.products;
+	const cusProducts = customer.products ?? [];
 	const finalProductId = productId || product?.id;
 	const productAttached = cusProducts.find(
 		(p) => p.id === finalProductId,
@@ -101,11 +99,11 @@ export const expectProductGroupCount = ({
 	group,
 	count,
 }: {
-	customer: Customer;
+	customer: CustomerLike;
 	group: string;
 	count: number;
 }) => {
-	const productCount = customer.products.reduce((acc: number, product: any) => {
+	const productCount = (customer.products ?? []).reduce((acc: number, product: any) => {
 		if (product.group === group) {
 			return acc + 1;
 		} else return acc;
@@ -151,7 +149,7 @@ export const expectProductV1Attached = ({
 	status,
 	entityId,
 }: {
-	customer: Customer;
+	customer: CustomerLike;
 	product: {
 		id: string;
 		isDefault?: boolean;
@@ -166,7 +164,7 @@ export const expectProductV1Attached = ({
 	status?: CusProductStatus;
 	entityId?: string;
 }) => {
-	const cusProducts = customer.products;
+	const cusProducts = customer.products ?? [];
 	const finalProductId = productId || product?.id;
 	const productAttached = cusProducts.find(
 		(p) =>
@@ -182,7 +180,7 @@ export const expectProductV1Attached = ({
 		expect(
 			productAttached?.status,
 			`product ${finalProductId} should have status ${status}`,
-		).toEqual(status as unknown as ProductStatus);
+		).toEqual(status);
 	}
 };
 
@@ -191,7 +189,7 @@ export const expectAddOnAttached = ({
 	productId,
 	status,
 }: {
-	customer: Customer & {
+	customer: CustomerLike & {
 		add_ons: {
 			id: string;
 			status: CusProductStatus;
@@ -216,7 +214,7 @@ export const expectInvoicesCorrect = ({
 	first,
 	// second,
 }: {
-	customer: Customer & { invoices: CustomerInvoice[] };
+	customer: CustomerLike & { invoices: { total: number; product_ids: string[] }[] };
 	first: {
 		productId: string;
 		total: number;

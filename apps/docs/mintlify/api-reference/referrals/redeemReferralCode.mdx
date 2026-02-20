@@ -1,0 +1,44 @@
+---
+title: "Redeem Referral Code"
+openapi: "openapi POST /v1/referrals.redeem_code"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="code" type="string" required>
+  The referral code to redeem
+</DynamicParamField>
+
+<DynamicParamField body="customer_id" type="string" required>
+  The unique identifier of the customer redeeming the code
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="id" type="string">
+  The ID of the redemption event
+</DynamicResponseField>
+
+<DynamicResponseField name="customer_id" type="string">
+  Your unique identifier for the customer
+</DynamicResponseField>
+
+<DynamicResponseField name="reward_id" type="string">
+  The ID of the reward that will be granted
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "id": "<string>",
+  "customer_id": "<string>",
+  "reward_id": "<string>"
+}
+```
+</ResponseExample>

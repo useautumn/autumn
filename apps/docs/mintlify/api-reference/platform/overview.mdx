@@ -1,0 +1,31 @@
+---
+title: "Overview"
+description: "Manage Autumn on behalf of your users in a multi-tenant flow"
+---
+
+<Warning>
+  **Private Preview** - This feature is currently in private preview. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) if you would like access!
+</Warning>
+
+## What is the Platform API?
+
+The Platform API is for users who want to manage Autumn on behalf of their users (for example, AI app builders) in a multi-tenant flow.
+
+## How it Works
+
+### 1. Create an Organization
+
+Create an Autumn organization linked to a user email. This generates API keys that your user can use to interact with Autumn's billing features.
+
+### 2. Integrate
+Each organization created through Step 1 already has a Stripe account connected to their sandbox environment. As such, you can freely integrate and test Autumn without additional Stripe credentials. When you're ready to go to prod, you can then connect your user's Stripe account through the Step 3.
+
+### 3. Link Stripe Account
+
+Connect your user's Stripe account using one of two methods:
+
+**Option A: OAuth Flow**
+Call our [Generate Stripe OAuth URL](/api-reference/platform/oauth-url) endpoint, which generates a link that lets the user connect their Stripe account directly.
+
+**Option B: Direct Account ID**
+If you have your own Stripe Connect platform, simply pass us the Stripe account ID using the [Update Connected Stripe Account](/api-reference/platform/update-stripe) endpoint and we'll handle the rest.

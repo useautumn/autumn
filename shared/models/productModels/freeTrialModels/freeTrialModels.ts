@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { FreeTrialDuration } from "./freeTrialEnums.js";
+import { FreeTrialDuration } from "./freeTrialEnums";
 
 export const FreeTrialSchema = z.object({
 	id: z.string(),

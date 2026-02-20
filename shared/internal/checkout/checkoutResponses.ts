@@ -1,8 +1,8 @@
-import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1.js";
-import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
-import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
+import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1";
+import { ApiPlanV1Schema } from "@api/products/apiPlanV1";
+import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels";
 import { z } from "zod/v4";
-import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse.js";
+import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse";
 
 /**
  * Org branding for checkout display

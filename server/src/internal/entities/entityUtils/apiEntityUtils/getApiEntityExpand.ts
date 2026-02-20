@@ -1,4 +1,4 @@
-import { CusExpand, type FullCustomer } from "@autumn/shared";
+import { CustomerExpand, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { InvoiceService } from "../../../invoices/InvoiceService";
@@ -21,7 +21,7 @@ export const getApiEntityExpand = async ({
 }): Promise<ApiEntityExpand> => {
 	const { org, env, db, logger } = ctx;
 
-	if (!ctx.expand.includes(CusExpand.Invoices)) {
+	if (!ctx.expand.includes(CustomerExpand.Invoices)) {
 		return {};
 	}
 

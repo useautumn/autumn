@@ -5,7 +5,6 @@ import {
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
-import type { Autumn } from "autumn-js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -65,7 +64,7 @@ export const initCustomer = async ({
 	attachPm,
 	withTestClock = true,
 }: {
-	autumn: Autumn | AutumnInt;
+	autumn: AutumnInt;
 	customerId: string;
 	fingerprint?: string;
 	org: Organization;
@@ -219,7 +218,7 @@ export const initCustomerV2 = async ({
 	attachPm,
 	withTestClock = true,
 }: {
-	autumn: Autumn | AutumnInt;
+	autumn: AutumnInt;
 	customerId: string;
 	customerData?: CustomerData;
 	org: Organization;

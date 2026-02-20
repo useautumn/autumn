@@ -8,8 +8,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "../../ProductService.js";
-import { createProduct } from "../productActions/createProduct.js";
-import { updateProduct } from "../productActions/updateProduct.js";
+import { createProduct } from "../../../product/actions/createProduct.js";
+import { updateProduct } from "../../../product/actions/updateProduct.js";
 
 const conformProductToSchema = (
 	product: ProductV2,

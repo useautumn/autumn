@@ -1,13 +1,13 @@
-import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
-import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice.js";
-import { ApiBaseEntitySchema } from "@api/entities/apiEntity.js";
-import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
-import { AppEnv } from "@models/genModels/genEnums.js";
+import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral";
+import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice";
+import { ApiBaseEntitySchema } from "@api/entities/apiEntity";
+import { ApiCusRewardsSchema } from "@api/others/apiDiscount";
+import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
-import { ApiInvoiceV0Schema } from "../../others/apiInvoice/prevVersions/apiInvoiceV0.js";
-import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0.js";
-import { ApiCusFeatureV3Schema } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
-import { ApiCusProductV3Schema } from "../cusPlans/previousVersions/apiCusProductV3.js";
+import { ApiInvoiceV0Schema } from "../../others/apiInvoice/prevVersions/apiInvoiceV0";
+import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0";
+import { ApiCusFeatureV3Schema } from "../cusFeatures/previousVersions/apiCusFeatureV3";
+import { ApiCusProductV3Schema } from "../cusPlans/previousVersions/apiCusProductV3";
 
 export const API_CUSTOMER_V3_EXAMPLE = {
 	id: "customer_123",

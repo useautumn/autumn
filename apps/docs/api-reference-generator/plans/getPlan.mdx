@@ -1,0 +1,29 @@
+---
+title: "Get a plan"
+openapi: "openapi POST /v1/plans.get"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Retrieves a single plan by its ID. Returns the latest version by default.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Get a plan
+const plan = await autumn.plans.get({
+  planId: "pro_plan"
+});
+```
+
+```typescript Get a specific version
+const plan = await autumn.plans.get({
+  planId: "pro_plan",
+  version: 2
+});
+```
+
+</CodeGroup>

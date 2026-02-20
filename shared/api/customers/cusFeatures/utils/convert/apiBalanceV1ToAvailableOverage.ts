@@ -1,18 +1,14 @@
-import { apiBalanceV1ToOverage } from "@api/customers/cusFeatures/utils/convert/apiBalanceV1ToOverage.js";
-import { BillingMethod } from "@api/products/components/billingMethod.js";
-import { sumValues } from "@utils/utils.js";
+import { sumValues } from "@utils/utils";
 import { Decimal } from "decimal.js";
-import type {
-	ApiBalanceBreakdownV1,
-	ApiBalanceV1,
-} from "../../apiBalanceV1.js";
+import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
+import { apiBalanceV1ToOverage } from "./apiBalanceV1ToOverage";
 
 export const apiBalanceBreakdownV1ToMaxOverage = ({
 	apiBalanceBreakdown,
 }: {
 	apiBalanceBreakdown: ApiBalanceBreakdownV1;
 }): number | undefined => {
-	if (apiBalanceBreakdown.price?.billing_method === BillingMethod.UsageBased) {
+	if (apiBalanceBreakdown.price?.billing_method === "usage_based") {
 		return apiBalanceBreakdown.price?.max_purchase ?? undefined;
 	}
 

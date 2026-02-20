@@ -1,11 +1,13 @@
 import { test } from "bun:test";
-import { FreeTrialDuration } from "@autumn/shared";
+import { type ApiCustomerV3, FreeTrialDuration } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { expectCustomerFeatureCorrect } from "../../utils/expectCustomerFeatureCorrect";
+import { expectCustomerInvoiceCorrect } from "../../utils/expectCustomerInvoiceCorrect";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ONE-OFF ERRORS - Price/Billing Changes Not Allowed
@@ -330,6 +332,7 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 	);
 
 	// Update included usage from 50 to 100 (same quantity)
+	const newTotalGranted = 300;
 	const newIncludedUsage = 100;
 	const updatedPrepaidItem = items.oneOffMessages({
 		includedUsage: newIncludedUsage,
@@ -343,9 +346,26 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		items: [updatedPrepaidItem],
 	};
 
-	await expectAutumnError({
-		func: async () => {
-			await autumnV1.subscriptions.update(updateParams);
-		},
+	await autumnV1.subscriptions.update(updateParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: newTotalGranted,
+		balance: newTotalGranted - messagesUsed,
+		usage: messagesUsed,
 	});
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+	});
+
+	// await expectAutumnError({
+	// 	func: async () => {
+	// 		await autumnV1.subscriptions.update(updateParams);
+	// 	},
+	// });
 });

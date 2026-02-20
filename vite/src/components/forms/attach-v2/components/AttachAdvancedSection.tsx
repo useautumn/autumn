@@ -117,7 +117,7 @@ export function AttachAdvancedSection() {
 
 		if (hasCustomBilling) {
 			parts.push(
-				`Billing: ${effectiveBillingBehavior === "next_cycle_only" ? "No Charges" : "Prorate"}`,
+				`Billing: ${effectiveBillingBehavior === "none" ? "No Charges" : "Prorate"}`,
 			);
 		}
 
@@ -341,17 +341,15 @@ export function AttachAdvancedSection() {
 																iconOrientation="left"
 																variant="secondary"
 																size="sm"
-																checked={
-																	effectiveBillingBehavior === "next_cycle_only"
-																}
+																checked={effectiveBillingBehavior === "none"}
 																disabled={!isNoChargesAllowed}
 																onCheckedChange={() =>
-																	handleBillingBehaviorChange("next_cycle_only")
+																	handleBillingBehaviorChange("none")
 																}
 																className={cn(
 																	"rounded-l-none",
-																	effectiveBillingBehavior !==
-																		"next_cycle_only" && "border-l-0",
+																	effectiveBillingBehavior !== "none" &&
+																		"border-l-0",
 																)}
 															>
 																No Charges

@@ -72,10 +72,12 @@ interface IndividualTest {
 
 interface TestFileResult {
 	file: string;
-	status: "pending" | "running" | "passed" | "failed";
+	status: "pending" | "running" | "passed" | "failed" | "retrying";
 	tests: IndividualTest[];
 	currentTest?: string;
 	duration: number;
+	attempt: number;
+	passedOnRetry: boolean;
 }
 
 // ============================================================================
@@ -249,6 +251,7 @@ async function collectTestFiles(directories: string[]): Promise<string[]> {
 async function runTestFile(
 	file: string,
 	onUpdate: (result: TestFileResult) => void,
+	attempt = 1,
 ): Promise<TestFileResult> {
 	const startTime = performance.now();
 
@@ -257,6 +260,8 @@ async function runTestFile(
 		status: "running",
 		tests: [],
 		duration: 0,
+		attempt,
+		passedOnRetry: false,
 	};
 
 	onUpdate(result);
@@ -312,6 +317,8 @@ async function runTestFile(
 			status: hasFailures ? "failed" : "passed",
 			tests,
 			duration,
+			attempt,
+			passedOnRetry: false,
 		};
 
 		onUpdate(finalResult);
@@ -323,6 +330,8 @@ async function runTestFile(
 			status: "failed",
 			tests: [],
 			duration,
+			attempt,
+			passedOnRetry: false,
 		};
 		onUpdate(finalResult);
 		return finalResult;
@@ -333,18 +342,19 @@ async function runTestFile(
 // Ink Components
 // ============================================================================
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 function Spinner() {
 	const [frame, setFrame] = useState(0);
-	const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 	useEffect(() => {
 		const timer = setInterval(() => {
-			setFrame((prev) => (prev + 1) % frames.length);
+			setFrame((prev) => (prev + 1) % SPINNER_FRAMES.length);
 		}, 80);
 		return () => clearInterval(timer);
 	}, []);
 
-	return <Text color="cyan">{frames[frame]}</Text>;
+	return <Text color="cyan">{SPINNER_FRAMES[frame]}</Text>;
 }
 
 function truncate(str: string, maxLength: number): string {
@@ -371,11 +381,15 @@ function CompletedFile({ result }: CompletedFileProps) {
 
 	const icon = result.status === "passed" ? "✓" : "✗";
 	const iconColor = result.status === "passed" ? "green" : "red";
+	const retryBadge = result.passedOnRetry ? " (retry)" : "";
 
 	return (
 		<Box>
 			<Text color={iconColor}>{icon} </Text>
-			<Text dimColor={result.status === "passed"}>{fileName} </Text>
+			<Text dimColor={result.status === "passed"}>
+				{fileName}
+				{retryBadge}{" "}
+			</Text>
 			<Text dimColor>
 				(<Text color="green">✓{passedCount}</Text>
 				{failedCount > 0 && <Text color="red"> ✗{failedCount}</Text>})
@@ -435,6 +449,22 @@ function RunningFile({ result }: RunningFileProps) {
 	);
 }
 
+interface RetryingFileProps {
+	result: TestFileResult;
+}
+
+function RetryingFile({ result }: RetryingFileProps) {
+	const fileName = basename(result.file);
+	return (
+		<Box>
+			<Text> </Text>
+			<Spinner />
+			<Text color="yellow"> {fileName} </Text>
+			<Text color="yellow">(retrying...)</Text>
+		</Box>
+	);
+}
+
 interface TestRunnerAppProps {
 	testFiles: string[];
 	maxParallel: number;
@@ -458,6 +488,9 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 	const emittedFilesRef = useRef<Set<string>>(new Set());
 	const [staticItems, setStaticItems] = useState<TestFileResult[]>([]);
 
+	// Track whether retry phase is complete (to defer static emission of failed files)
+	const retryPhaseCompleteRef = useRef(false);
+
 	// Initialize all files as pending
 	useEffect(() => {
 		const initial = new Map<string, TestFileResult>();
@@ -467,6 +500,8 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				status: "pending",
 				tests: [],
 				duration: 0,
+				attempt: 1,
+				passedOnRetry: false,
 			});
 		}
 		pendingRef.current = initial;
@@ -483,12 +518,16 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 			setResults(snapshot);
 
 			// Emit newly-completed files to <Static>
+			// Only emit passed files immediately; defer failed files until retry phase is complete
 			const newStatic: TestFileResult[] = [];
 			for (const [file, result] of snapshot) {
-				if (
-					(result.status === "passed" || result.status === "failed") &&
-					!emittedFilesRef.current.has(file)
-				) {
+				if (emittedFilesRef.current.has(file)) continue;
+
+				const shouldEmit =
+					result.status === "passed" ||
+					(result.status === "failed" && retryPhaseCompleteRef.current);
+
+				if (shouldEmit) {
 					emittedFilesRef.current.add(file);
 					newStatic.push(result);
 				}
@@ -512,11 +551,48 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 		const runAllTests = async () => {
 			const limit = pLimit(maxParallel);
 
+			// Phase 1: Initial run
 			const promises = testFiles.map((file) =>
-				limit(() => runTestFile(file, updateResult)),
+				limit(() => runTestFile(file, updateResult, 1)),
 			);
 
 			await Promise.all(promises);
+
+			// Phase 2: Retry failed files
+			const failedFiles = Array.from(pendingRef.current.values()).filter(
+				(r) => r.status === "failed" && r.attempt === 1,
+			);
+
+			if (failedFiles.length > 0) {
+				// Mark files as retrying
+				for (const result of failedFiles) {
+					const retryingResult: TestFileResult = {
+						...result,
+						status: "retrying",
+					};
+					pendingRef.current.set(result.file, retryingResult);
+				}
+				dirtyRef.current = true;
+
+				// Run retries sequentially to avoid resource contention
+				const retryLimit = pLimit(1);
+				const retryPromises = failedFiles.map((result) =>
+					retryLimit(async () => {
+						const retryResult = await runTestFile(result.file, updateResult, 2);
+						// If passed on retry, mark it
+						if (retryResult.status === "passed") {
+							retryResult.passedOnRetry = true;
+							pendingRef.current.set(result.file, retryResult);
+							dirtyRef.current = true;
+						}
+						return retryResult;
+					}),
+				);
+				await Promise.all(retryPromises);
+			}
+
+			// Mark retry phase as complete so failed files can be emitted to static
+			retryPhaseCompleteRef.current = true;
 
 			// Final flush to ensure every completed result is captured
 			const finalSnapshot = new Map(pendingRef.current);
@@ -562,6 +638,7 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 
 	const allResults = Array.from(results.values());
 	const runningFiles = allResults.filter((r) => r.status === "running");
+	const retryingFiles = allResults.filter((r) => r.status === "retrying");
 
 	const completedFiles = allResults.filter(
 		(r) => r.status === "passed" || r.status === "failed",
@@ -598,6 +675,15 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				</Box>
 			)}
 
+			{/* Retrying files */}
+			{retryingFiles.length > 0 && (
+				<Box flexDirection="column">
+					{retryingFiles.map((r) => (
+						<RetryingFile key={r.file} result={r} />
+					))}
+				</Box>
+			)}
+
 			{/* Progress */}
 			<Box>
 				{!isComplete && <Spinner />}
@@ -613,6 +699,9 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 					</Text>
 					{runningFiles.length > 0 && (
 						<Text dimColor> | {runningFiles.length} running</Text>
+					)}
+					{retryingFiles.length > 0 && (
+						<Text color="yellow"> | {retryingFiles.length} retrying</Text>
 					)}
 				</Text>
 			</Box>
@@ -635,6 +724,7 @@ function FinalSummary({ results }: FinalSummaryProps) {
 	const allTests = results.flatMap((r) => r.tests);
 	const passedTests = allTests.filter((t) => t.status === "passed");
 	const failedTests = allTests.filter((t) => t.status === "failed");
+	const passedOnRetryFiles = results.filter((r) => r.passedOnRetry);
 	const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
 	const failedByFile = new Map<string, IndividualTest[]>();
@@ -646,13 +736,17 @@ function FinalSummary({ results }: FinalSummaryProps) {
 	}
 
 	if (failedTests.length === 0) {
+		const retryText =
+			passedOnRetryFiles.length > 0
+				? ` (${passedOnRetryFiles.length} on retry)`
+				: "";
 		return (
 			<Box flexDirection="column">
 				<Text color="green" bold>
 					{"═".repeat(60)}
 				</Text>
 				<Text color="green" bold>
-					✓ ALL {passedTests.length} TESTS PASSED (
+					✓ ALL {passedTests.length} TESTS PASSED{retryText} (
 					{(totalDuration / 1000).toFixed(1)}s)
 				</Text>
 				<Text color="green" bold>

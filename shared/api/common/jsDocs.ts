@@ -2,17 +2,17 @@ import {
 	createJSDocDescription,
 	docLink,
 	example,
-} from "@api/utils/openApiHelpers.js";
-// import { TrackParamsSchema } from "../balances/trackModels.js";
-import { SetUsageParamsSchema } from "../balances/usageModels.js";
-// import { CheckParamsSchema } from "../core/checkModels.js";
+} from "@api/utils/openApiHelpers";
+// import { TrackParamsSchema } from "../balances/trackModels";
+import { SetUsageParamsSchema } from "../balances/usageModels";
+// import { CheckParamsSchema } from "../core/checkModels";
 import {
 	BillingPortalParamsSchema,
 	CancelBodySchema,
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
-} from "../core/coreOpModels.js";
-import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models.js";
+} from "../core/coreOpModels";
+import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models";
 /**
  * Centralized JSDoc declarations for all core API methods.
  * These are used by the OpenAPI spec generator and propagate to SDK documentation.

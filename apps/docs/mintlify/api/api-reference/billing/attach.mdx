@@ -1,0 +1,161 @@
+---
+title: "Attach"
+openapi: "openapi POST /v1/attach"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="entity_id" type="string | null" />
+
+<DynamicParamField body="entity_data" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="feature_id" type="string" required>
+      The feature ID that this entity is associated with
+    </DynamicParamField>
+
+    <DynamicParamField body="name" type="string">
+      Name of the entity
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="options" type="object[] | null">
+  <Expandable title="properties">
+    <DynamicParamField body="feature_id" type="string" required />
+
+    <DynamicParamField body="quantity" type="number" />
+
+    <DynamicParamField body="reset_after_trial_end" type="boolean" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="version" type="number" />
+
+<DynamicParamField body="free_trial" type="object | null">
+  <Expandable title="properties">
+    <DynamicParamField body="length" type="number" required />
+
+    <DynamicParamField body="duration" type="'day' | 'month' | 'year'" required />
+
+    <DynamicParamField body="card_required" type="boolean" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="items" type="object[]">
+  <Expandable title="properties">
+    <DynamicParamField body="type" type="'feature' | 'priced_feature' | 'price'">
+      The type of the product item.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_id" type="string | null">
+      The feature ID of the product item. Should be null for fixed price items.
+    </DynamicParamField>
+
+    <DynamicParamField body="included_usage" type="number | null">
+      The amount of usage included for this feature (per interval).
+    </DynamicParamField>
+
+    <DynamicParamField body="interval" type="enum">
+      The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
+    </DynamicParamField>
+
+    <DynamicParamField body="interval_count" type="number | null">
+      Interval count of the feature.
+    </DynamicParamField>
+
+    <DynamicParamField body="entity_feature_id" type="string | null">
+      The feature ID of the entity (like seats) to track sub-balances for.
+    </DynamicParamField>
+
+    <DynamicParamField body="usage_model" type="'prepaid' | 'pay_per_use'">
+      Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
+    </DynamicParamField>
+
+    <DynamicParamField body="price" type="number | null">
+      The price of the product item. Should be null if tiered pricing is set.
+    </DynamicParamField>
+
+    <DynamicParamField body="tiers" type="object[] | null">
+      Tiered pricing for the product item. Not applicable for fixed price items.
+      <Expandable title="properties">
+        <DynamicParamField body="to" type="number" required>
+          The maximum amount of usage for this tier.
+        </DynamicParamField>
+
+        <DynamicParamField body="amount" type="number" required>
+          The price of the product item for this tier.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="billing_units" type="number | null">
+      The billing units of the product item (eg $1 for 30 credits).
+    </DynamicParamField>
+
+    <DynamicParamField body="reset_usage_when_enabled" type="boolean | null">
+      Whether the usage should be reset when the product is enabled.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="product_id" type="string" required />
+
+<DynamicParamField body="invoice" type="boolean" />
+
+<DynamicParamField body="enable_product_immediately" type="boolean" />
+
+<DynamicParamField body="finalize_invoice" type="boolean" />
+
+<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'" />
+
+<DynamicParamField body="success_url" type="string" />
+
+<DynamicParamField body="new_billing_subscription" type="boolean" />
+
+<DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'" />
+
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'next_cycle_only'" />
+
+<DynamicParamField body="adjustable_quantity" type="boolean" />
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string" />
+
+<DynamicResponseField name="entity_id" type="string" />
+
+<DynamicResponseField name="invoice" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="status" type="string | null" />
+
+    <DynamicResponseField name="stripe_id" type="string" />
+
+    <DynamicResponseField name="total" type="number" />
+
+    <DynamicResponseField name="currency" type="string" />
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null" />
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="payment_url" type="string | null" />
+
+<DynamicResponseField name="required_action" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed'" />
+
+    <DynamicResponseField name="reason" type="string" />
+
+  </Expandable>
+</DynamicResponseField>

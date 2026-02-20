@@ -1,4 +1,4 @@
-import type { CustomerSchema } from "@autumn/shared";
+import { AppEnv, type Customer } from "@autumn/shared";
 import {
 	ArrowsClockwiseIcon,
 	AtIcon,
@@ -6,7 +6,7 @@ import {
 	GearIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { AppEnv } from "autumn-js";
+
 import {
 	CircleUserRoundIcon,
 	Monitor,
@@ -17,7 +17,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
-import type { z } from "zod";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -41,8 +40,6 @@ import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
 import { handleSwitchOrg } from "@/views/main-sidebar/components/OrgDropdown";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
-
-type Customer = z.infer<typeof CustomerSchema>;
 
 type User = {
 	id: string;

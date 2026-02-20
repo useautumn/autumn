@@ -1,5 +1,5 @@
-import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0.js";
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
 
 // Descriptions

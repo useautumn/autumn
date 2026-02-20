@@ -193,8 +193,6 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
 			product_id: premium.id,
 			entity_id: "1",
 			cancel_immediately: true,
-			// @ts-expect-error
-			prorate: false,
 		});
 
 		await expectSubToBeCorrect({

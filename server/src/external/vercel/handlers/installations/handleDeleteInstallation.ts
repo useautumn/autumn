@@ -2,8 +2,8 @@ import { AppEnv } from "@autumn/shared";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusById } from "@/internal/customers/handlers/handleDeleteCustomerV2.js";
 import {
 	type VercelResourceDeletedEvent,
 	VercelWebhooks,
@@ -59,10 +59,12 @@ export const handleDeleteInstallation = createRoute({
 
 			// 3. Delete the customer/installation using the actual customer ID
 			if (customer) {
-				await deleteCusById({
+				await customerActions.delete({
 					ctx,
-					customerId: customer.internal_id,
-					deleteInStripe: true,
+					params: {
+						customer_id: customer.internal_id,
+						delete_in_stripe: true,
+					},
 				});
 			} else {
 				logger.warn(

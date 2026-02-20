@@ -7,7 +7,6 @@ import { getRequestListener } from "@hono/node-server";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";

@@ -1,0 +1,172 @@
+---
+title: "Enabling Plans"
+description: "How to activate a plan for a customer"
+---
+
+Attaching a product to a customer will apply the product items to that customer. This means:
+
+- The customer will get access to the features in the product
+- If the product has prices, the customer will be billed for them accordingly
+
+If the product being enabled has prices, a checkout URL or an invoice will be generated for the customer to make payments.
+
+## With the API
+
+Call `attach` from your application with:
+
+- a `customer_id` (your internal user ID)
+- the Autumn `product_id` (defined when the product was created).
+
+If there's no existing payment method for the customer, a checkout URL will be generated.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+<Button onClick={() => attach({ productId: "pro" })} />;
+```
+
+```javascript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.attach({
+  customer_id: "user_123",
+  product_id: "pro",
+});
+```
+
+```shell cURL
+curl --request POST \
+  --url https://api.useautumn.com/v1/attach \
+  --header 'Authorization: Bearer am_sk_1234567890' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "customer_id": "john-123",
+  "product_id": "pro-tier"
+}'
+```
+
+</CodeGroup>
+
+<CodeGroup>
+```json Checkout required
+{
+  "checkout_url": "https://checkout.stripe.com/cx/...",
+  "customer_id": "123",
+  "product_ids": ["pro"],
+  "code": "checkout_created",
+  "message": "Successfully created checkout for customer 123, product(s) Pro",
+}
+```
+```json Payment method exists
+{
+  "customer_id": "123",
+  "product_ids": ["free"],
+  "code": "downgrade_scheduled",
+  "message": "Successfully downgraded from Ultra to Free"
+}
+```
+</CodeGroup>
+
+<Tip>
+  If the `customer_id` you send doesn't already exist, Autumn will automatically
+  create a new customer. You can optionally set the properties of this new
+  customer through the `customer_data` object.
+</Tip>
+
+## From the UI
+
+1. Go to the Autumn [customers page](https://app.useautumn.com/customers)
+2. Navigate to the customer you want to enable the product for
+3. Click "Attach product", and choose the product you want to enable for this customer
+4. Optionally, make any changes to the product items before enabling it. This will create a [custom version](/documentation/customers/managing-customers#custom-product-versions) of the product.
+5. Choose how the customer should pay for the product:
+   - **Checkout URL**: this will only last 1 day before it expires (a limitation of Stripe)
+   - **Invoice**: this is a long lasting payment link. You'll be taken to the Stripe invoice page where you can check over the invoice, add an email if necessary, and send it
+
+<Note>
+  When generating a checkout URL, the customer must pay for the product before
+  its enabled for them. 
+  
+  With an invoice, the product is immediately enabled and
+  the customer can pay in accordance with your payment terms.
+
+</Note>
+
+## Upgrades and downgrades
+
+If you enable a product to a customer with an existing product (with the same `attach` method), Autumn will handle upgrades and downgrades between different pricing tiers.
+
+#### Upgrades
+
+Upgrades happen when a new product, with a more expensive price than the existing product, is enabled for a customer.
+
+<Warning>
+  If a payment method exists for the customer, attaching the product will
+  immediately bill them. If upgrading from a free to a paid product, a checkout
+  URL will be generated instead.
+</Warning>
+
+The upgraded product will be immediately enabled and the prices will be switched:
+
+**Priced features** will depend on the usage reset behavior:
+
+- If usage resets with billing (eg, credits), the outstanding usage will be billed at the existing price immediately. The new price will be applied to usage going forward and applied to the next invoice.
+- If there's no reset (eg, seats), the difference in price is prorated and charged immediately.
+
+**Fixed prices** will also be prorated and charged immediately. They'll be charged the difference between the old and the new price, adjusted by the amount of time remaining in the current period.
+
+#### Downgrades
+
+Downgrades happen when a new product, with a cheaper price than the existing product, is enabled for a customer.
+
+Downgrades **do not** happen immediately. Instead, the new product will be `scheduled` to start at the end of the current period.
+
+A customer can cancel the scheduled downgrade by attaching the existing product again.
+
+<Note>
+
+If you've set a [`group`](/documentation/pricing/plans#plan-properties) when creating the product, upgrades and
+downgrades will only apply to products within the same group.
+
+Attaching a new product from a different `group` will enable the new product in
+addition to the existing product.
+
+</Note>
+
+#### Usage reset behaviour
+
+When new products are enabled, you can choose what happens to existing feature usage using the `reset_usage_when_enabled` property.
+
+- `true`: existing usage is reset to 0 (typically used for consumable features like credits)
+- `false`: existing usage is carried over to the new product (typically used for continuous features like seats)
+
+<Info>
+**Example Use Case:**
+
+Let's imagine a customer is allowed 100 credits on a Free plan, and they used 20. Then they upgrade to a Pro product that gives them 500 credits.
+
+If `reset_usage_when_enabled = true` for the Pro product's `credits` item, they'll be reset to 500 credits on upgrade. If it's `false` they'll have 480.
+
+</Info>
+
+## Product statuses
+
+Customer's products can be in one of the following statuses:
+
+| Status      | Description                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `active`    | The product is currently active and the customer has access to it                                |
+| `trialing`  | The product is currently in the trial period (only applies to products with a free trial)        |
+| `expired`   | The product has expired and the customer no longer has access to it                              |
+| `past_due`  | The customer is past their due date for payment. Usually applies when a customer's payment fails |
+| `scheduled` | The product will start at the end of the current period                                          |
+| `cancelled` | The product has been cancelled and is scheduled to expire at the end of the current period       |
+
+
+{/* Upgrade / downgrade scheduling / failed payment flows / auto charging if payment method / reset behaviour */}

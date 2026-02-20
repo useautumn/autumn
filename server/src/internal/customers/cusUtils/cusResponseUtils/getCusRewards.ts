@@ -1,7 +1,7 @@
 import {
 	type AppEnv,
 	CouponDurationType,
-	CusExpand,
+	CustomerExpand,
 	type FullCustomer,
 	notNullish,
 	type Organization,
@@ -23,9 +23,9 @@ export const getCusRewards = async ({
 	env: AppEnv;
 	fullCus: FullCustomer;
 	subIds?: string[];
-	expand?: CusExpand[];
+	expand?: CustomerExpand[];
 }) => {
-	if (!expand?.includes(CusExpand.Rewards)) {
+	if (!expand?.includes(CustomerExpand.Rewards)) {
 		return undefined;
 	}
 

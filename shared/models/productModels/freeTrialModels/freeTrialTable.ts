@@ -5,7 +5,7 @@ import {
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
-import { products } from "../productTable.js";
+import { products } from "../productTable";
 
 export const freeTrials = pgTable(
 	"free_trials",

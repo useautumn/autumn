@@ -1,14 +1,14 @@
-import type { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
-import { TierInfinite } from "@models/productV2Models/productItemModels/productItemModels.js";
+import type { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0";
+import { TierInfinite } from "@models/productV2Models/productItemModels/productItemModels";
 import {
 	isFeatureItem,
 	isPriceItem,
-} from "@utils/productV2Utils/productItemUtils/getItemType.js";
-import { notNullish } from "@utils/utils.js";
+} from "@utils/productV2Utils/productItemUtils/getItemType";
+import { notNullish } from "@utils/utils";
 import type { z } from "zod/v4";
-import type { CusProductLegacyData } from "../cusProductLegacyData.js";
-import type { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1.js";
-import type { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
+import type { CusProductLegacyData } from "../cusProductLegacyData";
+import type { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1";
+import type { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2";
 
 /**
  * Transform product from V2 format to V1 format

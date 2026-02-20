@@ -68,8 +68,9 @@ export const auth = betterAuth({
 			"https://*.useautumn.com",
 		];
 
-		// Add dynamic port origins in development
-		if (process.env.NODE_ENV === "development") {
+		// Better Auth validates origins independently from app-level CORS.
+		// Allow local multi-port setups for any non-production runtime.
+		if (process.env.NODE_ENV !== "production") {
 			// Add ports 3000-3010 for multiple instances
 			for (let i = 0; i <= 10; i++) {
 				origins.push(`http://localhost:${3000 + i}`);

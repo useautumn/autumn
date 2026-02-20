@@ -1,42 +1,47 @@
 import { FeatureSchema, FeatureType, ResetInterval } from "@autumn/shared";
 import { z } from "zod/v4";
+import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
-const descriptions = {
-	feature_id: "The feature ID to create the balance for",
-	customer_id: "The customer ID to assign the balance to",
-	entity_id: "Entity ID for entity-scoped balances",
-	included: "The initial balance amount to grant",
-	unlimited: "Whether the balance is unlimited",
-	reset: "Reset configuration for the balance",
-	expires_at: "Unix timestamp (milliseconds) when the balance expires",
-};
+export const ExtCreateBalanceParamsSchema = BalanceParamsBaseSchema.extend({
+	included: z.number().optional().meta({
+		description:
+			"The initial balance amount to grant. For metered features, this is the number of units the customer can use.",
+	}),
 
-export const ExtCreateBalanceParamsSchema = z
-	.object({
-		feature_id: z.string().describe(descriptions.feature_id),
-		customer_id: z.string().describe(descriptions.customer_id),
-		entity_id: z.string().optional().describe(descriptions.entity_id),
-
-		included: z.number().optional().describe(descriptions.included),
-
-		unlimited: z.boolean().optional().describe(descriptions.unlimited),
-		reset: z
-			.object({
-				interval: z.enum(ResetInterval),
-				interval_count: z.number().optional(),
-			})
-			.optional()
-			.describe(descriptions.reset),
-		expires_at: z.number().optional().describe(descriptions.expires_at), // Unix timestamp in milliseconds
-	})
-	.refine((data) => {
-		if (data.entity_id && !data.customer_id) {
-			return false;
-		} else return true;
-	});
+	unlimited: z.boolean().optional().meta({
+		description:
+			"If true, the balance has unlimited usage. Cannot be combined with 'included'.",
+	}),
+	reset: z
+		.object({
+			interval: z.enum(ResetInterval).meta({
+				description:
+					"The interval at which the balance resets (e.g., 'month', 'day', 'year').",
+			}),
+			interval_count: z.number().optional().meta({
+				description:
+					"Number of intervals between resets. Defaults to 1 (e.g., interval_count: 2 with interval: 'month' resets every 2 months).",
+			}),
+		})
+		.optional()
+		.meta({
+			description:
+				"Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.",
+		}),
+	expires_at: z.number().optional().meta({
+		description:
+			"Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.",
+	}),
+}).refine((data) => {
+	if (data.entity_id && !data.customer_id) {
+		return false;
+	} else return true;
+});
 
 export const CreateBalanceParamsV0Schema = ExtCreateBalanceParamsSchema.extend({
-	granted_balance: z.number().optional(),
+	granted_balance: z.number().optional().meta({
+		internal: true,
+	}),
 });
 
 export const ValidateCreateBalanceParamsSchema =

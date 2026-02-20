@@ -1,39 +1,63 @@
 import { test } from "bun:test";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { ApiVersion, FreeTrialDuration, ResetInterval } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
-/**
- * Test: Attach free default product, then attach pro with invoice mode
- */
-test.concurrent(`${chalk.yellowBright("attach: pro plan with failed payment method")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
+const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
+const { db, org, env } = ctx;
 
-	const premium = products.premium({
-		id: "premium",
-		items: [messagesItem],
-	});
+test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
+	const productId = `temp_rpc_roundtrip_${Date.now()}`;
+	const baselineGroup = `baseline_group_${productId}`;
+	const changedGroup = `changed_group_${productId}`;
 
-	const { autumnV1 } = await initScenario({
-		customerId: "test-failed-pm",
-		setup: [
-			s.customer({}), // Failed payment method
-			s.products({ list: [pro, premium] }),
+	const baseline = {
+		name: "Temp RPC Baseline",
+		description: "baseline description",
+		group: baselineGroup,
+		add_on: false,
+		auto_enable: false,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 100,
+				reset: { interval: ResetInterval.Month },
+			},
 		],
-		actions: [],
-	});
+		free_trial: {
+			duration_type: FreeTrialDuration.Day,
+			duration_length: 7,
+			card_required: false,
+		},
+	};
 
-	const result = await autumnV1.billing.attach({
-		customer_id: "test-failed-pm",
-		product_id: pro.id,
-		invoice: true,
-		finalize_invoice: false,
-	});
+	const restUpdates = {
+		name: "Temp RPC Changed",
+		group: changedGroup,
+		add_on: true,
+		auto_enable: true,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 250,
+				reset: { interval: ResetInterval.Month },
+			},
+		],
+		free_trial: {
+			duration_type: FreeTrialDuration.Day,
+			duration_length: 14,
+			card_required: true,
+		},
+	};
 
-	console.log("result", result);
+	try {
+		await autumnV2_1.products.delete(productId);
+	} catch (_error) {}
+
+	await autumnV2_1.products.create({
+		id: productId,
+		...baseline,
+	});
 });

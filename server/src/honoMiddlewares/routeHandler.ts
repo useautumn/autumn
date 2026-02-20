@@ -143,8 +143,8 @@ export function createRoute<
 		middlewares.push(validator("param", opts.params));
 	}
 
-	// Add expand middleware after query validation
-	if (opts.query || opts.versionedQuery) {
+	// Add expand middleware after validation (handles both query and body expand)
+	if (opts.query || opts.versionedQuery || opts.body || opts.versionedBody) {
 		middlewares.push(expandMiddleware());
 	}
 

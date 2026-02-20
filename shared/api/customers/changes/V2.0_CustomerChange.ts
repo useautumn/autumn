@@ -1,17 +1,17 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../types/sharedContext.js";
-import { ApiCustomerSchema } from "../apiCustomer.js";
-import { ApiCustomerV5Schema } from "../apiCustomerV5.js";
-import type { ApiBalance } from "../cusFeatures/apiBalance.js";
-import { balanceV1ToV0 } from "../cusFeatures/mappers/balanceV1ToV0.js";
-import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
-import { apiPurchaseV0ToSubscriptionV0 } from "../cusPlans/mappers/apiPurchaseV0ToSubscriptionV0.js";
-import { apiSubscriptionV1ToV0 } from "../cusPlans/mappers/apiSubscriptionV1ToV0.js";
+import type { SharedContext } from "../../../types/sharedContext";
+import { ApiCustomerSchema } from "../apiCustomer";
+import { ApiCustomerV5Schema } from "../apiCustomerV5";
+import type { ApiBalance } from "../cusFeatures/apiBalance";
+import { balanceV1ToV0 } from "../cusFeatures/mappers/balanceV1ToV0";
+import type { ApiSubscription } from "../cusPlans/apiSubscription";
+import { apiPurchaseV0ToSubscriptionV0 } from "../cusPlans/mappers/apiPurchaseV0ToSubscriptionV0";
+import { apiSubscriptionV1ToV0 } from "../cusPlans/mappers/apiSubscriptionV1ToV0";
 
 export const V2_0_CustomerChange = defineVersionChange({
 	name: "V2_0 Customer Change",

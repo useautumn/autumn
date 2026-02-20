@@ -1,0 +1,32 @@
+---
+title: "Delete Entity"
+openapi: "openapi POST /v1/entities.delete"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string">
+  The ID of the customer.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string" required>
+  The ID of the entity.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />
+
+
+<ResponseExample>
+```json 200
+{
+  "success": true
+}
+```
+</ResponseExample>

@@ -1,0 +1,77 @@
+---
+title: Understanding how Autumn works
+sidebarTitle: Understand Autumn
+description: "Autumn is built to manage your feature access and your billing together. Learn how it all works."
+---
+
+## The Autumn flow
+
+The typical Autumn flow looks like this:
+
+<Steps>
+<Step title="Define your pricing model in the Autumn dashboard">
+The dashboard is where you define which of your users get access to what, and how much they're charged for it. Here, you'll [create products](/products/create-product) and [manage your customers](/customers/managing-customers).
+</Step>
+<Step title="Call attach when a customer wants to purchase a product">
+From your application, when your customer wants to [purchase](/products/enabling-product) one of your price plans, the `attach` endpoint will return a Stripe checkout URL.
+
+Once they've purchased, Autumn grants access to the product's features that were defined in the dashboard.
+
+If the customer is already paying for a plan, this will automatically handle any [upgrades and downgrades](products/enabling-product#upgrades-and-downgrades) too.
+
+</Step>
+
+<Step title="Check whether a customer has access to something">
+From your application, you can [check](/features/check) in real-time whether a customer has access to:
+
+- a product (eg, pro tier)
+- a feature balance (eg, 10 remaining credits)
+- a feature flag (eg, premium AI models)
+
+Autumn will return whether they're `allowed` access, and you can use this to control access to your features. When you want to update your pricing model, you can do so without changing any of your code.
+
+</Step>
+
+<Step title="Track usage for usage-based features">
+For your usage-based features, if Autumn tells you they're `allowed` access, you can [track their usage](/features/tracking-usage) to update their balance.
+
+This means Autumn can enforce any usage limits you set (ie, by returning `allowed: false` once they hit a balance of 0). It also allows you to charge for usage (eg, $1 per AI tokens used), if you have a usage-based pricing model.
+
+</Step>
+
+<Step title="Display customer's information and balances">
+When using usage-based features, you'll typically want to [display the customer's balance](/api-reference/customers/get) to them. You can do this from the `customers` route or hook, which will return customer information, the product they've purchased, and the balance of any usage-based features.
+
+</Step>
+</Steps>
+
+This means all of the logic that you would typically have to build yourself is done for you.
+
+- How do I limit usage of this feature to 10 per month, then reset?
+- How would I bill users who go over the limit?
+- How do I build in-app flows for upgrading, downgrading, cancelling?
+- What if I want add-ons, or credits?
+- My billing is at the org level. How do I track feature limits at the user level?
+- What happens to their usage if they upgrade, or downgrade, or cancel?
+- How can I block access if payment fails?
+- How would I migrate people if I change my pricing?
+- What should I do if I want a custom plan for different customers?
+
+Autumn takes care of all of this, and more.
+
+## Why use Autumn?
+
+Autumn is loved by developers, founders and fast-growing startups because it's easy to integrate and **billing never has to be touched again**.
+
+1. **The simplest integration you'll find** - Just 2 API calls to set up any pricing model. You don't need to deal with webhooks, state syncing, or deal with any of Stripe's APIs.
+2. **Enforce access limits** - Autumn knows who's paying for which product and what features they have access to. Just [check](/features/check.mdx) if a customer has access, then [track](/features/tracking-usage.mdx) any usage if needed.
+3. **Billing flows handled** - Upgrades, downgrades, failed payments, and more. Autumn takes care of it all, with customizable UI components that "just work" out of the box.
+4. **Make changes without touching code** - Make pricing changes, set custom plans, or launch new types of pricing without going through engineering. Versioning, grandfathering and migrations is easy through the Autumn dashboard.
+
+## What Autumn isn't
+
+- A Stripe billing replacement: although you don't need to deal with Stripe's APIs, you are still using Stripe's subscriptions, payments and invoicing.
+- Another metered billing product: Autumn easily handles usage-based billing up to 100 events per second, but there are many providers out there that specialize if you need more.
+- For purely sales-led companies: Autumn is designed to be used by product-led, or hybrid product-sales teams. If your customers only pay via custom invoices, Autumn is probably not for you.
+
+Now that you understand how Autumn works, check out one of the quickstart guides to get started!

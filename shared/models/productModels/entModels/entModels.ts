@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
-import { FeatureSchema } from "../../featureModels/featureModels.js";
-import { RolloverConfigSchema } from "../../productV2Models/productItemModels/productItemModels.js";
-import { EntInterval } from "../intervals/entitlementInterval.js";
+import { FeatureSchema } from "../../featureModels/featureModels";
+import { RolloverConfigSchema } from "../../productV2Models/productItemModels/productItemModels";
+import { EntInterval } from "../intervals/entitlementInterval";
 
 export enum AllowanceType {
 	Fixed = "fixed",

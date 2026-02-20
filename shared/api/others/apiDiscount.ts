@@ -1,7 +1,7 @@
 import {
 	CouponDurationType,
 	RewardType,
-} from "@models/rewardModels/rewardModels/rewardEnums.js";
+} from "@models/rewardModels/rewardModels/rewardEnums";
 import { z } from "zod/v4";
 
 export const ApiDiscountSchema = z.object({

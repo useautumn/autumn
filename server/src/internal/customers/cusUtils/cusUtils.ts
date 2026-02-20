@@ -1,9 +1,9 @@
 import {
 	type ApiCustomer,
 	type ApiInvoiceV1,
-	CusExpand,
 	type Customer,
 	type CustomerData,
+	CustomerExpand,
 	ErrCode,
 	type Feature,
 	type FullCustomer,
@@ -161,19 +161,19 @@ const getCusEntsInFeatures = async ({
 	return { cusEnts, cusPrices };
 };
 
-const parseCusExpand = (expand?: string): CusExpand[] => {
+const parseCusExpand = (expand?: string): CustomerExpand[] => {
 	if (expand) {
 		const options = expand.split(",");
-		const result: CusExpand[] = [];
+		const result: CustomerExpand[] = [];
 		for (const option of options) {
-			if (!Object.values(CusExpand).includes(option as CusExpand)) {
+			if (!Object.values(CustomerExpand).includes(option as CustomerExpand)) {
 				throw new RecaseError({
 					message: `Invalid expand option: ${option}`,
 					code: ErrCode.InvalidExpand,
 					statusCode: StatusCodes.BAD_REQUEST,
 				});
 			}
-			result.push(option as CusExpand);
+			result.push(option as CustomerExpand);
 		}
 		return result;
 	} else {

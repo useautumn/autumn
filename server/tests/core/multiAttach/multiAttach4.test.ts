@@ -206,8 +206,6 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 			product_id: premium.id,
 			entity_id: "1",
 			cancel_immediately: true,
-			// @ts-expect-error
-			prorate: false,
 		});
 
 		await expectSubToBeCorrect({

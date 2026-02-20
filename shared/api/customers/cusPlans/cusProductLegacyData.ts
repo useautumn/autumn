@@ -1,6 +1,6 @@
-import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
+import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels";
 import { z } from "zod/v4";
-import { FeatureSchema } from "../../../models/featureModels/featureModels.js";
+import { FeatureSchema } from "../../../models/featureModels/featureModels";
 
 // export const CusProductLegacyDataWithoutFeaturesSchema = z.object({
 // 	subscription_id: z.string().optional(),
