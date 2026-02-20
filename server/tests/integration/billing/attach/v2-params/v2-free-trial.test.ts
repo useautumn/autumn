@@ -37,9 +37,11 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: set trial with v1 f
 		customer_id: customerId,
 		plan_id: pro.id,
 		redirect_mode: "if_required",
-		free_trial: {
-			duration_length: 7,
-			duration_type: FreeTrialDuration.Day,
+		customize: {
+			free_trial: {
+				duration_length: 7,
+				duration_type: FreeTrialDuration.Day,
+			},
 		},
 	};
 
@@ -89,7 +91,9 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: remove product tria
 		customer_id: customerId,
 		plan_id: proTrial.id,
 		redirect_mode: "if_required",
-		free_trial: null,
+		customize: {
+			free_trial: null,
+		},
 	};
 
 	const preview =
@@ -135,9 +139,11 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: month-based v1 free
 		customer_id: customerId,
 		plan_id: pro.id,
 		redirect_mode: "if_required",
-		free_trial: {
-			duration_length: 1,
-			duration_type: FreeTrialDuration.Month,
+		customize: {
+			free_trial: {
+				duration_length: 1,
+				duration_type: FreeTrialDuration.Month,
+			},
 		},
 	};
 

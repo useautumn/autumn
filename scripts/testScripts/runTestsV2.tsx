@@ -566,7 +566,7 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 
 			await Promise.all(promises);
 
-			// Phase 2: Retry failed files
+			// Phase 2: Retry failed files with same concurrency as initial run
 			const failedFiles = Array.from(pendingRef.current.values()).filter(
 				(r) => r.status === "failed" && r.attempt === 1,
 			);
@@ -582,23 +582,29 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				}
 				dirtyRef.current = true;
 
-				// Run retries sequentially to avoid resource contention
-				for (const result of failedFiles) {
-					// Mark this specific file as actively retrying
-					const retryingResult: TestFileResult = {
-						...result,
-						status: "retrying",
-					};
-					pendingRef.current.set(result.file, retryingResult);
-					dirtyRef.current = true;
-
-					const retryResult = await runTestFile(result.file, updateResult, 2);
-					if (retryResult.status === "passed") {
-						retryResult.passedOnRetry = true;
-						pendingRef.current.set(result.file, retryResult);
+				// Run retries concurrently with same limit as initial run
+				const retryLimit = pLimit(maxParallel);
+				const retryPromises = failedFiles.map((result) =>
+					retryLimit(async () => {
+						// Mark this specific file as actively retrying
+						const retryingResult: TestFileResult = {
+							...result,
+							status: "retrying",
+						};
+						pendingRef.current.set(result.file, retryingResult);
 						dirtyRef.current = true;
-					}
-				}
+
+						const retryResult = await runTestFile(result.file, updateResult, 2);
+						if (retryResult.status === "passed") {
+							retryResult.passedOnRetry = true;
+							pendingRef.current.set(result.file, retryResult);
+							dirtyRef.current = true;
+						}
+						return retryResult;
+					}),
+				);
+
+				await Promise.all(retryPromises);
 			}
 
 			// Mark retry phase as complete so failed files can be emitted to static

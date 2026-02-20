@@ -39,7 +39,7 @@ export type UseReferralsResult = HookResultWithMethods<
 export const useReferrals = (
 	params: UseReferralsParams,
 ): UseReferralsResult => {
-	const client = useAutumnClient();
+	const client = useAutumnClient({ caller: "useReferrals" });
 	const { programId, queryOptions } = params;
 
 	const queryResult = useQuery<CreateReferralCodeResponse, AutumnClientError>({

@@ -92,7 +92,7 @@ await autumn.plans.update({
 </DynamicParamField>
 
 <DynamicParamField body="price" type="object | null">
-  The price of the plan. Set to null to remove the base price.
+  Base price configuration for a plan.
   <Expandable title="properties">
     <DynamicParamField body="amount" type="number" required>
       Base price amount for the plan.
@@ -214,7 +214,7 @@ await autumn.plans.update({
 </DynamicParamField>
 
 <DynamicParamField body="free_trial" type="object | null">
-  The free trial of the plan. Set to null to remove the free trial.
+  Free trial configuration for a plan.
   <Expandable title="properties">
     <DynamicParamField body="duration_length" type="number" required>
       Number of duration_type periods the trial lasts.
