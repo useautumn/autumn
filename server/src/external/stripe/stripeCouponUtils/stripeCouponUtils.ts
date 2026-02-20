@@ -177,6 +177,14 @@ export const createStripeCoupon = async ({
 		} catch (_) {}
 	}
 
+	// Collect Autumn product IDs for metadata when coupon applies to specific products
+	const appliesToSpecificProducts =
+		reward.type !== RewardType.FreeProduct && !discountConfig!.apply_to_all;
+
+	const autumnProductIds = appliesToSpecificProducts
+		? [...new Set(prices.map((price) => price.product.id))]
+		: [];
+
 	const stripeCoupon = await stripeCli.coupons.create({
 		// id: reward.internal_id,
 		id: reward.id,
@@ -188,15 +196,15 @@ export const createStripeCoupon = async ({
 		name: reward.name,
 		metadata: {
 			autumn_internal_id: reward.internal_id,
+			...(autumnProductIds.length > 0 && {
+				autumn_product_ids: JSON.stringify(autumnProductIds),
+			}),
 		},
-		applies_to:
-			reward.type === RewardType.FreeProduct
-				? undefined
-				: !discountConfig!.apply_to_all
-					? {
-							products: stripeProdIds,
-						}
-					: undefined,
+		applies_to: appliesToSpecificProducts
+			? {
+					products: stripeProdIds,
+				}
+			: undefined,
 	});
 
 	// Create promo codes
