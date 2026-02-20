@@ -68,49 +68,44 @@ npx atmn init
 This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/api-reference/cli/config) to build your own.
 
 ```typescript autumn.config.ts [expandable]
-import {
-  feature,
-  product,
-  featureItem,
-  pricedFeatureItem,
-  priceItem,
-} from "atmn";
+import { feature, plan, planItem } from "atmn";
 
 // Features
 export const messages = feature({
   id: "messages",
   name: "Messages",
-  type: "single_use",
+  type: "metered",
+  consumable: true,
 });
 
-// Products
-export const free = product({
+// Plans
+export const free = plan({
   id: "free",
   name: "Free",
+  autoEnable: true,
   items: [
     // 5 messages per month
-    featureItem({
-      feature_id: messages.id,
-      included_usage: 5,
-      interval: "month",
+    planItem({
+      featureId: messages.id,
+      included: 5,
+      reset: { interval: "month" },
     }),
   ],
 });
 
-export const pro = product({
+export const pro = plan({
   id: "pro",
   name: "Pro",
+  price: {
+    amount: 20,
+    interval: "month",
+  },
   items: [
     // 100 messages per month
-    featureItem({
-      feature_id: messages.id,
-      included_usage: 100,
-      interval: "month",
-    }),
-    // $20 per month
-    priceItem({
-      price: 20,
-      interval: "month",
+    planItem({
+      featureId: messages.id,
+      included: 100,
+      reset: { interval: "month" },
     }),
   ],
 });

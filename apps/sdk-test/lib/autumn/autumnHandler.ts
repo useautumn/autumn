@@ -1,4 +1,4 @@
-import { autumnHandler } from "autumn-js/backend/next";
+import { autumnHandler } from "autumn-js/next";
 import { SDK_TEST_IDENTITY } from "./testIdentity";
 
 /** Set to true to simulate an unauthenticated user */

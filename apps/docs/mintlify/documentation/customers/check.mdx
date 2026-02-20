@@ -38,57 +38,61 @@ import { useCustomer } from "autumn-js/react";
 const { check } = useCustomer();
 
 // check the customer state object locally (no API call)
-const { data } = check({ featureId: "messages" });
+const { allowed } = check({ featureId: "messages" });
 ```
 
-```javascript Node.js
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
 
-const { data } = await autumn.check({
-  customer_id: "user-123",
-  feature_id: "messages",
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "messages",
 });
+
+console.log(response.allowed);
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("secret_key")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-  check = await autumn.check(customer_id="user-123", feature_id="messages")
-  allowed = check.allowed
-
-asyncio.run(main())
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="messages",
+)
+print(response.allowed)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_1234567890" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user-123",
-    "feature_id": "messages",
+    "customer_id": "user_123",
+    "feature_id": "messages"
   }'
 ```
 
 </CodeGroup>
 
 <Expandable title="check response">
-```json [expandable]
+```json
 {
-    "allowed": true,
-    "feature_id": "messages",
-    "customer_id": "user_123",
-    "required_balance": 1,
-    "unlimited": false,
-    "interval": "month",
-    "balance": 5,
+  "allowed": true,
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "messages",
+    "granted": 5,
+    "remaining": 5,
     "usage": 0,
-    "included_usage": 5,
-    "next_reset_at": 1767610960519,
-    "overage_allowed": false
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1767610960519
+  }
 }
 ```
 </Expandable>
@@ -100,9 +104,9 @@ Even if your product doesn't have usage limits (ie your feature is purely usage-
 
 ## Checking for a required balance
 
-If you know the balance a user will consume in advance, you can specify it with the `required_balance` parameter. This means you can prevent a user from starting a process that would consume more than their current balance.
+If you know the balance a user will consume in advance, you can specify it with the `requiredBalance` parameter. This means you can prevent a user from starting a process that would consume more than their current balance.
 
-By default, `required_balance` is 1, so not passing this parameter will return `allowed: true` as long as the customer has a feature balance of 1 or more.
+By default, `requiredBalance` is 1, so not passing this parameter will return `allowed: true` as long as the customer has a feature balance of 1 or more.
 
 <CodeGroup>
 
@@ -111,47 +115,43 @@ import { useCustomer } from "autumn-js/react";
 
 const { check } = useCustomer();
 
-const { data } = check({ featureId: "messages", requiredBalance: 3 });
+const { allowed } = check({ featureId: "messages", requiredBalance: 3 });
 ```
 
-```javascript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "messages",
+  requiredBalance: 3,
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "ai-messages",
-  required_balance: 3,
-});
+console.log(response.allowed);
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-  check = await autumn.check(
-    customer_id="user_or_org_id_from_auth",
-    feature_id="ai-messages",
-    required_balance=3
-  )
-  allowed = check.allowed
-
-asyncio.run(main())
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="messages",
+    required_balance=3,
+)
+print(response.allowed)
 ```
 
-```bash cURL {7}
+```bash cURL
 curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "feature_id": "ai-messages",
+    "customer_id": "user_123",
+    "feature_id": "messages",
     "required_balance": 3
   }'
 ```
@@ -160,50 +160,46 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 ## Checking and reserving usage
 
-You can check access and record usage in a single, atomic API call using the `send_event` field. The usage value deducted from the balance will be the `required_balance` parameter. This is useful for concurrent events.
+You can check access and record usage in a single, atomic API call using the `sendEvent` field. The usage value deducted from the balance will be the `requiredBalance` parameter. This is useful for concurrent events.
 
 <CodeGroup>
 
-```javascript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "api_calls",
+  requiredBalance: 3,
+  sendEvent: true,
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "api_calls",
-  required_balance: 3,
-  send_event: true,
-});
+console.log(response.allowed);
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-  check = await autumn.check(
-      customer_id="user_or_org_id_from_auth",
-      feature_id="api_calls",
-      required_balance=3,
-      send_event=True,
-  )
-  allowed = check.allowed
-
-asyncio.run(main())
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="api_calls",
+    required_balance=3,
+    send_event=True,
+)
+print(response.allowed)
 ```
 
-```bash cURL {7-8}
+```bash cURL
 curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "feature_id": "ai-messages",
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
     "required_balance": 3,
     "send_event": true
   }'
@@ -215,40 +211,36 @@ If the operation fails, you can then "refund" the usage with a negative usage `v
 
 <CodeGroup>
 
-```javascript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const { data } = await autumn.track({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "api_calls",
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "api_calls",
   value: -3,
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-  await autumn.track(
-    customer_id="user_or_org_id_from_auth",
+await autumn.customers.track(
+    customer_id="user_123",
     feature_id="api_calls",
     value=-3,
-  )
+)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/track" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
+    "customer_id": "user_123",
     "feature_id": "api_calls",
     "value": -3
   }'
@@ -257,14 +249,14 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 ## Checking boolean features
 
-For simple on/off features, use the endpoint to determine if a customer has access. Alternatively you can just check if they have access to a certain plan.
+For simple on/off features, use the check method to determine if a customer has access:
 
 ```tsx React
 const { check } = useCustomer();
 
-// check if the customer has access to a plan
-const isPremium = check({ productId: "premium" });
+const { allowed } = check({ featureId: "premium-dashboard" });
 
-// check if the customer has access to a feature
-const dashboardAccess = check({ featureId: "premium-dashboard" });
+if (allowed) {
+  // Show premium dashboard
+}
 ```

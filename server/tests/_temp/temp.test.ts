@@ -1,63 +1,44 @@
 import { test } from "bun:test";
-import { ApiVersion, FreeTrialDuration, ResetInterval } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import {
+	FreeTrialDuration,
+	type UpdateSubscriptionV1Params,
+} from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-
-const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
-const { db, org, env } = ctx;
 
 test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
-	const productId = `temp_rpc_roundtrip_${Date.now()}`;
-	const baselineGroup = `baseline_group_${productId}`;
-	const changedGroup = `changed_group_${productId}`;
-
-	const baseline = {
-		name: "Temp RPC Baseline",
-		description: "baseline description",
-		group: baselineGroup,
-		add_on: false,
-		auto_enable: false,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 100,
-				reset: { interval: ResetInterval.Month },
-			},
-		],
-		free_trial: {
-			duration_type: FreeTrialDuration.Day,
-			duration_length: 7,
-			card_required: false,
-		},
-	};
-
-	const restUpdates = {
-		name: "Temp RPC Changed",
-		group: changedGroup,
-		add_on: true,
-		auto_enable: true,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 250,
-				reset: { interval: ResetInterval.Month },
-			},
-		],
-		free_trial: {
-			duration_type: FreeTrialDuration.Day,
-			duration_length: 14,
-			card_required: true,
-		},
-	};
-
-	try {
-		await autumnV2_1.products.delete(productId);
-	} catch (_error) {}
-
-	await autumnV2_1.products.create({
-		id: productId,
-		...baseline,
+	const proProd = products.pro({
+		id: "pro",
+		items: [items.monthlyCredits({ includedUsage: 100 })],
 	});
+	const customerId = "temp";
+
+	const { autumnV1, autumnV2_1 } = await initScenario({
+		customerId,
+		actions: [],
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proProd] }),
+		],
+	});
+
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: proProd.id,
+		free_trial: {
+			length: 14,
+			duration: FreeTrialDuration.Day,
+		},
+	});
+
+	console.log(result);
+
+	const updateResult =
+		await autumnV2_1.subscriptions.update<UpdateSubscriptionV1Params>({
+			customer_id: customerId,
+			plan_id: proProd.id,
+		});
+	console.log(updateResult);
 });

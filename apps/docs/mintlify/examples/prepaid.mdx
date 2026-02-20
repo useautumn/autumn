@@ -69,7 +69,7 @@ When your user signs up, create an Autumn customer. This will automatically assi
 import { useCustomer } from "autumn-js/react";
 
 const App = () => {
-  const { customer } = useCustomer();
+  const { data: customer } = useCustomer();
 
   console.log("Autumn customer:", customer);
 
@@ -77,43 +77,36 @@ const App = () => {
 };
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const { data, error } = await autumn.customers.create({
-  id: "user_or_org_id_from_auth",
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
   name: "John Yeo",
   email: "john@example.com",
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    customer = await autumn.customers.create(
-        id="user_or_org_id_from_auth",
-        name="John Yeo",
-        email="john@example.com",
-    )
-
-asyncio.run(main())
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    name="John Yeo",
+    email="john@example.com",
+)
 ```
 
 ```bash cURL
-curl --request POST \
-  --url https://api.useautumn.com/customers \
-  --header 'Authorization: Bearer am_sk_42424242' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "id": "user_or_org_id_from_auth",
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
     "name": "John Yeo",
     "email": "john@example.com"
   }'
@@ -129,16 +122,16 @@ Every time our user wants to send a premium message, we'll first check if they h
 
 <CodeGroup>
 
-```jsx React wrap
+```jsx React
 import { useCustomer } from "autumn-js/react";
 
 export function CheckPremiumMessage() {
   const { check, refetch } = useCustomer();
 
   const handleCheckAccess = async () => {
-    const { data } = await check({ featureId: "premium-messages" });
+    const { allowed } = check({ featureId: "premium_messages" });
 
-    if (!data?.allowed) {
+    if (!allowed) {
       alert("You've run out of premium messages");
     } else {
       // proceed with sending message
@@ -148,49 +141,42 @@ export function CheckPremiumMessage() {
 }
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "premium_messages",
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "premium_messages",
-});
-
-if (!data.allowed) {
+if (!response.allowed) {
   console.log("User has run out of premium messages");
   return;
 }
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_1234567890")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    response = await autumn.check(
-        customer_id="user_or_org_id_from_auth",
-        feature_id="premium_messages",
-    )
-    
-    if not response.allowed:
-        print("User has run out of premium messages")
-        return
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="premium_messages",
+)
 
-asyncio.run(main())
+if not response.allowed:
+    print("User has run out of premium messages")
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_1234567890" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
+    "customer_id": "user_123",
     "feature_id": "premium_messages"
   }'
 ```
@@ -200,18 +186,18 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 <Expandable title="check response">
 ```json
 {
-  "customer_id": "user_or_org_id_from_auth",
-  "feature_id": "premium_messages",
-  "code": "feature_found",
   "allowed": true,
-  "balance": 10,
-  "usage": 0,
-  "included_usage": 10,
-  "unlimited": false,
-  "interval": null,
-  "interval_count": 1,
-  "next_reset_at": null,
-  "overage_allowed": false
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "premium_messages",
+    "granted": 10,
+    "remaining": 10,
+    "usage": 0,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": null
+  }
 }
 ```
 </Expandable>
@@ -224,42 +210,36 @@ Now let's implement our usage tracking and use up our premium messages. In this 
 
 <CodeGroup>
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.track({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "premium_messages",
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "premium_messages",
   value: 5,
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_42424242")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    await autumn.track(
-        customer_id="user_or_org_id_from_auth",
-        feature_id="premium_messages",
-        value=5,
-    )
-
-asyncio.run(main())
+await autumn.customers.track(
+    customer_id="user_123",
+    feature_id="premium_messages",
+    value=5,
+)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/track" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
+    "customer_id": "user_123",
     "feature_id": "premium_messages",
     "value": 5
   }'
@@ -270,9 +250,17 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 <Expandable title="track response">
 ```json
 {
-  "code": "event_received",
-  "customer_id": "user_or_org_id_from_auth",
-  "feature_id": "premium_messages"
+  "customerId": "user_123",
+  "value": 5,
+  "balance": {
+    "featureId": "premium_messages",
+    "granted": 10,
+    "remaining": 5,
+    "usage": 5,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": null
+  }
 }
 ```
 </Expandable>
@@ -286,23 +274,20 @@ When users run out of premium messages, they can purchase additional messages us
 <CodeGroup>
 
 ```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
 export default function TopUpButton() {
-  const { checkout } = useCustomer();
+  const { attach } = useCustomer();
 
   return (
     <button
-      onClick={async () => {
-        await checkout({
-          productId: "top_up",
-          dialog: CheckoutDialog,
-          options: [{
-            featureId: "premium_messages",
-            quantity: 200,
-          }],
-        });
-      }}
+      onClick={() => attach({
+        planId: "top_up",
+        featureQuantities: [{
+          featureId: "premium_messages",
+          quantity: 200,
+        }],
+      })}
     >
       Buy More Messages
     </button>
@@ -310,64 +295,48 @@ export default function TopUpButton() {
 }
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "top_up",
-  options: [{
-    feature_id: "premium_messages",
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "top_up",
+  featureQuantities: [{
+    featureId: "premium_messages",
     quantity: 200,
   }],
 });
 
-if (data.url) {
-  // Redirect user to Stripe checkout URL
-} else {
-  // Show purchase preview to user
-}
+redirect(response.paymentUrl);
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_42424242")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    response = await autumn.checkout(
-        customer_id="user_or_org_id_from_auth",
-        product_id="top-up",
-        options=[{
-          "feature_id": "premium-messages",
-          "quantity": 200,
-        }],
-    )
-    
-    if response.url:
-        # Redirect user to Stripe checkout URL
-        pass
-    else:
-        # Show purchase preview to user
-        pass
-
-asyncio.run(main())
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="top_up",
+    feature_quantities=[{
+        "feature_id": "premium_messages",
+        "quantity": 200,
+    }],
+)
+# Redirect to response.payment_url
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
-  -H "Authorization: Bearer am_sk_42424242" \
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_id": "top-up",
-    "options": [{
-      "feature_id": "premium-messages",
+    "customer_id": "user_123",
+    "plan_id": "top_up",
+    "feature_quantities": [{
+      "feature_id": "premium_messages",
       "quantity": 200
     }]
   }'
@@ -375,87 +344,7 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 
 </CodeGroup>
 
-<Expandable title="checkout response">
-```json
-{
-  "customer_id": "user_or_org_id_from_auth",
-  "lines": [
-    {
-      "description": "Top-up - 200 premium messages",
-      "amount": 20,
-      "item": {
-        "type": "feature",
-        "feature_id": "premium-messages",
-        "feature_type": "prepaid",
-        "feature": {
-          "id": "premium-messages",
-          "name": "Premium messages",
-          "type": "metered",
-          "display": {
-            "singular": "premium message",
-            "plural": "premium messages"
-          }
-        },
-        "quantity": 200,
-        "price": 10,
-        "price_per": 100,
-        "display": {
-          "primary_text": "200 premium messages",
-          "secondary_text": "$10 per 100 messages"
-        }
-      }
-    }
-  ],
-  "product": {
-    "id": "top-up",
-    "name": "Top-up",
-    "group": null,
-    "env": "sandbox",
-    "is_add_on": false,
-    "is_default": false,
-    "archived": false,
-    "version": 1,
-    "created_at": 1766428038264,
-    "items": [
-      {
-        "type": "feature",
-        "feature_id": "premium-messages",
-        "feature_type": "prepaid",
-        "feature": {
-          "id": "premium-messages",
-          "name": "Premium messages",
-          "type": "metered",
-          "display": {
-            "singular": "premium message",
-            "plural": "premium messages"
-          }
-        },
-        "price": 10,
-        "price_per": 100,
-        "display": {
-          "primary_text": "$10 per 100 messages"
-        }
-      }
-    ],
-    "free_trial": null,
-    "base_variant_id": null,
-    "scenario": "attach",
-    "properties": {
-      "is_free": false,
-      "is_one_off": true,
-      "has_trial": false,
-      "updateable": false
-    }
-  },
-  "total": 20,
-  "currency": "usd",
-  "url": "https://checkout.stripe.com/c/pay/.......",
-  "has_prorations": false
-}
-```
-</Expandable>
-
-Once the customer completes the payment, they will have an additional 200 premium messages available to use. You can display to the user by getting balances from the `customer` method. 
+Once the customer completes the payment, they will have an additional 200 premium messages available to use. You can display this to the user by getting balances from the customer endpoint.
 
 </Step>
 </Steps>

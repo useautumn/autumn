@@ -51,77 +51,63 @@ Before allowing a customer to use a feature, `check` if they have enough credits
 
 <CodeGroup>
 
-```javascript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "premium_request",
+  requiredBalance: 6,
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "premium_request",
-  required_balance: 6,
-});
+console.log(response.allowed);
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn("am_sk_42424242")
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    check = await autumn.check(
-        customer_id="user-123",
-        feature_id="premium_request",
-        required_balance: 6,
-    )
-    allowed = check.allowed
-
-asyncio.run(main())
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="premium_request",
+    required_balance=6,
+)
+print(response.allowed)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user-123",
+    "customer_id": "user_123",
     "feature_id": "premium_request",
-    "required_balance": 6,
+    "required_balance": 6
   }'
 ```
 
 </CodeGroup>
 
 <Expandable title="check response">
-The response will contain the ID of the credit system that is being deducted from.
+The response will contain the balance for the credit system that is being deducted from.
 
-```json expandable
+```json
 {
   "allowed": true,
-  "customer_id": "johnyeo",
-  "feature_id": "credits",
-  "required_balance": 3,
-  "code": "feature_found",
-  "interval": "month",
-  "unlimited": false,
-  "balance": 100,
-  "usage": 0,
-  "included_usage": 100,
-  "next_reset_at": 1757192635393,
-  "overage_allowed": false,
-  "credit_schema": [
-    {
-      "feature_id": "basic_request",
-      "credit_amount": 1
-    },
-    {
-      "feature_id": "premium_request",
-      "credit_amount": 3
-    }
-  ]
+  "customerId": "user_123",
+  "requiredBalance": 6,
+  "balance": {
+    "featureId": "credits",
+    "granted": 100,
+    "remaining": 100,
+    "usage": 0,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
 }
 ```
 
@@ -129,7 +115,7 @@ The response will contain the ID of the credit system that is being deducted fro
 In this case, we have a balance of 100 credits remaining, so we're allowed to use our 6 "premium requests" feature.
 
 <Note>
-  If a feature is not defined in the credit system, it will return`allowed: false`
+  If a feature is not defined in the credit system, it will return `allowed: false`
 </Note>
 
 #### Tracking usage
@@ -139,59 +125,57 @@ Since the customer has sufficient credits, you can let them use their 6 "premium
 This will decrement the customer's balance by 18 credits (6 requests * 3 credits per request).
 
 <CodeGroup>
-```javascript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.track({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "premium_request",
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "premium_request",
   value: 6,
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    await autumn.track(
-        customer_id="user_or_org_id_from_auth",
-        feature_id="premium_request",
-        value=6,
-    )
-
-asyncio.run(main())
+await autumn.customers.track(
+    customer_id="user_123",
+    feature_id="premium_request",
+    value=6,
+)
 ```
 
 ```bash cURL
 curl -X POST "https://api.useautumn.com/v1/track" \
--H "Authorization: Bearer am_sk_42424242" \
--H "Content-Type: application/json" \
--d '{
-"customer_id": "user_or_org_id_from_auth",
-"feature_id": "premium_request",
-"value": 6
-}'
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "premium_request",
+    "value": 6
+  }'
 ```
-
-
-
 
 </CodeGroup>
 
 <Expandable title="track response">
 ```json
 {
-    "message": "Event recorded successfully",
-    "event_id": "event_123",
-    "customer_id": "user-123",
-    "feature_id": "audio-transcription-minutes"
+  "customerId": "user_123",
+  "value": 6,
+  "balance": {
+    "featureId": "credits",
+    "granted": 100,
+    "remaining": 82,
+    "usage": 18,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
 }
 ```
 </Expandable>
