@@ -1,0 +1,239 @@
+name: SDK Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/autumn-js/**'
+      - 'packages/openapi/**'
+  
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run (no actual publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      test-package:
+        description: 'Publish to @useautumn/js-test instead'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      version-bump:
+        description: 'Version bump type (for manual triggers)'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - 'patch'
+          - 'minor'
+          - 'major'
+
+env:
+  PACKAGE_DIR: packages/autumn-js
+  REAL_PACKAGE_NAME: autumn-js
+  TEST_PACKAGE_NAME: '@useautumn/js-test'
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.2
+      
+      - name: Set up Node.js (for npm OIDC)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Determine version bump type
+        id: version-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger - use input
+            echo "bump=${{ github.event.inputs.version-bump }}" >> $GITHUB_OUTPUT
+            echo "Using manual version bump: ${{ github.event.inputs.version-bump }}"
+          else
+            # Auto trigger - parse commit message
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            echo "Commit message: $COMMIT_MSG"
+            
+            if echo "$COMMIT_MSG" | grep -qE "^major:|BREAKING CHANGE"; then
+              echo "bump=major" >> $GITHUB_OUTPUT
+              echo "Detected major version bump"
+            elif echo "$COMMIT_MSG" | grep -qE "^minor:|^feat:"; then
+              echo "bump=minor" >> $GITHUB_OUTPUT
+              echo "Detected minor version bump"
+            elif echo "$COMMIT_MSG" | grep -qE "^fix:|^patch:"; then
+              echo "bump=patch" >> $GITHUB_OUTPUT
+              echo "Detected patch version bump"
+            else
+              echo "bump=skip" >> $GITHUB_OUTPUT
+              echo "No version bump pattern detected, skipping publish"
+            fi
+          fi
+      
+      - name: Get current version from tags
+        if: steps.version-type.outputs.bump != 'skip'
+        id: current-version
+        run: |
+          # Get the latest tag for autumn-js
+          LATEST_TAG=$(git tag -l "autumn-js-v*" --sort=-v:refname | head -n 1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            # No tags yet, start at 1.0.0
+            echo "current=1.0.0" >> $GITHUB_OUTPUT
+            echo "No existing tags found, starting at 1.0.0"
+          else
+            # Extract version from tag (autumn-js-v1.2.3 -> 1.2.3)
+            VERSION=${LATEST_TAG#autumn-js-v}
+            echo "current=$VERSION" >> $GITHUB_OUTPUT
+            echo "Current version from tag: $VERSION"
+          fi
+      
+      - name: Calculate next version
+        if: steps.version-type.outputs.bump != 'skip'
+        id: next-version
+        run: |
+          CURRENT="${{ steps.current-version.outputs.current }}"
+          BUMP="${{ steps.version-type.outputs.bump }}"
+          
+          # Parse semver
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "Next version: $NEXT_VERSION"
+      
+      - name: Determine package name
+        if: steps.version-type.outputs.bump != 'skip'
+        id: package
+        run: |
+          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            echo "name=${{ env.TEST_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
+            echo "Publishing to test package: ${{ env.TEST_PACKAGE_NAME }}"
+          else
+            echo "name=${{ env.REAL_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
+            echo "Publishing to real package: ${{ env.REAL_PACKAGE_NAME }}"
+          fi
+      
+      - name: Update package.json version and name
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          
+          # Update version
+          jq --arg version "${{ steps.next-version.outputs.version }}" \
+             '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          
+          # Update package name if using test package
+          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            jq --arg name "${{ env.TEST_PACKAGE_NAME }}" \
+               '.name = $name' package.json > package.json.tmp
+            mv package.json.tmp package.json
+          fi
+          
+          echo "Updated package.json:"
+          cat package.json | head -20
+      
+      - name: Regenerate SDK from OpenAPI
+        if: steps.version-type.outputs.bump != 'skip'
+        env:
+          SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+        run: bun api
+      
+      - name: Build SDK and autumn-js
+        if: steps.version-type.outputs.bump != 'skip'
+        run: bun js:build
+      
+      - name: TypeScript check
+        if: steps.version-type.outputs.bump != 'skip'
+        run: bun js:ts
+      
+      - name: Publish (dry-run)
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run == 'true'
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          npm publish --dry-run --provenance --access public
+          echo "✅ Dry run completed successfully"
+      
+      - name: Publish to npm
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true'
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          npm publish --provenance --access public
+          echo "✅ Published ${{ steps.package.outputs.name }}@${{ steps.next-version.outputs.version }}"
+      
+      - name: Create git tag
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true' && github.event.inputs.test-package != 'true'
+        run: |
+          TAG_NAME="autumn-js-v${{ steps.next-version.outputs.version }}"
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "✅ Created and pushed tag: $TAG_NAME"
+      
+      - name: Summary
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          echo "## SDK Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | ${{ steps.package.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ steps.next-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{ steps.version-type.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | ${{ github.event.inputs.dry-run || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Skip notice
+        if: steps.version-type.outputs.bump == 'skip'
+        run: |
+          echo "## SDK Publish Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No version bump pattern detected in commit message." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To trigger a publish, use one of these commit message prefixes:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`fix:\` or \`patch:\` for patch version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`feat:\` or \`minor:\` for minor version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`major:\` or \`BREAKING CHANGE\` for major version" >> $GITHUB_STEP_SUMMARY

@@ -29,13 +29,13 @@ test.concurrent(`${chalk.yellowBright("rpc get: get plan response in latest form
 	ApiPlanV1Schema.parse(plan);
 
 	const messagesResponseItem = plan.items.find(
-		(item: any) => item.feature_id === TestFeature.Messages,
+		(item) => item.feature_id === TestFeature.Messages,
 	);
 	const wordsResponseItem = plan.items.find(
-		(item: any) => item.feature_id === TestFeature.Words,
+		(item) => item.feature_id === TestFeature.Words,
 	);
 	const creditsResponseItem = plan.items.find(
-		(item: any) => item.feature_id === TestFeature.Credits,
+		(item) => item.feature_id === TestFeature.Credits,
 	);
 
 	expect(messagesResponseItem).toBeDefined();

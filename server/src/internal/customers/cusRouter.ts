@@ -28,6 +28,7 @@ cusRouter.post("/clear_cache", ...handleClearCustomerCache);
 
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
 cusRouter.post("/:customer_id", ...handleUpdateCustomer);
+cusRouter.patch("/:customer_id", ...handleUpdateCustomer);
 
 cusRouter.delete("/:customer_id", ...handleDeleteCustomer);
 

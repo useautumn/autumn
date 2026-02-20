@@ -31,7 +31,7 @@
 	"files.exclude": {
 		// "**/.claude": true,
 		"**/.cursor": true,
-		"**/.github": true,
+		// "**/.github": true,
 		"**/.superset": true
 	}
 }

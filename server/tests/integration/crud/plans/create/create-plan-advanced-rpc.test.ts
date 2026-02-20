@@ -5,7 +5,7 @@ import {
 	ApiVersion,
 	BillingInterval,
 	BillingMethod,
-	type CreatePlanParamsInput,
+	type CreatePlanParamsV2Input,
 	ProductItemInterval,
 	ResetInterval,
 	TierInfinite,
@@ -28,8 +28,8 @@ test.concurrent(`${chalk.yellowBright("rpc create: metered feature with monthly 
 		await autumnRpc.plans.delete(productId, { allVersions: true });
 	} catch (_error) {}
 
-	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: productId,
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: productId,
 		name: "RPC Metered Monthly",
 		group,
 		auto_enable: false,
@@ -57,8 +57,8 @@ test.concurrent(`${chalk.yellowBright("rpc create: tiered usage pricing")}`, asy
 		await autumnRpc.plans.delete(productId, { allVersions: true });
 	} catch (_error) {}
 
-	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: productId,
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: productId,
 		name: "RPC Tiered Pricing",
 		group,
 		auto_enable: false,
@@ -96,8 +96,8 @@ test.concurrent(`${chalk.yellowBright("rpc create: validation rejects reset/pric
 
 	let err: { code?: string } | null = null;
 	try {
-		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-			id: productId,
+		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+			plan_id: productId,
 			name: "RPC Invalid Intervals",
 			group,
 			auto_enable: false,
