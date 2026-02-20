@@ -44,65 +44,31 @@ class PreviewUpdateGlobals(BaseModel):
 
 
 class PreviewUpdateFeatureQuantityTypedDict(TypedDict):
+    r"""Quantity configuration for a prepaid feature."""
+
     feature_id: str
+    r"""The ID of the feature to set quantity for."""
     quantity: NotRequired[float]
+    r"""The quantity of the feature."""
     adjustable: NotRequired[bool]
+    r"""Whether the customer can adjust the quantity."""
 
 
 class PreviewUpdateFeatureQuantity(BaseModel):
+    r"""Quantity configuration for a prepaid feature."""
+
     feature_id: str
+    r"""The ID of the feature to set quantity for."""
 
     quantity: Optional[float] = None
+    r"""The quantity of the feature."""
 
     adjustable: Optional[bool] = None
+    r"""Whether the customer can adjust the quantity."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["quantity", "adjustable"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-PreviewUpdateDurationType = Literal[
-    "day",
-    "month",
-    "year",
-]
-r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-
-class PreviewUpdateFreeTrialTypedDict(TypedDict):
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[PreviewUpdateDurationType]
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-    card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-
-
-class PreviewUpdateFreeTrial(BaseModel):
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-
-    duration_type: Optional[PreviewUpdateDurationType] = "month"
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required"])
         serialized = handler(self)
         m = {}
 
@@ -128,7 +94,9 @@ PreviewUpdatePriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class PreviewUpdatePriceTypedDict(TypedDict):
+class PreviewUpdateBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
     interval: PreviewUpdatePriceInterval
@@ -137,7 +105,9 @@ class PreviewUpdatePriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
-class PreviewUpdatePrice(BaseModel):
+class PreviewUpdateBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
 
@@ -248,7 +218,7 @@ PreviewUpdateBillingMethod = Literal[
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class PreviewUpdateItemPriceTypedDict(TypedDict):
+class PreviewUpdatePriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: PreviewUpdateItemPriceInterval
@@ -267,7 +237,7 @@ class PreviewUpdateItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
-class PreviewUpdateItemPrice(BaseModel):
+class PreviewUpdatePrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: PreviewUpdateItemPriceInterval
@@ -395,7 +365,9 @@ class PreviewUpdateRollover(BaseModel):
         return m
 
 
-class PreviewUpdateItemTypedDict(TypedDict):
+class PreviewUpdatePlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
     included: NotRequired[float]
@@ -404,7 +376,7 @@ class PreviewUpdateItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     reset: NotRequired[PreviewUpdateResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[PreviewUpdateItemPriceTypedDict]
+    price: NotRequired[PreviewUpdatePriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[PreviewUpdateProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
@@ -412,7 +384,9 @@ class PreviewUpdateItemTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class PreviewUpdateItem(BaseModel):
+class PreviewUpdatePlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
 
@@ -425,7 +399,7 @@ class PreviewUpdateItem(BaseModel):
     reset: Optional[PreviewUpdateReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[PreviewUpdateItemPrice] = None
+    price: Optional[PreviewUpdatePrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     proration: Optional[PreviewUpdateProration] = None
@@ -453,24 +427,81 @@ class PreviewUpdateItem(BaseModel):
         return m
 
 
-class PreviewUpdateCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+PreviewUpdateDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    price: NotRequired[Nullable[PreviewUpdatePriceTypedDict]]
-    items: NotRequired[List[PreviewUpdateItemTypedDict]]
+
+class PreviewUpdateFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[PreviewUpdateDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
 
-class PreviewUpdateCustomize(BaseModel):
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+class PreviewUpdateFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
 
-    price: OptionalNullable[PreviewUpdatePrice] = UNSET
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
 
-    items: Optional[List[PreviewUpdateItem]] = None
+    duration_type: Optional[PreviewUpdateDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price", "items"])
-        nullable_fields = set(["price"])
+        optional_fields = set(["duration_type", "card_required"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+
+    price: NotRequired[Nullable[PreviewUpdateBasePriceTypedDict]]
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+    items: NotRequired[List[PreviewUpdatePlanItemTypedDict]]
+    r"""Override the items in the plan."""
+    free_trial: NotRequired[Nullable[PreviewUpdateFreeTrialParamsTypedDict]]
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+
+class PreviewUpdateCustomize(BaseModel):
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+
+    price: OptionalNullable[PreviewUpdateBasePrice] = UNSET
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+
+    items: Optional[List[PreviewUpdatePlanItem]] = None
+    r"""Override the items in the plan."""
+
+    free_trial: OptionalNullable[PreviewUpdateFreeTrialParams] = UNSET
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "items", "free_trial"])
+        nullable_fields = set(["price", "free_trial"])
         serialized = handler(self)
         m = {}
 
@@ -533,11 +564,11 @@ class PreviewUpdateInvoiceMode(BaseModel):
         return m
 
 
-PreviewUpdateBillingBehavior = Literal[
+PreviewUpdateProrationBehavior = Literal[
     "prorate_immediately",
     "none",
 ]
-r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
 PreviewUpdateCancelAction = Literal[
@@ -559,14 +590,12 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
-    free_trial: NotRequired[Nullable[PreviewUpdateFreeTrialTypedDict]]
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
     customize: NotRequired[PreviewUpdateCustomizeTypedDict]
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
     invoice_mode: NotRequired[PreviewUpdateInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
-    billing_behavior: NotRequired[PreviewUpdateBillingBehavior]
-    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+    proration_behavior: NotRequired[PreviewUpdateProrationBehavior]
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
@@ -587,17 +616,14 @@ class PreviewUpdateParams(BaseModel):
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
-    free_trial: OptionalNullable[PreviewUpdateFreeTrial] = UNSET
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-
     customize: Optional[PreviewUpdateCustomize] = None
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
 
     invoice_mode: Optional[PreviewUpdateInvoiceMode] = None
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
-    billing_behavior: Optional[PreviewUpdateBillingBehavior] = None
-    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+    proration_behavior: Optional[PreviewUpdateProrationBehavior] = None
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
     cancel_action: Optional[PreviewUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
@@ -609,31 +635,21 @@ class PreviewUpdateParams(BaseModel):
                 "entity_id",
                 "feature_quantities",
                 "version",
-                "free_trial",
                 "customize",
                 "invoice_mode",
-                "billing_behavior",
+                "proration_behavior",
                 "cancel_action",
             ]
         )
-        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m

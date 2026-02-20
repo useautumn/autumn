@@ -52,10 +52,9 @@ import { Result } from "../types/fp.js";
  * @param entityId - The ID of the entity to attach the plan to. (optional)
  * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
  * @param version - The version of the plan to attach. (optional)
- * @param freeTrial - Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. (optional)
- * @param customize - Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both. (optional)
+ * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
- * @param billingBehavior - How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle. (optional)
+ * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
  * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).

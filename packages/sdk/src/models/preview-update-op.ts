@@ -15,40 +15,22 @@ export type PreviewUpdateGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Quantity configuration for a prepaid feature.
+ */
 export type PreviewUpdateFeatureQuantity = {
+  /**
+   * The ID of the feature to set quantity for.
+   */
   featureId: string;
+  /**
+   * The quantity of the feature.
+   */
   quantity?: number | undefined;
+  /**
+   * Whether the customer can adjust the quantity.
+   */
   adjustable?: boolean | undefined;
-};
-
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const PreviewUpdateDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type PreviewUpdateDurationType = ClosedEnum<
-  typeof PreviewUpdateDurationType
->;
-
-export type PreviewUpdateFreeTrial = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType?: PreviewUpdateDurationType | undefined;
-  /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
-   */
-  cardRequired?: boolean | undefined;
 };
 
 /**
@@ -69,7 +51,10 @@ export type PreviewUpdatePriceInterval = ClosedEnum<
   typeof PreviewUpdatePriceInterval
 >;
 
-export type PreviewUpdatePrice = {
+/**
+ * Base price configuration for a plan.
+ */
+export type PreviewUpdateBasePrice = {
   /**
    * Base price amount for the plan.
    */
@@ -161,7 +146,7 @@ export type PreviewUpdateBillingMethod = ClosedEnum<
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PreviewUpdateItemPrice = {
+export type PreviewUpdatePrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -271,7 +256,10 @@ export type PreviewUpdateRollover = {
   expiryDurationLength?: number | undefined;
 };
 
-export type PreviewUpdateItem = {
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type PreviewUpdatePlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -291,7 +279,7 @@ export type PreviewUpdateItem = {
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PreviewUpdateItemPrice | undefined;
+  price?: PreviewUpdatePrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
@@ -303,11 +291,54 @@ export type PreviewUpdateItem = {
 };
 
 /**
- * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const PreviewUpdateDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type PreviewUpdateDurationType = ClosedEnum<
+  typeof PreviewUpdateDurationType
+>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type PreviewUpdateFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: PreviewUpdateDurationType | undefined;
+  /**
+   * If true, payment method required to start trial. Customer is charged after trial ends.
+   */
+  cardRequired?: boolean | undefined;
+};
+
+/**
+ * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type PreviewUpdateCustomize = {
-  price?: PreviewUpdatePrice | null | undefined;
-  items?: Array<PreviewUpdateItem> | undefined;
+  /**
+   * Override the base price of the plan. Pass null to remove the base price.
+   */
+  price?: PreviewUpdateBasePrice | null | undefined;
+  /**
+   * Override the items in the plan.
+   */
+  items?: Array<PreviewUpdatePlanItem> | undefined;
+  /**
+   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
+   */
+  freeTrial?: PreviewUpdateFreeTrialParams | null | undefined;
 };
 
 /**
@@ -329,17 +360,17 @@ export type PreviewUpdateInvoiceMode = {
 };
 
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export const PreviewUpdateBillingBehavior = {
+export const PreviewUpdateProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export type PreviewUpdateBillingBehavior = ClosedEnum<
-  typeof PreviewUpdateBillingBehavior
+export type PreviewUpdateProrationBehavior = ClosedEnum<
+  typeof PreviewUpdateProrationBehavior
 >;
 
 /**
@@ -379,11 +410,7 @@ export type PreviewUpdateParams = {
    */
   version?: number | undefined;
   /**
-   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
-   */
-  freeTrial?: PreviewUpdateFreeTrial | null | undefined;
-  /**
-   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   * Customize the plan to attach. Can override the price, items, free trial, or a combination.
    */
   customize?: PreviewUpdateCustomize | undefined;
   /**
@@ -391,9 +418,9 @@ export type PreviewUpdateParams = {
    */
   invoiceMode?: PreviewUpdateInvoiceMode | undefined;
   /**
-   * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
-  billingBehavior?: PreviewUpdateBillingBehavior | undefined;
+  prorationBehavior?: PreviewUpdateProrationBehavior | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -501,60 +528,21 @@ export function previewUpdateFeatureQuantityToJSON(
 }
 
 /** @internal */
-export const PreviewUpdateDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateDurationType
-> = z.enum(PreviewUpdateDurationType);
-
-/** @internal */
-export type PreviewUpdateFreeTrial$Outbound = {
-  duration_length: number;
-  duration_type: string;
-  card_required: boolean;
-};
-
-/** @internal */
-export const PreviewUpdateFreeTrial$outboundSchema: z.ZodMiniType<
-  PreviewUpdateFreeTrial$Outbound,
-  PreviewUpdateFreeTrial
-> = z.pipe(
-  z.object({
-    durationLength: z.number(),
-    durationType: z._default(PreviewUpdateDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      durationLength: "duration_length",
-      durationType: "duration_type",
-      cardRequired: "card_required",
-    });
-  }),
-);
-
-export function previewUpdateFreeTrialToJSON(
-  previewUpdateFreeTrial: PreviewUpdateFreeTrial,
-): string {
-  return JSON.stringify(
-    PreviewUpdateFreeTrial$outboundSchema.parse(previewUpdateFreeTrial),
-  );
-}
-
-/** @internal */
 export const PreviewUpdatePriceInterval$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdatePriceInterval
 > = z.enum(PreviewUpdatePriceInterval);
 
 /** @internal */
-export type PreviewUpdatePrice$Outbound = {
+export type PreviewUpdateBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
-  PreviewUpdatePrice$Outbound,
-  PreviewUpdatePrice
+export const PreviewUpdateBasePrice$outboundSchema: z.ZodMiniType<
+  PreviewUpdateBasePrice$Outbound,
+  PreviewUpdateBasePrice
 > = z.pipe(
   z.object({
     amount: z.number(),
@@ -568,11 +556,11 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdatePriceToJSON(
-  previewUpdatePrice: PreviewUpdatePrice,
+export function previewUpdateBasePriceToJSON(
+  previewUpdateBasePrice: PreviewUpdateBasePrice,
 ): string {
   return JSON.stringify(
-    PreviewUpdatePrice$outboundSchema.parse(previewUpdatePrice),
+    PreviewUpdateBasePrice$outboundSchema.parse(previewUpdateBasePrice),
   );
 }
 
@@ -660,7 +648,7 @@ export const PreviewUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateBillingMethod);
 
 /** @internal */
-export type PreviewUpdateItemPrice$Outbound = {
+export type PreviewUpdatePrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewUpdateTier$Outbound> | undefined;
   interval: string;
@@ -671,9 +659,9 @@ export type PreviewUpdateItemPrice$Outbound = {
 };
 
 /** @internal */
-export const PreviewUpdateItemPrice$outboundSchema: z.ZodMiniType<
-  PreviewUpdateItemPrice$Outbound,
-  PreviewUpdateItemPrice
+export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
+  PreviewUpdatePrice$Outbound,
+  PreviewUpdatePrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
@@ -694,11 +682,11 @@ export const PreviewUpdateItemPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateItemPriceToJSON(
-  previewUpdateItemPrice: PreviewUpdateItemPrice,
+export function previewUpdatePriceToJSON(
+  previewUpdatePrice: PreviewUpdatePrice,
 ): string {
   return JSON.stringify(
-    PreviewUpdateItemPrice$outboundSchema.parse(previewUpdateItemPrice),
+    PreviewUpdatePrice$outboundSchema.parse(previewUpdatePrice),
   );
 }
 
@@ -782,27 +770,27 @@ export function previewUpdateRolloverToJSON(
 }
 
 /** @internal */
-export type PreviewUpdateItem$Outbound = {
+export type PreviewUpdatePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: PreviewUpdateReset$Outbound | undefined;
-  price?: PreviewUpdateItemPrice$Outbound | undefined;
+  price?: PreviewUpdatePrice$Outbound | undefined;
   proration?: PreviewUpdateProration$Outbound | undefined;
   rollover?: PreviewUpdateRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const PreviewUpdateItem$outboundSchema: z.ZodMiniType<
-  PreviewUpdateItem$Outbound,
-  PreviewUpdateItem
+export const PreviewUpdatePlanItem$outboundSchema: z.ZodMiniType<
+  PreviewUpdatePlanItem$Outbound,
+  PreviewUpdatePlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => PreviewUpdateReset$outboundSchema)),
-    price: z.optional(z.lazy(() => PreviewUpdateItemPrice$outboundSchema)),
+    price: z.optional(z.lazy(() => PreviewUpdatePrice$outboundSchema)),
     proration: z.optional(z.lazy(() => PreviewUpdateProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => PreviewUpdateRollover$outboundSchema)),
   }),
@@ -813,30 +801,84 @@ export const PreviewUpdateItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateItemToJSON(
-  previewUpdateItem: PreviewUpdateItem,
+export function previewUpdatePlanItemToJSON(
+  previewUpdatePlanItem: PreviewUpdatePlanItem,
 ): string {
   return JSON.stringify(
-    PreviewUpdateItem$outboundSchema.parse(previewUpdateItem),
+    PreviewUpdatePlanItem$outboundSchema.parse(previewUpdatePlanItem),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateDurationType
+> = z.enum(PreviewUpdateDurationType);
+
+/** @internal */
+export type PreviewUpdateFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+};
+
+/** @internal */
+export const PreviewUpdateFreeTrialParams$outboundSchema: z.ZodMiniType<
+  PreviewUpdateFreeTrialParams$Outbound,
+  PreviewUpdateFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(PreviewUpdateDurationType$outboundSchema, "month"),
+    cardRequired: z._default(z.boolean(), true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+    });
+  }),
+);
+
+export function previewUpdateFreeTrialParamsToJSON(
+  previewUpdateFreeTrialParams: PreviewUpdateFreeTrialParams,
+): string {
+  return JSON.stringify(
+    PreviewUpdateFreeTrialParams$outboundSchema.parse(
+      previewUpdateFreeTrialParams,
+    ),
   );
 }
 
 /** @internal */
 export type PreviewUpdateCustomize$Outbound = {
-  price?: PreviewUpdatePrice$Outbound | null | undefined;
-  items?: Array<PreviewUpdateItem$Outbound> | undefined;
+  price?: PreviewUpdateBasePrice$Outbound | null | undefined;
+  items?: Array<PreviewUpdatePlanItem$Outbound> | undefined;
+  free_trial?: PreviewUpdateFreeTrialParams$Outbound | null | undefined;
 };
 
 /** @internal */
 export const PreviewUpdateCustomize$outboundSchema: z.ZodMiniType<
   PreviewUpdateCustomize$Outbound,
   PreviewUpdateCustomize
-> = z.object({
-  price: z.optional(
-    z.nullable(z.lazy(() => PreviewUpdatePrice$outboundSchema)),
-  ),
-  items: z.optional(z.array(z.lazy(() => PreviewUpdateItem$outboundSchema))),
-});
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => PreviewUpdateBasePrice$outboundSchema)),
+    ),
+    items: z.optional(
+      z.array(z.lazy(() => PreviewUpdatePlanItem$outboundSchema)),
+    ),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => PreviewUpdateFreeTrialParams$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      freeTrial: "free_trial",
+    });
+  }),
+);
 
 export function previewUpdateCustomizeToJSON(
   previewUpdateCustomize: PreviewUpdateCustomize,
@@ -879,9 +921,9 @@ export function previewUpdateInvoiceModeToJSON(
 }
 
 /** @internal */
-export const PreviewUpdateBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateBillingBehavior
-> = z.enum(PreviewUpdateBillingBehavior);
+export const PreviewUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateProrationBehavior
+> = z.enum(PreviewUpdateProrationBehavior);
 
 /** @internal */
 export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
@@ -895,10 +937,9 @@ export type PreviewUpdateParams$Outbound = {
   plan_id: string;
   feature_quantities?: Array<PreviewUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
-  free_trial?: PreviewUpdateFreeTrial$Outbound | null | undefined;
   customize?: PreviewUpdateCustomize$Outbound | undefined;
   invoice_mode?: PreviewUpdateInvoiceMode$Outbound | undefined;
-  billing_behavior?: string | undefined;
+  proration_behavior?: string | undefined;
   cancel_action?: string | undefined;
 };
 
@@ -915,14 +956,13 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => PreviewUpdateFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
-    freeTrial: z.optional(
-      z.nullable(z.lazy(() => PreviewUpdateFreeTrial$outboundSchema)),
-    ),
     customize: z.optional(z.lazy(() => PreviewUpdateCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => PreviewUpdateInvoiceMode$outboundSchema),
     ),
-    billingBehavior: z.optional(PreviewUpdateBillingBehavior$outboundSchema),
+    prorationBehavior: z.optional(
+      PreviewUpdateProrationBehavior$outboundSchema,
+    ),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
   }),
   z.transform((v) => {
@@ -931,9 +971,8 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
-      freeTrial: "free_trial",
       invoiceMode: "invoice_mode",
-      billingBehavior: "billing_behavior",
+      prorationBehavior: "proration_behavior",
       cancelAction: "cancel_action",
     });
   }),
