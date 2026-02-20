@@ -46,60 +46,46 @@ Enable the trial with the normal plan enablement flow. Only customers that have 
 ```tsx React
 import { useCustomer } from "autumn-js/react";
 
-const { checkout } = useCustomer();
+const { attach } = useCustomer();
 
-<Button onClick={() => checkout({ productId: "pro" })} />;
+<Button onClick={() => attach({ planId: "pro" })}>
+  Start Trial
+</Button>;
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
 });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
-});
-
-if (data.url) {
-  // Redirect user to Stripe checkout URL
-} else {
-  // Show purchase preview to user
-}
+// Redirect to Stripe Checkout for card collection
+redirect(response.paymentUrl);
 ```
 
 ```python Python
-import asyncio
-import os
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    response = await autumn.checkout(
-        customer_id="user_or_org_id_from_auth",
-        product_id="pro",
-    )
-    
-    if response.url:
-        # Redirect user to Stripe checkout URL
-        pass
-    else:
-        # Show purchase preview to user
-        pass
-
-asyncio.run(main())
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+# Redirect to response.payment_url
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
-  -H "Authorization: Bearer am_sk_42424242" \
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_id": "pro"
+    "customer_id": "user_123",
+    "plan_id": "pro"
   }'
 ```
 
@@ -112,60 +98,45 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 ```tsx React
 import { useCustomer } from "autumn-js/react";
 
-const { checkout } = useCustomer();
+const { attach } = useCustomer();
 
-<Button onClick={() => checkout({ productIds: ["pro", "trial_fee"] })} />;
+<Button onClick={() => attach({ planIds: ["pro", "trial_fee"] })}>
+  Start Trial
+</Button>;
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planIds: ["pro", "trial_fee"],
 });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_or_org_id_from_auth",
-  product_ids: ["pro", "trial_fee"],
-});
-
-if (data.url) {
-  // Redirect user to Stripe checkout URL
-} else {
-  // Show purchase preview to user
-}
+redirect(response.paymentUrl);
 ```
 
 ```python Python
-import asyncio
-import os
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    response = await autumn.checkout(
-        customer_id="user_or_org_id_from_auth",
-        product_ids=["pro", "trial_fee"],
-    )
-    
-    if response.url:
-        # Redirect user to Stripe checkout URL
-        pass
-    else:
-        # Show purchase preview to user
-        pass
-
-asyncio.run(main())
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_ids=["pro", "trial_fee"],
+)
+# Redirect to response.payment_url
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
-  -H "Authorization: Bearer am_sk_42424242" \
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_ids": ["pro", "trial_fee"]
+    "customer_id": "user_123",
+    "plan_ids": ["pro", "trial_fee"]
   }'
 ```
 
@@ -178,7 +149,7 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 </Accordion>
 
 <Tip>
-You may want to block certain users from accessing the trial. You can pass in `free_trial: false` into the checkout/attach request to disable the trial.
+You may want to block certain users from accessing the trial. You can pass in `freeTrial: false` into the attach request to disable the trial.
 </Tip>
 
 After the trial ends, the customer will be automatically charged the full price of the plan. 
@@ -192,43 +163,43 @@ You can end the trial early by cancelling the plan immediately, and attaching it
 ```tsx React
 import { useCustomer } from "autumn-js/react";
 
-const { cancel, attach } = useCustomer();
+const { updateSubscription, attach } = useCustomer();
 
 const handleEarlyEnd = async () => {
-    await cancel({
-        productId: "pro",
-        cancelImmediately: true,
-    });
-    await attach({
-        productId: "pro",
-        // give the customer a discount for upgrading early
-        reward: "early_end",
-    });
+  // Cancel the trial immediately
+  await updateSubscription({
+    planId: "pro",
+    cancelAction: "cancel_immediately",
+  });
+  
+  // Attach the plan again with a reward
+  await attach({
+    planId: "pro",
+    reward: "early_end",
+  });
     
-    console.log("Trial ended early");
+  console.log("Trial ended early");
 };
 
-<Button onClick={handleEarlyEnd} />;
+<Button onClick={handleEarlyEnd}>Upgrade Now</Button>;
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
 // Cancel the trial immediately
-await autumn.cancel({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
-  cancel_immediately: true,
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_immediately",
 });
 
 // Attach the plan again with a reward
-const { data } = await autumn.attach({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
   reward: "early_end",
 });
 
@@ -236,50 +207,45 @@ console.log("Trial ended early");
 ```
 
 ```python Python
-import asyncio
-import os
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    # Cancel the trial immediately
-    await autumn.cancel(
-        customer_id="user_or_org_id_from_auth",
-        product_id="pro",
-        cancel_immediately=True,
-    )
-    
-    # Attach the plan again with a reward
-    response = await autumn.attach(
-        customer_id="user_or_org_id_from_auth",
-        product_id="pro",
-        reward="early_end",
-    )
-    
-    print("Trial ended early")
+# Cancel the trial immediately
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_immediately",
+)
 
-asyncio.run(main())
+# Attach the plan again with a reward
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    reward="early_end",
+)
+
+print("Trial ended early")
 ```
 
 ```bash cURL
 # Cancel the trial immediately
-curl -X POST "https://api.useautumn.com/v1/cancel" \
-  -H "Authorization: Bearer am_sk_42424242" \
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_id": "pro",
-    "cancel_immediately": true
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_immediately"
   }'
 
 # Attach the plan again with a reward
 curl -X POST "https://api.useautumn.com/v1/attach" \
-  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_id": "pro",
+    "customer_id": "user_123",
+    "plan_id": "pro",
     "reward": "early_end"
   }'
 ```
@@ -297,51 +263,52 @@ You can uncancel the trial plan by attaching it again.
 ```tsx React
 import { useCustomer } from "autumn-js/react";
 
-const { cancel } = useCustomer();
+const { updateSubscription } = useCustomer();
 
-<Button onClick={() => cancel({ productId: "pro" })} />;
+<Button onClick={() => updateSubscription({ 
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle" 
+})}>
+  Cancel Trial
+</Button>;
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const { data } = await autumn.cancel({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
 });
 
 console.log("Trial cancelled");
 ```
 
 ```python Python
-import asyncio
-import os
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('am_sk_42424242')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    response = await autumn.cancel(
-        customer_id="user_or_org_id_from_auth",
-        product_id="pro",
-    )
-    
-    print("Trial cancelled")
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
 
-asyncio.run(main())
+print("Trial cancelled")
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/cancel" \
-  -H "Authorization: Bearer am_sk_42424242" \
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "user_or_org_id_from_auth",
-    "product_id": "pro"
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
   }'
 ```
 

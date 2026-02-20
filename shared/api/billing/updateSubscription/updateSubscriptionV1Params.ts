@@ -15,7 +15,17 @@ export const UpdateSubscriptionV1ParamsSchema =
 		customer_product_id: z.string().optional().meta({
 			internal: true,
 		}),
-	});
+	}).refine(
+		(data) =>
+			data.feature_quantities !== undefined ||
+			data.version !== undefined ||
+			data.customize !== undefined ||
+			data.cancel_action !== undefined,
+		{
+			message:
+				"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",
+		},
+	);
 
 export type UpdateSubscriptionV1Params = z.infer<
 	typeof UpdateSubscriptionV1ParamsSchema

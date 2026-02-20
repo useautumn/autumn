@@ -14,7 +14,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description: "URL to redirect to after successful checkout.",
 	}),
 
-	redirect_mode: RedirectModeSchema.default("always").meta({
+	redirect_mode: RedirectModeSchema.default("if_required").meta({
 		internal: true,
 		description:
 			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",

@@ -14,8 +14,7 @@ The customer details page shows:
 
 ## Enabling a Product
 
-You can enable a product for a customer either via the API using the `attach` method or via the dashboard.
-
+You can enable a product for a customer either via the API using the `billing.attach` method or via the dashboard.
 
 If you're enabling a product for a customer that already has a product, Autumn will handle the upgrade or downgrade between the two products.
 
@@ -35,7 +34,7 @@ You can directly edit a customer's feature balances via the dashboard, to give t
 1. Navigate to the Customer details page
 2. Under "Available Features", click on the feature you want to edit the balance for.
 3. In the popup, enter the new balance value:
-   - If you're giving them more allowance (`included_usage`) of a feature, enter a **positive** number
+   - If you're giving them more allowance (`granted`) of a feature, enter a **positive** number
    - If you're changing how much usage they'll be charged for, enter a **negative** number
 4. Optionally, set a new usage reset date for the feature
 5. Click "Update"
@@ -78,43 +77,40 @@ You can update a customer's basic information through either the dashboard or AP
 You can also update a customer's properties via the API, useful for when a customer changes their details in your application.
 
 <CodeGroup>
-```shell cURL
-curl -X PUT https://api.useautumn.com/customers/{customer_id} \
-  -H "Authorization: Bearer {api_key}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Mr New Name", 
-    "email": "newemail@example.com", 
-    "fingerprint": "new-device-id"
-    }'
-```
 
-```javascript TypeScript
-import { Autumn as autumn } from "autumn-js";
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
 await autumn.customers.update({
-  id: "customer_id",
+  customerId: "user_123",
   name: "Mr New Name",
   email: "newemail@example.com",
-  fingerprint: "new-device-id",
 });
 ```
 
 ```python Python
-import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
-autumn = Autumn('secret_key')
+autumn = Autumn("am_sk_test_1234")
 
-async def main():
-    await autumn.customers.update(
-        id="customer_id".
-        name="Mr New Name",
-        email="newemail@example.com",
-        fingerprint="new-device-id"
-    )
+await autumn.customers.update(
+    customer_id="user_123",
+    name="Mr New Name",
+    email="newemail@example.com",
+)
+```
 
-asyncio.run(main())
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "name": "Mr New Name",
+    "email": "newemail@example.com"
+  }'
 ```
 
 </CodeGroup>
