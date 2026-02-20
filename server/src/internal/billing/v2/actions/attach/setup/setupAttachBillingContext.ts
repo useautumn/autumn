@@ -1,10 +1,8 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	BillingContextOverride,
-} from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type BillingContextOverride,
 	BillingVersion,
 	CusProductStatus,
 	cusProductToPrices,
@@ -12,6 +10,7 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 	notNullish,
+	orgToReturnUrl,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -224,5 +223,7 @@ export const setupAttachBillingContext = async ({
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
+		successUrl:
+			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 	};
 };
