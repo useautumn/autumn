@@ -72,6 +72,12 @@ jobs:
           node-version: '22.14.0'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Ensure npm >= 11.5.1 for OIDC trusted publishing
+        run: |
+          echo "Current npm version: $(npm --version)"
+          npm install -g npm@latest
+          echo "Updated npm version: $(npm --version)"
+      
       - name: Install dependencies
         run: bun install
       
