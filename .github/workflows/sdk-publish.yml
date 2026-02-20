@@ -205,7 +205,8 @@ jobs:
           cp -r ${{ env.PACKAGE_DIR }}/dist /tmp/js-test-publish/
           cp ${{ env.PACKAGE_DIR }}/package.json /tmp/js-test-publish/
           cd /tmp/js-test-publish
-          jq --arg name "${{ env.TEST_PACKAGE_NAME }}" '.name = $name' package.json > package.json.tmp
+          # Update package name and remove prepublishOnly (already built)
+          jq --arg name "${{ env.TEST_PACKAGE_NAME }}" '.name = $name | del(.scripts.prepublishOnly)' package.json > package.json.tmp
           mv package.json.tmp package.json
           echo "Package name in package.json:"
           grep '"name"' package.json
