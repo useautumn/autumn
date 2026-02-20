@@ -8,6 +8,7 @@ export * from "./convertAmountUtils.js";
 export * from "./convertPriceUtils.js";
 export * from "./findPrice/findPriceByFeatureId.js";
 export * from "./formatPriceUtils.js";
+export * from "./getPriceForOverage.js";
 
 export const priceUtils = {
 	convert: {
