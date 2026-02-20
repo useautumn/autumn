@@ -3,11 +3,11 @@ import {
 	ErrCode,
 	InternalError,
 	RecaseError,
+	RedeemReferralCodeParamsSchema,
 	RewardCategory,
 	type RewardRedemption,
 	RewardTriggerEvent,
 } from "@autumn/shared";
-import { z } from "zod/v4";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
@@ -19,10 +19,7 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
 export const handleRedeemReferral = createRoute({
-	body: z.object({
-		code: z.string(),
-		customer_id: z.string(),
-	}),
+	body: RedeemReferralCodeParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;

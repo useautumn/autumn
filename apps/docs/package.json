@@ -1,0 +1,20 @@
+{
+	"name": "@autumn/docs",
+	"private": true,
+	"scripts": {
+		"pull": "bun scripts/pull.ts",
+		"dev": "cd mintlify && mint dev --port 3003",
+		"build": "cd mintlify && mint build",
+		"start": "cd mintlify && mint dev"
+	},
+	"dependencies": {
+		"mintlify": "^4.2.272",
+		"yaml": "^2.8.1"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.1"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

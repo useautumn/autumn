@@ -1,1 +1,1 @@
-export { checkoutToUrl } from "./checkoutToUrl.js";
+export { checkoutToUrl } from "./checkoutToUrl";

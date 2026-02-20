@@ -95,6 +95,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checko
 			product_id: premium.id,
 			invoice: true,
 			enable_product_immediately: true,
+			finalize_invoice: false,
 		});
 
 		const customer = await autumn.customers.get(customerId);

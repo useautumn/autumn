@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import {
-	CusExpand,
+	CustomerExpand,
 	type LimitedItem,
 	OnDecrease,
 	OnIncrease,
@@ -441,7 +441,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity4 - per entity 
 	usage += newEntities.length;
 
 	const customer = await autumnV1.customers.get(customerId, {
-		expand: [CusExpand.Entities],
+		expand: [CustomerExpand.Entities],
 	});
 
 	const res = await autumnV1.check({

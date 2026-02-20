@@ -7,7 +7,7 @@ import {
 	type Organization,
 	ProductItemInterval,
 } from "@autumn/shared";
-import { resetAndGetCusEnt } from "@tests/advanced/rollovers/rolloverTestUtils.js";
+import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { addPrefixToProducts } from "@tests/attach/utils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";

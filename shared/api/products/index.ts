@@ -1,19 +1,21 @@
-import { planParamsV1ToProductV2 } from "@api/products/crud/mappers/planParamsV1ToProductV2.js";
-import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems.js";
+import { planParamsV1ToProductV2 } from "@api/products/crud/mappers/planParamsV1ToProductV2";
+import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
 
-export * from "./apiFreeTrial.js";
-export * from "./apiPlanV1.js";
-export * from "./components/apiFreeTrialV2.js";
-export * from "./components/billingMethod.js";
-export * from "./components/display.js";
-export * from "./crud/index.js";
-export * from "./items/index.js";
-export * from "./mappers/index.js";
-export * from "./planLegacyData.js";
-export * from "./previousVersions/apiPlanV0.js";
-export * from "./previousVersions/apiProduct.js";
-export * from "./productOpModels.js";
-export * from "./productsOpenApi.js";
+export * from "./apiFreeTrial";
+export * from "./apiPlanV1";
+export * from "./components/apiFreeTrialV2";
+export * from "./components/billingMethod";
+export * from "./components/display";
+export * from "./components/planExpand";
+export * from "./crud/index";
+export * from "./items/index";
+export * from "./mappers/index";
+export * from "./planLegacyData";
+export * from "./previousVersions/apiPlanV0";
+export * from "./previousVersions/apiProduct";
+export * from "./productOpModels";
+export * from "./productsOpenApi";
+
 // Note: V1.2_ProductChanges.js is NOT exported here to avoid circular deps
 // It's only imported directly by versionChangeRegistry.ts
 

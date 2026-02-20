@@ -1,15 +1,15 @@
-import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams.js";
-import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams";
+import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
+import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../../types/sharedContext.js";
-import { AttachParamsV0Schema } from "../attachParamsV0.js";
-import { AttachParamsV1Schema } from "../attachParamsV1.js";
+import type { SharedContext } from "../../../../types/sharedContext";
+import { AttachParamsV0Schema } from "../attachParamsV0";
+import { AttachParamsV1Schema } from "../attachParamsV1";
 
 export const V1_2_AttachParamsChange = defineVersionChange({
 	name: "V1.2 Attach Params Change",

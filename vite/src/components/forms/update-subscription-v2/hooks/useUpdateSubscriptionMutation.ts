@@ -45,7 +45,7 @@ export function useUpdateSubscriptionMutation({
 			}
 
 			const response = await axiosInstance.post(
-				"/v1/subscriptions/update",
+				"/v1/billing.update",
 				requestBody,
 			);
 			return { data: response.data, useInvoice };

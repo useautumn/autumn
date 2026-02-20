@@ -1,18 +1,18 @@
-import type { Customer } from "autumn-js";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expect } from "chai";
 
 export const expectTrialEndsAtCorrect = ({
 	cusBefore,
 	cusAfter,
 }: {
-	cusBefore: Customer;
-	cusAfter: Customer;
+	cusBefore: ApiCustomerV3;
+	cusAfter: ApiCustomerV3;
 }) => {
 	const productsBefore = cusBefore.products;
 	const productsAfter = cusAfter.products;
 
 	for (const productBefore of productsBefore) {
-		const trialEndsAtBefore = productBefore.trial_ends_at;
+		const trialEndsAtBefore = productBefore.current_period_end;
 
 		if (!trialEndsAtBefore) {
 			continue;
@@ -20,6 +20,6 @@ export const expectTrialEndsAtCorrect = ({
 
 		const productAfter = productsAfter.find((p) => p.id === productBefore.id);
 
-		expect(productAfter?.trial_ends_at).to.equal(trialEndsAtBefore);
+		expect(productAfter?.current_period_end).to.equal(trialEndsAtBefore);
 	}
 };

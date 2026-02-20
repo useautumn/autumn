@@ -16,7 +16,7 @@ Refactor `handleCreateCustomer` to:
 Three overlapping types with duplicated ID validation logic:
 - `CreateCustomerSchema` in `shared/models/cusModels/cusModels.ts`
 - `CustomerDataSchema` in `shared/api/common/customerData.ts`
-- `CreateCustomerParamsSchema` in `shared/api/customers/customerOpModels.ts`
+- `CreateCustomerParamsV0Schema` in `shared/api/customers/crud/createCustomerParams.ts`
 
 ### Solution
 
@@ -87,8 +87,8 @@ import { CustomerDataSchema, CustomerIdSchema } from "../common/customerData.js"
 
 // Remove duplicate customerId const, use CustomerIdSchema instead
 
-export const CreateCustomerParamsSchema = z.object({
-  id: CustomerIdSchema.nullable().meta({
+export const CreateCustomerParamsV0Schema = z.object({
+  id: CustomerIdSchema.optional().nullable().meta({
     description: "Your unique identifier for the customer",
   }),
   ...CustomerDataSchema.shape,

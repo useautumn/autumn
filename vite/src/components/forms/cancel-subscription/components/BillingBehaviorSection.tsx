@@ -53,10 +53,8 @@ export function BillingBehaviorSection() {
 
 							<div className="flex w-full items-center gap-4">
 								<PanelButton
-									isSelected={billingBehavior === "next_cycle_only"}
-									onClick={() =>
-										form.setFieldValue("billingBehavior", "next_cycle_only")
-									}
+									isSelected={billingBehavior === "none"}
+									onClick={() => form.setFieldValue("billingBehavior", "none")}
 									icon={<CalendarCheckIcon size={18} weight="duotone" />}
 								/>
 								<div className="flex-1">

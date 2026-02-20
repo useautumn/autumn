@@ -48,7 +48,7 @@ function createFilterConfig<T extends { object: string }>({
 const filterConfigs = [
 	createFilterConfig<ApiBalanceBreakdownV1>({
 		schema: ApiBalanceBreakdownV1Schema,
-		omitFields: ["overage", "expires_at", "object"],
+		omitFields: ["overage", "object"],
 	}),
 	createFilterConfig<ApiBalanceV1>({
 		schema: ApiBalanceV1Schema,

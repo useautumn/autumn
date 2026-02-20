@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { CusExpand } from "@autumn/shared";
+import { CustomerExpand } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -80,7 +80,11 @@ test.concurrent(`${chalk.yellowBright("create: with expand params")}`, async () 
 		name: customerId,
 		email: `${customerId}@example.com`,
 		withAutumnId: false,
-		expand: [CusExpand.Invoices, CusExpand.TrialsUsed, CusExpand.Entities],
+		expand: [
+			CustomerExpand.Invoices,
+			CustomerExpand.TrialsUsed,
+			CustomerExpand.Entities,
+		],
 	});
 
 	expect(data.invoices).toEqual([]);

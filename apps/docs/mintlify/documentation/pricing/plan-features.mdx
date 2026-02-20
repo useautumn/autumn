@@ -1,0 +1,79 @@
+---
+title: "Adding features to plans"
+description: "Configure what customers get access to when they purchase a plan"
+---
+
+When you add a feature to a plan, you define what customers on that plan can use, and how they should be charged for it.
+
+There are 2 types of plan features: 
+- **Included Features**: features provided at no additional cost, either as a granted usage limit or a boolean flag
+- **Priced Features**: features that are billed for, either as a prepaid quantity or a usage-based price. Priced features can also have an included amount.
+
+
+## Included Features
+
+#### Grant amount
+For metered features, you can set a grant amount. This is how much of the feature can be used before the user hits their limit. 
+
+When the plan is enabled for a customer, their balance for this feature will be set to the grant amount. It can either be a fixed amount, or "unlimited".
+
+Tracking usage will decrement the feature's balance, and once it's fully consumed, checking access will return `allowed: false`.
+
+#### Reset interval
+For metered features that are `consumable`, you can also set a reset interval. This is how often the feature's balance will be reset to the grant amount.
+
+Reset intervals can be: `no reset`, `hour`, `day`, `week`, `month`, `quarter`, `semi_annual`, or `year`. You can also customize the `interval count` to be a custom number of intervals between resets (eg, 4 hours).
+
+`no reset` can be used to grant one-time grants that never expire. This is commonly used for top-ups or one-time purchases.
+
+You cannot set a reset interval for `non-consumable` features (eg, seats).
+
+
+#### Advanced
+You can additionally configure the following properties when adding a `consumable` included feature:
+- **Reset existing usage when plan is enabled**: when the plan is enabled (eg on upgrade), their usage cycle will reset, and customer's balance will be reset to full grant amount. This is `true` by default.
+
+<Info>
+**Example**
+
+You have a free plan that allows users to send 10 messages per month. A user on this plan has used 3 messages so in the current month. Then, they upgrade to a pro plan that grants 100 messages per month.
+
+If `Reset existing usage when plan is enabled` is set to `true`, their balance will be reset to 100 messages. If it's set to `false`, the 3 messages used will be carried over, and their new balance will be 97 messages.
+
+</Info>
+
+- **Rollovers**: configure whether granted usage should rollover to the next cycle. You can configure rollover duration, and a maximum rollover cap. Rollover balances can be retrieved from the `balances` object.
+
+
+
+Features that are `non-consumable` have no advanced configuration options.
+
+
+## Priced Features
+
+Priced features can be used to model usage-based pricing, where the price of the product is variable and tied to how much of a feature a user consumes. This combines the configuration options of a feature with a price.
+
+#### Grant amount
+Priced features can also have an optional grant amount. This is how much of the feature can be used before being billed.
+
+Tracking usage for a feature will first decrement the grant amount. The price will then be applied to the remaining usage.
+
+#### Price
+A feature's price consists of:
+- **Price**: the price of the feature per billing units of usage, or tiered by usage
+- **Billing Units**: the packages of units that the price is defined for (eg, $5 for 1000 credits)
+- **Billing Interval**: how often the price is applied. This can be one-time, or recurring (eg, monthly, annually).
+
+#### Usage model
+When charging for a feature, you can choose between 2 methods:
+
+- **Usage-based**: charge for how much of the feature is used end of billing period
+- **Prepaid**: charge for a fixed quantity of the feature upfront, and draw from it as usage occurs.
+
+#### Advanced
+You can additionally configure the following properties when adding a priced feature:
+
+- **Max purchase limit**: the maximum quantity of the feature that can be purchased. Once this limit is reached, checking access will return `allowed: false`. It includes the grant amount, if it exists.
+- **Proration behavior**: for `non-consumable` features, you can choose whether to prorate the price when the quantity is increased or decreased. You can also choose whether to charge for that change immediately, or at the end of the billing period.
+
+For priced `consumable` features, you can also set the `reset existing usage when plan is enabled` and `rollovers` properties, in the same way as included features.

@@ -1,12 +1,12 @@
-import type { Customer } from "autumn-js";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expect } from "chai";
 
 export const expectResetAtCorrect = ({
 	cusBefore,
 	cusAfter,
 }: {
-	cusBefore: Customer;
-	cusAfter: Customer;
+	cusBefore: ApiCustomerV3;
+	cusAfter: ApiCustomerV3;
 }) => {
 	const featuresBefore = cusBefore.features;
 	const featuresAfter = cusAfter.features;

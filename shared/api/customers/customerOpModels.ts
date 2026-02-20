@@ -1,11 +1,9 @@
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../common/customerData.js";
-import { CustomerIdSchema } from "../common/customerId.js";
-import { queryStringArray } from "../common/queryHelpers.js";
+import { queryStringArray } from "../common/queryHelpers";
+import { CustomerExpandEnum } from "./components/customerExpand/customerExpand";
 
 export const GetCustomerQuerySchema = z.object({
-	expand: queryStringArray(z.enum(CusExpand)).optional(),
+	expand: queryStringArray(CustomerExpandEnum).optional(),
 
 	skip_cache: z.boolean().optional().meta({
 		internal: true,
@@ -15,21 +13,14 @@ export const GetCustomerQuerySchema = z.object({
 	}),
 });
 
-export const CreateCustomerQuerySchema = z.object({
-	expand: queryStringArray(z.enum(CusExpand)).optional(),
-	with_autumn_id: z.boolean().default(false).meta({
-		internal: true,
-	}),
-});
-
-// Update Customer Params (based on handleUpdateCustomer logic)
-export const UpdateCustomerParamsSchema = z
-	.object({
-		id: CustomerIdSchema.optional().meta({
-			description: "New unique identifier for the customer",
-		}),
-	})
-	.extend(CustomerDataSchema.shape);
+// // Update Customer Params (based on handleUpdateCustomer logic)
+// export const UpdateCustomerParamsSchema = z
+// 	.object({
+// 		id: CustomerIdSchema.optional().meta({
+// 			description: "New unique identifier for the customer",
+// 		}),
+// 	})
+// 	.extend(CustomerDataSchema.shape);
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
@@ -89,7 +80,6 @@ export const GetBillingPortalResponseSchema = z.object({
 	}),
 });
 
-export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
 
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;

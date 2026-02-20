@@ -223,7 +223,7 @@ These folders need detailed test planning before implementation. Use the prompt 
 
 **Key questions to answer:**
 - `"prorate_immediately"` — Default, charges prorated amount now
-- `"next_cycle_only"` — No immediate proration, changes apply next cycle
+- `"none"` — No immediate proration, changes apply next cycle
 - How does this interact with upgrades vs downgrades?
 - How does this interact with prepaid quantities?
 

@@ -1,6 +1,6 @@
 import {
 	AppEnv,
-	CusExpand,
+	CustomerExpand,
 	type FullProduct,
 	RecaseError,
 } from "@autumn/shared";
@@ -50,7 +50,7 @@ export const handleCreateResource = createRoute({
 			vercelInstallationId: integrationConfigurationId,
 			orgId,
 			env: env as AppEnv,
-			expand: [CusExpand.Entities],
+			expand: [CustomerExpand.Entities],
 		});
 
 		if (!customer) {

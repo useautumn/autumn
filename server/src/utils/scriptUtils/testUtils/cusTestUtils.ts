@@ -1,5 +1,5 @@
 import type { Organization } from "@autumn/shared";
-import { AppEnv } from "autumn-js";
+import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";

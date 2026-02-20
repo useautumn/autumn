@@ -1,0 +1,26 @@
+---
+title: "Update Connected Stripe Account"
+openapi: "platform POST /platform/organizations/stripe"
+---
+
+<Info>
+  Updates a platform organization's Stripe Connect configuration. Associates a Stripe account ID with the organization using your master Stripe credentials.
+</Info>
+
+## When to Use This Endpoint
+
+Use this endpoint when you want to manage Stripe accounts on behalf of your tenants using your own Stripe Connect credentials, rather than having them go through the OAuth flow.
+
+## Validation
+
+- Your organization must have the corresponding Stripe secret key connected (test/live)
+- The endpoint validates that your master Stripe account can access the provided account ID
+- If validation fails, you'll receive a descriptive error message
+
+<Note>
+  The `master_org_id` is automatically set to your organization ID. All Stripe operations for the tenant will use your master Stripe credentials with the tenant's account ID.
+</Note>
+
+<Warning>
+  At least one of `test_account_id` or `live_account_id` must be provided in the request.
+</Warning>

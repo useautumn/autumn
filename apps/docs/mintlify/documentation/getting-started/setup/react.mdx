@@ -1,0 +1,510 @@
+---
+title: "Using React hooks"
+description: "Implement your React + Node.js app's payments and pricing model"
+---
+import CreatePlans from '/snippets/create-plans.mdx';
+
+Autumn's client-side [hooks](/react/hooks/useCustomer) and [UI components](/react/components/pricing-table) allow you to handle billing directly from your frontend.
+
+<Info>
+  Client libraries are supported for React and Node.js apps. Please use our [Server-side SDK](/documentation/getting-started/setup/sdk) for other frameworks and languages.
+</Info>
+
+In this example we'll create the pricing for a premium AI chatbot. We're going to have:
+
+- A <Badge color="green">Free</Badge> plan that gives users 5 chat messages per month for free
+- A <Badge color="blue">Pro</Badge> plan that gives users 100 chat messages per month for $20 per month.
+
+<Steps>
+<Step>
+### Create your pricing plans
+
+Create a plan for each pricing tier that your app offers. In our example we'll create a "Free" and "Pro" plan, and assign them features.
+
+<CreatePlans />
+
+</Step>
+
+<Step>
+### Installation
+
+[Create an Autumn Secret key](https://app.useautumn.com/sandbox/dev?tab=api_keys), and paste it in your `.env` variables. Then, install the Autumn SDK.
+
+```bash .env
+AUTUMN_SECRET_KEY=am_sk_test_42424242...
+```
+
+<CodeGroup>
+
+```bash bun
+bun add autumn-js
+```
+
+```bash npm
+npm install autumn-js
+```
+
+```bash pnpm
+pnpm add autumn-js
+```
+
+```bash yarn
+yarn add autumn-js
+```
+
+</CodeGroup>
+
+<Note>
+  If you're using a separate backend and frontend, make sure to install the
+  library in both.
+</Note>
+
+</Step>
+
+<Step>
+### Add Endpoints Server-side
+
+Server-side, mount the Autumn handler. This will create endpoints in the `/api/autumn/*` path, which will be called by Autumn's frontend React hooks. These endpoints in turn call Autumn's API.
+
+The handler takes in an `identify` function where you should pass in the user ID or organization ID from your auth provider.
+
+<CodeGroup>
+
+```typescript Next.js
+// app/api/autumn/[...all]/route.ts
+
+import { autumnHandler } from "autumn-js/next";
+import { auth } from "@/lib/auth";
+
+export const { GET, POST } = autumnHandler({
+  identify: async (request) => {
+    // get the user from your auth provider (example: better-auth)
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    return {
+      customerId: session?.user.id, //or org ID
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+});
+```
+
+```typescript React Router
+// app/routes/api.autumn.tsx
+
+import { autumnHandler } from "autumn-js/react-router";
+import { auth } from "../lib/auth.server";
+
+export const { loader, action } = autumnHandler({
+  identify: async (args) => {
+    // get the user from your auth provider (example: better-auth)
+    const session = await auth.api.getSession({
+      headers: args.request.headers,
+    });
+
+    return {
+      customerId: session?.user.id,
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+});
+
+//routes.ts
+import { type RouteConfig, index, route } from "@react-router/dev/routes";
+
+export default [
+  index("routes/home.tsx"),
+  route("api/autumn/*", "routes/api.autumn.tsx"),
+] satisfies RouteConfig;
+```
+
+```typescript Tanstack Start
+// routes/api/autumn.$.ts
+
+import { createAPIFileRoute } from "@tanstack/react-start/api";
+import { auth } from "~/lib/auth";
+import { autumnHandler } from "autumn-js/tanstack";
+
+const handler = autumnHandler({
+  identify: async ({ request }) => {
+    // get the user from your auth provider (example: better-auth)
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    return {
+      customerId: session?.user.id,
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+});
+
+export const Route = createFileRoute("/api/autumn/$")({
+	server: {
+		handlers: handler,
+	},
+});
+
+```
+
+```typescript Hono
+//index.ts
+
+import { autumnHandler } from "autumn-js/hono";
+
+app.use(
+  "/api/autumn/*",
+  autumnHandler({
+    identify: async (c: Context) => {
+      // get the user from your auth provider (example: better-auth)
+      const session = await auth.api.getSession({
+        headers: c.req.raw.headers,
+      });
+
+      return {
+        customerId: session?.user.id,
+        customerData: {
+          name: session?.user.name,
+          email: session?.user.email,
+        },
+      };
+    },
+  })
+);
+```
+
+```typescript Express
+//index.ts
+
+import { autumnHandler } from "autumn-js/express";
+
+// You need to parse request body BEFORE autumnHandler
+app.use(express.json());
+
+app.use(
+  "/api/autumn",
+  autumnHandler({
+    identify: async (req) => {
+      // get the user from your auth provider (example: better-auth)
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(req.headers),
+      });
+
+      return {
+        customerId: session?.user.id,
+        customerData: {
+          name: session?.user.name,
+          email: session?.user.email,
+        },
+      };
+    },
+  })
+);
+```
+
+```typescript Fastify
+//index.ts
+
+import { autumnHandler } from "autumn-js/fastify";
+
+fastify.route({
+  method: ["GET", "POST"],
+  url: "/api/autumn/*",
+  handler: autumnHandler({
+    identify: async (request) => {
+      // get the user from your auth provider (example: better-auth)
+      const session = await auth.api.getSession({
+        headers: request.headers as any,
+      });
+
+      return {
+        customerId: session?.user.id,
+        customerData: {
+          name: session?.user.name,
+          email: session?.user.email,
+        },
+      };
+    },
+  }),
+});
+```
+
+```typescript Supabase
+//supabase/functions/autumn/index.ts
+//You will need to use the getBearerToken function in the AutumnProvider if you're using SupabaseAuth
+
+import { autumnHandler } from "npm:autumn-js/supabase";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.9";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  //supabase auth
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    {
+      global: {
+        headers: { Authorization: req.headers.get("Authorization") },
+      },
+    }
+  );
+
+  const { data, error } = await supabaseClient.auth.getUser();
+
+  const handler = autumnHandler({
+    corsHeaders,
+    identify: async () => {
+      return {
+        customerId: data.user?.id,
+        customerData: {
+          email: data.user?.email,
+        },
+      };
+    },
+  });
+
+  return handler(req);
+});
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step>
+### Add Provider Client-side
+
+Client side, wrap your application with the `<AutumnProvider>` component.
+
+If your backend is hosted on a separate URL (eg, when using Vite), pass it into the `backendUrl` prop. This directs the requests from your frontend to the handler in the previous step.
+
+<CodeGroup>
+```jsx Next.js
+//layout.tsx
+import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({ children }: {
+  children: React.ReactNode,
+}) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider>
+          {children}
+        </AutumnProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+```jsx Vite wrap
+//.env
+VITE_AUTUMN_BACKEND_URL=http://localhost:8000
+
+//page.tsx
+import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({ children }: {
+  children: React.ReactNode,
+}) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider backendUrl={import.meta.env.VITE_AUTUMN_BACKEND_URL}>
+          {children}
+        </AutumnProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+</CodeGroup>
+
+<Info>
+If needed, you can use the `getBearerToken` or `headers` [props](/react/hooks/autumn-provider) in the provider to pass the auth token or headers to the handler.
+</Info>
+
+</Step>
+
+<Step>
+### Create an Autumn customer
+
+From a frontend component, use the [`useCustomer()` hook](/react/hooks/useCustomer). This will automatically create an Autumn customer if they're a new user and enable the <Badge color="green">Free</Badge> plan for them, or get the customer's state for existing users.
+
+```jsx React
+import { useCustomer } from 'autumn-js/react'
+
+const App = () => {
+  const { customer } = useCustomer();
+
+  console.log("Autumn customer:", customer)
+
+  return <h1>My very profitable app</h1>
+}
+```
+
+<Expandable title="customer object">
+
+```json expandable
+{
+    "id": "user_123",
+    "created_at": 1764932560414,
+    "name": "My First Customer",
+    "email": null,
+    "fingerprint": null,
+    "stripe_id": null,
+    "env": "sandbox",
+    "metadata": {},
+    "products": [
+        {
+            "id": "free",
+            "name": "Free",
+            "group": null,
+            "status": "active",
+            "canceled_at": null,
+            "started_at": 1764932560519,
+            "is_default": true,
+            "is_add_on": false,
+            "version": 5,
+            "current_period_start": null,
+            "current_period_end": null,
+            "items": [
+                {
+                    "type": "feature",
+                    "feature_id": "chat_messages",
+                    "feature_type": "single_use",
+                    "feature": {
+                        "id": "chat_messages",
+                        "name": "Chat Messages",
+                        "type": "single_use",
+                        "display": {
+                            "singular": "chat message",
+                            "plural": "chat messages"
+                        }
+                    },
+                    "included_usage": 5,
+                    "interval": "month",
+                    "reset_usage_when_enabled": true,
+                    "entity_feature_id": null,
+                    "display": {
+                        "primary_text": "5 chat messages"
+                    }
+                }
+            ],
+            "quantity": 1
+        }
+    ],
+    "features": {
+        "chat_messages": {
+            "id": "chat_messages",
+            "type": "single_use",
+            "name": "Chat Messages",
+            "interval": "month",
+            "interval_count": 1,
+            "unlimited": false,
+            "balance": 5,
+            "usage": 0,
+            "included_usage": 5,
+            "next_reset_at": 1767610960519,
+            "overage_allowed": false
+        }
+    }
+}
+```
+</Expandable>
+
+You will see your user under the [customers](https://app.useautumn.com/customers) page in the Autumn dashboard.
+
+</Step>
+
+<Step>
+### Stripe Payment Flow
+
+Call `checkout` to redirect the customer to a Stripe checkout page when they want to purchase the <Badge color="blue">Pro</Badge> plan. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
+
+For subsequent payments, no payment details are required, so a Checkout URL is not returned. You can pass in Autumn's [&#60;CheckoutDialog /&#62;](/react/components/checkout-dialog) component, which will automatically open instead to let the user confirm their payment.
+
+<Note>
+Use Stripe's test card `4242 4242 4242 4242` to make a purchase in sandbox. You can enter any Expiry and CVV.
+</Note>
+
+```jsx React
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
+
+export default function PurchaseButton() {
+  const { checkout } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await checkout({
+          productId: "pro",
+          dialog: CheckoutDialog,
+        });
+      }}
+    >
+      Select Pro Plan
+    </button>
+  );
+}
+```
+
+<Expandable title="Checkout Dialog">
+    <Frame>
+      <img
+        src="/assets/quickstart/ui-components/product-change-dialog.png"
+
+      />
+    </Frame>
+
+</Expandable>
+
+
+This will handle any plan changes scenario (upgrades, downgrades, one-time topups, renewals, etc).
+
+Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
+
+
+<Tip>
+  Autumn also has a prebuilt [&#60;PricingTable /&#62;](/react/components/pricing-table) UI component, which you can drop in to dynamically display plans and upgrade states.
+  
+  
+  Alternatively, you can [build your own](/react/components/pricing-table#build-your-own) components and flows using Autumn's headless API for full control.
+</Tip>
+
+</Step>
+</Steps>
+
+
+**Next: Track and limit usage**
+
+Now that the plan is enabled and you've handled payments, you can now make sure that customers have the access to the right features and limits based on their plan.
+
+<Card
+  title="Track and limit usage"
+  href='/documentation/getting-started/gating'
+ >
+Enforce usage limits and feature permissions using Autumn's `check` and `track` functions
+ </Card>
+

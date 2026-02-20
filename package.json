@@ -7,19 +7,26 @@
 			"shared",
 			"vite",
 			"scripts",
-			"apps/checkout"
+			"apps/checkout",
+			"apps/docs",
+			"apps/sdk-test",
+			"packages/sdk",
+			"packages/autumn-js",
+			"packages/openapi"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
+			"tsgo": "npm:@typescript/native-preview@7.0.0-dev.20260218.1",
 			"@sentry/bun": "10.38.0",
 			"@clickhouse/client": "1.11.2",
 			"@date-fns/utc": "2.1.0",
 			"@better-auth/dash": "0.1.6",
 			"@orpc/contract": "^1.0.0",
 			"@orpc/client": "^1.0.0",
-			"@orpc/openapi-client": "^1.0.0"
+			"@orpc/openapi-client": "^1.0.0",
+			"@tanstack/react-query": "5.85.6"
 		}
 	},
 	"overrides": {
@@ -69,7 +76,17 @@
 		"knip": "knip",
 		"knip:fix": "knip --fix",
 		"knip:fix-all": "knip --fix --allow-remove-files",
-		"prepare": "husky"
+		"prepare": "husky",
+		"api": "cd packages/openapi && bun generate",
+		"docs:pull": "bun -F @autumn/docs pull",
+		"docs:dev": "bun -F @autumn/docs dev",
+		"docs:build": "bun -F @autumn/docs build",
+		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts",
+		"js:ts": "bun -F autumn-js ts",
+		"js:build": "bun -F @useautumn/sdk build && bun -F autumn-js build",
+		"js:publish": "bun js:build && cd packages/autumn-js && npm publish",
+		"js:publish-beta": "bun js:build && cd packages/autumn-js && npm publish --tag beta",
+		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run"
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",
@@ -90,6 +107,7 @@
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
 		"husky": "^9.1.7",
-		"inquirer": "^12.10.0"
+		"inquirer": "^12.10.0",
+		"ts-to-zod": "^5.1.0"
 	}
 }

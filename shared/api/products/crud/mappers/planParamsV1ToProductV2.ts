@@ -1,17 +1,20 @@
-import type { CreatePlanParams } from "@api/products/crud/createPlanParamsV0";
-import type { UpdatePlanParams } from "@api/products/crud/updatePlanParamsV0";
-import { planItemParamsV1ToPlanItemV0 } from "@api/products/items/mappers/planItemParamsV1ToPlanItemV0";
-import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
+import type { CreatePlanParams } from "@api/products/crud/createPlanParamsV1";
+import type { UpdatePlanParams } from "@api/products/crud/updatePlanParamsV1";
 import type { AppEnv } from "@models/genModels/genEnums";
+import type { FullProduct } from "@models/productModels/productModels";
 import type { ProductV2 } from "@models/productV2Models/productV2Models";
+import { notNullish } from "@utils/index";
 import type { SharedContext } from "../../../../types/sharedContext";
+import { planParamsV1ToProductItems } from "./planParamsV1ToProductItems";
 
 export function planParamsV1ToProductV2({
 	ctx,
 	params,
+	currentFullProduct,
 }: {
 	ctx: SharedContext;
 	params: CreatePlanParams | UpdatePlanParams;
+	currentFullProduct?: FullProduct;
 
 	// Here to enforce type checking, probably not used but just to be sure.
 	overrides?: {
@@ -20,16 +23,14 @@ export function planParamsV1ToProductV2({
 		created_at: number;
 	};
 }): Partial<ProductV2> {
-	const planFeatures =
-		params.items?.map((item) => planItemParamsV1ToPlanItemV0({ ctx, item })) ??
-		[];
-
-	const price = params.price;
-
 	// Convert plan to items using shared utility
-	const items = planV0ToProductItems({
+	const items = planParamsV1ToProductItems({
 		ctx,
-		plan: { features: planFeatures, price: price ?? null },
+		params: {
+			price: params.price,
+			items: params.items,
+		},
+		currentFullProduct,
 	});
 
 	// Check if archived field exists on plan (it's on ApiPlan, not CreatePlanParams)
@@ -47,15 +48,14 @@ export function planParamsV1ToProductV2({
 
 		group: params.group ?? "",
 		items,
-		free_trial:
-			params.free_trial !== undefined
-				? {
-						duration: params.free_trial.duration_type,
-						length: params.free_trial.duration_length,
-						unique_fingerprint: false,
-						card_required: params.free_trial.card_required,
-					}
-				: undefined,
+		free_trial: notNullish(params.free_trial)
+			? {
+					duration: params.free_trial.duration_type,
+					length: params.free_trial.duration_length,
+					unique_fingerprint: false,
+					card_required: params.free_trial.card_required,
+				}
+			: params.free_trial,
 		...(archived !== undefined && { archived }),
 	};
 }

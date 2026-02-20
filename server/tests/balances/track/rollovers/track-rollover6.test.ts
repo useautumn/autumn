@@ -121,10 +121,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 		);
 
 		const rollovers = msgesFeature?.rollovers;
-		// @ts-expect-error (rollovers is an array of rollovers)
 		expect(rollovers?.[0].balance).toBe(100);
-		// @ts-expect-error (rollovers is an array of rollovers)
-		expect(rollovers[1].balance).toBe(500);
+		expect(rollovers?.[1].balance).toBe(500);
 
 		// Verify non-cached customer balance
 		await timeout(2000);
@@ -138,9 +136,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 		);
 
 		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
-		// @ts-expect-error (rollovers is an array of rollovers)
 		expect(nonCachedRollovers?.[0].balance).toBe(100);
-		// @ts-expect-error (rollovers is an array of rollovers)
-		expect(nonCachedRollovers[1].balance).toBe(500);
+		expect(nonCachedRollovers?.[1].balance).toBe(500);
 	});
 });

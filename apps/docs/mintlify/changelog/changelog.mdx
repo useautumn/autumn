@@ -1,0 +1,212 @@
+---
+title: "Changelog"
+mode: "center"
+description: "Some new things we've shipped at Autumn HQ"
+---
+
+<Update
+  label="January 12th 2026"
+>
+  ## Dynamic onboarding prompts
+
+We've added a new in-app onboarding guide to help you get your billing set up in less than 30 minutes.
+
+- **Docs in app**: Access documentation directly within the dashboard
+- **3 prompts → full billing setup**: Complete your entire billing configuration in just 3 steps
+- **Dynamic code snippets**: Get code snippets and prompts tailored to your specific pricing config
+- **Real-time updates**: See your progress update as you complete each step
+
+<br />
+  <Frame style={{ width: "500px" }}>
+    <img src="/assets/changelog/onboarding-prompts.png" />
+  </Frame>
+  <br />
+
+<AccordionGroup>
+    <Accordion title="Improvements">
+      - Code cleanup and refactoring in Stripe billing plan evaluation system - [#525](https://github.com/useautumn/autumn/pull/525)
+      - Added `customerId` to request context for improved tracking and observability - [#520](https://github.com/useautumn/autumn/pull/520)
+      - Improved cache verification workflow with free product filtering and Sentry alert tags - [#519](https://github.com/useautumn/autumn/pull/519)
+      - Major Redis Lua refactor with cache versioning, filtering, and safer updates - [#512](https://github.com/useautumn/autumn/pull/512)
+    </Accordion>
+    
+    <Accordion title="Bug Fixes">
+      - Fixed multi-region cache deletion to delete from all configured regions - [#539](https://github.com/useautumn/autumn/pull/539)
+      - Fixed import path casing issue for createProrationinvoice - [#537](https://github.com/useautumn/autumn/pull/537)
+      - Fixed TypeScript type compatibility in BullMQ worker - [#538](https://github.com/useautumn/autumn/pull/538)
+      - Fixed type annotations in OpenAPI definitions and RevenueCat mappings - [#533](https://github.com/useautumn/autumn/pull/533), [#534](https://github.com/useautumn/autumn/pull/534)
+      - Fixed migration logic for product downgrades and cancellations - [#529](https://github.com/useautumn/autumn/pull/529)
+      - Fixed subscription migration to prevent auto-uncanceling during version updates - [#527](https://github.com/useautumn/autumn/pull/527)
+      - Fixed `included_usage` calculation in V1.2 API backward compatibility layer - [#526](https://github.com/useautumn/autumn/pull/526)
+      - Implemented Redis-first caching for add-to-balance operations - [#524](https://github.com/useautumn/autumn/pull/524)
+      - Simplified Stripe webhook cache refresh strategy - [#523](https://github.com/useautumn/autumn/pull/523)
+      - Removed redundant `plan_version` field from subscription API schema - [#522](https://github.com/useautumn/autumn/pull/522)
+      - Fixed duplicate features in plan editor when closing edit feature sheet - [#508](https://github.com/useautumn/autumn/pull/508)
+    </Accordion>
+    
+    <Accordion title="API">
+      - Added `entity_id` parameter support to legacy balance update endpoint - [#532](https://github.com/useautumn/autumn/pull/532)
+      - Added `/configs/push` and `/configs/nuke` endpoints for managing organization configuration in sandbox environments - [#521](https://github.com/useautumn/autumn/pull/521)
+      - Implemented idempotency protection for billing endpoints using `idempotency-key` header - [#516](https://github.com/useautumn/autumn/pull/516)
+      - Added new `POST /customers/list` V2 endpoint with plan filtering, subscription status filtering, and search functionality - [#518](https://github.com/useautumn/autumn/pull/518), [#517](https://github.com/useautumn/autumn/pull/517)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+
+<Update
+  label="December 26th 2025"
+>
+  ## Add to balance in the dashboard
+
+Merry Christmas! 🎄 
+
+You can now add to a customer's balance directly from the dashboard. This is useful for giving extra credits to a customer.
+
+You can input a positive or negative value in this field.
+
+<br />
+  <Frame style={{ width: "400px" }}>
+  <img src="/assets/changelog/add-to-balance.png" />
+  </Frame>
+  <br />
+<AccordionGroup>
+    <Accordion title="Improvements">
+      - Balance management enhancements with atomic "Add to Balance" feature - [#503](https://github.com/useautumn/autumn/pull/503)
+      - Product copy workflow streamlined with direct environment selection - [#501](https://github.com/useautumn/autumn/pull/501)
+      - Plan feature sheet with discard/update actions and change detection - [#499](https://github.com/useautumn/autumn/pull/499)
+      - Base price display logic centralized into reusable utility - [#488](https://github.com/useautumn/autumn/pull/488)
+      - Stripe secret key authentication always available, improved UI - [#491](https://github.com/useautumn/autumn/pull/491)
+      - Console logs removed from production builds for cleaner output - [#487](https://github.com/useautumn/autumn/pull/487)
+      - Sign-in flow simplified by removing onboarding redirect logic - [#484](https://github.com/useautumn/autumn/pull/484)
+      - Enter key handler added for email sign-in and cache improvements - [#483](https://github.com/useautumn/autumn/pull/483)
+      - Plan editor UI enhanced with better pricing configuration - [#481](https://github.com/useautumn/autumn/pull/481)
+      - Hono dependency pinned to exact version for build consistency - [#494](https://github.com/useautumn/autumn/pull/494)
+      - UI refinements and number formatting improvements - [#500](https://github.com/useautumn/autumn/pull/500)
+    </Accordion>
+    
+    <Accordion title="Bug Fixes">
+      - Add-on products no longer carry usage from main products - [#502](https://github.com/useautumn/autumn/pull/502)
+      - Base price display component type handling fixed - [#496](https://github.com/useautumn/autumn/pull/496)
+      - Invoice checkout cache invalidation fixed for null customer IDs - [#490](https://github.com/useautumn/autumn/pull/490)
+      - One-off products properly handled during subscription upgrades - [#489](https://github.com/useautumn/autumn/pull/489)
+      - Sandbox redirect logic restored for non-deployed organizations - [#486](https://github.com/useautumn/autumn/pull/486)
+      - Dashboard checkout success URL fixed for production environments - [#485](https://github.com/useautumn/autumn/pull/485)
+      - Transfer endpoint cache clearing URL pattern corrected - [#482](https://github.com/useautumn/autumn/pull/482)
+      - Cache race condition in attach flow resolved with timestamp guards - [#479](https://github.com/useautumn/autumn/pull/479)
+    </Accordion>
+    
+    <Accordion title="API">
+      - RevenueCat payment processor integration added and reverted - [#497](https://github.com/useautumn/autumn/pull/497), [#495](https://github.com/useautumn/autumn/pull/495), [#435](https://github.com/useautumn/autumn/pull/435), [#493](https://github.com/useautumn/autumn/pull/493)
+      - Added manual secret key override to Hono `autumnHandler`
+      - Added `checkoutSessionParams` to `PricingTable` component from `autumn-js/react`
+      - Added `new_billing_subscription` to the `attach` endpoint, allowing you to create a new Stripe subscription instead of combining with an existing one
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+
+<Update
+  label="December 24th 2025"
+>
+  ## RevenueCat integration
+
+We just released a new integration with RevenueCat, to let you manage your mobile app subscriptions and billing with Autumn. 
+
+This is especially helpful for users that have a mix of web and mobile users, and want to manage their billing in one place.
+
+- **RevenueCat integration**: [Documentation](/documentation/external-providers/revenuecat)
+
+<Note>
+This is currently in beta, please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at hey@useautumn.com to get access.
+</Note>
+
+<br />
+  <Frame style={{ width: "500px" }}>
+    <img src="/assets/changelog/revenuecat.png" />
+  </Frame>
+</Update>
+
+
+<Update
+  label="December 18th 2025"
+>
+  ## List and aggregate events endpoints
+
+We just released two new endpoints to retrieve usage data that your customers have sent to Autumn. 
+
+You can use this to display a billing event log, and a timeseries chart of usage data, so you can provide first-class billing observability out of the box!
+
+- **List Events**: [React hooks](/react/hooks/useListEvents) and [API reference](/api-reference/events/list-events)
+- **Aggregate Events**: [React hooks](/react/hooks/useAggregateEvents) and [API reference](/api-reference/events/aggregate-events)
+
+<br />
+  <Frame style={{ width: "300px" }}>
+    <img src="/assets/changelog/event-list.png" />
+    
+  </Frame>
+  <Frame style={{ width: "300px" }}>
+    <img src="/assets/changelog/event-aggregate.png" />
+  </Frame>
+</Update>
+
+<Update
+  label="December 16th 2025"
+>
+  ## Stripe customer portal link within the customer page
+
+  You can now open a customer's Stripe customer portal directly from the customer page. You can quickly preview this and send to customers that want to manage their payment methods or see past invoices.
+
+  <Frame style={{ width: "300px" }}>
+    <img src="/assets/changelog/customer-portal.png" alt="Stripe customer portal" />
+  </Frame>
+  <br />
+
+</Update>
+
+
+
+
+<Update
+  label="December 10th 2025"
+>
+  ## Usage columns in your customer list
+
+  Preview a customer's current credit balances straight from the customer list. Now you can see who's worth peeking into! 
+
+  <Frame style={{ width: "400px" }}>
+    <img src="/assets/changelog/usage-columns.png" alt="Usage columns" />
+  </Frame>
+
+</Update>
+
+
+<Update
+  label="December 5th 2025"
+>
+  ## Autumn is live in us-east
+
+  Autumn is live on US-East! Previously all requests were hitting our us-west DB.
+
+  Now, we're reading and writing from multiple Redis caches, so both checking feature balances and tracking usage events are faster and more reliable.
+
+  More regions coming soon!
+
+  <Frame style={{ width: "400px" }}>
+    <img src="/assets/changelog/us-east.png" alt="US-East region" />
+  </Frame>
+</Update>
+
+<Update
+  label="December 1st 2025"
+>
+  ## Dark mode
+
+  Dark mode is here. No need to say more. We know you guys are all night owls. 
+
+  We also shipped an entirely new design for the plan editor and customer pages, to make managing your plans and customers easier.
+
+  <Frame style={{ width: "400px" }}>
+    <img src="/assets/changelog/dark-mode.png" alt="Dark mode" />
+  </Frame>
+</Update>

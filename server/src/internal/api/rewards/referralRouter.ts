@@ -11,3 +11,7 @@ redemptionRouter.get("/:redemption_id", ...handleGetRedemption);
 export const referralRouter = new Hono<HonoEnv>();
 referralRouter.post("/code", ...handleGetReferralCode);
 referralRouter.post("/redeem", ...handleRedeemReferral);
+
+export const referralRpcRouter = new Hono<HonoEnv>();
+referralRpcRouter.post("referrals.create_code", ...handleGetReferralCode);
+referralRpcRouter.post("referrals.redeem_code", ...handleRedeemReferral);

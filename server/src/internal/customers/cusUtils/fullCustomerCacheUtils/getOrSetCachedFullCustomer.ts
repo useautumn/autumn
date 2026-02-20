@@ -1,6 +1,6 @@
 import {
 	type AppEnv,
-	CusExpand,
+	CustomerExpand,
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	type FullCustomer,
@@ -69,7 +69,7 @@ export const getOrSetCachedFullCustomer = async ({
 		env: env as AppEnv,
 		withEntities: true,
 		withSubs: true,
-		expand: [CusExpand.Invoices],
+		expand: [CustomerExpand.Invoices],
 	});
 
 	if (!fullCustomer) {

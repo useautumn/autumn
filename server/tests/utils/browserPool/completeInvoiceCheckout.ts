@@ -1,21 +1,36 @@
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { timeout } from "../genUtils.js";
 import { browserPool } from "./browserPool.js";
 
 /**
- * Complete a Stripe Invoice Checkout form using the shared browser pool.
+ * Complete a Stripe Invoice Checkout form.
  * This handles the Payment Element (iframe-based) checkout flow.
- * Opens a new tab, fills the form, and closes the tab (browser stays open).
+ *
+ * @param isolatedBrowser - If true, launches a dedicated browser instance for this checkout.
+ *   Use this when running multiple checkouts concurrently to avoid flakiness from shared browser state.
  */
 export const completeInvoiceCheckout = async ({
 	url,
-	isLocal = false,
+	isolatedBrowser = false,
 }: {
 	url: string;
-	isLocal?: boolean;
+	isolatedBrowser?: boolean;
 }): Promise<void> => {
 	console.log("[completeInvoiceCheckout] Starting invoice checkout...");
 
-	const page = await browserPool.newPage();
+	let browser: Browser | undefined;
+	let page: Page;
+	if (isolatedBrowser) {
+		browser = await puppeteer.launch({
+			headless: true,
+			executablePath: process.env.TESTS_CHROMIUM_PATH,
+			args: ["--no-sandbox", "--disable-setuid-sandbox"],
+		});
+		page = await browser.newPage();
+		await page.setViewport({ width: 1280, height: 800 });
+	} else {
+		page = await browserPool.newPage();
+	}
 
 	try {
 		await page.goto(url);
@@ -178,7 +193,9 @@ export const completeInvoiceCheckout = async ({
 		await timeout(20000);
 		console.log("[completeInvoiceCheckout] Invoice checkout completed");
 	} finally {
-		// Close the page (tab), but keep browser open for reuse
 		await page.close();
+		if (browser) {
+			await browser.close();
+		}
 	}
 };

@@ -1,0 +1,100 @@
+---
+title: "useReferrals"
+description: "Create and redeem referral codes"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useReferrals` hook provides methods to create and redeem referral codes as part of a referral program.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="programId" type="string" required>
+  The ID of your referral program.
+</ParamField>
+
+<ParamField body="queryOptions" type="UseQueryOptions">
+  Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
+</ParamField>
+
+## Returns
+
+### `data`
+
+The referral code response. The hook starts with `enabled: false`, so call `refetch()` to create/fetch the code.
+
+```tsx
+import { useReferrals } from "autumn-js/react";
+
+export default function ReferralCode() {
+  const { data, refetch, isLoading } = useReferrals({ programId: "refer-a-friend" });
+
+  return (
+    <div>
+      <button onClick={() => refetch()}>Get My Referral Code</button>
+      {data && <p>Share this code: {data.code}</p>}
+    </div>
+  );
+}
+```
+
+<Expandable title="Response object">
+
+```json
+{
+  "code": "REF123ABC",
+  "customerId": "cus_123",
+  "createdAt": 1717000000
+}
+```
+
+</Expandable>
+
+### `redeemCode()`
+
+Redeems a referral code for the current customer.
+
+```tsx
+import { useReferrals } from "autumn-js/react";
+
+export default function RedeemForm() {
+  const { redeemCode } = useReferrals({ programId: "refer-a-friend" });
+
+  const handleRedeem = async (code: string) => {
+    const result = await redeemCode({ code });
+    console.log("Redeemed! Reward:", result.rewardId);
+  };
+
+  return <button onClick={() => handleRedeem("REF123ABC")}>Redeem Code</button>;
+}
+```
+
+**Parameters**
+
+<ParamField body="code" type="string" required>
+  The referral code to redeem.
+</ParamField>
+
+**Returns**
+
+```json
+{
+  "id": "red_123",
+  "customerId": "cus_456",
+  "rewardId": "reward_789"
+}
+```
+
+### `isLoading`
+
+Boolean indicating whether a referral code is being created/fetched.
+
+### `error`
+
+Any error that occurred.
+
+### `refetch()`
+
+Creates or fetches the referral code for the configured `programId`.

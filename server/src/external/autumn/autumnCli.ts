@@ -7,37 +7,35 @@ import {
 	type ApiBaseEntity,
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
+	type ApiCustomerV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0Input,
-	type BalancesUpdateParams,
+	type CancelBody,
+	type CheckoutParamsV0,
+	type CheckoutResponseV0,
+	type CheckParams,
 	type CheckQuery,
+	type CheckResponseV1,
 	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
-	type CreateCustomerParams,
+	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	CusExpand,
+	CustomerExpand,
 	EntityExpand,
 	ErrCode,
 	type LegacyVersion,
 	type OrgConfig,
 	type ProductItem,
 	type RewardRedemption,
+	type SetUsageParams,
 	type SetupPaymentParams,
 	type TrackParams,
+	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
-import type {
-	CancelParams,
-	CheckoutParams,
-	CheckoutResult,
-	CheckParams,
-	CheckResult,
-	Customer,
-	UsageParams,
-} from "autumn-js";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -306,11 +304,11 @@ export class AutumnInt {
 	}
 
 	async checkout(
-		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
+		params: CheckoutParamsV0 & { invoice?: boolean; force_checkout?: boolean },
 	) {
 		const data = await this.post(`/checkout`, params);
 
-		return data as CheckoutResult;
+		return data as CheckoutResponseV0;
 	}
 	async transfer(
 		customerId: string,
@@ -322,7 +320,7 @@ export class AutumnInt {
 	) {
 		const data = await this.post(`/customers/${customerId}/transfer`, params);
 
-		return data as CheckoutResult;
+		return data;
 	}
 
 	async sendEvent({
@@ -390,7 +388,7 @@ export class AutumnInt {
 		},
 
 		get: async <
-			T = Customer & {
+			T = ApiCustomerV3 & {
 				invoices: any[];
 				autumn_id?: string;
 				entities?: ApiBaseEntity[];
@@ -398,14 +396,14 @@ export class AutumnInt {
 		>(
 			customerId: string,
 			params?: {
-				expand?: CusExpand[];
+				expand?: CustomerExpand[];
 				skip_cache?: string;
 				with_autumn_id?: boolean;
 			},
 		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			};
 
 			const finalParams = { ...defaultParams, ...params };
@@ -437,10 +435,10 @@ export class AutumnInt {
 			...customerData
 		}: {
 			withAutumnId?: boolean;
-			expand?: CusExpand[];
+			expand?: CustomerExpand[];
 			internalOptions?: CreateCustomerInternalOptions;
 			skipWebhooks?: boolean;
-		} & Omit<CreateCustomerParams, "internal_options">) => {
+		} & Omit<CreateCustomerParamsV0Input, "internal_options">) => {
 			const headers: Record<string, string> = {};
 			if (skipWebhooks !== undefined) {
 				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
@@ -753,12 +751,12 @@ export class AutumnInt {
 		return data;
 	};
 
-	usage = async (params: UsageParams) => {
+	usage = async (params: SetUsageParams) => {
 		const data = await this.post(`/usage`, params);
 		return data;
 	};
 
-	check = async <T = CheckResult>(
+	check = async <T = CheckResponseV1>(
 		params: CheckParams & CheckQuery & { skip_event?: boolean },
 		{ headers }: { headers?: Record<string, string> } = {},
 	): Promise<T> => {
@@ -780,7 +778,7 @@ export class AutumnInt {
 		return data;
 	};
 
-	cancel = async (params: CancelParams) => {
+	cancel = async (params: CancelBody) => {
 		const data = await this.post(`/cancel`, params);
 		return data;
 	};
@@ -806,7 +804,7 @@ export class AutumnInt {
 			);
 			return data;
 		},
-		update: async (params: BalancesUpdateParams) => {
+		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
 			return data;
 		},
@@ -826,7 +824,7 @@ export class AutumnInt {
 			}
 
 			const data = await this.post(
-				`/subscriptions/update`,
+				`/billing.update`,
 				params,
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
@@ -839,7 +837,7 @@ export class AutumnInt {
 		previewUpdate: async <TInput = UpdateSubscriptionV0Params>(
 			params: TInput,
 		): Promise<any> => {
-			const data = await this.post(`/subscriptions/preview_update`, params);
+			const data = await this.post(`/billing.preview_update`, params);
 			return data;
 		},
 	};
@@ -854,7 +852,7 @@ export class AutumnInt {
 			{
 				skipWebhooks,
 				idempotencyKey,
-				timeout = 2000,
+				timeout,
 			}: {
 				skipWebhooks?: boolean;
 				idempotencyKey?: string;
@@ -870,13 +868,16 @@ export class AutumnInt {
 			}
 
 			const data = await this.post(
-				`/billing/attach`,
+				`/billing.attach`,
 				{ redirect_mode: "if_required", ...params },
 				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 
-			if (timeout) {
-				await new Promise((resolve) => setTimeout(resolve, timeout));
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
 			}
 			return data;
 		},
@@ -888,7 +889,7 @@ export class AutumnInt {
 		>(
 			params: TInput,
 		): Promise<any> => {
-			const data = await this.post(`/billing/preview_attach`, {
+			const data = await this.post(`/billing.preview_attach`, {
 				...params,
 				redirect_mode: "if_required",
 			});

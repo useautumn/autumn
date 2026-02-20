@@ -138,7 +138,6 @@ describe(`${chalk.yellowBright("track-breakdown6: exhaust into overage, then add
 
 		await timeout(2000);
 	});
-	return;
 
 	test("attach lifetime prepaid product", async () => {
 		await autumnV2.attach({
@@ -238,10 +237,10 @@ describe(`${chalk.yellowBright("track-breakdown6: exhaust into overage, then add
 
 		// Sum of breakdown balances should equal top-level balance
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === "month",
 		);
 		const lifetimeBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === "lifetime",
 		);
 
 		const sumOfBreakdownBalances =
@@ -344,10 +343,10 @@ describe(`${chalk.yellowBright("track-breakdown6: exhaust into overage, then add
 
 		// Verify sum of breakdown balances
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "month",
+			(b) => b.interval === "month",
 		);
 		const lifetimeBreakdownV1 = msgesFeature.breakdown?.find(
-			(b: { interval: string }) => b.interval === "lifetime",
+			(b) => b.interval === "lifetime",
 		);
 
 		expect(monthlyBreakdownV1?.usage).toBe(650);

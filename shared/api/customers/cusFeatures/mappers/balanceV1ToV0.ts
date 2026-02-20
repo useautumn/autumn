@@ -1,9 +1,9 @@
-import { deduplicateArray } from "@utils/utils.js";
+import { deduplicateArray } from "@utils/utils";
 import { Decimal } from "decimal.js";
-import type { ApiBalance, ApiBalanceBreakdown } from "../apiBalance.js";
-import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1.js";
-import { apiBalanceV1ToPrepaidQuantity } from "../utils/convert/apiBalanceV1ToPrepaidQuantity.js";
-import { apiBalanceV1ToPurchasedBalance } from "../utils/convert/apiBalanceV1ToPurchasedBalance.js";
+import type { ApiBalance, ApiBalanceBreakdown } from "../apiBalance";
+import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
+import { apiBalanceV1ToPrepaidQuantity } from "../utils/convert/apiBalanceV1ToPrepaidQuantity";
+import { apiBalanceV1ToPurchasedBalance } from "../utils/convert/apiBalanceV1ToPurchasedBalance";
 
 export function balanceBreakdownV1ToV0({
 	input,

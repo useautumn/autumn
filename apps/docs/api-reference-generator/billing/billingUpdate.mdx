@@ -1,0 +1,42 @@
+---
+title: "Update Subscription"
+openapi: "openapi POST /v1/billing.update"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  The update endpoint modifies an existing subscription. Use this to change prepaid quantities, cancel subscriptions, or modify plan configuration. For subscribing to a new plan, use [attach](/api-reference/billing/billingAttach) instead.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Update prepaid quantity
+const response = await autumn.billing.update({
+  customerId: "cus_123",
+  planId: "pro_plan",
+  featureQuantities: [{ featureId: "seats", quantity: 10 }]
+});
+```
+
+```typescript Cancel at end of cycle
+const response = await autumn.billing.update({
+  customerId: "cus_123",
+  planId: "pro_plan",
+  cancelAction: "cancel_end_of_cycle"
+});
+```
+
+```typescript Uncancel subscription
+const response = await autumn.billing.update({
+  customerId: "cus_123",
+  planId: "pro_plan",
+  cancelAction: "uncancel"
+});
+```
+
+</CodeGroup>

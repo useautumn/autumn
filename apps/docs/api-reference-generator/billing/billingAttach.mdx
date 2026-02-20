@@ -1,0 +1,53 @@
+---
+title: "Attach"
+openapi: "openapi POST /v1/billing.attach"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  The attach endpoint subscribes a customer to a plan. It handles new subscriptions, upgrades, and downgrades automatically. For modifying an existing subscription (like changing quantities or canceling), use [update](/api-reference/billing/billingUpdate) instead.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Subscribe to a plan
+const response = await autumn.billing.attach({
+  customerId: "cus_123",
+  planId: "pro_plan"
+});
+
+if (response.paymentUrl) {
+  // Redirect customer to checkout
+  window.location.href = response.paymentUrl;
+}
+```
+
+```typescript Custom pricing
+const response = await autumn.billing.attach({
+  customerId: "cus_123",
+  planId: "enterprise_plan",
+  customize: {
+    price: {
+      amount: 99900, // $999.00
+      interval: "month"
+    }
+  }
+});
+```
+
+```typescript Attach plan with prepaid quantities
+const response = await autumn.billing.attach({
+  customerId: "cus_123",
+  planId: "team_plan",
+  featureQuantities: [
+    { featureId: "seats", quantity: 5 }
+  ]
+});
+```
+
+</CodeGroup>

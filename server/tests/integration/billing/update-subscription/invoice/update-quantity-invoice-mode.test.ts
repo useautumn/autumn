@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, CusExpand } from "@autumn/shared";
+import { type ApiCustomerV3, CustomerExpand } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -82,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (dr
 		idOrInternalId: customerId,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		expand: [CusExpand.Invoices],
+		expand: [CustomerExpand.Invoices],
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(

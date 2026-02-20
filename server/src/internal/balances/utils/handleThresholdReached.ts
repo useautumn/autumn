@@ -3,8 +3,9 @@ import {
 	type ApiCustomerV5,
 	ApiVersion,
 	addToExpand,
+	apiBalanceToAllowed,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	dbToApiFeatureV1,
 	type Feature,
@@ -13,7 +14,6 @@ import {
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { apiBalanceToAllowed } from "@/internal/api/check/checkUtils/apiBalanceToAllowed.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 
 const cleanApiCustomer = ({
@@ -118,9 +118,9 @@ export const handleThresholdReached = async ({
 		ctx = addToExpand({
 			ctx,
 			add: [
-				CusExpand.BalancesFeature,
-				CusExpand.SubscriptionsPlan,
-				CusExpand.PurchasesPlan,
+				CustomerExpand.BalancesFeature,
+				CustomerExpand.SubscriptionsPlan,
+				CustomerExpand.PurchasesPlan,
 			],
 		});
 	}

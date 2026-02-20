@@ -123,7 +123,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 		expect(invoices[0].total).toBe(getBasePrice({ product: premium }));
 
 		const wordsFeature = customer2.features[TestFeature.Words];
-		// @ts-expect-error
 		expect(wordsFeature.interval_count).toBe(2);
 	});
 });

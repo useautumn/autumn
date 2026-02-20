@@ -4,8 +4,8 @@ import {
 	CouponDurationType,
 	type CreateReward,
 	type CreateRewardProgram,
-	CusExpand,
 	CusProductStatus,
+	CustomerExpand,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
@@ -254,7 +254,7 @@ describe(`${chalk.yellowBright(
 		const mainCustomerWithInvoices = await autumn.customers.get(
 			mainCustomerId,
 			{
-				expand: [CusExpand.Invoices, CusExpand.Rewards],
+				expand: [CustomerExpand.Invoices, CustomerExpand.Rewards],
 			},
 		);
 
