@@ -7,6 +7,7 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
+import { calculateGraduatedTiersAmount } from "../billingUtils/invoicingUtils/lineItemUtils/calculateGraduatedTiersAmount.js";
 import { isPriceItem } from "../productV2Utils/productItemUtils/getItemType.js";
 import {
 	calculateProrationAmount,
@@ -24,46 +25,14 @@ export const getAmountForQuantity = ({
 	quantity: number;
 }) => {
 	const config = price.config as UsagePriceConfig;
-
 	const billingUnits = config.billing_units || 1;
+	const tiers = config.usage_tiers;
 
-	const roundedQuantity = new Decimal(quantity)
-		.div(billingUnits)
-		.ceil()
-		.mul(billingUnits)
-		.toNumber();
-
-	let lastTierTo: number = 0;
-
-	let amount = new Decimal(0);
-	let remainingUsage = new Decimal(roundedQuantity);
-
-	// console.log("Getting amount for quantity:", roundedQuantity);
-	// console.log("Usage tiers:", config.usage_tiers);
-
-	for (let i = 0; i < config.usage_tiers.length; i++) {
-		const tier = config.usage_tiers[i];
-
-		let usageWithinTier = new Decimal(0);
-		if (tier.to === Infinite || tier.to === -1) {
-			usageWithinTier = remainingUsage;
-		} else {
-			const tierUsage = new Decimal(tier.to).minus(lastTierTo);
-			usageWithinTier = Decimal.min(remainingUsage, tierUsage);
-			lastTierTo = tier.to;
-		}
-
-		const amountPerUnit = new Decimal(tier.amount).div(billingUnits);
-		const amountWithinTier = amountPerUnit.mul(usageWithinTier);
-		amount = amount.plus(amountWithinTier);
-		remainingUsage = remainingUsage.minus(usageWithinTier);
-
-		if (remainingUsage.lte(0)) {
-			break;
-		}
-	}
-
-	return amount.toDecimalPlaces(10).toNumber();
+	return calculateGraduatedTiersAmount({
+		tiers,
+		usage: quantity,
+		billingUnits,
+	});
 };
 
 export const itemToInvoiceAmount = ({
