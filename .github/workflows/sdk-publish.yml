@@ -73,9 +73,7 @@ jobs:
         run: bun install
       
       - name: Install Speakeasy CLI
-        uses: speakeasy-api/speakeasy-action@v1
-        with:
-          speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}
+        run: curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
       
       - name: Determine version bump type
         id: version-type
