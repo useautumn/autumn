@@ -181,6 +181,7 @@ export const setupAttachBillingContext = async ({
 		attachProduct,
 		stripeSubscription,
 		trialContext,
+		invoiceMode,
 	});
 
 	const transitionConfig = setupTransitionConfigs({
