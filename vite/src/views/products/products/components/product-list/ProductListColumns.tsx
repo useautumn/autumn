@@ -97,8 +97,10 @@ export const createProductListColumns = ({
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
 				<div
+					role="toolbar"
 					className="flex justify-end w-full pr-2"
 					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => e.stopPropagation()}
 				>
 					<ProductListRowToolbar
 						product={row.original}

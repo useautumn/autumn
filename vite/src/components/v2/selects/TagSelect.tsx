@@ -4,6 +4,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectTrigger } from "./Select";
 
+const EMPTY_ARRAY: string[] = [];
+
 interface TagSelectOption {
 	value: string;
 	label: string;
@@ -20,7 +22,7 @@ interface TagSelectProps {
 }
 
 export function TagSelect({
-	value = [],
+	value = EMPTY_ARRAY,
 	onChange,
 	options,
 	placeholder = "Select...",
@@ -60,6 +62,7 @@ export function TagSelect({
 						value.map((val) => (
 							<div
 								key={val}
+								role="group"
 								className="flex items-center gap-1 border border-border bg-background rounded-lg pl-3 pr-2 py-1 text-xs pointer-events-auto"
 								onPointerDown={(e) => {
 									e.preventDefault();
@@ -69,6 +72,7 @@ export function TagSelect({
 									e.preventDefault();
 									e.stopPropagation();
 								}}
+								onKeyDown={(e) => e.stopPropagation()}
 								onMouseDown={(e) => {
 									e.preventDefault();
 									e.stopPropagation();

@@ -2,6 +2,8 @@ import { Check, Copy } from "lucide-react";
 import React from "react";
 import CopyButton from "./CopyButton";
 
+const EMPTY_COPY_PROPS: React.ComponentProps<typeof Copy> = {};
+
 export function CopyablePre({ text }: { text: string }) {
 	return (
 		<div className="relative w-full">
@@ -20,7 +22,7 @@ export function CopyableSpan({
 	text,
 	className = "",
 	copySize = 20,
-	copyProps = {},
+	copyProps = EMPTY_COPY_PROPS,
 }: {
 	text: string;
 	className?: string;
@@ -46,12 +48,15 @@ export function CopyableSpan({
 
 	return (
 		<span
+			role="button"
+			tabIndex={0}
 			className={
 				`inline-flex items-center rounded-xl bg-muted/50 pl-3 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1 cursor-pointer transition-opacity ${
 					copied ? "opacity-30" : ""
 				}` + (className ? ` ${className}` : "")
 			}
 			onClick={handleClick}
+			onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleClick(e as unknown as React.MouseEvent); }}
 		>
 			<span className="pr-2">{text}</span>
 			<div className="ml-1 p-0.5 rounded transition bg-transparent size-6 z-[1] static bg-none shadow-none border-none flex items-center justify-center">

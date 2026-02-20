@@ -1,4 +1,5 @@
 import type { CheckoutResponseV0 } from "@autumn/shared";
+import type React from "react";
 import type { ReactNode } from "react";
 import { useIsLatestVersion } from "@/hooks/stores/useProductStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
@@ -133,8 +134,8 @@ export const AttachConfirmationInfo = ({
 
 	return (
 		<div className="space-y-2 px-4">
-			{infoBoxes.map((box, index) => (
-				<div key={index}>{box}</div>
+			{infoBoxes.map((box) => (
+				<div key={(box as React.ReactElement).key}>{box}</div>
 			))}
 		</div>
 	);

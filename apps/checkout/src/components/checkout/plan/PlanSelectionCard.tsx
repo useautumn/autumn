@@ -126,7 +126,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 										<div className="flex gap-2">
 											<motion.div
 												className="shrink-0 pt-1"
-												initial={{ scale: 0, opacity: 0 }}
+												initial={{ scale: 0.95, opacity: 0 }}
 												animate={{ scale: 1, opacity: 1 }}
 												transition={{
 													type: "spring",
@@ -213,7 +213,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 										<div className="flex items-center gap-2 min-w-0">
 											<motion.div
 												className="shrink-0"
-												initial={{ scale: 0, opacity: 0 }}
+												initial={{ scale: 0.95, opacity: 0 }}
 												animate={{ scale: 1, opacity: 1 }}
 												transition={{
 													type: "spring",
@@ -261,7 +261,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 								<div className="flex items-center gap-2 min-w-0">
 									<motion.div
 										className="shrink-0"
-										initial={{ scale: 0, opacity: 0 }}
+										initial={{ scale: 0.95, opacity: 0 }}
 										animate={{ scale: 1, opacity: 1 }}
 										transition={{
 											type: "spring",
