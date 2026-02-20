@@ -336,3 +336,48 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with allocated us
 		latestInvoiceProductId: proAnnual.id,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("setup-payment: monthly plan + one-time payment - invoices paid after trial")}`, async () => {
+	const premium = products.base({
+		id: "premium",
+		items: [
+			items.annualPrice({ price: 50 }),
+			items.oneOffMessages({ price: 100, billingUnits: 100, includedUsage: 0 }),
+		],
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "setup-payment-monthly-oneoff",
+		setup: [s.customer({}), s.products({ list: [premium] })],
+		actions: [],
+	});
+
+	// Attach product with quantity option for the one-off prepaid feature
+	const res = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required",
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: 100,
+			},
+		],
+	});
+
+	await completeStripeCheckoutForm({ url: res.payment_url! });
+
+	const customer = await autumnV1.customers.get(customerId);
+
+	await expectProductActive({
+		customer,
+		productId: premium.id,
+	});
+
+	await expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 100,
+		usage: 0,
+	});
+});
