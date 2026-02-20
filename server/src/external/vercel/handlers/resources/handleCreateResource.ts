@@ -148,7 +148,7 @@ export const handleCreateResource = createRoute({
 				productId,
 				name,
 				metadata,
-				status: "pending", // Will become "ready" after marketplace.invoice.paid confirms payment
+				status: "ready", // Will become "ready" after marketplace.invoice.paid confirms payment
 				billingPlan: {
 					...productToBillingPlan({
 						product,
