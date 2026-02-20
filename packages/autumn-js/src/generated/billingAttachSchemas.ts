@@ -24,18 +24,10 @@ export const billingAttachInvoiceModeSchema = z.object({
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const billingAttachDiscount2Schema = z.object({
-	promotionCode: z.string(),
+export const billingAttachAttachDiscountSchema = z.object({
+	rewardId: z.union([z.string(), z.undefined()]).optional(),
+	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
-
-export const billingAttachDiscount1Schema = z.object({
-	rewardId: z.string(),
-});
-
-export const billingAttachDiscountUnionSchema = z.union([
-	billingAttachDiscount1Schema,
-	billingAttachDiscount2Schema,
-]);
 
 export const billingAttachInvoiceSchema = z.object({
 	status: z.string().nullable(),
@@ -51,13 +43,7 @@ export const billingAttachFeatureQuantityOutboundSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const billingAttachFreeTrialOutboundSchema = z.object({
-	duration_length: z.number(),
-	duration_type: z.string(),
-	card_required: z.boolean(),
-});
-
-export const billingAttachPriceOutboundSchema = z.object({
+export const billingAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
@@ -75,7 +61,7 @@ export const billingAttachTierOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const billingAttachItemPriceOutboundSchema = z.object({
+export const billingAttachPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	tiers: z
 		.union([z.array(billingAttachTierOutboundSchema), z.undefined()])
@@ -98,14 +84,12 @@ export const billingAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingAttachItemOutboundSchema = z.object({
+export const billingAttachPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([billingAttachResetOutboundSchema, z.undefined()]).optional(),
-	price: z
-		.union([billingAttachItemPriceOutboundSchema, z.undefined()])
-		.optional(),
+	price: z.union([billingAttachPriceOutboundSchema, z.undefined()]).optional(),
 	proration: z
 		.union([billingAttachProrationOutboundSchema, z.undefined()])
 		.optional(),
@@ -114,14 +98,24 @@ export const billingAttachItemOutboundSchema = z.object({
 		.optional(),
 });
 
+export const billingAttachFreeTrialParamsOutboundSchema = z.object({
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+});
+
 export const billingAttachCustomizeOutboundSchema = z.object({
 	price: z
-		.union([billingAttachPriceOutboundSchema, z.undefined()])
+		.union([billingAttachBasePriceOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(billingAttachItemOutboundSchema), z.undefined()])
+		.union([z.array(billingAttachPlanItemOutboundSchema), z.undefined()])
 		.optional(),
+	free_trial: z
+		.union([billingAttachFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 });
 
 export const billingAttachInvoiceModeOutboundSchema = z.object({
@@ -130,18 +124,10 @@ export const billingAttachInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 });
 
-export const billingAttachDiscount2OutboundSchema = z.object({
-	promotion_code: z.string(),
+export const billingAttachAttachDiscountOutboundSchema = z.object({
+	reward_id: z.union([z.string(), z.undefined()]).optional(),
+	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
-
-export const billingAttachDiscount1OutboundSchema = z.object({
-	reward_id: z.string(),
-});
-
-export const billingAttachDiscountUnionOutboundSchema = z.union([
-	billingAttachDiscount1OutboundSchema,
-	billingAttachDiscount2OutboundSchema,
-]);
 
 export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
@@ -151,27 +137,15 @@ export const attachParamsOutboundSchema = z.object({
 		.union([z.array(billingAttachFeatureQuantityOutboundSchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
-	free_trial: z
-		.union([billingAttachFreeTrialOutboundSchema, z.undefined()])
-		.optional()
-		.nullable(),
 	customize: z
 		.union([billingAttachCustomizeOutboundSchema, z.undefined()])
 		.optional(),
 	invoice_mode: z
 		.union([billingAttachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
-	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
+	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
-		.union([
-			z.array(
-				z.union([
-					billingAttachDiscount1OutboundSchema,
-					billingAttachDiscount2OutboundSchema,
-				]),
-			),
-			z.undefined(),
-		])
+		.union([z.array(billingAttachAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
@@ -182,19 +156,9 @@ const closedEnumSchema = z.any();
 
 const openEnumSchema = z.any();
 
-export const billingAttachDurationTypeSchema = closedEnumSchema;
-
-export const billingAttachFreeTrialSchema = z.object({
-	durationLength: z.number(),
-	durationType: z
-		.union([billingAttachDurationTypeSchema, z.undefined()])
-		.optional(),
-	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-});
-
 export const billingAttachPriceIntervalSchema = closedEnumSchema;
 
-export const billingAttachPriceSchema = z.object({
+export const billingAttachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: billingAttachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
@@ -211,7 +175,7 @@ export const billingAttachItemPriceIntervalSchema = closedEnumSchema;
 
 export const billingAttachBillingMethodSchema = closedEnumSchema;
 
-export const billingAttachItemPriceSchema = z.object({
+export const billingAttachPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	tiers: z.union([z.array(billingAttachTierSchema), z.undefined()]).optional(),
 	interval: billingAttachItemPriceIntervalSchema,
@@ -238,25 +202,41 @@ export const billingAttachRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingAttachItemSchema = z.object({
+export const billingAttachPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([billingAttachResetSchema, z.undefined()]).optional(),
-	price: z.union([billingAttachItemPriceSchema, z.undefined()]).optional(),
+	price: z.union([billingAttachPriceSchema, z.undefined()]).optional(),
 	proration: z.union([billingAttachProrationSchema, z.undefined()]).optional(),
 	rollover: z.union([billingAttachRolloverSchema, z.undefined()]).optional(),
 });
 
-export const billingAttachCustomizeSchema = z.object({
-	price: z
-		.union([billingAttachPriceSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	items: z.union([z.array(billingAttachItemSchema), z.undefined()]).optional(),
+export const billingAttachDurationTypeSchema = closedEnumSchema;
+
+export const billingAttachFreeTrialParamsSchema = z.object({
+	durationLength: z.number(),
+	durationType: z
+		.union([billingAttachDurationTypeSchema, z.undefined()])
+		.optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const billingAttachBillingBehaviorSchema = closedEnumSchema;
+export const billingAttachCustomizeSchema = z.object({
+	price: z
+		.union([billingAttachBasePriceSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	items: z
+		.union([z.array(billingAttachPlanItemSchema), z.undefined()])
+		.optional(),
+	freeTrial: z
+		.union([billingAttachFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
+});
+
+export const billingAttachProrationBehaviorSchema = closedEnumSchema;
 
 export const billingAttachPlanScheduleSchema = closedEnumSchema;
 
@@ -268,24 +248,15 @@ export const attachParamsSchema = z.object({
 		.union([z.array(billingAttachFeatureQuantitySchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
-	freeTrial: z
-		.union([billingAttachFreeTrialSchema, z.undefined()])
-		.optional()
-		.nullable(),
 	customize: z.union([billingAttachCustomizeSchema, z.undefined()]).optional(),
 	invoiceMode: z
 		.union([billingAttachInvoiceModeSchema, z.undefined()])
 		.optional(),
-	billingBehavior: z
-		.union([billingAttachBillingBehaviorSchema, z.undefined()])
+	prorationBehavior: z
+		.union([billingAttachProrationBehaviorSchema, z.undefined()])
 		.optional(),
 	discounts: z
-		.union([
-			z.array(
-				z.union([billingAttachDiscount1Schema, billingAttachDiscount2Schema]),
-			),
-			z.undefined(),
-		])
+		.union([z.array(billingAttachAttachDiscountSchema), z.undefined()])
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),

@@ -80,7 +80,8 @@
 							"documentation/customers/tracking-usage",
 							"documentation/customers/balances",
 							"documentation/customers/feature-entities",
-							"documentation/customers/enabling-product",
+							"documentation/customers/attaching-plans",
+							"documentation/customers/updating-subscriptions",
 							"documentation/customers/creating-customers",
 							"documentation/customers/managing-customers"
 						]

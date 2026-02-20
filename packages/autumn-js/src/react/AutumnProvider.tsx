@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useRef } from "react";
 import { AutumnContext, type AutumnContextValue } from "./AutumnContext";
 import { createAutumnClient } from "./client/AutumnClient";
 
@@ -14,19 +14,7 @@ export type AutumnProviderProps = {
 	pathPrefix?: string;
 	useBetterAuth?: boolean;
 	includeCredentials?: boolean;
-	queryClient?: QueryClient;
 };
-
-const defaultQueryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			staleTime: 1000 * 60,
-			retry: false,
-			refetchOnWindowFocus: false,
-			refetchOnReconnect: false,
-		},
-	},
-});
 
 /**
  * Provider component for Autumn billing SDK.
@@ -35,7 +23,6 @@ const defaultQueryClient = new QueryClient({
  * @param pathPrefix - Path prefix for the Autumn routes. Defaults to "/api/autumn", or "/api/auth/autumn" if useBetterAuth is true.
  * @param useBetterAuth - Use better-auth integration. Sets pathPrefix to "/api/auth/autumn" and includeCredentials to true by default.
  * @param includeCredentials - Include credentials (cookies) in cross-origin requests. Defaults to true if useBetterAuth is true.
- * @param queryClient - Custom TanStack Query client.
  */
 export const AutumnProvider = ({
 	children,
@@ -43,8 +30,21 @@ export const AutumnProvider = ({
 	pathPrefix,
 	useBetterAuth,
 	includeCredentials,
-	queryClient = defaultQueryClient,
 }: AutumnProviderProps) => {
+	const queryClientRef = useRef<QueryClient | null>(null);
+	if (!queryClientRef.current) {
+		queryClientRef.current = new QueryClient({
+			defaultOptions: {
+				queries: {
+					staleTime: 1000 * 60,
+					retry: false,
+					refetchOnWindowFocus: false,
+					refetchOnReconnect: false,
+				},
+			},
+		});
+	}
+
 	const contextValue = useMemo<AutumnContextValue>(() => {
 		const resolvedPathPrefix =
 			pathPrefix ??
@@ -61,7 +61,7 @@ export const AutumnProvider = ({
 	}, [backendUrl, pathPrefix, useBetterAuth, includeCredentials]);
 
 	return (
-		<QueryClientProvider client={queryClient}>
+		<QueryClientProvider client={queryClientRef.current}>
 			<AutumnContext.Provider value={contextValue}>
 				{children}
 			</AutumnContext.Provider>

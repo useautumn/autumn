@@ -41,7 +41,7 @@ env:
   PACKAGE_NAME: autumn-js
   TEST_PACKAGE_NAME: '@useautumn/js-test'
   # ⚠️  ONE-LINE TOGGLE: Set to 'true' to publish to @useautumn/js-test instead of autumn-js
-  USE_TEST_PACKAGE: 'false'
+  USE_TEST_PACKAGE: 'true'
 
 jobs:
   publish:

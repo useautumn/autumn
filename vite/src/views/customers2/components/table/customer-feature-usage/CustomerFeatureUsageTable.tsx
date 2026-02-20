@@ -161,6 +161,12 @@ export function CustomerFeatureUsageTable() {
 		[allEnts],
 	);
 
+	// Strip CreditSystemSubRow subRows — CustomerBalanceTable uses aggregatedMap for its own sub-rows
+	const balanceEnts = useMemo(
+		() => meteredEnts.map(({ subRows, ...rest }) => rest),
+		[meteredEnts],
+	);
+
 	const booleanEnts = useMemo(
 		() =>
 			allEnts.filter(
@@ -169,7 +175,7 @@ export function CustomerFeatureUsageTable() {
 		[allEnts],
 	);
 
-	const hasMeteredBalances = meteredEnts.length > 0;
+	const hasMeteredBalances = balanceEnts.length > 0;
 	const hasBooleanBalances = booleanEnts.length > 0;
 
 	return (
@@ -203,7 +209,7 @@ export function CustomerFeatureUsageTable() {
 						<div className="flex flex-col gap-3">
 							{hasMeteredBalances && (
 								<CustomerBalanceTable
-									allEnts={meteredEnts}
+									allEnts={balanceEnts}
 									entityId={entityId ?? null}
 									aggregatedMap={aggregatedMap}
 									isLoading={isLoading}

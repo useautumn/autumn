@@ -2185,6 +2185,9 @@ paths:
                           carry over.
                     required:
                       - feature_id
+                    title: PlanItem
+                    description: Configuration for a feature item in a plan, including usage limits,
+                      pricing, and rollover settings.
                   description: Feature configurations for this plan. Each item defines included
                     units, pricing, and reset behavior.
                 free_trial:
@@ -3669,6 +3672,8 @@ paths:
                       required:
                         - amount
                         - interval
+                      title: BasePrice
+                      description: Base price configuration for a plan.
                     - type: "null"
                   description: The price of the plan. Set to null to remove the base price.
                 items:
@@ -3808,6 +3813,9 @@ paths:
                           carry over.
                     required:
                       - feature_id
+                    title: PlanItem
+                    description: Configuration for a feature item in a plan, including usage limits,
+                      pricing, and rollover settings.
                   description: Feature configurations for this plan. Each item defines included
                     units, pricing, and reset behavior.
                 free_trial:
@@ -3831,6 +3839,8 @@ paths:
                             charged after trial ends.
                       required:
                         - duration_length
+                      title: FreeTrialParams
+                      description: Free trial configuration for a plan.
                     - type: "null"
                   description: The free trial of the plan. Set to null to remove the free trial.
                 version:
@@ -5186,13 +5196,18 @@ paths:
                     properties:
                       feature_id:
                         type: string
+                        description: The ID of the feature to set quantity for.
                       quantity:
                         type: number
                         minimum: 0
+                        description: The quantity of the feature.
                       adjustable:
                         type: boolean
+                        description: Whether the customer can adjust the quantity.
                     required:
                       - feature_id
+                    title: FeatureQuantity
+                    description: Quantity configuration for a prepaid feature.
                   description: If this plan contains prepaid features, use this field to specify
                     the quantity of each prepaid feature. This quantity includes
                     the included amount and billing units defined when setting
@@ -5200,30 +5215,6 @@ paths:
                 version:
                   type: number
                   description: The version of the plan to attach.
-                free_trial:
-                  anyOf:
-                    - type: object
-                      properties:
-                        duration_length:
-                          type: number
-                          description: Number of duration_type periods the trial lasts.
-                        duration_type:
-                          enum:
-                            - day
-                            - month
-                            - year
-                          default: month
-                          description: Unit of time for the trial ('day', 'month', 'year').
-                        card_required:
-                          type: boolean
-                          default: true
-                          description: If true, payment method required to start trial. Customer is
-                            charged after trial ends.
-                      required:
-                        - duration_length
-                    - type: "null"
-                  description: Override the plan's default free trial. Pass an object to set a
-                    custom trial, or null to remove the trial entirely.
                 customize:
                   type: object
                   properties:
@@ -5249,7 +5240,11 @@ paths:
                           required:
                             - amount
                             - interval
+                          title: BasePrice
+                          description: Base price configuration for a plan.
                         - type: "null"
+                      description: Override the base price of the plan. Pass null to remove the base
+                        price.
                     items:
                       type: array
                       items:
@@ -5387,8 +5382,38 @@ paths:
                               carry over.
                         required:
                           - feature_id
-                  description: Customize the plan to attach. Can either override the price of the
-                    plan, the items in the plan, or both.
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Override the items in the plan.
+                    free_trial:
+                      anyOf:
+                        - type: object
+                          properties:
+                            duration_length:
+                              type: number
+                              description: Number of duration_type periods the trial lasts.
+                            duration_type:
+                              enum:
+                                - day
+                                - month
+                                - year
+                              default: month
+                              description: Unit of time for the trial ('day', 'month', 'year').
+                            card_required:
+                              type: boolean
+                              default: true
+                              description: If true, payment method required to start trial. Customer is
+                                charged after trial ends.
+                          required:
+                            - duration_length
+                          title: FreeTrialParams
+                          description: Free trial configuration for a plan.
+                        - type: "null"
+                      description: Override the plan's default free trial. Pass an object to set a
+                        custom trial, or null to remove the trial entirely.
+                  description: Customize the plan to attach. Can override the price, items, free
+                    trial, or a combination.
                 invoice_mode:
                   type: object
                   properties:
@@ -5412,32 +5437,25 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                billing_behavior:
+                proration_behavior:
                   enum:
                     - prorate_immediately
                     - none
-                  description: How to handle billing when updating an existing subscription.
+                  description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
-                    'next_cycle_only' skips creating any charges and applies the
-                    change at the next billing cycle.
+                    'none' skips creating any charges.
                 discounts:
                   type: array
                   items:
-                    anyOf:
-                      - type: object
-                        properties:
-                          reward_id:
-                            type: string
-                            description: The ID of the reward to apply as a discount.
-                        required:
-                          - reward_id
-                      - type: object
-                        properties:
-                          promotion_code:
-                            type: string
-                            description: The promotion code to apply as a discount.
-                        required:
-                          - promotion_code
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
                     description: A discount to apply. Can be either a reward ID or a promotion code.
                   description: List of discounts to apply. Each discount can be an Autumn reward
                     ID, Stripe coupon ID, or Stripe promotion code.
@@ -5609,13 +5627,18 @@ paths:
                     properties:
                       feature_id:
                         type: string
+                        description: The ID of the feature to set quantity for.
                       quantity:
                         type: number
                         minimum: 0
+                        description: The quantity of the feature.
                       adjustable:
                         type: boolean
+                        description: Whether the customer can adjust the quantity.
                     required:
                       - feature_id
+                    title: FeatureQuantity
+                    description: Quantity configuration for a prepaid feature.
                   description: If this plan contains prepaid features, use this field to specify
                     the quantity of each prepaid feature. This quantity includes
                     the included amount and billing units defined when setting
@@ -5623,30 +5646,6 @@ paths:
                 version:
                   type: number
                   description: The version of the plan to attach.
-                free_trial:
-                  anyOf:
-                    - type: object
-                      properties:
-                        duration_length:
-                          type: number
-                          description: Number of duration_type periods the trial lasts.
-                        duration_type:
-                          enum:
-                            - day
-                            - month
-                            - year
-                          default: month
-                          description: Unit of time for the trial ('day', 'month', 'year').
-                        card_required:
-                          type: boolean
-                          default: true
-                          description: If true, payment method required to start trial. Customer is
-                            charged after trial ends.
-                      required:
-                        - duration_length
-                    - type: "null"
-                  description: Override the plan's default free trial. Pass an object to set a
-                    custom trial, or null to remove the trial entirely.
                 customize:
                   type: object
                   properties:
@@ -5672,7 +5671,11 @@ paths:
                           required:
                             - amount
                             - interval
+                          title: BasePrice
+                          description: Base price configuration for a plan.
                         - type: "null"
+                      description: Override the base price of the plan. Pass null to remove the base
+                        price.
                     items:
                       type: array
                       items:
@@ -5810,8 +5813,38 @@ paths:
                               carry over.
                         required:
                           - feature_id
-                  description: Customize the plan to attach. Can either override the price of the
-                    plan, the items in the plan, or both.
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Override the items in the plan.
+                    free_trial:
+                      anyOf:
+                        - type: object
+                          properties:
+                            duration_length:
+                              type: number
+                              description: Number of duration_type periods the trial lasts.
+                            duration_type:
+                              enum:
+                                - day
+                                - month
+                                - year
+                              default: month
+                              description: Unit of time for the trial ('day', 'month', 'year').
+                            card_required:
+                              type: boolean
+                              default: true
+                              description: If true, payment method required to start trial. Customer is
+                                charged after trial ends.
+                          required:
+                            - duration_length
+                          title: FreeTrialParams
+                          description: Free trial configuration for a plan.
+                        - type: "null"
+                      description: Override the plan's default free trial. Pass an object to set a
+                        custom trial, or null to remove the trial entirely.
+                  description: Customize the plan to attach. Can override the price, items, free
+                    trial, or a combination.
                 invoice_mode:
                   type: object
                   properties:
@@ -5835,32 +5868,25 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                billing_behavior:
+                proration_behavior:
                   enum:
                     - prorate_immediately
                     - none
-                  description: How to handle billing when updating an existing subscription.
+                  description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
-                    'next_cycle_only' skips creating any charges and applies the
-                    change at the next billing cycle.
+                    'none' skips creating any charges.
                 discounts:
                   type: array
                   items:
-                    anyOf:
-                      - type: object
-                        properties:
-                          reward_id:
-                            type: string
-                            description: The ID of the reward to apply as a discount.
-                        required:
-                          - reward_id
-                      - type: object
-                        properties:
-                          promotion_code:
-                            type: string
-                            description: The promotion code to apply as a discount.
-                        required:
-                          - promotion_code
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
                     description: A discount to apply. Can be either a reward ID or a promotion code.
                   description: List of discounts to apply. Each discount can be an Autumn reward
                     ID, Stripe coupon ID, or Stripe promotion code.
@@ -6039,13 +6065,18 @@ paths:
                     properties:
                       feature_id:
                         type: string
+                        description: The ID of the feature to set quantity for.
                       quantity:
                         type: number
                         minimum: 0
+                        description: The quantity of the feature.
                       adjustable:
                         type: boolean
+                        description: Whether the customer can adjust the quantity.
                     required:
                       - feature_id
+                    title: FeatureQuantity
+                    description: Quantity configuration for a prepaid feature.
                   description: If this plan contains prepaid features, use this field to specify
                     the quantity of each prepaid feature. This quantity includes
                     the included amount and billing units defined when setting
@@ -6053,30 +6084,6 @@ paths:
                 version:
                   type: number
                   description: The version of the plan to attach.
-                free_trial:
-                  anyOf:
-                    - type: object
-                      properties:
-                        duration_length:
-                          type: number
-                          description: Number of duration_type periods the trial lasts.
-                        duration_type:
-                          enum:
-                            - day
-                            - month
-                            - year
-                          default: month
-                          description: Unit of time for the trial ('day', 'month', 'year').
-                        card_required:
-                          type: boolean
-                          default: true
-                          description: If true, payment method required to start trial. Customer is
-                            charged after trial ends.
-                      required:
-                        - duration_length
-                    - type: "null"
-                  description: Override the plan's default free trial. Pass an object to set a
-                    custom trial, or null to remove the trial entirely.
                 customize:
                   type: object
                   properties:
@@ -6102,7 +6109,11 @@ paths:
                           required:
                             - amount
                             - interval
+                          title: BasePrice
+                          description: Base price configuration for a plan.
                         - type: "null"
+                      description: Override the base price of the plan. Pass null to remove the base
+                        price.
                     items:
                       type: array
                       items:
@@ -6240,8 +6251,38 @@ paths:
                               carry over.
                         required:
                           - feature_id
-                  description: Customize the plan to attach. Can either override the price of the
-                    plan, the items in the plan, or both.
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Override the items in the plan.
+                    free_trial:
+                      anyOf:
+                        - type: object
+                          properties:
+                            duration_length:
+                              type: number
+                              description: Number of duration_type periods the trial lasts.
+                            duration_type:
+                              enum:
+                                - day
+                                - month
+                                - year
+                              default: month
+                              description: Unit of time for the trial ('day', 'month', 'year').
+                            card_required:
+                              type: boolean
+                              default: true
+                              description: If true, payment method required to start trial. Customer is
+                                charged after trial ends.
+                          required:
+                            - duration_length
+                          title: FreeTrialParams
+                          description: Free trial configuration for a plan.
+                        - type: "null"
+                      description: Override the plan's default free trial. Pass an object to set a
+                        custom trial, or null to remove the trial entirely.
+                  description: Customize the plan to attach. Can override the price, items, free
+                    trial, or a combination.
                 invoice_mode:
                   type: object
                   properties:
@@ -6265,14 +6306,13 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                billing_behavior:
+                proration_behavior:
                   enum:
                     - prorate_immediately
                     - none
-                  description: How to handle billing when updating an existing subscription.
+                  description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
-                    'next_cycle_only' skips creating any charges and applies the
-                    change at the next billing cycle.
+                    'none' skips creating any charges.
                 cancel_action:
                   enum:
                     - cancel_immediately
@@ -6454,13 +6494,18 @@ paths:
                     properties:
                       feature_id:
                         type: string
+                        description: The ID of the feature to set quantity for.
                       quantity:
                         type: number
                         minimum: 0
+                        description: The quantity of the feature.
                       adjustable:
                         type: boolean
+                        description: Whether the customer can adjust the quantity.
                     required:
                       - feature_id
+                    title: FeatureQuantity
+                    description: Quantity configuration for a prepaid feature.
                   description: If this plan contains prepaid features, use this field to specify
                     the quantity of each prepaid feature. This quantity includes
                     the included amount and billing units defined when setting
@@ -6468,30 +6513,6 @@ paths:
                 version:
                   type: number
                   description: The version of the plan to attach.
-                free_trial:
-                  anyOf:
-                    - type: object
-                      properties:
-                        duration_length:
-                          type: number
-                          description: Number of duration_type periods the trial lasts.
-                        duration_type:
-                          enum:
-                            - day
-                            - month
-                            - year
-                          default: month
-                          description: Unit of time for the trial ('day', 'month', 'year').
-                        card_required:
-                          type: boolean
-                          default: true
-                          description: If true, payment method required to start trial. Customer is
-                            charged after trial ends.
-                      required:
-                        - duration_length
-                    - type: "null"
-                  description: Override the plan's default free trial. Pass an object to set a
-                    custom trial, or null to remove the trial entirely.
                 customize:
                   type: object
                   properties:
@@ -6517,7 +6538,11 @@ paths:
                           required:
                             - amount
                             - interval
+                          title: BasePrice
+                          description: Base price configuration for a plan.
                         - type: "null"
+                      description: Override the base price of the plan. Pass null to remove the base
+                        price.
                     items:
                       type: array
                       items:
@@ -6655,8 +6680,38 @@ paths:
                               carry over.
                         required:
                           - feature_id
-                  description: Customize the plan to attach. Can either override the price of the
-                    plan, the items in the plan, or both.
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Override the items in the plan.
+                    free_trial:
+                      anyOf:
+                        - type: object
+                          properties:
+                            duration_length:
+                              type: number
+                              description: Number of duration_type periods the trial lasts.
+                            duration_type:
+                              enum:
+                                - day
+                                - month
+                                - year
+                              default: month
+                              description: Unit of time for the trial ('day', 'month', 'year').
+                            card_required:
+                              type: boolean
+                              default: true
+                              description: If true, payment method required to start trial. Customer is
+                                charged after trial ends.
+                          required:
+                            - duration_length
+                          title: FreeTrialParams
+                          description: Free trial configuration for a plan.
+                        - type: "null"
+                      description: Override the plan's default free trial. Pass an object to set a
+                        custom trial, or null to remove the trial entirely.
+                  description: Customize the plan to attach. Can override the price, items, free
+                    trial, or a combination.
                 invoice_mode:
                   type: object
                   properties:
@@ -6680,14 +6735,13 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                billing_behavior:
+                proration_behavior:
                   enum:
                     - prorate_immediately
                     - none
-                  description: How to handle billing when updating an existing subscription.
+                  description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
-                    'next_cycle_only' skips creating any charges and applies the
-                    change at the next billing cycle.
+                    'none' skips creating any charges.
                 cancel_action:
                   enum:
                     - cancel_immediately

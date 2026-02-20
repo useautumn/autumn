@@ -54,22 +54,17 @@ const reactConfigs: Options[] = [
 		},
 	},
 
-	// New React (src/react) - TanStack Query based
+	// New React (src/react) - TanStack Query based (bundled)
 	{
 		entry: ["src/react/**/*.{ts,tsx}"],
 		format: ["cjs", "esm"],
 		dts: true,
 		clean: false,
 		outDir: "./dist/react",
-		external: [
-			"react",
-			"react/jsx-runtime",
-			"react-dom",
-			"@tanstack/react-query",
-		],
-		noExternal,
+		external: ["react", "react/jsx-runtime", "react-dom"],
+		noExternal: [...noExternal, "@tanstack/react-query"],
 		bundle: true,
-		skipNodeModulesBundle: true,
+		skipNodeModulesBundle: false,
 		banner: {
 			js: '"use client";',
 		},
