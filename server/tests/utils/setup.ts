@@ -19,7 +19,7 @@ export const getPublicAxiosInstance = ({
 				"x-publishable-key": pkey,
 			};
 	return axios.create({
-		baseURL: "http://localhost:8080",
+		baseURL: process.env.AUTUMN_TEST_BASE_URL || "http://localhost:8080",
 		headers: headers,
 	});
 };
