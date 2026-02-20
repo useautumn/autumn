@@ -3,6 +3,7 @@ import {
 	type ApiPlanV1,
 	ApiVersion,
 	BillingInterval,
+	type CreatePlanParamsV2Input,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -44,7 +45,7 @@ const createTestPlan = async (planId: string) => {
 		await autumnRpc.plans.delete(planId, { allVersions: true });
 	} catch (_error) {}
 
-	return await autumnRpc.plans.create<ApiPlanV1>({
+	return await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
 		plan_id: planId,
 		name: `Test Plan ${planId}`,
 		group: `group_${planId}`,

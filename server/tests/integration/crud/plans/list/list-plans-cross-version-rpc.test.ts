@@ -7,7 +7,7 @@ import {
 	type ApiProduct,
 	ApiProductSchema,
 	ApiVersion,
-	type CreatePlanParamsInput,
+	type CreatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import chalk from "chalk";
@@ -28,12 +28,10 @@ test.concurrent(`${chalk.yellowBright("rpc regression: rest list stays cross-ver
 
 	try {
 		await autumnRpc.plans.delete(freeId, { allVersions: true });
-	} catch (_error) {
-		// no-op
-	}
+	} catch (_error) {}
 
-	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsInput>({
-		id: freeId,
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: freeId,
 		name: "RPC List Free",
 		group: freeGroup,
 		items: [{ feature_id: TestFeature.Credits, included: 500 }],
