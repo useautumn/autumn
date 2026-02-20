@@ -1,6 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	addToExpand,
 	backwardsChangeActive,
 	CreateCustomerParamsV0Schema,
 	CreateCustomerQuerySchema,
@@ -21,7 +22,7 @@ export const handlePostCustomer = createRoute({
 	body: CreateCustomerParamsV0Schema,
 
 	handler: async (c) => {
-		const ctx = c.get("ctx");
+		let ctx = c.get("ctx");
 
 		const { expand = [], with_autumn_id } = c.req.valid("query");
 		const createCusParams = c.req.valid("json");
@@ -34,6 +35,18 @@ export const handlePostCustomer = createRoute({
 			})
 		) {
 			expand.push(CustomerExpand.Invoices);
+		}
+
+		// SECOND SIDE EFFECT
+		if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
+			ctx = addToExpand({
+				ctx,
+				add: [
+					CustomerExpand.SubscriptionsPlan,
+					CustomerExpand.PurchasesPlan,
+					CustomerExpand.BalancesFeature,
+				],
+			});
 		}
 
 		const start = Date.now();
