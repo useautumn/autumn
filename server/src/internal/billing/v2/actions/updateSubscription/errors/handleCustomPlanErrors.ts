@@ -8,6 +8,7 @@ import {
 	RecaseError,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { hasCustomItems } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const handleCustomPlanErrors = ({
@@ -21,7 +22,7 @@ export const handleCustomPlanErrors = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	params: UpdateSubscriptionV1Params;
 }) => {
-	if (!params.customize) return;
+	if (!hasCustomItems(params.customize)) return;
 
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
 	const currentCustomerProduct = billingContext.customerProduct;
