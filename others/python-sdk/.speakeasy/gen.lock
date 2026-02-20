@@ -5,12 +5,12 @@ management:
   docVersion: 2.1.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
-  releaseVersion: 0.4.17
-  configChecksum: 2fd2e3cdfeca190c82c97c016f010a78
+  releaseVersion: 0.4.18
+  configChecksum: 46b68bc55ccd1052174eed6b06433cd1
 persistentEdits:
-  generation_id: d867aa25-7002-45c0-9257-d1552210f0fe
-  pristine_commit_hash: fef7bd1893678ccd9300e5aec919a85cbd8d4d2e
-  pristine_tree_hash: 734ab30d9c0e0586332acd2645bdc679782d6bb2
+  generation_id: b77b4864-8198-4088-b74b-22fe24b826db
+  pristine_commit_hash: 36b6e89a90c419184a00c38297f1ac5aba5ccd4e
+  pristine_tree_hash: 721c02e8ad48c4d1b4b9a6dae09474dd85a0471f
 features:
   python:
     additionalDependencies: 1.0.0
@@ -1885,8 +1885,8 @@ trackedFiles:
     pristine_git_object: 5650f49e06066f8a1338afdbc0e155f5277152df
   pyproject.toml:
     id: 5d07e7d72637
-    last_write_checksum: sha1:aba72bf104473833b5c27a14c12b72ec7056ccdf
-    pristine_git_object: fa66a09cdd4e41e9e96d6936449c424574e446b6
+    last_write_checksum: sha1:fd0badc54d2c51c633d02cacda0e7a9fd5abaa00
+    pristine_git_object: 1882a4eb3c078ecb42ac6bb3ca7cde0658ff19f9
   scripts/publish.sh:
     id: fe273b08f514
     last_write_checksum: sha1:adc9b741c12ad1591ab4870eabe20f0d0a86cd1a
@@ -1909,8 +1909,8 @@ trackedFiles:
     pristine_git_object: 3e604651c1eae73d815b276806e73b2f1334bb79
   src/autumn_sdk/_version.py:
     id: a98babfdf4fc
-    last_write_checksum: sha1:45939110fb0d40ecfefdc0c29153e73f51bf4177
-    pristine_git_object: 2d130c9fd4c3244a6b1f26d8d8f95dc1188aa2af
+    last_write_checksum: sha1:dde65e24ed57aab0bae04bf07cc28993d0d197ec
+    pristine_git_object: 640279bb0265e22047255effeeec245c86c47396
   src/autumn_sdk/balances.py:
     id: 0a15be654dad
     last_write_checksum: sha1:bcef18a651842ffe96a5a72f608c4c37e2443bf7

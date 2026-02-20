@@ -1,6 +1,6 @@
 [project]
 name = "autumn-sdk"
-version = "0.4.17"
+version = "0.4.18"
 description = "Python SDK for the Autumn billing API"
 authors = [{ name = "Autumn" },]
 readme = "README.md"
