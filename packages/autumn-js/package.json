@@ -1,7 +1,7 @@
 {
 	"name": "autumn-js",
 	"description": "Autumn JS Library",
-	"version": "1.0.0-beta.1",
+	"version": "0.0.1",
 	"repository": "github:useautumn/autumn-js",
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
@@ -13,7 +13,7 @@
 		"LICENSE.md"
 	],
 	"scripts": {
-		"ts": "bunx tsgo --noEmit --skipLibCheck",
+		"ts": "tsgo --noEmit --skipLibCheck",
 		"build": "rm -rf dist && tsup",
 		"prepublishOnly": "bun run build"
 	},
@@ -75,6 +75,9 @@
 	],
 	"author": "John Yeo",
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
 		"query-string": "^9.2.2",
 		"rou3": "^0.6.1",
@@ -90,8 +93,8 @@
 		"next": "^15.2.3",
 		"react-dom": "^19.1.0",
 		"tsup": "^8.4.0",
-		"tsgo": "catalog:",
-		"typescript": "^5.8.3"
+		"typescript": "^5.8.3",
+		"@typescript/native-preview": "catalog:"
 	},
 	"peerDependencies": {
 		"@tanstack/react-query": "^5.0.0",

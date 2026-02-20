@@ -11,6 +11,9 @@ COPY shared/package.json ./shared/package.json
 COPY vite/package.json ./vite/package.json
 COPY scripts/package.json ./scripts/package.json
 COPY apps/checkout/package.json ./apps/checkout/package.json
+COPY packages/autumn-js/package.json ./packages/autumn-js/package.json
+COPY packages/openapi/package.json ./packages/openapi/package.json
+COPY packages/sdk/package.json ./packages/sdk/package.json
 
 # Install dependencies
 RUN bun install --ignore-scripts
