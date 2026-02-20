@@ -24,11 +24,17 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <DynamicParamField body="feature_quantities" type="object[]">
   If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
   <Expandable title="properties">
-    <DynamicParamField body="feature_id" type="string" required />
+    <DynamicParamField body="feature_id" type="string" required>
+      The ID of the feature to set quantity for.
+    </DynamicParamField>
 
-    <DynamicParamField body="quantity" type="number" />
+    <DynamicParamField body="quantity" type="number">
+      The quantity of the feature.
+    </DynamicParamField>
 
-    <DynamicParamField body="adjustable" type="boolean" />
+    <DynamicParamField body="adjustable" type="boolean">
+      Whether the customer can adjust the quantity.
+    </DynamicParamField>
 
   </Expandable>
 </DynamicParamField>
@@ -37,28 +43,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   The version of the plan to attach.
 </DynamicParamField>
 
-<DynamicParamField body="free_trial" type="object | null">
-  Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
-  <Expandable title="properties">
-    <DynamicParamField body="duration_length" type="number" required>
-      Number of duration_type periods the trial lasts.
-    </DynamicParamField>
-
-    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
-      Unit of time for the trial ('day', 'month', 'year').
-    </DynamicParamField>
-
-    <DynamicParamField body="card_required" type="boolean">
-      If true, payment method required to start trial. Customer is charged after trial ends.
-    </DynamicParamField>
-
-  </Expandable>
-</DynamicParamField>
-
 <DynamicParamField body="customize" type="object">
-  Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+  Customize the plan to attach. Can override the price, items, free trial, or a combination.
   <Expandable title="properties">
     <DynamicParamField body="price" type="object | null">
+      Base price configuration for a plan.
       <Expandable title="properties">
         <DynamicParamField body="amount" type="number" required>
           Base price amount for the plan.
@@ -76,6 +65,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicParamField>
 
     <DynamicParamField body="items" type="object[]">
+      Override the items in the plan.
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string" required>
           The ID of the feature to configure.
@@ -178,6 +168,24 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicParamField>
 
+    <DynamicParamField body="free_trial" type="object | null">
+      Free trial configuration for a plan.
+      <Expandable title="properties">
+        <DynamicParamField body="duration_length" type="number" required>
+          Number of duration_type periods the trial lasts.
+        </DynamicParamField>
+
+        <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
+          Unit of time for the trial ('day', 'month', 'year').
+        </DynamicParamField>
+
+        <DynamicParamField body="card_required" type="boolean">
+          If true, payment method required to start trial. Customer is charged after trial ends.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
@@ -199,8 +207,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
-  How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
+  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
 </DynamicParamField>
 
 <DynamicParamField body="cancel_action" type="'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'">

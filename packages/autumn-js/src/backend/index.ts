@@ -103,14 +103,3 @@ export {
 	type UnifiedRequest,
 	type UnifiedResponse,
 } from "./core";
-
-// ─────────────────────────────────────────────────────────────
-// Adapters
-// ─────────────────────────────────────────────────────────────
-
-export {
-	type HonoAutumnHandlerOptions,
-	honoAutumnHandler,
-	type NextAutumnHandlerOptions,
-	nextAutumnHandler,
-} from "./adapters";
