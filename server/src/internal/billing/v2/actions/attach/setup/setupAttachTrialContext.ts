@@ -48,9 +48,9 @@ export const setupAttachTrialContext = async ({
 	} = currentContext;
 
 	// Handle explicit free_trial param (null or value)
-	if (params.free_trial !== undefined) {
+	if (params.customize?.free_trial !== undefined) {
 		return handleFreeTrialParam({
-			freeTrialParams: params.free_trial,
+			freeTrialParams: params.customize.free_trial,
 			stripeSubscription,
 			fullProduct: attachProduct,
 			currentEpochMs,

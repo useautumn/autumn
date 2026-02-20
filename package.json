@@ -84,9 +84,9 @@
 		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts",
 		"js:ts": "bun -F autumn-js ts",
 		"js:build": "bun -F @useautumn/sdk build && bun -F autumn-js build",
-		"js:publish": "bun js:build && cd packages/autumn-js && npm publish",
 		"js:publish-beta": "bun js:build && cd packages/autumn-js && npm publish --tag beta",
-		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run"
+		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run",
+		"js:version": "git fetch --tags origin && git tag -l 'autumn-js-v*' --sort=-v:refname | head -1"
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",

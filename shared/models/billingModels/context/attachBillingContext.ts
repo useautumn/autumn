@@ -3,7 +3,11 @@ import { z } from "zod/v4";
 import type { BillingContext } from "./billingContext";
 
 // Plan timing for attach operations
-export const PlanTimingSchema = z.enum(["immediate", "end_of_cycle"]);
+export const PlanTimingSchema = z.enum(["immediate", "end_of_cycle"]).meta({
+	title: "PlanSchedule",
+	description:
+		"When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle.",
+});
 export type PlanTiming = z.infer<typeof PlanTimingSchema>;
 
 // Checkout mode for attach operations

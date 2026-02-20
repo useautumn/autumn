@@ -45,65 +45,31 @@ class BillingAttachGlobals(BaseModel):
 
 
 class BillingAttachFeatureQuantityTypedDict(TypedDict):
+    r"""Quantity configuration for a prepaid feature."""
+
     feature_id: str
+    r"""The ID of the feature to set quantity for."""
     quantity: NotRequired[float]
+    r"""The quantity of the feature."""
     adjustable: NotRequired[bool]
+    r"""Whether the customer can adjust the quantity."""
 
 
 class BillingAttachFeatureQuantity(BaseModel):
+    r"""Quantity configuration for a prepaid feature."""
+
     feature_id: str
+    r"""The ID of the feature to set quantity for."""
 
     quantity: Optional[float] = None
+    r"""The quantity of the feature."""
 
     adjustable: Optional[bool] = None
+    r"""Whether the customer can adjust the quantity."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["quantity", "adjustable"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-BillingAttachDurationType = Literal[
-    "day",
-    "month",
-    "year",
-]
-r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-
-class BillingAttachFreeTrialTypedDict(TypedDict):
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[BillingAttachDurationType]
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-    card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-
-
-class BillingAttachFreeTrial(BaseModel):
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-
-    duration_type: Optional[BillingAttachDurationType] = "month"
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required"])
         serialized = handler(self)
         m = {}
 
@@ -129,7 +95,9 @@ BillingAttachPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class BillingAttachPriceTypedDict(TypedDict):
+class BillingAttachBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
     interval: BillingAttachPriceInterval
@@ -138,7 +106,9 @@ class BillingAttachPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
-class BillingAttachPrice(BaseModel):
+class BillingAttachBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
 
@@ -249,7 +219,7 @@ BillingAttachBillingMethod = Literal[
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class BillingAttachItemPriceTypedDict(TypedDict):
+class BillingAttachPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: BillingAttachItemPriceInterval
@@ -268,7 +238,7 @@ class BillingAttachItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
-class BillingAttachItemPrice(BaseModel):
+class BillingAttachPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: BillingAttachItemPriceInterval
@@ -396,7 +366,9 @@ class BillingAttachRollover(BaseModel):
         return m
 
 
-class BillingAttachItemTypedDict(TypedDict):
+class BillingAttachPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
     included: NotRequired[float]
@@ -405,7 +377,7 @@ class BillingAttachItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     reset: NotRequired[BillingAttachResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[BillingAttachItemPriceTypedDict]
+    price: NotRequired[BillingAttachPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[BillingAttachProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
@@ -413,7 +385,9 @@ class BillingAttachItemTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class BillingAttachItem(BaseModel):
+class BillingAttachPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
 
@@ -426,7 +400,7 @@ class BillingAttachItem(BaseModel):
     reset: Optional[BillingAttachReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[BillingAttachItemPrice] = None
+    price: Optional[BillingAttachPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     proration: Optional[BillingAttachProration] = None
@@ -454,24 +428,81 @@ class BillingAttachItem(BaseModel):
         return m
 
 
-class BillingAttachCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+BillingAttachDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    price: NotRequired[Nullable[BillingAttachPriceTypedDict]]
-    items: NotRequired[List[BillingAttachItemTypedDict]]
+
+class BillingAttachFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[BillingAttachDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
 
-class BillingAttachCustomize(BaseModel):
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+class BillingAttachFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
 
-    price: OptionalNullable[BillingAttachPrice] = UNSET
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
 
-    items: Optional[List[BillingAttachItem]] = None
+    duration_type: Optional[BillingAttachDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price", "items"])
-        nullable_fields = set(["price"])
+        optional_fields = set(["duration_type", "card_required"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingAttachCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+
+    price: NotRequired[Nullable[BillingAttachBasePriceTypedDict]]
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+    items: NotRequired[List[BillingAttachPlanItemTypedDict]]
+    r"""Override the items in the plan."""
+    free_trial: NotRequired[Nullable[BillingAttachFreeTrialParamsTypedDict]]
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+
+class BillingAttachCustomize(BaseModel):
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+
+    price: OptionalNullable[BillingAttachBasePrice] = UNSET
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+
+    items: Optional[List[BillingAttachPlanItem]] = None
+    r"""Override the items in the plan."""
+
+    free_trial: OptionalNullable[BillingAttachFreeTrialParams] = UNSET
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "items", "free_trial"])
+        nullable_fields = set(["price", "free_trial"])
         serialized = handler(self)
         m = {}
 
@@ -534,44 +565,46 @@ class BillingAttachInvoiceMode(BaseModel):
         return m
 
 
-BillingAttachBillingBehavior = Literal[
+BillingAttachProrationBehavior = Literal[
     "prorate_immediately",
     "none",
 ]
-r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
-class BillingAttachDiscount2TypedDict(TypedDict):
-    promotion_code: str
+class BillingAttachAttachDiscountTypedDict(TypedDict):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: NotRequired[str]
+    r"""The ID of the reward to apply as a discount."""
+    promotion_code: NotRequired[str]
     r"""The promotion code to apply as a discount."""
 
 
-class BillingAttachDiscount2(BaseModel):
-    promotion_code: str
+class BillingAttachAttachDiscount(BaseModel):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: Optional[str] = None
+    r"""The ID of the reward to apply as a discount."""
+
+    promotion_code: Optional[str] = None
     r"""The promotion code to apply as a discount."""
 
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["reward_id", "promotion_code"])
+        serialized = handler(self)
+        m = {}
 
-class BillingAttachDiscount1TypedDict(TypedDict):
-    reward_id: str
-    r"""The ID of the reward to apply as a discount."""
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
 
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
 
-class BillingAttachDiscount1(BaseModel):
-    reward_id: str
-    r"""The ID of the reward to apply as a discount."""
-
-
-BillingAttachDiscountUnionTypedDict = TypeAliasType(
-    "BillingAttachDiscountUnionTypedDict",
-    Union[BillingAttachDiscount1TypedDict, BillingAttachDiscount2TypedDict],
-)
-r"""A discount to apply. Can be either a reward ID or a promotion code."""
-
-
-BillingAttachDiscountUnion = TypeAliasType(
-    "BillingAttachDiscountUnion", Union[BillingAttachDiscount1, BillingAttachDiscount2]
-)
-r"""A discount to apply. Can be either a reward ID or a promotion code."""
+        return m
 
 
 BillingAttachPlanSchedule = Literal[
@@ -592,15 +625,13 @@ class AttachParamsTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
-    free_trial: NotRequired[Nullable[BillingAttachFreeTrialTypedDict]]
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
     customize: NotRequired[BillingAttachCustomizeTypedDict]
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
     invoice_mode: NotRequired[BillingAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
-    billing_behavior: NotRequired[BillingAttachBillingBehavior]
-    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
-    discounts: NotRequired[List[BillingAttachDiscountUnionTypedDict]]
+    proration_behavior: NotRequired[BillingAttachProrationBehavior]
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    discounts: NotRequired[List[BillingAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
@@ -626,19 +657,16 @@ class AttachParams(BaseModel):
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
-    free_trial: OptionalNullable[BillingAttachFreeTrial] = UNSET
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-
     customize: Optional[BillingAttachCustomize] = None
-    r"""Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both."""
+    r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
 
     invoice_mode: Optional[BillingAttachInvoiceMode] = None
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
-    billing_behavior: Optional[BillingAttachBillingBehavior] = None
-    r"""How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle."""
+    proration_behavior: Optional[BillingAttachProrationBehavior] = None
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
-    discounts: Optional[List[BillingAttachDiscountUnion]] = None
+    discounts: Optional[List[BillingAttachAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
     success_url: Optional[str] = None
@@ -657,34 +685,24 @@ class AttachParams(BaseModel):
                 "entity_id",
                 "feature_quantities",
                 "version",
-                "free_trial",
                 "customize",
                 "invoice_mode",
-                "billing_behavior",
+                "proration_behavior",
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
                 "plan_schedule",
             ]
         )
-        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m

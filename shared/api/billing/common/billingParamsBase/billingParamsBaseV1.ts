@@ -1,5 +1,4 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
-import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
 import { EntityDataSchema } from "../../../common/entityData";
@@ -26,22 +25,18 @@ export const BillingParamsBaseV1Schema = z.object({
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),
-	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
-		description:
-			"Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.",
-	}),
 	customize: CustomizePlanV1Schema.optional().meta({
 		description:
-			"Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.",
+			"Customize the plan to attach. Can override the price, items, free trial, or a combination.",
 	}),
 
 	invoice_mode: InvoiceModeParamsSchema.optional().meta({
 		description:
 			"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.",
 	}),
-	billing_behavior: BillingBehaviorSchema.optional().meta({
+	proration_behavior: BillingBehaviorSchema.optional().meta({
 		description:
-			"How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.",
+			"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
 	}),
 
 	transition_rules: TransitionRulesSchema.optional().meta({

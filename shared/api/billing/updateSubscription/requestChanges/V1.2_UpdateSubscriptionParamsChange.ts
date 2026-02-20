@@ -31,7 +31,7 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof UpdateSubscriptionV0ParamsSchema>;
 	}): z.infer<typeof UpdateSubscriptionV1ParamsSchema> => {
-		const customizeV1 = input.items
+		const itemsCustomize = input.items
 			? productItemsToCustomizePlanV1({
 					ctx,
 					items: input.items,
@@ -41,6 +41,14 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 		const freeTrialV1 = freeTrialParamsV0ToV1({
 			freeTrialParamsV0: input.free_trial,
 		});
+
+		const customizeV1 =
+			itemsCustomize || freeTrialV1 !== undefined
+				? {
+						...itemsCustomize,
+						free_trial: freeTrialV1,
+					}
+				: undefined;
 
 		const newPlanId = input.product_id ?? undefined;
 		const featureQuantities = input.options;
@@ -52,9 +60,8 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 			plan_id: newPlanId,
 			invoice_mode: invoiceMode,
 			feature_quantities: featureQuantities,
-
-			free_trial: freeTrialV1,
 			customize: customizeV1,
+			proration_behavior: input.billing_behavior,
 		};
 	},
 });

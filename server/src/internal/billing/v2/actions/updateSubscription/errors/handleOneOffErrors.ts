@@ -32,9 +32,9 @@ export const handleOneOffErrors = ({
 	if (!isCustomerProductOneOff(customerProduct)) return;
 
 	// 1. Check that free trial param isn't passed in
-	const { free_trial } = params;
+	const freeTrial = params.customize?.free_trial;
 
-	if (free_trial) {
+	if (freeTrial) {
 		throw new RecaseError({
 			message: "Cannot set / remove a free trial on one off plans.",
 		});

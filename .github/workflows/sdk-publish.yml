@@ -18,14 +18,6 @@ on:
         options:
           - 'true'
           - 'false'
-      test-package:
-        description: 'Publish to @useautumn/js-test instead'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
       version-bump:
         description: 'Version bump type (for manual triggers)'
         required: false
@@ -35,11 +27,21 @@ on:
           - 'patch'
           - 'minor'
           - 'major'
+      test-package:
+        description: 'Publish to @useautumn/js-test instead (for testing)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 env:
   PACKAGE_DIR: packages/autumn-js
-  REAL_PACKAGE_NAME: autumn-js
+  PACKAGE_NAME: autumn-js
   TEST_PACKAGE_NAME: '@useautumn/js-test'
+  # ⚠️  ONE-LINE TOGGLE: Set to 'true' to publish to @useautumn/js-test instead of autumn-js
+  USE_TEST_PACKAGE: 'true'
 
 jobs:
   publish:
@@ -68,8 +70,19 @@ jobs:
           node-version: '22.14.0'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Ensure npm >= 11.5.1 for OIDC trusted publishing
+        run: |
+          echo "Current npm version: $(npm --version)"
+          npm install -g npm@latest
+          echo "Updated npm version: $(npm --version)"
+      
       - name: Install dependencies
         run: bun install
+      
+      - name: Install Speakeasy CLI
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          echo "$HOME/.speakeasy/bin" >> $GITHUB_PATH
       
       - name: Determine version bump type
         id: version-type
@@ -145,19 +158,7 @@ jobs:
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "Next version: $NEXT_VERSION"
       
-      - name: Determine package name
-        if: steps.version-type.outputs.bump != 'skip'
-        id: package
-        run: |
-          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
-            echo "name=${{ env.TEST_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
-            echo "Publishing to test package: ${{ env.TEST_PACKAGE_NAME }}"
-          else
-            echo "name=${{ env.REAL_PACKAGE_NAME }}" >> $GITHUB_OUTPUT
-            echo "Publishing to real package: ${{ env.REAL_PACKAGE_NAME }}"
-          fi
-      
-      - name: Update package.json version and name
+      - name: Update package.json version
         if: steps.version-type.outputs.bump != 'skip'
         run: |
           cd ${{ env.PACKAGE_DIR }}
@@ -167,15 +168,8 @@ jobs:
              '.version = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
           
-          # Update package name if using test package
-          if [ "${{ github.event.inputs.test-package }}" = "true" ]; then
-            jq --arg name "${{ env.TEST_PACKAGE_NAME }}" \
-               '.name = $name' package.json > package.json.tmp
-            mv package.json.tmp package.json
-          fi
-          
           echo "Updated package.json:"
-          cat package.json | head -20
+          cat package.json | head -10
       
       - name: Regenerate SDK from OpenAPI
         if: steps.version-type.outputs.bump != 'skip'
@@ -191,22 +185,63 @@ jobs:
         if: steps.version-type.outputs.bump != 'skip'
         run: bun js:ts
       
+      - name: Determine target package
+        if: steps.version-type.outputs.bump != 'skip'
+        id: target
+        run: |
+          # Manual trigger can override, otherwise use env var
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.test-package }}" = "true" ]; then
+            USE_TEST="true"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.test-package }}" = "false" ]; then
+            USE_TEST="false"
+          else
+            # Auto-trigger: use env var
+            USE_TEST="${{ env.USE_TEST_PACKAGE }}"
+          fi
+          echo "use_test=$USE_TEST" >> $GITHUB_OUTPUT
+          echo "Target: use_test=$USE_TEST"
+      
+      - name: Prepare test package
+        if: steps.version-type.outputs.bump != 'skip' && steps.target.outputs.use_test == 'true'
+        run: |
+          echo "Preparing test package (use_test=${{ steps.target.outputs.use_test }})"
+          mkdir -p /tmp/js-test-publish
+          cp -r ${{ env.PACKAGE_DIR }}/dist /tmp/js-test-publish/
+          cp ${{ env.PACKAGE_DIR }}/package.json /tmp/js-test-publish/
+          cd /tmp/js-test-publish
+          # Update package name and remove prepublishOnly (already built)
+          jq --arg name "${{ env.TEST_PACKAGE_NAME }}" '.name = $name | del(.scripts.prepublishOnly)' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          echo "Package name in package.json:"
+          grep '"name"' package.json
+          echo "✅ Prepared test package: ${{ env.TEST_PACKAGE_NAME }}"
+      
       - name: Publish (dry-run)
         if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run == 'true'
         run: |
-          cd ${{ env.PACKAGE_DIR }}
+          if [ "${{ steps.target.outputs.use_test }}" = "true" ]; then
+            cd /tmp/js-test-publish
+          else
+            cd ${{ env.PACKAGE_DIR }}
+          fi
           npm publish --dry-run --provenance --access public
           echo "✅ Dry run completed successfully"
       
       - name: Publish to npm
         if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true'
         run: |
-          cd ${{ env.PACKAGE_DIR }}
-          npm publish --provenance --access public
-          echo "✅ Published ${{ steps.package.outputs.name }}@${{ steps.next-version.outputs.version }}"
+          if [ "${{ steps.target.outputs.use_test }}" = "true" ]; then
+            cd /tmp/js-test-publish
+            npm publish --provenance --access public
+            echo "✅ Published ${{ env.TEST_PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
+          else
+            cd ${{ env.PACKAGE_DIR }}
+            npm publish --provenance --access public
+            echo "✅ Published ${{ env.PACKAGE_NAME }}@${{ steps.next-version.outputs.version }}"
+          fi
       
       - name: Create git tag
-        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true' && github.event.inputs.test-package != 'true'
+        if: steps.version-type.outputs.bump != 'skip' && github.event.inputs.dry-run != 'true' && steps.target.outputs.use_test != 'true'
         run: |
           TAG_NAME="autumn-js-v${{ steps.next-version.outputs.version }}"
           git tag "$TAG_NAME"
@@ -220,7 +255,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | ${{ steps.package.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.target.outputs.use_test }}" = "true" ]; then
+            echo "| Package | ${{ env.TEST_PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Package | ${{ env.PACKAGE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Version | ${{ steps.next-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | ${{ steps.version-type.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Dry Run | ${{ github.event.inputs.dry-run || 'false' }} |" >> $GITHUB_STEP_SUMMARY
