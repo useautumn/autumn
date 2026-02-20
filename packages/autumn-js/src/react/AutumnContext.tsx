@@ -7,10 +7,14 @@ export type AutumnContextValue = {
 
 export const AutumnContext = createContext<AutumnContextValue | null>(null);
 
-export const useAutumnClient = (): IAutumnClient => {
+export const useAutumnClient = ({
+	caller,
+}: {
+	caller: string;
+}): IAutumnClient => {
 	const context = useContext(AutumnContext);
 	if (!context) {
-		throw new Error("useAutumnClient must be used within an AutumnProvider");
+		throw new Error(`${caller} must be used within <AutumnProvider/>`);
 	}
 	return context.client;
 };

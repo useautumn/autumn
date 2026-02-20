@@ -8,6 +8,7 @@ import {
 	BillingVersion,
 	CusProductStatus,
 	cusProductToPrices,
+	hasCustomItems,
 	isFreeProduct,
 	isOneOffProduct,
 	notNullish,
@@ -130,7 +131,7 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = notNullish(params.customize);
+	const isCustom = hasCustomItems(params.customize);
 
 	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();

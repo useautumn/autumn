@@ -235,7 +235,10 @@ export type CreatePlanRolloverRequest = {
   expiryDurationLength?: number | undefined;
 };
 
-export type CreatePlanItemRequest = {
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type CreatePlanPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -284,7 +287,7 @@ export type CreatePlanDurationTypeRequest = ClosedEnum<
 /**
  * Free trial configuration. Customers can try this plan before being charged.
  */
-export type CreatePlanFreeTrialRequest = {
+export type FreeTrialRequest = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -331,11 +334,11 @@ export type CreatePlanParams = {
   /**
    * Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
    */
-  items?: Array<CreatePlanItemRequest> | undefined;
+  items?: Array<CreatePlanPlanItem> | undefined;
   /**
    * Free trial configuration. Customers can try this plan before being charged.
    */
-  freeTrial?: CreatePlanFreeTrialRequest | undefined;
+  freeTrial?: FreeTrialRequest | undefined;
 };
 
 /**
@@ -604,7 +607,7 @@ export type CreatePlanRolloverResponse = {
   expiryDurationLength?: number | undefined;
 };
 
-export type CreatePlanItemResponse = {
+export type CreatePlanItem = {
   /**
    * The ID of the feature this item configures.
    */
@@ -723,7 +726,7 @@ export type CreatePlanResponse = {
   /**
    * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
    */
-  items: Array<CreatePlanItemResponse>;
+  items: Array<CreatePlanItem>;
   /**
    * Free trial configuration. If set, new customers can try this plan before being charged.
    */
@@ -993,7 +996,7 @@ export function createPlanRolloverRequestToJSON(
 }
 
 /** @internal */
-export type CreatePlanItemRequest$Outbound = {
+export type CreatePlanPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -1004,9 +1007,9 @@ export type CreatePlanItemRequest$Outbound = {
 };
 
 /** @internal */
-export const CreatePlanItemRequest$outboundSchema: z.ZodMiniType<
-  CreatePlanItemRequest$Outbound,
-  CreatePlanItemRequest
+export const CreatePlanPlanItem$outboundSchema: z.ZodMiniType<
+  CreatePlanPlanItem$Outbound,
+  CreatePlanPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1026,11 +1029,11 @@ export const CreatePlanItemRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createPlanItemRequestToJSON(
-  createPlanItemRequest: CreatePlanItemRequest,
+export function createPlanPlanItemToJSON(
+  createPlanPlanItem: CreatePlanPlanItem,
 ): string {
   return JSON.stringify(
-    CreatePlanItemRequest$outboundSchema.parse(createPlanItemRequest),
+    CreatePlanPlanItem$outboundSchema.parse(createPlanPlanItem),
   );
 }
 
@@ -1040,16 +1043,16 @@ export const CreatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreatePlanDurationTypeRequest);
 
 /** @internal */
-export type CreatePlanFreeTrialRequest$Outbound = {
+export type FreeTrialRequest$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
 };
 
 /** @internal */
-export const CreatePlanFreeTrialRequest$outboundSchema: z.ZodMiniType<
-  CreatePlanFreeTrialRequest$Outbound,
-  CreatePlanFreeTrialRequest
+export const FreeTrialRequest$outboundSchema: z.ZodMiniType<
+  FreeTrialRequest$Outbound,
+  FreeTrialRequest
 > = z.pipe(
   z.object({
     durationLength: z.number(),
@@ -1068,11 +1071,11 @@ export const CreatePlanFreeTrialRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createPlanFreeTrialRequestToJSON(
-  createPlanFreeTrialRequest: CreatePlanFreeTrialRequest,
+export function freeTrialRequestToJSON(
+  freeTrialRequest: FreeTrialRequest,
 ): string {
   return JSON.stringify(
-    CreatePlanFreeTrialRequest$outboundSchema.parse(createPlanFreeTrialRequest),
+    FreeTrialRequest$outboundSchema.parse(freeTrialRequest),
   );
 }
 
@@ -1085,8 +1088,8 @@ export type CreatePlanParams$Outbound = {
   add_on: boolean;
   auto_enable: boolean;
   price?: CreatePlanPriceRequest$Outbound | undefined;
-  items?: Array<CreatePlanItemRequest$Outbound> | undefined;
-  free_trial?: CreatePlanFreeTrialRequest$Outbound | undefined;
+  items?: Array<CreatePlanPlanItem$Outbound> | undefined;
+  free_trial?: FreeTrialRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -1102,12 +1105,8 @@ export const CreatePlanParams$outboundSchema: z.ZodMiniType<
     addOn: z._default(z.boolean(), false),
     autoEnable: z._default(z.boolean(), false),
     price: z.optional(z.lazy(() => CreatePlanPriceRequest$outboundSchema)),
-    items: z.optional(
-      z.array(z.lazy(() => CreatePlanItemRequest$outboundSchema)),
-    ),
-    freeTrial: z.optional(
-      z.lazy(() => CreatePlanFreeTrialRequest$outboundSchema),
-    ),
+    items: z.optional(z.array(z.lazy(() => CreatePlanPlanItem$outboundSchema))),
+    freeTrial: z.optional(z.lazy(() => FreeTrialRequest$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1451,8 +1450,8 @@ export function createPlanRolloverResponseFromJSON(
 }
 
 /** @internal */
-export const CreatePlanItemResponse$inboundSchema: z.ZodMiniType<
-  CreatePlanItemResponse,
+export const CreatePlanItem$inboundSchema: z.ZodMiniType<
+  CreatePlanItem,
   unknown
 > = z.pipe(
   z.object({
@@ -1476,13 +1475,13 @@ export const CreatePlanItemResponse$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createPlanItemResponseFromJSON(
+export function createPlanItemFromJSON(
   jsonString: string,
-): SafeParseResult<CreatePlanItemResponse, SDKValidationError> {
+): SafeParseResult<CreatePlanItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CreatePlanItemResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanItemResponse' from JSON`,
+    (x) => CreatePlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanItem' from JSON`,
   );
 }
 
@@ -1541,7 +1540,7 @@ export const CreatePlanResponse$inboundSchema: z.ZodMiniType<
     add_on: types.boolean(),
     auto_enable: types.boolean(),
     price: types.nullable(z.lazy(() => CreatePlanPriceResponse$inboundSchema)),
-    items: z.array(z.lazy(() => CreatePlanItemResponse$inboundSchema)),
+    items: z.array(z.lazy(() => CreatePlanItem$inboundSchema)),
     free_trial: types.optional(
       z.lazy(() => CreatePlanFreeTrialResponse$inboundSchema),
     ),

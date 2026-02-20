@@ -15,12 +15,12 @@ export const resolveParamDiscounts = async ({
 }): Promise<StripeDiscountWithCoupon[]> => {
 	const resolved = await Promise.all(
 		discounts.map((discount) => {
-			if ("reward_id" in discount) {
+			if ("reward_id" in discount && discount.reward_id) {
 				return resolveCoupon({ stripeCli, couponId: discount.reward_id });
 			}
 			return resolvePromotionCode({
 				stripeCli,
-				code: discount.promotion_code,
+				code: discount.promotion_code ?? "",
 			});
 		}),
 	);
