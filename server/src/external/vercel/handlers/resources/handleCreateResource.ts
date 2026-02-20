@@ -90,7 +90,7 @@ export const handleCreateResource = createRoute({
 						env: env as AppEnv,
 						installation_id: integrationConfigurationId,
 						name,
-						status: "pending",
+						status: "ready",
 						metadata: metadata ?? {},
 					},
 				});
