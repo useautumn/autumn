@@ -85,8 +85,9 @@ export function MainLayout() {
 		);
 	}
 
-	// 2. If no user, redirect to sign in
-	if (!data) {
+	// 2. If no user, redirect to sign in (skipped in mock mode)
+	const isMockMode = import.meta.env.VITE_MOCK_MODE === "true";
+	if (!data && !isMockMode) {
 		navigate("/sign-in");
 		return;
 	}

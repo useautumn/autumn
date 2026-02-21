@@ -49,7 +49,12 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		initialData: getInitialData(),
 	});
 
+	const isMockMode = import.meta.env.VITE_MOCK_MODE === "true";
+
 	useEffect(() => {
+		// In mock mode there is no real session, so skip setActive / signOut flows
+		if (isMockMode) return;
+
 		const handleNoActiveOrg = async () => {
 			// 1. If there's existing org, set as active
 			if (orgList && orgList.length > 0) {
@@ -67,7 +72,7 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		if (!org && !isLoading) {
 			handleNoActiveOrg();
 		}
-	}, [org, orgList, isLoading]);
+	}, [org, orgList, isLoading, isMockMode]);
 
 	return { org: org as FrontendOrg, isLoading, error, mutate: refetch };
 };

@@ -95,17 +95,20 @@ if (cluster.isPrimary) {
 	// Worker process
 	console.log(`[Worker ${process.pid}] Starting queue consumer...`);
 
-	// Auto-detect which queue implementation to use
-	if (process.env.SQS_QUEUE_URL) {
-		console.log(`[Worker ${process.pid}] Using SQS queue implementation`);
-		const { initWorkers } = await import("./queue/initWorkers.js");
-		await initWorkers();
-		// SQS implementation handles its own SIGTERM/SIGINT
-	} else if (process.env.QUEUE_URL) {
+	// Auto-detect which queue implementation to use.
+	// QUEUE_URL (BullMQ/Redis) takes priority over SQS_QUEUE_URL so that
+	// docker-compose sandbox environments can set QUEUE_URL and leave
+	// SQS_QUEUE_URL unset (or empty) without the local .env leaking in.
+	if (process.env.QUEUE_URL) {
 		console.log(`[Worker ${process.pid}] Using BullMQ queue implementation`);
 		const { initWorkers } = await import("./queue/bullmq/initBullMqWorkers.js");
 		await initWorkers();
 		// BullMQ implementation handles its own SIGTERM/SIGINT
+	} else if (process.env.SQS_QUEUE_URL) {
+		console.log(`[Worker ${process.pid}] Using SQS queue implementation`);
+		const { initWorkers } = await import("./queue/initWorkers.js");
+		await initWorkers();
+		// SQS implementation handles its own SIGTERM/SIGINT
 	} else {
 		console.error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
 		process.exit(1);
