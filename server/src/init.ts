@@ -21,6 +21,7 @@ import { redirectToHono } from "./initHono.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import { initMockOrg } from "./utils/mockMode/initMockOrg.js";
 
 checkEnvVars();
 // subscribeToOrgUpdates({ db });
@@ -108,6 +109,11 @@ const init = async () => {
 
 	// Initialize managers in parallel for faster startup
 	await Promise.all([ClickHouseManager.getInstance(), warmupRegionalRedis()]);
+
+	// Bootstrap mock org when running in mock mode
+	if (process.env.MOCK_MODE === "true") {
+		await initMockOrg();
+	}
 
 	app.use(async (req: any, res: any, next: any) => {
 		// Add Render region identifier headers for load balancer verification

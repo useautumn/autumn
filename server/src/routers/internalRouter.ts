@@ -5,6 +5,7 @@ import { adminAuthMiddleware } from "../honoMiddlewares/adminAuthMiddleware";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware";
 import { betterAuthMiddleware } from "../honoMiddlewares/betterAuthMiddleware";
+import { mockAuthMiddleware } from "../honoMiddlewares/mockAuthMiddleware";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware";
@@ -23,14 +24,20 @@ import { internalProductRouter } from "../internal/products/internalProductRoute
 export const internalRouter = new Hono<HonoEnv>();
 
 // Internal/dashboard routes - use betterAuthMiddleware for session auth
-internalRouter.use("*", betterAuthMiddleware);
+// In mock mode, bypass session validation entirely and inject the mock org
+internalRouter.use(
+	"*",
+	process.env.MOCK_MODE === "true" ? mockAuthMiddleware : betterAuthMiddleware,
+);
 internalRouter.use("*", orgConfigMiddleware);
 internalRouter.use("*", apiVersionMiddleware);
 internalRouter.use("*", analyticsMiddleware);
 internalRouter.use("*", refreshCacheMiddleware);
 internalRouter.use("*", queryMiddleware());
 
-internalRouter.use("/admin/*", adminAuthMiddleware);
+if (process.env.MOCK_MODE !== "true") {
+	internalRouter.use("/admin/*", adminAuthMiddleware);
+}
 internalRouter.route("admin", honoAdminRouter);
 
 internalRouter.route("organization", internalOrgRouter);

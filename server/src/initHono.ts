@@ -22,6 +22,12 @@ import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
+import {
+	getMockOrgContext,
+	MOCK_ORG_ID,
+	MOCK_ORG_NAME,
+	MOCK_ORG_SLUG,
+} from "./utils/mockMode/initMockOrg.js";
 
 const ALLOWED_ORIGINS = [
 	"http://localhost:3000",
@@ -97,6 +103,47 @@ const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
+
+	// Mock session endpoint — consumed by the Vite frontend in MOCK_MODE.
+	// Returns a fake session/user/org so the frontend can skip Better Auth entirely.
+	if (process.env.MOCK_MODE === "true") {
+		app.get("/api/mock-session", (c) => {
+			const mockData = getMockOrgContext();
+			return c.json({
+				user: {
+					id: "mock_test_user",
+					name: "Mock Test User",
+					email: "mock@test.local",
+					emailVerified: true,
+					image: null,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+					role: "admin",
+				},
+				session: {
+					id: "mock_test_session",
+					userId: "mock_test_user",
+					activeOrganizationId: MOCK_ORG_ID,
+					expiresAt: new Date(
+						Date.now() + 1000 * 60 * 60 * 24 * 365,
+					).toISOString(),
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				},
+				organization: mockData?.org
+					? {
+							id: mockData.org.id,
+							name: mockData.org.name,
+							slug: mockData.org.slug,
+						}
+					: {
+							id: MOCK_ORG_ID,
+							name: MOCK_ORG_NAME,
+							slug: MOCK_ORG_SLUG,
+						},
+			});
+		});
+	}
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
