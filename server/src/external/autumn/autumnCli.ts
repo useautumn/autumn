@@ -264,7 +264,12 @@ export class AutumnInt {
 		{
 			skipWebhooks,
 			idempotencyKey,
-		}: { skipWebhooks?: boolean; idempotencyKey?: string } = {},
+			timeout,
+		}: {
+			skipWebhooks?: boolean;
+			idempotencyKey?: string;
+			timeout?: number;
+		} = {},
 	): Promise<any> {
 		const headers: Record<string, string> = {};
 		if (skipWebhooks !== undefined) {
@@ -279,6 +284,13 @@ export class AutumnInt {
 			params,
 			Object.keys(headers).length > 0 ? headers : undefined,
 		);
+
+		const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+		const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+		const finalTimeout = timeout ?? defaultTimeout;
+		if (finalTimeout) {
+			await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+		}
 
 		return data;
 	}
