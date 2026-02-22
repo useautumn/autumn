@@ -1,73 +1,13 @@
 import "../sentry.ts";
-import type { CustomerEntitlement, ResetCusEnt } from "@autumn/shared";
-import { UTCDate } from "@date-fns/utc";
 import { CronJob } from "cron";
-import { format } from "date-fns";
 import { initDrizzle } from "../db/initDrizzle.js";
 import { logger } from "../external/logtail/logtailUtils.js";
-import { CusEntService } from "../internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { notNullish } from "../utils/genUtils.js";
-import {
-	clearCusEntsFromCache,
-	resetCustomerEntitlement,
-} from "./cronUtils.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runProductCron } from "./productCron/runProductCron.js";
+import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle();
-
-const cronTask = async () => {
-	try {
-		// const [productCusEnts, looseCusEnts] = await Promise.all([
-		// 	CusEntService.getActiveResetPassed({ db, batchSize: 500 }),
-		// 	CusEntService.getLooseResetPassed({ db, batchSize: 500 }),
-		// ]);
-		// const cusEnts: ResetCusEnt[] = [...productCusEnts, ...looseCusEnts];
-		const cusEnts = await CusEntService.getActiveResetPassed({
-			db,
-			batchSize: 500,
-		});
-
-		const batchSize = 100;
-		for (let i = 0; i < cusEnts.length; i += batchSize) {
-			const batch = cusEnts.slice(i, i + batchSize);
-			const batchResets = [];
-			const updatedCusEnts: ResetCusEnt[] = [];
-			for (const cusEnt of batch) {
-				batchResets.push(
-					resetCustomerEntitlement({
-						db,
-						cusEnt: cusEnt,
-						updatedCusEnts,
-					}),
-				);
-			}
-
-			const results = await Promise.all(batchResets);
-
-			const toUpsert = results.filter(notNullish);
-			await CusEntService.upsert({
-				db,
-				data: toUpsert as CustomerEntitlement[],
-			});
-			console.log(`Upserted ${toUpsert.length} short entitlements`);
-
-			await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
-		}
-
-		console.log(
-			"FINISHED RESET CRON:",
-			format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
-		);
-		console.log("----------------------------------\n");
-	} catch (error) {
-		console.error("Error getting entitlements for reset:", error);
-		return;
-	}
-
-	// await client.end();
-};
 
 const main = async () => {
 	if (process.env.DISABLE_CRON === "true") {
@@ -79,7 +19,11 @@ const main = async () => {
 		db,
 		logger,
 	};
-	await Promise.all([cronTask(), runProductCron(), runInvoiceCron({ ctx })]);
+	await Promise.all([
+		runResetCron({ ctx }),
+		runProductCron(),
+		runInvoiceCron({ ctx }),
+	]);
 };
 
 new CronJob(

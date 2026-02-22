@@ -233,7 +233,6 @@ export const resetCustomerEntitlement = async ({
 		});
 
 		// 1. Check if should reset
-
 		let nextResetAt = getNextResetAt({
 			curReset: new UTCDate(cusEnt.next_reset_at!),
 			interval: cusEnt.entitlement.interval as EntInterval,
