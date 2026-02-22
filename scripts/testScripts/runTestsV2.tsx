@@ -86,6 +86,8 @@ interface TestFileResult {
 	duration: number;
 	attempt: number;
 	passedOnRetry: boolean;
+	/** Captured stderr when a file crashes with 0 tests */
+	crashError?: string;
 }
 
 // ============================================================================
@@ -306,7 +308,9 @@ async function runTestFile({
 		runningProcesses.add(proc);
 
 		let output = "";
+		let stderrOutput = "";
 		const decoder = new TextDecoder();
+		const stderrDecoder = new TextDecoder();
 
 		if (proc.stdout) {
 			for await (const chunk of proc.stdout) {
@@ -327,7 +331,9 @@ async function runTestFile({
 
 		if (proc.stderr) {
 			for await (const chunk of proc.stderr) {
-				output += decoder.decode(chunk);
+				const text = stderrDecoder.decode(chunk);
+				output += text;
+				stderrOutput += text;
 			}
 		}
 
@@ -356,6 +362,10 @@ async function runTestFile({
 			duration,
 			attempt,
 			passedOnRetry: false,
+			crashError:
+				hasNoTests && stderrOutput.trim()
+					? stderrOutput.trim().slice(0, 1000)
+					: undefined,
 		};
 
 		onUpdate(finalResult);
@@ -929,12 +939,15 @@ function FinalSummary({ results }: FinalSummaryProps) {
 						📁 {basename(result.file)}
 					</Text>
 					<Text dimColor>{"─".repeat(50)}</Text>
-					<Box marginLeft={2}>
+					<Box marginLeft={2} flexDirection="column">
 						<Text color="red">
 							{" "}
 							✗ File produced 0 tests (likely import/module error or process
 							crash)
 						</Text>
+						{result.crashError && (
+							<Text color="yellow"> {result.crashError}</Text>
+						)}
 					</Box>
 				</Box>
 			))}
