@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
+import { completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckout";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";

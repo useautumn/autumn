@@ -13,7 +13,7 @@ import { expectProductActive } from "@tests/integration/billing/utils/expectCust
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation";
+import { completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmation";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 

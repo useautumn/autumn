@@ -3,7 +3,7 @@ import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
-import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
+import { completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckout";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
