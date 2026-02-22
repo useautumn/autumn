@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { RewardType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { createReward } from "@tests/utils/productUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";

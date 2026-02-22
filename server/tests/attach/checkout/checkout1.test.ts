@@ -9,7 +9,7 @@ import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { timeout } from "@tests/utils/genUtils.js";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutFormV2 as completeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 
@@ -73,7 +73,7 @@ describe(`${chalk.yellowBright("checkout1: Testing attach basic product through 
 			product_id: proProd.id,
 		});
 
-		await completeCheckoutForm(checkout_url);
+		await completeCheckoutForm({ url: checkout_url });
 		await timeout(12000);
 	});
 

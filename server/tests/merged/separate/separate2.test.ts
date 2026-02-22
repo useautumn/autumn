@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";

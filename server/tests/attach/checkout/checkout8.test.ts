@@ -2,7 +2,7 @@ import { beforeAll, describe, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
