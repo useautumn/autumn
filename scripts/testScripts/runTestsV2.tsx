@@ -267,11 +267,13 @@ async function runTestFile({
 	onUpdate,
 	attempt = 1,
 	failedTestNames,
+	verbose = false,
 }: {
 	file: string;
 	onUpdate: (result: TestFileResult) => void;
 	attempt?: number;
 	failedTestNames?: string[];
+	verbose?: boolean;
 }): Promise<TestFileResult> {
 	const startTime = performance.now();
 
@@ -312,10 +314,16 @@ async function runTestFile({
 		const decoder = new TextDecoder();
 		const stderrDecoder = new TextDecoder();
 
+		const fileLabel = basename(file);
+
 		if (proc.stdout) {
 			for await (const chunk of proc.stdout) {
 				const text = decoder.decode(chunk);
 				output += text;
+
+				if (verbose) {
+					process.stderr.write(`[${fileLabel}:stdout] ${text}`);
+				}
 
 				// Update with parsed tests
 				const tests = parseTestOutput(output, file);
@@ -334,6 +342,10 @@ async function runTestFile({
 				const text = stderrDecoder.decode(chunk);
 				output += text;
 				stderrOutput += text;
+
+				if (verbose) {
+					process.stderr.write(`[${fileLabel}:stderr] ${text}`);
+				}
 			}
 		}
 
@@ -543,9 +555,10 @@ interface StaticItem {
 interface TestRunnerAppProps {
 	testFiles: string[];
 	maxParallel: number;
+	verbose: boolean;
 }
 
-function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
+function TestRunnerApp({ testFiles, maxParallel, verbose }: TestRunnerAppProps) {
 	const { exit } = useApp();
 
 	// Mutable ref accumulates updates from stdout chunks without triggering re-renders.
@@ -1005,15 +1018,18 @@ async function main() {
 	let maxParallel = process.env.TEST_FILE_CONCURRENCY
 		? Number.parseInt(process.env.TEST_FILE_CONCURRENCY, 10)
 		: 6;
+	let verbose = process.env.TEST_VERBOSE === "1";
 
 	for (const arg of args) {
 		if (arg.startsWith("--max=")) {
 			const maxValue = arg.split("=")[1];
 			maxParallel = maxValue ? Number.parseInt(maxValue, 10) : 6;
+		} else if (arg === "--verbose" || arg === "-v") {
+			verbose = true;
 		} else if (arg.startsWith("-")) {
 			console.error(`Unknown option: ${arg}`);
 			console.log(
-				"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N]",
+				"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N] [--verbose]",
 			);
 			process.exit(1);
 		} else {
@@ -1059,7 +1075,13 @@ async function main() {
 		return;
 	}
 
-	render(<TestRunnerApp testFiles={testFiles} maxParallel={maxParallel} />);
+	render(
+		<TestRunnerApp
+			testFiles={testFiles}
+			maxParallel={maxParallel}
+			verbose={verbose}
+		/>,
+	);
 }
 
 main();
