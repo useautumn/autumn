@@ -1,9 +1,20 @@
 import { readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { core } from "./core";
+import { coreAttach } from "./core/coreAttach";
+import { coreBalances } from "./core/coreBalances";
+import { coreLegacy } from "./core/coreLegacy";
+import { coreMigrations } from "./core/coreMigrations";
+import { coreStripe } from "./core/coreStripe";
+import { coreUpdateSubscription } from "./core/coreUpdateSubscription";
 import { advanced } from "./domains/advanced";
-import { balances } from "./domains/balances";
-import { billing } from "./domains/billing";
+import { balances } from "./domains/balances/balances";
+import { check } from "./domains/balances/check";
+import { track } from "./domains/balances/track";
+import { updateBalance } from "./domains/balances/updateBalance";
+import { billing } from "./domains/billing/billing";
+import { billingV1 } from "./domains/billing/billingV1";
+import { billingV2 } from "./domains/billing/billingV2";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
@@ -14,8 +25,19 @@ export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
 	core,
+	coreAttach,
+	coreBalances,
+	coreLegacy,
+	coreMigrations,
+	coreStripe,
+	coreUpdateSubscription,
 	balances,
+	check,
+	track,
+	updateBalance,
 	billing,
+	billingV1,
+	billingV2,
 	crud,
 	webhooks,
 	advanced,
