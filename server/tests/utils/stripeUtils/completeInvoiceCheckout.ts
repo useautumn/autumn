@@ -21,7 +21,12 @@ export const completeInvoiceCheckout = async ({
 	browser = await puppeteer.launch({
 		headless: true,
 		executablePath: process.env.TESTS_CHROMIUM_PATH,
-		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+		args: [
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--disable-dev-shm-usage",
+			"--disable-gpu",
+		],
 	});
 
 	try {
