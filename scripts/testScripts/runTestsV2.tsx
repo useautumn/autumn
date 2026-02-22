@@ -558,7 +558,11 @@ interface TestRunnerAppProps {
 	verbose: boolean;
 }
 
-function TestRunnerApp({ testFiles, maxParallel, verbose }: TestRunnerAppProps) {
+function TestRunnerApp({
+	testFiles,
+	maxParallel,
+	verbose,
+}: TestRunnerAppProps) {
 	const { exit } = useApp();
 
 	// Mutable ref accumulates updates from stdout chunks without triggering re-renders.
@@ -660,7 +664,9 @@ function TestRunnerApp({ testFiles, maxParallel, verbose }: TestRunnerAppProps) 
 
 			// Phase 1: Initial run
 			const promises = testFiles.map((file) =>
-				limit(() => runTestFile({ file, onUpdate: updateResult, attempt: 1 })),
+				limit(() =>
+					runTestFile({ file, onUpdate: updateResult, attempt: 1, verbose }),
+				),
 			);
 
 			await Promise.all(promises);
@@ -711,6 +717,7 @@ function TestRunnerApp({ testFiles, maxParallel, verbose }: TestRunnerAppProps) 
 							onUpdate: updateResult,
 							attempt: 2,
 							failedTestNames,
+							verbose,
 						});
 						if (retryResult.status === "passed") {
 							retryResult.passedOnRetry = true;
@@ -762,7 +769,7 @@ function TestRunnerApp({ testFiles, maxParallel, verbose }: TestRunnerAppProps) 
 		if (testFiles.length > 0) {
 			runAllTests();
 		}
-	}, [testFiles, maxParallel, updateResult]);
+	}, [testFiles, maxParallel, updateResult, verbose]);
 
 	// Exit when complete
 	useEffect(() => {
