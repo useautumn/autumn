@@ -29,14 +29,22 @@ export const invoiceCheckout = async ({
 	let paymentFrame = null;
 
 	// Try to find the iframe via #payment-element first (embedded Payment Element)
+	// Use a specific selector to avoid matching the bank search results iframe
 	try {
-		await page.waitForSelector("#payment-element iframe", { timeout: 10000 });
-		paymentFrame = page.frameLocator("#payment-element iframe");
+		await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
+		paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
 		console.log("[invoiceCheckout] Found #payment-element iframe");
 	} catch {
-		console.log(
-			"[invoiceCheckout] No #payment-element iframe, searching all frames...",
-		);
+		// Fallback: try first iframe in #payment-element
+		try {
+			await page.waitForSelector("#payment-element iframe", { timeout: 5000 });
+			paymentFrame = page.frameLocator("#payment-element iframe").first();
+			console.log("[invoiceCheckout] Found #payment-element iframe (first)");
+		} catch {
+			console.log(
+				"[invoiceCheckout] No #payment-element iframe, searching all frames...",
+			);
+		}
 	}
 
 	// Fallback: search all frames for one containing Stripe payment fields
@@ -97,13 +105,22 @@ export const invoiceCheckout = async ({
 
 		// Now try to find the payment frame again
 		try {
-			await page.waitForSelector("#payment-element iframe", { timeout: 10000 });
-			paymentFrame = page.frameLocator("#payment-element iframe");
+			await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
+			paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
 			console.log(
 				"[invoiceCheckout] Found #payment-element iframe after card click",
 			);
 		} catch {
-			// Still try frame search
+			// Fallback: first iframe
+			try {
+				await page.waitForSelector("#payment-element iframe", { timeout: 5000 });
+				paymentFrame = page.frameLocator("#payment-element iframe").first();
+				console.log(
+					"[invoiceCheckout] Found #payment-element iframe after card click (first)",
+				);
+			} catch {
+				// Still try frame search
+			}
 		}
 
 		if (!paymentFrame) {
