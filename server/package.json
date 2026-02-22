@@ -144,7 +144,7 @@
 		"drizzle-kit": "catalog:",
 		"mocha": "^11.1.0",
 		"nodemon": "^3.1.10",
-		"playwright": "^1.58.2",
+		"playwright-core": "^1.58.2",
 		"react-email": "4.0.16",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
