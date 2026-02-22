@@ -177,8 +177,7 @@ function parseErrorFromLines(
 		const matchedFile = stackMatch?.[1];
 		const lineNum = stackMatch?.[2];
 		const colNum = stackMatch?.[3];
-		if (matchedFile && lineNum && colNum) {;
-
+		if (matchedFile && lineNum && colNum) {
 			// Prefer .test.ts files
 			if (matchedFile.endsWith(".test.ts")) {
 				location = `${matchedFile}:${lineNum}:${colNum}`;
@@ -332,7 +331,7 @@ async function runTestFile({
 			}
 		}
 
-		await proc.exited;
+		const exitCode = await proc.exited;
 
 		// Remove from tracking
 		runningProcesses.delete(proc);
@@ -341,10 +340,18 @@ async function runTestFile({
 
 		const tests = parseTestOutput(output, file);
 		const hasFailures = tests.some((t) => t.status === "failed");
+		const hasNoTests = tests.length === 0;
+		const processExitedNonZero = exitCode !== 0;
+
+		// A file is considered failed if:
+		// 1. Any individual test failed, OR
+		// 2. The process exited non-zero (e.g. module import error), OR
+		// 3. Zero tests were found (likely a silent import failure)
+		const isFailed = hasFailures || processExitedNonZero || hasNoTests;
 
 		const finalResult: TestFileResult = {
 			file,
-			status: hasFailures ? "failed" : "passed",
+			status: isFailed ? "failed" : "passed",
 			tests,
 			duration,
 			attempt,
@@ -739,14 +746,12 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 		if (!isComplete) return;
 
 		const exitResults: TestFileResult[] = Array.from(results.values());
-		const exitFailedTests = exitResults.flatMap((r) =>
-			r.tests.filter((t) => t.status === "failed"),
-		);
+		const exitFailedFiles = exitResults.some((r) => r.status === "failed");
 
 		// Small delay to ensure final render
 		setTimeout(() => {
 			exit();
-			process.exit(exitFailedTests.length > 0 ? 1 : 0);
+			process.exit(exitFailedFiles ? 1 : 0);
 		}, 100);
 	}, [isComplete, results, exit]);
 
@@ -867,8 +872,12 @@ function FinalSummary({ results }: FinalSummaryProps) {
 	const allTests = results.flatMap((r) => r.tests);
 	const passedTests = allTests.filter((t) => t.status === "passed");
 	const failedTests = allTests.filter((t) => t.status === "failed");
+	const failedFiles = results.filter((r) => r.status === "failed");
 	const passedOnRetryFiles = results.filter((r) => r.passedOnRetry);
 	const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
+
+	// Files that failed with 0 tests (e.g. import errors, process crashes)
+	const crashedFiles = failedFiles.filter((r) => r.tests.length === 0);
 
 	const failedByFile = new Map<string, IndividualTest[]>();
 	for (const result of results) {
@@ -878,7 +887,9 @@ function FinalSummary({ results }: FinalSummaryProps) {
 		}
 	}
 
-	if (failedTests.length === 0) {
+	const hasAnyFailure = failedFiles.length > 0;
+
+	if (!hasAnyFailure) {
 		const retryText =
 			passedOnRetryFiles.length > 0
 				? ` (${passedOnRetryFiles.length} on retry)`
@@ -905,11 +916,28 @@ function FinalSummary({ results }: FinalSummaryProps) {
 				{"═".repeat(60)}
 			</Text>
 			<Text color="red" bold>
-				FAILED TESTS ({failedTests.length})
+				FAILED ({failedTests.length} test{failedTests.length !== 1 ? "s" : ""},{" "}
+				{failedFiles.length} file{failedFiles.length !== 1 ? "s" : ""})
 			</Text>
 			<Text color="red" bold>
 				{"═".repeat(60)}
 			</Text>
+
+			{crashedFiles.map((result) => (
+				<Box key={result.file} flexDirection="column" marginTop={1}>
+					<Text color="red" bold>
+						📁 {basename(result.file)}
+					</Text>
+					<Text dimColor>{"─".repeat(50)}</Text>
+					<Box marginLeft={2}>
+						<Text color="red">
+							{" "}
+							✗ File produced 0 tests (likely import/module error or process
+							crash)
+						</Text>
+					</Box>
+				</Box>
+			))}
 
 			{Array.from(failedByFile.entries()).map(([file, tests]) => (
 				<Box key={file} flexDirection="column" marginTop={1}>
@@ -941,8 +969,11 @@ function FinalSummary({ results }: FinalSummaryProps) {
 			</Text>
 			<Text bold>
 				SUMMARY: <Text color="green">{passedTests.length} passed</Text> |{" "}
-				<Text color="red">{failedTests.length} failed</Text> |{" "}
-				{(totalDuration / 1000).toFixed(1)}s
+				<Text color="red">{failedTests.length} failed</Text>
+				{crashedFiles.length > 0 && (
+					<Text color="red"> | {crashedFiles.length} crashed</Text>
+				)}{" "}
+				| {(totalDuration / 1000).toFixed(1)}s
 			</Text>
 			<Text color="red" bold>
 				{"═".repeat(60)}
