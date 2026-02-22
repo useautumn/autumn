@@ -3,8 +3,9 @@ import { browserPool } from "./browserPool.js";
 
 /**
  * Complete a Stripe 3DS Invoice Confirmation using the shared browser pool.
- * This handles the 3DS authentication challenge flow.
+ * Handles the 3DS authentication challenge flow.
  * Opens a new tab, completes confirmation, and closes the tab (browser stays open).
+ * Throws on any critical failure.
  */
 export const completeInvoiceConfirmation = async ({
 	url,
@@ -18,10 +19,11 @@ export const completeInvoiceConfirmation = async ({
 	const page = await browserPool.newPage();
 
 	try {
-		await page.goto(url);
+		await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+		console.log("[completeInvoiceConfirmation] Page loaded");
 
 		// Wait for the page to be ready
-		await page.waitForSelector("button", { timeout: 5000 });
+		await page.waitForSelector("button", { timeout: 15000 });
 
 		// Find and click the "Confirm payment" button
 		const buttonClicked = await page.evaluate(() => {
@@ -39,13 +41,14 @@ export const completeInvoiceConfirmation = async ({
 		if (!buttonClicked) {
 			throw new Error("Could not find or click Confirm payment button");
 		}
+		console.log("[completeInvoiceConfirmation] Confirm payment clicked");
 
 		// Wait for processing/navigation
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
 		// Wait for iframe with the three-ds-2-challenge URL
 		let threeDSFrame = null;
-		for (let i = 0; i < 15; i++) {
+		for (let i = 0; i < 20; i++) {
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 			const frames = page.frames();
 
@@ -61,9 +64,10 @@ export const completeInvoiceConfirmation = async ({
 		if (!threeDSFrame) {
 			throw new Error("Could not find 3DS challenge frame");
 		}
+		console.log("[completeInvoiceConfirmation] 3DS challenge frame found");
 
 		// Wait for the 3DS frame content to load
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 3000));
 
 		// Check for nested iframes
 		const frameContent = await threeDSFrame.evaluate(() => {
@@ -89,10 +93,11 @@ export const completeInvoiceConfirmation = async ({
 			}
 		}
 
-		// Wait for the button and click it
+		// Wait for the authorize button — generous timeout for remote browsers under load
 		await threeDSFrame.waitForSelector("#test-source-authorize-3ds", {
-			timeout: 3000,
+			timeout: 15000,
 		});
+		console.log("[completeInvoiceConfirmation] 3DS authorize button found");
 
 		await threeDSFrame.evaluate(() => {
 			const button = document.querySelector(
@@ -102,12 +107,12 @@ export const completeInvoiceConfirmation = async ({
 				button.click();
 			}
 		});
+		console.log("[completeInvoiceConfirmation] 3DS authorize button clicked");
 
 		// Wait for the 3DS authentication to complete
 		await timeout(10000);
 		console.log("[completeInvoiceConfirmation] 3DS confirmation completed");
 	} finally {
-		// Close the page (tab), but keep browser open for reuse
 		await page.close();
 	}
 };
