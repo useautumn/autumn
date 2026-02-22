@@ -5,7 +5,8 @@ import "dotenv/config";
 // ============================================================================
 
 /** Use Kernel cloud browsers instead of local Chromium */
-export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
+// export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
+export const USE_KERNEL = false;
 
 /** Run browsers in headless mode (set false to watch the browser) */
 export const HEADLESS = true;

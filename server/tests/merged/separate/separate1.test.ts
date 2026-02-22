@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckout";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { DrizzleCli } from "@/db/initDrizzle.js";

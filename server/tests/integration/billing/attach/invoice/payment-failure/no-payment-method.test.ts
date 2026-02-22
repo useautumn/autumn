@@ -12,7 +12,7 @@ import { expectProductActive } from "@tests/integration/billing/utils/expectCust
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckout";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 

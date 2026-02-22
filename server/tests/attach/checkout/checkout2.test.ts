@@ -10,7 +10,7 @@ import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { timeout } from "@tests/utils/genUtils.js";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutFormV2 as completeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -111,10 +111,10 @@ describe(`${chalk.yellowBright("checkout2: Testing attach one time add ons (thro
 				force_checkout: true,
 			});
 
-			await completeCheckoutForm(
-				res.checkout_url,
-				oneTimeQuantity / (oneTimeBillingUnits ?? 1),
-			);
+		await completeCheckoutForm({
+			url: res.checkout_url,
+			overrideQuantity: oneTimeQuantity / (oneTimeBillingUnits ?? 1),
+		});
 			await timeout(15000);
 		}
 	});

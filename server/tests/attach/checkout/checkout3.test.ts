@@ -3,7 +3,7 @@ import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
-import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutFormV2 as completeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -59,7 +59,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi attach checkout, pro 
 			product_ids: [pro.id, oneOff.id],
 		});
 
-		await completeCheckoutForm(res.checkout_url);
+		await completeCheckoutForm({ url: res.checkout_url });
 		await timeout(10000);
 
 		const customer = await autumn.customers.get(customerId);
