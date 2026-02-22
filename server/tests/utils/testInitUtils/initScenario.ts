@@ -18,7 +18,7 @@ import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtil
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
-import { createReferralProgram } from "../productUtils.js";
+import { createReferralProgram, createReward } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
 import defaultCtx, { type TestContext } from "./createTestContext.js";
 
@@ -51,6 +51,11 @@ type OtherCustomerConfig = {
 type ReferralProgramConfig = {
 	reward: CreateReward;
 	program: CreateRewardProgram;
+};
+
+type RewardConfig = {
+	reward: CreateReward;
+	productId: string;
 };
 
 // Discriminated union for all action types
@@ -180,6 +185,7 @@ type ScenarioConfig = {
 	actions: ScenarioAction[];
 	otherCustomers: OtherCustomerConfig[];
 	referralProgram?: ReferralProgramConfig;
+	rewards: RewardConfig[];
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -327,6 +333,26 @@ const referralProgramSetup = ({
 	program: CreateRewardProgram;
 }): ConfigFn => {
 	return (config) => ({ ...config, referralProgram: { reward, program } });
+};
+
+/**
+ * Define a reward/coupon for this test scenario.
+ * Reward ID is auto-suffixed with the product prefix for test isolation.
+ * @param reward - The reward configuration (from constructCoupon)
+ * @param productId - The product ID to apply this reward to
+ * @example s.reward({ reward: constructCoupon({ id: "50-off", discountValue: 50, ... }), productId: "pro" })
+ */
+const rewardSetup = ({
+	reward,
+	productId,
+}: {
+	reward: CreateReward;
+	productId: string;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		rewards: [...config.rewards, { reward, productId }],
+	});
 };
 
 /**
@@ -797,6 +823,7 @@ export const s = {
 	products,
 	entities,
 	referralProgram: referralProgramSetup,
+	reward: rewardSetup,
 	attach,
 	cancel,
 	advanceTestClock,
@@ -834,6 +861,7 @@ const defaultConfig: ScenarioConfig = {
 	actions: [],
 	otherCustomers: [],
 	referralProgram: undefined,
+	rewards: [],
 };
 
 /**
@@ -1030,6 +1058,26 @@ export async function initScenario({
 			autumn: cleanupAutumn,
 			reward,
 			rewardProgram: program,
+		});
+	}
+
+	// 1.6. Initialize standalone rewards (if configured)
+	for (const rewardConfig of config.rewards) {
+		const { reward, productId } = rewardConfig;
+
+		// Suffix reward ID with productPrefix for isolation
+		reward.id = `${reward.id}_${productPrefix}`;
+
+		// Suffix productId to match prefixed products
+		const prefixedProductId = `${productId}_${productPrefix}`;
+
+		await createReward({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			autumn: cleanupAutumn,
+			reward,
+			productId: prefixedProductId,
 		});
 	}
 
