@@ -5,6 +5,7 @@ import {
 	priceToEnt,
 	priceUtils,
 	RecaseError,
+	TierBehaviours,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -25,13 +26,31 @@ export const createStripePrepaidPriceV2 = async ({
 }) => {
 	const { org, db, env } = ctx;
 
-	// 1. If no entitlement, re-use current stripe price
 	const entitlement = priceToEnt({
 		price,
 		entitlements: product.entitlements,
 	});
 
-	if (!entitlement?.allowance) {
+	const isVolume = price.tier_behaviour === TierBehaviours.VolumeBased;
+
+	// A separate V2 Stripe price is only needed for graduated prices that have
+	// an allowance. In that case, priceToStripePrepaidV2Tiers encodes the free
+	// units as a $0 leading tier and shifts all paid-tier boundaries up by the
+	// allowance, so Stripe's graduated splitting produces the right charge.
+	//
+	// In every other case stripe_prepaid_price_v2_id just points at the same
+	// Stripe price as stripe_price_id:
+	//
+	//   No allowance — the V2 price would be identical to V1 (nothing to shift),
+	//   so there is no point creating a second Stripe object.
+	//
+	//   Volume + allowance — the free-tier-offset trick does not work with
+	//   Stripe's volume mode because volume charges the *entire* quantity at
+	//   one rate, so a $0 leading tier corrupts the math. Instead the allowance
+	//   is tracked purely by Autumn; Stripe only ever sees the purchased packs
+	//   (see featureOptionsToV2StripeQuantity). The V1 price tiers are already
+	//   correct for that, so reuse it.
+	if (!entitlement?.allowance || isVolume) {
 		price.config = {
 			...(price.config as UsagePriceConfig),
 			stripe_prepaid_price_v2_id: price.config.stripe_price_id,
