@@ -8,7 +8,7 @@ import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBa
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
-import { runBatchResetCusEntsTask } from "@/internal/customers/actions/resetCustomerEntitlements/runBatchResetCusEntsTask.js";
+import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -192,7 +192,7 @@ export const processMessage = async ({
 				workerLogger.error("No context found for batch reset cus ents job");
 				return;
 			}
-			await runBatchResetCusEntsTask({
+			await batchResetCustomerEntitlements({
 				ctx,
 				payload: job.data,
 			});

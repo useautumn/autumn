@@ -1,101 +1,107 @@
-import type {
-	AppEnv,
-	FullCustomer,
-	FullCustomerEntitlement,
-	Organization,
-	Rollover,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import type { FullCustomer } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	type ResetCusEntParam,
+	resetCusEnts,
+} from "@/internal/balances/utils/sql/client.js";
+import { applyResetResults } from "./applyResetResults.js";
+import { executeResetCache } from "./executeResetCache.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
-import { processReset } from "./processReset.js";
+import { type ProcessResetResult, processReset } from "./processReset.js";
 
-/** Find the original cusEnt reference on the FullCustomer by ID. */
-const findOriginalCusEnt = ({
-	fullCus,
+/** Maps a processReset result into the JSONB shape for the SQL function. */
+const toResetParam = ({
 	cusEntId,
+	result,
 }: {
-	fullCus: FullCustomer;
 	cusEntId: string;
-}): FullCustomerEntitlement | null => {
-	for (const cusProduct of fullCus.customer_products) {
-		for (const cusEnt of cusProduct.customer_entitlements) {
-			if (cusEnt.id === cusEntId) return cusEnt;
-		}
-	}
+	result: ProcessResetResult;
+}): ResetCusEntParam => {
+	const { updates } = result;
+	const firstRollover = result.rolloverInsert?.rows[0] ?? null;
 
-	for (const cusEnt of fullCus.extra_customer_entitlements || []) {
-		if (cusEnt.id === cusEntId) return cusEnt;
-	}
-
-	return null;
+	return {
+		cus_ent_id: cusEntId,
+		balance: updates.balance,
+		additional_balance: updates.additional_balance,
+		adjustment: updates.adjustment,
+		entities: updates.entities,
+		next_reset_at: updates.next_reset_at,
+		rollover_insert: firstRollover,
+	};
 };
 
 /**
  * Lazily resets customer entitlements that have passed their next_reset_at.
- * Mutates the FullCustomer in-memory and awaits DB + rollover writes.
+ * Uses an atomic Postgres function with per-row locking to prevent double-resets.
+ * Mutates the FullCustomer in-memory using the latest DB state from applied resets.
  * Returns true if any entitlements were reset.
  */
 export const resetCustomerEntitlements = async ({
+	ctx,
 	fullCus,
-	db,
-	org,
-	env,
 }: {
+	ctx: AutumnContext;
 	fullCus: FullCustomer;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
 }): Promise<boolean> => {
 	const now = Date.now();
+
+	const { logger } = ctx;
+	const customerId = fullCus.id || fullCus.internal_id;
 
 	const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
 
 	if (cusEntsNeedingReset.length === 0) return false;
 
-	const dbUpdates: Array<{
-		id: string;
-		updates: Record<string, unknown>;
-	}> = [];
-	const rolloverInserts: Array<{
-		rows: Rollover[];
-		fullCusEnt: FullCustomerEntitlement;
+	logger.info(
+		`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length}`,
+	);
+
+	// 1. Compute all resets (pure computation, no DB writes)
+	const computed: Array<{
+		cusEntId: string;
+		result: ProcessResetResult;
 	}> = [];
 
 	for (const cusEnt of cusEntsNeedingReset) {
-		const result = await processReset({
-			cusEnt,
-			org,
-			env,
-		});
-
+		const result = await processReset({ cusEnt, ctx });
 		if (!result) continue;
-
-		// Mutate the original cusEnt on fullCus (not the spread copy)
-		const original = findOriginalCusEnt({ fullCus, cusEntId: cusEnt.id });
-		if (original) {
-			Object.assign(original, result.updates);
-		}
-
-		dbUpdates.push({ id: cusEnt.id, updates: result.updates });
-
-		if (result.rolloverInsert) {
-			rolloverInserts.push(result.rolloverInsert);
-		}
+		computed.push({ cusEntId: cusEnt.id, result });
 	}
 
-	if (dbUpdates.length === 0) return false;
+	if (computed.length === 0) return false;
 
-	// Await all DB writes
-	await Promise.all([
-		...dbUpdates.map(({ id, updates }) =>
-			CusEntService.update({ db, id, updates }),
-		),
-		...rolloverInserts.map(({ rows, fullCusEnt }) =>
-			RolloverService.insert({ db, rows, fullCusEnt }),
-		),
-	]);
+	// 2. Execute atomic DB writes via Postgres function
+	const resets = computed.map(({ cusEntId, result }) =>
+		toResetParam({ cusEntId, result }),
+	);
+
+	const { applied, skipped } = await resetCusEnts({ ctx, resets });
+
+	logger.info(
+		`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
+	);
+
+	// 3. Apply computed reset values to in-memory FullCustomer.
+	// Both DB-applied and DB-skipped cusEnts get their in-memory state updated
+	// (skipped means another request already wrote the same values to DB).
+	// Rollover clearing only runs for DB-applied entries.
+	await applyResetResults({ ctx, fullCus, computed, skipped });
+
+	// 4. Update Redis cache atomically (fire-and-forget)
+	// Only needed when we actually wrote to DB — skipped means cache was
+	// already updated by the winning request.
+	if (Object.keys(applied).length > 0) {
+		await executeResetCache({
+			ctx,
+			customerId,
+			resets,
+		});
+
+		logger.info(
+			`[resetCustomerEntitlements] customer=${customerId}, Redis cache updated`,
+		);
+	}
 
 	return true;
 };

@@ -1,40 +1,42 @@
-import {
-	CusProductStatus,
-	type FullCustomer,
-	fullCustomerToCustomerEntitlements,
-} from "@autumn/shared";
-import { workflows } from "@/queue/workflows.js";
+import { CusProductStatus } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
+import { CusService } from "../../CusService.js";
+import { resetCustomerEntitlements } from "./resetCustomerEntitlements.js";
 
 /**
- * Checks a list of FullCustomers for entitlements needing reset,
- * and queues an SQS job with the cusEnt IDs if any are found.
+ * SQS worker handler: fetches cusEnts by ID, groups by customer,
+ * fetches each FullCustomer, and runs the lazy reset logic.
  */
 export const batchResetCustomerEntitlements = async ({
-	fullCustomers,
-	orgId,
-	env,
+	ctx,
+	payload,
 }: {
-	fullCustomers: FullCustomer[];
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
+	payload: BatchResetCusEntsPayload;
 }): Promise<void> => {
-	const now = Date.now();
-	const cusEntIds: string[] = [];
+	const { resets } = payload;
 
-	for (const fullCus of fullCustomers) {
-		const cusEnts = fullCustomerToCustomerEntitlements({
-			fullCustomer: fullCus,
-			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-		});
+	if (resets.length === 0) return;
 
-		for (const cusEnt of cusEnts) {
-			if (cusEnt.next_reset_at && cusEnt.next_reset_at < now) {
-				cusEntIds.push(cusEnt.id);
-			}
-		}
+	const BATCH_SIZE = 100;
+
+	for (let i = 0; i < resets.length; i += BATCH_SIZE) {
+		const batch = resets.slice(i, i + BATCH_SIZE);
+
+		await Promise.all(
+			batch.map(async (reset) => {
+				const fullCus = await CusService.getFull({
+					ctx,
+					idOrInternalId: reset.internalCustomerId,
+					inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+				});
+
+				await resetCustomerEntitlements({
+					ctx,
+					fullCus,
+				});
+			}),
+		);
 	}
-
-	if (cusEntIds.length === 0) return;
-
-	await workflows.triggerBatchResetCusEnts({ orgId, env, cusEntIds });
 };

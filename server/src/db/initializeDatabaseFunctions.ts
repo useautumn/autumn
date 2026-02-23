@@ -28,6 +28,7 @@ export const initializeDatabaseFunctions = async () => {
 			"performDeduction.sql",
 			"syncBalances.sql",
 			"syncBalancesV2.sql",
+			"resetCusEnts.sql",
 		];
 
 		for (const file of sqlFiles) {

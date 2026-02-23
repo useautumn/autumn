@@ -1114,7 +1114,7 @@ export async function initScenario({
 			customerData: otherCusConfig.data,
 			attachPm: otherCusConfig.paymentMethod,
 			withTestClock: false, // Don't create a new test clock
-			existingTestClockId: testClockId, // Reuse primary customer's test clock
+			...(testClockId ? { existingTestClockId: testClockId } : {}),
 			withDefault: false,
 			defaultGroup: productPrefix,
 			skipWebhooks: config.skipWebhooks,
