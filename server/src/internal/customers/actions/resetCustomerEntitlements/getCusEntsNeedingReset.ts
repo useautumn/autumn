@@ -18,7 +18,7 @@ export const getCusEntsNeedingReset = ({
 
 	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		inStatuses: [CusProductStatus.Active],
 	});
 
 	for (const cusEnt of cusEnts) {
