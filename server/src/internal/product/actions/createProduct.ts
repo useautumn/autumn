@@ -36,8 +36,8 @@ export const createProduct = async ({
 		id: data.id,
 	});
 
-	// 1. If existing product, throw error
-	if (existing) throw new ProductAlreadyExistsError({ productId: data.id });
+	// 1. If existing non-archived product, throw error
+	if (existing && !existing.archived) throw new ProductAlreadyExistsError({ productId: data.id });
 
 	await validateDefaultFlag({
 		ctx,

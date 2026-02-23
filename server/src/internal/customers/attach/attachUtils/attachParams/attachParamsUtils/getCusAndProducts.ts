@@ -37,6 +37,14 @@ const getProductsForAttach = async ({
 		version,
 	});
 
+	const archivedProducts = products.filter((prod) => prod.archived);
+	if (archivedProducts.length > 0) {
+		throw new RecaseError({
+			message: `Cannot attach archived product${archivedProducts.length > 1 ? "s" : ""}: ${archivedProducts.map((p) => p.id).join(", ")}`,
+			code: ErrCode.InvalidRequest,
+		});
+	}
+
 	if (notNullish(product_ids)) {
 		const freeTrialProds = products.filter((prod) =>
 			notNullish(prod.free_trial),

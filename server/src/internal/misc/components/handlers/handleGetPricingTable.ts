@@ -23,7 +23,7 @@ export const handleGetPricingTable = createRoute({
 		const { customer_id: customerId } = c.req.valid("query");
 
 		const [products, customer] = await Promise.all([
-			ProductService.listFull({ db, orgId: org.id, env }),
+			ProductService.listFull({ db, orgId: org.id, env, archived: false }),
 			(async () => {
 				if (!customerId) {
 					return undefined;

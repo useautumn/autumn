@@ -59,8 +59,8 @@ export const handleCreatePlan = createRoute({
 			id: body.id,
 		});
 
-		// 1. If existing product, throw error
-		if (existing) throw new ProductAlreadyExistsError({ productId: body.id });
+		// 1. If existing non-archived product, throw error
+		if (existing && !existing.archived) throw new ProductAlreadyExistsError({ productId: body.id });
 
 		await validateDefaultFlag({
 			ctx,
