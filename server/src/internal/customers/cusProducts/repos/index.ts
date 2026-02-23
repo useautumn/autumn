@@ -1,4 +1,4 @@
-import { batchUpdateCustomerProducts } from "@/internal/customers/cusProducts/repos/batchUpdteCustomerProducts";
+import { batchUpdateCustomerProducts } from "./batchUpdateCustomerProducts";
 
 export const customerProductRepo = {
 	batchUpdate: batchUpdateCustomerProducts,
