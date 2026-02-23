@@ -22,7 +22,6 @@
 --         "adjustment": number,
 --         "entities": jsonb,
 --         "next_reset_at": number,
---         "cache_version": number,
 --         "rollover": jsonb or null
 --       }
 --     },
@@ -92,8 +91,7 @@ BEGIN
       additional_balance = COALESCE(new_additional_balance, ce.additional_balance),
       adjustment = COALESCE(new_adjustment, ce.adjustment),
       entities = COALESCE(new_entities, ce.entities),
-      next_reset_at = new_next_reset_at,
-      cache_version = COALESCE(ce.cache_version, 0) + 1
+      next_reset_at = new_next_reset_at
     WHERE ce.id = ent_id
     RETURNING ce.balance, ce.additional_balance, ce.adjustment, ce.entities,
               ce.next_reset_at, ce.cache_version
@@ -122,7 +120,6 @@ BEGIN
         'adjustment', updated_row.adjustment,
         'entities', updated_row.entities,
         'next_reset_at', updated_row.next_reset_at,
-        'cache_version', updated_row.cache_version,
         'rollover', CASE
           WHEN rollover_obj IS NOT NULL AND rollover_obj != 'null'::jsonb THEN rollover_obj
           ELSE NULL
