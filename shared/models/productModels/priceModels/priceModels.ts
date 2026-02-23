@@ -5,7 +5,7 @@ import {
 } from "../../productV2Models/productItemModels/productItemEnums.js";
 import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig.js";
 import {
-	TiersType,
+	TierBehaviours,
 	UsagePriceConfigSchema,
 } from "./priceConfig/usagePriceConfig.js";
 import { BillingType } from "./priceEnums.js";
@@ -22,7 +22,7 @@ export const PriceSchema = z.object({
 	org_id: z.string().optional(),
 	created_at: z.number().optional(),
 	billing_type: z.nativeEnum(BillingType).nullish(),
-	tiers_type: z.nativeEnum(TiersType).nullish(),
+	tier_behaviour: z.nativeEnum(TierBehaviours).nullish(),
 	is_custom: z.boolean().optional(),
 	config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
 

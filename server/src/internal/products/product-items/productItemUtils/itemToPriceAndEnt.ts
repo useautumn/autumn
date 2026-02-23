@@ -277,7 +277,7 @@ const toFeatureAndPrice = ({
 		config,
 		entitlement_id: ent.id,
 		proration_config: prorationConfig,
-		tiers_type: item.tiers_type ?? null,
+		tier_behaviour: item.tier_behaviour ?? null,
 	};
 
 	const billingType = getBillingType(price.config!);

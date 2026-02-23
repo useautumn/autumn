@@ -1,4 +1,9 @@
-import { Infinite, type PriceTier, TiersType, UsageModel } from "@autumn/shared";
+import {
+	Infinite,
+	type PriceTier,
+	TierBehaviours,
+	UsageModel,
+} from "@autumn/shared";
 import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -90,13 +95,13 @@ export function PriceTiers() {
 	// Auto-select prepaid when volume-based is active with multiple tiers
 	useEffect(() => {
 		if (
-			item?.tiers_type === TiersType.VolumeBased &&
+			item?.tier_behaviour === TierBehaviours.VolumeBased &&
 			(item?.tiers?.length ?? 0) > 1 &&
 			item?.usage_model !== UsageModel.Prepaid
 		) {
 			setItem({ ...item, usage_model: UsageModel.Prepaid });
 		}
-	}, [item?.tiers_type, item?.tiers?.length]);
+	}, [item?.tier_behaviour, item?.tiers?.length]);
 
 	if (!item) return null;
 

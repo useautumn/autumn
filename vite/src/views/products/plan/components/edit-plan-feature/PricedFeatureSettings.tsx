@@ -3,7 +3,7 @@ import {
 	itemToBillingInterval,
 	nullish,
 	ProductItemInterval,
-	TiersType,
+	TierBehaviours,
 	UsageModel,
 } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -18,7 +18,8 @@ export function PricedFeatureSettings() {
 
 	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
 	const isVolumeBased =
-		item.tiers_type === TiersType.VolumeBased && (item.tiers?.length ?? 0) > 1;
+		item.tier_behaviour === TierBehaviours.VolumeBased &&
+		(item.tiers?.length ?? 0) > 1;
 
 	const handleUsageModelChange = (value: string) => {
 		const usageModel = value as UsageModel;
