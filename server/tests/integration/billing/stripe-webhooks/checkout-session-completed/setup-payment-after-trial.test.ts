@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { FreeTrialDuration } from "@autumn/shared";
+
 import { completeSetupPaymentFormV2 as completeSetupPaymentForm } from "@tests/utils/browserPool/completeSetupPaymentFormV2";
+
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
