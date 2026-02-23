@@ -1,8 +1,9 @@
 import {
 	AffectedResource,
 	ErrCode,
-	SetupPaymentParamsSchema,
+	SetupPaymentParamsV0Schema,
 } from "@autumn/shared";
+
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -11,7 +12,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getOrCreateCustomer } from "../../customers/cusUtils/getOrCreateCustomer.js";
 
 export const handleSetupPayment = createRoute({
-	body: SetupPaymentParamsSchema,
+	body: SetupPaymentParamsV0Schema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

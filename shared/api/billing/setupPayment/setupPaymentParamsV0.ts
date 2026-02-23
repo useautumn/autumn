@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 
-export const SetupPaymentParamsSchema = z.object({
+export const SetupPaymentParamsV0Schema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
 	}),
@@ -25,3 +25,8 @@ export const SetupPaymentResponseV0Schema = z.object({
 		description: "URL to the payment setup page",
 	}),
 });
+
+export type SetupPaymentParamsV0 = z.infer<typeof SetupPaymentParamsV0Schema>;
+export type SetupPaymentResponseV0 = z.infer<
+	typeof SetupPaymentResponseV0Schema
+>;
