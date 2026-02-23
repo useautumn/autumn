@@ -95,9 +95,6 @@ for _, reset in ipairs(resets) do
         redis.call('JSON.SET', cache_key, base_path .. '.entities', cjson.encode(reset.entities))
       end
 
-      -- Increment cache_version
-      redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.cache_version', 1)
-
       -- Append rollover if provided
       if not is_nil(reset.rollover_insert) then
         local rollover_json = cjson.encode(reset.rollover_insert)
