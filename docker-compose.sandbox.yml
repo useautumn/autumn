@@ -1,0 +1,116 @@
+# =============================================================================
+# Autumn Sandbox — fully self-contained throwaway stack for AI agents
+# No Stripe, no Svix, no external services required.
+#
+# Usage:
+#   docker compose -f docker-compose.sandbox.yml up --build
+# =============================================================================
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: autumn
+      POSTGRES_PASSWORD: autumn
+      POSTGRES_DB: autumn
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autumn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  valkey:
+    image: docker.io/valkey/valkey:8.0
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  sandbox:
+    build:
+      dockerfile: docker/sandbox.dockerfile
+      context: .
+    develop:
+      watch:
+        # Server source — sync into container, bun dev hot-reloads automatically
+        - path: server/src
+          target: /app/server/src
+          action: sync
+        # Shared source — sync, then restart so the server picks up changes
+        - path: shared/src
+          target: /app/shared/src
+          action: sync+restart
+        # Vite source — sync into container, vite dev hot-reloads automatically
+        - path: vite/src
+          target: /app/vite/src
+          action: sync
+        # Dependency changes require a full rebuild
+        - path: package.json
+          action: rebuild
+        - path: server/package.json
+          action: rebuild
+        - path: vite/package.json
+          action: rebuild
+        - path: shared/package.json
+          action: rebuild
+        - path: bun.lock
+          action: rebuild
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+      - "${VITE_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - MOCK_MODE=true
+      - REDIS_URL=redis://valkey:6379
+      - CACHE_URL=redis://valkey:6379
+      - QUEUE_URL=redis://valkey:6379
+      - DATABASE_URL=postgres://autumn:autumn@postgres:5432/autumn
+      # Force SQS off so workers use BullMQ/Redis instead
+      - SQS_QUEUE_URL=
+
+      # Auth
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-sandbox-secret-change-me}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:8080}
+
+      # Encryption (used for publishable key generation)
+      - ENCRYPTION_PASSWORD=${ENCRYPTION_PASSWORD:-sandbox-encryption-password-32c}
+      - ENCRYPTION_IV=${ENCRYPTION_IV:-sandbox-iv-16c!!!}
+
+      # Vite
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8080}
+      - VITE_MOCK_MODE=true
+      - VITE_FRONTEND_URL=${VITE_FRONTEND_URL:-http://localhost:3000}
+
+      # Optional — safe to leave empty
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - SERVER_PORT=8080
+      - CLICKHOUSE_SKIP_ENSURES=true
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - LOOPS_API_KEY=${LOOPS_API_KEY:-}
+      - AXIOM_TOKEN=${AXIOM_TOKEN:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - SQS_QUEUE_URL=${SQS_QUEUE_URL:-}
+      - HATCHET_CLIENT_TOKEN=${HATCHET_CLIENT_TOKEN:-}
+      - STRIPE_SANDBOX_SECRET_KEY=${STRIPE_SANDBOX_SECRET_KEY:-}
+      - STRIPE_SANDBOX_WEBHOOK_SECRET=${STRIPE_SANDBOX_WEBHOOK_SECRET:-}
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

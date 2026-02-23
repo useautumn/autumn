@@ -7,6 +7,7 @@ import { configsRouter } from "@/internal/misc/configs/configsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
+import { mockAuthMiddleware } from "../honoMiddlewares/mockAuthMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
 import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
@@ -39,7 +40,10 @@ import { rpcRouter } from "./rpcRouter.js";
 export const apiRouter = new Hono<HonoEnv>();
 
 apiRouter.use("*", responseFilterMiddleware);
-apiRouter.use("*", secretKeyMiddleware);
+apiRouter.use(
+	"*",
+	process.env.MOCK_MODE === "true" ? mockAuthMiddleware : secretKeyMiddleware,
+);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
