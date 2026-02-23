@@ -5,6 +5,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient, useSession } from "@/lib/auth-client";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { AdminOnly } from "@/views/admin/components/AdminOnly";
@@ -26,6 +27,7 @@ export const AdminDropdownItems = () => {
 						setStopImpersonatingLoading(true);
 						try {
 							await authClient.admin.stopImpersonating();
+							clearOrgCache();
 							window.location.reload();
 						} catch (error) {
 							toast.error(getBackendErr(error, "Failed to stop impersonation"));
