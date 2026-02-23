@@ -14,6 +14,9 @@
  *                       graduated would also be $30 (all within tier 1)
  *   800 units (tier 2): volume = 8 packs × $5 = $40
  *                       graduated would be 5×$10 + 3×$5 = $65 (different!)
+ *
+ * Plan switch tests (immediate + scheduled) are in:
+ *   attach-prepaid-volume-switch.test.ts
  */
 
 import { expect, test } from "bun:test";
