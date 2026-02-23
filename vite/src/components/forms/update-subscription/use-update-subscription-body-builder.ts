@@ -6,7 +6,6 @@ import {
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import { useMemo } from "react";
 import type {
 	CancelActionValue,
@@ -89,24 +88,14 @@ export function useUpdateSubscriptionBodyBuilder(
 									item.usage_model === UsageModel.Prepaid,
 							);
 
-							if (!prepaidItem) {
-								return {
-									feature_id: featureId,
-									quantity: quantity,
-								};
-							}
-
 							const includedUsage =
-								typeof prepaidItem.included_usage === "number"
+								prepaidItem && typeof prepaidItem.included_usage === "number"
 									? prepaidItem.included_usage
 									: 0;
 
 							return {
 								feature_id: featureId,
-								quantity: new Decimal(quantity || 0)
-									.mul(prepaidItem.billing_units || 1)
-									.add(includedUsage)
-									.toNumber(),
+								quantity: (quantity || 0) + includedUsage,
 							};
 						},
 					)
