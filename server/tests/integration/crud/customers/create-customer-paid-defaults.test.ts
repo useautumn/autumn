@@ -127,10 +127,8 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`
 	});
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customer.id ?? "",
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	expect(fullCustomer.customer_products.length).toBe(1);

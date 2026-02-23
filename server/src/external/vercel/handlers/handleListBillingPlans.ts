@@ -211,7 +211,8 @@ export const handleListBillingPlansPerInstall = createRoute({
 			integrationConfigurationId?: string;
 			productId?: string;
 		};
-		const { db, org, logger } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { db, org, logger } = ctx;
 
 		if (!integrationConfigurationId && !productId) {
 			return c.json(
@@ -245,10 +246,8 @@ export const handleListBillingPlansPerInstall = createRoute({
 		}
 
 		const customer = await CusService.getByVercelId({
-			db,
+			ctx,
 			vercelInstallationId: integrationConfigurationId,
-			orgId: org.id,
-			env: env as AppEnv,
 		});
 
 		// Parse metadata from query params

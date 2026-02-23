@@ -326,10 +326,8 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 
 	// Verify separate subscriptions
 	const fullCus = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db,
-		orgId: org.id,
-		env,
 	});
 
 	const cusProducts = fullCus.customer_products;
@@ -392,10 +390,8 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 
 	// Verify add-on is on entity 2's subscription
 	const fullCusAfterAddOn = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db,
-		orgId: org.id,
-		env,
 	});
 
 	const addOnProd = fullCusAfterAddOn.customer_products.find(

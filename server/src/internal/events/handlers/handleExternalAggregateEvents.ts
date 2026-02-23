@@ -36,10 +36,8 @@ export const handleExternalAggregateEvents = createRoute({
 		});
 
 		const customer = await CusService.getFull({
-			db,
-			orgId: org.id,
+			ctx,
 			idOrInternalId: customer_id,
-			env,
 			withSubs: true,
 		});
 

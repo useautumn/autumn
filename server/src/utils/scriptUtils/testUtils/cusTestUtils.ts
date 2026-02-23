@@ -1,28 +1,24 @@
-import type { Organization } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const getCusSub = async ({
-	db,
-	org,
+	ctx,
 	customerId,
 	productId,
 }: {
-	db: DrizzleCli;
-	org: Organization;
+	ctx: AutumnContext;
 	customerId: string;
 	productId: string;
 }) => {
+	const { org } = ctx;
 	const env = AppEnv.Sandbox;
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		env,
-		orgId: org.id,
 	});
 
 	const cusProduct = fullCus.customer_products.find(

@@ -22,6 +22,8 @@ export enum JobName {
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 
+	BatchResetCusEnts = "batch-reset-cus-ents",
+
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 }

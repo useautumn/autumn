@@ -92,12 +92,9 @@ export const initCustomerV3 = async ({
 		});
 	}
 
-	const { db, org, env } = ctx;
 	const customer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env: env,
 	});
 
 	return {

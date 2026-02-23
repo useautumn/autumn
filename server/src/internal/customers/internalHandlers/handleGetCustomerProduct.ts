@@ -22,14 +22,13 @@ export const handleGetCustomerProduct = createRoute({
 		entity_id: z.string().optional(),
 	}),
 	handler: async (c) => {
-		const { db, org, env, features } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { db, org, env, features } = ctx;
 		const { customer_id, product_id } = c.req.param();
 		const { version, customer_product_id, entity_id } = c.req.valid("query");
 
 		const customer = await CusService.getFull({
-			db,
-			orgId: org.id,
-			env,
+			ctx,
 			idOrInternalId: customer_id,
 			withEntities: true,
 			entityId: entity_id,

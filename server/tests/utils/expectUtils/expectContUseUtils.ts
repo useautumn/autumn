@@ -39,9 +39,7 @@ export const expectSubQuantityCorrect = async ({
 	numReplaceables?: number;
 }) => {
 	const fullCus = await CusService.getFull({
-		db,
-		orgId: org.id,
-		env,
+		ctx: { db, org, env } as any,
 		idOrInternalId: customerId,
 	});
 

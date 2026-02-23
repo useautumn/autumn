@@ -37,10 +37,8 @@ export const getApiCustomerExpand = async ({
 
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId || "",
-			orgId: org.id,
-			env,
 			expand: expand as CustomerExpand[],
 			withEntities: expand.includes(CustomerExpand.Entities),
 			withSubs: true,

@@ -14,10 +14,8 @@ export const getSubscriptionId = async ({
 	productId: string;
 }): Promise<string> => {
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = fullCustomer.customer_products.find(
@@ -46,10 +44,8 @@ export const getEntitySubscriptionId = async ({
 	productId: string;
 }): Promise<string> => {
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = fullCustomer.customer_products.find(
