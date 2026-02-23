@@ -21,7 +21,6 @@ import { redirectToHono } from "./initHono.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-import { registerHeapSnapshotHandler } from "./utils/heapSnapshotHandler.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
@@ -143,7 +142,6 @@ const init = async () => {
 	server.listen(PORT, "0.0.0.0", () => {
 		console.log(`Server running on port ${PORT}`);
 		startMemoryMonitor("server", 60_000);
-		registerHeapSnapshotHandler("server");
 	});
 };
 

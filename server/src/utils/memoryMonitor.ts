@@ -20,13 +20,15 @@ function logMemoryUsage(label: string) {
 
 	logger.info("memory_log", {
 		type: "memory_log",
-		label,
-		pid: process.pid,
-		rssMB: toMB(mem.rss),
-		heapUsedMB: toMB(mem.heapUsed),
-		heapTotalMB: toMB(mem.heapTotal),
-		externalMB: toMB(mem.external),
-		arrayBuffersMB: toMB(mem.arrayBuffers),
+		data: {
+			label,
+			pid: process.pid,
+			rssMB: toMB(mem.rss),
+			heapUsedMB: toMB(mem.heapUsed),
+			heapTotalMB: toMB(mem.heapTotal),
+			externalMB: toMB(mem.external),
+			arrayBuffersMB: toMB(mem.arrayBuffers),
+		},
 	});
 }
 
