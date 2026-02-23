@@ -4,9 +4,9 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

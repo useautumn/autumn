@@ -167,13 +167,15 @@ export const setupAttachBillingContext = async ({
 		newFullProduct: attachProduct,
 	});
 
-	const endOfCycleMs = setupAttachEndOfCycleMs({
-		planTiming,
-		currentCustomerProduct,
-		stripeSubscription,
-		billingCycleAnchorMs,
-		currentEpochMs,
-	});
+	const endOfCycleMs =
+		contextOverride.endOfCycleMsOverride ??
+		setupAttachEndOfCycleMs({
+			planTiming,
+			currentCustomerProduct,
+			stripeSubscription,
+			billingCycleAnchorMs,
+			currentEpochMs,
+		});
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,

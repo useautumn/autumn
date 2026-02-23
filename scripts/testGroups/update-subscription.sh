@@ -7,9 +7,12 @@ source "$(dirname "$0")/config.sh"
 set -e
 
 
+# export USE_KERNEL_BROWSER=1
+export TEST_FILE_CONCURRENCY=2
 
 BUN_PARALLEL_V2 \
   'update-subscription/invoice' \
+  # 'update-subscription/invoice' \
   # 'update-subscription/custom-plan' \
   # 'update-subscription/discounts' \
   # 'update-subscription/errors' \

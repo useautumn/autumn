@@ -110,10 +110,8 @@ export const handleProductsUpdated = async ({
 
 	const fullProduct: FullProduct = cusProductToProduct({ cusProduct });
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: data.customerId || data.internalCustomerId,
-		orgId: org.id,
-		env: env,
 		entityId: cusProduct.internal_entity_id || undefined,
 		allowNotFound: true,
 	});

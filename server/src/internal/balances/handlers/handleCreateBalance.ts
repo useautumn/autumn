@@ -23,10 +23,8 @@ export const handleCreateBalance = createRoute({
 		}
 
 		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env: env,
 			entityId: entity_id,
 			withEntities: true,
 		});

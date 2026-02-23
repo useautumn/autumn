@@ -41,15 +41,14 @@ export const handleCreateResource = createRoute({
 	}),
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId } = c.req.param();
-		const { db, org, features, logger } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { db, org } = ctx;
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
 
 		// 1. Get customer by Vercel installation ID (not by customer.id which may differ)
 		const customer = await CusService.getByVercelId({
-			db,
+			ctx,
 			vercelInstallationId: integrationConfigurationId,
-			orgId,
-			env: env as AppEnv,
 			expand: [CustomerExpand.Entities],
 		});
 
@@ -100,16 +99,12 @@ export const handleCreateResource = createRoute({
 				try {
 					// 3. Create subscription (installation-level billing)
 					const { product } = await createVercelSubscription({
-						db: tx as unknown as DrizzleCli,
-						org,
-						env: env as AppEnv,
+						ctx: { ...ctx, db: tx as unknown as DrizzleCli },
 						customer,
 						stripeCustomer,
 						stripeCli,
 						integrationConfigurationId,
 						billingPlanId,
-						features,
-						logger,
 						c,
 						metadata,
 						resourceId,

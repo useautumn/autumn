@@ -79,8 +79,7 @@ verifyCacheConsistency?.task({
 
 			// Get from cache (now using full customer cache)
 			const cachedFullCustomer = await getCachedFullCustomer({
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
+				ctx: autumnContext,
 				customerId,
 			});
 
@@ -97,10 +96,8 @@ verifyCacheConsistency?.task({
 
 			// Get fresh from DB
 			const fullCus = await CusService.getFull({
-				db,
+				ctx: autumnContext,
 				idOrInternalId: customerId,
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
 				withEntities: true,
 				withSubs: true,
 				expand: [CustomerExpand.Invoices],

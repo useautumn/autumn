@@ -63,10 +63,8 @@ export const resolveRevenuecatResources = async ({
 					customerId,
 				})
 			: CusService.getFull({
-					db,
+					ctx,
 					idOrInternalId: customerId,
-					orgId: org.id,
-					env,
 				}),
 	]);
 
