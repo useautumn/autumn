@@ -6,6 +6,15 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ORG_STORAGE_KEY = "autumn_org";
 
+/** Clears all org-related localStorage cache entries. Call before reload on session changes (impersonation start/stop). */
+export const clearOrgCache = () => {
+	for (const key of Object.keys(localStorage)) {
+		if (key.startsWith(ORG_STORAGE_KEY)) {
+			localStorage.removeItem(key);
+		}
+	}
+};
+
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const axiosInstance = useAxiosInstance({ env: params?.env });
 	const { data: orgList } = useListOrganizations();
