@@ -37,6 +37,17 @@ export const getItemFeatureType = ({
 	return undefined;
 };
 
+/** Converts a prepaid item's stored quantity (in packs) to total units for display. */
+export const getPrepaidDisplayQuantity = ({
+	quantity,
+	billingUnits,
+}: {
+	quantity: number;
+	billingUnits?: number | null;
+}): number => {
+	return quantity * (billingUnits ?? 1);
+};
+
 export const getResetUsage = ({
 	item,
 	feature,
