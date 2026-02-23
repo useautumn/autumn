@@ -7,7 +7,7 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { calculateGraduatedTiersAmount } from "../billingUtils/invoicingUtils/lineItemUtils/calculateGraduatedTiersAmount.js";
+import { tiersToLineAmount } from "../billingUtils/invoicingUtils/lineItemUtils/tiersToLineAmount.js";
 import { isPriceItem } from "../productV2Utils/productItemUtils/getItemType.js";
 import {
 	calculateProrationAmount,
@@ -17,6 +17,27 @@ import { nullish } from "../utils.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 import { getBillingType } from "./priceUtils.js";
 
+/**
+ * Prices an arbitrary quantity against a usage price's tier schedule.
+ * This is the single entry point for converting a raw unit count into dollars —
+ * it does NOT know whether that count represents included allowance, prepaid
+ * purchased units, or paid overage. The caller is responsible for passing the
+ * correct quantity for the billing context:
+ *
+ * - **Included usage** (free allowance): pass the size of the free bucket to
+ *   find out its monetary value (used internally for proration math).
+ * - **Prepaid** (`UsageInAdvance`): pass the quantity the customer is buying
+ *   upfront. The result is the immediate charge.
+ * - **Pay-per-use overage** (`UsageInArrear`): pass only the units consumed
+ *   *above* any included free allowance — i.e. `totalUsage − includedFree`.
+ *   Do NOT pass raw total usage here; the caller must subtract the free tier first.
+ *
+ * @param price - The usage price whose config contains `usage_tiers` and
+ *   optionally `billing_units`.
+ * @param quantity - The unit count to price. Must already be net of any free
+ *   included allowance when called in an overage context.
+ * @returns Dollar amount as a number rounded to 10 decimal places.
+ */
 export const getAmountForQuantity = ({
 	price,
 	quantity,
@@ -26,11 +47,10 @@ export const getAmountForQuantity = ({
 }) => {
 	const config = price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
-	const tiers = config.usage_tiers;
 
-	return calculateGraduatedTiersAmount({
-		tiers,
-		usage: quantity,
+	return tiersToLineAmount({
+		price,
+		overage: quantity,
 		billingUnits,
 	});
 };
@@ -56,6 +76,7 @@ export const itemToInvoiceAmount = ({
 	}
 
 	const price = {
+		tier_behaviour: item.tier_behaviour,
 		config: {
 			usage_tiers: item.tiers || [
 				{

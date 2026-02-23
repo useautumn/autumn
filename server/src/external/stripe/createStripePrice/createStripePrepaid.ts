@@ -5,6 +5,7 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	TierBehaviours,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -113,6 +114,10 @@ export const createStripePrepaid = async ({
 		config.stripe_price_id = stripePrice.id;
 	} else {
 		const tiers = prepaidToStripeTiers({ price, org });
+		const tiersMode =
+			price.tier_behaviour === TierBehaviours.VolumeBased
+				? "volume"
+				: "graduated";
 
 		let priceAmountData = {};
 		if (tiers.length === 1) {
@@ -122,7 +127,7 @@ export const createStripePrepaid = async ({
 		} else {
 			priceAmountData = {
 				billing_scheme: "tiered",
-				tiers_mode: "graduated",
+				tiers_mode: tiersMode,
 				tiers: tiers,
 			};
 		}
