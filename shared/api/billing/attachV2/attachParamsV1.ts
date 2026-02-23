@@ -28,6 +28,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.",
 	}),
+
+	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
+		description:
+			"Additional parameters to pass into the creation of the Stripe checkout session.",
+	}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;
