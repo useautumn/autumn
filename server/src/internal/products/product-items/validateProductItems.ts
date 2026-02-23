@@ -15,7 +15,7 @@ import {
 	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
-	TiersType,
+	TierBehaviours,
 	UsageModel,
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
@@ -175,7 +175,7 @@ const validateProductItem = ({
 		}
 
 		if (
-			item.tiers_type === TiersType.VolumeBased &&
+			item.tier_behaviour === TierBehaviours.VolumeBased &&
 			item.tiers.length > 1 &&
 			item.usage_model !== UsageModel.Prepaid
 		) {
@@ -380,7 +380,6 @@ export const validateProductItems = ({
 				});
 			}
 		}
-
 	}
 
 	// 6. Can't have both weekly and monthly price items in the same product

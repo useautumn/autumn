@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
-import { TiersType } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { TierBehaviours } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "../../productModels/productEnums.js";
 import { OnDecrease, OnIncrease } from "./productItemEnums.js";
 
@@ -120,9 +120,8 @@ export const ProductItemSchema = z.object({
 			"The billing units of the product item (eg $1 for 30 credits).",
 	}),
 
-	tiers_type: z.nativeEnum(TiersType).nullish().meta({
-		description:
-			"The type of tiered pricing: graduated or volume-based.",
+	tier_behaviour: z.nativeEnum(TierBehaviours).nullish().meta({
+		description: "The type of tiered pricing: graduated or volume-based.",
 	}),
 
 	// Others

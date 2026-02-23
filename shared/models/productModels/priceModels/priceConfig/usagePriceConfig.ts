@@ -8,7 +8,7 @@ export enum BillWhen {
 	EndOfPeriod = "end_of_period",
 }
 
-export enum TiersType {
+export enum TierBehaviours {
 	Graduated = "graduated",
 	VolumeBased = "volume",
 }

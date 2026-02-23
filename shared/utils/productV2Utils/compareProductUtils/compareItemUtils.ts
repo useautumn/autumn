@@ -306,9 +306,9 @@ export const featurePriceItemsAreSame = ({
 			condition: tiersAreSame(item1.tiers || null, item2.tiers || null),
 			message: `Tiers different`,
 		},
-		tiers_type: {
-			condition: item1.tiers_type == item2.tiers_type,
-			message: `Tiers type different: ${item1.tiers_type} != ${item2.tiers_type}`,
+		tier_behaviour: {
+			condition: item1.tier_behaviour == item2.tier_behaviour,
+			message: `Tiers type different: ${item1.tier_behaviour} != ${item2.tier_behaviour}`,
 		},
 		billing_units: {
 			condition: item1.billing_units == item2.billing_units,
