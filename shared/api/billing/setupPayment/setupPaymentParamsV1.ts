@@ -1,7 +1,12 @@
 import { AttachParamsV1Schema } from "@api/models";
 import { z } from "zod/v4";
 
-export const SetupPaymentParamsV1Schema = AttachParamsV1Schema.omit({
+export const SetupPaymentParamsV1Schema = AttachParamsV1Schema.extend({
+	plan_id: z.string().optional().meta({
+		description:
+			"If specified, the plan will be attached to the customer after setup.",
+	}),
+}).omit({
 	invoice_mode: true,
 	redirect_mode: true,
 	new_billing_subscription: true,
