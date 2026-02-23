@@ -2,6 +2,7 @@ import { Globe } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
@@ -34,6 +35,7 @@ export const AdminView = () => {
 			return;
 		}
 
+		clearOrgCache();
 		window.location.reload();
 	};
 
