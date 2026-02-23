@@ -11,7 +11,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
+import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -84,10 +84,10 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 		// Wait for sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
 
 		const cusEnt = await findCustomerEntitlement({
 			ctx,
