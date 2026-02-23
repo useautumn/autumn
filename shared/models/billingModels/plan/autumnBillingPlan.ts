@@ -1,3 +1,4 @@
+import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -92,4 +93,11 @@ export type DeferredAutumnBillingPlanData = {
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
 	resumeAfter?: StripeBillingStage;
+};
+
+export type DeferredSetupPaymentData = {
+	requestId: string;
+	orgId: string;
+	env: AppEnv;
+	params: SetupPaymentParamsV1;
 };

@@ -3,6 +3,7 @@ import { handleCheckoutSessionMetadataV2 } from "@/external/stripe/webhookHandle
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupCheckoutSessionCompletedContext } from "./setupCheckoutSessionCompletedContext.js";
 import { handleLegacyCheckoutSessionMetadata } from "./tasks/handleLegacyCheckoutSessionMetadata.ts/handleCheckoutSessionCompletedLegacy.js";
+import { handleSetupPaymentMetadata } from "./tasks/handleSetupPaymentMetadata.js";
 import { handleStandaloneSetupCheckout } from "./tasks/handleStandaloneSetupCheckout.js";
 import { updateCustomerFromCheckout } from "./tasks/updateCustomerFromCheckout.js";
 
@@ -20,6 +21,12 @@ export const handleStripeCheckoutSessionCompleted = async ({
 
 	// V2 flow
 	await handleCheckoutSessionMetadataV2({
+		ctx,
+		checkoutContext,
+	});
+
+	// Setup payment with metadata (plan attachment after setup)
+	await handleSetupPaymentMetadata({
 		ctx,
 		checkoutContext,
 	});
