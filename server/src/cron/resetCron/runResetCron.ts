@@ -6,42 +6,63 @@ import {
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { clearCusEntsFromCache, resetCustomerEntitlement } from "../cronUtils";
 import type { CronContext } from "../utils/CronContext";
+import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
+import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
 
 export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 	const { db } = ctx;
-	try {
-		const cusEnts = await CusEntService.getActiveResetPassed({
-			db,
-			batchSize: 500,
-		});
 
-		const batchSize = 100;
-		for (let i = 0; i < cusEnts.length; i += batchSize) {
-			const batch = cusEnts.slice(i, i + batchSize);
-			const batchResets = [];
-			const updatedCusEnts: ResetCusEnt[] = [];
-			for (const cusEnt of batch) {
-				batchResets.push(
-					resetCustomerEntitlement({
-						db,
-						cusEnt: cusEnt,
-						updatedCusEnts,
-					}),
-				);
+	const maxIterations = 10;
+	const timeoutMs = 60_000; // 1 minute
+	const startTime = Date.now();
+
+	try {
+		let iteration = 0;
+
+		while (iteration < maxIterations && Date.now() - startTime < timeoutMs) {
+			iteration++;
+
+			const cusEnts = await CusEntService.getActiveResetPassed({
+				db,
+				batchSize: 10_000,
+				limit: 10_000,
+			});
+
+			if (cusEnts.length === 0) {
+				break;
 			}
 
-			const results = await Promise.all(batchResets);
+			console.log(
+				`Reset cron iteration ${iteration}: processing ${cusEnts.length} entitlements`,
+			);
 
-			const toUpsert = results.filter(notNullish);
-			await CusEntService.upsert({
-				db,
-				data: toUpsert as CustomerEntitlement[],
-			});
-			console.log(`Upserted ${toUpsert.length} short entitlements`);
+			const batchSize = 1000;
+			for (let i = 0; i < cusEnts.length; i += batchSize) {
+				const batch = cusEnts.slice(i, i + batchSize);
+				const batchResets = [];
+				const updatedCusEnts: ResetCusEnt[] = [];
+				for (const cusEnt of batch) {
+					batchResets.push(
+						resetCustomerEntitlement({
+							db,
+							cusEnt: cusEnt,
+							updatedCusEnts,
+						}),
+					);
+				}
 
-			await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
+				const results = await Promise.all(batchResets);
+
+				const toUpsert = results.filter(notNullish);
+				await CusEntService.upsert({
+					db,
+					data: toUpsert as CustomerEntitlement[],
+				});
+				console.log(`Upserted ${toUpsert.length} short entitlements`);
+
+				await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
+			}
 		}
 
 		console.log(
