@@ -1,63 +1,44 @@
 import { test } from "bun:test";
-import { ApiVersion, FreeTrialDuration, ResetInterval } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features";
+import { ApiVersion } from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 const { db, org, env } = ctx;
 
+const customerId = "temp-test";
+
 test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
-	const productId = `temp_rpc_roundtrip_${Date.now()}`;
-	const baselineGroup = `baseline_group_${productId}`;
-	const changedGroup = `changed_group_${productId}`;
+	const consumableMessagesItem = items.consumableMessages({
+		includedUsage: 100,
+	});
+	const proProduct = products.base({
+		id: "pro",
+		items: [consumableMessagesItem, items.annualPrice({ price: 200 })],
+	});
 
-	const baseline = {
-		name: "Temp RPC Baseline",
-		description: "baseline description",
-		group: baselineGroup,
-		add_on: false,
-		auto_enable: false,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 100,
-				reset: { interval: ResetInterval.Month },
-			},
+	const { autumnV1, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [proProduct] }),
 		],
-		free_trial: {
-			duration_type: FreeTrialDuration.Day,
-			duration_length: 7,
-			card_required: false,
-		},
-	};
+		actions: [],
+	});
 
-	const restUpdates = {
-		name: "Temp RPC Changed",
-		group: changedGroup,
-		add_on: true,
-		auto_enable: true,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 250,
-				reset: { interval: ResetInterval.Month },
-			},
-		],
-		free_trial: {
-			duration_type: FreeTrialDuration.Day,
-			duration_length: 14,
-			card_required: true,
-		},
-	};
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: proProduct.id,
+	});
 
-	try {
-		await autumnV2_1.products.delete(productId);
-	} catch (_error) {}
-
-	await autumnV2_1.products.create({
-		id: productId,
-		...baseline,
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		numberOfWeeks: 6,
 	});
 });
