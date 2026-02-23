@@ -332,9 +332,7 @@ test.concurrent(`${chalk.yellowBright("migrate-addons-3: same add-on attached tw
 	// Verify migrated state
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
+		ctx,
 		idOrInternalId: customerId,
 	});
 

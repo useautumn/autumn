@@ -85,10 +85,8 @@ export const getOrSetCachedFullCustomer = async ({
 	const fetchTimeMs = Date.now();
 
 	const fullCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env: env as AppEnv,
 		withEntities: true,
 		withSubs: true,
 		expand: [CustomerExpand.Invoices],

@@ -84,12 +84,10 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 		// Wait for sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 
 		const cusEnt = await findCustomerEntitlement({
 			ctx,

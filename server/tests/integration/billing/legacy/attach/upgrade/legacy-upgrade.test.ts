@@ -226,8 +226,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 2: upgrade monthly to annu
 
 	// Verify Stripe subscription period_end matches checkout preview
 	const sub = await getCusSub({
-		db: ctx.db,
-		org: ctx.org,
+		ctx,
 		customerId,
 		productId: proAnnual.id,
 	});
@@ -297,8 +296,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annu
 
 	// Verify Stripe subscription period_end matches checkout preview
 	const sub = await getCusSub({
-		db: ctx.db,
-		org: ctx.org,
+		ctx,
 		customerId,
 		productId: proAnnual.id,
 	});

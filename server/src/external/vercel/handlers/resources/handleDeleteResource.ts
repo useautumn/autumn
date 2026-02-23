@@ -17,7 +17,8 @@ export const handleDeleteResource = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();
-		const { db, org } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { db, org } = ctx;
 		const stripeCli = createStripeCli({ org, env: env as AppEnv });
 
 		await VercelResourceService.delete({
@@ -45,10 +46,8 @@ export const handleDeleteResource = createRoute({
 		});
 
 		const customer = await CusService.getByVercelId({
-			db,
+			ctx,
 			vercelInstallationId: integrationConfigurationId,
-			orgId,
-			env: env as AppEnv,
 		});
 
 		customer?.customer_products.forEach(async (x) => {

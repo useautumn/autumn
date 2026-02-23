@@ -1,9 +1,5 @@
-import {
-	type AppEnv,
-	CusProductStatus,
-	type Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductStatus } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
 import { CusService } from "../../CusService.js";
 import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
@@ -17,7 +13,7 @@ export const runBatchResetCusEntsTask = async ({
 	ctx,
 	payload,
 }: {
-	ctx: { db: DrizzleCli; org: Organization; env: AppEnv };
+	ctx: AutumnContext;
 	payload: BatchResetCusEntsPayload;
 }): Promise<void> => {
 	const { db, org, env } = ctx;
@@ -42,10 +38,8 @@ export const runBatchResetCusEntsTask = async ({
 	for (const [internalCustomerId] of byCustomer) {
 		try {
 			const fullCus = await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: internalCustomerId,
-				orgId: org.id,
-				env,
 				inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 			});
 

@@ -26,8 +26,7 @@ export const migrateCustomer = async ({
 	toProduct: FullProduct;
 	migrationJob?: MigrationJob;
 }) => {
-	const { db, org, env } = ctx;
-	const orgId = org.id;
+	const { db } = ctx;
 
 	// Create customer-specific logger
 	const customerLogger = createMigrationCustomerLogger({
@@ -39,10 +38,8 @@ export const migrateCustomer = async ({
 
 	try {
 		const fullCus = await CusService.getFull({
-			db,
+			ctx: customerCtx,
 			idOrInternalId: customerId,
-			orgId,
-			env,
 			withEntities: true,
 			inStatuses: ACTIVE_STATUSES,
 		});

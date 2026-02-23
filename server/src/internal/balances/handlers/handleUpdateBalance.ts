@@ -44,10 +44,8 @@ export const handleUpdateBalance = createRoute({
 			});
 
 			const fullCus = await CusService.getFull({
-				db: ctx.db,
+				ctx,
 				idOrInternalId: params.customer_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
 				entityId: params.entity_id,
 				withEntities: true,
 			});
