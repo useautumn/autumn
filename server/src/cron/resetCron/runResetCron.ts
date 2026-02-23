@@ -25,11 +25,14 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 
 			const cusEnts = await CusEntService.getActiveResetPassed({
 				db,
-				batchSize: 10_000,
-				limit: 10_000,
+				batchSize: 5_000,
+				limit: 5_000,
 			});
 
-			if (cusEnts.length === 0) {
+			if (cusEnts.length < 5_000) {
+				console.log(
+					`Reset cron: only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
+				);
 				break;
 			}
 

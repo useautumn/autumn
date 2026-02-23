@@ -1,8 +1,4 @@
-import type {
-	FullCustomer,
-	FullCustomerEntitlement,
-	Rollover,
-} from "@autumn/shared";
+import type { FullCustomer, FullCustomerEntitlement } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import type { ProcessResetResult } from "./processReset.js";
@@ -29,6 +25,7 @@ const findCusEnt = ({
 /**
  * Applies computed reset values to in-memory FullCustomer for all cusEnts,
  * and runs rollover max-clearing only for DB-applied (non-skipped) ones.
+ * For skipped entries (another request won the race), re-reads rollovers from DB.
  */
 export const applyResetResults = async ({
 	ctx,
@@ -43,7 +40,6 @@ export const applyResetResults = async ({
 }): Promise<void> => {
 	const { db } = ctx;
 	const skippedSet = new Set(skipped);
-	const clearingPromises: Promise<Rollover[]>[] = [];
 
 	for (const { cusEntId, result } of computed) {
 		const original = findCusEnt({ fullCus, cusEntId });
@@ -57,20 +53,24 @@ export const applyResetResults = async ({
 		if (updates.entities !== null) original.entities = updates.entities;
 		original.next_reset_at = updates.next_reset_at;
 
-		// Only run rollover clearing for DB-applied entries.
-		// Skipped entries were already cleared by the winning request.
-		if (!skippedSet.has(cusEntId) && result.rolloverInsert) {
-			clearingPromises.push(
-				RolloverService.clearExcessRollovers({
-					db,
-					newRows: result.rolloverInsert.rows,
-					fullCusEnt: original,
-				}),
-			);
-		}
-	}
+		if (!result.rolloverInsert) continue;
 
-	if (clearingPromises.length > 0) {
-		await Promise.all(clearingPromises);
+		if (!skippedSet.has(cusEntId)) {
+			// Winner: we inserted the rollover into DB. Clear excess and
+			// update the in-memory array to include the new rollovers.
+			const clearedRollovers = await RolloverService.clearExcessRollovers({
+				db,
+				newRows: result.rolloverInsert.rows,
+				fullCusEnt: original,
+			});
+			original.rollovers = clearedRollovers;
+		} else {
+			// Loser: the winning request already inserted the rollover and
+			// cleared excess. Re-read from DB to get the authoritative state.
+			original.rollovers = await RolloverService.getCurrentRollovers({
+				db,
+				cusEntID: cusEntId,
+			});
+		}
 	}
 };
