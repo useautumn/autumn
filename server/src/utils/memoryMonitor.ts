@@ -2,14 +2,13 @@
  * Periodic memory usage logger for diagnosing memory leaks.
  *
  * Logs heap usage, RSS, external memory, and array buffers every interval.
- * Ships to Axiom via the standard logger with type: "memory_log".
+ * Uses Axiom logger so metrics are queryable via type: "memory_log".
  */
 
-import { logger } from "@/external/logtail/logtailUtils.js";
+import { logger } from "../external/logtail/logtailUtils.js";
 
 const DEFAULT_INTERVAL_MS = 60_000; // 1 minute
 
-let previousRss = 0;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 function toMB(bytes: number): number {
@@ -19,19 +18,16 @@ function toMB(bytes: number): number {
 function logMemoryUsage(label: string) {
 	const mem = process.memoryUsage();
 
-	logger.info("memory log", {
+	logger.info("memory_log", {
 		type: "memory_log",
 		label,
 		pid: process.pid,
-		rss_mb: toMB(mem.rss),
-		heap_used_mb: toMB(mem.heapUsed),
-		heap_total_mb: toMB(mem.heapTotal),
-		external_mb: toMB(mem.external),
-		array_buffers_mb: toMB(mem.arrayBuffers),
-		rss_delta_mb: previousRss ? toMB(mem.rss - previousRss) : 0,
+		rssMB: toMB(mem.rss),
+		heapUsedMB: toMB(mem.heapUsed),
+		heapTotalMB: toMB(mem.heapTotal),
+		externalMB: toMB(mem.external),
+		arrayBuffersMB: toMB(mem.arrayBuffers),
 	});
-
-	previousRss = mem.rss;
 }
 
 /**
@@ -54,6 +50,10 @@ export function startMemoryMonitor(
 	if (intervalHandle.unref) {
 		intervalHandle.unref();
 	}
+
+	console.log(
+		`[mem:${label}] Memory monitor started (every ${intervalMs / 1000}s)`,
+	);
 }
 
 export function stopMemoryMonitor() {
