@@ -51,10 +51,8 @@ const getStripePrepaidSubscriptionItem = async ({
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const stripeCustomerId =

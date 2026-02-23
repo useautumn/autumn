@@ -234,10 +234,8 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 
 	// Verify we have 2 separate subscriptions
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const subCount = getCusStripeSubCount({ fullCus: fullCustomer });

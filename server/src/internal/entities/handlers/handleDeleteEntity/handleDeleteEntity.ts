@@ -25,10 +25,8 @@ export const handleDeleteEntity = createRoute({
 		const { db, org, env, features, logger } = ctx;
 
 		const fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env,
 			withEntities: true,
 		});
 

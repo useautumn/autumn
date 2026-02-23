@@ -41,10 +41,8 @@ export const getCheckPreview = async ({
 
 	const { db, org, env, features: allFeatures } = ctx;
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		entityId,
 	});
 

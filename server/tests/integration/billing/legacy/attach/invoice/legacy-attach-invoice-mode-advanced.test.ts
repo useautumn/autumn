@@ -304,10 +304,8 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 
 	// Verify separate subscriptions
 	const fullCus = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db,
-		orgId: org.id,
-		env,
 	});
 
 	const cusProducts = fullCus.customer_products;

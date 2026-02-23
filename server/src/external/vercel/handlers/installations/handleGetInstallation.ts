@@ -1,7 +1,7 @@
 import {
 	cusProductToProduct,
-	mapToProductV2,
 	type FullCusProduct,
+	mapToProductV2,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -13,13 +13,11 @@ export const handleGetInstallation = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId } = c.req.param();
-		const { db, org } = ctx;
+		const { org } = ctx;
 
 		const customer = await CusService.getByVercelId({
-			db,
+			ctx,
 			vercelInstallationId: integrationConfigurationId,
-			orgId: org.id,
-			env: ctx.env,
 		});
 
 		if (!customer) {

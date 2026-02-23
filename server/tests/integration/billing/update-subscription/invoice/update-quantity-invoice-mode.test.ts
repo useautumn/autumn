@@ -52,10 +52,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (dr
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -78,10 +76,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (dr
 	});
 
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 		expand: [CustomerExpand.Invoices],
 	});
 
@@ -133,10 +129,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice with immed
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -160,10 +154,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice with immed
 
 	// Entitlements should be updated immediately
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(
@@ -216,10 +208,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with i
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -243,10 +233,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with i
 
 	// Entitlements should be updated immediately
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(
@@ -299,10 +287,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -326,10 +312,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 
 	// Entitlements should NOT be updated yet (waiting for payment)
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(
@@ -362,10 +346,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 
 	// Entitlements should now be updated after payment
 	const afterPayment = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const paidCustomerProduct = afterPayment.customer_products.find(

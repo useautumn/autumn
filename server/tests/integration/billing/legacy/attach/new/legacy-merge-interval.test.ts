@@ -80,8 +80,7 @@ test.concurrent(`${chalk.yellowBright("legacy-merge-interval 1: entity attach mi
 
 	// Verify Stripe subscription period_end matches
 	const sub = await getCusSub({
-		db: ctx.db,
-		org: ctx.org,
+		ctx,
 		customerId,
 		productId: pro.id,
 	});
@@ -154,8 +153,7 @@ test.concurrent(`${chalk.yellowBright("legacy-merge-interval 2: entity attach an
 
 	// Verify Stripe subscription period_end matches
 	const sub = await getCusSub({
-		db: ctx.db,
-		org: ctx.org,
+		ctx,
 		customerId,
 		productId: proAnnual.id,
 	});
@@ -230,8 +228,7 @@ test.concurrent(`${chalk.yellowBright("legacy-merge-interval 3: entity attach an
 
 	// Verify at least one subscription item has matching period_end
 	const sub = await getCusSub({
-		db: ctx.db,
-		org: ctx.org,
+		ctx,
 		customerId,
 		productId: proAnnual.id,
 	});

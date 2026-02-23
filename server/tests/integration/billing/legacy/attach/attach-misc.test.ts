@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type AppEnv, ErrCode } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
@@ -87,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 		actions: [],
 	});
 
-	const { db, org, env, stripeCli } = ctx;
+	const { stripeCli } = ctx;
 
 	// Attach with invoice option
 	const res = await autumnV1.attach({
@@ -113,10 +113,8 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 	await timeout(10000);
 
 	const cusProduct = await getMainCusProduct({
-		db,
+		ctx,
 		customerId,
-		orgId: org.id,
-		env: env as AppEnv,
 		productGroup: pro.group ?? undefined,
 	});
 

@@ -45,10 +45,8 @@ export const handleInternalAggregateEvents = createRoute({
 		} else {
 			// Customer ID provided, fetch customer data
 			customer = await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: customer_id,
-				orgId: org.id,
-				env,
 				withSubs: true,
 			});
 

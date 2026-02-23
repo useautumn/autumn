@@ -7,13 +7,11 @@ import { CusService } from "@/internal/customers/CusService";
  */
 export const handleGetCustomer = createRoute({
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
 		const { customer_id } = c.req.param();
 
 		const fullCus = await CusService.getFull({
-			db,
-			orgId: org.id,
-			env,
+			ctx,
 			idOrInternalId: customer_id,
 			withEntities: true,
 			expand: [CustomerExpand.Invoices],
