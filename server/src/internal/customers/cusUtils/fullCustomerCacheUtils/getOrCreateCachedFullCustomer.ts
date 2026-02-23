@@ -74,10 +74,8 @@ export const getOrCreateCachedFullCustomer = async ({
 	// 2. Try DB if not in cache
 	if (!fullCustomer && customerId) {
 		fullCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
 			expand: [CustomerExpand.Invoices],
@@ -115,10 +113,8 @@ export const getOrCreateCachedFullCustomer = async ({
 		setCache = true;
 
 		fullCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
-			orgId: org.id,
-			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
 			entityId,

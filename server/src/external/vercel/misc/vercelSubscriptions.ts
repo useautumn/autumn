@@ -1,19 +1,15 @@
 import {
-	type AppEnv,
-	type Feature,
 	type FullCustomer,
 	type FullProduct,
-	type Organization,
 	RecaseError,
 } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import type { Context } from "hono";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { createStripeSub2 } from "@/internal/customers/attach/attachFunctions/addProductFlow/createStripeSub2.js";
 import { handleFreeProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -40,34 +36,27 @@ import {
  * Future: handleUpdateBillingPlan will also handle upgrades/downgrades when subscription exists
  */
 export const createVercelSubscription = async ({
-	db,
-	org,
-	env,
+	ctx,
 	customer,
 	stripeCustomer,
 	stripeCli,
 	integrationConfigurationId,
 	billingPlanId,
-	features,
-	logger,
 	c,
 	metadata,
 	resourceId,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 	customer: FullCustomer;
 	stripeCustomer: Stripe.Customer;
 	stripeCli: Stripe;
 	integrationConfigurationId: string;
 	billingPlanId: string;
-	features: Feature[];
-	logger: any;
 	c: Context<HonoEnv>;
 	metadata?: Record<string, any>;
 	resourceId?: string;
 }): Promise<{ product: FullProduct }> => {
+	const { db, org, env, features, logger } = ctx;
 	// 1. Check for existing non-incomplete subscription (only allow one per installation)
 	const existingSubscription = stripeCustomer.subscriptions?.data.find(
 		(s) =>
@@ -105,10 +94,8 @@ export const createVercelSubscription = async ({
 	}
 
 	const refreshedCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customer.internal_id,
-		orgId: org.id,
-		env,
 	});
 
 	// 3. Get custom payment method (created in handleUpsertInstallation)

@@ -40,10 +40,8 @@ export const handleTransferProductV2 = createRoute({
 		}
 
 		const customer = await CusService.getFull({
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env,
-			db,
 			withEntities: true,
 		});
 

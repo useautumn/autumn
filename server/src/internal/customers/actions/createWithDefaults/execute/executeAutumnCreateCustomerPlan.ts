@@ -57,20 +57,18 @@ export const executeAutumnCreateCustomerPlan = async ({
 
 	if (error) {
 		if (isUniqueConstraintError(error)) {
-			logger.info(
-				`Customer already exists, returning existing: ${fullCustomer.id || fullCustomer.email}`,
-			);
-			const existingCustomer = await CusService.getFull({
-				db,
-				idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				withEntities: true,
-				withSubs: true,
-				expand: [CustomerExpand.Invoices],
-			});
-			context.fullCustomer = existingCustomer;
-			return { type: "existing" };
+		logger.info(
+			`Customer already exists, returning existing: ${fullCustomer.id || fullCustomer.email}`,
+		);
+		const existingCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
+			withEntities: true,
+			withSubs: true,
+			expand: [CustomerExpand.Invoices],
+		});
+		context.fullCustomer = existingCustomer;
+		return { type: "existing" };
 		}
 		throw error;
 	}
@@ -80,10 +78,8 @@ export const executeAutumnCreateCustomerPlan = async ({
 			`Customer already exists (claimed or existing): ${fullCustomer.id || fullCustomer.internal_id}`,
 		);
 		const existingCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: fullCustomer.internal_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			withEntities: true,
 			withSubs: true,
 			expand: [CustomerExpand.Invoices],

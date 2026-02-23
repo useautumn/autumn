@@ -64,10 +64,8 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_re
 
 	// Verify the update was applied (both Autumn and Stripe)
 	const updatedCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 	expect(updatedCustomer.send_email_receipts).toBe(true);
 	expect(updatedCustomer.email).toBe(testEmail);
@@ -255,10 +253,8 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 
 	// Verify send_email_receipts was enabled
 	const updatedCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 	expect(updatedCustomer.send_email_receipts).toBe(true);
 

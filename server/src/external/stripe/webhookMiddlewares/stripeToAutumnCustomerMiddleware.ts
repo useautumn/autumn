@@ -39,10 +39,8 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	if (!cus) return;
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: cus.internal_id,
-		orgId: ctx.org.id,
-		env: ctx.env,
 		withEntities: true,
 		withSubs: true,
 		inStatuses: RELEVANT_STATUSES,

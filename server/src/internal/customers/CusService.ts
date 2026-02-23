@@ -32,9 +32,7 @@ import { getFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusService {
 	static async getFull({
-		db,
-		orgId,
-		env,
+		ctx,
 		idOrInternalId,
 		inStatuses = RELEVANT_STATUSES,
 		withEntities = false,
@@ -44,9 +42,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 	}: {
-		db: DrizzleCli;
-		orgId: string;
-		env: AppEnv;
+		ctx: AutumnContext;
 		idOrInternalId: string;
 		inStatuses?: CusProductStatus[];
 		withEntities?: boolean;
@@ -56,6 +52,9 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 	}): Promise<FullCustomer> {
+		const { db, org, env } = ctx;
+		const orgId = org.id;
+
 		const includeInvoices = expand?.includes(CustomerExpand.Invoices) || false;
 		const withTrialsUsed = expand?.includes(CustomerExpand.TrialsUsed) || false;
 
@@ -418,25 +417,23 @@ export class CusService {
 	}
 
 	static async getByVercelId({
-		db,
+		ctx,
 		vercelInstallationId,
-		orgId,
-		env,
 		expand,
 	}: {
-		db: DrizzleCli;
+		ctx: AutumnContext;
 		vercelInstallationId: string;
-		orgId: string;
-		env: AppEnv;
 		expand?: (CustomerExpand | EntityExpand)[];
 	}) {
+		const { db, org, env } = ctx;
+
 		// This assumes the "processors" column is a JSONB object that can have a "vercel" object with "installation_id"
 		const results = await db
 			.select()
 			.from(customers as unknown as Table)
 			.where(
 				and(
-					eq(customers.org_id, orgId),
+					eq(customers.org_id, org.id),
 					eq(customers.env, env),
 					// This JSON path works for Postgres jsonb column
 					// Check for 'vercel.installation_id' inside the processors JSONB column
@@ -449,10 +446,8 @@ export class CusService {
 		if (!customer) return null;
 		else {
 			return (await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: customer.internal_id,
-				orgId,
-				env,
 				expand,
 			})) as FullCustomer;
 		}

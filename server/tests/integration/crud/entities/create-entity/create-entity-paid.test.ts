@@ -583,10 +583,8 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity5 - payment fai
 
 	// Step 2: Attach a failing payment method
 	const fullCus = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	await attachFailedPaymentMethod({

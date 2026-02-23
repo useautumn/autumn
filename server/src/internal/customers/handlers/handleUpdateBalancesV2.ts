@@ -12,15 +12,13 @@ export const handleUpdateBalancesV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 
-		const { org, env, db, features } = ctx;
+		const { features } = ctx;
 		const { customer_id } = c.req.param();
 		const { balances, entity_id } = c.req.valid("json");
 
 		const fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env,
 			entityId: entity_id,
 		});
 

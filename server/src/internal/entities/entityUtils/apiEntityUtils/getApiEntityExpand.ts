@@ -27,10 +27,8 @@ export const getApiEntityExpand = async ({
 
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId || "",
-			orgId: org.id,
-			env,
 			entityId,
 		});
 	}

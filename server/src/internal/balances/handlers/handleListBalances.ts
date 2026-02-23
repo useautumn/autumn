@@ -21,10 +21,8 @@ export const handleListBalances = createRoute({
 		const { customer_id } = c.req.valid("query");
 
 		const fullCus = await CusService.getFull({
-			db: ctx.db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
 		});
 
 		if (!fullCus) {

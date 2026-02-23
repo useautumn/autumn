@@ -97,10 +97,8 @@ verifyCacheConsistency?.task({
 
 			// Get fresh from DB
 			const fullCus = await CusService.getFull({
-				db,
+				ctx: autumnContext,
 				idOrInternalId: customerId,
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
 				withEntities: true,
 				withSubs: true,
 				expand: [CustomerExpand.Invoices],
