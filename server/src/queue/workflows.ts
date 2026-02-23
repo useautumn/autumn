@@ -35,6 +35,12 @@ export type GrantCheckoutRewardPayload = {
 	stripeSubscriptionId?: string;
 };
 
+export type BatchResetCusEntsPayload = {
+	orgId: string;
+	env: string;
+	cusEntIds: string[];
+};
+
 // ============ Workflow Registry ============
 
 type WorkflowRunner = "sqs" | "hatchet";
@@ -65,6 +71,11 @@ const workflowRegistry = {
 		jobName: JobName.GrantCheckoutReward,
 		runner: "sqs",
 	} as WorkflowConfig<GrantCheckoutRewardPayload>,
+
+	batchResetCusEnts: {
+		jobName: JobName.BatchResetCusEnts,
+		runner: "sqs",
+	} as WorkflowConfig<BatchResetCusEntsPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -131,4 +142,9 @@ export const workflows = {
 		payload: GrantCheckoutRewardPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "grantCheckoutReward", payload, options }),
+
+	triggerBatchResetCusEnts: (
+		payload: BatchResetCusEntsPayload,
+		options?: TriggerOptions,
+	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
 };

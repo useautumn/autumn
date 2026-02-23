@@ -33,9 +33,9 @@ import { getFullCusQuery } from "./getFullCusQuery.js";
 export class CusService {
 	static async getFull({
 		db,
-		idOrInternalId,
 		orgId,
 		env,
+		idOrInternalId,
 		inStatuses = RELEVANT_STATUSES,
 		withEntities = false,
 		entityId,
@@ -45,9 +45,9 @@ export class CusService {
 		withEvents = false,
 	}: {
 		db: DrizzleCli;
-		idOrInternalId: string;
 		orgId: string;
 		env: AppEnv;
+		idOrInternalId: string;
 		inStatuses?: CusProductStatus[];
 		withEntities?: boolean;
 		entityId?: string;

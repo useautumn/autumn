@@ -13,6 +13,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { batchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
@@ -40,8 +41,21 @@ export class CusBatchService {
 			internalCustomerIds,
 		});
 		const results = await db.execute(query);
+		const fullCustomers = results as unknown as FullCustomer[];
 
-		return results as unknown as FullCustomer[];
+		// Fire-and-forget: queue SQS job for any stale entitlement resets
+		batchResetCustomerEntitlements({
+			fullCustomers,
+			orgId: org.id,
+			env,
+		}).catch((err) =>
+			console.error(
+				"[CusBatchService.getByInternalIds] batch reset failed:",
+				err,
+			),
+		);
+
+		return fullCustomers;
 	}
 
 	static async getPage({
@@ -75,12 +89,14 @@ export class CusBatchService {
 		});
 		const results = await ctx.db.execute(sqlQuery);
 		const finals = [];
+		const fullCustomers: FullCustomer[] = [];
 
 		for (const result of results) {
 			try {
 				const normalizedCustomer =
 					CusBatchService.normalizeCustomerData(result);
 				const fullCus = normalizedCustomer as FullCustomer;
+				fullCustomers.push(fullCus);
 
 				// Since we already have fullCus from DB, call getApiCustomerBase directly
 				const { apiCustomer: baseCustomer, legacyData } =
@@ -107,6 +123,15 @@ export class CusBatchService {
 				console.error(`Failed to process customer ${result.id}:`, error);
 			}
 		}
+
+		// Fire-and-forget: queue SQS job for any stale entitlement resets
+		batchResetCustomerEntitlements({
+			fullCustomers,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		}).catch((err) =>
+			console.error("[CusBatchService.getPage] batch reset failed:", err),
+		);
 
 		return finals;
 	}
