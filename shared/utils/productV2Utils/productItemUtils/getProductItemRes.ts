@@ -11,6 +11,7 @@ import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
 import { notNullish } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import { getItemType } from "./getItemType.js";
+import { getPrepaidDisplayQuantity } from "./productItemUtils.js";
 
 /**
  * @deprecated Use `applyProration` from `@autumn/shared` instead.
@@ -131,11 +132,17 @@ export const getProductItemResponse = ({
 	if (item.usage_model === UsageModel.Prepaid && notNullish(options)) {
 		const option = options!.find((o) => o.feature_id === item.feature_id);
 		quantity = option?.quantity
-			? option?.quantity * (item.billing_units ?? 1)
+			? getPrepaidDisplayQuantity({
+					quantity: option.quantity,
+					billingUnits: item.billing_units,
+				})
 			: undefined;
 
 		upcomingQuantity = option?.upcoming_quantity
-			? option?.upcoming_quantity * (item.billing_units ?? 1)
+			? getPrepaidDisplayQuantity({
+					quantity: option.upcoming_quantity,
+					billingUnits: item.billing_units,
+				})
 			: undefined;
 	}
 
