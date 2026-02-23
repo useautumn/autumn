@@ -29,12 +29,12 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				limit: 5_000,
 			});
 
-			if (cusEnts.length < 5_000) {
-				console.log(
-					`Reset cron: only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
-				);
-				break;
-			}
+			// if (cusEnts.length < 5_000) {
+			// 	console.log(
+			// 		`Reset cron: only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
+			// 	);
+			// 	break;
+			// }
 
 			console.log(
 				`Reset cron iteration ${iteration}: processing ${cusEnts.length} entitlements`,
