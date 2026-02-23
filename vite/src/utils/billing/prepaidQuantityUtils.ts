@@ -25,9 +25,10 @@ export function backendToDisplayQuantity({
 
 	return prepaidItems.reduce(
 		(acc, item) => {
-			const featureId = item.feature_id as string;
-			const backendQuantity = backendLookup[featureId] ?? 0;
-			acc[featureId] = getPrepaidDisplayQuantity({
+			if (!item.feature_id) return acc;
+
+			const backendQuantity = backendLookup[item.feature_id] ?? 0;
+			acc[item.feature_id] = getPrepaidDisplayQuantity({
 				quantity: backendQuantity,
 				billingUnits: item.billing_units,
 			});
