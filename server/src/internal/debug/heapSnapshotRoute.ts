@@ -1,7 +1,9 @@
-import { readFileSync, unlinkSync } from "node:fs";
+import { writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
+import { secretKeyMiddleware } from "@/honoMiddlewares/secretKeyMiddleware.js";
+import { orgConfigMiddleware } from "@/honoMiddlewares/orgConfigMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const ALLOWED_ORG_IDS = new Set([
@@ -11,6 +13,9 @@ const ALLOWED_ORG_IDS = new Set([
 
 export const heapSnapshotRouter = new Hono<HonoEnv>();
 
+heapSnapshotRouter.use("*", secretKeyMiddleware);
+heapSnapshotRouter.use("*", orgConfigMiddleware);
+
 heapSnapshotRouter.get("/heap-snapshot", async (c) => {
 	const ctx = c.get("ctx");
 
@@ -19,10 +24,7 @@ heapSnapshotRouter.get("/heap-snapshot", async (c) => {
 	}
 
 	// Bun-specific heap snapshot
-	if (
-		typeof Bun !== "undefined" &&
-		typeof Bun.generateHeapSnapshot === "function"
-	) {
+	if (typeof Bun !== "undefined" && typeof Bun.generateHeapSnapshot === "function") {
 		const snapshot = Bun.generateHeapSnapshot();
 		return c.json({
 			ok: true,
@@ -35,10 +37,7 @@ heapSnapshotRouter.get("/heap-snapshot", async (c) => {
 	// Node.js fallback using v8
 	try {
 		const v8 = await import("node:v8");
-		const snapshotPath = join(
-			tmpdir(),
-			`heap-${process.pid}-${Date.now()}.heapsnapshot`,
-		);
+		const snapshotPath = join(tmpdir(), `heap-${process.pid}-${Date.now()}.heapsnapshot`);
 
 		v8.writeHeapSnapshot(snapshotPath);
 
