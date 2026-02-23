@@ -11,7 +11,7 @@ import {
 	type Price,
 	type Product,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CronContext } from "@/cron/utils/CronContext";
 
 export type OneOffCleanupResult = {
 	customer_product: CustomerProduct;
@@ -36,7 +36,7 @@ export type OneOffCleanupResult = {
 export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
 }: {
-	ctx: AutumnContext;
+	ctx: CronContext;
 }): Promise<OneOffCleanupResult[]> => {
 	const result = await ctx.db.execute<{
 		customer_product: CustomerProduct;

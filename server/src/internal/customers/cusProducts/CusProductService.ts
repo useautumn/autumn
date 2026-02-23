@@ -180,6 +180,15 @@ export class CusProductService {
 		return cusProducts as FullCusProduct[];
 	}
 
+	static async getFull({ db, id }: { db: DrizzleCli; id: string }) {
+		const data = await db.query.customerProducts.findFirst({
+			where: eq(customerProducts.id, id),
+			with: getFullCusProdRelations(),
+		});
+
+		return data as FullCusProduct | undefined;
+	}
+
 	static async getByInternalProductId({
 		db,
 		internalProductId,
