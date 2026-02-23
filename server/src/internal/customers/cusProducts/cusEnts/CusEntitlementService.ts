@@ -98,10 +98,12 @@ export class CusEntService {
 		db,
 		customDateUnix,
 		batchSize = 1000,
+		limit,
 	}: {
 		db: DrizzleCli;
 		customDateUnix?: number;
 		batchSize?: number;
+		limit?: number;
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
 		let offset = 0;
@@ -148,7 +150,7 @@ export class CusEntService {
 				.limit(batchSize)
 				.offset(offset);
 
-			if (data.length === 0) {
+			if (data.length === 0 || (limit && allResults.length >= limit)) {
 				hasMore = false;
 			} else {
 				const mappedData = data.map((item) => ({
