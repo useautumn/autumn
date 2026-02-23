@@ -73,6 +73,12 @@ BEGIN
     WHERE ce.id = ent_id
     FOR UPDATE;
 
+    -- Skip if the row doesn't exist (stale ID from a deleted cusEnt)
+    IF NOT FOUND THEN
+      skipped_ids := skipped_ids || to_jsonb(ent_id);
+      CONTINUE;
+    END IF;
+
     -- Optimistic lock: skip if next_reset_at already equals the new value
     IF db_next_reset_at IS NOT DISTINCT FROM new_next_reset_at THEN
       skipped_ids := skipped_ids || to_jsonb(ent_id);

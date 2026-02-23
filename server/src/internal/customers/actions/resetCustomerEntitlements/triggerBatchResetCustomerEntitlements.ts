@@ -23,6 +23,8 @@ export const triggerBatchResetCustomerEntitlements = async ({
 			now,
 		});
 
+		if (cusEntsNeedingReset.length === 0) continue;
+
 		resets.push({
 			internalCustomerId: fullCus.internal_id,
 			customerId: fullCus.id ?? "",

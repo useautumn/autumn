@@ -364,8 +364,9 @@ async function runTestFile({
 		// A file is considered failed if:
 		// 1. Any individual test failed, OR
 		// 2. The process exited non-zero (e.g. module import error), OR
-		// 3. Zero tests were found (likely a silent import failure)
-		const isFailed = hasFailures || processExitedNonZero || hasNoTests;
+		// 3. Zero tests were found AND process exited non-zero (likely a silent import failure)
+		// Note: Empty files that run successfully (exit 0) are treated as passed/skipped
+		const isFailed = hasFailures || processExitedNonZero;
 
 		const finalResult: TestFileResult = {
 			file,

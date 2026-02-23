@@ -1,4 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type ResetCusEntParam,
@@ -53,55 +54,63 @@ export const resetCustomerEntitlements = async ({
 
 	if (cusEntsNeedingReset.length === 0) return false;
 
-	logger.info(
-		`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length}`,
-	);
+	try {
+		logger.info(
+			`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length}`,
+		);
 
-	// 1. Compute all resets (pure computation, no DB writes)
-	const computed: Array<{
-		cusEntId: string;
-		result: ProcessResetResult;
-	}> = [];
+		// 1. Compute all resets (pure computation, no DB writes)
+		const computed: Array<{
+			cusEntId: string;
+			result: ProcessResetResult;
+		}> = [];
 
-	for (const cusEnt of cusEntsNeedingReset) {
-		const result = await processReset({ cusEnt, ctx });
-		if (!result) continue;
-		computed.push({ cusEntId: cusEnt.id, result });
-	}
+		for (const cusEnt of cusEntsNeedingReset) {
+			const result = await processReset({ cusEnt, ctx });
+			if (!result) continue;
+			computed.push({ cusEntId: cusEnt.id, result });
+		}
 
-	if (computed.length === 0) return false;
+		if (computed.length === 0) return false;
 
-	// 2. Execute atomic DB writes via Postgres function
-	const resets = computed.map(({ cusEntId, result }) =>
-		toResetParam({ cusEntId, result }),
-	);
+		// 2. Execute atomic DB writes via Postgres function
+		const resets = computed.map(({ cusEntId, result }) =>
+			toResetParam({ cusEntId, result }),
+		);
 
-	const { applied, skipped } = await resetCusEnts({ ctx, resets });
-
-	logger.info(
-		`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
-	);
-
-	// 3. Apply computed reset values to in-memory FullCustomer.
-	// Both DB-applied and DB-skipped cusEnts get their in-memory state updated
-	// (skipped means another request already wrote the same values to DB).
-	// Rollover clearing only runs for DB-applied entries.
-	await applyResetResults({ ctx, fullCus, computed, skipped });
-
-	// 4. Update Redis cache atomically (fire-and-forget)
-	// Only needed when we actually wrote to DB — skipped means cache was
-	// already updated by the winning request.
-	if (Object.keys(applied).length > 0) {
-		await executeResetCache({
-			ctx,
-			customerId,
-			resets,
-		});
+		const { applied, skipped } = await resetCusEnts({ ctx, resets });
 
 		logger.info(
-			`[resetCustomerEntitlements] customer=${customerId}, Redis cache updated`,
+			`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
 		);
-	}
 
-	return true;
+		// 3. Apply computed reset values to in-memory FullCustomer.
+		// Both DB-applied and DB-skipped cusEnts get their in-memory state updated
+		// (skipped means another request already wrote the same values to DB).
+		// Rollover clearing only runs for DB-applied entries.
+		await applyResetResults({ ctx, fullCus, computed, skipped });
+
+		// 4. Update Redis cache atomically (fire-and-forget)
+		// Only needed when we actually wrote to DB — skipped means cache was
+		// already updated by the winning request.
+		if (Object.keys(applied).length > 0) {
+			await executeResetCache({
+				ctx,
+				customerId,
+				resets,
+			});
+
+			logger.info(
+				`[resetCustomerEntitlements] customer=${customerId}, Redis cache updated`,
+			);
+		}
+
+		return true;
+	} catch (error) {
+		logger.error(
+			`[resetCustomerEntitlements] customer=${customerId}, failed: ${error}`,
+		);
+		Sentry.captureException(error);
+		return false;
+	}
 };
