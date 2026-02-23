@@ -72,10 +72,8 @@ export const handleMarketplaceInvoicePaid = async ({
 		}
 
 		const customer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: partialCustomer.internal_id,
-			orgId: org.id,
-			env,
 		});
 
 		if (!customer) {

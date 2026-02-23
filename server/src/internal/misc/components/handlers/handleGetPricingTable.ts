@@ -29,9 +29,7 @@ export const handleGetPricingTable = createRoute({
 					return undefined;
 				}
 				return await CusService.getFull({
-					db,
-					orgId: org.id,
-					env,
+					ctx,
 					idOrInternalId: customerId,
 				});
 			})(),

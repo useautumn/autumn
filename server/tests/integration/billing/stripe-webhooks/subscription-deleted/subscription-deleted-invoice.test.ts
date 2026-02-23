@@ -321,7 +321,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: multi-interval â†’ a
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 15,
+		waitForSeconds: 30,
 	});
 
 	// Get invoice count after 1 month advance
@@ -425,7 +425,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable â†
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 15,
+		waitForSeconds: 30,
 	});
 
 	// Track 500 messages on entity in the new cycle (100 included, 400 overage)
@@ -808,7 +808,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable â†
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 15,
+		waitForSeconds: 30,
 	});
 
 	// Verify product is removed from entity

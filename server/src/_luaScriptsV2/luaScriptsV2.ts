@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 // Path to script folders
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
+const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
 
 // ============================================================================
 // HELPER MODULES
@@ -93,3 +94,20 @@ export const BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
 	join(DELETE_CACHE_DIR, "batchDeleteFullCustomerCache.lua"),
 	"utf-8",
 );
+
+// ============================================================================
+// RESET CUSTOMER ENTITLEMENTS SCRIPT
+// ============================================================================
+
+const resetMainScript = readFileSync(
+	join(RESET_DIR, "resetCustomerEntitlements.lua"),
+	"utf-8",
+);
+
+/**
+ * Lua script for atomically resetting cusEnt fields in the cached FullCustomer.
+ * Reuses luaUtils helpers for find_entitlement navigation.
+ * Skips if cache doesn't exist or cusEnt already reset (optimistic guard).
+ */
+export const RESET_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${resetMainScript}`;

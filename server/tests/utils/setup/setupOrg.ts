@@ -18,7 +18,7 @@ export const getAxiosInstance = (apiKey?: string) => {
 	}
 
 	return axios.create({
-		baseURL: "http://localhost:8080",
+		baseURL: process.env.AUTUMN_TEST_BASE_URL || "http://localhost:8080",
 		headers: {
 			Authorization: `Bearer ${secretKey}`,
 			"x-api-version": "0.1",

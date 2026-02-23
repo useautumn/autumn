@@ -179,10 +179,8 @@ export const expectSubToBeCorrect = async ({
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
-		db,
+		ctx: { db, org, env } as any,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		withEntities: true,
 	});
 

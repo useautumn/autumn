@@ -289,21 +289,19 @@ describe(`${chalk.yellowBright(
 			expect(redeemerProInvoice.total).toBe(expectedTotal);
 		}
 
-		const dbCustomers = await Promise.all(
-			[mainCustomerId, redeemer].map((x) =>
-				CusService.getFull({
-					db,
-					idOrInternalId: x,
-					orgId: org.id,
-					env,
-					inStatuses: [
-						CusProductStatus.Active,
-						CusProductStatus.PastDue,
-						CusProductStatus.Expired,
-					],
-				}),
-			),
-		);
+	const dbCustomers = await Promise.all(
+		[mainCustomerId, redeemer].map((x) =>
+			CusService.getFull({
+				ctx,
+				idOrInternalId: x,
+				inStatuses: [
+					CusProductStatus.Active,
+					CusProductStatus.PastDue,
+					CusProductStatus.Expired,
+				],
+			}),
+		),
+	);
 
 		const expectedProducts = [
 			[

@@ -42,10 +42,8 @@ export const sendProductsUpdated = async ({
 
 	// Fetch FullCustomer
 	const fullCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId ?? "",
-		orgId: org.id,
-		env,
 		withEntities: true,
 		withSubs: true,
 		allowNotFound: true,

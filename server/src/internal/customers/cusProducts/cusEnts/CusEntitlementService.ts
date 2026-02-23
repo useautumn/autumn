@@ -1,3 +1,4 @@
+import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import {
 	type AppEnv,
 	type CusProduct,
@@ -15,11 +16,10 @@ import {
 	type InsertCustomerEntitlement,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -42,6 +42,17 @@ export class CusEntService {
 				target: customerEntitlements.id,
 				set: updateColumns,
 			});
+	}
+
+	static async getByIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		if (ids.length === 0) return [];
+
+		const data = await db
+			.select()
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.id, ids));
+
+		return data as CustomerEntitlement[];
 	}
 
 	static async getByFeature({

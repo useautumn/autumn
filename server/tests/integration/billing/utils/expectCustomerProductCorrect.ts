@@ -5,7 +5,12 @@ import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
-type ProductState = "active" | "canceled" | "scheduled" | "undefined";
+type ProductState =
+	| "active"
+	| "canceled"
+	| "scheduled"
+	| "past_due"
+	| "undefined";
 type CustomerOrEntity = ApiCustomerV3 | ApiEntityV0;
 
 /**
@@ -67,6 +72,8 @@ export const expectCustomerProductCorrect = async ({
 		).toBe(true);
 	} else if (state === "scheduled") {
 		expect(String(product.status)).toBe("scheduled");
+	} else if (state === "past_due") {
+		expect(String(product.status)).toBe("past_due");
 	}
 };
 
@@ -139,6 +146,15 @@ export const expectProductScheduled = async ({
 };
 
 /**
+ * Shorthand for checking product is past_due (payment failed).
+ */
+export const expectProductPastDue = async (params: {
+	customerId?: string;
+	customer?: ApiCustomerV3 | ApiEntityV0;
+	productId: string;
+}) => expectCustomerProductCorrect({ ...params, state: "past_due" });
+
+/**
  * Shorthand for checking product does not exist
  */
 export const expectProductNotPresent = async (params: {
@@ -157,6 +173,7 @@ export const expectProductNotPresent = async (params: {
  *   active: [pro.id, addon.id],
  *   canceling: [premium.id],
  *   scheduled: [free.id],
+ *   pastDue: [overdue.id],
  *   notPresent: [oldProduct.id],
  * });
  */
@@ -166,6 +183,7 @@ export const expectCustomerProducts = async ({
 	active = [],
 	canceling = [],
 	scheduled = [],
+	pastDue = [],
 	notPresent = [],
 }: {
 	customerId?: string;
@@ -173,6 +191,7 @@ export const expectCustomerProducts = async ({
 	active?: string[];
 	canceling?: string[];
 	scheduled?: string[];
+	pastDue?: string[];
 	notPresent?: string[];
 }) => {
 	const customer = providedCustomer
@@ -200,6 +219,14 @@ export const expectCustomerProducts = async ({
 			customer: customer as ApiCustomerV3,
 			productId,
 			state: "scheduled",
+		});
+	}
+
+	for (const productId of pastDue) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "past_due",
 		});
 	}
 

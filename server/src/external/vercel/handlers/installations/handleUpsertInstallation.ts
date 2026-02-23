@@ -144,10 +144,8 @@ export const handleUpsertInstallation = createRoute({
 
 		if (createdCustomer) {
 			const fullCreatedCustomer = await CusService.getFull({
-				db: ctx.db,
+				ctx,
 				idOrInternalId: createdCustomer.internal_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
 			});
 
 			const installation = {

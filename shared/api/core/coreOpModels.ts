@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../common/customerData.js";
 
 // Cancel Schemas
 export const CancelBodySchema = z.object({
@@ -68,29 +67,6 @@ export const QueryResultSchema = z.object({
 	}),
 });
 
-export const SetupPaymentParamsSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer",
-	}),
-	success_url: z.string().optional().meta({
-		description:
-			"URL to redirect to after successful payment setup. Must start with either http:// or https://",
-	}),
-	customer_data: CustomerDataSchema.optional(),
-	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
-		description: "Additional parameters for the checkout session",
-	}),
-});
-
-export const SetupPaymentResultSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer",
-	}),
-	url: z.string().meta({
-		description: "URL to the payment setup page",
-	}),
-});
-
 export const BillingPortalParamsSchema = z.object({
 	return_url: z.string().optional().meta({
 		description:
@@ -111,6 +87,6 @@ export type CancelBody = z.infer<typeof CancelBodySchema>;
 export type CancelResult = z.infer<typeof CancelResultSchema>;
 export type QueryParams = z.infer<typeof QueryParamsSchema>;
 export type QueryResult = z.infer<typeof QueryResultSchema>;
-export type SetupPaymentParams = z.infer<typeof SetupPaymentParamsSchema>;
+
 export type BillingPortalParams = z.infer<typeof BillingPortalParamsSchema>;
 export type BillingPortalResult = z.infer<typeof BillingPortalResultSchema>;

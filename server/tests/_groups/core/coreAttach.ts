@@ -1,0 +1,31 @@
+import type { TestGroup } from "../types";
+
+export const coreAttach: TestGroup = {
+	name: "core-attach",
+	description: "Core v2 attach tests",
+	tier: "core",
+	paths: [
+		"billing/attach/new-plan/attach-paid.test.ts",
+		"billing/attach/new-plan/attach-free.test.ts",
+		"billing/attach/new-plan/attach-addon.test.ts",
+		"billing/attach/new-plan/attach-entities.test.ts",
+		"billing/attach/immediate-switch/immediate-switch-basic.test.ts",
+		"billing/attach/immediate-switch/immediate-switch-prepaid.test.ts",
+		"billing/attach/immediate-switch/immediate-switch-consumable.test.ts",
+		"billing/attach/immediate-switch/immediate-switch-entities.test.ts",
+		"billing/attach/scheduled-switch/scheduled-switch-basic.test.ts",
+		"billing/attach/scheduled-switch/scheduled-switch-consumable.test.ts",
+		"billing/attach/scheduled-switch/scheduled-switch-entities-basic.test.ts",
+		"billing/attach/checkout/stripe-checkout/stripe-checkout-basic.test.ts",
+		"billing/attach/free-trial/trial-basic.test.ts",
+		"billing/attach/free-trial/trial-conversion.test.ts",
+		"billing/attach/free-trial/trial-payment-method.test.ts",
+		"billing/attach/invoice/attach-invoice-finalized-immediate.test.ts",
+		"billing/attach/invoice/attach-invoice-draft-deferred.test.ts",
+		"billing/attach/invoice/payment-failure/payment-failed.test.ts",
+		"billing/attach/errors/attach-basic-errors.test.ts",
+		"billing/attach/discounts/attach-discounts-basic.test.ts",
+		"billing/attach/new-billing-subscription/new-billing-subscription.test.ts",
+		"billing/attach/params/custom-plan/custom-plan-features.test.ts",
+	],
+};

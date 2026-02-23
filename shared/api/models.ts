@@ -51,6 +51,7 @@ export * from "./balances/track/trackResponseV2.js";
 export * from "./balances/track/trackResponseV3.js";
 export * from "./balances/update/updateBalanceParams.js";
 export * from "./balances/usageModels.js";
+export * from "./billing";
 // Billing
 export * from "./billing/index.js";
 export * from "./common/customerData.js";

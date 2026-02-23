@@ -14,11 +14,8 @@ export const updateFeatureBalance = async ({
 	featureId: string;
 	balance: number;
 }) => {
-	const { db, org, env } = ctx;
 	const cusEnt = await getCusEntByFeature({
-		db,
-		org,
-		env,
+		ctx,
 		customerId,
 		featureId,
 	});

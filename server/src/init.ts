@@ -21,6 +21,7 @@ import { redirectToHono } from "./initHono.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
 // subscribeToOrgUpdates({ db });
@@ -140,6 +141,7 @@ const init = async () => {
 	// Bind to 0.0.0.0 for AWS ECS/Docker containers
 	server.listen(PORT, "0.0.0.0", () => {
 		console.log(`Server running on port ${PORT}`);
+		startMemoryMonitor("server", 60_000);
 	});
 };
 

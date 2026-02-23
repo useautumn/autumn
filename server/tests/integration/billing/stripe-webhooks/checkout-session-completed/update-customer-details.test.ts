@@ -12,7 +12,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";

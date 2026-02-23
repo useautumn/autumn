@@ -44,22 +44,14 @@ const pro = constructProduct({
 
 export const getLifetimeAndUsageCusEnts = async ({
 	customerId,
-	db,
-	orgId,
-	env,
 	featureId,
 }: {
 	customerId: string;
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	featureId: string;
 }) => {
 	const mainCusProduct = await getMainCusProduct({
+		ctx,
 		customerId,
-		db,
-		orgId,
-		env,
 	});
 
 	const lifetimeCusEnt = getLifetimeFreeCusEnt({
@@ -116,9 +108,6 @@ describe(`${chalk.yellowBright(
 
 		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 
@@ -144,9 +133,6 @@ describe(`${chalk.yellowBright(
 
 		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 
@@ -165,9 +151,6 @@ describe(`${chalk.yellowBright(
 
 		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 

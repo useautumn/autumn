@@ -54,10 +54,8 @@ export const getOrCreateCustomer = async ({
 
 	if (!skipGet && customerId) {
 		customer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 			inStatuses,
 			withEntities,
 			entityId,
@@ -88,10 +86,8 @@ export const getOrCreateCustomer = async ({
 
 		if (updated) {
 			customer = await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: customer.id || customer.internal_id,
-				orgId: org.id,
-				env,
 				inStatuses,
 				withEntities,
 				entityId,
