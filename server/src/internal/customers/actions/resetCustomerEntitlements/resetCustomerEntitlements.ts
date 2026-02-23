@@ -50,9 +50,9 @@ export const resetCustomerEntitlements = async ({
 	const { logger } = ctx;
 	const customerId = fullCus.id || fullCus.internal_id;
 
-	let cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
+	const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
 
-	cusEntsNeedingReset = [];
+	// cusEntsNeedingReset = [];
 
 	if (cusEntsNeedingReset.length === 0) return false;
 
