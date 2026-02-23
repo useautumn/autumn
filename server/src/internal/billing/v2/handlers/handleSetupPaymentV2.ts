@@ -1,18 +1,9 @@
-import {
-	AffectedResource,
-	ApiVersion,
-	SetupPaymentParamsV0Schema,
-	SetupPaymentParamsV1Schema,
-} from "@autumn/shared";
+import { SetupPaymentParamsV1Schema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { billingActions } from "@/internal/billing/v2/actions";
 
 export const handleSetupPaymentV2 = createRoute({
-	versionedBody: {
-		latest: SetupPaymentParamsV1Schema,
-		[ApiVersion.V1_Beta]: SetupPaymentParamsV0Schema,
-	},
-	resource: AffectedResource.Customer,
+	body: SetupPaymentParamsV1Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");

@@ -27,7 +27,6 @@ export enum AffectedResource {
 	Attach = "attach",
 	ApiSubscriptionUpdate = "api_subscription_update",
 	EventsAggregate = "events_aggregate",
-	// Add more as needed
 }
 
 /**
