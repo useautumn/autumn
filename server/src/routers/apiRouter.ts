@@ -34,6 +34,7 @@ import {
 	honoProductRouter,
 	migrationRouter,
 } from "../internal/products/productRouter.js";
+import { heapSnapshotRouter } from "../internal/debug/heapSnapshotRoute.js";
 import { rpcRouter } from "./rpcRouter.js";
 
 export const apiRouter = new Hono<HonoEnv>();
@@ -79,3 +80,4 @@ apiRouter.route("/events", eventsRouter);
 
 apiRouter.route("/configs", configsRouter);
 apiRouter.route("/components", componentsRouter);
+apiRouter.route("/debug", heapSnapshotRouter);
