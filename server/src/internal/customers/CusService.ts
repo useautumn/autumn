@@ -25,6 +25,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
@@ -108,7 +109,15 @@ export class CusService {
 					}
 				}
 
-				return data as FullCustomer;
+				const fullCus = data as FullCustomer;
+
+				// Lazy reset stale entitlements (mutates fullCus in-memory + writes DB)
+				await resetCustomerEntitlements({
+					fullCus,
+					ctx,
+				});
+
+				return fullCus;
 			},
 		});
 	}

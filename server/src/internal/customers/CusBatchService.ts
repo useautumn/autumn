@@ -1,37 +1,32 @@
 import {
 	AffectedResource,
 	type ApiCustomerV5,
-	type AppEnv,
 	applyResponseVersionChanges,
 	type CusProductStatus,
 	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 	type ListCustomersV2Params,
-	type Organization,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { batchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
+import * as Sentry from "@sentry/bun";
+import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
+import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusBatchService {
 	static async getByInternalIds({
-		db,
-		org,
-		env,
+		ctx,
 		internalCustomerIds,
 	}: {
-		db: DrizzleCli;
-		org: Organization;
-		env: AppEnv;
+		ctx: AutumnContext;
 		internalCustomerIds: string[];
 	}) {
+		const { org, env, db } = ctx;
 		const query = getPaginatedFullCusQuery({
-			orgId: org.id,
-			env,
+			orgId: ctx.org.id,
+			env: ctx.env,
 			includeInvoices: true,
 			withEntities: true,
 			withTrialsUsed: false,
@@ -44,16 +39,15 @@ export class CusBatchService {
 		const fullCustomers = results as unknown as FullCustomer[];
 
 		// Fire-and-forget: queue SQS job for any stale entitlement resets
-		batchResetCustomerEntitlements({
+		triggerBatchResetCustomerEntitlements({
+			ctx,
 			fullCustomers,
-			orgId: org.id,
-			env,
-		}).catch((err) =>
-			console.error(
-				"[CusBatchService.getByInternalIds] batch reset failed:",
-				err,
-			),
-		);
+		}).catch((err) => {
+			ctx.logger.error(
+				`[CusBatchService.getByInternalIds] batch reset failed: ${err}`,
+			);
+			Sentry.captureException(err);
+		});
 
 		return fullCustomers;
 	}
@@ -120,18 +114,18 @@ export class CusBatchService {
 
 				finals.push(versionedCustomer);
 			} catch (error) {
-				console.error(`Failed to process customer ${result.id}:`, error);
+				ctx.logger.error(`Failed to process customer ${result.id}: ${error}`);
 			}
 		}
 
 		// Fire-and-forget: queue SQS job for any stale entitlement resets
-		batchResetCustomerEntitlements({
+		triggerBatchResetCustomerEntitlements({
+			ctx,
 			fullCustomers,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		}).catch((err) =>
-			console.error("[CusBatchService.getPage] batch reset failed:", err),
-		);
+		}).catch((err) => {
+			ctx.logger.error("[CusBatchService.getPage] batch reset failed:", err);
+			Sentry.captureException(err);
+		});
 
 		return finals;
 	}

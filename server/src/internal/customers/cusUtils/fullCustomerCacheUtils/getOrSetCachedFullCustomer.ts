@@ -1,12 +1,10 @@
 import {
-	type AppEnv,
 	CustomerExpand,
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { CusService } from "../../CusService.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
@@ -26,13 +24,12 @@ export const getOrSetCachedFullCustomer = async ({
 	entityId?: string;
 	source?: string;
 }): Promise<FullCustomer> => {
-	const { org, env, db, skipCache, logger } = ctx;
+	const { skipCache, logger } = ctx;
 
-	// 1. Try cache first
+	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	if (!skipCache) {
 		const cached = await getCachedFullCustomer({
-			orgId: org.id,
-			env,
+			ctx,
 			customerId,
 		});
 
@@ -40,27 +37,6 @@ export const getOrSetCachedFullCustomer = async ({
 			logger.debug(
 				`[getOrSetCachedFullCustomer] Cache hit for ${customerId}, source: ${source}`,
 			);
-
-			// // Lazy reset stale entitlements
-			// const didReset = await resetCustomerEntitlements({
-			// 	fullCus: cached,
-			// 	db,
-			// 	org,
-			// 	env: env as AppEnv,
-			// });
-
-			// if (didReset) {
-			// 	await setCachedFullCustomer({
-			// 		ctx,
-			// 		fullCustomer: cached,
-			// 		customerId,
-			// 		fetchTimeMs: Date.now(),
-			// 		source: "lazyReset",
-			// 		overwrite: true,
-			// 	}).catch((err) =>
-			// 		logger.error(`[lazyReset] Failed to update cache: ${err}`),
-			// 	);
-			// }
 
 			// Set entity if entityId is provided, otherwise clear it
 			if (entityId) {
@@ -95,14 +71,6 @@ export const getOrSetCachedFullCustomer = async ({
 	if (!fullCustomer) {
 		throw new CustomerNotFoundError({ customerId });
 	}
-
-	// Lazy reset stale entitlements (DB path)
-	await resetCustomerEntitlements({
-		fullCus: fullCustomer,
-		db,
-		org,
-		env: env as AppEnv,
-	});
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);

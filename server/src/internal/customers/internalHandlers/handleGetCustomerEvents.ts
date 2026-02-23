@@ -19,13 +19,11 @@ export const handleGetCustomerEvents = createRoute({
 	query: QuerySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, env } = ctx;
 		const { customer_id } = c.req.param();
 		const { interval, limit } = c.req.valid("query");
 
 		const customer = await getCachedFullCustomer({
-			orgId: org.id,
-			env,
+			ctx,
 			customerId: customer_id,
 		});
 

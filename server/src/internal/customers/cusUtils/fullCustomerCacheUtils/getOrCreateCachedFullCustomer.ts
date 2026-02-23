@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	type CheckParams,
 	CustomerExpand,
 	type Entity,
@@ -9,7 +8,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
-import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { CusService } from "../../CusService.js";
 import { updateCustomerDetails } from "../cusUtils.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
@@ -30,7 +28,7 @@ export const getOrCreateCachedFullCustomer = async ({
 	};
 	source?: string;
 }): Promise<FullCustomer> => {
-	const { org, env, db, skipCache, logger } = ctx;
+	const { skipCache, logger } = ctx;
 	const {
 		customer_id: customerId,
 		customer_data: customerData,
@@ -41,37 +39,23 @@ export const getOrCreateCachedFullCustomer = async ({
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
 
-	// 1. Try cache first
+	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	let setCache = true;
 	if (customerId && !skipCache) {
 		fullCustomer =
 			(await getCachedFullCustomer({
-				orgId: org.id,
-				env,
+				ctx,
 				customerId,
 				entityId,
 			})) ?? undefined;
 
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
-
-			// Lazy reset stale entitlements
-			const didReset = await resetCustomerEntitlements({
-				fullCus: fullCustomer,
-				db,
-				org,
-				env: env as AppEnv,
-			});
-
-			if (didReset) {
-				setCache = true;
-			} else {
-				setCache = false;
-			}
+			setCache = false;
 		}
 	}
 
-	// 2. Try DB if not in cache
+	// 2. Try DB if not in cache (CusService.getFull handles lazy reset internally)
 	if (!fullCustomer && customerId) {
 		fullCustomer = await CusService.getFull({
 			ctx,
@@ -81,16 +65,6 @@ export const getOrCreateCachedFullCustomer = async ({
 			expand: [CustomerExpand.Invoices],
 			allowNotFound: true,
 		});
-
-		// Lazy reset stale entitlements (DB path)
-		if (fullCustomer) {
-			await resetCustomerEntitlements({
-				fullCus: fullCustomer,
-				db,
-				org,
-				env: env as AppEnv,
-			});
-		}
 	}
 
 	// 3. Create if not found

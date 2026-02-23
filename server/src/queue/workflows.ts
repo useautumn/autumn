@@ -38,7 +38,11 @@ export type GrantCheckoutRewardPayload = {
 export type BatchResetCusEntsPayload = {
 	orgId: string;
 	env: string;
-	cusEntIds: string[];
+	resets: {
+		internalCustomerId: string;
+		customerId: string;
+		cusEntIds: string[];
+	}[];
 };
 
 // ============ Workflow Registry ============

@@ -1,44 +1,51 @@
 import {
-	type AppEnv,
 	cusEntToOptions,
 	type EntInterval,
+	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerEntitlement,
 	getStartingBalance,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
-	type Organization,
 	type Rollover,
 } from "@autumn/shared";
 import { logger } from "better-auth";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getResetAtUpdate } from "./getResetAtUpdate.js";
 
+export type ResetUpdates = {
+	balance: number | null;
+	additional_balance: number | null;
+	adjustment: number;
+	entities: Record<string, EntityBalance> | null;
+	next_reset_at: number;
+};
+
 export type ProcessResetResult = {
-	updates: Record<string, unknown>;
+	updates: ResetUpdates;
 	rolloverInsert?: { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement };
 };
 
 /** Processes a single cusEnt reset. Returns updates + optional rollover insert, or null if skipped. */
 export const processReset = async ({
 	cusEnt,
-	org,
-	env,
+	ctx,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 }): Promise<ProcessResetResult | null> => {
 	const ent = cusEnt.entitlement;
 	const cusProduct = cusEnt.customer_product;
 
-	// Handle unlimited entitlements
+	// Unlimited / lifetime cusEnts should never reach here
+	// (getCusEntsNeedingReset filters them out), but guard defensively
 	if (
 		isUnlimitedEntitlement({ entitlement: ent }) ||
 		isLifetimeEntitlement({ entitlement: ent })
 	) {
-		return { updates: { next_reset_at: null } };
+		return null;
 	}
 
 	const options = cusEntToOptions({ cusEnt });
@@ -55,6 +62,8 @@ export const processReset = async ({
 		);
 		return null;
 	}
+
+	const { org, env } = ctx;
 
 	// Compute next reset time (with Stripe anchor adjustment on edge dates)
 	const nextResetAt = await getResetAtUpdate({
@@ -78,11 +87,22 @@ export const processReset = async ({
 		allowance: resetBalance,
 	});
 
-	const updates = {
-		...resetBalanceUpdate,
-		next_reset_at: nextResetAt,
-		adjustment: 0,
-	};
+	const updates: ResetUpdates =
+		"entities" in resetBalanceUpdate
+			? {
+					balance: null,
+					additional_balance: null,
+					adjustment: 0,
+					entities: resetBalanceUpdate.entities,
+					next_reset_at: nextResetAt,
+				}
+			: {
+					balance: resetBalanceUpdate.balance,
+					additional_balance: resetBalanceUpdate.additional_balance,
+					adjustment: 0,
+					entities: null,
+					next_reset_at: nextResetAt,
+				};
 
 	let rolloverInsert:
 		| { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement }

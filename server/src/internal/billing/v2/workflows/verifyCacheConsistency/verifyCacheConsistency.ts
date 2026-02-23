@@ -79,8 +79,7 @@ verifyCacheConsistency?.task({
 
 			// Get from cache (now using full customer cache)
 			const cachedFullCustomer = await getCachedFullCustomer({
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
+				ctx: autumnContext,
 				customerId,
 			});
 
