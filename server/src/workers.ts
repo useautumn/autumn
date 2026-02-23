@@ -19,6 +19,8 @@ const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 1 : 4;
 // Track if we're shutting down
 let isShuttingDown = false;
 
+import { startMemoryMonitor } from "./utils/memoryMonitor.js";
+
 if (cluster.isPrimary) {
 	await initInfisical();
 
@@ -94,6 +96,7 @@ if (cluster.isPrimary) {
 } else {
 	// Worker process
 	console.log(`[Worker ${process.pid}] Starting queue consumer...`);
+	startMemoryMonitor("worker", 60_000);
 
 	// Auto-detect which queue implementation to use
 	if (process.env.SQS_QUEUE_URL) {
