@@ -501,9 +501,11 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 5: paid to trial upgrade")}`
 	// 2 invoices: Pro paid ($20) + Premium trial ($0)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterPremium,
-		count: 2,
+		count: 3,
 		latestTotal: 0, // Premium trial - $0
 	});
+
+	expect(customerAfterPremium.invoices?.[1].total).toBe(-20); // refund for pro
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

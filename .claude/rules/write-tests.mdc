@@ -1,0 +1,49 @@
+---
+alwaysApply: true
+---
+
+## Test Assertion Style
+
+- Use `toMatchObject` when comparing multiple properties at once
+- Use `toEqual` for single-value comparisons (not `toMatchObject({ prop: value })`)
+- Use `items.free()` for free metered features, not `items.consumable()` with `price: 0`
+
+## Test Scenario Reuse (Conservative Tests)
+
+- Be CONSERVATIVE with test scenarios. Avoid creating the same scenario (same product/feature setup + initScenario) more than once when the **action** being tested is the same.
+- "Combining" means running **multiple assertions/checks after one action**, NOT chaining different actions into one giant test. For example, after calling `attach`, you might check that the feature resets correctly, the product is correct, AND the invoice is correct — all in the same test. That's combining checks.
+- If two tests perform **different actions** (e.g., "set usage to 30" vs "set usage to 130 causing overage"), those are separate tests even if the setup is identical. Each test should verify one distinct behavior.
+- Only create a new test case when either the **setup** genuinely differs (different feature type, product config, billing model) OR the **action** being tested differs.
+- Don't duplicate scenarios needlessly — if two tests have the exact same setup AND the exact same action, they should be one test with multiple assertions.
+
+## Filtering Breakdowns by Interval
+
+When checking individual breakdown items from `balance.breakdown`, always filter using `b.reset?.interval` with the `ResetInterval` enum. Do NOT use `b.reset === null` for one-off/lifetime breakdowns — they have a `reset` object with `interval === "one_off"`.
+
+```typescript
+import { ResetInterval } from "@autumn/shared";
+
+const breakdowns = customer.balances[TestFeature.Messages].breakdown!;
+
+// Monthly breakdown
+const monthly = breakdowns.find(
+  (b) => b.reset?.interval === ResetInterval.Month,
+)!;
+
+// One-off / lifetime breakdown
+const lifetime = breakdowns.find(
+  (b) => b.reset?.interval === ResetInterval.OneOff,
+)!;
+```
+
+## Prepaid Attach Options (quantity)
+
+When attaching a prepaid feature and passing `options` with a quantity:
+
+1. **Legacy attach** (`autumnV1.attach`): `quantity` should NOT be divided by billing units and should be **exclusive** of included usage (i.e. only the prepaid amount, not counting what's already included free).
+2. **New attach** (`autumnV1.billing.attach`): `quantity` should NOT be divided by billing units and should be **inclusive** of included usage (i.e. total desired amount including the free included portion).
+
+## Type Checking
+
+- After writing or editing test files, ALWAYS run `bun ts` in the `server/` directory to check for type errors before considering the task done.
+- Fix all type errors before moving on. Common issues include missing imports, wrong generic types, and optional chaining on nullable fields.

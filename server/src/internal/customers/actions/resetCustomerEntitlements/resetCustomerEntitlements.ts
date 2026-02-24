@@ -90,16 +90,31 @@ export const resetCustomerEntitlements = async ({
 		// Both DB-applied and DB-skipped cusEnts get their in-memory state updated
 		// (skipped means another request already wrote the same values to DB).
 		// Rollover clearing only runs for DB-applied entries.
-		await applyResetResults({ ctx, fullCus, computed, skipped });
+		const clearingMap = await applyResetResults({
+			ctx,
+			fullCus,
+			computed,
+			skipped,
+		});
 
 		// 4. Update Redis cache atomically (fire-and-forget)
 		// Only needed when we actually wrote to DB — skipped means cache was
 		// already updated by the winning request.
 		if (Object.keys(applied).length > 0) {
+			// Build map of cusEntId -> old next_reset_at for the optimistic guard
+			const oldNextResetAts: Record<string, number> = {};
+			for (const cusEnt of cusEntsNeedingReset) {
+				if (cusEnt.next_reset_at) {
+					oldNextResetAts[cusEnt.id] = cusEnt.next_reset_at;
+				}
+			}
+
 			await executeResetCache({
 				ctx,
 				customerId,
 				resets,
+				oldNextResetAts,
+				clearingMap,
 			});
 
 			logger.info(

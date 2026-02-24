@@ -213,7 +213,8 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 		product_id: pro.id,
 	});
 
-	const customerAfterPro = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterPro =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterPro,
@@ -231,9 +232,11 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_immediately: true,
+		prorate: false,
 	});
 
-	const customerAfterCancel = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterCancel,
@@ -249,7 +252,8 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 
 	await completeStripeCheckoutFormV2({ url: res.checkout_url });
 
-	const customerAfterPremium = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterPremium =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterPremium,

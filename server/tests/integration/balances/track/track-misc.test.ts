@@ -4,10 +4,13 @@ import {
 	type ApiCustomerV3,
 	type ApiEntityV0,
 	CustomerExpand,
+	ErrCode,
 	sumValues,
 	type TrackResponseV2,
 } from "@autumn/shared";
+import { getCustomerEvents } from "@tests/balances/testBalanceUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -328,4 +331,102 @@ test.concurrent(`${chalk.yellowBright("track-misc8: V1.2 properties.value is rem
 		foo: "bar",
 	});
 	expect(events[0].properties).not.toHaveProperty("value");
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-MISC9: Idempotency key prevents duplicate tracks
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents duplicate tracks")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const freeProd = products.base({
+		id: "free",
+		items: [messagesItem],
+	});
+
+	const testRunId = Date.now().toString(36);
+	const idempotencyKey1 = `test-idempotency-key-1-${testRunId}`;
+	const idempotencyKey2 = `test-idempotency-key-2-${testRunId}`;
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "track-misc9",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerBefore.features[TestFeature.Messages].balance).toEqual(100);
+
+	const deductValue1 = 25.5;
+	const expectedBalance1 = new Decimal(100).sub(deductValue1).toNumber();
+
+	await autumnV1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: deductValue1,
+		idempotency_key: idempotencyKey1,
+	});
+
+	const customerAfterFirst =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerAfterFirst.features[TestFeature.Messages]).toMatchObject({
+		balance: expectedBalance1,
+		usage: deductValue1,
+	});
+
+	await timeout(2000);
+	const events1 = await getCustomerEvents({ customerId });
+	expect(events1).toHaveLength(1);
+	expect(events1?.[0].idempotency_key).toBe(idempotencyKey1);
+	expect(events1?.[0].value).toBe(deductValue1);
+
+	await expectAutumnError({
+		errCode: ErrCode.DuplicateIdempotencyKey,
+		func: async () => {
+			await autumnV1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 30.75,
+				idempotency_key: idempotencyKey1,
+			});
+		},
+	});
+
+	const customerAfterDupe =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerAfterDupe.features[TestFeature.Messages].balance).toEqual(
+		expectedBalance1,
+	);
+
+	await timeout(2000);
+	const customerNonCached = await autumnV1.customers.get<ApiCustomerV3>(
+		customerId,
+		{ skip_cache: "true" },
+	);
+	expect(customerNonCached.features[TestFeature.Messages].balance).toEqual(
+		expectedBalance1,
+	);
+
+	const events2 = await getCustomerEvents({ customerId });
+	expect(events2).toHaveLength(1);
+	expect(events2?.[0].idempotency_key).toBe(idempotencyKey1);
+
+	const deductValue2 = 15.25;
+	const expectedBalance2 = new Decimal(expectedBalance1)
+		.sub(deductValue2)
+		.toNumber();
+
+	await autumnV1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: deductValue2,
+		idempotency_key: idempotencyKey2,
+	});
+
+	const customerAfterSecond =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerAfterSecond.features[TestFeature.Messages].balance).toEqual(
+		expectedBalance2,
+	);
 });

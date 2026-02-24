@@ -61,7 +61,7 @@ export const executeAutumnBillingPlan = async ({
 		const { customerProduct, updates } = updateCustomerProduct;
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates,
 		});
@@ -73,7 +73,7 @@ export const executeAutumnBillingPlan = async ({
 			`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
 		);
 		await CusProductService.delete({
-			db,
+			ctx,
 			cusProductId: deleteCustomerProduct.id,
 		});
 	}

@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright("track-race-condition3: track runs when credits a
 			chalk.yellow("\nStep 3: Resetting credits (simulates cron reset)..."),
 		);
 		await resetAndGetCusEnt({
-			db: ctx.db,
+			ctx,
 			customer: fullCustomer,
 			productGroup: pro.group!,
 			featureId: TestFeature.Messages,

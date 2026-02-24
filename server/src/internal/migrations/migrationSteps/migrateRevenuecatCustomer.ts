@@ -46,7 +46,7 @@ export const migrateRevenueCatCustomer = async ({
 	});
 
 	await CusProductService.update({
-		db,
+		ctx,
 		cusProductId: cusProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,

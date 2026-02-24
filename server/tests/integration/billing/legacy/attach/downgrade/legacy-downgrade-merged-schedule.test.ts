@@ -35,8 +35,8 @@ import chalk from "chalk";
 //      Premium(ent1→renew), Premium(ent2→renew)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 1: downgrade 2 entities then renew")}`, async () => {
-	const customerId = "legacy-downgrade-1";
+test.concurrent(`${chalk.yellowBright("legacy-dg-sched 1: downgrade 2 entities then renew")}`, async () => {
+	const customerId = "legacy-dg-sched-1";
 
 	const wordsItem = items.consumableWords();
 	const premium = products.premium({ id: "premium", items: [wordsItem] });
@@ -150,8 +150,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 1: downgrade 2 entities 
 // Ops: Pro(ent1), Pro(ent2), Free(ent1→sched), Premium(ent2→upgrade)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 3: pro entities, downgrade to free + upgrade to premium")}`, async () => {
-	const customerId = "legacy-downgrade-3";
+test.concurrent(`${chalk.yellowBright("legacy-dg-sched 2: pro entities, downgrade to free + upgrade to premium")}`, async () => {
+	const customerId = "legacy-dg-sched-2";
 
 	const wordsItem = items.monthlyWords({ includedUsage: 100 });
 	const wordsConsumable = items.consumableWords();
@@ -233,8 +233,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 3: pro entities, downgra
 //      Pro(ent2→replaces free schedule)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 5: downgrade to free, then change schedule to pro")}`, async () => {
-	const customerId = "legacy-downgrade-5";
+test.concurrent(`${chalk.yellowBright("legacy-dg-sched 3: downgrade to free, then change schedule to pro")}`, async () => {
+	const customerId = "legacy-dg-sched-3";
 
 	const wordsItem = items.monthlyWords({ includedUsage: 100 });
 	const free = products.base({ id: "free", items: [wordsItem] });
@@ -317,8 +317,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 5: downgrade to free, th
 // Tests that changing the scheduled product replaces the previous schedule
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 6: multiple schedule changes on same entity")}`, async () => {
-	const customerId = "legacy-downgrade-6";
+test.concurrent(`${chalk.yellowBright("legacy-dg-sched 4: multiple schedule changes on same entity")}`, async () => {
+	const customerId = "legacy-dg-sched-4";
 
 	const wordsItem = items.monthlyWords({ includedUsage: 100 });
 	const free = products.base({ id: "free", items: [wordsItem] });
@@ -408,8 +408,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 6: multiple schedule cha
 //      PremiumAnnual(ent1→renew), Premium(ent2→renew)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 7: mixed annual + monthly downgrade then renew")}`, async () => {
-	const customerId = "legacy-downgrade-8";
+test.concurrent(`${chalk.yellowBright("legacy-dg-sched 5: mixed annual + monthly downgrade then renew")}`, async () => {
+	const customerId = "legacy-dg-sched-5";
 
 	const wordsItem = items.consumableWords();
 	const premiumAnnualItem = items.annualPrice({ price: 500 });

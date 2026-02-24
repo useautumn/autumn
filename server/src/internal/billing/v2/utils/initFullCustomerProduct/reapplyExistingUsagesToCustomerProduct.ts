@@ -74,7 +74,7 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 	for (const cusEnt of customerProduct.customer_entitlements) {
 		await CusEntService.update({
-			db,
+			ctx,
 			id: cusEnt.id,
 			updates: {
 				balance: cusEnt.balance ?? 0,
