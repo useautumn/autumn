@@ -48,7 +48,7 @@ export const handleBillingIssue = async ({
 
 	if (ACTIVE_STATUSES.includes(curSameProduct.status)) {
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.PastDue,

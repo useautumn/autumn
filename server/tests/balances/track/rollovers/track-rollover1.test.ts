@@ -82,7 +82,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		await timeout(3000);
 
 		await resetAndGetCusEnt({
-			db: ctx.db,
+			ctx,
 			customer,
 			productGroup: free.group!,
 			featureId: TestFeature.Messages,
@@ -119,7 +119,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 	// let usage2 = 50;
 	test("should reset again and have correct rollover", async () => {
 		await resetAndGetCusEnt({
-			db: ctx.db,
+			ctx,
 			customer,
 			productGroup: free.group!,
 			featureId: TestFeature.Messages,

@@ -7,7 +7,6 @@ import {
 	InternalError,
 	OnDecrease,
 	OnIncrease,
-	type Organization,
 	type Product,
 	priceToInvoiceAmount,
 	shouldProrate,
@@ -16,9 +15,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/index.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
@@ -29,7 +27,7 @@ import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
 
 const createDowngradeProrationInvoice = async ({
-	org,
+	ctx,
 	cusPrice,
 	stripeCli,
 	sub,
@@ -41,9 +39,8 @@ const createDowngradeProrationInvoice = async ({
 	product,
 	onIncrease,
 	onDecrease,
-	logger,
 }: {
-	org: Organization;
+	ctx: AutumnContext;
 	cusPrice: FullCustomerPrice;
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
@@ -55,8 +52,8 @@ const createDowngradeProrationInvoice = async ({
 	product: Product;
 	onIncrease: OnIncrease;
 	onDecrease: OnDecrease;
-	logger: any;
 }) => {
+	const { logger } = ctx;
 	const config = cusPrice.price.config as UsagePriceConfig;
 
 	const now = await stripeSubscriptionToNowMs({
@@ -94,9 +91,9 @@ const createDowngradeProrationInvoice = async ({
 	);
 
 	const invoiceItem = constructStripeInvoiceItem({
+		ctx,
 		product,
 		amount: invoiceAmount,
-		org,
 		price: cusPrice.price,
 		description: invoiceDescription,
 		stripeSubId: sub.id,
@@ -129,8 +126,7 @@ const createDowngradeProrationInvoice = async ({
 };
 
 export const handleProratedDowngrade = async ({
-	db,
-	org,
+	ctx,
 	stripeCli,
 	cusEnt,
 	cusPrice,
@@ -138,10 +134,8 @@ export const handleProratedDowngrade = async ({
 	subItem,
 	newBalance,
 	prevBalance,
-	logger,
 }: {
-	db: DrizzleCli;
-	org: Organization;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	cusEnt: FullCusEntWithFullCusProduct;
 	cusPrice: FullCustomerPrice;
@@ -149,8 +143,8 @@ export const handleProratedDowngrade = async ({
 	subItem: Stripe.SubscriptionItem;
 	newBalance: number;
 	prevBalance: number;
-	logger: Logger;
 }) => {
+	const { logger } = ctx;
 	logger.info(`Handling quantity decrease`);
 
 	if (!cusEnt.customer_product) {
@@ -200,7 +194,7 @@ export const handleProratedDowngrade = async ({
 		});
 
 		invoice = await createDowngradeProrationInvoice({
-			org,
+			ctx,
 			cusPrice,
 			stripeCli,
 			sub,
@@ -217,7 +211,6 @@ export const handleProratedDowngrade = async ({
 				cusPrice.price.proration_config?.on_increase ||
 				OnIncrease.ProrateImmediately,
 			onDecrease,
-			logger,
 		});
 	} else {
 		if (prevOverage > 0) {
@@ -228,7 +221,7 @@ export const handleProratedDowngrade = async ({
 			});
 
 			await RepService.insert({
-				db,
+				ctx,
 				data: newReplaceables,
 			});
 		}

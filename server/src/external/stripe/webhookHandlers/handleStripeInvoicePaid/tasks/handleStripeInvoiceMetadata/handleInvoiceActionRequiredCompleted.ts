@@ -53,7 +53,7 @@ export const handleInvoiceActionRequiredCompleted = async ({
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	if (attachParams.cusEntIds && curCusProduct) {
 		await resetUsageBalances({
-			db: ctx.db,
+			ctx,
 			cusEntIds: attachParams.cusEntIds,
 			cusProduct: curCusProduct,
 		});

@@ -103,9 +103,9 @@ export const handleQuantityUpgrade = async ({
 
 		const product = cusProductToProduct({ cusProduct });
 		const invoiceItem = constructStripeInvoiceItem({
+			ctx,
 			product,
 			amount: amount,
-			org: org,
 			price: cusPrice.price,
 			description: getFeatureInvoiceDescription({
 				feature: feature,
@@ -197,7 +197,7 @@ export const handleQuantityUpgrade = async ({
 			`🔥 Incrementing feature ${cusEnt.entitlement.feature.id} balance by ${incrementBy}`,
 		);
 		await CusEntService.increment({
-			db,
+			ctx,
 			id: cusEnt.id,
 			amount: incrementBy,
 		});

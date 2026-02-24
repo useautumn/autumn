@@ -30,7 +30,7 @@ import {
 	type ProductItem,
 	type RewardRedemption,
 	type SetUsageParams,
-	type SetupPaymentParamsV0,
+	type SetupPaymentParamsV1,
 	type TrackParams,
 	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
@@ -908,8 +908,8 @@ export class AutumnInt {
 			return data;
 		},
 
-		setupPayment: async (params: SetupPaymentParamsV0) => {
-			const data = await this.post(`/setup_payment`, params);
+		setupPayment: async (params: SetupPaymentParamsV1) => {
+			const data = await this.post(`/billing.setup_payment`, params);
 			return data;
 		},
 

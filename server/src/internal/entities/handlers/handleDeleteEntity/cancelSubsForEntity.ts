@@ -15,7 +15,7 @@ export const cancelSubsForEntity = async ({
 	cusProducts: FullCusProduct[];
 	entity: Entity;
 }) => {
-	const { db, logger } = ctx;
+	const { logger } = ctx;
 	try {
 		for (const cusProduct of cusProducts) {
 			if (cusProduct.internal_entity_id !== entity.internal_id) {
@@ -24,7 +24,7 @@ export const cancelSubsForEntity = async ({
 
 			if (cusProduct.status === CusProductStatus.Scheduled) {
 				await CusProductService.delete({
-					db,
+					ctx,
 					cusProductId: cusProduct.id,
 				});
 			}

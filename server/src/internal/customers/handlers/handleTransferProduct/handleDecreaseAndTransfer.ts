@@ -50,7 +50,7 @@ export const handleDecreaseAndTransfer = async ({
 
 		batchDecrement.push(
 			CusEntService.decrement({
-				db,
+				ctx,
 				id: cusEnt.id,
 				amount: resetBalance,
 			}),
@@ -60,7 +60,7 @@ export const handleDecreaseAndTransfer = async ({
 	await Promise.all(batchDecrement);
 
 	await CusProductService.update({
-		db,
+		ctx,
 		cusProductId: cusProduct.id,
 		updates: {
 			quantity: cusProduct.quantity - 1,

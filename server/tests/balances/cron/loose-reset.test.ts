@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 
 		// 3. Call resetCustomerEntitlement
 		const updatedCusEnt = await resetCustomerEntitlement({
-			db: ctx.db,
+			ctx,
 			cusEnt: resetCusEnt,
 			updatedCusEnts: [],
 		});

@@ -36,10 +36,8 @@ export const updateCustomerFromCheckout = async ({
 	if (!updates.name && !updates.email) return;
 
 	await CusService.update({
-		db,
-		idOrInternalId: fullCustomer.internal_id,
-		orgId: org.id,
-		env,
+		ctx,
+		idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
 		update: updates,
 	});
 

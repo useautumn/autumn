@@ -141,7 +141,7 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-
 	// Attach the same free add-on a second time
 	await autumnV1.attach({
 		customer_id: customerId,
-		product_id: `${addOn.id}_${customerId}`,
+		product_id: addOn.id,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -154,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Credits,
-		balance: 100,
+		balance: 200,
 		usage: 0,
 	});
 });
@@ -216,7 +216,7 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly p
 	});
 
 	// Use AutumnCli.getCustomer for V1 response format (entitlements, add_ons)
-	const cusRes = await AutumnCli.getCustomer(customerId) as ApiCustomerV1;
+	const cusRes = (await AutumnCli.getCustomer(customerId)) as ApiCustomerV1;
 
 	// Pro gives 10 Messages, add-on gives 500
 	const expectedBalance = 10 + monthlyQuantity;
@@ -233,7 +233,10 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly p
 	expect(cusRes.invoices.length).toBe(2);
 
 	// Verify /entitled returns correct balance (V0 endpoint with balances array)
-	const entitledRes = await AutumnCli.entitled(customerId, TestFeature.Messages) as {
+	const entitledRes = (await AutumnCli.entitled(
+		customerId,
+		TestFeature.Messages,
+	)) as {
 		allowed: boolean;
 		balances: { feature_id: string; balance: number }[];
 	};

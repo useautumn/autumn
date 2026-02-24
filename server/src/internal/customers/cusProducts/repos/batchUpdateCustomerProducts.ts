@@ -1,16 +1,18 @@
-import type { InsertCustomerProduct } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "../CusProductService.js";
+import { type InsertCustomerProduct } from "@autumn/shared";
+import type { RepoContext } from "@/db/repoContext.js";
+import { CusProductService } from "../CusProductService";
 
 /**
  * Batch update customer products by their IDs.
  * Each update is executed in parallel using Promise.all.
  */
 export const batchUpdateCustomerProducts = async ({
-	db,
+	ctx,
+
 	updates,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
+
 	updates: {
 		id: string;
 		updates: Partial<InsertCustomerProduct>;
@@ -26,7 +28,7 @@ export const batchUpdateCustomerProducts = async ({
 		}
 
 		return CusProductService.update({
-			db,
+			ctx,
 			cusProductId: id,
 			updates: updateData,
 		});

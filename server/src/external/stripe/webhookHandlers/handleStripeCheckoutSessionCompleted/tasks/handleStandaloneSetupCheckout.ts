@@ -1,5 +1,5 @@
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { updateDefaultPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
 import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext.js";
@@ -42,11 +42,9 @@ export const handleStandaloneSetupCheckout = async ({
 	}
 
 	const stripeCli = createStripeCli({ org, env });
-
-	const paymentMethod = await getCusPaymentMethod({
+	const paymentMethod = await updateDefaultPaymentMethod({
 		stripeCli,
-		stripeId: stripeCustomerId,
-		errorIfNone: false,
+		stripeCustomerId,
 	});
 
 	if (!paymentMethod) {
@@ -57,13 +55,6 @@ export const handleStandaloneSetupCheckout = async ({
 	}
 
 	logger.info(
-		`Standalone setup checkout: updating default payment method for customer ${customer.id}`,
+		`Standalone setup checkout: updated default payment method for customer ${customer.id}`,
 	);
-
-	// Set as customer's default payment method
-	await stripeCli.customers.update(stripeCustomerId, {
-		invoice_settings: {
-			default_payment_method: paymentMethod.id,
-		},
-	});
 };

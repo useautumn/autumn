@@ -157,7 +157,7 @@ export const updateStripeSub2 = async ({
 	if (curCusProduct) {
 		if (!url) {
 			await resetUsageBalances({
-				db,
+				ctx,
 				cusEntIds,
 				cusProduct: curCusProduct,
 			});

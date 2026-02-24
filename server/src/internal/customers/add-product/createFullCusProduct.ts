@@ -20,6 +20,7 @@ import {
 	type ProductOptions,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -157,25 +158,26 @@ const initCusProduct = ({
 };
 
 const insertFullCusProduct = async ({
-	db,
+	ctx,
 	cusProd,
 	cusEnts,
 	cusPrices,
 	replaceables,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	cusProd: CusProduct;
 	cusEnts: CustomerEntitlement[];
 	cusPrices: CustomerPrice[];
 	replaceables: InsertReplaceable[];
 }) => {
+	const { db } = ctx;
 	await CusProductService.insert({
 		db,
 		data: cusProd,
 	});
 
 	await CusEntService.insert({
-		db,
+		ctx,
 		data: cusEnts as InsertCustomerEntitlement[],
 	});
 
@@ -185,19 +187,19 @@ const insertFullCusProduct = async ({
 	});
 
 	await RepService.insert({
-		db,
+		ctx,
 		data: replaceables,
 	});
 };
 
 const expireOrDeleteCusProduct = async ({
-	db,
+	ctx,
 	startsAt,
 	product,
 	cusProducts,
 	internalEntityId,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	startsAt?: number;
 	product: FullProduct;
 	cusProducts?: FullCusProduct[];
@@ -216,7 +218,7 @@ const expireOrDeleteCusProduct = async ({
 
 		if (curScheduledProduct) {
 			await CusProductService.delete({
-				db,
+				ctx,
 				cusProductId: curScheduledProduct.id,
 			});
 		}
@@ -229,7 +231,7 @@ const expireOrDeleteCusProduct = async ({
 
 		if (curMainProduct) {
 			await CusProductService.update({
-				db,
+				ctx,
 				cusProductId: curMainProduct.id,
 				updates: {
 					status: CusProductStatus.Expired,
@@ -352,6 +354,15 @@ export const createFullCusProduct = async ({
 		internalEntityId: attachParams.internalEntityId,
 	});
 
+	const repoContext: RepoContext = {
+		db,
+		org: {
+			id: customer.org_id,
+		},
+		env: customer.env,
+		logger,
+	};
+
 	if (
 		(isOneOff(prices) || (isFreeProduct(prices) && product.is_add_on)) &&
 		notNullish(existingCusProduct) &&
@@ -361,9 +372,8 @@ export const createFullCusProduct = async ({
 		ACTIVE_STATUSES.includes(existingCusProduct.status)
 	) {
 		await updateOneTimeCusProduct({
-			db,
+			ctx: repoContext,
 			attachParams,
-			logger,
 		});
 
 		return;
@@ -476,7 +486,7 @@ export const createFullCusProduct = async ({
 
 	if (!isOneOff(prices) && !product.is_add_on) {
 		await expireOrDeleteCusProduct({
-			db,
+			ctx: repoContext,
 			startsAt,
 			product,
 			cusProducts: attachParams.cusProducts,
@@ -485,7 +495,7 @@ export const createFullCusProduct = async ({
 	}
 
 	await insertFullCusProduct({
-		db,
+		ctx: repoContext,
 		cusProd,
 		cusEnts: deductedCusEnts,
 		cusPrices,
@@ -497,7 +507,7 @@ export const createFullCusProduct = async ({
 	for (const operation of rolloverOps) {
 		rolloverInserts.push(
 			RolloverService.insert({
-				db,
+				ctx: repoContext,
 				rows: operation.toInsert,
 				fullCusEnt: operation.cusEnt,
 			}),

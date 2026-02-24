@@ -1,4 +1,5 @@
-import { CusProductStatus } from "@autumn/shared";
+import { type AppEnv, CusProductStatus } from "@autumn/shared";
+import type { RepoContext } from "@/db/repoContext.js";
 import { getOneOffCustomerProductsToCleanup } from "@/internal/customers/cusProducts/actions/cleanupOneOff/getOneOffToCleanup.js";
 import { batchUpdateCustomerProducts } from "@/internal/customers/cusProducts/repos/batchUpdateCustomerProducts.js";
 import type { CronContext } from "../utils/CronContext.js";
@@ -33,13 +34,44 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 			);
 		}
 
-		await batchUpdateCustomerProducts({
-			db: ctx.db,
-			updates: toCleanup.map((result) => ({
-				id: result.customer_product.id,
-				updates: { status: CusProductStatus.Expired },
-			})),
-		});
+		// Group customer products by org and env
+		const groupedByOrgEnv = new Map<
+			string,
+			{ orgId: string; env: AppEnv; customerProductIds: string[] }
+		>();
+
+		for (const result of toCleanup) {
+			const key = `${result.org.id}:${result.customer.env}`;
+			if (!groupedByOrgEnv.has(key)) {
+				groupedByOrgEnv.set(key, {
+					orgId: result.org.id,
+					env: result.customer.env,
+					customerProductIds: [],
+				});
+			}
+			groupedByOrgEnv
+				.get(key)!
+				.customerProductIds.push(result.customer_product.id);
+		}
+
+		// Process each org/env group
+		for (const [_key, group] of groupedByOrgEnv) {
+			const repoContext: RepoContext = {
+				db: ctx.db,
+				org: {
+					id: group.orgId,
+				},
+				env: group.env,
+				logger: logger,
+			};
+			await batchUpdateCustomerProducts({
+				ctx: repoContext,
+				updates: group.customerProductIds.map((id) => ({
+					id,
+					updates: { status: CusProductStatus.Expired },
+				})),
+			});
+		}
 
 		logger.info(`Expired ${toCleanup.length} customer products`);
 		console.log(`Expired ${toCleanup.length} customer products`);

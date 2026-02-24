@@ -8,6 +8,8 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
+const customerId = "temp-test";
+
 test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
 	const proProd = products.pro({
 		id: "pro",

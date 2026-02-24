@@ -1,5 +1,6 @@
 import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { formatAmount } from "../../common/formatUtils/formatAmount.js";
+import { getPrepaidDisplayQuantity } from "../productItemUtils/productItemUtils.js";
 import type { ItemEdit } from "./itemEditTypes.js";
 
 /** Generates edit items for prepaid quantity changes */
@@ -22,9 +23,14 @@ export function generatePrepaidChanges({
 
 			if (oldQuantity === newQuantity) return null;
 
-			const billingUnits = item.billing_units ?? 1;
-			const oldDisplayQuantity = oldQuantity * billingUnits;
-			const newDisplayQuantity = newQuantity * billingUnits;
+			const oldDisplayQuantity = getPrepaidDisplayQuantity({
+				quantity: oldQuantity,
+				billingUnits: item.billing_units,
+			});
+			const newDisplayQuantity = getPrepaidDisplayQuantity({
+				quantity: newQuantity,
+				billingUnits: item.billing_units,
+			});
 
 			const unitPrice = item.price ?? null;
 			const costDelta =

@@ -96,7 +96,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		await timeout(3000);
 
 		await resetAndGetCusEnt({
-			db,
+			ctx,
 			customer,
 			productGroup: free.group || "",
 			featureId: TestFeature.Messages,
@@ -113,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 
 	test("should reset words feature and have correct next reset at", async () => {
 		await resetAndGetCusEnt({
-			db,
+			ctx,
 			customer,
 			productGroup: free.group || "",
 			featureId: TestFeature.Words,

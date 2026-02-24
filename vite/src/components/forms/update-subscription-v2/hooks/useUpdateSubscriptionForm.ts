@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { useAppForm } from "@/hooks/form/form";
+import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import {
 	type UpdateSubscriptionForm,
@@ -21,24 +22,14 @@ export function useUpdateSubscriptionForm({
 	const { customerProduct, prepaidItems, currentVersion, product } =
 		updateSubscriptionFormContext;
 
-	const initialPrepaidOptions = useMemo(() => {
-		const subscriptionValues = customerProduct.options.reduce(
-			(accumulator, option) => {
-				accumulator[option.feature_id] = option.quantity;
-				return accumulator;
-			},
-			{} as Record<string, number>,
-		);
-
-		return prepaidItems.reduce(
-			(accumulator, item) => {
-				const featureId = item.feature_id as string;
-				accumulator[featureId] = subscriptionValues[featureId] ?? 0;
-				return accumulator;
-			},
-			{} as Record<string, number>,
-		);
-	}, [customerProduct.options, prepaidItems]);
+	const initialPrepaidOptions = useMemo(
+		() =>
+			backendToDisplayQuantity({
+				backendOptions: customerProduct.options,
+				prepaidItems,
+			}),
+		[customerProduct.options, prepaidItems],
+	);
 
 	const isTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingTrialDays = isTrialing

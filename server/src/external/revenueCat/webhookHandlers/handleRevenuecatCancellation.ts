@@ -36,7 +36,7 @@ export const handleCancellation = async ({
 	}
 
 	await CusProductService.update({
-		db,
+		ctx,
 		cusProductId: curSameProduct.id,
 		updates: {
 			canceled_at: Date.now(),

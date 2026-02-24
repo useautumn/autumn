@@ -11,6 +11,7 @@ import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
 import { handlePreviewMultiAttach } from "./v2/handlers/handlePreviewMultiAttach.js";
 import { handlePreviewUpdateSubscription } from "./v2/handlers/handlePreviewUpdateSubscription.js";
+import { handleSetupPaymentV2 } from "./v2/handlers/handleSetupPaymentV2.js";
 import { handleUpdateSubscription } from "./v2/handlers/handleUpdateSubscription.js";
 
 export const billingRouter = new Hono<HonoEnv>();
@@ -36,6 +37,7 @@ billingRpcRouter.post(
 	...handlePreviewMultiAttach,
 );
 billingRpcRouter.post("/billing.preview_attach", ...handlePreviewAttach);
+billingRpcRouter.post("/billing.setup_payment", ...handleSetupPaymentV2);
 billingRpcRouter.post(
 	"/billing.open_customer_portal",
 	...handleOpenCustomerPortalV2,
