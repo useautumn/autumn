@@ -912,5 +912,43 @@ export class AutumnInt {
 			const data = await this.post(`/billing.setup_payment`, params);
 			return data;
 		},
+
+		multiAttach: async (
+			params: any,
+			{
+				skipWebhooks,
+				timeout,
+			}: {
+				skipWebhooks?: boolean;
+				timeout?: number;
+			} = {},
+		): Promise<any> => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/billing.multi_attach`,
+				{ redirect_mode: "if_required", ...params },
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+			return data;
+		},
+
+		previewMultiAttach: async (params: any): Promise<any> => {
+			const data = await this.post(`/billing.preview_multi_attach`, {
+				...params,
+				redirect_mode: "if_required",
+			});
+			return data;
+		},
 	};
 }

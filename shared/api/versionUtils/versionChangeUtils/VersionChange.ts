@@ -25,6 +25,7 @@ export enum AffectedResource {
 	Track = "track",
 	Checkout = "checkout",
 	Attach = "attach",
+	MultiAttach = "multi_attach",
 	ApiSubscriptionUpdate = "api_subscription_update",
 	EventsAggregate = "events_aggregate",
 }

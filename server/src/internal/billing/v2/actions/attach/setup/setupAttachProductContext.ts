@@ -1,4 +1,8 @@
-import type { AttachParamsV1, BillingContextOverride } from "@autumn/shared";
+import type {
+	AttachParamsV1,
+	BillingContextOverride,
+	MultiAttachParamsV0,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
@@ -12,7 +16,7 @@ export const setupAttachProductContext = async ({
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV1;
+	params: AttachParamsV1 | MultiAttachParamsV0["plans"][number];
 	contextOverride?: BillingContextOverride;
 }) => {
 	const { productContext } = contextOverride;

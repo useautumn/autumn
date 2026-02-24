@@ -19,7 +19,8 @@ import type Stripe from "stripe";
 
 type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
-	subscriptionCancelAt?: number;
+	/** number = set cancel_at, null = clear cancel_at, undefined = don't touch */
+	subscriptionCancelAt?: number | null;
 };
 
 /**
@@ -106,15 +107,16 @@ const buildActionForScenario = ({
 			return {};
 
 		case "single_indefinite":
-			// Uncancel scenario: release schedule if exists, otherwise nothing
-			return hasSchedule
-				? {
-						scheduleAction: {
+			// Product continues indefinitely: release schedule if exists, clear any cancel_at
+			return {
+				scheduleAction: hasSchedule
+					? {
 							type: "release",
 							stripeSubscriptionScheduleId: scheduleId!,
-						},
-					}
-				: {};
+						}
+					: undefined,
+				subscriptionCancelAt: null,
+			};
 
 		case "simple_cancel":
 			// Cancel at end of cycle: use cancel_at on subscription, not schedule
@@ -165,7 +167,7 @@ const buildActionForScenario = ({
  *
  * Returns:
  * - scheduleAction: The schedule action to execute (create, update, or release)
- * - subscriptionCancelAt: If set, the subscription should be canceled at this timestamp
+ * - subscriptionCancelAt: number = set cancel_at, null = clear cancel_at, undefined = don't touch
  */
 export const buildStripeSubscriptionScheduleAction = ({
 	ctx,
