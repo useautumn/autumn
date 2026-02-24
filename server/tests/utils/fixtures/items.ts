@@ -579,6 +579,31 @@ const consumableWords = ({
 		interval,
 	});
 
+/**
+ * Tiered consumable messages - graduated pricing with tiers (pay-per-use).
+ * Default tiers: 0-500 units at $0.10/unit, 501+ at $0.05/unit.
+ * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
+ * Note: tier_behavior is undefined, defaulting to graduated pricing.
+ */
+const tieredConsumableMessages = ({
+	includedUsage = 0,
+	billingUnits = 1,
+	tiers = [
+		{ to: 500, amount: 0.1 },
+		{ to: "inf", amount: 0.05 },
+	],
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	tiers?: { to: number | "inf"; amount: number }[];
+} = {}): LimitedItem =>
+	constructArrearItem({
+		featureId: TestFeature.Messages,
+		tiers: tiers as { to: number; amount: number }[],
+		billingUnits,
+		includedUsage,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
 // ═══════════════════════════════════════════════════════════════════
@@ -701,6 +726,7 @@ export const items = {
 	consumable,
 	consumableMessages,
 	consumableWords,
+	tieredConsumableMessages,
 
 	// Allocated
 	allocatedUsers,

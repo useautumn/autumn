@@ -100,7 +100,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: immediate switch, 
 		product_id: premium.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
-	expect(preview.total).toBeGreaterThan(0);
+	expect(preview.total).toEqual(30);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
@@ -201,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: immediate switch, 
 		product_id: premium.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
-	expect(preview.total).toBeGreaterThan(0);
+	expect(preview.total).toEqual(10 + 30);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
