@@ -1,11 +1,9 @@
 import { atmnToStripeAmount, type LineItem, msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
+import { lineItemToMetadata } from "./lineItemToMetadata";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceItemCreateParams
- *
- * Uses effectivePeriod (the actual period being charged/refunded) for Stripe,
- * which accounts for mid-cycle changes.
  */
 const toStripeCreateInvoiceItemParams = ({
 	stripeCustomerId,
@@ -19,20 +17,36 @@ const toStripeCreateInvoiceItemParams = ({
 	lineItem: LineItem;
 }): Stripe.InvoiceItemCreateParams => {
 	const { finalAmount, description, context } = lineItem;
-	const { effectivePeriod, currency } = context;
+	const { billingPeriod, currency } = context;
+
+	const isNegative = finalAmount < 0;
+	const stripeProductId = context.product.processor?.id ?? "";
+	const shouldUsePriceData = !isNegative && stripeProductId;
 
 	return {
 		customer: stripeCustomerId,
 		subscription: stripeSubscriptionId,
 		invoice: stripeInvoiceId,
-		amount: atmnToStripeAmount({ amount: finalAmount }),
+
+		amount: shouldUsePriceData
+			? undefined
+			: atmnToStripeAmount({ amount: finalAmount }),
+
+		price_data: shouldUsePriceData
+			? {
+					unit_amount: atmnToStripeAmount({ amount: finalAmount }),
+					currency,
+					product: stripeProductId,
+				}
+			: undefined,
+		metadata: lineItemToMetadata({ lineItem }),
 		currency,
 		description,
 		discountable: false,
-		period: effectivePeriod
+		period: billingPeriod
 			? {
-					start: msToSeconds(effectivePeriod.start),
-					end: msToSeconds(effectivePeriod.end),
+					start: msToSeconds(billingPeriod.start),
+					end: msToSeconds(billingPeriod.end),
 				}
 			: undefined,
 	};
