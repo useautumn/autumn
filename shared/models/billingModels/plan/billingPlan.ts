@@ -13,11 +13,13 @@ import {
 	type AutumnBillingPlan,
 	AutumnBillingPlanSchema,
 	type DeferredAutumnBillingPlanData,
+	type DeferredSetupPaymentData,
 } from "./autumnBillingPlan";
 
 export type {
 	AutumnBillingPlan,
 	DeferredAutumnBillingPlanData,
+	DeferredSetupPaymentData,
 	StripeBillingPlan,
 	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
