@@ -3,13 +3,7 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
-import {
-	cusEntsToBalance,
-	cusEntsToGrantedBalance,
-	cusEntsToPrepaidQuantity,
-	EntInterval,
-	nullish,
-} from "@autumn/shared";
+import { cusEntToPrepaidQuantity, EntInterval } from "@autumn/shared";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -84,7 +78,12 @@ function getIndividualEntValues({
 	});
 
 	const quantity = ent.customer_product?.quantity || 1;
-	const allowance = grantedBalance + prepaidAllowance;
+	const allowance =
+		(ent.entitlement.allowance ?? 0) * quantity +
+		(entityId && ent.entities?.[entityId]
+			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
+			: (ent.adjustment ?? 0)) +
+		cusEntToPrepaidQuantity({ cusEnt: ent });
 	return { balance, allowance, quantity };
 }
 
