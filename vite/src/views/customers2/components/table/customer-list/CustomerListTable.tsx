@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useMounted } from "@/hooks/useMounted";
@@ -31,6 +32,7 @@ export function CustomerListTable({
 	customers: CustomerWithProducts[];
 	isLoading: boolean;
 }) {
+	const { org } = useOrg();
 	// Defer rendering until after mount to ensure correct table layout on navigation
 	const isMounted = useMounted();
 	const env = useEnv();
@@ -96,15 +98,23 @@ export function CustomerListTable({
 		});
 	}, [customers, fullCustomersMap, isFullDataLoading]);
 
+	const columnStorageKey = org?.id
+		? `customer-list:${org.id}`
+		: "customer-list";
+
 	// Create columns including dynamic usage columns from metered features
 	const { columns, defaultVisibleColumnIds, columnGroups } =
-		useCustomerListColumns({ features });
+		useCustomerListColumns({ features, storageKey: columnStorageKey });
 
-	// Column visibility management
-	const { columnVisibility, setColumnVisibility } = useColumnVisibility({
+	const {
+		columnVisibility,
+		setColumnVisibility,
+		isDirty: columnVisibilityIsDirty,
+		saveColumnVisibility,
+	} = useColumnVisibility({
 		columns,
 		defaultVisibleColumnIds,
-		storageKey: "customer-list",
+		storageKey: columnStorageKey,
 		columnGroups,
 	});
 
@@ -183,8 +193,10 @@ export function CustomerListTable({
 				emptyStateText: "No matching results found.",
 				rowClassName: "h-10",
 				enableColumnVisibility: true,
-				columnVisibilityStorageKey: "customer-list",
+				columnVisibilityStorageKey: columnStorageKey,
 				columnGroups,
+				columnVisibilityIsDirty,
+				onColumnVisibilitySave: saveColumnVisibility,
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
 				virtualization: {
