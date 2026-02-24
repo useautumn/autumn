@@ -120,7 +120,7 @@ export const ProductItemSchema = z.object({
 			"The billing units of the product item (eg $1 for 30 credits).",
 	}),
 
-	tier_behaviour: z.nativeEnum(TierBehaviours).nullish().meta({
+	tier_behaviour: z.enum(TierBehaviours).nullish().meta({
 		description: "The type of tiered pricing: graduated or volume-based.",
 	}),
 

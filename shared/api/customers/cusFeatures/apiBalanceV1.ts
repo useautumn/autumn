@@ -1,5 +1,8 @@
 import { BillingMethod } from "@api/products/components/billingMethod";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import {
+	TierBehaviours,
+	UsageTierSchema,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { z } from "zod/v4";
 import { ApiFeatureV1Schema } from "../../features/apiFeatureV1";
 import { ApiBalanceResetSchema, ApiBalanceRolloverSchema } from "./apiBalance";
@@ -38,6 +41,9 @@ export const ApiBalanceBreakdownPriceSchema = z.object({
 	}),
 	tiers: z.array(UsageTierSchema).optional().meta({
 		description: "Tiered pricing configuration if applicable.",
+	}),
+	tier_behaviour: z.enum(TierBehaviours).optional().meta({
+		description: "How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).",
 	}),
 	billing_units: z.number().meta({
 		description:
