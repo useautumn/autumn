@@ -29,19 +29,7 @@ export const UpdateSubscriptionV0ParamsSchema =
 		customer_product_id: z.string().optional(),
 		// refund_behavior: RefundBehaviorSchema.optional(),
 	})
-		.refine(
-			(data) => {
-				if (data.items && data.items.length === 0) {
-					return false;
-				}
 
-				return true;
-			},
-			{
-				message:
-					"Must provide at least one item when updating to a custom plan",
-			},
-		)
 		.check((ctx) => {
 			if (ctx.value.options && ctx.value.options.length > 0) {
 				const invalidFeatures = ctx.value.options
