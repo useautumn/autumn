@@ -1,7 +1,17 @@
-import type { FullCustomer, FullCustomerEntitlement } from "@autumn/shared";
+import type {
+	FullCustomer,
+	FullCustomerEntitlement,
+	Rollover,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import type { ProcessResetResult } from "./processReset.js";
+
+/** Per-cusEnt rollover clearing info for cache propagation. */
+export type RolloverClearingInfo = {
+	deletedIds: string[];
+	overwrites: Rollover[];
+};
 
 /** Find a cusEnt on the FullCustomer by ID. */
 const findCusEnt = ({
@@ -26,6 +36,7 @@ const findCusEnt = ({
  * Applies computed reset values to in-memory FullCustomer for all cusEnts,
  * and runs rollover max-clearing only for DB-applied (non-skipped) ones.
  * For skipped entries (another request won the race), re-reads rollovers from DB.
+ * Returns per-cusEnt clearing info so the cache update can propagate deletes/overwrites.
  */
 export const applyResetResults = async ({
 	ctx,
@@ -37,9 +48,9 @@ export const applyResetResults = async ({
 	fullCus: FullCustomer;
 	computed: Array<{ cusEntId: string; result: ProcessResetResult }>;
 	skipped: string[];
-}): Promise<void> => {
-	const { db } = ctx;
+}): Promise<Record<string, RolloverClearingInfo>> => {
 	const skippedSet = new Set(skipped);
+	const clearingMap: Record<string, RolloverClearingInfo> = {};
 
 	for (const { cusEntId, result } of computed) {
 		const original = findCusEnt({ fullCus, cusEntId });
@@ -58,19 +69,26 @@ export const applyResetResults = async ({
 		if (!skippedSet.has(cusEntId)) {
 			// Winner: we inserted the rollover into DB. Clear excess and
 			// update the in-memory array to include the new rollovers.
-			const clearedRollovers = await RolloverService.clearExcessRollovers({
-				db,
-				newRows: result.rolloverInsert.rows,
-				fullCusEnt: original,
-			});
-			original.rollovers = clearedRollovers;
+			const { rollovers, deletedIds, overwrites } =
+				await RolloverService.clearExcessRollovers({
+					ctx,
+					newRows: result.rolloverInsert.rows,
+					fullCusEnt: original,
+				});
+			original.rollovers = rollovers;
+
+			if (deletedIds.length > 0 || overwrites.length > 0) {
+				clearingMap[cusEntId] = { deletedIds, overwrites };
+			}
 		} else {
 			// Loser: the winning request already inserted the rollover and
 			// cleared excess. Re-read from DB to get the authoritative state.
 			original.rollovers = await RolloverService.getCurrentRollovers({
-				db,
+				ctx,
 				cusEntID: cusEntId,
 			});
 		}
 	}
+
+	return clearingMap;
 };

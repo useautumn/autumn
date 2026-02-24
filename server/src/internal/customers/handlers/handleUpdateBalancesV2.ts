@@ -40,7 +40,6 @@ export const handleUpdateBalancesV2 = createRoute({
 			fullCustomer: fullCus,
 			customerId: customer_id,
 			deductions: featureDeductions,
-			refreshCache: true,
 			options: {
 				alterGrantedBalance: true,
 				overageBehaviour: "allow",

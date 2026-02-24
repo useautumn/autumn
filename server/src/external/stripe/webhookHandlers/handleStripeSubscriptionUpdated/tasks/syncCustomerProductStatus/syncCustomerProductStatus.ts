@@ -3,7 +3,6 @@ import {
 	type CollectionMethod,
 	CusProductStatus,
 	cp,
-	type FullCusProduct,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import {
@@ -99,7 +98,7 @@ export const syncCustomerProductStatus = async ({
 		);
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates,
 		});

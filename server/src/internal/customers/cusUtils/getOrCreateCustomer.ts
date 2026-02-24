@@ -78,23 +78,11 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!skipUpdate) {
-		const updated = await updateCustomerDetails({
+		await updateCustomerDetails({
 			ctx,
-			customer,
+			fullCustomer: customer,
 			customerData,
 		});
-
-		if (updated) {
-			customer = await CusService.getFull({
-				ctx,
-				idOrInternalId: customer.id || customer.internal_id,
-				inStatuses,
-				withEntities,
-				entityId,
-				expand,
-				withSubs: true,
-			});
-		}
 	}
 
 	// Customer is defined by this point!

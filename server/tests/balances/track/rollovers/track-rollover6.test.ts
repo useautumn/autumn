@@ -92,14 +92,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 
 	test("should create rollovers", async () => {
 		await resetAndGetCusEnt({
+			ctx,
 			customer,
-			db: ctx.db,
 			productGroup: testCase,
 			featureId: TestFeature.Messages,
 		});
 		await resetAndGetCusEnt({
+			ctx,
 			customer,
-			db: ctx.db,
 			productGroup: testCase,
 			featureId: TestFeature.Messages,
 		});

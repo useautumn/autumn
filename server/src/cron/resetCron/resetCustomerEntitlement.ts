@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
@@ -16,20 +16,31 @@ import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
+import type { CronContext } from "../utils/CronContext";
 import { getStripeSubscriptionAnchor } from "./getStripeSubscriptionAnchor";
 import { resetShortDurationCustomerEntitlement } from "./resetShortDurationCustomerEntitlement";
 
 const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
 
 export const resetCustomerEntitlement = async ({
-	db,
+	ctx,
 	cusEnt,
 	updatedCusEnts,
 }: {
-	db: DrizzleCli;
+	ctx: CronContext;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
 }) => {
+	const repoContext: RepoContext = {
+		db: ctx.db,
+		logger: ctx.logger,
+		org: {
+			id: cusEnt.customer.org_id,
+		},
+		env: cusEnt.customer.env,
+		customerId: cusEnt.customer_id ?? "",
+	};
+
 	try {
 		const ent = cusEnt.entitlement as FullEntitlement;
 
@@ -38,7 +49,7 @@ export const resetCustomerEntitlement = async ({
 			shortDurations.includes(ent.interval as EntInterval)
 		) {
 			return await resetShortDurationCustomerEntitlement({
-				db,
+				ctx: repoContext,
 				cusEnt,
 				updatedCusEnts,
 			});
@@ -48,7 +59,7 @@ export const resetCustomerEntitlement = async ({
 		let relatedCusPrice = null;
 		if (cusEnt.customer_product_id) {
 			const cusPrices = await CusPriceService.getByCustomerProductId({
-				db,
+				db: ctx.db,
 				customerProductId: cusEnt.customer_product_id,
 			});
 			relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
@@ -66,7 +77,7 @@ export const resetCustomerEntitlement = async ({
 		const entitlement = cusEnt.entitlement;
 		if (entitlement.allowance_type === AllowanceType.Unlimited) {
 			await CusEntService.update({
-				db,
+				ctx: repoContext,
 				id: cusEnt.id,
 				updates: {
 					unlimited: true,
@@ -82,7 +93,7 @@ export const resetCustomerEntitlement = async ({
 
 		if (entitlement.interval === EntInterval.Lifetime) {
 			await CusEntService.update({
-				db,
+				ctx: repoContext,
 				id: cusEnt.id,
 				updates: {
 					next_reset_at: null,
@@ -125,7 +136,7 @@ export const resetCustomerEntitlement = async ({
 		if (cusEnt.customer_product) {
 			try {
 				nextResetAt = await getStripeSubscriptionAnchor({
-					db,
+					db: ctx.db,
 					cusEnt,
 					nextResetAt,
 				});
@@ -138,7 +149,7 @@ export const resetCustomerEntitlement = async ({
 		}
 
 		await CusEntService.update({
-			db,
+			ctx: repoContext,
 			id: cusEnt.id,
 			updates: {
 				...resetBalanceUpdate,
@@ -149,7 +160,7 @@ export const resetCustomerEntitlement = async ({
 
 		if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
 			await RolloverService.insert({
-				db,
+				ctx: repoContext,
 				rows: rolloverUpdate.toInsert,
 				fullCusEnt: cusEnt,
 			});

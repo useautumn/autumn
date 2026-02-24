@@ -27,7 +27,7 @@ const processAllocatedPrice = async ({
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }) => {
 	const { db } = ctx;
-	const { stripeInvoice } = eventContext;
+	const { stripeInvoice, fullCustomer } = eventContext;
 
 	const customerProduct = customerEntitlement.customer_product;
 	const customerEntitlements = customerProduct?.customer_entitlements ?? [];
@@ -54,7 +54,7 @@ const processAllocatedPrice = async ({
 		});
 
 		await CusEntService.update({
-			db,
+			ctx,
 			id: linkedCusEnt.id,
 			updates: {
 				entities: newEntities,
@@ -63,13 +63,13 @@ const processAllocatedPrice = async ({
 	}
 
 	await CusEntService.increment({
-		db,
+		ctx,
 		id: customerEntitlement.id,
 		amount: replaceables.length,
 	});
 
 	await RepService.deleteInIds({
-		db,
+		ctx,
 		ids: replaceables.map((r) => r.id),
 	});
 

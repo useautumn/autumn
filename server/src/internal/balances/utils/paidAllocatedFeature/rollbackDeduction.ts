@@ -40,7 +40,7 @@ export const rollbackDeduction = async ({
 
 			// Restore the entitlement to original values
 			await CusEntService.update({
-				db,
+				ctx,
 				id: cusEntId,
 				updates: {
 					balance: originalCusEnt.balance ?? 0,

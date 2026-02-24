@@ -11,7 +11,6 @@ import {
 	findFeatureById,
 	type Replaceable,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
@@ -22,12 +21,12 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 const updateLinkedCusEnt = async ({
-	db,
+	ctx,
 	linkedCusEnt,
 	inputEntities,
 	entityToReplacement,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	linkedCusEnt: FullCustomerEntitlement;
 	inputEntities: CreateEntityParams[];
 	entityToReplacement: Record<string, string>;
@@ -57,7 +56,7 @@ const updateLinkedCusEnt = async ({
 		}
 
 		await CusEntService.update({
-			db,
+			ctx,
 			id: linkedCusEnt.id,
 			updates: {
 				entities: newEntities,
@@ -161,23 +160,20 @@ export const createEntityForCusProduct = async ({
 
 				const { deletedReplaceables: deletedReplaceables_ } =
 					await adjustAllowance({
-						db,
-						env,
-						org,
+						ctx,
 						cusPrices,
 						customer,
-						affectedFeature: feature,
+						affectedFeature: feature!,
 						cusEnt: mainCusEntWithCusProduct,
 						originalBalance,
-						newBalance,
-						logger,
+						newBalance: innerNewBalance,
 						errorIfIncomplete: true,
 					});
 
 				deletedReplaceables = deletedReplaceables_ || [];
 
 				await CusEntService.decrement({
-					db,
+					ctx,
 					id: mainCusEntWithCusProduct.id,
 					amount: inputEntities.length - deletedReplaceables.length,
 				});
@@ -203,7 +199,7 @@ export const createEntityForCusProduct = async ({
 
 		for (const linkedCusEnt of linkedCusEnts) {
 			await updateLinkedCusEnt({
-				db,
+				ctx,
 				linkedCusEnt,
 				inputEntities,
 				entityToReplacement,

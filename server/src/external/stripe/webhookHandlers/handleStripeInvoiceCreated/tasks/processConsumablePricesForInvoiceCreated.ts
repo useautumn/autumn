@@ -88,7 +88,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	}
 
 	await CusEntService.batchUpdate({
-		db: ctx.db,
+		ctx,
 		data: updateCustomerEntitlements,
 	});
 
@@ -100,7 +100,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		});
 
 		await RolloverService.insert({
-			db: ctx.db,
+			ctx,
 			rows: rolloverUpdates.toInsert,
 			fullCusEnt: update.customerEntitlement,
 		});
