@@ -77,7 +77,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan wit
 	});
 
 	// Invoice: $20 (planA base) + $15 (planB base) = $35 (no seat overage)
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 35,
@@ -94,22 +94,31 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan wit
 // ═══════════════════════════════════════════════════════════════════
 // Test 2: Entity-level multi-attach via checkout with allocated features
 // ═══════════════════════════════════════════════════════════════════
-test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-level with allocated seats")}`, async () => {
-	const allocUsers = items.allocatedUsers({ includedUsage: 3 });
-
+test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-level with allocated workflows")}`, async () => {
+	const freePlan = products.base({
+		items: [items.freeAllocatedWorkflows({ includedUsage: 3 })],
+	});
+	const allocWorkflows = items.allocatedWorkflows({ includedUsage: 0 });
 	const plan = products.pro({
-		id: "ent-alloc-plan",
-		items: [allocUsers],
+		items: [allocWorkflows],
 	});
 
 	const { customerId, autumnV1, ctx, entities } = await initScenario({
 		customerId: "ma-co-ent-allocated",
 		setup: [
 			s.customer({ testClock: true }), // No payment method
-			s.products({ list: [plan] }),
+			s.products({ list: [freePlan, plan] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: freePlan.id, entityIndex: 0 }),
+			s.track({
+				featureId: TestFeature.Workflows,
+				value: 3,
+				entityIndex: 0,
+				timeout: 4000,
+			}),
+		],
 	});
 
 	const result = await autumnV1.billing.multiAttach(
@@ -125,15 +134,14 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-l
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
 	await completeStripeCheckoutForm({ url: result.payment_url });
-	await timeout(12000);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Invoice: $20 base (no seat overage with 3 included)
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20,
+		latestTotal: 20 + 3 * 10,
 	});
 
 	await expectSubToBeCorrect({

@@ -84,6 +84,11 @@ export const MultiAttachParamsV0Schema = z.object({
 			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
 	}),
 
+	new_billing_subscription: z.boolean().optional().meta({
+		description:
+			"Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.",
+	}),
+
 	// Internal
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,
@@ -94,3 +99,6 @@ export const MultiAttachParamsV0Schema = z.object({
 });
 
 export type MultiAttachParamsV0 = z.infer<typeof MultiAttachParamsV0Schema>;
+export type MultiAttachParamsV0Input = z.input<
+	typeof MultiAttachParamsV0Schema
+>;

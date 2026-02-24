@@ -582,7 +582,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 4: premium to free
 			s.billing.attach({ productId: premium.id }),
 			s.billing.attach({ productId: free.id }), // Schedule downgrade to free
 			s.billing.attach({ productId: pro.id }), // Replace with pro
-			s.advanceToNextInvoice({ withPause: true }),
+			s.advanceToNextInvoice(),
 		],
 	});
 

@@ -89,7 +89,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach paid features: prepaid acros
 		balance: 300,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 85,
@@ -188,7 +188,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach paid features: prepaid + con
 		balance: 3,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 100,

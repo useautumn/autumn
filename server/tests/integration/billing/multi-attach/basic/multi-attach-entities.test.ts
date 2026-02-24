@@ -37,7 +37,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach entities: entity-level multi
 	const entityPlanB = products.base({
 		id: "ent-plan-b",
 		items: [items.dashboard(), items.monthlyPrice({ price: 5 })],
-		group: "group-b",
+		group: `${customerPlan.id}-group-b`,
 	});
 
 	const { customerId, autumnV1, entities } = await initScenario({
@@ -100,7 +100,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach entities: entity-level multi
 	});
 
 	// Invoice: $20 (customer plan) + $10 (entity plan A) + $5 (entity plan B) = $35
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2, // 1 for customer plan attach + 1 for entity multi-attach
 		latestTotal: 15,

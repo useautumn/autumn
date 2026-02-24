@@ -82,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach addons: two add-ons when cus
 	});
 
 	// Invoice count: 1 (main attach) + 1 (multi-attach addons) = 2
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 30,
@@ -166,7 +166,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach addons: add-on + main recurr
 	});
 
 	// Invoice count: 1 (existing addon) + 1 (multi-attach) = 2
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 30,
@@ -238,7 +238,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach addons: multiple recurring a
 		balance: 50,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 40,

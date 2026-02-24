@@ -57,8 +57,9 @@
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
-		"t": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=test -- bun scripts/dev.ts",
+		"t": "infisical run --env=dev -- bun scripts/testScripts/testDispatcher.ts",
 		"d": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
+		"d:test": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=test -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",

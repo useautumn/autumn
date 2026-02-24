@@ -1,5 +1,4 @@
 import {
-	type AttachParamsV1,
 	BillingVersion,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
@@ -11,7 +10,10 @@ import { setupStripeBillingContext } from "@/internal/billing/v2/providers/strip
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupBillingCycleAnchor } from "../../../setup/setupBillingCycleAnchor";
+import { setupResetCycleAnchor } from "../../../setup/setupResetCycleAnchor";
 import { setupAttachProductContext } from "../../attach/setup/setupAttachProductContext";
+import { setupAttachTransitionContext } from "../../attach/setup/setupAttachTransitionContext";
 import { setupMultiAttachCheckoutMode } from "./setupMultiAttachCheckoutMode";
 import { setupMultiAttachTrialContext } from "./setupMultiAttachTrialContext";
 
@@ -42,7 +44,14 @@ export const setupMultiAttachBillingContext = async ({
 						customize: plan.customize,
 						version: plan.version,
 						customer_id: params.customer_id,
-					} as AttachParamsV1,
+					},
+				});
+
+			// Resolve transition context per product (find existing product in same group)
+			const { currentCustomerProduct, scheduledCustomerProduct } =
+				setupAttachTransitionContext({
+					fullCustomer,
+					attachProduct: fullProduct,
 				});
 
 			const featureQuantities = setupFeatureQuantitiesContext({
@@ -51,7 +60,7 @@ export const setupMultiAttachBillingContext = async ({
 					feature_quantities: plan.feature_quantities,
 				},
 				fullProduct,
-				currentCustomerProduct: undefined,
+				currentCustomerProduct,
 				initializeUndefinedQuantities: true,
 			});
 
@@ -60,6 +69,8 @@ export const setupMultiAttachBillingContext = async ({
 				customPrices: customPrices ?? [],
 				customEnts: customEnts ?? [],
 				featureQuantities,
+				currentCustomerProduct,
+				scheduledCustomerProduct,
 			};
 		}),
 	);
@@ -67,6 +78,8 @@ export const setupMultiAttachBillingContext = async ({
 	const fullProducts = productContexts.map((pc) => pc.fullProduct);
 
 	// 3. Setup Stripe context (no target customer product — no transitions)
+	// When new_billing_subscription is true, skip fetching existing subscription
+	// so a brand new one is created during execution.
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -79,6 +92,7 @@ export const setupMultiAttachBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: undefined,
 		paramDiscounts: params.discounts,
+		newBillingSubscription: params.new_billing_subscription || undefined,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({
@@ -86,19 +100,35 @@ export const setupMultiAttachBillingContext = async ({
 	});
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
-	// 4. Setup trial context (top-level free_trial only)
-	const trialContext = setupMultiAttachTrialContext({
+	// 4. Setup trial context (inherit from product or use explicit param)
+	const trialContext = await setupMultiAttachTrialContext({
+		ctx,
 		freeTrialParam: params.free_trial,
+		fullCustomer,
 		stripeSubscription,
 		fullProducts,
 		currentEpochMs,
 	});
 
 	// 5. Billing cycle anchor
-	const billingCycleAnchorMs: number | "now" =
-		trialContext?.trialEndsAt ?? "now";
+	let billingCycleAnchorMs = setupBillingCycleAnchor({
+		stripeSubscription,
+		customerProduct: undefined,
+		newFullProduct: fullProducts[0],
+		trialContext,
+		currentEpochMs,
+	});
 
-	const resetCycleAnchorMs = billingCycleAnchorMs ?? "now";
+	if (trialContext?.trialEndsAt) {
+		// Trial ends at overrides billing cycle anchor
+		billingCycleAnchorMs = trialContext.trialEndsAt;
+	}
+
+	const resetCycleAnchorMs = setupResetCycleAnchor({
+		billingCycleAnchorMs,
+		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
+		newFullProduct: fullProducts[0],
+	});
 
 	// 6. Checkout mode
 	const checkoutMode = setupMultiAttachCheckoutMode({
