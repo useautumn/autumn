@@ -14,11 +14,13 @@ import {
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 import {
+	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
+	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
@@ -189,6 +191,16 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("updateCustomerEntitlements", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCustomerData", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_DATA_SCRIPT,
+	});
+
+	redisInstance.defineCommand("appendEntityToCustomer", {
+		numberOfKeys: 1,
+		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -372,6 +384,11 @@ declare module "ioredis" {
 		updateCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
+		): Promise<string>;
+		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
+		appendEntityToCustomer(
+			cacheKey: string,
+			entityJson: string,
 		): Promise<string>;
 	}
 }

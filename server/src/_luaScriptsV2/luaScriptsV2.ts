@@ -127,3 +127,32 @@ const updateMainScript = readFileSync(
  */
 export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${updateMainScript}`;
+
+// ============================================================================
+// UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
+// ============================================================================
+
+/**
+ * Lua script for atomically updating top-level customer fields in the cached
+ * FullCustomer (name, email, metadata, send_email_receipts, etc.).
+ */
+export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
+	join(__dirname, "updateCustomerData.lua"),
+	"utf-8",
+);
+
+// ============================================================================
+// APPEND ENTITY TO CUSTOMER SCRIPT
+// ============================================================================
+
+/**
+ * Lua script for atomically appending an entity to the customer's entities
+ * array in the cached FullCustomer. Checks for duplicates before appending.
+ *
+ * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active,
+ * so concurrent appends from different regions will both succeed.
+ */
+export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
+	join(__dirname, "appendEntityToCustomer.lua"),
+	"utf-8",
+);

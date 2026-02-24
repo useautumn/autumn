@@ -36,6 +36,13 @@ const lifetime = breakdowns.find(
 )!;
 ```
 
+## Prepaid Attach Options (quantity)
+
+When attaching a prepaid feature and passing `options` with a quantity:
+
+1. **Legacy attach** (`autumnV1.attach`): `quantity` should NOT be divided by billing units and should be **exclusive** of included usage (i.e. only the prepaid amount, not counting what's already included free).
+2. **New attach** (`autumnV1.billing.attach`): `quantity` should NOT be divided by billing units and should be **inclusive** of included usage (i.e. total desired amount including the free included portion).
+
 ## Type Checking
 
 - After writing or editing test files, ALWAYS run `bun ts` in the `server/` directory to check for type errors before considering the task done.

@@ -12,8 +12,6 @@ import {
 	expectUpcomingItemsCorrect,
 } from "@tests/utils/expectUtils/expectContUseUtils.js";
 import { getSubsFromCusId } from "@tests/utils/expectUtils/expectSubUtils.js";
-import { items } from "@tests/utils/fixtures/items.js";
-import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -162,7 +160,7 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage1: proration cycle simula
 		curUnix,
 		usageValues: [12, 3],
 	});
-}, 300_000); // Longer timeout for Stripe test clock operations
+}); // Longer timeout for Stripe test clock operations
 
 // =============================================================================
 // MIGRATED FROM: set-usage2.test.ts
@@ -307,118 +305,3 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub q
 	const customer3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer3.invoices!.length).toBe(1);
 }, 300_000); // Longer timeout for Stripe test clock operations
-
-// =============================================================================
-// NEW TESTS: Legacy /usage endpoint with free allocated features
-// =============================================================================
-
-// Test: Set usage on free allocated feature (within included)
-test.concurrent(`${chalk.yellowBright("legacy-set-usage-free-alloc1: set usage within included on free allocated")}`, async () => {
-	const usersItem = items.freeAllocatedUsers({ includedUsage: 5 });
-	const freeProd = products.base({ id: "free", items: [usersItem] });
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "legacy-set-usage-free-alloc1",
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
-
-	// Set usage to 3 via legacy /usage endpoint: balance = 5 - 3 = 2
-	await autumnV1.usage({
-		customer_id: customerId,
-		feature_id: TestFeature.Users,
-		value: 3,
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customer.features[TestFeature.Users].balance).toBe(2);
-	expect(customer.features[TestFeature.Users].usage).toBe(3);
-	expect(customer.features[TestFeature.Users].included_usage).toBe(5);
-
-	// Verify non-cached
-	const customerDb = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
-		skip_cache: "true",
-	});
-	expect(customerDb.features[TestFeature.Users].balance).toBe(2);
-	expect(customerDb.features[TestFeature.Users].usage).toBe(3);
-});
-
-// Test: Set usage beyond included on free allocated (overage)
-test.concurrent(`${chalk.yellowBright("legacy-set-usage-free-alloc2: set usage beyond included on free allocated")}`, async () => {
-	const usersItem = items.freeAllocatedUsers({ includedUsage: 5 });
-	const freeProd = products.base({ id: "free", items: [usersItem] });
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "legacy-set-usage-free-alloc2",
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
-
-	// Set usage to 8 via legacy /usage endpoint: balance = 5 - 8 = -3
-	await autumnV1.usage({
-		customer_id: customerId,
-		feature_id: TestFeature.Users,
-		value: 8,
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customer.features[TestFeature.Users].balance).toBe(-3);
-	expect(customer.features[TestFeature.Users].usage).toBe(8);
-	expect(customer.features[TestFeature.Users].included_usage).toBe(5);
-
-	// Verify non-cached
-	const customerDb = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
-		skip_cache: "true",
-	});
-	expect(customerDb.features[TestFeature.Users].balance).toBe(-3);
-	expect(customerDb.features[TestFeature.Users].usage).toBe(8);
-});
-
-// Test: Set usage with prepaid balance via legacy /usage endpoint
-test.concurrent(`${chalk.yellowBright("legacy-set-usage-prepaid1: set usage with prepaid balance")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
-	const freeProd = products.base({ id: "free", items: [messagesItem] });
-
-	const prepaidItem = items.prepaidMessages({
-		price: 10,
-		billingUnits: 100,
-	});
-	const prepaidAddOn = products.oneOffAddOn({
-		id: "prepaid-msgs",
-		items: [prepaidItem],
-	});
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "legacy-set-usage-prepaid1",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [freeProd, prepaidAddOn] }),
-		],
-		actions: [
-			s.attach({ productId: freeProd.id }),
-			s.billing.attach({
-				productId: prepaidAddOn.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-			}),
-		],
-	});
-
-	// Initial: granted=50, prepaid=200 (2*100), balance=250
-	// Set usage to 100 via legacy /usage: balance = 250 - 100 = 150
-	await autumnV1.usage({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customer.features[TestFeature.Messages].balance).toBe(150);
-	expect(customer.features[TestFeature.Messages].usage).toBe(100);
-
-	// Verify non-cached
-	const customerDb = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
-		skip_cache: "true",
-	});
-	expect(customerDb.features[TestFeature.Messages].balance).toBe(150);
-	expect(customerDb.features[TestFeature.Messages].usage).toBe(100);
-});

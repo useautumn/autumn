@@ -23,10 +23,12 @@ import {
 	type Table,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
+import { updateCachedCustomerData } from "./cusUtils/fullCustomerCacheUtils/updateCachedCustomerData.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
 // const tracer = trace.getTracer("express");
@@ -341,18 +343,15 @@ export class CusService {
 	}
 
 	static async update({
-		db,
+		ctx,
 		idOrInternalId,
-		orgId,
-		env,
 		update,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		idOrInternalId: string;
-		orgId: string;
-		env: AppEnv;
 		update: Partial<Customer>;
 	}) {
+		const { db, org, env } = ctx;
 		try {
 			const results = await db
 				.update(customers)
@@ -363,14 +362,22 @@ export class CusService {
 							eq(customers.id, idOrInternalId),
 							eq(customers.internal_id, idOrInternalId),
 						),
-						eq(customers.org_id, orgId),
+						eq(customers.org_id, org.id),
 						eq(customers.env, env),
 					),
 				)
 				.returning();
 
 			if (results && results.length > 0) {
-				return results[0] as Customer;
+				const customer = results[0] as Customer;
+
+				await updateCachedCustomerData({
+					ctx,
+					customerId: idOrInternalId,
+					updates: update,
+				});
+
+				return customer;
 			} else {
 				return null;
 			}

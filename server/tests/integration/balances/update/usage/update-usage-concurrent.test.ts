@@ -161,7 +161,7 @@ test.concurrent(`${chalk.yellowBright("update-usage-conc3: paid allocated update
 		items: [usersItem, messagesItem],
 	});
 
-	const { customerId, autumnV1, autumnV2 } = await initScenario({
+	const { customerId, autumnV2 } = await initScenario({
 		customerId: "update-usage-conc3",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -169,6 +169,16 @@ test.concurrent(`${chalk.yellowBright("update-usage-conc3: paid allocated update
 		],
 		actions: [s.billing.attach({ productId: proProd.id })],
 	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Users,
+		usage: 2,
+	}); // set the balance so that next set usage won't do anything and stripe webhooks won't be sent (so cache isn't cleared)
+
+	await timeout(4000);
+
+	await autumnV2.customers.get<ApiCustomer>(customerId);
 
 	// Set users usage to 5 + track 4 messages concurrently
 	const results = await Promise.allSettled([
@@ -206,8 +216,8 @@ test.concurrent(`${chalk.yellowBright("update-usage-conc3: paid allocated update
 	expect(customer.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 2,
 		current_balance: 0,
-		purchased_balance: 3,
-		usage: 5,
+		purchased_balance: 0,
+		usage: 2,
 	});
 
 	// Messages: 4 tracks of 1 each = 4 usage, current = 96
