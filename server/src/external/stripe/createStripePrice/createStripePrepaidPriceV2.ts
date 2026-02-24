@@ -5,7 +5,7 @@ import {
 	priceToEnt,
 	priceUtils,
 	RecaseError,
-	TierBehaviours,
+	TierBehavior,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -31,7 +31,7 @@ export const createStripePrepaidPriceV2 = async ({
 		entitlements: product.entitlements,
 	});
 
-	const isVolume = price.tier_behaviour === TierBehaviours.VolumeBased;
+	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
 
 	// A separate V2 Stripe price is only needed for graduated prices that have
 	// an allowance. In that case, priceToStripePrepaidV2Tiers encodes the free

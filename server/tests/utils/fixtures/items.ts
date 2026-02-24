@@ -4,7 +4,7 @@ import {
 	type ProductItemConfig,
 	ProductItemInterval,
 	type RolloverConfig,
-	TierBehaviours,
+	TierBehavior,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -350,7 +350,7 @@ const volumePrepaidMessages = ({
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		tiers: tiers as { to: number; amount: number }[],
-		tierBehaviour: TierBehaviours.VolumeBased,
+		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
 		includedUsage,
 		config,
