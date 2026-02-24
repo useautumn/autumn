@@ -1,10 +1,13 @@
-import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0";
-import { BillingMethod } from "@api/products/components/billingMethod";
-import { DisplaySchema } from "@api/products/components/display";
-import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
-import { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
+import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { DisplaySchema } from "@api/products/components/display.js";
+import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
+import {
+	TierBehavior,
+	UsageTierSchema,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -91,6 +94,7 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.",
 				}),
+				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval).meta({
 					description:
