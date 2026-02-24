@@ -14,7 +14,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description: "URL to redirect to after successful checkout.",
 	}),
 
-	redirect_mode: RedirectModeSchema.default("always").meta({
+	redirect_mode: RedirectModeSchema.default("if_required").meta({
 		internal: true,
 		description:
 			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
@@ -27,6 +27,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	plan_schedule: PlanTimingSchema.optional().meta({
 		description:
 			"When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.",
+	}),
+
+	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
+		description:
+			"Additional parameters to pass into the creation of the Stripe checkout session.",
 	}),
 });
 

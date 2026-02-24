@@ -30,49 +30,71 @@ function getEnvVariable(filePath: string, key: string): string | null {
 async function startDev() {
 	const rootDir = dirname(fileURLToPath(import.meta.url));
 	const projectRoot = join(rootDir, "..");
+	const serverOnly = process.argv.includes("--server-only");
 
 	try {
-		// Check if using remote backend (api.useautumn.com)
-		const viteEnvPath = join(projectRoot, "vite", ".env");
-		const backendUrl =
-			process.env.VITE_BACKEND_URL ||
-			getEnvVariable(viteEnvPath, "VITE_BACKEND_URL");
-		const isUsingRemoteBackend = backendUrl?.includes(".useautumn.com");
-
-		if (isUsingRemoteBackend) {
-			console.log("\n🌐 Using remote backend (*.useautumn.com)");
-			console.log("⏭️  Skipping port cleanup...\n");
+		if (serverOnly) {
+			console.log("Starting server and workers only (--server-only)...\n");
 		} else {
-			// Port cleanup disabled (detection is unreliable)
-			console.log("⏭️  Skipping port cleanup...\n");
+			// Check if using remote backend (api.useautumn.com)
+			const viteEnvPath = join(projectRoot, "vite", ".env");
+			const backendUrl =
+				process.env.VITE_BACKEND_URL ||
+				getEnvVariable(viteEnvPath, "VITE_BACKEND_URL");
+			const isUsingRemoteBackend = backendUrl?.includes(".useautumn.com");
+
+			if (isUsingRemoteBackend) {
+				console.log("\n Using remote backend (*.useautumn.com)");
+				console.log("Skipping port cleanup...\n");
+			} else {
+				// Port cleanup disabled (detection is unreliable)
+				console.log("Skipping port cleanup...\n");
+			}
+
+			// Clear Vite cache to prevent dep optimization issues
+			const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
+			if (existsSync(viteCachePath)) {
+				console.log("Clearing Vite cache...\n");
+				rmSync(viteCachePath, { recursive: true, force: true });
+			}
+
+			// Clear checkout Vite cache
+			const checkoutCachePath = join(
+				projectRoot,
+				"apps/checkout",
+				"node_modules",
+				".vite",
+			);
+			if (existsSync(checkoutCachePath)) {
+				console.log("Clearing Checkout Vite cache...\n");
+				rmSync(checkoutCachePath, { recursive: true, force: true });
+			}
 		}
 
-		// Clear Vite cache to prevent dep optimization issues
-		const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
-		if (existsSync(viteCachePath)) {
-			console.log("🧹 Clearing Vite cache...\n");
-			rmSync(viteCachePath, { recursive: true, force: true });
-		}
-
-		// Clear checkout Vite cache
-		const checkoutCachePath = join(
-			projectRoot,
-			"apps/checkout",
-			"node_modules",
-			".vite",
-		);
-		if (existsSync(checkoutCachePath)) {
-			console.log("🧹 Clearing Checkout Vite cache...\n");
-			rmSync(checkoutCachePath, { recursive: true, force: true });
-		}
-
-		console.log("🚀 Starting development servers in watch mode...\n");
+		console.log("Starting development servers...\n");
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
 		let shellArgs: string[];
-		if (isWindows) {
+		if (serverOnly) {
+			// Only start server and workers (for test sandboxes)
+			if (isWindows) {
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
+				const workersCmd = `cd server && bun workers`;
+				shellArgs = [
+					"cmd",
+					"/c",
+					`bunx concurrently -n server,workers -c green,yellow "${serverCmd}" "${workersCmd}"`,
+				];
+			} else {
+				shellArgs = [
+					"sh",
+					"-c",
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
+				];
+			}
+		} else if (isWindows) {
 			const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun dev`;
 			const workersCmd = `cd server && bun workers:dev`;
 			const viteCmd = `cd vite && set VITE_PORT=${VITE_PORT} && bun dev`;

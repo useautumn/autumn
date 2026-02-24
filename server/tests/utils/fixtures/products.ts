@@ -108,17 +108,20 @@ const proAnnual = ({
  * @param id - Product ID (default: "pro-trial")
  * @param trialDays - Number of trial days (default: 7)
  * @param cardRequired - Whether card is required for trial (default: true)
+ * @param uniqueFingerprint - Deduplicate trials by fingerprint (default: false)
  */
 const proWithTrial = ({
 	items,
 	id = "pro-trial",
 	trialDays = 7,
 	cardRequired = true,
+	uniqueFingerprint = false,
 }: {
 	items: ProductItem[];
 	id?: string;
 	trialDays?: number;
 	cardRequired?: boolean;
+	uniqueFingerprint?: boolean;
 }): ProductV2 =>
 	constructProduct({
 		id,
@@ -128,7 +131,7 @@ const proWithTrial = ({
 		freeTrial: {
 			length: trialDays,
 			duration: FreeTrialDuration.Day,
-			unique_fingerprint: false,
+			unique_fingerprint: uniqueFingerprint,
 			card_required: cardRequired,
 		},
 	});

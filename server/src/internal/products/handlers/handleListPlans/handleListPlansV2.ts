@@ -29,10 +29,8 @@ export const handleListPlansV2 = createRoute({
 			}),
 			customer_id
 				? CusService.getFull({
-						db,
+						ctx,
 						idOrInternalId: customer_id,
-						orgId: org.id,
-						env,
 						entityId: entity_id,
 						withEntities: true,
 						withSubs: true,

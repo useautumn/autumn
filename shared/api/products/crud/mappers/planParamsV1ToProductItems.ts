@@ -27,12 +27,10 @@ export function planParamsV1ToProductItems({
 	});
 
 	if (params.price === undefined && params.items === undefined) {
-		console.log("price and items undefined!");
 		return undefined;
 	}
 
 	if (params.price !== undefined && params.items !== undefined) {
-		console.log("price and items provided!");
 		// 1. If price AND items provided, return full items array
 		return planV1ToProductItems({
 			ctx,
@@ -41,7 +39,6 @@ export function planParamsV1ToProductItems({
 	}
 
 	if (params.price !== undefined && params.items === undefined) {
-		console.log("items undefined!");
 		// 2. If price provided, but no items, then customize base price and carry over feature items
 		const featureItems = currentProductItems.filter(
 			(item) => !isPriceItem(item),
@@ -56,7 +53,6 @@ export function planParamsV1ToProductItems({
 
 		return basePriceItem ? [basePriceItem, ...featureItems] : featureItems;
 	}
-	console.log("price and items undefined!");
 
 	// 3. If no price provided, then carry over base price
 	const basePriceItem = currentProductItems.filter((item) => isPriceItem(item));

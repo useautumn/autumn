@@ -2,6 +2,7 @@ import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
@@ -65,7 +66,8 @@ export function ImpersonateRedirect() {
 				// Step 5: Navigate to the redirect path
 				setStatus("Redirecting...");
 
-				// Use window.location for a full page reload to ensure session is picked up
+				// Clear stale org cache before navigating so the new session loads fresh data
+				clearOrgCache();
 				window.location.href = redirect;
 			} catch (err: unknown) {
 				const errorMessage =

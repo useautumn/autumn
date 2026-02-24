@@ -1,6 +1,5 @@
 import { CreateBalanceParamsV0Schema } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion";
 import { validateCreateBalanceParams } from "@/internal/balances/createBalance/validateCreateBalance";
@@ -23,10 +22,8 @@ export const handleCreateBalance = createRoute({
 		}
 
 		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env: env,
 			entityId: entity_id,
 			withEntities: true,
 		});
@@ -46,16 +43,14 @@ export const handleCreateBalance = createRoute({
 				params: createBalanceParams,
 			});
 
-		await ctx.db.transaction(async (tx) => {
-			await EntitlementService.insert({
-				db: tx as unknown as DrizzleCli,
-				data: [newEntitlement],
-			});
+		await EntitlementService.insert({
+			db: ctx.db,
+			data: [newEntitlement],
+		});
 
-			await CusEntService.insert({
-				db: tx as unknown as DrizzleCli,
-				data: [newCustomerEntitlement],
-			});
+		await CusEntService.insert({
+			ctx,
+			data: [newCustomerEntitlement],
 		});
 
 		return c.json({ success: true });

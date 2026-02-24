@@ -17,7 +17,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { completeStripeCheckoutForm } from "@tests/utils/browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -334,5 +334,50 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: annual with allocated us
 		count: 2,
 		latestTotal: 10,
 		latestInvoiceProductId: proAnnual.id,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("setup-payment: monthly plan + one-time payment - invoices paid after trial")}`, async () => {
+	const premium = products.base({
+		id: "premium",
+		items: [
+			items.annualPrice({ price: 50 }),
+			items.oneOffMessages({ price: 100, billingUnits: 100, includedUsage: 0 }),
+		],
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "setup-payment-monthly-oneoff",
+		setup: [s.customer({}), s.products({ list: [premium] })],
+		actions: [],
+	});
+
+	// Attach product with quantity option for the one-off prepaid feature
+	const res = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required",
+		options: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: 100,
+			},
+		],
+	});
+
+	await completeStripeCheckoutForm({ url: res.payment_url! });
+
+	const customer = await autumnV1.customers.get(customerId);
+
+	await expectProductActive({
+		customer,
+		productId: premium.id,
+	});
+
+	await expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 100,
+		usage: 0,
 	});
 });

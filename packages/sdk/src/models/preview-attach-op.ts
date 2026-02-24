@@ -15,40 +15,22 @@ export type PreviewAttachGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Quantity configuration for a prepaid feature.
+ */
 export type PreviewAttachFeatureQuantity = {
+  /**
+   * The ID of the feature to set quantity for.
+   */
   featureId: string;
+  /**
+   * The quantity of the feature.
+   */
   quantity?: number | undefined;
+  /**
+   * Whether the customer can adjust the quantity.
+   */
   adjustable?: boolean | undefined;
-};
-
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const PreviewAttachDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type PreviewAttachDurationType = ClosedEnum<
-  typeof PreviewAttachDurationType
->;
-
-export type PreviewAttachFreeTrial = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType?: PreviewAttachDurationType | undefined;
-  /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
-   */
-  cardRequired?: boolean | undefined;
 };
 
 /**
@@ -69,7 +51,10 @@ export type PreviewAttachPriceInterval = ClosedEnum<
   typeof PreviewAttachPriceInterval
 >;
 
-export type PreviewAttachPrice = {
+/**
+ * Base price configuration for a plan.
+ */
+export type PreviewAttachBasePrice = {
   /**
    * Base price amount for the plan.
    */
@@ -161,7 +146,7 @@ export type PreviewAttachBillingMethod = ClosedEnum<
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PreviewAttachItemPrice = {
+export type PreviewAttachPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -271,7 +256,10 @@ export type PreviewAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
-export type PreviewAttachItem = {
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type PreviewAttachPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -291,7 +279,7 @@ export type PreviewAttachItem = {
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PreviewAttachItemPrice | undefined;
+  price?: PreviewAttachPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
@@ -303,11 +291,54 @@ export type PreviewAttachItem = {
 };
 
 /**
- * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const PreviewAttachDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type PreviewAttachDurationType = ClosedEnum<
+  typeof PreviewAttachDurationType
+>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type PreviewAttachFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: PreviewAttachDurationType | undefined;
+  /**
+   * If true, payment method required to start trial. Customer is charged after trial ends.
+   */
+  cardRequired?: boolean | undefined;
+};
+
+/**
+ * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type PreviewAttachCustomize = {
-  price?: PreviewAttachPrice | null | undefined;
-  items?: Array<PreviewAttachItem> | undefined;
+  /**
+   * Override the base price of the plan. Pass null to remove the base price.
+   */
+  price?: PreviewAttachBasePrice | null | undefined;
+  /**
+   * Override the items in the plan.
+   */
+  items?: Array<PreviewAttachPlanItem> | undefined;
+  /**
+   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
+   */
+  freeTrial?: PreviewAttachFreeTrialParams | null | undefined;
 };
 
 /**
@@ -329,39 +360,32 @@ export type PreviewAttachInvoiceMode = {
 };
 
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export const PreviewAttachBillingBehavior = {
+export const PreviewAttachProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export type PreviewAttachBillingBehavior = ClosedEnum<
-  typeof PreviewAttachBillingBehavior
+export type PreviewAttachProrationBehavior = ClosedEnum<
+  typeof PreviewAttachProrationBehavior
 >;
-
-export type PreviewAttachDiscountRequest2 = {
-  /**
-   * The promotion code to apply as a discount.
-   */
-  promotionCode: string;
-};
-
-export type PreviewAttachDiscountRequest1 = {
-  /**
-   * The ID of the reward to apply as a discount.
-   */
-  rewardId: string;
-};
 
 /**
  * A discount to apply. Can be either a reward ID or a promotion code.
  */
-export type PreviewAttachDiscountUnion =
-  | PreviewAttachDiscountRequest1
-  | PreviewAttachDiscountRequest2;
+export type PreviewAttachAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
+};
 
 /**
  * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
@@ -399,11 +423,7 @@ export type PreviewAttachParams = {
    */
   version?: number | undefined;
   /**
-   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
-   */
-  freeTrial?: PreviewAttachFreeTrial | null | undefined;
-  /**
-   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   * Customize the plan to attach. Can override the price, items, free trial, or a combination.
    */
   customize?: PreviewAttachCustomize | undefined;
   /**
@@ -411,15 +431,13 @@ export type PreviewAttachParams = {
    */
   invoiceMode?: PreviewAttachInvoiceMode | undefined;
   /**
-   * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
-  billingBehavior?: PreviewAttachBillingBehavior | undefined;
+  prorationBehavior?: PreviewAttachProrationBehavior | undefined;
   /**
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
-  discounts?:
-    | Array<PreviewAttachDiscountRequest1 | PreviewAttachDiscountRequest2>
-    | undefined;
+  discounts?: Array<PreviewAttachAttachDiscount> | undefined;
   /**
    * URL to redirect to after successful checkout.
    */
@@ -434,7 +452,7 @@ export type PreviewAttachParams = {
   planSchedule?: PreviewAttachPlanSchedule | undefined;
 };
 
-export type PreviewAttachDiscountResponse = {
+export type PreviewAttachDiscount = {
   amountOff: number;
   percentOff?: number | undefined;
   stripeCouponId?: string | undefined;
@@ -457,7 +475,7 @@ export type PreviewAttachLineItem = {
   /**
    * List of discounts applied to this line item.
    */
-  discounts?: Array<PreviewAttachDiscountResponse> | undefined;
+  discounts?: Array<PreviewAttachDiscount> | undefined;
 };
 
 /**
@@ -535,60 +553,21 @@ export function previewAttachFeatureQuantityToJSON(
 }
 
 /** @internal */
-export const PreviewAttachDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewAttachDurationType
-> = z.enum(PreviewAttachDurationType);
-
-/** @internal */
-export type PreviewAttachFreeTrial$Outbound = {
-  duration_length: number;
-  duration_type: string;
-  card_required: boolean;
-};
-
-/** @internal */
-export const PreviewAttachFreeTrial$outboundSchema: z.ZodMiniType<
-  PreviewAttachFreeTrial$Outbound,
-  PreviewAttachFreeTrial
-> = z.pipe(
-  z.object({
-    durationLength: z.number(),
-    durationType: z._default(PreviewAttachDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      durationLength: "duration_length",
-      durationType: "duration_type",
-      cardRequired: "card_required",
-    });
-  }),
-);
-
-export function previewAttachFreeTrialToJSON(
-  previewAttachFreeTrial: PreviewAttachFreeTrial,
-): string {
-  return JSON.stringify(
-    PreviewAttachFreeTrial$outboundSchema.parse(previewAttachFreeTrial),
-  );
-}
-
-/** @internal */
 export const PreviewAttachPriceInterval$outboundSchema: z.ZodMiniEnum<
   typeof PreviewAttachPriceInterval
 > = z.enum(PreviewAttachPriceInterval);
 
 /** @internal */
-export type PreviewAttachPrice$Outbound = {
+export type PreviewAttachBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
-  PreviewAttachPrice$Outbound,
-  PreviewAttachPrice
+export const PreviewAttachBasePrice$outboundSchema: z.ZodMiniType<
+  PreviewAttachBasePrice$Outbound,
+  PreviewAttachBasePrice
 > = z.pipe(
   z.object({
     amount: z.number(),
@@ -602,11 +581,11 @@ export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewAttachPriceToJSON(
-  previewAttachPrice: PreviewAttachPrice,
+export function previewAttachBasePriceToJSON(
+  previewAttachBasePrice: PreviewAttachBasePrice,
 ): string {
   return JSON.stringify(
-    PreviewAttachPrice$outboundSchema.parse(previewAttachPrice),
+    PreviewAttachBasePrice$outboundSchema.parse(previewAttachBasePrice),
   );
 }
 
@@ -694,7 +673,7 @@ export const PreviewAttachBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachBillingMethod);
 
 /** @internal */
-export type PreviewAttachItemPrice$Outbound = {
+export type PreviewAttachPrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewAttachTier$Outbound> | undefined;
   interval: string;
@@ -705,9 +684,9 @@ export type PreviewAttachItemPrice$Outbound = {
 };
 
 /** @internal */
-export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
-  PreviewAttachItemPrice$Outbound,
-  PreviewAttachItemPrice
+export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
+  PreviewAttachPrice$Outbound,
+  PreviewAttachPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
@@ -728,11 +707,11 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewAttachItemPriceToJSON(
-  previewAttachItemPrice: PreviewAttachItemPrice,
+export function previewAttachPriceToJSON(
+  previewAttachPrice: PreviewAttachPrice,
 ): string {
   return JSON.stringify(
-    PreviewAttachItemPrice$outboundSchema.parse(previewAttachItemPrice),
+    PreviewAttachPrice$outboundSchema.parse(previewAttachPrice),
   );
 }
 
@@ -816,27 +795,27 @@ export function previewAttachRolloverToJSON(
 }
 
 /** @internal */
-export type PreviewAttachItem$Outbound = {
+export type PreviewAttachPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: PreviewAttachReset$Outbound | undefined;
-  price?: PreviewAttachItemPrice$Outbound | undefined;
+  price?: PreviewAttachPrice$Outbound | undefined;
   proration?: PreviewAttachProration$Outbound | undefined;
   rollover?: PreviewAttachRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const PreviewAttachItem$outboundSchema: z.ZodMiniType<
-  PreviewAttachItem$Outbound,
-  PreviewAttachItem
+export const PreviewAttachPlanItem$outboundSchema: z.ZodMiniType<
+  PreviewAttachPlanItem$Outbound,
+  PreviewAttachPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => PreviewAttachReset$outboundSchema)),
-    price: z.optional(z.lazy(() => PreviewAttachItemPrice$outboundSchema)),
+    price: z.optional(z.lazy(() => PreviewAttachPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => PreviewAttachProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => PreviewAttachRollover$outboundSchema)),
   }),
@@ -847,30 +826,84 @@ export const PreviewAttachItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewAttachItemToJSON(
-  previewAttachItem: PreviewAttachItem,
+export function previewAttachPlanItemToJSON(
+  previewAttachPlanItem: PreviewAttachPlanItem,
 ): string {
   return JSON.stringify(
-    PreviewAttachItem$outboundSchema.parse(previewAttachItem),
+    PreviewAttachPlanItem$outboundSchema.parse(previewAttachPlanItem),
+  );
+}
+
+/** @internal */
+export const PreviewAttachDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachDurationType
+> = z.enum(PreviewAttachDurationType);
+
+/** @internal */
+export type PreviewAttachFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+};
+
+/** @internal */
+export const PreviewAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
+  PreviewAttachFreeTrialParams$Outbound,
+  PreviewAttachFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(PreviewAttachDurationType$outboundSchema, "month"),
+    cardRequired: z._default(z.boolean(), true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+    });
+  }),
+);
+
+export function previewAttachFreeTrialParamsToJSON(
+  previewAttachFreeTrialParams: PreviewAttachFreeTrialParams,
+): string {
+  return JSON.stringify(
+    PreviewAttachFreeTrialParams$outboundSchema.parse(
+      previewAttachFreeTrialParams,
+    ),
   );
 }
 
 /** @internal */
 export type PreviewAttachCustomize$Outbound = {
-  price?: PreviewAttachPrice$Outbound | null | undefined;
-  items?: Array<PreviewAttachItem$Outbound> | undefined;
+  price?: PreviewAttachBasePrice$Outbound | null | undefined;
+  items?: Array<PreviewAttachPlanItem$Outbound> | undefined;
+  free_trial?: PreviewAttachFreeTrialParams$Outbound | null | undefined;
 };
 
 /** @internal */
 export const PreviewAttachCustomize$outboundSchema: z.ZodMiniType<
   PreviewAttachCustomize$Outbound,
   PreviewAttachCustomize
-> = z.object({
-  price: z.optional(
-    z.nullable(z.lazy(() => PreviewAttachPrice$outboundSchema)),
-  ),
-  items: z.optional(z.array(z.lazy(() => PreviewAttachItem$outboundSchema))),
-});
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => PreviewAttachBasePrice$outboundSchema)),
+    ),
+    items: z.optional(
+      z.array(z.lazy(() => PreviewAttachPlanItem$outboundSchema)),
+    ),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => PreviewAttachFreeTrialParams$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      freeTrial: "free_trial",
+    });
+  }),
+);
 
 export function previewAttachCustomizeToJSON(
   previewAttachCustomize: PreviewAttachCustomize,
@@ -913,89 +946,40 @@ export function previewAttachInvoiceModeToJSON(
 }
 
 /** @internal */
-export const PreviewAttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewAttachBillingBehavior
-> = z.enum(PreviewAttachBillingBehavior);
+export const PreviewAttachProrationBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachProrationBehavior
+> = z.enum(PreviewAttachProrationBehavior);
 
 /** @internal */
-export type PreviewAttachDiscountRequest2$Outbound = {
-  promotion_code: string;
+export type PreviewAttachAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
 };
 
 /** @internal */
-export const PreviewAttachDiscountRequest2$outboundSchema: z.ZodMiniType<
-  PreviewAttachDiscountRequest2$Outbound,
-  PreviewAttachDiscountRequest2
+export const PreviewAttachAttachDiscount$outboundSchema: z.ZodMiniType<
+  PreviewAttachAttachDiscount$Outbound,
+  PreviewAttachAttachDiscount
 > = z.pipe(
   z.object({
-    promotionCode: z.string(),
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      rewardId: "reward_id",
       promotionCode: "promotion_code",
     });
   }),
 );
 
-export function previewAttachDiscountRequest2ToJSON(
-  previewAttachDiscountRequest2: PreviewAttachDiscountRequest2,
+export function previewAttachAttachDiscountToJSON(
+  previewAttachAttachDiscount: PreviewAttachAttachDiscount,
 ): string {
   return JSON.stringify(
-    PreviewAttachDiscountRequest2$outboundSchema.parse(
-      previewAttachDiscountRequest2,
+    PreviewAttachAttachDiscount$outboundSchema.parse(
+      previewAttachAttachDiscount,
     ),
-  );
-}
-
-/** @internal */
-export type PreviewAttachDiscountRequest1$Outbound = {
-  reward_id: string;
-};
-
-/** @internal */
-export const PreviewAttachDiscountRequest1$outboundSchema: z.ZodMiniType<
-  PreviewAttachDiscountRequest1$Outbound,
-  PreviewAttachDiscountRequest1
-> = z.pipe(
-  z.object({
-    rewardId: z.string(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      rewardId: "reward_id",
-    });
-  }),
-);
-
-export function previewAttachDiscountRequest1ToJSON(
-  previewAttachDiscountRequest1: PreviewAttachDiscountRequest1,
-): string {
-  return JSON.stringify(
-    PreviewAttachDiscountRequest1$outboundSchema.parse(
-      previewAttachDiscountRequest1,
-    ),
-  );
-}
-
-/** @internal */
-export type PreviewAttachDiscountUnion$Outbound =
-  | PreviewAttachDiscountRequest1$Outbound
-  | PreviewAttachDiscountRequest2$Outbound;
-
-/** @internal */
-export const PreviewAttachDiscountUnion$outboundSchema: z.ZodMiniType<
-  PreviewAttachDiscountUnion$Outbound,
-  PreviewAttachDiscountUnion
-> = smartUnion([
-  z.lazy(() => PreviewAttachDiscountRequest1$outboundSchema),
-  z.lazy(() => PreviewAttachDiscountRequest2$outboundSchema),
-]);
-
-export function previewAttachDiscountUnionToJSON(
-  previewAttachDiscountUnion: PreviewAttachDiscountUnion,
-): string {
-  return JSON.stringify(
-    PreviewAttachDiscountUnion$outboundSchema.parse(previewAttachDiscountUnion),
   );
 }
 
@@ -1011,16 +995,10 @@ export type PreviewAttachParams$Outbound = {
   plan_id: string;
   feature_quantities?: Array<PreviewAttachFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
-  free_trial?: PreviewAttachFreeTrial$Outbound | null | undefined;
   customize?: PreviewAttachCustomize$Outbound | undefined;
   invoice_mode?: PreviewAttachInvoiceMode$Outbound | undefined;
-  billing_behavior?: string | undefined;
-  discounts?:
-    | Array<
-      | PreviewAttachDiscountRequest1$Outbound
-      | PreviewAttachDiscountRequest2$Outbound
-    >
-    | undefined;
+  proration_behavior?: string | undefined;
+  discounts?: Array<PreviewAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
@@ -1039,20 +1017,16 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => PreviewAttachFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
-    freeTrial: z.optional(
-      z.nullable(z.lazy(() => PreviewAttachFreeTrial$outboundSchema)),
-    ),
     customize: z.optional(z.lazy(() => PreviewAttachCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => PreviewAttachInvoiceMode$outboundSchema),
     ),
-    billingBehavior: z.optional(PreviewAttachBillingBehavior$outboundSchema),
-    discounts: z.optional(z.array(smartUnion([
-      z.lazy(() => PreviewAttachDiscountRequest1$outboundSchema),
-      z.lazy(() =>
-        PreviewAttachDiscountRequest2$outboundSchema
-      ),
-    ]))),
+    prorationBehavior: z.optional(
+      PreviewAttachProrationBehavior$outboundSchema,
+    ),
+    discounts: z.optional(
+      z.array(z.lazy(() => PreviewAttachAttachDiscount$outboundSchema)),
+    ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
@@ -1063,9 +1037,8 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
-      freeTrial: "free_trial",
       invoiceMode: "invoice_mode",
-      billingBehavior: "billing_behavior",
+      prorationBehavior: "proration_behavior",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
@@ -1082,8 +1055,8 @@ export function previewAttachParamsToJSON(
 }
 
 /** @internal */
-export const PreviewAttachDiscountResponse$inboundSchema: z.ZodMiniType<
-  PreviewAttachDiscountResponse,
+export const PreviewAttachDiscount$inboundSchema: z.ZodMiniType<
+  PreviewAttachDiscount,
   unknown
 > = z.object({
   amountOff: types.number(),
@@ -1092,13 +1065,13 @@ export const PreviewAttachDiscountResponse$inboundSchema: z.ZodMiniType<
   couponName: types.optional(types.string()),
 });
 
-export function previewAttachDiscountResponseFromJSON(
+export function previewAttachDiscountFromJSON(
   jsonString: string,
-): SafeParseResult<PreviewAttachDiscountResponse, SDKValidationError> {
+): SafeParseResult<PreviewAttachDiscount, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PreviewAttachDiscountResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PreviewAttachDiscountResponse' from JSON`,
+    (x) => PreviewAttachDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachDiscount' from JSON`,
   );
 }
 
@@ -1111,7 +1084,7 @@ export const PreviewAttachLineItem$inboundSchema: z.ZodMiniType<
   description: types.string(),
   amount: types.number(),
   discounts: types.optional(
-    z.array(z.lazy(() => PreviewAttachDiscountResponse$inboundSchema)),
+    z.array(z.lazy(() => PreviewAttachDiscount$inboundSchema)),
   ),
 });
 

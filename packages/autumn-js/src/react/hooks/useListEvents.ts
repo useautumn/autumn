@@ -14,7 +14,7 @@ export type UseListEventsParams = HookParams<
 >;
 
 export const useListEvents = (params: UseListEventsParams = {}) => {
-	const client = useAutumnClient();
+	const client = useAutumnClient({ caller: "useListEvents" });
 	const {
 		queryOptions,
 		limit: passedLimit,

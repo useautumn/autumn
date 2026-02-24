@@ -1,8 +1,8 @@
 {
 	"name": "autumn-js",
 	"description": "Autumn JS Library",
-	"version": "0.0.1",
-	"repository": "github:useautumn/autumn-js",
+	"version": "1.0.0-beta.5",
+	"repository": "github:useautumn/autumn",
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
 	"module": "./dist/sdk/index.mjs",
@@ -33,12 +33,12 @@
 			"require": "./dist/backend/index.js",
 			"import": "./dist/backend/index.mjs"
 		},
-		"./backend/hono": {
+		"./hono": {
 			"types": "./dist/backend/adapters/hono.d.ts",
 			"require": "./dist/backend/adapters/hono.js",
 			"import": "./dist/backend/adapters/hono.mjs"
 		},
-		"./backend/next": {
+		"./next": {
 			"types": "./dist/backend/adapters/next.d.ts",
 			"require": "./dist/backend/adapters/next.js",
 			"import": "./dist/backend/adapters/next.mjs"
@@ -57,10 +57,10 @@
 			"backend": [
 				"./dist/backend/index.d.ts"
 			],
-			"backend/hono": [
+			"hono": [
 				"./dist/backend/adapters/hono.d.ts"
 			],
-			"backend/next": [
+			"next": [
 				"./dist/backend/adapters/next.d.ts"
 			],
 			"better-auth": [
@@ -97,15 +97,13 @@
 		"@typescript/native-preview": "catalog:"
 	},
 	"peerDependencies": {
-		"@tanstack/react-query": "^5.0.0",
 		"better-auth": "^1.3.17",
 		"better-call": "^1.0.12",
+		"hono": "^4.0.0",
+		"next": "^14.0.0 || ^15.0.0",
 		"react": "^18.0.0 || ^19.0.0"
 	},
 	"peerDependenciesMeta": {
-		"@tanstack/react-query": {
-			"optional": true
-		},
 		"react": {
 			"optional": true
 		},
@@ -113,6 +111,12 @@
 			"optional": true
 		},
 		"better-call": {
+			"optional": true
+		},
+		"hono": {
+			"optional": true
+		},
+		"next": {
 			"optional": true
 		}
 	}

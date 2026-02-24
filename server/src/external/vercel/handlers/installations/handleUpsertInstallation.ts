@@ -104,10 +104,8 @@ export const handleUpsertInstallation = createRoute({
 				});
 
 				await CusService.update({
-					db: ctx.db,
-					idOrInternalId: createdCustomer.internal_id,
-					orgId: ctx.org.id,
-					env: ctx.env,
+					ctx,
+					idOrInternalId: createdCustomer.id || createdCustomer.internal_id,
 					update: {
 						processor: {
 							id: stripeCustomer.id,
@@ -144,10 +142,8 @@ export const handleUpsertInstallation = createRoute({
 
 		if (createdCustomer) {
 			const fullCreatedCustomer = await CusService.getFull({
-				db: ctx.db,
+				ctx,
 				idOrInternalId: createdCustomer.internal_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
 			});
 
 			const installation = {

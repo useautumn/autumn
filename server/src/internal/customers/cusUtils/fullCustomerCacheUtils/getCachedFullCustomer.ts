@@ -2,7 +2,9 @@ import type { FullCustomer } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
 /**
@@ -80,36 +82,39 @@ const roundFullCustomerBalances = (
 };
 
 /**
- * Get FullCustomer from Redis cache
+ * Get FullCustomer from Redis cache. Lazily resets stale entitlements.
  * @returns FullCustomer if found, null if not in cache
  */
 export const getCachedFullCustomer = async ({
-	orgId,
-	env,
+	ctx,
 	customerId,
 	entityId,
 	redisInstance,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	redisInstance?: Redis;
-}): Promise<FullCustomer | null> => {
-	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
+}): Promise<FullCustomer | undefined> => {
+	const { org, env } = ctx;
+	const cacheKey = buildFullCustomerCacheKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 	const redisClient = redisInstance || redis;
 
 	const cached = await tryRedisRead(
 		() => redisClient.call("JSON.GET", cacheKey) as Promise<string | null>,
 	);
 
-	if (!cached) return null;
+	if (!cached) return undefined;
 
 	const fullCustomer = JSON.parse(cached) as FullCustomer;
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
-		if (!fullCustomer.entity) return null; // might need to create?
+		if (!fullCustomer.entity) return undefined; // might need to create?
 	} else {
 		fullCustomer.entity = undefined;
 	}
@@ -122,6 +127,9 @@ export const getCachedFullCustomer = async ({
 	if (!fullCustomer.send_email_receipts) {
 		fullCustomer.send_email_receipts = false;
 	}
+
+	// Lazy reset stale entitlements (DB + in-memory + cache via Lua)
+	await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });
 
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY
 	return roundFullCustomerBalances(fullCustomer);

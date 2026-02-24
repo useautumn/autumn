@@ -55,7 +55,7 @@ export const handleRenewal = async ({
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,
@@ -86,7 +86,7 @@ export const handleRenewal = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,
@@ -98,7 +98,7 @@ export const handleRenewal = async ({
 	} else if (curSameProduct) {
 		// Reactivate the same product if it was expired/cancelled
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,

@@ -1,16 +1,16 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	BillingContextOverride,
-} from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type BillingContextOverride,
 	BillingVersion,
 	CusProductStatus,
 	cusProductToPrices,
+	hasCustomItems,
 	isFreeProduct,
 	isOneOffProduct,
 	notNullish,
+	orgToReturnUrl,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -130,7 +130,7 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = notNullish(params.customize);
+	const isCustom = hasCustomItems(params.customize);
 
 	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -167,13 +167,15 @@ export const setupAttachBillingContext = async ({
 		newFullProduct: attachProduct,
 	});
 
-	const endOfCycleMs = setupAttachEndOfCycleMs({
-		planTiming,
-		currentCustomerProduct,
-		stripeSubscription,
-		billingCycleAnchorMs,
-		currentEpochMs,
-	});
+	const endOfCycleMs =
+		contextOverride.endOfCycleMsOverride ??
+		setupAttachEndOfCycleMs({
+			planTiming,
+			currentCustomerProduct,
+			stripeSubscription,
+			billingCycleAnchorMs,
+			currentEpochMs,
+		});
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -223,5 +225,7 @@ export const setupAttachBillingContext = async ({
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
+		successUrl:
+			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 	};
 };

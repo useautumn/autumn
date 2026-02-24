@@ -8,6 +8,8 @@ const __dirname = dirname(__filename);
 // Path to script folders
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
+const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
+const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
 
 // ============================================================================
 // HELPER MODULES
@@ -91,5 +93,66 @@ export const SET_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
  */
 export const BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
 	join(DELETE_CACHE_DIR, "batchDeleteFullCustomerCache.lua"),
+	"utf-8",
+);
+
+// ============================================================================
+// RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)
+// ============================================================================
+
+const resetMainScript = readFileSync(
+	join(RESET_DIR, "resetCustomerEntitlements.lua"),
+	"utf-8",
+);
+
+/**
+ * @deprecated Use UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT instead.
+ */
+export const RESET_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${resetMainScript}`;
+
+// ============================================================================
+// UPDATE CUSTOMER ENTITLEMENTS SCRIPT (unified reset + deduction cache update)
+// ============================================================================
+
+const updateMainScript = readFileSync(
+	join(UPDATE_DIR, "updateCustomerEntitlements.lua"),
+	"utf-8",
+);
+
+/**
+ * Unified Lua script for atomically updating cusEnt fields in the cached
+ * FullCustomer. Handles both reset and deduction cache updates — both are
+ * "apply absolute values to customer entitlements in the Redis cache."
+ */
+export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${updateMainScript}`;
+
+// ============================================================================
+// UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
+// ============================================================================
+
+/**
+ * Lua script for atomically updating top-level customer fields in the cached
+ * FullCustomer (name, email, metadata, send_email_receipts, etc.).
+ */
+export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
+	join(__dirname, "updateCustomerData.lua"),
+	"utf-8",
+);
+
+// ============================================================================
+// APPEND ENTITY TO CUSTOMER SCRIPT
+// ============================================================================
+
+/**
+ * Lua script for atomically appending an entity to the customer's entities
+ * array in the cached FullCustomer. Checks for duplicates before appending.
+ *
+ * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active,
+ * so concurrent appends from different regions will both succeed.
+ */
+export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
+	join(__dirname, "appendEntityToCustomer.lua"),
 	"utf-8",
 );

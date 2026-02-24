@@ -12,10 +12,8 @@ export const getCustomerEntitlement = async ({
 	featureId?: string;
 }) => {
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const cusEnts = fullCustomerToCustomerEntitlements({

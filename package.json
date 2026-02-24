@@ -57,11 +57,11 @@
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
+		"t": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=test -- bun scripts/dev.ts",
 		"d": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
-		"t": "infisical run --env=dev -- bun scripts/test.ts",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
@@ -84,9 +84,9 @@
 		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts",
 		"js:ts": "bun -F autumn-js ts",
 		"js:build": "bun -F @useautumn/sdk build && bun -F autumn-js build",
-		"js:publish": "bun js:build && cd packages/autumn-js && npm publish",
 		"js:publish-beta": "bun js:build && cd packages/autumn-js && npm publish --tag beta",
-		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run"
+		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run",
+		"js:version": "git fetch --tags origin && git tag -l 'autumn-js-v*' --sort=-v:refname | head -1"
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",

@@ -54,10 +54,8 @@ export const getOrCreateCustomer = async ({
 
 	if (!skipGet && customerId) {
 		customer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 			inStatuses,
 			withEntities,
 			entityId,
@@ -80,25 +78,11 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!skipUpdate) {
-		const updated = await updateCustomerDetails({
+		await updateCustomerDetails({
 			ctx,
-			customer,
+			fullCustomer: customer,
 			customerData,
 		});
-
-		if (updated) {
-			customer = await CusService.getFull({
-				db,
-				idOrInternalId: customer.id || customer.internal_id,
-				orgId: org.id,
-				env,
-				inStatuses,
-				withEntities,
-				entityId,
-				expand,
-				withSubs: true,
-			});
-		}
 	}
 
 	// Customer is defined by this point!

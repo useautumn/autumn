@@ -34,7 +34,10 @@ export type UpdatePlanPriceIntervalRequest = ClosedEnum<
   typeof UpdatePlanPriceIntervalRequest
 >;
 
-export type UpdatePlanPriceRequest = {
+/**
+ * Base price configuration for a plan.
+ */
+export type UpdatePlanBasePrice = {
   /**
    * Base price amount for the plan.
    */
@@ -126,7 +129,7 @@ export type UpdatePlanBillingMethodRequest = ClosedEnum<
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type UpdatePlanItemPriceRequest = {
+export type UpdatePlanPriceRequest = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -232,7 +235,10 @@ export type UpdatePlanRolloverRequest = {
   expiryDurationLength?: number | undefined;
 };
 
-export type UpdatePlanItemRequest = {
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type UpdatePlanPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -252,7 +258,7 @@ export type UpdatePlanItemRequest = {
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: UpdatePlanItemPriceRequest | undefined;
+  price?: UpdatePlanPriceRequest | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
@@ -278,7 +284,10 @@ export type UpdatePlanDurationTypeRequest = ClosedEnum<
   typeof UpdatePlanDurationTypeRequest
 >;
 
-export type UpdatePlanFreeTrialRequest = {
+/**
+ * Free trial configuration for a plan.
+ */
+export type UpdatePlanFreeTrialParams = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -318,15 +327,15 @@ export type UpdatePlanParams = {
   /**
    * The price of the plan. Set to null to remove the base price.
    */
-  price?: UpdatePlanPriceRequest | null | undefined;
+  price?: UpdatePlanBasePrice | null | undefined;
   /**
    * Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
    */
-  items?: Array<UpdatePlanItemRequest> | undefined;
+  items?: Array<UpdatePlanPlanItem> | undefined;
   /**
    * The free trial of the plan. Set to null to remove the free trial.
    */
-  freeTrial?: UpdatePlanFreeTrialRequest | null | undefined;
+  freeTrial?: UpdatePlanFreeTrialParams | null | undefined;
   version?: number | undefined;
   archived?: boolean | undefined;
   /**
@@ -601,7 +610,7 @@ export type UpdatePlanRolloverResponse = {
   expiryDurationLength?: number | undefined;
 };
 
-export type UpdatePlanItemResponse = {
+export type UpdatePlanItem = {
   /**
    * The ID of the feature this item configures.
    */
@@ -654,7 +663,7 @@ export type UpdatePlanDurationTypeResponse = OpenEnum<
 /**
  * Free trial configuration. If set, new customers can try this plan before being charged.
  */
-export type UpdatePlanFreeTrialResponse = {
+export type UpdatePlanFreeTrial = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -720,11 +729,11 @@ export type UpdatePlanResponse = {
   /**
    * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
    */
-  items: Array<UpdatePlanItemResponse>;
+  items: Array<UpdatePlanItem>;
   /**
    * Free trial configuration. If set, new customers can try this plan before being charged.
    */
-  freeTrial?: UpdatePlanFreeTrialResponse | undefined;
+  freeTrial?: UpdatePlanFreeTrial | undefined;
   /**
    * Unix timestamp (ms) when the plan was created.
    */
@@ -749,16 +758,16 @@ export const UpdatePlanPriceIntervalRequest$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdatePlanPriceIntervalRequest);
 
 /** @internal */
-export type UpdatePlanPriceRequest$Outbound = {
+export type UpdatePlanBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanPriceRequest$Outbound,
-  UpdatePlanPriceRequest
+export const UpdatePlanBasePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanBasePrice$Outbound,
+  UpdatePlanBasePrice
 > = z.pipe(
   z.object({
     amount: z.number(),
@@ -772,11 +781,11 @@ export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanPriceRequestToJSON(
-  updatePlanPriceRequest: UpdatePlanPriceRequest,
+export function updatePlanBasePriceToJSON(
+  updatePlanBasePrice: UpdatePlanBasePrice,
 ): string {
   return JSON.stringify(
-    UpdatePlanPriceRequest$outboundSchema.parse(updatePlanPriceRequest),
+    UpdatePlanBasePrice$outboundSchema.parse(updatePlanBasePrice),
   );
 }
 
@@ -866,7 +875,7 @@ export const UpdatePlanBillingMethodRequest$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdatePlanBillingMethodRequest);
 
 /** @internal */
-export type UpdatePlanItemPriceRequest$Outbound = {
+export type UpdatePlanPriceRequest$Outbound = {
   amount?: number | undefined;
   tiers?: Array<UpdatePlanTierRequest$Outbound> | undefined;
   interval: string;
@@ -877,9 +886,9 @@ export type UpdatePlanItemPriceRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanItemPriceRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanItemPriceRequest$Outbound,
-  UpdatePlanItemPriceRequest
+export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
+  UpdatePlanPriceRequest$Outbound,
+  UpdatePlanPriceRequest
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
@@ -902,11 +911,11 @@ export const UpdatePlanItemPriceRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanItemPriceRequestToJSON(
-  updatePlanItemPriceRequest: UpdatePlanItemPriceRequest,
+export function updatePlanPriceRequestToJSON(
+  updatePlanPriceRequest: UpdatePlanPriceRequest,
 ): string {
   return JSON.stringify(
-    UpdatePlanItemPriceRequest$outboundSchema.parse(updatePlanItemPriceRequest),
+    UpdatePlanPriceRequest$outboundSchema.parse(updatePlanPriceRequest),
   );
 }
 
@@ -990,27 +999,27 @@ export function updatePlanRolloverRequestToJSON(
 }
 
 /** @internal */
-export type UpdatePlanItemRequest$Outbound = {
+export type UpdatePlanPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: UpdatePlanResetRequest$Outbound | undefined;
-  price?: UpdatePlanItemPriceRequest$Outbound | undefined;
+  price?: UpdatePlanPriceRequest$Outbound | undefined;
   proration?: UpdatePlanProration$Outbound | undefined;
   rollover?: UpdatePlanRolloverRequest$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdatePlanItemRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanItemRequest$Outbound,
-  UpdatePlanItemRequest
+export const UpdatePlanPlanItem$outboundSchema: z.ZodMiniType<
+  UpdatePlanPlanItem$Outbound,
+  UpdatePlanPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => UpdatePlanResetRequest$outboundSchema)),
-    price: z.optional(z.lazy(() => UpdatePlanItemPriceRequest$outboundSchema)),
+    price: z.optional(z.lazy(() => UpdatePlanPriceRequest$outboundSchema)),
     proration: z.optional(z.lazy(() => UpdatePlanProration$outboundSchema)),
     rollover: z.optional(
       z.lazy(() => UpdatePlanRolloverRequest$outboundSchema),
@@ -1023,11 +1032,11 @@ export const UpdatePlanItemRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanItemRequestToJSON(
-  updatePlanItemRequest: UpdatePlanItemRequest,
+export function updatePlanPlanItemToJSON(
+  updatePlanPlanItem: UpdatePlanPlanItem,
 ): string {
   return JSON.stringify(
-    UpdatePlanItemRequest$outboundSchema.parse(updatePlanItemRequest),
+    UpdatePlanPlanItem$outboundSchema.parse(updatePlanPlanItem),
   );
 }
 
@@ -1037,16 +1046,16 @@ export const UpdatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdatePlanDurationTypeRequest);
 
 /** @internal */
-export type UpdatePlanFreeTrialRequest$Outbound = {
+export type UpdatePlanFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
 };
 
 /** @internal */
-export const UpdatePlanFreeTrialRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanFreeTrialRequest$Outbound,
-  UpdatePlanFreeTrialRequest
+export const UpdatePlanFreeTrialParams$outboundSchema: z.ZodMiniType<
+  UpdatePlanFreeTrialParams$Outbound,
+  UpdatePlanFreeTrialParams
 > = z.pipe(
   z.object({
     durationLength: z.number(),
@@ -1065,11 +1074,11 @@ export const UpdatePlanFreeTrialRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanFreeTrialRequestToJSON(
-  updatePlanFreeTrialRequest: UpdatePlanFreeTrialRequest,
+export function updatePlanFreeTrialParamsToJSON(
+  updatePlanFreeTrialParams: UpdatePlanFreeTrialParams,
 ): string {
   return JSON.stringify(
-    UpdatePlanFreeTrialRequest$outboundSchema.parse(updatePlanFreeTrialRequest),
+    UpdatePlanFreeTrialParams$outboundSchema.parse(updatePlanFreeTrialParams),
   );
 }
 
@@ -1081,9 +1090,9 @@ export type UpdatePlanParams$Outbound = {
   description?: string | undefined;
   add_on?: boolean | undefined;
   auto_enable?: boolean | undefined;
-  price?: UpdatePlanPriceRequest$Outbound | null | undefined;
-  items?: Array<UpdatePlanItemRequest$Outbound> | undefined;
-  free_trial?: UpdatePlanFreeTrialRequest$Outbound | null | undefined;
+  price?: UpdatePlanBasePrice$Outbound | null | undefined;
+  items?: Array<UpdatePlanPlanItem$Outbound> | undefined;
+  free_trial?: UpdatePlanFreeTrialParams$Outbound | null | undefined;
   version?: number | undefined;
   archived: boolean;
   new_plan_id?: string | undefined;
@@ -1102,13 +1111,11 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     addOn: z.optional(z.boolean()),
     autoEnable: z.optional(z.boolean()),
     price: z.optional(
-      z.nullable(z.lazy(() => UpdatePlanPriceRequest$outboundSchema)),
+      z.nullable(z.lazy(() => UpdatePlanBasePrice$outboundSchema)),
     ),
-    items: z.optional(
-      z.array(z.lazy(() => UpdatePlanItemRequest$outboundSchema)),
-    ),
+    items: z.optional(z.array(z.lazy(() => UpdatePlanPlanItem$outboundSchema))),
     freeTrial: z.optional(
-      z.nullable(z.lazy(() => UpdatePlanFreeTrialRequest$outboundSchema)),
+      z.nullable(z.lazy(() => UpdatePlanFreeTrialParams$outboundSchema)),
     ),
     version: z.optional(z.number()),
     archived: z._default(z.boolean(), false),
@@ -1457,8 +1464,8 @@ export function updatePlanRolloverResponseFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanItemResponse$inboundSchema: z.ZodMiniType<
-  UpdatePlanItemResponse,
+export const UpdatePlanItem$inboundSchema: z.ZodMiniType<
+  UpdatePlanItem,
   unknown
 > = z.pipe(
   z.object({
@@ -1482,13 +1489,13 @@ export const UpdatePlanItemResponse$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanItemResponseFromJSON(
+export function updatePlanItemFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanItemResponse, SDKValidationError> {
+): SafeParseResult<UpdatePlanItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanItemResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanItemResponse' from JSON`,
+    (x) => UpdatePlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanItem' from JSON`,
   );
 }
 
@@ -1499,8 +1506,8 @@ export const UpdatePlanDurationTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanDurationTypeResponse);
 
 /** @internal */
-export const UpdatePlanFreeTrialResponse$inboundSchema: z.ZodMiniType<
-  UpdatePlanFreeTrialResponse,
+export const UpdatePlanFreeTrial$inboundSchema: z.ZodMiniType<
+  UpdatePlanFreeTrial,
   unknown
 > = z.pipe(
   z.object({
@@ -1517,13 +1524,13 @@ export const UpdatePlanFreeTrialResponse$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanFreeTrialResponseFromJSON(
+export function updatePlanFreeTrialFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanFreeTrialResponse, SDKValidationError> {
+): SafeParseResult<UpdatePlanFreeTrial, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanFreeTrialResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanFreeTrialResponse' from JSON`,
+    (x) => UpdatePlanFreeTrial$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanFreeTrial' from JSON`,
   );
 }
 
@@ -1547,10 +1554,8 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
     add_on: types.boolean(),
     auto_enable: types.boolean(),
     price: types.nullable(z.lazy(() => UpdatePlanPriceResponse$inboundSchema)),
-    items: z.array(z.lazy(() => UpdatePlanItemResponse$inboundSchema)),
-    free_trial: types.optional(
-      z.lazy(() => UpdatePlanFreeTrialResponse$inboundSchema),
-    ),
+    items: z.array(z.lazy(() => UpdatePlanItem$inboundSchema)),
+    free_trial: types.optional(z.lazy(() => UpdatePlanFreeTrial$inboundSchema)),
     created_at: types.number(),
     env: UpdatePlanEnv$inboundSchema,
     archived: types.boolean(),

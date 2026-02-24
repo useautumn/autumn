@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
-import { handleBillingBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
@@ -69,8 +69,8 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 8. Uncancel validation errors
 	handleUncancelErrors({ billingContext });
 
-	// 9. Billing behavior errors
-	handleBillingBehaviorErrors({
+	// 9. Proration behavior errors
+	handleProrationBehaviorErrors({
 		billingContext,
 		currentCustomerProduct: customerProduct,
 		billingPlan,

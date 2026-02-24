@@ -32,7 +32,7 @@ export const handleStripeSubscriptionRenewed = async ({
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { db, org, env, logger } = ctx;
+	const { org, env, logger } = ctx;
 	const {
 		stripeSubscription,
 		previousAttributes,
@@ -80,7 +80,7 @@ export const handleStripeSubscriptionRenewed = async ({
 		};
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates,
 		});
@@ -112,7 +112,7 @@ export const handleStripeSubscriptionRenewed = async ({
 
 			if (scheduledProduct) {
 				await CusProductService.delete({
-					db,
+					ctx,
 					cusProductId: scheduledProduct.id,
 				});
 

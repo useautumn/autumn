@@ -6,13 +6,9 @@ export const handleListEntities = createRoute({
 		const { customer_id } = c.req.param();
 		const ctx = c.get("ctx");
 
-		const { db, org, env } = ctx;
-
 		const fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env,
 		});
 
 		return c.json({

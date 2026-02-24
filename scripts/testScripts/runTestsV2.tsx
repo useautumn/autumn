@@ -80,10 +80,14 @@ interface TestFileResult {
 		| "retry_queued"
 		| "retrying";
 	tests: IndividualTest[];
+	/** Failed tests from the first attempt (preserved during retry for visibility) */
+	firstAttemptFailures?: IndividualTest[];
 	currentTest?: string;
 	duration: number;
 	attempt: number;
 	passedOnRetry: boolean;
+	/** Captured stderr when a file crashes with 0 tests */
+	crashError?: string;
 }
 
 // ============================================================================
@@ -98,12 +102,14 @@ function parseTestOutput(output: string, filePath: string): IndividualTest[] {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (!line) continue;
 
 		const passMatch = line.match(/^\(pass\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/);
 		const failMatch = line.match(/^\(fail\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/);
 
 		if (passMatch) {
-			const [, name, duration] = passMatch;
+			const name: string = passMatch[1] ?? "";
+			const duration: string = passMatch[2] ?? "0ms";
 			tests.push({
 				name: name.trim(),
 				status: "passed",
@@ -111,7 +117,8 @@ function parseTestOutput(output: string, filePath: string): IndividualTest[] {
 			});
 			lastTestEndIndex = i;
 		} else if (failMatch) {
-			const [, name, duration] = failMatch;
+			const name: string = failMatch[1] ?? "";
+			const duration: string = failMatch[2] ?? "0ms";
 
 			// Look BACKWARDS from this line to find the error output
 			const errorStartIndex = lastTestEndIndex + 1;
@@ -143,7 +150,7 @@ function parseErrorFromLines(
 	let errorMessage = "";
 	for (const line of errorLines) {
 		const errorMatch = line.match(/^error:\s*(.+)/i);
-		if (errorMatch) {
+		if (errorMatch?.[1]) {
 			errorMessage = errorMatch[1].trim();
 			break;
 		}
@@ -152,7 +159,7 @@ function parseErrorFromLines(
 	// Find Expected/Received for assertion errors
 	const expectedMatch = errorText.match(/Expected:\s*(.+)/);
 	const receivedMatch = errorText.match(/Received:\s*(.+)/);
-	if (expectedMatch && receivedMatch) {
+	if (expectedMatch?.[1] && receivedMatch?.[1]) {
 		errorMessage = `Expected: ${expectedMatch[1]}, Received: ${receivedMatch[1]}`;
 	}
 
@@ -169,11 +176,10 @@ function parseErrorFromLines(
 		// at async <anonymous> (/path/to/file.test.ts:38:29)
 		// at functionName (/path/to/file.ts:123:45)
 		const stackMatch = line.match(/at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/);
-		if (stackMatch) {
-			const matchedFile = stackMatch[1];
-			const lineNum = stackMatch[2];
-			const colNum = stackMatch[3];
-
+		const matchedFile = stackMatch?.[1];
+		const lineNum = stackMatch?.[2];
+		const colNum = stackMatch?.[3];
+		if (matchedFile && lineNum && colNum) {
 			// Prefer .test.ts files
 			if (matchedFile.endsWith(".test.ts")) {
 				location = `${matchedFile}:${lineNum}:${colNum}`;
@@ -212,8 +218,10 @@ function extractCurrentTest(output: string): string | null {
 	const lines = output.split("\n");
 
 	for (let i = lines.length - 1; i >= 0; i--) {
-		const match = lines[i].match(/^\((?:pass|fail)\)\s+(.+?)\s+\[/);
-		if (match) {
+		const line = lines[i];
+		if (!line) continue;
+		const match = line.match(/^\((?:pass|fail)\)\s+(.+?)\s+\[/);
+		if (match?.[1]) {
 			return match[1].trim();
 		}
 	}
@@ -254,11 +262,19 @@ async function collectTestFiles(directories: string[]): Promise<string[]> {
 	return testFiles;
 }
 
-async function runTestFile(
-	file: string,
-	onUpdate: (result: TestFileResult) => void,
+async function runTestFile({
+	file,
+	onUpdate,
 	attempt = 1,
-): Promise<TestFileResult> {
+	failedTestNames,
+	verbose = false,
+}: {
+	file: string;
+	onUpdate: (result: TestFileResult) => void;
+	attempt?: number;
+	failedTestNames?: string[];
+	verbose?: boolean;
+}): Promise<TestFileResult> {
 	const startTime = performance.now();
 
 	const result: TestFileResult = {
@@ -273,7 +289,18 @@ async function runTestFile(
 	onUpdate(result);
 
 	try {
-		const proc = spawn(["bun", "test", "--timeout", "0", file], {
+		const command = ["bun", "test", "--timeout", "0"];
+
+		if (failedTestNames && failedTestNames.length > 0) {
+			const pattern = failedTestNames
+				.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+				.join("|");
+			command.push("--test-name-pattern", pattern);
+		}
+
+		command.push(file);
+
+		const proc = spawn(command, {
 			stdout: "pipe",
 			stderr: "pipe",
 			env: { ...process.env },
@@ -283,12 +310,20 @@ async function runTestFile(
 		runningProcesses.add(proc);
 
 		let output = "";
+		let stderrOutput = "";
 		const decoder = new TextDecoder();
+		const stderrDecoder = new TextDecoder();
+
+		const fileLabel = basename(file);
 
 		if (proc.stdout) {
 			for await (const chunk of proc.stdout) {
 				const text = decoder.decode(chunk);
 				output += text;
+
+				if (verbose) {
+					process.stderr.write(`[${fileLabel}:stdout] ${text}`);
+				}
 
 				// Update with parsed tests
 				const tests = parseTestOutput(output, file);
@@ -304,11 +339,17 @@ async function runTestFile(
 
 		if (proc.stderr) {
 			for await (const chunk of proc.stderr) {
-				output += decoder.decode(chunk);
+				const text = stderrDecoder.decode(chunk);
+				output += text;
+				stderrOutput += text;
+
+				if (verbose) {
+					process.stderr.write(`[${fileLabel}:stderr] ${text}`);
+				}
 			}
 		}
 
-		await proc.exited;
+		const exitCode = await proc.exited;
 
 		// Remove from tracking
 		runningProcesses.delete(proc);
@@ -317,14 +358,27 @@ async function runTestFile(
 
 		const tests = parseTestOutput(output, file);
 		const hasFailures = tests.some((t) => t.status === "failed");
+		const hasNoTests = tests.length === 0;
+		const processExitedNonZero = exitCode !== 0;
+
+		// A file is considered failed if:
+		// 1. Any individual test failed, OR
+		// 2. The process exited non-zero (e.g. module import error), OR
+		// 3. Zero tests were found AND process exited non-zero (likely a silent import failure)
+		// Note: Empty files that run successfully (exit 0) are treated as passed/skipped
+		const isFailed = hasFailures || processExitedNonZero;
 
 		const finalResult: TestFileResult = {
 			file,
-			status: hasFailures ? "failed" : "passed",
+			status: isFailed ? "failed" : "passed",
 			tests,
 			duration,
 			attempt,
 			passedOnRetry: false,
+			crashError:
+				hasNoTests && stderrOutput.trim()
+					? stderrOutput.trim().slice(0, 1000)
+					: undefined,
 		};
 
 		onUpdate(finalResult);
@@ -355,7 +409,7 @@ function Spinner() {
 
 	useEffect(() => {
 		const timer = setInterval(() => {
-			setFrame((prev) => (prev + 1) % SPINNER_FRAMES.length);
+			setFrame((prev: number) => (prev + 1) % SPINNER_FRAMES.length);
 		}, 80);
 		return () => clearInterval(timer);
 	}, []);
@@ -378,16 +432,19 @@ function toClickablePath(absolutePath: string): string {
 
 interface CompletedFileProps {
 	result: TestFileResult;
+	willRetry?: boolean;
 }
 
-function CompletedFile({ result }: CompletedFileProps) {
+function CompletedFile({ result, willRetry }: CompletedFileProps) {
 	const fileName = basename(result.file);
 	const passedCount = result.tests.filter((t) => t.status === "passed").length;
 	const failedCount = result.tests.filter((t) => t.status === "failed").length;
 
 	const icon = result.status === "passed" ? "✓" : "✗";
-	const iconColor = result.status === "passed" ? "green" : "red";
-	const retryBadge = result.passedOnRetry ? " (retry)" : "";
+	// Yellow for first failures (will retry), red for final failures
+	const iconColor =
+		result.status === "passed" ? "green" : willRetry ? "yellow" : "red";
+	const retryBadge = willRetry ? " (will retry)" : "";
 
 	return (
 		<Box>
@@ -398,7 +455,10 @@ function CompletedFile({ result }: CompletedFileProps) {
 			</Text>
 			<Text dimColor>
 				(<Text color="green">✓{passedCount}</Text>
-				{failedCount > 0 && <Text color="red"> ✗{failedCount}</Text>})
+				{failedCount > 0 && (
+					<Text color={willRetry ? "yellow" : "red"}> ✗{failedCount}</Text>
+				)}
+				)
 			</Text>
 		</Box>
 	);
@@ -406,13 +466,15 @@ function CompletedFile({ result }: CompletedFileProps) {
 
 interface FailedTestProps {
 	test: IndividualTest;
+	isWarning?: boolean;
 }
 
-function FailedTest({ test }: FailedTestProps) {
+function FailedTest({ test, isWarning }: FailedTestProps) {
+	const color = isWarning ? "yellow" : "red";
 	return (
 		<Box flexDirection="column" marginLeft={2}>
 			<Box>
-				<Text color="red"> ✗ </Text>
+				<Text color={color}> ✗ </Text>
 				<Text>{truncate(test.name, 60)}</Text>
 				{test.error?.message && (
 					<Text color="yellow"> — {truncate(test.error.message, 70)}</Text>
@@ -457,28 +519,51 @@ function RunningFile({ result }: RunningFileProps) {
 
 interface RetryingFileProps {
 	result: TestFileResult;
-	queuedCount: number;
 }
 
-function RetryingFile({ result, queuedCount }: RetryingFileProps) {
+function RetryingFile({ result }: RetryingFileProps) {
 	const fileName = basename(result.file);
+	const passedCount = result.tests.filter((t) => t.status === "passed").length;
+	const failedCount = result.tests.filter((t) => t.status === "failed").length;
+
 	return (
 		<Box>
 			<Text> </Text>
 			<Spinner />
 			<Text color="yellow"> {fileName} </Text>
-			<Text color="yellow">(retrying...)</Text>
-			{queuedCount > 0 && <Text dimColor> ({queuedCount} more queued)</Text>}
+			<Text color="yellow">(retrying)</Text>
+			{(passedCount > 0 || failedCount > 0) && (
+				<Text dimColor>
+					{" "}
+					(<Text color="green">✓{passedCount}</Text>
+					{failedCount > 0 && <Text color="red"> ✗{failedCount}</Text>})
+				</Text>
+			)}
+			{result.currentTest && (
+				<Text dimColor> › {truncate(result.currentTest, 35)}</Text>
+			)}
 		</Box>
 	);
+}
+
+interface StaticItem {
+	key: string;
+	type: "result" | "retry_result";
+	result: TestFileResult;
+	willRetry?: boolean;
 }
 
 interface TestRunnerAppProps {
 	testFiles: string[];
 	maxParallel: number;
+	verbose: boolean;
 }
 
-function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
+function TestRunnerApp({
+	testFiles,
+	maxParallel,
+	verbose,
+}: TestRunnerAppProps) {
 	const { exit } = useApp();
 
 	// Mutable ref accumulates updates from stdout chunks without triggering re-renders.
@@ -494,7 +579,7 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 	// Track which completed files have already been emitted to <Static>
 	// so we only append new ones (Static items are write-once).
 	const emittedFilesRef = useRef<Set<string>>(new Set());
-	const [staticItems, setStaticItems] = useState<TestFileResult[]>([]);
+	const [staticItems, setStaticItems] = useState<StaticItem[]>([]);
 
 	// Track whether retry phase is complete (to defer static emission of failed files)
 	const retryPhaseCompleteRef = useRef(false);
@@ -522,26 +607,45 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 			if (!dirtyRef.current) return;
 			dirtyRef.current = false;
 
-			const snapshot = new Map(pendingRef.current);
+			const snapshot = new Map<string, TestFileResult>(pendingRef.current);
 			setResults(snapshot);
 
 			// Emit newly-completed files to <Static>
-			// Only emit passed files immediately; defer failed files until retry phase is complete
-			const newStatic: TestFileResult[] = [];
-			for (const [file, result] of snapshot) {
-				if (emittedFilesRef.current.has(file)) continue;
-
-				const shouldEmit =
-					result.status === "passed" ||
-					(result.status === "failed" && retryPhaseCompleteRef.current);
-
-				if (shouldEmit) {
+			// Emit passed files immediately, and failed files on first attempt (before retry)
+			const newStatic: StaticItem[] = [];
+			for (const [file, result] of snapshot.entries()) {
+				// Emit passed files
+				if (result.status === "passed" && !emittedFilesRef.current.has(file)) {
 					emittedFilesRef.current.add(file);
-					newStatic.push(result);
+					newStatic.push({ key: file, type: "result", result });
+				}
+				// Emit failed files on first attempt (will retry)
+				if (
+					result.status === "failed" &&
+					result.attempt === 1 &&
+					!emittedFilesRef.current.has(file)
+				) {
+					emittedFilesRef.current.add(file);
+					newStatic.push({
+						key: file,
+						type: "result",
+						result,
+						willRetry: true,
+					});
+				}
+				// Emit retry results (either passed or still failed after retry)
+				const retryKey = `${file}:retry`;
+				if (
+					result.attempt === 2 &&
+					(result.status === "passed" || result.status === "failed") &&
+					!emittedFilesRef.current.has(retryKey)
+				) {
+					emittedFilesRef.current.add(retryKey);
+					newStatic.push({ key: retryKey, type: "retry_result", result });
 				}
 			}
 			if (newStatic.length > 0) {
-				setStaticItems((prev) => [...prev, ...newStatic]);
+				setStaticItems((prev: StaticItem[]) => [...prev, ...newStatic]);
 			}
 		}, 100);
 
@@ -561,65 +665,103 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 
 			// Phase 1: Initial run
 			const promises = testFiles.map((file) =>
-				limit(() => runTestFile(file, updateResult, 1)),
+				limit(() =>
+					runTestFile({ file, onUpdate: updateResult, attempt: 1, verbose }),
+				),
 			);
 
 			await Promise.all(promises);
 
-			// Phase 2: Retry failed files
-			const failedFiles = Array.from(pendingRef.current.values()).filter(
+			// Phase 2: Retry failed files with same concurrency as initial run
+			const allPendingResults: TestFileResult[] = Array.from(
+				pendingRef.current.values(),
+			);
+			const failedFiles = allPendingResults.filter(
 				(r) => r.status === "failed" && r.attempt === 1,
 			);
 
 			if (failedFiles.length > 0) {
-				// Mark all failed files as queued for retry
+				// Mark all failed files as queued for retry, preserving first-attempt failures
 				for (const result of failedFiles) {
+					const firstAttemptFailures = result.tests.filter(
+						(t) => t.status === "failed",
+					);
 					const queuedResult: TestFileResult = {
 						...result,
 						status: "retry_queued",
+						firstAttemptFailures,
 					};
 					pendingRef.current.set(result.file, queuedResult);
 				}
 				dirtyRef.current = true;
 
-				// Run retries sequentially to avoid resource contention
-				for (const result of failedFiles) {
-					// Mark this specific file as actively retrying
-					const retryingResult: TestFileResult = {
-						...result,
-						status: "retrying",
-					};
-					pendingRef.current.set(result.file, retryingResult);
-					dirtyRef.current = true;
+				// Run retries concurrently with same limit as initial run
+				const retryLimit = pLimit(maxParallel);
+				const retryPromises = failedFiles.map((result) =>
+					retryLimit(async () => {
+						const firstAttemptFailures = result.tests.filter(
+							(t) => t.status === "failed",
+						);
+						const failedTestNames = firstAttemptFailures.map((t) => t.name);
 
-					const retryResult = await runTestFile(result.file, updateResult, 2);
-					if (retryResult.status === "passed") {
-						retryResult.passedOnRetry = true;
+						// Mark this specific file as actively retrying
+						const retryingResult: TestFileResult = {
+							...result,
+							status: "retrying",
+							firstAttemptFailures,
+						};
+						pendingRef.current.set(result.file, retryingResult);
+						dirtyRef.current = true;
+
+						const retryResult = await runTestFile({
+							file: result.file,
+							onUpdate: updateResult,
+							attempt: 2,
+							failedTestNames,
+							verbose,
+						});
+						if (retryResult.status === "passed") {
+							retryResult.passedOnRetry = true;
+						}
+						retryResult.firstAttemptFailures = firstAttemptFailures;
 						pendingRef.current.set(result.file, retryResult);
 						dirtyRef.current = true;
-					}
-				}
+						return retryResult;
+					}),
+				);
+
+				await Promise.all(retryPromises);
 			}
 
 			// Mark retry phase as complete so failed files can be emitted to static
 			retryPhaseCompleteRef.current = true;
 
 			// Final flush to ensure every completed result is captured
-			const finalSnapshot = new Map(pendingRef.current);
+			const finalSnapshot = new Map<string, TestFileResult>(pendingRef.current);
 			setResults(finalSnapshot);
 
-			const newStatic: TestFileResult[] = [];
-			for (const [file, result] of finalSnapshot) {
+			const newStatic: StaticItem[] = [];
+			for (const [file, result] of finalSnapshot.entries()) {
 				if (
 					(result.status === "passed" || result.status === "failed") &&
 					!emittedFilesRef.current.has(file)
 				) {
 					emittedFilesRef.current.add(file);
-					newStatic.push(result);
+					newStatic.push({ key: file, type: "result", result });
+				}
+				// Also emit any retry results that weren't captured
+				const retryKey = `${file}:retry`;
+				if (
+					result.attempt === 2 &&
+					(result.status === "passed" || result.status === "failed") &&
+					!emittedFilesRef.current.has(retryKey)
+				) {
+					emittedFilesRef.current.add(retryKey);
+					newStatic.push({ key: retryKey, type: "retry_result", result });
 				}
 			}
 			if (newStatic.length > 0) {
-				setStaticItems((prev) => [...prev, ...newStatic]);
+				setStaticItems((prev: StaticItem[]) => [...prev, ...newStatic]);
 			}
 
 			setIsComplete(true);
@@ -628,30 +770,25 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 		if (testFiles.length > 0) {
 			runAllTests();
 		}
-	}, [testFiles, maxParallel, updateResult]);
+	}, [testFiles, maxParallel, updateResult, verbose]);
 
 	// Exit when complete
 	useEffect(() => {
 		if (!isComplete) return;
 
-		const allResults = Array.from(results.values());
-		const failedTests = allResults.flatMap((r) =>
-			r.tests.filter((t) => t.status === "failed"),
-		);
+		const exitResults: TestFileResult[] = Array.from(results.values());
+		const exitFailedFiles = exitResults.some((r) => r.status === "failed");
 
 		// Small delay to ensure final render
 		setTimeout(() => {
 			exit();
-			process.exit(failedTests.length > 0 ? 1 : 0);
+			process.exit(exitFailedFiles ? 1 : 0);
 		}, 100);
 	}, [isComplete, results, exit]);
 
-	const allResults = Array.from(results.values());
+	const allResults: TestFileResult[] = Array.from(results.values());
 	const runningFiles = allResults.filter((r) => r.status === "running");
 	const retryingFiles = allResults.filter((r) => r.status === "retrying");
-	const retryQueuedFiles = allResults.filter(
-		(r) => r.status === "retry_queued",
-	);
 
 	const completedFiles = allResults.filter(
 		(r) => r.status === "passed" || r.status === "failed",
@@ -664,16 +801,45 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 		<Box flexDirection="column">
 			{/* Static section: completed files + failures. Written once, never re-rendered. */}
 			<Static items={staticItems}>
-				{(result) => (
-					<Box key={result.file} flexDirection="column">
-						<CompletedFile result={result} />
-						{result.tests
-							.filter((t) => t.status === "failed")
-							.map((t) => (
-								<FailedTest key={`${result.file}-${t.name}`} test={t} />
-							))}
-					</Box>
-				)}
+				{(item: StaticItem) => {
+					if (item.type === "retry_result") {
+						const { result } = item;
+						if (result.status === "passed") {
+							return (
+								<Box key={item.key}>
+									<Text color="green"> ↳ ✓ </Text>
+									<Text color="green">
+										{basename(result.file)} passed on retry
+									</Text>
+								</Box>
+							);
+						}
+						return (
+							<Box key={item.key}>
+								<Text color="red"> ↳ ✗ </Text>
+								<Text color="red">
+									{basename(result.file)} still failed after retry
+								</Text>
+							</Box>
+						);
+					}
+
+					const { result, willRetry } = item;
+					return (
+						<Box key={item.key} flexDirection="column">
+							<CompletedFile result={result} willRetry={willRetry} />
+							{result.tests
+								.filter((t: IndividualTest) => t.status === "failed")
+								.map((t: IndividualTest) => (
+									<FailedTest
+										key={`${result.file}-${t.name}`}
+										test={t}
+										isWarning={willRetry}
+									/>
+								))}
+						</Box>
+					);
+				}}
 			</Static>
 
 			{/* Dynamic section below — only this part re-renders */}
@@ -688,15 +854,11 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 				</Box>
 			)}
 
-			{/* Retrying file (only 1 at a time, show queued count) */}
+			{/* Actively retrying */}
 			{retryingFiles.length > 0 && (
 				<Box flexDirection="column">
 					{retryingFiles.map((r) => (
-						<RetryingFile
-							key={r.file}
-							result={r}
-							queuedCount={retryQueuedFiles.length}
-						/>
+						<RetryingFile key={r.file} result={r} />
 					))}
 				</Box>
 			)}
@@ -718,10 +880,7 @@ function TestRunnerApp({ testFiles, maxParallel }: TestRunnerAppProps) {
 						<Text dimColor> | {runningFiles.length} running</Text>
 					)}
 					{retryingFiles.length > 0 && (
-						<Text color="yellow"> | 1 retrying</Text>
-					)}
-					{retryQueuedFiles.length > 0 && (
-						<Text dimColor> | {retryQueuedFiles.length} queued</Text>
+						<Text color="yellow"> | {retryingFiles.length} retrying</Text>
 					)}
 				</Text>
 			</Box>
@@ -744,8 +903,12 @@ function FinalSummary({ results }: FinalSummaryProps) {
 	const allTests = results.flatMap((r) => r.tests);
 	const passedTests = allTests.filter((t) => t.status === "passed");
 	const failedTests = allTests.filter((t) => t.status === "failed");
+	const failedFiles = results.filter((r) => r.status === "failed");
 	const passedOnRetryFiles = results.filter((r) => r.passedOnRetry);
 	const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
+
+	// Files that failed with 0 tests (e.g. import errors, process crashes)
+	const crashedFiles = failedFiles.filter((r) => r.tests.length === 0);
 
 	const failedByFile = new Map<string, IndividualTest[]>();
 	for (const result of results) {
@@ -755,7 +918,9 @@ function FinalSummary({ results }: FinalSummaryProps) {
 		}
 	}
 
-	if (failedTests.length === 0) {
+	const hasAnyFailure = failedFiles.length > 0;
+
+	if (!hasAnyFailure) {
 		const retryText =
 			passedOnRetryFiles.length > 0
 				? ` (${passedOnRetryFiles.length} on retry)`
@@ -782,11 +947,31 @@ function FinalSummary({ results }: FinalSummaryProps) {
 				{"═".repeat(60)}
 			</Text>
 			<Text color="red" bold>
-				FAILED TESTS ({failedTests.length})
+				FAILED ({failedTests.length} test{failedTests.length !== 1 ? "s" : ""},{" "}
+				{failedFiles.length} file{failedFiles.length !== 1 ? "s" : ""})
 			</Text>
 			<Text color="red" bold>
 				{"═".repeat(60)}
 			</Text>
+
+			{crashedFiles.map((result) => (
+				<Box key={result.file} flexDirection="column" marginTop={1}>
+					<Text color="red" bold>
+						📁 {basename(result.file)}
+					</Text>
+					<Text dimColor>{"─".repeat(50)}</Text>
+					<Box marginLeft={2} flexDirection="column">
+						<Text color="red">
+							{" "}
+							✗ File produced 0 tests (likely import/module error or process
+							crash)
+						</Text>
+						{result.crashError && (
+							<Text color="yellow"> {result.crashError}</Text>
+						)}
+					</Box>
+				</Box>
+			))}
 
 			{Array.from(failedByFile.entries()).map(([file, tests]) => (
 				<Box key={file} flexDirection="column" marginTop={1}>
@@ -818,8 +1003,11 @@ function FinalSummary({ results }: FinalSummaryProps) {
 			</Text>
 			<Text bold>
 				SUMMARY: <Text color="green">{passedTests.length} passed</Text> |{" "}
-				<Text color="red">{failedTests.length} failed</Text> |{" "}
-				{(totalDuration / 1000).toFixed(1)}s
+				<Text color="red">{failedTests.length} failed</Text>
+				{crashedFiles.length > 0 && (
+					<Text color="red"> | {crashedFiles.length} crashed</Text>
+				)}{" "}
+				| {(totalDuration / 1000).toFixed(1)}s
 			</Text>
 			<Text color="red" bold>
 				{"═".repeat(60)}
@@ -838,14 +1026,18 @@ async function main() {
 	let maxParallel = process.env.TEST_FILE_CONCURRENCY
 		? Number.parseInt(process.env.TEST_FILE_CONCURRENCY, 10)
 		: 6;
+	let verbose = process.env.TEST_VERBOSE === "1";
 
 	for (const arg of args) {
 		if (arg.startsWith("--max=")) {
-			maxParallel = Number.parseInt(arg.split("=")[1], 10);
+			const maxValue = arg.split("=")[1];
+			maxParallel = maxValue ? Number.parseInt(maxValue, 10) : 6;
+		} else if (arg === "--verbose" || arg === "-v") {
+			verbose = true;
 		} else if (arg.startsWith("-")) {
 			console.error(`Unknown option: ${arg}`);
 			console.log(
-				"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N]",
+				"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N] [--verbose]",
 			);
 			process.exit(1);
 		} else {
@@ -891,7 +1083,13 @@ async function main() {
 		return;
 	}
 
-	render(<TestRunnerApp testFiles={testFiles} maxParallel={maxParallel} />);
+	render(
+		<TestRunnerApp
+			testFiles={testFiles}
+			maxParallel={maxParallel}
+			verbose={verbose}
+		/>,
+	);
 }
 
 main();

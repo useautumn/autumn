@@ -16,40 +16,22 @@ export type BillingAttachGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Quantity configuration for a prepaid feature.
+ */
 export type BillingAttachFeatureQuantity = {
+  /**
+   * The ID of the feature to set quantity for.
+   */
   featureId: string;
+  /**
+   * The quantity of the feature.
+   */
   quantity?: number | undefined;
+  /**
+   * Whether the customer can adjust the quantity.
+   */
   adjustable?: boolean | undefined;
-};
-
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const BillingAttachDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type BillingAttachDurationType = ClosedEnum<
-  typeof BillingAttachDurationType
->;
-
-export type BillingAttachFreeTrial = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType?: BillingAttachDurationType | undefined;
-  /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
-   */
-  cardRequired?: boolean | undefined;
 };
 
 /**
@@ -70,7 +52,10 @@ export type BillingAttachPriceInterval = ClosedEnum<
   typeof BillingAttachPriceInterval
 >;
 
-export type BillingAttachPrice = {
+/**
+ * Base price configuration for a plan.
+ */
+export type BillingAttachBasePrice = {
   /**
    * Base price amount for the plan.
    */
@@ -162,7 +147,7 @@ export type BillingAttachBillingMethod = ClosedEnum<
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type BillingAttachItemPrice = {
+export type BillingAttachPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -272,7 +257,10 @@ export type BillingAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
-export type BillingAttachItem = {
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type BillingAttachPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -292,7 +280,7 @@ export type BillingAttachItem = {
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: BillingAttachItemPrice | undefined;
+  price?: BillingAttachPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
@@ -304,11 +292,54 @@ export type BillingAttachItem = {
 };
 
 /**
- * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const BillingAttachDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type BillingAttachDurationType = ClosedEnum<
+  typeof BillingAttachDurationType
+>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type BillingAttachFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: BillingAttachDurationType | undefined;
+  /**
+   * If true, payment method required to start trial. Customer is charged after trial ends.
+   */
+  cardRequired?: boolean | undefined;
+};
+
+/**
+ * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type BillingAttachCustomize = {
-  price?: BillingAttachPrice | null | undefined;
-  items?: Array<BillingAttachItem> | undefined;
+  /**
+   * Override the base price of the plan. Pass null to remove the base price.
+   */
+  price?: BillingAttachBasePrice | null | undefined;
+  /**
+   * Override the items in the plan.
+   */
+  items?: Array<BillingAttachPlanItem> | undefined;
+  /**
+   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
+   */
+  freeTrial?: BillingAttachFreeTrialParams | null | undefined;
 };
 
 /**
@@ -330,39 +361,32 @@ export type BillingAttachInvoiceMode = {
 };
 
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export const BillingAttachBillingBehavior = {
+export const BillingAttachProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
- * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
  */
-export type BillingAttachBillingBehavior = ClosedEnum<
-  typeof BillingAttachBillingBehavior
+export type BillingAttachProrationBehavior = ClosedEnum<
+  typeof BillingAttachProrationBehavior
 >;
-
-export type BillingAttachDiscount2 = {
-  /**
-   * The promotion code to apply as a discount.
-   */
-  promotionCode: string;
-};
-
-export type BillingAttachDiscount1 = {
-  /**
-   * The ID of the reward to apply as a discount.
-   */
-  rewardId: string;
-};
 
 /**
  * A discount to apply. Can be either a reward ID or a promotion code.
  */
-export type BillingAttachDiscountUnion =
-  | BillingAttachDiscount1
-  | BillingAttachDiscount2;
+export type BillingAttachAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
+};
 
 /**
  * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
@@ -400,11 +424,7 @@ export type AttachParams = {
    */
   version?: number | undefined;
   /**
-   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
-   */
-  freeTrial?: BillingAttachFreeTrial | null | undefined;
-  /**
-   * Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+   * Customize the plan to attach. Can override the price, items, free trial, or a combination.
    */
   customize?: BillingAttachCustomize | undefined;
   /**
@@ -412,15 +432,13 @@ export type AttachParams = {
    */
   invoiceMode?: BillingAttachInvoiceMode | undefined;
   /**
-   * How to handle billing when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'next_cycle_only' skips creating any charges and applies the change at the next billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
-  billingBehavior?: BillingAttachBillingBehavior | undefined;
+  prorationBehavior?: BillingAttachProrationBehavior | undefined;
   /**
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
-  discounts?:
-    | Array<BillingAttachDiscount1 | BillingAttachDiscount2>
-    | undefined;
+  discounts?: Array<BillingAttachAttachDiscount> | undefined;
   /**
    * URL to redirect to after successful checkout.
    */
@@ -549,60 +567,21 @@ export function billingAttachFeatureQuantityToJSON(
 }
 
 /** @internal */
-export const BillingAttachDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof BillingAttachDurationType
-> = z.enum(BillingAttachDurationType);
-
-/** @internal */
-export type BillingAttachFreeTrial$Outbound = {
-  duration_length: number;
-  duration_type: string;
-  card_required: boolean;
-};
-
-/** @internal */
-export const BillingAttachFreeTrial$outboundSchema: z.ZodMiniType<
-  BillingAttachFreeTrial$Outbound,
-  BillingAttachFreeTrial
-> = z.pipe(
-  z.object({
-    durationLength: z.number(),
-    durationType: z._default(BillingAttachDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      durationLength: "duration_length",
-      durationType: "duration_type",
-      cardRequired: "card_required",
-    });
-  }),
-);
-
-export function billingAttachFreeTrialToJSON(
-  billingAttachFreeTrial: BillingAttachFreeTrial,
-): string {
-  return JSON.stringify(
-    BillingAttachFreeTrial$outboundSchema.parse(billingAttachFreeTrial),
-  );
-}
-
-/** @internal */
 export const BillingAttachPriceInterval$outboundSchema: z.ZodMiniEnum<
   typeof BillingAttachPriceInterval
 > = z.enum(BillingAttachPriceInterval);
 
 /** @internal */
-export type BillingAttachPrice$Outbound = {
+export type BillingAttachBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const BillingAttachPrice$outboundSchema: z.ZodMiniType<
-  BillingAttachPrice$Outbound,
-  BillingAttachPrice
+export const BillingAttachBasePrice$outboundSchema: z.ZodMiniType<
+  BillingAttachBasePrice$Outbound,
+  BillingAttachBasePrice
 > = z.pipe(
   z.object({
     amount: z.number(),
@@ -616,11 +595,11 @@ export const BillingAttachPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingAttachPriceToJSON(
-  billingAttachPrice: BillingAttachPrice,
+export function billingAttachBasePriceToJSON(
+  billingAttachBasePrice: BillingAttachBasePrice,
 ): string {
   return JSON.stringify(
-    BillingAttachPrice$outboundSchema.parse(billingAttachPrice),
+    BillingAttachBasePrice$outboundSchema.parse(billingAttachBasePrice),
   );
 }
 
@@ -708,7 +687,7 @@ export const BillingAttachBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingAttachBillingMethod);
 
 /** @internal */
-export type BillingAttachItemPrice$Outbound = {
+export type BillingAttachPrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<BillingAttachTier$Outbound> | undefined;
   interval: string;
@@ -719,9 +698,9 @@ export type BillingAttachItemPrice$Outbound = {
 };
 
 /** @internal */
-export const BillingAttachItemPrice$outboundSchema: z.ZodMiniType<
-  BillingAttachItemPrice$Outbound,
-  BillingAttachItemPrice
+export const BillingAttachPrice$outboundSchema: z.ZodMiniType<
+  BillingAttachPrice$Outbound,
+  BillingAttachPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
@@ -742,11 +721,11 @@ export const BillingAttachItemPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingAttachItemPriceToJSON(
-  billingAttachItemPrice: BillingAttachItemPrice,
+export function billingAttachPriceToJSON(
+  billingAttachPrice: BillingAttachPrice,
 ): string {
   return JSON.stringify(
-    BillingAttachItemPrice$outboundSchema.parse(billingAttachItemPrice),
+    BillingAttachPrice$outboundSchema.parse(billingAttachPrice),
   );
 }
 
@@ -830,27 +809,27 @@ export function billingAttachRolloverToJSON(
 }
 
 /** @internal */
-export type BillingAttachItem$Outbound = {
+export type BillingAttachPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: BillingAttachReset$Outbound | undefined;
-  price?: BillingAttachItemPrice$Outbound | undefined;
+  price?: BillingAttachPrice$Outbound | undefined;
   proration?: BillingAttachProration$Outbound | undefined;
   rollover?: BillingAttachRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const BillingAttachItem$outboundSchema: z.ZodMiniType<
-  BillingAttachItem$Outbound,
-  BillingAttachItem
+export const BillingAttachPlanItem$outboundSchema: z.ZodMiniType<
+  BillingAttachPlanItem$Outbound,
+  BillingAttachPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => BillingAttachReset$outboundSchema)),
-    price: z.optional(z.lazy(() => BillingAttachItemPrice$outboundSchema)),
+    price: z.optional(z.lazy(() => BillingAttachPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => BillingAttachProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => BillingAttachRollover$outboundSchema)),
   }),
@@ -861,30 +840,84 @@ export const BillingAttachItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingAttachItemToJSON(
-  billingAttachItem: BillingAttachItem,
+export function billingAttachPlanItemToJSON(
+  billingAttachPlanItem: BillingAttachPlanItem,
 ): string {
   return JSON.stringify(
-    BillingAttachItem$outboundSchema.parse(billingAttachItem),
+    BillingAttachPlanItem$outboundSchema.parse(billingAttachPlanItem),
+  );
+}
+
+/** @internal */
+export const BillingAttachDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingAttachDurationType
+> = z.enum(BillingAttachDurationType);
+
+/** @internal */
+export type BillingAttachFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+};
+
+/** @internal */
+export const BillingAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
+  BillingAttachFreeTrialParams$Outbound,
+  BillingAttachFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(BillingAttachDurationType$outboundSchema, "month"),
+    cardRequired: z._default(z.boolean(), true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+    });
+  }),
+);
+
+export function billingAttachFreeTrialParamsToJSON(
+  billingAttachFreeTrialParams: BillingAttachFreeTrialParams,
+): string {
+  return JSON.stringify(
+    BillingAttachFreeTrialParams$outboundSchema.parse(
+      billingAttachFreeTrialParams,
+    ),
   );
 }
 
 /** @internal */
 export type BillingAttachCustomize$Outbound = {
-  price?: BillingAttachPrice$Outbound | null | undefined;
-  items?: Array<BillingAttachItem$Outbound> | undefined;
+  price?: BillingAttachBasePrice$Outbound | null | undefined;
+  items?: Array<BillingAttachPlanItem$Outbound> | undefined;
+  free_trial?: BillingAttachFreeTrialParams$Outbound | null | undefined;
 };
 
 /** @internal */
 export const BillingAttachCustomize$outboundSchema: z.ZodMiniType<
   BillingAttachCustomize$Outbound,
   BillingAttachCustomize
-> = z.object({
-  price: z.optional(
-    z.nullable(z.lazy(() => BillingAttachPrice$outboundSchema)),
-  ),
-  items: z.optional(z.array(z.lazy(() => BillingAttachItem$outboundSchema))),
-});
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => BillingAttachBasePrice$outboundSchema)),
+    ),
+    items: z.optional(
+      z.array(z.lazy(() => BillingAttachPlanItem$outboundSchema)),
+    ),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => BillingAttachFreeTrialParams$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      freeTrial: "free_trial",
+    });
+  }),
+);
 
 export function billingAttachCustomizeToJSON(
   billingAttachCustomize: BillingAttachCustomize,
@@ -927,85 +960,40 @@ export function billingAttachInvoiceModeToJSON(
 }
 
 /** @internal */
-export const BillingAttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingAttachBillingBehavior
-> = z.enum(BillingAttachBillingBehavior);
+export const BillingAttachProrationBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BillingAttachProrationBehavior
+> = z.enum(BillingAttachProrationBehavior);
 
 /** @internal */
-export type BillingAttachDiscount2$Outbound = {
-  promotion_code: string;
+export type BillingAttachAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
 };
 
 /** @internal */
-export const BillingAttachDiscount2$outboundSchema: z.ZodMiniType<
-  BillingAttachDiscount2$Outbound,
-  BillingAttachDiscount2
+export const BillingAttachAttachDiscount$outboundSchema: z.ZodMiniType<
+  BillingAttachAttachDiscount$Outbound,
+  BillingAttachAttachDiscount
 > = z.pipe(
   z.object({
-    promotionCode: z.string(),
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      rewardId: "reward_id",
       promotionCode: "promotion_code",
     });
   }),
 );
 
-export function billingAttachDiscount2ToJSON(
-  billingAttachDiscount2: BillingAttachDiscount2,
+export function billingAttachAttachDiscountToJSON(
+  billingAttachAttachDiscount: BillingAttachAttachDiscount,
 ): string {
   return JSON.stringify(
-    BillingAttachDiscount2$outboundSchema.parse(billingAttachDiscount2),
-  );
-}
-
-/** @internal */
-export type BillingAttachDiscount1$Outbound = {
-  reward_id: string;
-};
-
-/** @internal */
-export const BillingAttachDiscount1$outboundSchema: z.ZodMiniType<
-  BillingAttachDiscount1$Outbound,
-  BillingAttachDiscount1
-> = z.pipe(
-  z.object({
-    rewardId: z.string(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      rewardId: "reward_id",
-    });
-  }),
-);
-
-export function billingAttachDiscount1ToJSON(
-  billingAttachDiscount1: BillingAttachDiscount1,
-): string {
-  return JSON.stringify(
-    BillingAttachDiscount1$outboundSchema.parse(billingAttachDiscount1),
-  );
-}
-
-/** @internal */
-export type BillingAttachDiscountUnion$Outbound =
-  | BillingAttachDiscount1$Outbound
-  | BillingAttachDiscount2$Outbound;
-
-/** @internal */
-export const BillingAttachDiscountUnion$outboundSchema: z.ZodMiniType<
-  BillingAttachDiscountUnion$Outbound,
-  BillingAttachDiscountUnion
-> = smartUnion([
-  z.lazy(() => BillingAttachDiscount1$outboundSchema),
-  z.lazy(() => BillingAttachDiscount2$outboundSchema),
-]);
-
-export function billingAttachDiscountUnionToJSON(
-  billingAttachDiscountUnion: BillingAttachDiscountUnion,
-): string {
-  return JSON.stringify(
-    BillingAttachDiscountUnion$outboundSchema.parse(billingAttachDiscountUnion),
+    BillingAttachAttachDiscount$outboundSchema.parse(
+      billingAttachAttachDiscount,
+    ),
   );
 }
 
@@ -1021,13 +1009,10 @@ export type AttachParams$Outbound = {
   plan_id: string;
   feature_quantities?: Array<BillingAttachFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
-  free_trial?: BillingAttachFreeTrial$Outbound | null | undefined;
   customize?: BillingAttachCustomize$Outbound | undefined;
   invoice_mode?: BillingAttachInvoiceMode$Outbound | undefined;
-  billing_behavior?: string | undefined;
-  discounts?:
-    | Array<BillingAttachDiscount1$Outbound | BillingAttachDiscount2$Outbound>
-    | undefined;
+  proration_behavior?: string | undefined;
+  discounts?: Array<BillingAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
@@ -1046,20 +1031,16 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => BillingAttachFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
-    freeTrial: z.optional(
-      z.nullable(z.lazy(() => BillingAttachFreeTrial$outboundSchema)),
-    ),
     customize: z.optional(z.lazy(() => BillingAttachCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => BillingAttachInvoiceMode$outboundSchema),
     ),
-    billingBehavior: z.optional(BillingAttachBillingBehavior$outboundSchema),
-    discounts: z.optional(z.array(smartUnion([
-      z.lazy(() => BillingAttachDiscount1$outboundSchema),
-      z.lazy(() =>
-        BillingAttachDiscount2$outboundSchema
-      ),
-    ]))),
+    prorationBehavior: z.optional(
+      BillingAttachProrationBehavior$outboundSchema,
+    ),
+    discounts: z.optional(
+      z.array(z.lazy(() => BillingAttachAttachDiscount$outboundSchema)),
+    ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(BillingAttachPlanSchedule$outboundSchema),
@@ -1070,9 +1051,8 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
-      freeTrial: "free_trial",
       invoiceMode: "invoice_mode",
-      billingBehavior: "billing_behavior",
+      prorationBehavior: "proration_behavior",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
