@@ -24,14 +24,14 @@ export const ProductsPage = () => {
 	// Show empty state without the header when no plans exist
 	if (!isLoading && !hasPlans) {
 		return (
-			<div className="h-fit max-h-full px-10">
+			<div className="h-fit max-h-full px-4 sm:px-10">
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
 			</div>
 		);
 	}
 
 	return (
-		<div className="h-fit max-h-full px-10">
+		<div className="h-fit max-h-full px-4 sm:px-10">
 			<ProductsPageHeader>
 				<ProductsViewToggle value={viewMode} onValueChange={setViewMode} />
 				<ProductListCreateButton />

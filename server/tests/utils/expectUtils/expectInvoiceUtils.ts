@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	BillingInterval,
 	cusProductToEnts,
 	cusProductToPrices,
@@ -8,7 +9,6 @@ import {
 	priceToInvoiceAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { AppEnv } from "autumn-js";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";

@@ -1,7 +1,7 @@
 // Cus plan utils
-export * from "./cusPlanUtils/cusPlanUtils.js";
+export * from "./cusPlanUtils/cusPlanUtils";
 
 // Full cus utils
-export * from "./fullCusUtils/enrichFullCustomer.js";
-export * from "./fullCusUtils/fullCustomerToCustomerEntitlements.js";
-export * from "./fullCusUtils/getCusStripeSubCount.js";
+export * from "./fullCusUtils/enrichFullCustomer";
+export * from "./fullCusUtils/fullCustomerToCustomerEntitlements";
+export * from "./fullCusUtils/getCusStripeSubCount";

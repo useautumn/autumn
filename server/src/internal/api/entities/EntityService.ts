@@ -1,9 +1,31 @@
 import { type Entity, ErrCode, entities } from "@autumn/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class EntityService {
+	static async listById({
+		ctx,
+		id,
+		withCustomer,
+	}: {
+		ctx: AutumnContext;
+		id: string;
+		withCustomer?: boolean;
+	}) {
+		return await ctx.db.query.entities.findMany({
+			where: (entities, { eq }) =>
+				and(
+					eq(entities.id, id),
+					eq(entities.org_id, ctx.org.id),
+					eq(entities.env, ctx.env),
+				),
+			with: {
+				customer: withCustomer ? true : undefined,
+			},
+		});
+	}
 	static async get({
 		db,
 		id,

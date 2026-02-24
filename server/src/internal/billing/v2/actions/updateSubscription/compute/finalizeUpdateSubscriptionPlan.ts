@@ -35,8 +35,8 @@ export const finalizeUpdateSubscriptionPlan = ({
 		plan.lineItems = [];
 	}
 
-	// Guard: if billing_behavior is 'next_cycle_only', clear line items (skip proration charges)
-	if (params.billing_behavior === "next_cycle_only") {
+	// Guard: if proration_behavior is 'none', clear line items (skip proration charges)
+	if (params.proration_behavior === "none") {
 		plan.lineItems = [];
 	}
 

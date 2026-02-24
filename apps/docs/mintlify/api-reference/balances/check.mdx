@@ -1,0 +1,544 @@
+---
+title: "Check Permissions"
+openapi: "openapi POST /v1/balances.check"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  Check determines if a customer has access to a feature based on their current balance. Returns `allowed: true` if they have sufficient balance, the feature is unlimited, or it's a boolean feature included in their plan.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Check feature access
+const { allowed, balance } = await autumn.balances.check({
+  customerId: "cus_123",
+  featureId: "ai_messages"
+});
+
+if (!allowed) {
+  // Show upgrade prompt or paywall
+}
+```
+
+```typescript Check and track atomically
+const { allowed } = await autumn.balances.check({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  requiredBalance: 1,
+  sendEvent: true // Deducts usage if allowed
+});
+```
+
+```typescript Get upgrade options when denied
+const { allowed, preview } = await autumn.balances.check({
+  customerId: "cus_123",
+  featureId: "advanced_analytics",
+  withPreview: true
+});
+
+if (!allowed && preview) {
+  // Display preview.products as upgrade options
+}
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer.
+</DynamicParamField>
+
+<DynamicParamField body="feature_id" type="string" required>
+  The ID of the feature.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+</DynamicParamField>
+
+<DynamicParamField body="required_balance" type="number">
+  Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.
+</DynamicParamField>
+
+<DynamicParamField body="properties" type="object">
+  Additional properties to attach to the usage event if send_event is true.
+</DynamicParamField>
+
+<DynamicParamField body="send_event" type="boolean">
+  If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+</DynamicParamField>
+
+<DynamicParamField body="with_preview" type="boolean">
+  If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="allowed" type="boolean">
+  Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean.
+</DynamicResponseField>
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer that was checked.
+</DynamicResponseField>
+
+<DynamicResponseField name="entity_id" type="string | null">
+  The ID of the entity, if an entity-scoped check was performed.
+</DynamicResponseField>
+
+<DynamicResponseField name="required_balance" type="number">
+  The required balance that was checked against.
+</DynamicResponseField>
+
+<DynamicResponseField name="balance" type="object | null">
+  The customer's balance for this feature. Null if the customer has no balance for this feature.
+  <Expandable title="properties">
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this balance is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature" type="object">
+      The full feature object if expanded.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string" />
+
+        <DynamicResponseField name="name" type="string" />
+
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'" />
+
+        <DynamicResponseField name="consumable" type="boolean" />
+
+        <DynamicResponseField name="event_names" type="string[]" />
+
+        <DynamicResponseField name="credit_schema" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="metered_feature_id" type="string" />
+
+            <DynamicResponseField name="credit_cost" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="display" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="singular" type="string | null" />
+
+            <DynamicResponseField name="plural" type="string | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="archived" type="boolean" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total balance granted (included + prepaid).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Remaining balance available for use.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Total usage consumed in the current period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unlimited" type="boolean">
+      Whether this feature has unlimited usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="boolean">
+      Whether usage beyond the granted balance is allowed (with overage charges).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="max_purchase" type="number | null">
+      Maximum quantity that can be purchased as a top-up, or null for unlimited.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="next_reset_at" type="number | null">
+      Timestamp when the balance will reset, or null for no reset.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="breakdown" type="object[]">
+      Detailed breakdown of balance sources when stacking multiple plans or grants.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The unique identifier for this balance breakdown.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string | null">
+          The plan ID this balance originates from, or null for standalone balances.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="included_grant" type="number">
+          Amount granted from the plan's included usage.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="prepaid_grant" type="number">
+          Amount granted from prepaid purchases or top-ups.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="remaining" type="number">
+          Remaining balance available for use.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="usage" type="number">
+          Amount consumed in the current period.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="unlimited" type="boolean">
+          Whether this balance has unlimited usage.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="reset" type="object | null">
+          Reset configuration for this balance, or null if no reset.
+          <Expandable title="properties">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval_count" type="number">
+              Number of intervals between resets (eg. 2 for bi-monthly).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="resets_at" type="number | null">
+              Timestamp when the balance will next reset.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="price" type="object | null">
+          Pricing configuration if this balance has usage-based pricing.
+          <Expandable title="properties">
+            <DynamicResponseField name="amount" type="number">
+              The per-unit price amount.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tiers" type="object[]">
+              Tiered pricing configuration if applicable.
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number" />
+
+                <DynamicResponseField name="amount" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_units" type="number">
+              The number of units per billing increment (eg. $9 / 250 units).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+              Whether usage is prepaid or billed pay-per-use.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="max_purchase" type="number | null">
+              Maximum quantity that can be purchased, or null for unlimited.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expires_at" type="number | null">
+          Timestamp when this balance expires, or null for no expiration.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="rollovers" type="object[]">
+      Rollover balances carried over from previous periods.
+      <Expandable title="properties">
+        <DynamicResponseField name="balance" type="number">
+          Amount of balance rolled over from a previous period.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expires_at" type="number">
+          Timestamp when the rollover balance expires.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="preview" type="object">
+  Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
+  <Expandable title="properties">
+    <DynamicResponseField name="scenario" type="'usage_limit' | 'feature_flag'">
+      The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="title" type="string">
+      A title suitable for displaying in a paywall or upgrade modal.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="message" type="string">
+      A message explaining why access was denied.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      The ID of the feature that was checked.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_name" type="string">
+      The display name of the feature.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="products" type="object[]">
+      Products that would grant access to this feature. Use to display upgrade options.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The ID of the product you set when creating the product
+        </DynamicResponseField>
+
+        <DynamicResponseField name="name" type="string">
+          The name of the product
+        </DynamicResponseField>
+
+        <DynamicResponseField name="group" type="string | null">
+          Product group which this product belongs to
+        </DynamicResponseField>
+
+        <DynamicResponseField name="env" type="'sandbox' | 'live'">
+          The environment of the product
+        </DynamicResponseField>
+
+        <DynamicResponseField name="is_add_on" type="boolean">
+          Whether the product is an add-on and can be purchased alongside other products
+        </DynamicResponseField>
+
+        <DynamicResponseField name="is_default" type="boolean">
+          Whether the product is the default product
+        </DynamicResponseField>
+
+        <DynamicResponseField name="archived" type="boolean">
+          Whether this product has been archived and is no longer available
+        </DynamicResponseField>
+
+        <DynamicResponseField name="version" type="number">
+          The current version of the product
+        </DynamicResponseField>
+
+        <DynamicResponseField name="created_at" type="number">
+          The timestamp of when the product was created in milliseconds since epoch
+        </DynamicResponseField>
+
+        <DynamicResponseField name="items" type="object[]">
+          Array of product items that define the product's features and pricing
+          <Expandable title="properties">
+            <DynamicResponseField name="type" type="'feature' | 'priced_feature' | 'price'">
+              The type of the product item
+            </DynamicResponseField>
+
+            <DynamicResponseField name="feature_id" type="string | null">
+              The feature ID of the product item. If the item is a fixed price, should be `null`
+            </DynamicResponseField>
+
+            <DynamicResponseField name="feature_type" type="'single_use' | 'continuous_use' | 'boolean' | 'static'">
+              Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="included_usage" type="number | null">
+              The amount of usage included for this feature.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval" type="'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval_count" type="number | null">
+              The interval count of the product item.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="price" type="number | null">
+              The price of the product item. Should be `null` if tiered pricing is set.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tiers" type="object[] | null">
+              Tiered pricing for the product item. Not applicable for fixed price items.
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number">
+                  The maximum amount of usage for this tier.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="amount" type="number">
+                  The price of the product item for this tier.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="usage_model" type="'prepaid' | 'pay_per_use'">
+              Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_units" type="number | null">
+              The amount per billing unit (eg. $9 / 250 units)
+            </DynamicResponseField>
+
+            <DynamicResponseField name="reset_usage_when_enabled" type="boolean | null">
+              Whether the usage should be reset when the product is enabled.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="entity_feature_id" type="string | null">
+              The entity feature ID of the product item if applicable.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="display" type="object | null">
+              The display of the product item.
+              <Expandable title="properties">
+                <DynamicResponseField name="primary_text" type="string" />
+
+                <DynamicResponseField name="secondary_text" type="string | null" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="quantity" type="number | null">
+              Used in customer context. Quantity of the feature the customer has prepaid for.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="next_cycle_quantity" type="number | null">
+              Used in customer context. Quantity of the feature the customer will prepay for in the next cycle.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="config" type="object | null">
+              Configuration for rollover and proration behavior of the feature.
+              <Expandable title="properties">
+                <DynamicResponseField name="rollover" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="max" type="number | null" />
+
+                    <DynamicResponseField name="duration" type="'month' | 'forever'" />
+
+                    <DynamicResponseField name="length" type="number" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" />
+
+                <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="free_trial" type="object | null">
+          Free trial configuration for this product, if available
+          <Expandable title="properties">
+            <DynamicResponseField name="duration" type="'day' | 'month' | 'year'">
+              The duration type of the free trial
+            </DynamicResponseField>
+
+            <DynamicResponseField name="length" type="number">
+              The length of the duration type specified
+            </DynamicResponseField>
+
+            <DynamicResponseField name="unique_fingerprint" type="boolean">
+              Whether the free trial is limited to one per customer fingerprint
+            </DynamicResponseField>
+
+            <DynamicResponseField name="card_required" type="boolean">
+              Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="trial_available" type="boolean | null">
+              Used in customer context. Whether the free trial is available for the customer if they were to attach the product.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="base_variant_id" type="string | null">
+          ID of the base variant this product is derived from
+        </DynamicResponseField>
+
+        <DynamicResponseField name="scenario" type="'scheduled' | 'active' | 'new' | 'renew' | 'upgrade' | 'downgrade' | 'cancel' | 'expired' | 'past_due'">
+          Scenario for when this product is used in attach flows
+        </DynamicResponseField>
+
+        <DynamicResponseField name="properties" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="is_free" type="boolean">
+              True if the product has no base price or usage prices
+            </DynamicResponseField>
+
+            <DynamicResponseField name="is_one_off" type="boolean">
+              True if the product only contains a one-time price
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval_group" type="string | null">
+              The billing interval group for recurring products (e.g., 'monthly', 'yearly')
+            </DynamicResponseField>
+
+            <DynamicResponseField name="has_trial" type="boolean | null">
+              True if the product includes a free trial
+            </DynamicResponseField>
+
+            <DynamicResponseField name="updateable" type="boolean | null">
+              True if the product can be updated after creation (only applicable if there are prepaid recurring prices)
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "allowed": true,
+  "customer_id": "cus_123",
+  "entity_id": null,
+  "required_balance": 1,
+  "balance": {
+    "feature_id": "messages",
+    "granted": 100,
+    "remaining": 72,
+    "usage": 28,
+    "unlimited": false,
+    "overage_allowed": false,
+    "max_purchase": null,
+    "next_reset_at": 1773851121437,
+    "breakdown": [
+      {
+        "id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
+        "plan_id": "pro_plan",
+        "included_grant": 100,
+        "prepaid_grant": 0,
+        "remaining": 72,
+        "usage": 28,
+        "unlimited": false,
+        "reset": {
+          "interval": "month",
+          "resets_at": 1773851121437
+        },
+        "price": null,
+        "expires_at": null
+      }
+    ]
+  }
+}
+```
+</ResponseExample>

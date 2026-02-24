@@ -1,8 +1,6 @@
 import type { Customer } from "@autumn/shared";
-import {
-	clearCusEntsFromCache,
-	resetCustomerEntitlement,
-} from "@/cron/cronUtils.js";
+import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
+import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";

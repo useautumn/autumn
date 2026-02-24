@@ -6,6 +6,7 @@ import type { Entity } from "../../models/cusModels/entityModels/entityModels.js
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
+import { isOneOffProduct } from "../productUtils/classifyProduct/classifyProductUtils.js";
 import { notNullish, nullish } from "../utils.js";
 
 /**
@@ -136,7 +137,7 @@ export const filterOutEntitiesFromFullCustomer = ({
 };
 
 /**
- * Returns true if a non-add-on product is already active for this customer/entity.
+ * Returns true if a non-add-on, non-one-off product is already active for this customer/entity.
  * Used to fully disable selection in the product dropdown.
  */
 export const isProductAlreadyEnabled = ({
@@ -151,8 +152,14 @@ export const isProductAlreadyEnabled = ({
 	return filterCustomerProductsByActiveStatuses({
 		customerProducts: customer.customer_products,
 	}).some((cp: FullCusProduct) => {
-		// Check if product matches and is not an add-on
-		if (cp.product_id !== productId || cp.product.is_add_on) {
+		const prices = cp.customer_prices.map((cp) => cp.price);
+
+		// Check if product matches and is not an add-on or one-off
+		if (
+			cp.product_id !== productId ||
+			cp.product.is_add_on ||
+			isOneOffProduct({ prices })
+		) {
 			return false;
 		}
 

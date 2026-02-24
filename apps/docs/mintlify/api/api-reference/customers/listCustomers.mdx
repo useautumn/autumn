@@ -1,0 +1,99 @@
+---
+title: "List Customers"
+openapi: "openapi POST /v1/customers.list"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="offset" type="integer">
+  Number of items to skip
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 10, max 1000.
+</DynamicParamField>
+
+<DynamicParamField body="plans" type="object[]">
+  Filter by plan ID and version. Returns customers with active subscriptions to this plan.
+  <Expandable title="properties">
+    <DynamicParamField body="id" type="string" required />
+
+    <DynamicParamField body="versions" type="number[]" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="subscription_status" type="'active' | 'scheduled'">
+  Filter by customer product status. Defaults to active and scheduled
+</DynamicParamField>
+
+<DynamicParamField body="search" type="string">
+  Search customers by id, name, or email
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Array of items for current page
+  <Expandable title="properties">
+    <DynamicResponseField name="autumn_id" type="string" />
+
+    <DynamicResponseField name="id" type="string | null">
+      Your unique identifier for the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      The name of the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="email" type="string | null">
+      The email address of the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp of customer creation in milliseconds since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="fingerprint" type="string | null">
+      A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string | null">
+      Stripe customer ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="env" type="'sandbox' | 'live'">
+      The environment this customer was created in.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="metadata" type="object">
+      The metadata for the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="send_email_receipts" type="boolean">
+      Whether to send email receipts to the customer.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist after this page
+</DynamicResponseField>
+
+<DynamicResponseField name="offset" type="number">
+  Current offset position
+</DynamicResponseField>
+
+<DynamicResponseField name="limit" type="number">
+  Limit passed in the request
+</DynamicResponseField>
+
+<DynamicResponseField name="total" type="number">
+  Total number of items returned in the current page
+</DynamicResponseField>

@@ -38,9 +38,9 @@ function ProductsView({ env: _env }: { env: AppEnv }) {
 	const tab = queryStates.tab;
 	return (
 		<ProductsContext.Provider value={{}}>
-			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
+			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-4 sm:pt-8">
 				{/* Onboarding Guide - visible on all tabs */}
-				<div className="px-10">
+				<div className="px-4 sm:px-10">
 					<OnboardingGuide />
 				</div>
 

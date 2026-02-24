@@ -82,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately edge: cancel pro after
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_immediately",
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 	});
 
 	// Verify pro is removed, addon still active

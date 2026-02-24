@@ -1,15 +1,15 @@
-import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams.js";
-import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1.js";
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams";
+import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
+import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../../types/sharedContext.js";
-import { UpdateSubscriptionV0ParamsSchema } from "../updateSubscriptionV0Params.js";
-import { UpdateSubscriptionV1ParamsSchema } from "../updateSubscriptionV1Params.js";
+import type { SharedContext } from "../../../../types/sharedContext";
+import { UpdateSubscriptionV0ParamsSchema } from "../updateSubscriptionV0Params";
+import { UpdateSubscriptionV1ParamsSchema } from "../updateSubscriptionV1Params";
 
 export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 	name: "V1.2 Update Subscription Params Change",
@@ -31,7 +31,7 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof UpdateSubscriptionV0ParamsSchema>;
 	}): z.infer<typeof UpdateSubscriptionV1ParamsSchema> => {
-		const customizeV1 = input.items
+		const itemsCustomize = input.items
 			? productItemsToCustomizePlanV1({
 					ctx,
 					items: input.items,
@@ -41,6 +41,14 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 		const freeTrialV1 = freeTrialParamsV0ToV1({
 			freeTrialParamsV0: input.free_trial,
 		});
+
+		const customizeV1 =
+			itemsCustomize || freeTrialV1 !== undefined
+				? {
+						...itemsCustomize,
+						free_trial: freeTrialV1,
+					}
+				: undefined;
 
 		const newPlanId = input.product_id ?? undefined;
 		const featureQuantities = input.options;
@@ -52,9 +60,8 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 			plan_id: newPlanId,
 			invoice_mode: invoiceMode,
 			feature_quantities: featureQuantities,
-
-			free_trial: freeTrialV1,
 			customize: customizeV1,
+			proration_behavior: input.billing_behavior,
 		};
 	},
 });

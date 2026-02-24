@@ -1,4 +1,7 @@
-import { isProductAlreadyEnabled } from "@autumn/shared";
+import {
+	isProductAlreadyEnabled,
+	isProductCurrentlyAttached,
+} from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -49,17 +52,28 @@ export function AttachProductSelection({
 					{(field) => (
 						<field.SelectField
 							label=""
-							options={availableProducts.map((p) => ({
-								label: p.name,
-								value: p.id,
-								disabledValue: isProductAlreadyEnabled({
+							options={availableProducts.map((p) => {
+								const entityIdVal = entityId ?? undefined;
+								const alreadyEnabled = isProductAlreadyEnabled({
 									productId: p.id,
 									customer,
-									entityId: entityId ?? undefined,
-								})
-									? "Already Enabled"
-									: undefined,
-							}))}
+									entityId: entityIdVal,
+								});
+								const currentlyAttached =
+									!alreadyEnabled &&
+									isProductCurrentlyAttached({
+										productId: p.id,
+										customer,
+										entityId: entityIdVal,
+									});
+
+								return {
+									label: p.name,
+									value: p.id,
+									disabledValue: alreadyEnabled ? "Already Enabled" : undefined,
+									badgeValue: currentlyAttached ? "Already Enabled" : undefined,
+								};
+							})}
 							placeholder="Select Product"
 							hideFieldInfo
 							selectValueAfter={

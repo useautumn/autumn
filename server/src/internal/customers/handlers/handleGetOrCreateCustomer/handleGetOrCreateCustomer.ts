@@ -1,0 +1,78 @@
+import {
+	AffectedResource,
+	ApiVersion,
+	addToExpand,
+	backwardsChangeActive,
+	CreateCustomerParamsV0Schema,
+	CreateCustomerQuerySchema,
+	CustomerDataSchema,
+	CustomerExpand,
+	V0_2_InvoicesAlwaysExpanded,
+} from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getApiCustomer } from "../../cusUtils/apiCusUtils/getApiCustomer.js";
+import { getOrCreateCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+
+export const handlePostCustomer = createRoute({
+	versionedQuery: {
+		latest: CreateCustomerQuerySchema,
+		[ApiVersion.V1_2]: CreateCustomerQuerySchema,
+	},
+	resource: AffectedResource.Customer,
+	body: CreateCustomerParamsV0Schema,
+
+	handler: async (c) => {
+		let ctx = c.get("ctx");
+
+		const { expand = [], with_autumn_id } = c.req.valid("query");
+		const createCusParams = c.req.valid("json");
+
+		// SIDE EFFECT
+		if (
+			backwardsChangeActive({
+				apiVersion: ctx.apiVersion,
+				versionChange: V0_2_InvoicesAlwaysExpanded,
+			})
+		) {
+			expand.push(CustomerExpand.Invoices);
+		}
+
+		// SECOND SIDE EFFECT
+		if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
+			ctx = addToExpand({
+				ctx,
+				add: [
+					CustomerExpand.SubscriptionsPlan,
+					CustomerExpand.PurchasesPlan,
+					CustomerExpand.BalancesFeature,
+				],
+			});
+		}
+
+		const start = Date.now();
+
+		const customerData = CustomerDataSchema.parse(createCusParams);
+
+		const fullCustomer = await getOrCreateCachedFullCustomer({
+			ctx,
+			params: {
+				customer_id: createCusParams.id,
+				customer_data: customerData,
+				entity_id: createCusParams.entity_id,
+				entity_data: createCusParams.entity_data,
+			},
+			source: "handlePostCustomer",
+		});
+
+		const apiCustomer = await getApiCustomer({
+			ctx,
+			fullCustomer,
+			withAutumnId: with_autumn_id,
+		});
+
+		const duration = Date.now() - start;
+		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
+
+		return c.json(apiCustomer);
+	},
+});

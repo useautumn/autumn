@@ -1,0 +1,44 @@
+---
+title: "Create Referral Code"
+openapi: "openapi POST /v1/referrals.create_code"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The unique identifier of the customer
+</DynamicParamField>
+
+<DynamicParamField body="program_id" type="string" required>
+  ID of your referral program
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="code" type="string">
+  The referral code that can be shared with customers
+</DynamicResponseField>
+
+<DynamicResponseField name="customer_id" type="string">
+  Your unique identifier for the customer
+</DynamicResponseField>
+
+<DynamicResponseField name="created_at" type="number">
+  The timestamp of when the referral code was created
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "code": "<string>",
+  "customer_id": "<string>",
+  "created_at": 123
+}
+```
+</ResponseExample>

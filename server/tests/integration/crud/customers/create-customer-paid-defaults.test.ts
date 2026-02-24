@@ -13,7 +13,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { FreeTrialDuration } from "autumn-js";
+import { FreeTrialDuration } from "@autumn/shared";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -127,10 +127,8 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`
 	});
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customer.id ?? "",
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	expect(fullCustomer.customer_products.length).toBe(1);

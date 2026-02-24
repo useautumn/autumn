@@ -1,0 +1,184 @@
+---
+alwaysApply: true
+---
+
+# SDK Generation Pipeline
+
+Zod Schemas → ORPC Contracts → OpenAPI Spec → Speakeasy SDKs → autumn-js Wrapper → React Hooks
+
+Run `bun api` from root to execute the full pipeline.
+
+---
+
+## 1. Zod Schema Layer
+
+**Location:** `shared/api/`
+
+- Use `.describe()` for field descriptions in API docs
+- Use `.meta({ internal: true })` for fields stripped from public OpenAPI spec
+- Use `.meta({ id: "SchemaName" })` for schema registration
+
+---
+
+## 2. ORPC Contract Layer
+
+**Location:** `packages/openapi/v2.1/contracts/`
+
+Each contract defines: `method`, `path`, `operationId`, `tags`, `input`, `output`.
+
+All contracts aggregated in `packages/openapi/v2.1/contracts/index.ts`.
+
+---
+
+## 3. OpenAPI Generation
+
+**Entry point:** `packages/openapi/v2.1/openapi2.1.ts`
+
+Steps: Register internal schemas → Generate via ORPC → Apply Speakeasy settings → Inject global headers → Remove internal fields.
+
+---
+
+## 4. SDK Generation
+
+**Entry point:** `packages/openapi/api.ts`
+
+- **TypeScript:** `bunx speakeasy run -t autumn` → `packages/sdk/`
+- **Python:** `bunx speakeasy run -t autumn-python` → `others/python-sdk/`
+
+---
+
+## 5. autumn-js Architecture
+
+**Location:** `packages/autumn-js/src/`
+
+### Directory Structure
+
+```
+packages/autumn-js/src/
+├── backend/                    # Server-side
+│   ├── adapters/               # Framework adapters (hono.ts, next.ts)
+│   └── core/
+│       ├── handlers/           # Request processing
+│       │   ├── coreHandler.ts  # Main handler factory
+│       │   ├── executeRoute.ts # Route execution logic
+│       │   └── resolveIdentity.ts
+│       ├── routes/
+│       │   ├── defaultRoutes.ts # Route definitions
+│       │   └── routeBuilder.ts  # rou3-based router
+│       ├── types/              # Type definitions
+│       └── utils/              # backendRes, secretKeyCheck
+├── react/                      # Client-side
+│   ├── client/
+│   │   ├── AutumnClient.ts     # Client factory
+│   │   └── internal/httpClient.ts
+│   ├── hooks/                  # useCustomer, useListPlans
+│   └── AutumnContext.tsx       # React context provider
+├── sdk/                        # Re-exports from @useautumn/sdk
+└── utils/                      # Shared utilities
+```
+
+### Backend: Route Definitions
+
+Routes defined in `defaultRoutes.ts` using `RouteDefinition`:
+
+```typescript
+type RouteDefinition = {
+  route: string;                    // RPC-style name: "customers.get_or_create"
+  sdkMethod: (autumn, args) => Promise<any>;
+  inject?: { customerId?: boolean; customerData?: boolean };
+  customHandler?: CustomHandlerFn;  // For special logic
+  requireCustomer?: boolean;        // Default: true
+};
+```
+
+Standard routes use `inject` to auto-add identity fields. Use `customHandler` for complex logic (e.g., `customers.get_or_create` handles `errorOnNotFound`).
+
+### Backend: Framework Adapters
+
+Adapters in `backend/adapters/` convert framework requests to `UnifiedRequest`:
+
+```typescript
+type UnifiedRequest = {
+  method: string;
+  path: string;
+  body: unknown;
+  raw: unknown;  // Original request for identify()
+};
+```
+
+### React Client
+
+`AutumnClient.ts` creates a client with namespaced methods that call backend routes:
+
+```typescript
+const client = createAutumnClient({ baseUrl: "/api/autumn" });
+// client.customers.getOrCreate(), client.billing.attach(), client.plans.list()
+```
+
+### React Hooks
+
+Hooks use TanStack Query with consistent patterns:
+
+```typescript
+export const useCustomer = (params: UseCustomerParams = {}) => {
+  const client = useAutumnClient();
+  const { errorOnNotFound, queryOptions, ...sdkParams } = params;
+
+  return useQuery<Customer | null, ClientError>({
+    queryKey: ["autumn", "customer", sdkParams],
+    queryFn: async () => {
+      const response = await client.customers.getOrCreate({...});
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    ...queryOptions,
+  });
+};
+```
+
+### SDK Casing Convention
+
+**Important:** The TypeScript SDK and React hooks use **camelCase** for all properties. Speakeasy automatically transforms snake_case API responses to camelCase.
+
+- API response: `{ plan_id: "pro", created_at: 123, auto_enable: true }`
+- SDK/Hook response: `{ planId: "pro", createdAt: 123, autoEnable: true }`
+
+When writing documentation examples for React hooks or the TypeScript SDK, always use camelCase:
+- `data?.balances?.messages?.featureId` (not `feature_id`)
+- `subscription.planId` (not `plan_id`)
+- `plan.createdAt` (not `created_at`)
+
+---
+
+## 6. Testing (sdk-test)
+
+**Location:** `apps/sdk-test/`
+
+Scenario pages organized by provider: `scenarios/core/`, `scenarios/better-auth/`, `scenarios/convex/`.
+
+---
+
+## Adding a New Route
+
+1. **Add contract** in `packages/openapi/v2.1/contracts/`
+2. **Add to router** in `packages/openapi/v2.1/contracts/index.ts`
+3. **Regenerate** via `bun api`
+4. **Add route definition** in `defaultRoutes.ts`
+5. **Add client method** in `AutumnClient.ts`
+6. **Add hook** in `react/hooks/` if needed
+7. **Add scenario test** in `apps/sdk-test/`
+
+---
+
+## Key File Paths
+
+| Purpose | Path |
+|---------|------|
+| Zod schemas | `shared/api/` |
+| ORPC contracts | `packages/openapi/v2.1/contracts/` |
+| Generated TS SDK | `packages/sdk/` |
+| Backend core handler | `packages/autumn-js/src/backend/core/handlers/coreHandler.ts` |
+| Route definitions | `packages/autumn-js/src/backend/core/routes/defaultRoutes.ts` |
+| React client | `packages/autumn-js/src/react/client/AutumnClient.ts` |
+| React hooks | `packages/autumn-js/src/react/hooks/` |
+| SDK tests | `apps/sdk-test/` |

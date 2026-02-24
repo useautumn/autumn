@@ -120,7 +120,7 @@ export const getTargetSubscriptionCusProduct = ({
 
 	const cusProducts = fullCus.customer_products.filter((customerProduct) => {
 		const { valid } = cp(customerProduct)
-			.recurring()
+			.paidRecurring()
 			.hasActiveStatus()
 			.hasSubscription();
 

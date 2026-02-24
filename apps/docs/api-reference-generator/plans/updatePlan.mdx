@@ -1,0 +1,68 @@
+---
+title: "Update a plan"
+openapi: "openapi POST /v1/plans.update"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+Updates an existing plan. By default, creates a new version of the plan. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
+
+<Note>
+  Updates create a new plan version by default. Existing customers remain on their current version until their subscription renews or they explicitly upgrade.
+</Note>
+
+### Updating Items
+
+When updating `items`, you must provide the complete items array. The new array replaces the existing configuration entirely.
+
+To update a single feature's configuration while keeping others unchanged, include all existing items with the modified values.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Update plan price
+await autumn.plans.update({
+  planId: "pro_plan",
+  price: { amount: 15, interval: "month" }
+});
+```
+
+```typescript Remove base price (usage-only plan)
+await autumn.plans.update({
+  planId: "pro_plan",
+  price: null // Removes the base price
+});
+```
+
+```typescript Update feature's included amount
+await autumn.plans.update({
+  planId: "pro_plan",
+  items: [
+    {
+      featureId: "messages",
+      included: 2000, // Increased from 1000
+      reset: { interval: "month" }
+    }
+  ]
+});
+```
+
+```typescript Archive a plan
+await autumn.plans.update({
+  planId: "old_plan",
+  archived: true
+});
+```
+
+```typescript Rename a plan
+await autumn.plans.update({
+  planId: "pro_plan",
+  name: "Pro Plan (Updated)",
+  newPlanId: "pro_plan_v2" // Optional: change the plan ID
+});
+```
+
+</CodeGroup>

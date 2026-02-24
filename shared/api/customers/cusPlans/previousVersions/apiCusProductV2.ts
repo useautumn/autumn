@@ -1,4 +1,4 @@
-import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0.js";
+import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0";
 import { z } from "zod/v4";
 
 /**

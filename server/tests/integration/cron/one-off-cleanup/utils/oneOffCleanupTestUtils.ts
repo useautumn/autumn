@@ -12,10 +12,8 @@ export const getFullCustomerWithExpired = async (
 	customerId: string,
 ): Promise<FullCustomer> => {
 	return await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 		inStatuses: ALL_STATUSES,
 	});
 };

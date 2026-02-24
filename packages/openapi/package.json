@@ -1,0 +1,25 @@
+{
+	"name": "@autumn/openapi",
+	"type": "module",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"generate": "bun api.ts"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*",
+		"@orpc/contract": "catalog:",
+		"@orpc/openapi": "^1.13.4",
+		"@orpc/zod": "^1.13.4",
+		"yaml": "^2.8.1",
+		"zod-openapi": "^5.4.1"
+	},
+	"peerDependencies": {
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/node": "^24.0.3",
+		"@typescript/native-preview": "catalog:"
+	}
+}

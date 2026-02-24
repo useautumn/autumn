@@ -1,0 +1,346 @@
+---
+title: "Display billing data"
+description: "Display usage and billing data in your app for your users"
+---
+
+Software applications typically ship with a billing page. This allows customers to change plan, cancel subscription and view their usage.
+
+The customer endpoint returns the current state of the customer, including their active subscriptions, one-time purchases, and feature balances.
+
+### Active plans
+
+Display the plan the user is currently on. Users can have multiple active subscriptions and purchases (e.g., main plan and add-ons).
+
+- **`subscriptions`** - Free and paid recurring plans
+- **`purchases`** - One-off plans (e.g., credit top-ups)
+
+<CodeGroup>
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const { data: customer } = useCustomer();
+
+const active = customer?.subscriptions.filter(
+  (sub) => sub.status === "active"
+);
+
+console.log(active?.map((sub) => sub.planId).join(", "));
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const active = customer.subscriptions?.filter(
+  (sub) => sub.status === "active"
+);
+
+console.log(active?.map((sub) => sub.planId).join(", "));
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+active = [s for s in customer.subscriptions if s.status == "active"]
+print([s.plan_id for s in active])
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/customers' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Response includes subscriptions array
+```
+</CodeGroup>
+
+### Usage balances
+
+Metered features have `granted`, `usage`, and `remaining` fields. Use these to display current usage and remaining balance.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const { data: customer } = useCustomer();
+
+const messages = customer?.balances.messages;
+
+console.log(`${messages?.remaining} / ${messages?.granted}`);
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const messages = customer.balances?.messages;
+console.log(`${messages?.remaining} / ${messages?.granted}`);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+messages = customer.balances.get("messages")
+print(f"{messages.remaining} / {messages.granted}")
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/customers' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Response includes balances.[feature_id]
+```
+</CodeGroup>
+
+### Switching or cancelling plans
+
+Switching plans uses `billing.attach`. See [Attaching Plans](/documentation/customers/attaching-plans) for the full guide.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export default function UpgradeButton() {
+  const { attach } = useCustomer();
+
+  return (
+    <button onClick={() => attach({ planId: "pro" })}>
+      Upgrade to Pro
+    </button>
+  );
+}
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// Redirect to complete payment or confirm plan change
+redirect(response.paymentUrl);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+# Redirect to response.payment_url
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+To cancel a plan, use `billing.update` with a `cancelAction`. See [Updating Subscriptions](/documentation/customers/updating-subscriptions#canceling-a-subscription) for details.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+// Cancel at end of billing cycle
+await updateSubscription({ 
+  planId: "pro", 
+  cancelAction: "cancel_end_of_cycle" 
+});
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+// Cancel at end of billing cycle
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+# Cancel at end of billing cycle
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>
+
+### Stripe billing portal
+
+The Stripe billing portal lets users manage their payment method, view past invoices, and cancel their plan.
+
+<Warning>
+Enable the billing portal in your [Stripe settings](https://dashboard.stripe.com/settings/billing/portal).
+</Warning>
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const { openCustomerPortal } = useCustomer();
+
+// Opens Stripe billing portal in current tab
+await openCustomerPortal({ 
+  returnUrl: "https://your-app.com/billing" 
+});
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { url } = await autumn.billing.openCustomerPortal({
+  customerId: "user_123",
+  returnUrl: "https://your-app.com/billing",
+});
+
+redirect(url);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.open_customer_portal(
+    customer_id="user_123",
+    return_url="https://your-app.com/billing",
+)
+# Redirect to response.url
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.open_customer_portal' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "return_url": "https://your-app.com/billing"
+  }'
+```
+
+</CodeGroup>
+
+
+### Usage history chart
+
+Autumn replicates usage data to Clickhouse for aggregate time series queries. Pass the response to a charting library like Recharts.
+
+<CodeGroup>
+
+```jsx React
+import { useAggregateEvents } from "autumn-js/react";
+
+const { list, total } = useAggregateEvents({
+  featureId: "messages",
+  range: "30d",
+});
+
+// list: [{ period: 1234567890, values: { messages: 42 } }, ...]
+// total: { messages: { count: 100, sum: 500 } }
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { list, total } = await autumn.events.aggregate({
+  customerId: "user_123",
+  featureId: "messages",
+  range: "30d",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.events.aggregate(
+    customer_id="user_123",
+    feature_id="messages",
+    range="30d",
+)
+# response.list, response.total
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/events.aggregate' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages",
+    "range": "30d"
+  }'
+```
+</CodeGroup>

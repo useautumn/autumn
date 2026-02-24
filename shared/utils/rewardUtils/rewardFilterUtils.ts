@@ -1,4 +1,4 @@
-import type { Reward, RewardProgram } from "../../index.js";
+import type { Reward, RewardProgram } from "../../index";
 
 /**
  * Checks if a reward is applicable to a specific product.

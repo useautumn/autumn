@@ -43,7 +43,7 @@ export const RewardsPage = () => {
 	}
 
 	return (
-		<div className="h-fit max-h-full px-10">
+		<div className="h-fit max-h-full px-4 sm:px-10">
 			<div className="flex flex-col gap-8">
 				{/* Rewards Table */}
 				<div>

@@ -1,29 +1,19 @@
-import type {
-	AppEnv,
-	FullCustomerEntitlement,
-	Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "../../../../../db/initDrizzle.js";
+import type { FullCustomerEntitlement } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../../../CusService.js";
 
 export const getCusEntByFeature = async ({
-	db,
-	org,
-	env,
+	ctx,
 	customerId,
 	featureId,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 	customerId: string;
 	featureId: string;
 }) => {
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 	});
 
 	const cusEnts = fullCus?.customer_products

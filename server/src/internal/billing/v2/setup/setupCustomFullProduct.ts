@@ -2,6 +2,7 @@ import {
 	type CustomizePlanV1,
 	customizePlanV1ToV0,
 	type FullProduct,
+	hasCustomItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
@@ -18,7 +19,7 @@ export const setupCustomFullProduct = async ({
 	currentFullProduct: FullProduct;
 	customizePlan?: CustomizePlanV1;
 }) => {
-	if (!customizePlan) {
+	if (!hasCustomItems(customizePlan)) {
 		return {
 			fullProduct: currentFullProduct,
 			customPrices: [],

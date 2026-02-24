@@ -1,4 +1,8 @@
-import { type ApiCustomerV5, type AppEnv, CusExpand } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	type AppEnv,
+	CustomerExpand,
+} from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
@@ -75,8 +79,7 @@ verifyCacheConsistency?.task({
 
 			// Get from cache (now using full customer cache)
 			const cachedFullCustomer = await getCachedFullCustomer({
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
+				ctx: autumnContext,
 				customerId,
 			});
 
@@ -93,13 +96,11 @@ verifyCacheConsistency?.task({
 
 			// Get fresh from DB
 			const fullCus = await CusService.getFull({
-				db,
+				ctx: autumnContext,
 				idOrInternalId: customerId,
-				orgId: autumnContext.org.id,
-				env: autumnContext.env,
 				withEntities: true,
 				withSubs: true,
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			});
 
 			const { apiCustomer: dbCustomer } = await getApiCustomerBase({

@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiCusFeatureV0Schema } from "./apiCusFeatureV0.js";
+import { ApiCusFeatureV0Schema } from "./apiCusFeatureV0";
 
 export const ApiCusFeatureV1Schema = ApiCusFeatureV0Schema.extend({
 	next_reset_at: z.number().nullish(),

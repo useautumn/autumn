@@ -19,10 +19,8 @@ import { expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import {
-	completeInvoiceCheckout,
-	completeStripeCheckoutForm,
-} from "@tests/utils/browserPool";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -101,10 +99,8 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 
 	// Verify different subscription IDs per entity
 	const fullCus = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 	const cusProducts = fullCus.customer_products;
 	const entity1Prod = cusProducts.find((cp) => cp.entity_id === entities[0].id);
@@ -243,10 +239,8 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 
 	// Verify different subscription IDs per entity
 	let fullCus = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 	let cusProducts = fullCus.customer_products;
 	const entity1Prod = cusProducts.find((cp) => cp.entity_id === entities[0].id);
@@ -307,10 +301,8 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 
 	// Verify add-on's sub ID matches entity 2's sub ID
 	fullCus = await CusService.getFull({
+		ctx,
 		idOrInternalId: customerId,
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 	cusProducts = fullCus.customer_products;
 	const addOnProd = cusProducts.find((cp) => cp.product.id === addOn.id);

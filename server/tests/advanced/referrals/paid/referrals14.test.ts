@@ -4,8 +4,8 @@ import {
 	CouponDurationType,
 	type CreateReward,
 	type CreateRewardProgram,
-	CusExpand,
 	CusProductStatus,
+	CustomerExpand,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
@@ -285,7 +285,7 @@ describe(`${chalk.yellowBright(
 		const mainCustomerWithInvoices = await autumn.customers.get(
 			mainCustomerId,
 			{
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			},
 		);
 
@@ -306,21 +306,19 @@ describe(`${chalk.yellowBright(
 			expect(premiumInvoice.total).toBeLessThan(premiumPrice);
 		}
 
-		const dbCustomers = await Promise.all(
-			[mainCustomerId, redeemer].map((x) =>
-				CusService.getFull({
-					db,
-					idOrInternalId: x,
-					orgId: org.id,
-					env,
-					inStatuses: [
-						CusProductStatus.Active,
-						CusProductStatus.PastDue,
-						CusProductStatus.Expired,
-					],
-				}),
-			),
-		);
+	const dbCustomers = await Promise.all(
+		[mainCustomerId, redeemer].map((x) =>
+			CusService.getFull({
+				ctx,
+				idOrInternalId: x,
+				inStatuses: [
+					CusProductStatus.Active,
+					CusProductStatus.PastDue,
+					CusProductStatus.Expired,
+				],
+			}),
+		),
+	);
 
 		const expectedProducts = [
 			[

@@ -1,4 +1,6 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: Legacy test helpers */
 import { expect } from "bun:test";
+import type { ApiCustomerV3, AttachParamsV0Input } from "@autumn/shared";
 import {
 	type ApiEntityV0,
 	type AppEnv,
@@ -16,14 +18,19 @@ import {
 	expectProductAttached,
 } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { getCurrentOptions } from "@tests/utils/testAttachUtils/testAttachUtils.js";
-import type { AttachParams, Customer, CustomerInvoice } from "autumn-js";
+
+type CustomerLike =
+	| ApiCustomerV3
+	| ApiEntityV0
+	| { products?: any[]; invoices?: any[]; id?: string; features?: any };
+
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { completeStripeCheckoutForm } from "../browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "../browserPool/completeStripeCheckoutFormV2";
 
 export const attachAndExpectCorrect = async ({
 	autumn,
@@ -69,14 +76,14 @@ export const attachAndExpectCorrect = async ({
 	entities?: CreateEntityParams[];
 	shouldBeCanceled?: boolean;
 	checkNotTrialing?: boolean;
-	attachParams?: AttachParams;
+	attachParams?: Partial<AttachParamsV0Input>;
 }) => {
 	const preview = await autumn.attachPreview({
 		customer_id: customerId,
 		product_id: product.id,
 		entity_id: entityId,
 		...attachParams,
-	});
+	} as any);
 
 	const checkoutRes = await autumn.checkout({
 		customer_id: customerId,
@@ -84,7 +91,7 @@ export const attachAndExpectCorrect = async ({
 		entity_id: entityId,
 		options: toSnakeCase(options),
 		...attachParams,
-	});
+	} as any);
 
 	const logCheckoutRes = false;
 	if (logCheckoutRes) {
@@ -123,22 +130,25 @@ export const attachAndExpectCorrect = async ({
 		await timeout(waitForInvoice);
 	}
 
-	let customer: Customer;
+	let customer: CustomerLike;
 	if (entityId) {
 		customer = await autumn.entities.get(customerId, entityId);
 	} else {
 		customer = await autumn.customers.get(customerId);
 	}
 
-	const productCount = customer.products.reduce((acc: number, p: any) => {
-		if (
-			product.group === p.group &&
-			!p.is_add_on
-			// && (entityId ? p.entity_id === entityId : true)
-		) {
-			return acc + 1;
-		} else return acc;
-	}, 0);
+	const productCount = (customer.products ?? []).reduce(
+		(acc: number, p: any) => {
+			if (
+				product.group === p.group &&
+				!p.is_add_on
+				// && (entityId ? p.entity_id === entityId : true)
+			) {
+				return acc + 1;
+			} else return acc;
+		},
+		0,
+	);
 
 	const branch = preview.branch;
 
@@ -173,10 +183,12 @@ export const attachAndExpectCorrect = async ({
 
 	if (!skipInvoiceCheck && !freeProduct) {
 		expectInvoicesCorrect({
-			customer: customer as Customer & { invoices: CustomerInvoice[] },
+			customer: customer as any,
 			first: {
 				productId: product.id,
-				total: new Decimal(checkoutRes.total).toDecimalPlaces(2).toNumber(),
+				total: new Decimal(checkoutRes.total ?? 0)
+					.toDecimalPlaces(2)
+					.toNumber(),
 			},
 		});
 	}
@@ -246,7 +258,7 @@ export const expectAttachCorrect = async ({
 	entityId,
 	otherProducts,
 }: {
-	customer: Customer | ApiEntityV0;
+	customer: CustomerLike;
 	product: ProductV2;
 	entityId?: string;
 	otherProducts?: ProductV2[];

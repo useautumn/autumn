@@ -1,0 +1,53 @@
+---
+title: "<AutumnProvider />"
+description: "Provider component for your React application"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `AutumnProvider` component wraps your React application and provides the Autumn client to all hooks.
+
+<LearnHooksTip />
+
+## Usage
+
+```tsx
+// app/layout.tsx
+import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider>{children}</AutumnProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+## Parameters
+
+<ParamField body="backendUrl" type="string">
+  Base URL for your backend server (e.g., `https://api.example.com`). Defaults to current origin. Set this when your backend is hosted on a separate domain.
+</ParamField>
+
+<ParamField body="pathPrefix" type="string">
+  Path prefix for Autumn routes. Defaults to `/api/autumn`, or `/api/auth/autumn` if `useBetterAuth` is true.
+</ParamField>
+
+<ParamField body="useBetterAuth" type="boolean">
+  Use [better-auth](https://www.better-auth.com/docs/plugins/autumn) integration. Sets `pathPrefix` to `/api/auth/autumn` and `includeCredentials` to true.
+</ParamField>
+
+<ParamField body="includeCredentials" type="boolean">
+  Include credentials (cookies) in cross-origin requests. Defaults to true if `useBetterAuth` is true.
+</ParamField>
+
+<ParamField body="queryClient" type="QueryClient">
+  Custom TanStack Query client. Uses a default client if not provided.
+</ParamField>
+
+<ParamField body="suppressLogs" type="boolean">
+  If true, suppresses console warnings and logs.
+</ParamField>

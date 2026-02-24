@@ -11,12 +11,12 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
 import PaginationPanel from "./components/PaginationPanel";
 import { QueryTopbar } from "./components/QueryTopbar";
-import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import {
 	useAnalyticsData,
 	useRawAnalyticsData,
@@ -224,7 +224,7 @@ export const AnalyticsView = () => {
 				availableGroupValues,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
+			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
 				<OnboardingGuide />
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">

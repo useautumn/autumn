@@ -41,10 +41,8 @@ export const getSubsFromCusId = async ({
 	withExpired?: boolean;
 }) => {
 	const fullCus = await CusService.getFull({
-		db,
+		ctx: { db, org, env } as any,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		inStatuses: withExpired
 			? [
 					CusProductStatus.Active,
@@ -93,10 +91,8 @@ export const expectSubItemsCorrect = async ({
 	entityId?: string;
 }) => {
 	const fullCus = await CusService.getFull({
-		db,
+		ctx: { db, org, env } as any,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		withEntities: true,
 	});
 

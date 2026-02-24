@@ -64,6 +64,7 @@ export function AttachProductPrepaidOptions({
 										label=""
 										placeholder="0"
 										min={0}
+										step={item.billing_units ?? 1}
 										hideFieldInfo={true}
 									/>
 								)}

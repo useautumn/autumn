@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	ApiVersion,
 	backwardsChangeActive,
-	CusExpand,
+	CustomerExpand,
 	GetCustomerQuerySchema,
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
@@ -22,6 +22,7 @@ export const handleGetCustomerV2 = createRoute({
 		const { expand } = ctx;
 		const { with_autumn_id } = c.req.valid("query");
 
+
 		// SIDE EFFECT
 		// !ctx.org.config.disable_v1_invoices &&
 		if (
@@ -30,7 +31,7 @@ export const handleGetCustomerV2 = createRoute({
 				versionChange: V0_2_InvoicesAlwaysExpanded,
 			})
 		) {
-			expand.push(CusExpand.Invoices);
+			expand.push(CustomerExpand.Invoices);
 		}
 
 		const start = Date.now();

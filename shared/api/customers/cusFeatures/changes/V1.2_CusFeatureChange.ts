@@ -1,20 +1,20 @@
-import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0.js";
-import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
-import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
+import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
+import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
-import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
-import { sumValues } from "../../../../utils/utils.js";
-import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
+import { FeatureType } from "../../../../models/featureModels/featureEnums";
+import { sumValues } from "../../../../utils/utils";
+import type { ApiFeatureV1 } from "../../../features/apiFeatureV1";
 import type {
 	ApiBalance,
 	ApiBalanceBreakdown,
 	ApiBalanceSchema,
-} from "../apiBalance.js";
+} from "../apiBalance";
 import type {
 	ApiCusFeatureV3Breakdown,
 	ApiCusFeatureV3Schema,
-} from "../previousVersions/apiCusFeatureV3.js";
+} from "../previousVersions/apiCusFeatureV3";
 
 // overage_allowed: z.boolean().nullish().meta({
 // 	description: "Whether overage usage beyond the limit is allowed",
@@ -96,12 +96,16 @@ const toV3BalanceParams = ({
 	const isBoolean = feature?.type === FeatureType.Boolean;
 
 	if (isBoolean || unlimited) {
+		const expiresAt =
+			"expires_at" in input ? (input as ApiBalanceBreakdown).expires_at : null;
+
 		return {
 			includedUsage: 0,
 			balance: 0,
 			usage: 0,
 			overageAllowed: false,
 			usageLimit: undefined,
+			expiresAt,
 		};
 	}
 

@@ -57,10 +57,8 @@ export const executePostgresDeduction = async ({
 	// Need to getOrCreateCustomer here too...
 	if (!fullCustomer) {
 		fullCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 			inStatuses: ACTIVE_STATUSES,
 			entityId,
 			withSubs: true,

@@ -1,9 +1,9 @@
 import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { PlanExpand } from "@api/products/components/planExpand.js";
 import {
 	type ApiPlanItemV1,
 	ApiPlanItemV1Schema,
 } from "@api/products/items/apiPlanItemV1.js";
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	type ProductItem,
@@ -126,16 +126,18 @@ export const productItemsToPlanItemsV1 = ({
 	items,
 	features,
 	expand = [],
+	currency,
 }: {
 	items: ProductItem[];
 	features: Feature[];
 	expand?: string[];
+	currency?: string;
 }): ApiPlanItemV1[] => {
 	if (!items) return [];
 
 	const shouldExpandFeature = expandIncludes({
 		expand,
-		includes: [CusExpand.PlanFeaturesFeature],
+		includes: [PlanExpand.ItemsFeature],
 	});
 
 	return items.map((item) => {
@@ -173,7 +175,7 @@ export const productItemsToPlanItemsV1 = ({
 			rollover,
 			proration,
 
-			display: getProductItemDisplay({ item, features }),
+			display: getProductItemDisplay({ item, features, currency }),
 		});
 	});
 };

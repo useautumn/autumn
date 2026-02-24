@@ -2,6 +2,7 @@ import {
 	getProductItemDisplay,
 	type ItemEdit,
 	type ProductItem,
+	roundUsageToNearestBillingUnit,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -13,13 +14,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+import { ConditionalTooltip } from "@/components/v2/tooltips/ConditionalTooltip";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
@@ -39,6 +37,27 @@ interface SubscriptionItemRowProps {
 	isDeleted?: boolean;
 	isCreated?: boolean;
 }
+
+const getPrepaidQuantityTooltipData = ({
+	inputQuantity,
+	billingUnits,
+}: {
+	inputQuantity: number;
+	billingUnits: number;
+}) => {
+	const normalizedBillingUnits = billingUnits > 0 ? billingUnits : 1;
+	const roundedQuantity = roundUsageToNearestBillingUnit({
+		usage: inputQuantity,
+		billingUnits: normalizedBillingUnits,
+	});
+
+	return {
+		roundedQuantity,
+		normalizedBillingUnits,
+		shouldShowRoundingHint:
+			normalizedBillingUnits > 1 && roundedQuantity !== inputQuantity,
+	};
+};
 
 function EditRow({
 	edit,
@@ -193,6 +212,21 @@ export function SubscriptionItemRow({
 	};
 
 	const showPrepaidOutside = isPrepaid && form && featureId && !hasEditableEdit;
+	const inputQuantity = prepaidQuantity ?? 0;
+	const billingUnitStep = item.billing_units ?? 1;
+	const { roundedQuantity, normalizedBillingUnits, shouldShowRoundingHint } =
+		getPrepaidQuantityTooltipData({
+			inputQuantity,
+			billingUnits: billingUnitStep,
+		});
+	const showDebouncedOffUnitRing = useDebounce({
+		value: shouldShowRoundingHint,
+		delayMs: 200,
+	});
+	const showPrepaidRowTooltip =
+		!isDeleted && showPrepaidOutside && !isEditingQuantity;
+	const shouldShowRightControlRing =
+		showPrepaidOutside && showDebouncedOffUnitRing;
 
 	const handleRowClick = () => {
 		if (hasMultipleEdits) setIsAccordionOpen(!isAccordionOpen);
@@ -205,106 +239,131 @@ export function SubscriptionItemRow({
 		}
 	};
 
-	return (
-		<div className="flex flex-col">
-			<div className="flex items-center gap-2">
-				<div
-					role={hasMultipleEdits ? "button" : undefined}
-					tabIndex={hasMultipleEdits ? 0 : undefined}
-					className={cn(
-						"flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base",
-						rowRingClass,
-						hasMultipleEdits && "cursor-pointer",
-					)}
-					onClick={handleRowClick}
-					onKeyDown={handleRowKeyDown}
-				>
-					<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-						<div className="flex flex-row items-center gap-1 shrink-0">
-							<PlanFeatureIcon item={item} position="left" />
-							<CustomDotIcon />
-							<PlanFeatureIcon item={item} position="right" />
-						</div>
-						<p className="whitespace-nowrap truncate flex-1 min-w-0">
-							<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
-								{displayText}
-							</span>
-							<span className="text-body-secondary">
-								{" "}
-								{display.secondary_text}
-							</span>
-						</p>
+	const rowContent = (
+		<div className="flex items-center gap-2">
+			<div
+				role={hasMultipleEdits ? "button" : undefined}
+				tabIndex={hasMultipleEdits ? 0 : undefined}
+				className={cn(
+					"flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base",
+					rowRingClass,
+					hasMultipleEdits && "cursor-pointer",
+				)}
+				onClick={handleRowClick}
+				onKeyDown={handleRowKeyDown}
+			>
+				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
+					<div className="flex flex-row items-center gap-1 shrink-0">
+						<PlanFeatureIcon item={item} position="left" />
+						<CustomDotIcon />
+						<PlanFeatureIcon item={item} position="right" />
 					</div>
-
-					<div className="flex items-center gap-2 shrink-0">
-						{renderRowIndicator()}
-					</div>
+					<p className="whitespace-nowrap truncate flex-1 min-w-0">
+						<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
+							{displayText}
+						</span>
+						<span className="text-body-secondary">
+							{" "}
+							{display.secondary_text}
+						</span>
+					</p>
 				</div>
 
-				{!isDeleted &&
-					(showPrepaidOutside || hasEditableEdit) &&
-					form &&
-					featureId && (
-						<motion.div
-							layout
-							transition={FAST_TRANSITION}
-							className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0 gap-2 overflow-hidden"
-						>
-							<AnimatePresence mode="popLayout" initial={false}>
-								{isEditingQuantity ? (
-									<motion.div
-										key="edit"
-										layout
-										initial={{ opacity: 0, x: 10 }}
-										animate={{ opacity: 1, x: 0 }}
-										exit={{ opacity: 0, x: -10 }}
-										transition={FAST_TRANSITION}
-										className="flex items-center gap-2"
-									>
-										<form.AppField name={`prepaidOptions.${featureId}`}>
-											{(field) => (
-												<field.QuantityField label="" min={0} hideFieldInfo />
-											)}
-										</form.AppField>
-										<IconButton
-											icon={<CheckIcon size={14} />}
-											variant="skeleton"
-											size="sm"
-											className="text-green-600 dark:text-green-500 hover:text-green-700! dark:hover:text-green-400! hover:bg-black/5 dark:hover:bg-white/10"
-											onClick={() => setIsEditingQuantity(false)}
-										/>
-									</motion.div>
-								) : (
-									<motion.div
-										key="display"
-										layout
-										initial={{ opacity: 0, x: -10 }}
-										animate={{ opacity: 1, x: 0 }}
-										exit={{ opacity: 0, x: 10 }}
-										transition={FAST_TRANSITION}
-										className="flex items-center gap-2"
-									>
-										<span className="text-sm tabular-nums text-t3">
-											x{prepaidQuantity ?? 0}
-										</span>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<IconButton
-													icon={<PencilSimpleIcon size={14} />}
-													variant="skeleton"
-													size="sm"
-													className="text-t4 hover:text-t2 hover:bg-muted"
-													onClick={() => setIsEditingQuantity(true)}
-												/>
-											</TooltipTrigger>
-											<TooltipContent>Update prepaid quantity</TooltipContent>
-										</Tooltip>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</motion.div>
-					)}
+				<div className="flex items-center gap-2 shrink-0">
+					{renderRowIndicator()}
+				</div>
 			</div>
+
+			{!isDeleted &&
+				(showPrepaidOutside || hasEditableEdit) &&
+				form &&
+				featureId && (
+					<motion.div
+						layout
+						transition={FAST_TRANSITION}
+						className={cn(
+							"flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0 gap-2 overflow-hidden",
+							shouldShowRightControlRing &&
+								"ring-1 ring-inset ring-amber-500/50",
+						)}
+					>
+						<AnimatePresence mode="popLayout" initial={false}>
+							{isEditingQuantity ? (
+								<motion.div
+									key="edit"
+									layout
+									initial={{ opacity: 0, x: 10 }}
+									animate={{ opacity: 1, x: 0 }}
+									exit={{ opacity: 0, x: -10 }}
+									transition={FAST_TRANSITION}
+									className="flex items-center gap-2"
+								>
+									<form.AppField name={`prepaidOptions.${featureId}`}>
+										{(field) => (
+											<field.QuantityField
+												label=""
+												min={0}
+												step={billingUnitStep}
+												hideFieldInfo
+											/>
+										)}
+									</form.AppField>
+									<IconButton
+										icon={<CheckIcon size={14} />}
+										variant="skeleton"
+										size="sm"
+										className="text-green-600 dark:text-green-500 hover:text-green-700! dark:hover:text-green-400! hover:bg-black/5 dark:hover:bg-white/10"
+										onClick={() => setIsEditingQuantity(false)}
+									/>
+								</motion.div>
+							) : (
+								<motion.div
+									key="display"
+									layout
+									initial={{ opacity: 0, x: -10 }}
+									animate={{ opacity: 1, x: 0 }}
+									exit={{ opacity: 0, x: 10 }}
+									transition={FAST_TRANSITION}
+									className="flex items-center gap-2"
+								>
+									<span className="text-sm tabular-nums text-t3">
+										x{inputQuantity}
+									</span>
+									<IconButton
+										icon={<PencilSimpleIcon size={14} />}
+										variant="skeleton"
+										size="sm"
+										className="text-t4 hover:text-t2 hover:bg-muted"
+										onClick={() => setIsEditingQuantity(true)}
+									/>
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</motion.div>
+				)}
+		</div>
+	);
+	const prepaidTooltipContent = (
+		<div className="flex flex-col gap-1">
+			<p>Quantity is exclusive of included usage.</p>
+			{shouldShowRoundingHint && (
+				<p>
+					Rounded up to {roundedQuantity} to match {normalizedBillingUnits}-unit
+					billing.
+				</p>
+			)}
+		</div>
+	);
+
+	return (
+		<div className="flex flex-col">
+			<ConditionalTooltip
+				enabled={!!showPrepaidRowTooltip}
+				content={prepaidTooltipContent}
+				contentClassName="max-w-(--radix-tooltip-trigger-width)"
+			>
+				{rowContent}
+			</ConditionalTooltip>
 
 			{!isDeleted && hasMultipleEdits && (
 				<div

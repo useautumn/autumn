@@ -66,10 +66,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 
 	// Get Stripe subscription item quantity before update
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const stripeCustomerId =
@@ -166,10 +164,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade qu
 
 	// Get Stripe subscription before downgrade
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const stripeCustomerId =

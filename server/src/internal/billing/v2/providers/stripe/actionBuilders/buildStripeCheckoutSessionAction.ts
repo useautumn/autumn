@@ -73,7 +73,7 @@ export const buildStripeCheckoutSessionAction = ({
 		mode,
 		line_items: lineItems,
 		subscription_data: subscriptionData,
-		success_url: orgToReturnUrl({ org, env }),
+		success_url: billingContext.successUrl ?? orgToReturnUrl({ org, env }),
 		discounts,
 	};
 

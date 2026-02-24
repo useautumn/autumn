@@ -35,6 +35,7 @@ export interface BillingContextOverride {
 	featureQuantities?: FeatureOptions[];
 	transitionConfig?: TransitionConfig;
 	billingVersion?: BillingVersion;
+	endOfCycleMsOverride?: number;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

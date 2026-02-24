@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"noImplicitAny": true,
+		"esModuleInterop": true,
+		"strictNullChecks": true,
+		"target": "ES2022",
+		"moduleResolution": "NodeNext",
+		"module": "NodeNext",
+		"declaration": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"outDir": "dist",
+		"jsx": "react-jsx",
+		"lib": ["DOM", "DOM.Iterable", "ESNext"],
+		"skipLibCheck": true,
+
+		"paths": {
+			"@useautumn/sdk": ["../sdk/src/index.ts"],
+			"@useautumn/sdk/*": ["../sdk/src/*"],
+			"@utils/*": ["./src/utils/*"]
+		}
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
+}

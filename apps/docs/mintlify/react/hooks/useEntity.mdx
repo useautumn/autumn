@@ -1,0 +1,99 @@
+---
+title: "useEntity"
+description: "Access an entity's state in your React app"
+---
+
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useEntity` hook fetches [entity data](/documentation/customers/feature-entities). Entities are sub-resources of customers, typically used for per-seat or per-resource billing.
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="entityId" type="string" required>
+  The ID of the entity to retrieve.
+</ParamField>
+
+<ParamField body="queryOptions" type="UseQueryOptions">
+  Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
+</ParamField>
+
+## Returns
+
+### `data`
+
+The entity object containing subscriptions, purchases, and balances for that entity.
+
+```tsx
+import { useEntity } from "autumn-js/react";
+
+export default function SeatDetails() {
+  const { data, isLoading } = useEntity({ entityId: "seat_42" });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <p>Name: {data?.name}</p>
+      <p>Messages remaining: {data?.balances?.messages?.remaining}</p>
+    </div>
+  );
+}
+```
+
+<Expandable title="Entity object">
+
+```json
+{
+  "id": "seat_42",
+  "name": "Seat 42",
+  "customerId": "cus_123",
+  "featureId": "seats",
+  "createdAt": 1771409161016,
+  "env": "sandbox",
+  "subscriptions": [
+    {
+      "planId": "pro_plan",
+      "autoEnable": true,
+      "addOn": false,
+      "status": "active",
+      "pastDue": false,
+      "canceledAt": null,
+      "expiresAt": null,
+      "trialEndsAt": null,
+      "startedAt": 1771431921437,
+      "currentPeriodStart": 1771431921437,
+      "currentPeriodEnd": 1771999921437,
+      "quantity": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "messages": {
+      "featureId": "messages",
+      "granted": 100,
+      "remaining": 72,
+      "usage": 28,
+      "unlimited": false,
+      "overageAllowed": false,
+      "maxPurchase": null,
+      "nextResetAt": 1773851121437
+    }
+  }
+}
+```
+
+</Expandable>
+
+### `isLoading`
+
+Boolean indicating whether the entity data is currently being fetched.
+
+### `error`
+
+Any error that occurred while fetching entity data.
+
+### `refetch()`
+
+Function to manually refetch the entity data.

@@ -1,0 +1,196 @@
+---
+title: "Attach"
+openapi: "openapi POST /v1/billing.attach"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer to attach the plan to.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string | null">
+  The ID of the entity to attach the plan to.
+</DynamicParamField>
+
+<DynamicParamField body="feature_quantities" type="object[] | null">
+  If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
+  <Expandable title="properties">
+    <DynamicParamField body="feature_id" type="string" required />
+
+    <DynamicParamField body="quantity" type="number" />
+
+    <DynamicParamField body="adjustable" type="boolean" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="version" type="number">
+  The version of the plan to attach.
+</DynamicParamField>
+
+<DynamicParamField body="free_trial" type="object | null">
+  <Expandable title="properties">
+    <DynamicParamField body="duration_length" type="number" required />
+
+    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'" />
+
+    <DynamicParamField body="card_required" type="boolean" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="customize" type="object">
+  Customize the plan to attach. Can either override the price of the plan, the items in the plan, or both.
+  <Expandable title="properties">
+    <DynamicParamField body="price" type="object | null">
+      <Expandable title="properties">
+        <DynamicParamField body="amount" type="number" required />
+
+        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required />
+
+        <DynamicParamField body="interval_count" type="number" />
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="items" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required />
+
+        <DynamicParamField body="included" type="number" />
+
+        <DynamicParamField body="unlimited" type="boolean" />
+
+        <DynamicParamField body="reset" type="object">
+          <Expandable title="properties">
+            <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required />
+
+            <DynamicParamField body="interval_count" type="number" />
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="price" type="object">
+          <Expandable title="properties">
+            <DynamicParamField body="amount" type="number" />
+
+            <DynamicParamField body="tiers" type="object[]">
+              <Expandable title="properties">
+                <DynamicParamField body="to" type="number" required />
+
+                <DynamicParamField body="amount" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required />
+
+            <DynamicParamField body="interval_count" type="number" />
+
+            <DynamicParamField body="billing_units" type="number" />
+
+            <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required />
+
+            <DynamicParamField body="max_purchase" type="number" />
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="proration" type="object">
+          <Expandable title="properties">
+            <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required />
+
+            <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required />
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="rollover" type="object">
+          <Expandable title="properties">
+            <DynamicParamField body="max" type="number" />
+
+            <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required />
+
+            <DynamicParamField body="expiry_duration_length" type="number" />
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="plan_id" type="string" required />
+
+<DynamicParamField body="invoice_mode" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required />
+
+    <DynamicParamField body="enable_plan_immediately" type="boolean" />
+
+    <DynamicParamField body="finalize" type="boolean" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="discounts" type="object[]" />
+
+<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'" />
+
+<DynamicParamField body="success_url" type="string" />
+
+<DynamicParamField body="new_billing_subscription" type="boolean" />
+
+<DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'" />
+
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'next_cycle_only'" />
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string" />
+
+<DynamicResponseField name="entity_id" type="string" />
+
+<DynamicResponseField name="invoice" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="status" type="string | null" />
+
+    <DynamicResponseField name="stripe_id" type="string" />
+
+    <DynamicResponseField name="total" type="number" />
+
+    <DynamicResponseField name="currency" type="string" />
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null" />
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="payment_url" type="string | null" />
+
+<DynamicResponseField name="required_action" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed'" />
+
+    <DynamicResponseField name="reason" type="string" />
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "payment_url": null
+}
+```
+</ResponseExample>

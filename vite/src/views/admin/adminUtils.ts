@@ -10,6 +10,7 @@ import type {
 	Rollover,
 } from "@autumn/shared";
 import { toast } from "sonner";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
@@ -56,6 +57,7 @@ export const impersonateUser = async (userId: string) => {
 		return;
 	}
 
+	clearOrgCache();
 	window.location.reload();
 };
 
@@ -120,14 +122,16 @@ export const getCusEntHoverTexts = ({
 		});
 	}
 
-	if (cusEnt.rollovers.length > 0) {
+	const rollovers = cusEnt.rollovers ?? [];
+	if (rollovers.length > 0) {
 		hoverTexts.push({
 			key: "Rollovers",
-			value: cusEnt.rollovers
+			value: rollovers
 				.map((r: Rollover) => {
-					if (Object.values(r.entities).length > 0) {
+					const rolloverEntities = r.entities ? Object.values(r.entities) : [];
+					if (rolloverEntities.length > 0) {
 						return (
-							Object.values(r.entities)
+							rolloverEntities
 								.map((e: EntityRolloverBalance) => `${e.balance} (${e.id})`)
 								.join(", ") +
 							` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`

@@ -3,7 +3,7 @@ import {
 	notNullish,
 	nullish,
 	RecaseError,
-	UpdateBalanceParamsSchema,
+	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -15,16 +15,14 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const handleUpdateBalance = createRoute({
-	body: UpdateBalanceParamsSchema.extend({}),
+	body: UpdateBalanceParamsV0Schema.extend({}),
 
 	handler: async (c) => {
 		const params = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		if (
-			notNullish(params.add_to_balance) ||
-			notNullish(params.current_balance)
-		) {
+		const targetBalance = params.remaining ?? params.current_balance;
+		if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
 			await runUpdateBalanceV2({ ctx, params });
 		}
 
@@ -46,10 +44,8 @@ export const handleUpdateBalance = createRoute({
 			});
 
 			const fullCus = await CusService.getFull({
-				db: ctx.db,
+				ctx,
 				idOrInternalId: params.customer_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
 				entityId: params.entity_id,
 				withEntities: true,
 			});

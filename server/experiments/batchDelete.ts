@@ -1,6 +1,6 @@
 import { CusEntService } from "../src/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { initDrizzle } from "../src/db/initDrizzle";
-import { clearCusEntsFromCache } from "../src/cron/cronUtils";
+import { clearCusEntsFromCache } from "../src/cron/resetCron/clearCusEntsFromCache";
 
 const main = async () => {
   const { db } = initDrizzle();

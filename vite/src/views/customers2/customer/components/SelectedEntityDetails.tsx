@@ -75,8 +75,8 @@ export const SelectedEntityDetails = () => {
 
 	return (
 		<>
-			<div className="flex gap-2 items-center justify-between w-full bg-card mt-1 border p-2 rounded-lg overflow-hidden">
-				<div className="flex items-center gap-2 shrink-0">
+			<div className="flex gap-2 items-center justify-between w-full bg-card mt-1 border p-2 rounded-lg overflow-hidden flex-wrap">
+				<div className="flex items-center gap-2 min-w-0 flex-1">
 					<SearchableSelect
 						value={entityId}
 						onValueChange={handleValueChange}
@@ -87,7 +87,7 @@ export const SelectedEntityDetails = () => {
 						searchable
 						searchPlaceholder="Search entities..."
 						emptyText="No entities found"
-						triggerClassName="w-72"
+						triggerClassName="w-full sm:w-72"
 						renderValue={(entity) =>
 							entity ? (
 								<span className="text-t2 truncate">

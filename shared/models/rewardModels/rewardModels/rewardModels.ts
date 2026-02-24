@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { CouponDurationType, RewardType } from "./rewardEnums.js";
+import { CouponDurationType, RewardType } from "./rewardEnums";
 
 const PromoCodeSchema = z.object({
 	code: z.string(),

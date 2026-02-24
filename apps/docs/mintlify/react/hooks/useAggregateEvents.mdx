@@ -1,0 +1,93 @@
+---
+title: "useAggregateEvents"
+description: "Show event usage to your customers in a timeseries chart"
+---
+
+import QueryOptionsParam from '/snippets/swr-config-param.mdx';
+import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
+
+The `useAggregateEvents` hook provides access to usage analytics and reporting data. 
+
+It fetches data from the [/events/aggregate](/api-reference/events/aggregate-events) endpoint, that can be displayed in a chart (typically via a library like Recharts).
+
+<LearnHooksTip />
+
+## Parameters
+
+<ParamField body="featureId" type="string | string[]" required>
+  The feature ID or array of feature IDs to query usage data for.
+</ParamField>
+
+<ParamField body="groupBy" type="string">
+Aggregate data by an event properties paramater. This property is metadata passed in the event endpoint. Should be formatted as `properties.<event_property>`
+</ParamField>
+
+<ParamField body="range" type="string">
+  Time range for the analytics query. Available options: "24h", "7d", "30d", "90d", "last_cycle", "1bc", "3bc". "bc" refers to billing cycle. Defaults to "30d" if not provided.
+
+</ParamField>
+
+<ParamField body="binSize" type="string">
+  Granularity of the time bins for the data points. Available options: "day", "hour". Defaults to "day".
+</ParamField>
+
+<ParamField body="customRange" type="object">
+  Custom date range for the query. When provided, overrides the `range` parameter.
+  
+  <Expandable title="customRange properties">
+    <ParamField body="start" type="number" required>
+      Start timestamp (Unix timestamp in milliseconds)
+    </ParamField>
+    
+    <ParamField body="end" type="number" required>
+      End timestamp (Unix timestamp in milliseconds)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<QueryOptionsParam />
+
+## Returns
+
+### `list`
+
+Array of aggregated event data points for each time period. Each `AggregatedEventRow` includes:
+- `period`: Unix timestamp in milliseconds representing the start of the time period
+- Dynamic properties for each queried `featureId` with their usage amounts
+
+<Expandable title="list example">
+
+```json
+[
+    {
+        "period": 1765411200000,
+        "basic_messages": 3,
+        "premium_messages": 5
+    },
+    {
+        "period": 1765497600000,
+        "basic_messages": 1,
+        "premium_messages": 2
+    },
+]
+```
+
+</Expandable>
+
+### `total`
+
+Aggregate totals for the entire time range. Returns a record with each feature ID as the key and an object containing:
+- `count`: Total number of events
+- `sum`: Total sum of all event values
+
+### `isLoading`
+
+Boolean indicating whether the event data is currently being fetched.
+
+### `error`
+
+Any `AutumnError` that occurred while fetching event data.
+
+### `refetch()`
+
+Function to manually refetch the event data.

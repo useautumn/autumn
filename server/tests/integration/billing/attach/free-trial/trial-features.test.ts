@@ -82,12 +82,17 @@ test.concurrent(`${chalk.yellowBright("trial-features 1: prepaid messages during
 
 	// 2. Attach product with prepaid
 	// quantity becomes the new includedUsage (200), so 1 pack purchased
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: productWithTrial.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-		redirect_mode: "if_required",
-	});
+	await autumnV1.billing.attach(
+		{
+			customer_id: customerId,
+			product_id: productWithTrial.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+			redirect_mode: "if_required",
+		},
+		{
+			timeout: 5000,
+		},
+	);
 
 	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 

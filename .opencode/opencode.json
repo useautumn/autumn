@@ -5,6 +5,15 @@
 			"type": "remote",
 			"url": "https://mcp.linear.app/mcp",
 			"oauth": {}
+		},
+		"mintlify": {
+			"type": "remote",
+			"url": "https://mintlify.com/docs/mcp"
+		},
+
+		"planetscale": {
+			"type": "remote",
+			"url": "https://mcp.pscale.dev/mcp/planetscale"
 		}
 	}
 }

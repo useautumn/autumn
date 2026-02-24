@@ -88,7 +88,24 @@ export class RolloverService {
 
 		await db.insert(rollovers).values(rows).returning();
 
-		let curRollovers = [...fullCusEnt.rollovers, ...rows];
+		return RolloverService.clearExcessRollovers({
+			db,
+			newRows: rows,
+			fullCusEnt,
+		});
+	}
+
+	/** Enforces the rollover max cap after new rollovers have been inserted into the DB. */
+	static async clearExcessRollovers({
+		db,
+		newRows,
+		fullCusEnt,
+	}: {
+		db: DrizzleCli;
+		newRows: Rollover[];
+		fullCusEnt: FullCustomerEntitlement;
+	}): Promise<Rollover[]> {
+		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
 			rows: curRollovers as Rollover[],
@@ -103,17 +120,9 @@ export class RolloverService {
 			await RolloverService.upsert({ db, rows: toUpdate });
 		}
 
-		// Return latest rollovers...?
-		curRollovers = curRollovers.filter((r) => toDelete.includes(r.id));
-		curRollovers = curRollovers.map((r) => {
-			const updatedRow = toUpdate.find((u) => u.id === r.id);
-			if (updatedRow) {
-				return updatedRow;
-			}
-			return r;
-		});
-
-		return curRollovers;
+		return curRollovers
+			.filter((r) => !toDelete.includes(r.id))
+			.map((r) => toUpdate.find((u) => u.id === r.id) ?? r);
 	}
 
 	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {

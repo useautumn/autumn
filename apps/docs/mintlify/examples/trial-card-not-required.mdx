@@ -1,0 +1,277 @@
+---
+title: Trial - card not required
+description: Enable a trial period that customers can access without providing payment information
+---
+
+Card-not-required trials give customers full access to a paid plan for a limited time without requiring payment information upfront. Customers can optionally add a payment method during the trial to continue using the plan after it expires.
+
+After the trial period, if no payment method is provided, customers lose access to the plan. If they add a payment method, billing begins automatically when the trial ends.
+
+Companies using this model include Cursor, Greptile and Vercel.
+
+## Configure Pricing
+
+
+You can toggle on a trial for a plan when creating it, or in the "plan settings" section. Switch off the "card required" flag.
+
+<Frame style={{ width: "400px" }}>
+<img src="/assets/guides/trial-card-not-required/no-card-light.png" className="block dark:hidden" />
+<img src="/assets/guides/trial-card-not-required/no-card-dark.png" className="hidden dark:block" />
+</Frame>
+
+<Note>
+The "card required" flag will only be visible if the plan is a paid plan. However, you can also add a limited-time trial to a free plan. 
+
+This is similar to a card-not-required trial, but there will be no automatic billing when the trial ends. Instead, you can manually `attach` the plan to the customer to bill them.
+</Note>
+
+<Accordion title="Auto-enabling the trial plan">
+Since no card is required, you can choose whether the plan is enabled automatically when a customer is created, or if you want to manually attach the plan to a customer (eg, when they opt-in to the trial).
+
+If you switch the "auto-enable" flag to true, the trial plan will be automatically applied to newly created customers. The plan will be labelled as an `auto-trial` plan. Customers will only be able to access this trial once.
+
+You can also create another `free` `auto-enable` plan without a trial. This will be enabled if the customer does not add a payment method during the trial, or if they cancel their plan later on.
+
+<Frame>
+<img src="/assets/guides/trial-card-not-required/auto-trial-light.png" className="block dark:hidden" />
+<img src="/assets/guides/trial-card-not-required/auto-trial-dark.png" className="hidden dark:block" />
+</Frame>
+</Accordion>
+
+
+
+## Implementation
+
+#### Enabling the trial
+
+Attach the plan to the customer to enable the trial. Since no card is required, no checkout is needed.
+
+If you switched the "auto-enable" flag to true, you can skip the attach step as the trial will be automatically applied to newly created customers.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+const handleStartTrial = async () => {
+  await attach({ planId: "pro" });
+  console.log("Trial started");
+};
+
+<Button onClick={handleStartTrial}>Start Trial</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// For card-not-required trials, paymentUrl may be null
+// if the trial is enabled without requiring payment
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+<Check>
+The trial will only be applied once per customer.
+</Check>
+
+#### Adding a payment method
+
+Customers can add a payment method and transition to the paid version of the plan using the setup payment endpoint. Once the trial ends, they will be charged for the plan. 
+
+If the customer does not add a payment method, the trial will expire and they will lose access to the plan.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { setupPayment } = useCustomer();
+
+<Button onClick={() => setupPayment()}>
+  Add Payment Method
+</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.setupPayment({
+  customerId: "user_123",
+  successUrl: "https://your-app.com/success",
+});
+
+redirect(response.url);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.setup_payment(
+    customer_id="user_123",
+    success_url="https://your-app.com/success",
+)
+# Redirect to response.url
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing.setup_payment" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "success_url": "https://your-app.com/success"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="hosted setup payment page">
+
+<Frame>
+<img src="/assets/guides/trial-card-not-required/setup-payment.png" />
+
+</Frame>
+
+</Expandable>
+
+<Tip>
+If there's a payment method on file, the customer will be charged. Otherwise, the trial plan will expire. If there's another non-trial auto-enable plan (like a free tier), it will be automatically enabled.
+</Tip>
+
+#### Ending the trial early
+
+You can end the trial early by cancelling the plan immediately, and attaching it again. You may want to pass in a `reward` into the attach request to give the customer a discount for upgrading early.
+
+<Warning>
+Make sure to warn the user that this action will cancel their current trial before proceeding.
+</Warning>
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription, attach } = useCustomer();
+
+const handleEarlyEnd = async () => {
+  // Cancel the trial immediately
+  await updateSubscription({
+    planId: "pro",
+    cancelAction: "cancel_immediately",
+  });
+  
+  // Attach the plan again with a reward
+  await attach({
+    planId: "pro",
+    reward: "early_end",
+  });
+    
+  console.log("Trial ended early");
+};
+
+<Button onClick={handleEarlyEnd}>Upgrade Now</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+// Cancel the trial immediately
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_immediately",
+});
+
+// Attach the plan again with a reward
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  reward: "early_end",
+});
+
+console.log("Trial ended early");
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+# Cancel the trial immediately
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_immediately",
+)
+
+# Attach the plan again with a reward
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    reward="early_end",
+)
+
+print("Trial ended early")
+```
+
+```bash cURL
+# Cancel the trial immediately
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_immediately"
+  }'
+
+# Attach the plan again with a reward
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "reward": "early_end"
+  }'
+```
+
+</CodeGroup>
+
+---

@@ -38,7 +38,7 @@ export const NavButton = ({
 	// Get window path
 	const finalEnv = useEnv();
 	const tab = useTab();
-	const { expanded } = useSidebarContext();
+	const { expanded, onNavigate } = useSidebarContext();
 	const [searchParams] = useSearchParams();
 	const subTab = searchParams.get("tab");
 
@@ -113,6 +113,12 @@ export const NavButton = ({
 					}
 					className={outerDivClass}
 					target={href ? "_blank" : undefined}
+					onClick={() => {
+						// Close mobile sidebar on navigation (skip external links)
+						if (!href) {
+							onNavigate?.();
+						}
+					}}
 				>
 					<TabComponent />
 				</Link>

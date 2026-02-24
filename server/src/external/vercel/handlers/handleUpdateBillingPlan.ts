@@ -1,4 +1,4 @@
-import { type AppEnv, CusExpand, RecaseError } from "@autumn/shared";
+import { CustomerExpand, RecaseError } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
@@ -15,18 +15,17 @@ export const handleUpdateVercelBillingPlan = createRoute({
 	}),
 	// assertIdempotence: "Idempotency-Key",
 	handler: async (c) => {
-		const { orgId, env, integrationConfigurationId } = c.req.param();
-		const { db, org, features, logger } = c.get("ctx");
+		const { integrationConfigurationId } = c.req.param();
+		const ctx = c.get("ctx");
+		const { org, logger } = ctx;
 
 		const { billingPlanId } = c.req.valid("json");
 
 		// Get customer by Vercel installation ID (not by customer.id which may differ)
 		const customer = await CusService.getByVercelId({
-			db,
+			ctx,
 			vercelInstallationId: integrationConfigurationId,
-			orgId,
-			env: env as AppEnv,
-			expand: [CusExpand.Entities],
+			expand: [CustomerExpand.Entities],
 		});
 
 		if (!customer) {
@@ -55,7 +54,7 @@ export const handleUpdateVercelBillingPlan = createRoute({
 
 			const stripeCli = createStripeCli({
 				org,
-				env: env as AppEnv,
+				env: ctx.env,
 			});
 
 			const stripeCustomer = await stripeCli.customers.retrieve(
@@ -90,16 +89,12 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			if (!existingSubscription) {
 				// New subscription flow - create installation-level subscription
 				const { product } = await createVercelSubscription({
-					db,
-					org,
-					env: env as AppEnv,
+					ctx,
 					customer,
 					stripeCustomer,
 					stripeCli,
 					integrationConfigurationId,
 					billingPlanId,
-					features,
-					logger,
 					c,
 				});
 

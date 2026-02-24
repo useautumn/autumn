@@ -1,17 +1,16 @@
 import type {
 	BillingBehavior,
+	CancelAction,
 	CreateFreeTrial,
 	PreviewUpdateSubscriptionResponse,
 	ProductItem,
+	RefundBehavior,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormProvider";
-import type {
-	CancelActionValue,
-	RefundBehaviorValue,
-} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
+
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useUpdateSubscriptionBodyBuilder } from "./use-update-subscription-body-builder";
 
@@ -32,9 +31,9 @@ export function useUpdateSubscriptionPreview({
 	enabled?: boolean;
 	items?: ProductItem[] | null;
 	version?: number;
-	cancelAction?: CancelActionValue | null;
+	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
-	refundBehavior?: RefundBehaviorValue | null;
+	refundBehavior?: RefundBehavior | null;
 }) {
 	const { customerId, product, entityId } = updateSubscriptionFormContext;
 	const axiosInstance = useAxiosInstance();
@@ -88,7 +87,7 @@ export function useUpdateSubscriptionPreview({
 
 			const response =
 				await axiosInstance.post<PreviewUpdateSubscriptionResponse>(
-					"/v1/subscriptions/preview_update",
+					"/v1/billing.preview_update",
 					updateSubscriptionBody,
 				);
 

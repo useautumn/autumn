@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import {
-	CusExpand,
+	CustomerExpand,
 	type LimitedItem,
 	OnDecrease,
 	OnIncrease,
@@ -441,7 +441,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity4 - per entity 
 	usage += newEntities.length;
 
 	const customer = await autumnV1.customers.get(customerId, {
-		expand: [CusExpand.Entities],
+		expand: [CustomerExpand.Entities],
 	});
 
 	const res = await autumnV1.check({
@@ -583,10 +583,8 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity5 - payment fai
 
 	// Step 2: Attach a failing payment method
 	const fullCus = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	await attachFailedPaymentMethod({

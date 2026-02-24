@@ -1,0 +1,207 @@
+---
+title: Credit Systems
+description: Learn how to create a credit system in Autumn
+---
+
+Credit systems let you track actions with different credit costs from a single balance pool.
+
+A credit system is made up of a list of [features](/documentation/pricing/features) that can draw from it, and a credit cost per unit of usage for each feature.
+
+
+> **Example** <br />
+> You have a Pro plan that gives users `100 basic messages` per month, and `10 premium messages` per month. These 2 balances are separate and independent of each other.
+> To give your users more flexibility, you instead decide to use a credit system, where:
+> - `basic message`: costs 1 credit per message
+> - `premium message`: costs 10 credits per message 
+>
+> Instead of having 2 separate balances for each message type, your Pro plan can have `200 credits` per month. Your users can use the credits in any combination of basic and premium messages they want.
+
+
+
+
+## Creating a credit system
+
+<Warning>
+  Make sure you have some metered features created before creating a credit
+  system.
+</Warning>
+
+1. Navigate to the features page, under Products.
+2. Click "Create Credit System"
+4. Add the features that can draw from this credit system.
+5. For each feature, define how many credits each unit of usage should cost (eg, 3 credits per "premium request").
+6. Click "Create"
+
+<Info>
+**Example**
+
+If each `premium_request` is worth 3 credits, then using 6 premium requests will cost 18 credits.
+
+</Info>
+
+Now you can add this credit system to a plan, such as granting 50 credits per month or charging $1 per credit.
+
+## Tracking and limiting credit usage
+
+When implementing a credit system into your application, **you should interact with the underlying features -- not the credit system itself**. This means passing in the underlying `feature_id` when checking or tracking usage.
+
+#### Checking access
+
+Before allowing a customer to use a feature, `check` if they have enough credits to do so. If each "premium request" is worth 3 credits, then this example will check if the customer has at least 18 credits remaining.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "premium_request",
+  requiredBalance: 6,
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="premium_request",
+    required_balance=6,
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "premium_request",
+    "required_balance": 6
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+The response will contain the balance for the credit system that is being deducted from.
+
+```json
+{
+  "allowed": true,
+  "customerId": "user_123",
+  "requiredBalance": 6,
+  "balance": {
+    "featureId": "credits",
+    "granted": 100,
+    "remaining": 100,
+    "usage": 0,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+
+</Expandable>
+In this case, we have a balance of 100 credits remaining, so we're allowed to use our 6 "premium requests" feature.
+
+<Note>
+  If a feature is not defined in the credit system, it will return `allowed: false`
+</Note>
+
+#### Tracking usage
+
+Since the customer has sufficient credits, you can let them use their 6 "premium requests". Afterwards, you can [track](/documentation/customers/tracking-usage) the usage to update their balance.
+
+This will decrement the customer's balance by 18 credits (6 requests * 3 credits per request).
+
+<CodeGroup>
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "premium_request",
+  value: 6,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.customers.track(
+    customer_id="user_123",
+    feature_id="premium_request",
+    value=6,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "premium_request",
+    "value": 6
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="track response">
+```json
+{
+  "customerId": "user_123",
+  "value": 6,
+  "balance": {
+    "featureId": "credits",
+    "granted": 100,
+    "remaining": 82,
+    "usage": 18,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+</Expandable>
+
+Since the customer started with a balance of 100 credits, and used 18 credits, their remaining balance is 82 credits.
+
+## Monetary credits
+
+You may want your credit system to represent a monetary value: eg, $10 of credits. To implement this, you can map each credit to a cent value (eg, 1 credit = 1 cent).
+
+1. When creating your credit system, define credit amounts in the per-cent cost 
+<Info>
+   Eg: if each `premium_request` costs 3 cents, our credit cost should be 3.
+</Info>
+2. When adding the credits to a plan, set the granted amount of credits in cents 
+<Info>
+   Eg, if customers get 5 USD credits for free, they should have an included usage of `500`.
+</Info>
+3. When charging for the credits, set the cost of each credit to 1 cent
+
+
+See the credits pricing guide for a more detailed example of setting up a monetary credits system
+
+<Card
+  title="Credits Example"
+  horizontal
+  href="/examples/credits"
+  icon="money-bills"
+/>

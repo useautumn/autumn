@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { AppEnv } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
@@ -8,8 +8,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import AutumnError from "@/external/autumn/autumnCli";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { timeout } from "@/utils/genUtils.js";
+import { generateId, timeout } from "@/utils/genUtils.js";
 
 // ============================================================================
 // Test 1: Auto-create customer and entity via attach
@@ -86,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 		actions: [],
 	});
 
-	const { db, org, env, stripeCli } = ctx;
+	const { stripeCli } = ctx;
 
 	// Attach with invoice option
 	const res = await autumnV1.attach({
@@ -112,10 +113,8 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 	await timeout(10000);
 
 	const cusProduct = await getMainCusProduct({
-		db,
+		ctx,
 		customerId,
-		orgId: org.id,
-		env: env as AppEnv,
 		productGroup: pro.group ?? undefined,
 	});
 
@@ -159,4 +158,73 @@ test.skip(`${chalk.yellowBright("attach-misc: attach race condition - concurrent
 	// At least one should succeed, both shouldn't fail
 	const successes = responses.filter((r) => r.status === "fulfilled");
 	expect(successes.length).toEqual(1);
+});
+
+// ============================================================================
+// Test 3: Idempotency key - duplicate requests rejected
+// (from others10)
+// ============================================================================
+test.concurrent(`${chalk.yellowBright("attach-misc: idempotency key duplicate rejected")}`, async () => {
+	const customerId = "attach-misc-idempotency";
+
+	const creditsItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [creditsItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: true }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const idempotencyKey = generateId("it");
+
+	// Send two concurrent attach requests with the same idempotency key
+	const results = await Promise.allSettled([
+		autumnV1.attach(
+			{
+				customer_id: customerId,
+				product_id: pro.id,
+			},
+			{
+				idempotencyKey,
+			},
+		),
+		autumnV1.attach(
+			{
+				customer_id: customerId,
+				product_id: pro.id,
+			},
+			{
+				idempotencyKey,
+			},
+		),
+	]);
+
+	// Exactly one request should succeed
+	const fulfilled = results.filter((r) => r.status === "fulfilled");
+	const rejected = results.filter((r) => r.status === "rejected");
+
+	expect(fulfilled).toHaveLength(1);
+	expect(rejected).toHaveLength(1);
+
+	// The successful request should have attached the product
+	const successResult = fulfilled[0] as PromiseFulfilledResult<
+		Awaited<ReturnType<typeof autumnV1.attach>>
+	>;
+	expect(successResult.value.success).toBe(true);
+	expect(successResult.value.customer_id).toBe(customerId);
+	expect(successResult.value.product_ids).toContain(pro.id);
+
+	// The rejected request should have the duplicate idempotency key error
+	const rejectedResult = rejected[0] as PromiseRejectedResult;
+	expect(rejectedResult.reason).toBeInstanceOf(AutumnError);
+	expect((rejectedResult.reason as AutumnError).code).toBe(
+		ErrCode.DuplicateIdempotencyKey,
+	);
 });

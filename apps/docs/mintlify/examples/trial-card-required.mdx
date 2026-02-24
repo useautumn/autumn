@@ -1,0 +1,324 @@
+---
+title: Trial - card required
+description: Enable a trial period where customers must provide payment information upfront.
+---
+
+Card-required trials give customers full access to a paid plan for a limited time. Payment information is collected upfront, and customers are billed after the trial ends.
+
+Customers can cancel anytime during the trial period. If they cancel, their account downgrades when the trial expires. If they don't cancel, billing begins automatically.
+
+Companies using this model include Lindy, Descript and Fxyer.
+
+## Configure Pricing
+
+
+You can toggle on a free trial for a plan when creating it, or in the "plan settings" section. By default, the "card required" flag is set to true.
+
+<Frame style={{ width: "400px" }}>
+<img src="/assets/guides/trials/card-light.png" className="block dark:hidden" />
+<img src="/assets/guides/trials/card-dark.png" className="hidden dark:block" />
+</Frame>
+
+<br />
+
+<Accordion title="Adding a trial fee (optional workaround)">
+
+You can optionally charge a small upfront fee for trial access, often used to qualify leads and reduce trial abuse while maintaining low barrier to entry.
+
+Create an add-on plan, with a one-time price. We will attach the plan with a free trial, and the trial-fee add on at the same time.
+
+<Frame>
+<img src="/assets/guides/trials/trial-fee-light.png" className="block dark:hidden" />
+<img src="/assets/guides/trials/trial-fee-dark.png" className="hidden dark:block" />
+</Frame>
+
+</Accordion>
+
+
+## Implementation
+
+#### Enabling the trial
+
+Enable the trial with the normal plan enablement flow. Only customers that have not used the trial before will be able to access it.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+<Button onClick={() => attach({ planId: "pro" })}>
+  Start Trial
+</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// Redirect to Stripe Checkout for card collection
+redirect(response.paymentUrl);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+# Redirect to response.payment_url
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+<Accordion title="With trial fee">
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+<Button onClick={() => attach({ planIds: ["pro", "trial_fee"] })}>
+  Start Trial
+</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planIds: ["pro", "trial_fee"],
+});
+
+redirect(response.paymentUrl);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_ids=["pro", "trial_fee"],
+)
+# Redirect to response.payment_url
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_ids": ["pro", "trial_fee"]
+  }'
+```
+
+</CodeGroup>
+
+<Frame>
+<img src="/assets/guides/trials/trial-fee-checkout.png" />
+</Frame>
+
+</Accordion>
+
+<Tip>
+You may want to block certain users from accessing the trial. You can pass in `freeTrial: false` into the attach request to disable the trial.
+</Tip>
+
+After the trial ends, the customer will be automatically charged the full price of the plan. 
+
+#### Ending the trial early
+
+You can end the trial early by cancelling the plan immediately, and attaching it again. You may want to pass in a `reward` into the attach request to give the customer a discount for upgrading early.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription, attach } = useCustomer();
+
+const handleEarlyEnd = async () => {
+  // Cancel the trial immediately
+  await updateSubscription({
+    planId: "pro",
+    cancelAction: "cancel_immediately",
+  });
+  
+  // Attach the plan again with a reward
+  await attach({
+    planId: "pro",
+    reward: "early_end",
+  });
+    
+  console.log("Trial ended early");
+};
+
+<Button onClick={handleEarlyEnd}>Upgrade Now</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+// Cancel the trial immediately
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_immediately",
+});
+
+// Attach the plan again with a reward
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  reward: "early_end",
+});
+
+console.log("Trial ended early");
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+# Cancel the trial immediately
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_immediately",
+)
+
+# Attach the plan again with a reward
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    reward="early_end",
+)
+
+print("Trial ended early")
+```
+
+```bash cURL
+# Cancel the trial immediately
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_immediately"
+  }'
+
+# Attach the plan again with a reward
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "reward": "early_end"
+  }'
+```
+
+</CodeGroup>
+
+#### Cancelling the trial
+
+Customers can cancel the trial at any time. If they cancel, the plan will expire when the trial ends. If there is an `auto-enable` plan (eg your free tier), this will then be enabled.
+
+You can uncancel the trial plan by attaching it again.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+<Button onClick={() => updateSubscription({ 
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle" 
+})}>
+  Cancel Trial
+</Button>;
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+
+console.log("Trial cancelled");
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
+
+print("Trial cancelled")
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>
+
+---
+
+1. Enabling the trial
+2. Ending the trial period
+3. Ending the trial early
+4. Cancelling trial
+
+You can test using stripe test clock

@@ -14,7 +14,6 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"api": "bun api/api.ts",
 		"ts": "bunx tsgo --build --noEmit",
 		"db:push": "bun db:generate && bun db:migrate",
 		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
@@ -23,6 +22,8 @@
 	},
 	"dependencies": {
 		"@orpc/contract": "catalog:",
+		"@orpc/openapi": "^1.13.4",
+		"@orpc/zod": "^1.13.4",
 		"@date-fns/utc": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",

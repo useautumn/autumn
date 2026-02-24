@@ -5,24 +5,23 @@ dotenv.config();
 
 import {
 	type AttachBodyV0,
+	type CancelBody,
+	type CheckoutParams,
+	type CheckoutResponseV0,
+	type CheckParams,
+	type CheckQuery,
+	type CheckResponseV1,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	CusExpand,
+	type ApiCustomerV3,
+	CustomerExpand,
 	EntityExpand,
 	ErrCode,
 	type OrgConfig,
 	type RewardRedemption,
+	type SetUsageParams,
+	type TrackParams,
 } from "@autumn/shared";
-import type {
-	CancelParams,
-	CheckoutParams,
-	CheckoutResult,
-	CheckParams,
-	CheckResult,
-	Customer,
-	TrackParams,
-	UsageParams,
-} from "autumn-js";
 
 class AutumnError extends Error {
 	message: string;
@@ -205,7 +204,7 @@ export class AutumnCliV2 {
 		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
 	) {
 		const data = await this.post(`/checkout`, params);
-		return data as CheckoutResult;
+		return data as CheckoutResponseV0;
 	}
 
 	async transfer(
@@ -217,7 +216,7 @@ export class AutumnCliV2 {
 		},
 	) {
 		const data = await this.post(`/customers/${customerId}/transfer`, params);
-		return data as CheckoutResult;
+		return data;
 	}
 
 	async sendEvent({
@@ -272,16 +271,16 @@ export class AutumnCliV2 {
 		get: async (
 			customerId: string,
 			params?: {
-				expand?: CusExpand[];
+				expand?: CustomerExpand[];
 			},
 		): Promise<
-			Customer & {
+			ApiCustomerV3 & {
 				invoices: any[];
 			}
 		> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			};
 
 			const finalParams = { ...defaultParams, ...params };
@@ -468,15 +467,17 @@ export class AutumnCliV2 {
 		},
 	};
 
-	track = async (params: TrackParams & { timestamp?: number }) => {
+	track = async (params: TrackParams) => {
 		return await this.post(`/track`, params);
 	};
 
-	usage = async (params: UsageParams) => {
+	usage = async (params: SetUsageParams) => {
 		return await this.post(`/usage`, params);
 	};
 
-	check = async (params: CheckParams): Promise<CheckResult> => {
+	check = async <T = CheckResponseV1>(
+		params: CheckParams & CheckQuery,
+	): Promise<T> => {
 		return await this.post(`/check`, params);
 	};
 
@@ -484,7 +485,7 @@ export class AutumnCliV2 {
 		return await this.post(`/attach/preview`, params);
 	};
 
-	cancel = async (params: CancelParams) => {
+	cancel = async (params: CancelBody) => {
 		return await this.post(`/cancel`, params);
 	};
 

@@ -1,0 +1,43 @@
+---
+title: "Track Usage"
+openapi: "openapi POST /v1/balances.track"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  Track records usage events to decrement a customer's balance. Use this to meter feature consumption like API calls, messages sent, or credits used.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Track single usage
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "ai_messages",
+  value: 1
+});
+```
+
+```typescript Track with idempotency
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  value: 1,
+  idempotencyKey: "request_abc123" // Prevents duplicate tracking on retry
+});
+```
+
+```typescript Credit balance (negative value)
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "seats",
+  value: -1 // Increases balance when removing a seat
+});
+```
+
+</CodeGroup>

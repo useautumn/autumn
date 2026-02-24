@@ -1,7 +1,8 @@
 import {
-	CusExpand,
 	CusProductStatus,
 	type CustomerData,
+	CustomerExpand,
+	CustomerNotFoundError,
 	type Entity,
 	type EntityData,
 	type FullCustomer,
@@ -29,6 +30,7 @@ export const getOrCreateCustomer = async ({
 	entityId,
 	entityData,
 	skipUpdate = false,
+	skipCreate = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
@@ -36,25 +38,24 @@ export const getOrCreateCustomer = async ({
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;
 	withEntities?: boolean;
-	expand?: CusExpand[];
+	expand?: CustomerExpand[];
 	entityId?: string;
 	entityData?: EntityData;
 	skipUpdate?: boolean;
+	skipCreate?: boolean;
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
 	const { db, org, env, logger } = ctx;
 
 	if (!withEntities) {
-		withEntities = expand?.includes(CusExpand.Entities) || false;
+		withEntities = expand?.includes(CustomerExpand.Entities) || false;
 	}
 
 	if (!skipGet && customerId) {
 		customer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 			inStatuses,
 			withEntities,
 			entityId,
@@ -65,6 +66,10 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!customer) {
+		if (skipCreate) {
+			throw new CustomerNotFoundError({ customerId: customerId || "" });
+		}
+
 		customer = await customerActions.createWithDefaults({
 			ctx,
 			customerId,
@@ -81,10 +86,8 @@ export const getOrCreateCustomer = async ({
 
 		if (updated) {
 			customer = await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: customer.id || customer.internal_id,
-				orgId: org.id,
-				env,
 				inStatuses,
 				withEntities,
 				entityId,

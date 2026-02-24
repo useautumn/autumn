@@ -1,0 +1,129 @@
+---
+title: "Creating Customers"
+description: "Learn about customers in Autumn and how to create them"
+---
+
+Customers represent the entities, usually users or organizations, of your application that can use and pay for your products.
+
+For each customer, Autumn will:
+
+- Keep record of the products they've purchased
+- Track the features they've used
+- Track the features they have access to
+- Bill them through Stripe for the prices you've set
+
+## Creating a customer via API
+
+You can create a customer with the `customers.getOrCreate` method. This will create the customer if they don't exist, or return the existing customer if they do.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  name: "John Doe",
+  email: "john@example.com",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    name="John Doe",
+    email="john@example.com",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "name": "John Doe",
+    "email": "john@example.com"
+  }'
+```
+
+</CodeGroup>
+
+Only the `customerId` field is required - this should be your unique identifier for the customer that you'll use to reference them in future API calls.
+
+<Note>
+  An Autumn customer does not map to a Stripe customer by default. A Stripe
+  customer will only be created when an `attach` request is made.
+</Note>
+
+## Creating a customer via the Autumn dashboard
+
+You can also create a customer via the Autumn dashboard. This is useful if you want to "pre-create" a customer for a user who hasn't interacted with your application yet.
+
+1. Navigate to the [Customers page](https://app.useautumn.com/customers)
+2. Click the "Create Customer" button
+3. Fill in the customer's details, such as name and email. <br/>
+   **Leave the `id` field blank**, as this will come from your application.
+4. Click "Create Customer"
+
+When the customer logs in for the first time, Autumn will match the user's `email` to the customer email you provided above.
+
+<Warning>
+  Make sure the email you provide is the same email that the customer will use
+  to log in to your application. You can update this from the customer details
+  page.
+</Warning>
+
+You can enable a product and set their properties in advance, so that when they do interact with your application, they're already have the right features available.
+
+This is especially useful for larger or enterprise deals where payment happens separately via invoice.
+
+## Customer Properties
+
+#### Customer ID
+
+This is your unique identifier for the customer. You'll use this ID in all future API calls to reference this customer. It could be:
+
+- Your database ID for the user
+- Their email address
+- Any other unique identifier in your system
+
+#### Name and Email
+
+Optional fields to help identify the customer in the Autumn dashboard and on invoices.
+
+## Stripe Integration
+
+By default, Autumn does not create a Stripe customer when you create an Autumn customer. A Stripe customer is only created on the first billing call (like `billing.attach` or `billing.openCustomerPortal`).
+
+You can change this behavior with the following options:
+
+#### Create in Stripe immediately
+
+Pass `createInStripe: true` to create the Stripe customer at the same time as the Autumn customer:
+
+```typescript
+await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  name: "John Doe",
+  email: "john@example.com",
+  createInStripe: true,
+});
+```
+
+#### Link to an existing Stripe customer
+
+If you already have a Stripe customer, pass `stripeId` to link it to the Autumn customer:
+
+```typescript
+await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  stripeId: "cus_abc123", // Your existing Stripe customer ID
+});
+```

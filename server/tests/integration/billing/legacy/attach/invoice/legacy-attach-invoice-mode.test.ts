@@ -27,7 +27,7 @@ import {
 } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -226,6 +226,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode 3: upgrade")}`, async () 
 		customer_id: customerId,
 		product_id: premium.id,
 		invoice: true,
+		finalize_invoice: false,
 		enable_product_immediately: true,
 	});
 
@@ -290,6 +291,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode 4: upgrade")}`, async () 
 		customer_id: customerId,
 		product_id: premium.id,
 		invoice: true,
+		enable_product_immediately: true,
 	});
 
 	expect(res.checkout_url).toBeDefined();
@@ -315,7 +317,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode 4: upgrade")}`, async () 
 		customerId,
 		{ skip_cache: "true" },
 	);
-	expect(nonCachedCustomer.invoices?.[0].status).toBe("draft");
+	expect(nonCachedCustomer.invoices?.[0].status).toBe("paid");
 
 	await expectSubToBeCorrect({
 		db: ctx.db,

@@ -1,14 +1,16 @@
 import { expect } from "bun:test";
 import {
+	type ApiCustomerV3,
 	type ApiEntityV0,
 	type CreateEntityParams,
 	type FeatureOptions,
 	Infinite,
 	type ProductV2,
 } from "@autumn/shared";
-import type { Customer } from "autumn-js";
 import { Decimal } from "decimal.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+
+type CustomerLike = ApiCustomerV3 | ApiEntityV0 | { features?: Record<string, any> };
 
 export const expectFeaturesCorrect = ({
 	customer,
@@ -19,7 +21,7 @@ export const expectFeaturesCorrect = ({
 	usage,
 	entities,
 }: {
-	customer: Customer | ApiEntityV0;
+	customer: CustomerLike;
 	product: ProductV2;
 	otherProducts?: ProductV2[];
 	productQuantity?: number;
@@ -70,7 +72,7 @@ export const expectFeaturesCorrect = ({
 			}
 		}
 
-		const feature = customer.features?.[featureId!];
+		const feature = customer.features?.[featureId as string];
 
 		expect(feature, `Feature ${featureId} exists`).toBeDefined();
 

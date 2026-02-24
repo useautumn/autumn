@@ -77,7 +77,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only cancel: immediate cancel 
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_immediately" as const,
-		billing_behavior: "next_cycle_only" as const,
+		billing_behavior: "none" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 	expect(preview.total).toBe(0);
@@ -201,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only cancel: comparison with d
 		customer_id: customerDeferred,
 		product_id: proDeferred.id,
 		cancel_action: "cancel_immediately" as const,
-		billing_behavior: "next_cycle_only" as const,
+		billing_behavior: "none" as const,
 	};
 	const previewDeferred =
 		await autumnDeferred.subscriptions.previewUpdate(deferredParams);
@@ -296,7 +296,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only cancel: monthly price - n
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_immediately" as const,
-		billing_behavior: "next_cycle_only" as const,
+		billing_behavior: "none" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 	expect(preview.total).toBe(0);

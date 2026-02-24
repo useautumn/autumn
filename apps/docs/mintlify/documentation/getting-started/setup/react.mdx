@@ -1,0 +1,311 @@
+---
+title: "Using React hooks"
+description: "Implement your React + Node.js app's payments and pricing model"
+---
+import CreatePlans from '/snippets/create-plans.mdx';
+
+Autumn's client-side [hooks](/react/hooks/useCustomer) allow you to handle billing directly from your frontend.
+
+<Info>
+  Client libraries are supported for React and Node.js apps. Please use our [Server-side SDK](/documentation/getting-started/setup/sdk) for other frameworks and languages.
+</Info>
+
+In this example we'll create the pricing for a premium AI chatbot. We're going to have:
+
+- A <Badge color="green">Free</Badge> plan that gives users 5 chat messages per month for free
+- A <Badge color="blue">Pro</Badge> plan that gives users 100 chat messages per month for $20 per month.
+
+<Steps>
+<Step>
+### Create your pricing plans
+
+Create a plan for each pricing tier that your app offers. In our example we'll create a "Free" and "Pro" plan, and assign them features.
+
+<CreatePlans />
+
+</Step>
+
+<Step>
+### Installation
+
+[Create an Autumn Secret key](https://app.useautumn.com/sandbox/dev?tab=api_keys), and paste it in your `.env` variables. Then, install the Autumn SDK.
+
+```bash .env
+AUTUMN_SECRET_KEY=am_sk_test_42424242...
+```
+
+<CodeGroup>
+
+```bash bun
+bun add autumn-js
+```
+
+```bash npm
+npm install autumn-js
+```
+
+```bash pnpm
+pnpm add autumn-js
+```
+
+```bash yarn
+yarn add autumn-js
+```
+
+</CodeGroup>
+
+<Note>
+  If you're using a separate backend and frontend, make sure to install the
+  library in both.
+</Note>
+
+</Step>
+
+<Step>
+### Add Endpoints Server-side
+
+Server-side, mount the Autumn handler. This will create endpoints in the `/api/autumn/*` path, which will be called by Autumn's frontend React hooks. These endpoints in turn call Autumn's API.
+
+The handler takes in an `identify` function where you should pass in the user ID or organization ID from your auth provider.
+
+<CodeGroup>
+
+```typescript Next.js
+// app/api/autumn/[...all]/route.ts
+
+import { autumnHandler } from "autumn-js/next";
+import { auth } from "@/lib/auth";
+
+export const { GET, POST } = autumnHandler({
+  identify: async (request) => {
+    // get the user from your auth provider (example: better-auth)
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    return {
+      customerId: session?.user.id, // or org ID
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+});
+```
+
+```typescript Hono
+// index.ts
+
+import { autumnHandler } from "autumn-js/hono";
+
+app.use(
+  "/api/autumn/*",
+  autumnHandler({
+    identify: async (c: Context) => {
+      // get the user from your auth provider (example: better-auth)
+      const session = await auth.api.getSession({
+        headers: c.req.raw.headers,
+      });
+
+      return {
+        customerId: session?.user.id,
+        customerData: {
+          name: session?.user.name,
+          email: session?.user.email,
+        },
+      };
+    },
+  })
+);
+```
+
+```typescript General (framework-agnostic)
+// For any framework not listed above
+
+import { autumnHandler } from "autumn-js/backend";
+
+// Call this from your route handler
+const result = await autumnHandler({
+  request: {
+    url: request.url, // Full URL or path (e.g., "/api/autumn/customer")
+    method: request.method,
+    body: await request.json(),
+  },
+  customerId: session?.user.id,
+  customerData: {
+    name: session?.user.name,
+    email: session?.user.email,
+  },
+});
+
+// Return the response
+return new Response(JSON.stringify(result.response), {
+  status: result.statusCode,
+  headers: { "Content-Type": "application/json" },
+});
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step>
+### Add Provider Client-side
+
+Client side, wrap your application with the `<AutumnProvider>` component.
+
+```jsx
+// layout.tsx
+import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({ children }: {
+  children: React.ReactNode,
+}) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider>
+          {children}
+        </AutumnProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+The provider accepts the following props:
+
+| Prop | Description |
+|------|-------------|
+| `backendUrl` | Base URL for the backend server (e.g., `https://api.example.com`). Defaults to current origin. |
+| `pathPrefix` | Path prefix for the Autumn routes. Defaults to `/api/autumn`, or `/api/auth/autumn` if `useBetterAuth` is true. |
+| `useBetterAuth` | Use better-auth integration. Sets `pathPrefix` to `/api/auth/autumn` and `includeCredentials` to true by default. |
+| `includeCredentials` | Include credentials (cookies) in cross-origin requests. Defaults to true if `useBetterAuth` is true. |
+
+</Step>
+
+<Step>
+### Create an Autumn customer
+
+From a frontend component, use the [`useCustomer()` hook](/react/hooks/useCustomer). This will automatically create an Autumn customer if they're a new user and enable the <Badge color="green">Free</Badge> plan for them, or get the customer's state for existing users.
+
+```jsx React
+import { useCustomer } from 'autumn-js/react'
+
+const App = () => {
+  const { data } = useCustomer();
+
+  console.log("Autumn customer:", data)
+
+  return <h1>My very profitable app</h1>
+}
+```
+
+<Expandable title="data object">
+
+```json expandable
+{
+    "id": "user_123",
+    "createdAt": 1764932560414,
+    "name": "My First Customer",
+    "email": null,
+    "fingerprint": null,
+    "stripeId": null,
+    "env": "sandbox",
+    "metadata": {},
+    "sendEmailReceipts": false,
+    "subscriptions": [
+        {
+            "planId": "free",
+            "autoEnable": true,
+            "addOn": false,
+            "status": "active",
+            "pastDue": false,
+            "canceledAt": null,
+            "expiresAt": null,
+            "trialEndsAt": null,
+            "startedAt": 1764932560519,
+            "currentPeriodStart": null,
+            "currentPeriodEnd": null,
+            "quantity": 1
+        }
+    ],
+    "purchases": [],
+    "balances": {
+        "messages": {
+            "featureId": "messages",
+            "granted": 5,
+            "remaining": 5,
+            "usage": 0,
+            "unlimited": false,
+            "overageAllowed": false,
+            "maxPurchase": null,
+            "nextResetAt": 1767610960519
+        }
+    }
+}
+```
+</Expandable>
+
+You will see your user under the [customers](https://app.useautumn.com/customers) page in the Autumn dashboard.
+
+</Step>
+
+<Step>
+### Stripe Payment Flow
+
+Call `attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. The customer is redirected to an Autumn checkout page where they can review prorations and plan changes before confirming. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
+
+<Note>
+Use Stripe's test card `4242 4242 4242 4242` to make a purchase in sandbox. You can enter any Expiry and CVV.
+</Note>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export default function PurchaseButton() {
+  const { attach } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        await attach({
+          planId: "pro",
+        });
+        // Hook automatically redirects to Autumn checkout
+      }}
+    >
+      Select Pro Plan
+    </button>
+  );
+}
+```
+
+This will handle any plan changes scenario (upgrades, downgrades, one-time topups, renewals, etc).
+
+Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
+
+<Note>
+  **Default behavior:** For new subscriptions, the hook redirects to **Stripe Checkout**. For plan changes (upgrades/downgrades), it redirects to **Autumn Checkout** where customers can review prorations before confirming.
+
+  **Build your own UI:** If you want to handle the checkout for plan changes yourself:
+  1. Call [previewAttach](/api-reference/billing/previewAttach) to get line items and pricing details
+  2. Call `attach` with `redirectMode: "if_required"` — this charges the customer automatically if they have a payment method on file
+</Note>
+
+</Step>
+</Steps>
+
+
+**Next: Track and limit usage**
+
+Now that the plan is enabled and you've handled payments, you can now make sure that customers have the access to the right features and limits based on their plan.
+
+<Card
+  title="Track and limit usage"
+  href='/documentation/getting-started/gating'
+ >
+Enforce usage limits and feature permissions using Autumn's `check` and `track` functions
+ </Card>
+

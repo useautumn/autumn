@@ -1,8 +1,5 @@
-import { sumValues } from "@utils/utils.js";
-import type {
-	ApiBalanceBreakdownV1,
-	ApiBalanceV1,
-} from "../../apiBalanceV1.js";
+import { sumValues } from "@utils/utils";
+import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
 
 export const apiBalanceBreakdownV1ToOverage = ({
 	apiBalanceBreakdown,

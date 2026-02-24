@@ -4,8 +4,8 @@ import {
 	CouponDurationType,
 	type CreateReward,
 	type CreateRewardProgram,
-	CusExpand,
 	CusProductStatus,
+	CustomerExpand,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
@@ -256,10 +256,10 @@ describe(`${chalk.yellowBright(
 		// Test that both customers' Pro invoices have pro_amount discount applied
 		const [mainCustomerWithInvoices, redeemerWithInvoices] = await Promise.all([
 			autumn.customers.get(mainCustomerId, {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			}),
 			autumn.customers.get(redeemer, {
-				expand: [CusExpand.Invoices],
+				expand: [CustomerExpand.Invoices],
 			}),
 		]);
 
@@ -289,21 +289,19 @@ describe(`${chalk.yellowBright(
 			expect(redeemerProInvoice.total).toBe(expectedTotal);
 		}
 
-		const dbCustomers = await Promise.all(
-			[mainCustomerId, redeemer].map((x) =>
-				CusService.getFull({
-					db,
-					idOrInternalId: x,
-					orgId: org.id,
-					env,
-					inStatuses: [
-						CusProductStatus.Active,
-						CusProductStatus.PastDue,
-						CusProductStatus.Expired,
-					],
-				}),
-			),
-		);
+	const dbCustomers = await Promise.all(
+		[mainCustomerId, redeemer].map((x) =>
+			CusService.getFull({
+				ctx,
+				idOrInternalId: x,
+				inStatuses: [
+					CusProductStatus.Active,
+					CusProductStatus.PastDue,
+					CusProductStatus.Expired,
+				],
+			}),
+		),
+	);
 
 		const expectedProducts = [
 			[

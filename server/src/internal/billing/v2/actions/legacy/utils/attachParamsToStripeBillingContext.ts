@@ -5,10 +5,11 @@ import {
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
+import { fetchStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeSubscriptionScheduleForBilling";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams";
+import { legacyRewardToAttachDiscounts } from "./legacyRewardToAttachDiscounts";
 
 export const attachParamsToStripeBillingContext = async ({
 	ctx,
@@ -36,10 +37,13 @@ export const attachParamsToStripeBillingContext = async ({
 		});
 
 	const stripeCustomer = attachParams.stripeCus as StripeCustomerWithDiscount;
+	const paramDiscounts = legacyRewardToAttachDiscounts({ attachParams });
 
-	const stripeDiscounts = extractStripeDiscounts({
+	const stripeDiscounts = await fetchStripeDiscountsForBilling({
+		ctx,
 		stripeSubscription,
 		stripeCustomer,
+		paramDiscounts,
 	});
 
 	const { paymentMethod, now } = attachParams;
