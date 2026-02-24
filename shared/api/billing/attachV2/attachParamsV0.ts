@@ -34,17 +34,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 	// Custom product configuration
 	items: z.array(ProductItemSchema).optional(),
-}).refine(
-	(data) => {
-		if (data.items && data.items.length === 0) {
-			return false;
-		}
-		return true;
-	},
-	{
-		message: "Must provide at least one item when using custom plan",
-	},
-);
+});
 
 export type ExtAttachParamsV0 = z.input<typeof ExtAttachParamsV0Schema>;
 export type AttachParamsV0 = z.infer<typeof AttachParamsV0Schema>;

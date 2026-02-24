@@ -1,30 +1,35 @@
-import type { FullProduct, TrialContext } from "@autumn/shared";
+import type { FullCustomer, FullProduct, TrialContext } from "@autumn/shared";
 import { isOneOffProduct, isProductPaidAndRecurring } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
 import type Stripe from "stripe";
-import { handleFreeTrialParam } from "@/internal/billing/v2/setup/trialContext";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	applyProductTrialConfig,
+	handleFreeTrialParam,
+} from "@/internal/billing/v2/setup/trialContext";
 
 /**
  * Sets up trial context for multi-attach operations.
- * Only uses the top-level free_trial param — does not inherit from plans.
  *
- * Prioritizes paid recurring products for trial context, falls back to any recurring product.
+ * Logic:
+ * 1. If free_trial param is explicitly passed → use it (null removes trial, value sets trial)
+ * 2. If free_trial param is undefined → look for the first product with a free_trial and inherit it
  */
-export const setupMultiAttachTrialContext = ({
+export const setupMultiAttachTrialContext = async ({
+	ctx,
 	freeTrialParam,
+	fullCustomer,
 	stripeSubscription,
 	fullProducts,
 	currentEpochMs,
 }: {
+	ctx: AutumnContext;
 	freeTrialParam?: FreeTrialParamsV1 | null;
+	fullCustomer: FullCustomer;
 	stripeSubscription?: Stripe.Subscription;
 	fullProducts: FullProduct[];
 	currentEpochMs: number;
-}): TrialContext | undefined => {
-	if (freeTrialParam === undefined) {
-		return undefined;
-	}
-
+}): Promise<TrialContext | undefined> => {
 	// Prioritize paid recurring, fall back to any recurring product
 	const paidRecurring = fullProducts.find((p) => isProductPaidAndRecurring(p));
 	const anyRecurring = fullProducts.find(
@@ -36,10 +41,28 @@ export const setupMultiAttachTrialContext = ({
 		return undefined;
 	}
 
-	return handleFreeTrialParam({
-		freeTrialParams: freeTrialParam,
+	// 1. Explicit free_trial param → use it
+	if (freeTrialParam !== undefined) {
+		return handleFreeTrialParam({
+			freeTrialParams: freeTrialParam,
+			stripeSubscription,
+			fullProduct: targetProduct,
+			currentEpochMs,
+		});
+	}
+
+	// 2. No explicit param → inherit from first product with a free_trial
+	const productWithTrial = fullProducts.find((p) => p.free_trial);
+
+	if (!productWithTrial) {
+		return undefined;
+	}
+
+	return applyProductTrialConfig({
+		ctx,
+		fullProduct: productWithTrial,
+		fullCustomer,
 		stripeSubscription,
-		fullProduct: targetProduct,
 		currentEpochMs,
 	});
 };

@@ -5,7 +5,11 @@ import {
 	expectCustomerFeatureExists,
 } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import {
+	expectCustomerProducts,
+	expectProductCanceling,
+	expectProductScheduled,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -68,7 +72,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: two recurring plans i
 		balance: 10,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 50,
@@ -140,10 +144,271 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: one-off add-on + main
 		featureId: TestFeature.Dashboard,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 30,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		flags: { checkNotTrialing: true },
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Test 3: Free → Pro + recurring add-on (single transition)
+// Customer starts on free plan, multi-attach pro + addon.
+// Free should expire, pro + addon should be active.
+// ═══════════════════════════════════════════════════════════════════
+test.concurrent(`${chalk.yellowBright("multi-attach basic: free → pro + recurring add-on")}`, async () => {
+	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+	const proMessages = items.monthlyMessages({ includedUsage: 200 });
+	const addonWords = items.monthlyWords({ includedUsage: 100 });
+
+	const free = products.base({
+		id: "free",
+		items: [freeMessages],
+		isDefault: false,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessages],
+	});
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [addonWords],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "ma-basic-free-to-pro",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro, addon] }),
+		],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+
+	const multiAttachParams = {
+		customer_id: customerId,
+		plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
+	};
+
+	// 1. Preview — $20 (pro) + $20 (addon) = $40
+	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
+	expect(preview.total).toBeCloseTo(40, 0);
+
+	// 2. Attach
+	await autumnV1.billing.multiAttach(multiAttachParams);
+
+	// 3. Verify
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id, addon.id],
+		notPresent: [free.id],
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 200,
+	});
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Words,
+		balance: 100,
+	});
+
+	// Free plan had no invoice, so only 1 invoice from multi-attach ($40)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 40,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		flags: { checkNotTrialing: true },
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Test 4: Pro → Premium + recurring add-on (paid transition)
+// Customer starts on pro ($20), multi-attach premium ($50) + addon ($20).
+// Pro should expire (notPresent), premium + addon should be active.
+// Invoice 1 = initial pro attach ($20), Invoice 2 = upgrade diff + addon ($50)
+// ═══════════════════════════════════════════════════════════════════
+test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → premium + recurring add-on")}`, async () => {
+	const proMessages = items.monthlyMessages({ includedUsage: 200 });
+	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+	const addonWords = items.monthlyWords({ includedUsage: 100 });
+
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessages],
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessages],
+	});
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [addonWords],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "ma-basic-pro-to-premium",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium, addon] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const multiAttachParams = {
+		customer_id: customerId,
+		plans: [{ plan_id: premium.id }, { plan_id: addon.id }],
+	};
+
+	// 1. Preview — ($50 - $20 refund) + $20 addon = $50
+	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
+	expect(preview.total).toBeCloseTo(50, 0);
+
+	// 2. Attach
+	await autumnV1.billing.multiAttach(multiAttachParams);
+
+	// 3. Verify
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer,
+		active: [premium.id, addon.id],
+		notPresent: [pro.id],
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 500,
+	});
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Words,
+		balance: 100,
+	});
+
+	// Invoice 1 = initial pro ($20), Invoice 2 = upgrade ($50)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 50,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		flags: { checkNotTrialing: true },
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Test 5: Pro → scheduled downgrade to Free → multi-attach Premium + addon
+// Customer on pro ($20), downgrades to free (scheduled).
+// Then multi-attach premium ($50) + addon ($20).
+// Pro expires, scheduled free is deleted, premium + addon active.
+// ═══════════════════════════════════════════════════════════════════
+test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → scheduled free → multi-attach premium + addon")}`, async () => {
+	const proMessages = items.monthlyMessages({ includedUsage: 200 });
+	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+	const addonWords = items.monthlyWords({ includedUsage: 100 });
+
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessages],
+	});
+	const free = products.base({
+		id: "free",
+		items: [freeMessages],
+		isDefault: false,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessages],
+	});
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [addonWords],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "ma-basic-pro-sched-free-to-prem",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, free, premium, addon] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.billing.attach({ productId: free.id }), // downgrade → scheduled
+		],
+	});
+
+	// Verify intermediate state: pro canceling, free scheduled
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({ customer: customerBefore, productId: pro.id });
+	await expectProductScheduled({
+		customer: customerBefore,
+		productId: free.id,
+	});
+
+	const multiAttachParams = {
+		customer_id: customerId,
+		plans: [{ plan_id: premium.id }, { plan_id: addon.id }],
+	};
+
+	// 1. Preview — ($50 - $20 refund) + $20 addon = $50
+	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
+	expect(preview.total).toEqual(50);
+
+	// 2. Attach
+	await autumnV1.billing.multiAttach(multiAttachParams);
+
+	// 3. Verify
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer,
+		active: [premium.id, addon.id],
+		notPresent: [pro.id, free.id],
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 500,
+	});
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Words,
+		balance: 100,
+	});
+
+	// Invoice 1 = initial pro ($20), Invoice 2 = upgrade ($50)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 50,
 	});
 
 	await expectSubToBeCorrect({

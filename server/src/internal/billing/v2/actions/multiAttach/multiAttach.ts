@@ -11,8 +11,8 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { computeMultiAttachPlan } from "./compute/computeMultiAttachPlan";
-import { handleMultiAttachCurrentProductErrors } from "./errors/handleMultiAttachCurrentProductErrors";
-import { handleMultiAttachPrepaidErrors } from "./errors/handleMultiAttachPrepaidErrors";
+import { handleMultiAttachErrors } from "./errors/handleMultiAttachErrors";
+import { logMultiAttachContext } from "./logs/logMultiAttachContext";
 import { setupMultiAttachBillingContext } from "./setup/setupMultiAttachBillingContext";
 
 export interface MultiAttachResult {
@@ -37,14 +37,13 @@ export async function multiAttach({
 	});
 
 	// 2. Errors
-	handleMultiAttachCurrentProductErrors({
-		productContexts: billingContext.productContexts,
-		fullCustomer: billingContext.fullCustomer,
+	handleMultiAttachErrors({
+		billingContext,
+		redirectMode: params.redirect_mode,
 	});
 
-	handleMultiAttachPrepaidErrors({
-		productContexts: billingContext.productContexts,
-	});
+	// 2b. Log context
+	logMultiAttachContext({ ctx, billingContext });
 
 	// 3. Compute
 	const autumnBillingPlan = computeMultiAttachPlan({

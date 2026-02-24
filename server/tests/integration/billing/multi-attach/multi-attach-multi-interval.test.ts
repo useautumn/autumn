@@ -67,7 +67,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly + an
 		balance: 200,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 220,
@@ -151,7 +151,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly recu
 		balance: 500,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 130,

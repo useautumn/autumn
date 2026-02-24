@@ -19,6 +19,7 @@ import {
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { calculateProratedDiff } from "@tests/integration/billing/utils/proration";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -294,7 +295,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 4: pro to free to 
 		items: [premiumMessagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -349,6 +350,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 4: pro to free to 
 		includedUsage: 1000,
 		balance: 1000,
 		usage: 0,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 

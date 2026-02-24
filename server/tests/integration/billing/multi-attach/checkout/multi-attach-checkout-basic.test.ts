@@ -82,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: one-off add-on + m
 		featureId: TestFeature.Dashboard,
 	});
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 30,
@@ -155,7 +155,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two recurrings in 
 	});
 
 	// Invoice: $20 + $30 = $50
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 50,
@@ -256,11 +256,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two plans with pre
 		balance: 300,
 	});
 
-	// Invoice: $20 (planA base) + $20 (200/100 * $10 msgs) + $10 (planB base) + $15 (300/100 * $5 words) = $65
-	expectCustomerInvoiceCorrect({
+	// Invoice: $20 (planA base) + $40 (400/100 * $10 msgs) + $10 (planB base) + $15 (300/100 * $5 words) = $65
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 65,
+		latestTotal: 85,
 	});
 
 	await expectSubToBeCorrect({

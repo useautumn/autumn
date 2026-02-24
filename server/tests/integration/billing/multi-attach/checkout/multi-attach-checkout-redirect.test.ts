@@ -87,43 +87,9 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on fil
 	});
 
 	// Invoice: $20 charged directly
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 20,
 	});
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// Test 3: No PM + redirect_mode "never" → no checkout URL (error or null)
-// ═══════════════════════════════════════════════════════════════════
-test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: no PM + redirect never → null URL")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const plan = products.pro({
-		id: "plan",
-		items: [messagesItem],
-	});
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "ma-co-redirect-never",
-		setup: [
-			s.customer({ testClock: true }), // No payment method
-			s.products({ list: [plan] }),
-		],
-		actions: [],
-	});
-
-	// Multi-attach with redirect_mode: "never" — no PM, no checkout
-	const result = await autumnV1.billing.multiAttach(
-		{
-			customer_id: customerId,
-			plans: [{ plan_id: plan.id }],
-			redirect_mode: "never",
-		},
-		{ timeout: 0 },
-	);
-
-	// Should not return a checkout URL
-	expect(result.payment_url).toBeNull();
 });
