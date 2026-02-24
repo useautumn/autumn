@@ -94,11 +94,13 @@ export class RolloverService {
 
 		await db.insert(rollovers).values(rows).returning();
 
-		return RolloverService.clearExcessRollovers({
+		const result = await RolloverService.clearExcessRollovers({
 			ctx,
 			newRows: rows,
 			fullCusEnt,
 		});
+
+		return result;
 	}
 
 	/** Enforces the rollover max cap after new rollovers have been inserted into the DB. */
@@ -110,7 +112,11 @@ export class RolloverService {
 		ctx: RepoContext;
 		newRows: Rollover[];
 		fullCusEnt: FullCustomerEntitlement;
-	}): Promise<Rollover[]> {
+	}): Promise<{
+		rollovers: Rollover[];
+		deletedIds: string[];
+		overwrites: Rollover[];
+	}> {
 		const { db } = ctx;
 		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
@@ -127,9 +133,11 @@ export class RolloverService {
 			await RolloverService.upsert({ db, rows: toUpdate });
 		}
 
-		return curRollovers
+		const rollovers = curRollovers
 			.filter((r) => !toDelete.includes(r.id))
 			.map((r) => toUpdate.find((u) => u.id === r.id) ?? r);
+
+		return { rollovers, deletedIds: toDelete, overwrites: toUpdate };
 	}
 
 	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {

@@ -135,7 +135,8 @@ for _, update in ipairs(updates) do
       if not is_nil(update.rollover_overwrites) then
         local rollovers_json = redis.call('JSON.GET', cache_key, base_path .. '.rollovers')
         if rollovers_json then
-          local rollovers = cjson.decode(rollovers_json)
+          -- JSONPath ($-prefixed) returns [value], unwrap with [1]
+          local rollovers = cjson.decode(rollovers_json)[1]
 
           -- Build lookup from overwrite ID -> overwrite data
           local overwrite_map = {}
@@ -163,7 +164,8 @@ for _, update in ipairs(updates) do
       if not is_nil(update.rollover_delete_ids) then
         local rollovers_json = redis.call('JSON.GET', cache_key, base_path .. '.rollovers')
         if rollovers_json then
-          local rollovers = cjson.decode(rollovers_json)
+          -- JSONPath ($-prefixed) returns [value], unwrap with [1]
+          local rollovers = cjson.decode(rollovers_json)[1]
 
           -- Build delete set
           local delete_set = {}
@@ -199,7 +201,8 @@ for _, update in ipairs(updates) do
       if not is_nil(update.deleted_replaceable_ids) then
         local replaceables_json = redis.call('JSON.GET', cache_key, base_path .. '.replaceables')
         if replaceables_json then
-          local replaceables = cjson.decode(replaceables_json)
+          -- JSONPath ($-prefixed) returns [value], unwrap with [1]
+          local replaceables = cjson.decode(replaceables_json)[1]
 
           -- Build delete set
           local delete_set = {}

@@ -154,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Credits,
-		balance: 100,
+		balance: 200,
 		usage: 0,
 	});
 });

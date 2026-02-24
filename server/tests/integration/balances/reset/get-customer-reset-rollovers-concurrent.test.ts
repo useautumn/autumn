@@ -200,3 +200,93 @@ test.concurrent(`${chalk.yellowBright("concurrent rollover reset: multiple track
 	// Only 1 rollover should exist (not duplicated by concurrent requests)
 	expect(cusEntAfter!.rollovers.length).toBe(1);
 });
+
+// ─────────────────────────────────────────────────────────────────
+// Concurrent GETs after multiple resets — excess rollovers cleared from cache
+// ─────────────────────────────────────────────────────────────────
+
+test.concurrent(`${chalk.yellowBright("concurrent rollover reset: excess rollovers cleared from cache after max cap")}`, async () => {
+	const maxRolloverConfig = {
+		max: 80,
+		length: 1,
+		duration: RolloverExpiryDurationType.Month,
+	};
+	const messagesItem = items.monthlyMessagesWithRollover({
+		includedUsage: 100,
+		rolloverConfig: maxRolloverConfig,
+	});
+	const pro = products.pro({ items: [messagesItem] });
+
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "reset-rollover-conc-max-clear",
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 }),
+		],
+	});
+
+	// Before first reset: 100 - 50 = 50 remaining
+	const before = await autumnV2.customers.get<ApiCustomer>(customerId, {
+		skip_cache: "true",
+	});
+	expect(before.balances[TestFeature.Messages].current_balance).toBe(50);
+
+	// --- First reset: rollover(50), fresh grant 100, total = 150 ---
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+
+	const afterReset1 = await autumnV2.customers.get<ApiCustomer>(customerId);
+	expect(afterReset1.balances[TestFeature.Messages].current_balance).toBe(150);
+	expect(afterReset1.balances[TestFeature.Messages].rollovers!.length).toBe(1);
+	expect(afterReset1.balances[TestFeature.Messages].rollovers![0].balance).toBe(
+		50,
+	);
+
+	// --- Second reset: balance is 100 (not tracked), creates rollover(100) ---
+	// Total rollovers: [old(50), new(100)] = 150 > max(80)
+	// After clearing: old deleted, new trimmed to 80 → 1 rollover with 80
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+
+	// Fire 5 concurrent GETs to trigger the second reset.
+	// The winner applies clearing (delete old rollover, trim new to 80).
+	// Losers may read DB before clearing finishes, so concurrent results
+	// can transiently show uncapped rollovers. That's expected.
+	await Promise.all(
+		Array.from({ length: 5 }, () =>
+			autumnV2.customers.get<ApiCustomer>(customerId),
+		),
+	);
+
+	// After all concurrent requests settle, cache and DB should be consistent.
+	// A fresh GET should return the max-cleared state:
+	// 1 rollover with balance=80, fresh grant=100, total=180
+	const afterSettle = await autumnV2.customers.get<ApiCustomer>(customerId);
+	const msgBalance = afterSettle.balances[TestFeature.Messages];
+	expect(msgBalance.current_balance).toBe(180);
+	expect(msgBalance.usage).toBe(0);
+	expect(msgBalance.rollovers).toBeDefined();
+	expect(msgBalance.rollovers!.length).toBe(1);
+	expect(msgBalance.rollovers![0].balance).toBe(80);
+
+	// DB should also reflect the cleared state
+	const cusEntAfter = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEntAfter).toBeDefined();
+	expect(cusEntAfter!.next_reset_at).toBeGreaterThan(Date.now());
+	expect(cusEntAfter!.rollovers.length).toBe(1);
+	expect(cusEntAfter!.rollovers[0].balance).toBe(80);
+});
