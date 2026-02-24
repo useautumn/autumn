@@ -242,6 +242,9 @@ export const handleSwitchOrg = async (
 	try {
 		setSearchParams?.(new URLSearchParams());
 
+		// Clear cached org data so stale name isn't shown after reload
+		localStorage.removeItem("autumn_org");
+
 		await authClient.organization.setActive({
 			organizationId: orgId,
 		});
