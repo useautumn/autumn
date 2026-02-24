@@ -67,19 +67,23 @@ const base = ({
  * Pro product - $20/month base price
  * @param items - Product items (features)
  * @param id - Product ID (default: "pro")
+ * @param group - Optional product group
  */
 const pro = ({
 	items,
 	id = "pro",
+	group,
 }: {
 	items: ProductItem[];
 	id?: string;
+	group?: string;
 }): ProductV2 =>
 	constructProduct({
 		id,
 		items: [...items],
 		type: "pro",
 		isDefault: false,
+		group,
 	});
 
 /**
