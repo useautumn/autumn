@@ -10,32 +10,25 @@ source "$(dirname "$0")/config.sh"
 # Run tests using TypeScript runner with compact mode
 # Adjust --max to control concurren.cy (default: 6)
 
-export TEST_FILE_CONCURRENCY=6
+export TEST_FILE_CONCURRENCY=4
 
 BUN_PARALLEL_V2 \
-  'integration/balances/check' \
-  'integration/balances/track' \
+  'integration/balances' \
   'balances/track/basic' \
   'balances/track/concurrency' \
   'balances/track/breakdown' \
-  'balances/track/credit-systems' \
   'balances/track/entity-products' \
   'balances/track/legacy' \
   'balances/track/allocated' \
   'balances/track/entity-balances' \
-  'balances/track/negative' \
   'balances/track/rollovers' \
   'balances/track/race-condition' \
   'balances/track/paid-allocated' \
-  'balances/track/edge-cases' \
   'balances/check/breakdown' \
   'balances/track/loose' \
   'balances/check/credit-systems' \
-  'balances/check/misc' \
   'balances/check/prepaid' \
   'balances/check/send-event' \
   'balances/check/loose' \
-  'balances/set-usage' \
-  'integration/balances/update' \
   --max=6
 

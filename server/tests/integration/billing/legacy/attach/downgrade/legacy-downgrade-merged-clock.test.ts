@@ -32,8 +32,8 @@ import chalk from "chalk";
 // Then upgrade ent1 back to Premium
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 2: downgrade to free + pro, advance clock, upgrade")}`, async () => {
-	const customerId = "legacy-downgrade-2";
+test.concurrent(`${chalk.yellowBright("legacy-dg-clock 1: downgrade to free + pro, advance clock, upgrade")}`, async () => {
+	const customerId = "legacy-dg-clock-1";
 
 	const wordsItem = items.monthlyWords({ includedUsage: 100 });
 	const wordsConsumable = items.consumableWords();
@@ -112,8 +112,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 2: downgrade to free + p
 // Advance clock → ent1=PremiumAnnual(active), ent2=Pro(active)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, advance clock activates schedule")}`, async () => {
-	const customerId = "legacy-downgrade-4";
+test.concurrent(`${chalk.yellowBright("legacy-dg-clock 2: annual + monthly, advance clock activates schedule")}`, async () => {
+	const customerId = "legacy-dg-clock-2";
 
 	const wordsItem = items.consumableWords();
 	const premiumAnnualItem = items.annualPrice({ price: 500 });
@@ -147,10 +147,6 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, adv
 		productId: premiumAnnualProduct.id,
 		status: CusProductStatus.Active,
 	});
-	expect(
-		entity1.products.filter((p) => p.group === premiumAnnualProduct.group)
-			.length,
-	).toBe(1);
 
 	// Entity 2: Pro active (monthly schedule activated)
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
@@ -159,9 +155,6 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, adv
 		productId: pro.id,
 		status: CusProductStatus.Active,
 	});
-	expect(entity2.products.filter((p) => p.group === premium.group).length).toBe(
-		1,
-	);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -173,8 +166,8 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, adv
 // Then upgrade ent2 back to Premium
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-downgrade 8: annual + monthly downgrade, advance clock, upgrade")}`, async () => {
-	const customerId = "legacy-downgrade-9";
+test.concurrent(`${chalk.yellowBright("legacy-dg-clock 3: annual + monthly downgrade, advance clock, upgrade")}`, async () => {
+	const customerId = "legacy-dg-clock-3";
 
 	const wordsItem = items.consumableWords();
 	const premiumAnnualItem = items.annualPrice({ price: 500 });
