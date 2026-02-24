@@ -241,6 +241,7 @@ export const handleSwitchOrg = async (
 
 	try {
 		setSearchParams?.(new URLSearchParams());
+		window.history.replaceState(null, "", window.location.pathname);
 
 		await authClient.organization.setActive({
 			organizationId: orgId,
