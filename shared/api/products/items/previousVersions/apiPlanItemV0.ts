@@ -4,7 +4,7 @@ import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import {
-	TierBehaviours,
+	TierBehavior,
 	UsageTierSchema,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
@@ -34,7 +34,7 @@ export const ApiPlanItemV0Schema = z
 			.object({
 				amount: z.number().optional(),
 				tiers: z.array(UsageTierSchema).optional(),
-				tier_behaviour: z.enum(TierBehaviours).optional(),
+				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval),
 				interval_count: z.number().optional(),

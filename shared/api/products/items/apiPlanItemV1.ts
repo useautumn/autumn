@@ -5,7 +5,7 @@ import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import {
-	TierBehaviours,
+	TierBehavior,
 	UsageTierSchema,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
@@ -94,7 +94,7 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.",
 				}),
-				tier_behaviour: z.enum(TierBehaviours).optional(),
+				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval).meta({
 					description:

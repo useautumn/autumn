@@ -2,7 +2,7 @@ import type { ApiBalanceBreakdownPrice } from "@api/customers/cusFeatures/apiBal
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import {
-	TierBehaviours,
+	TierBehavior,
 	type UsagePriceConfig,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { cusEntsToMaxPurchase } from "@utils/cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
@@ -36,7 +36,7 @@ export const customerEntitlementToBalancePrice = ({
 	// If usage price with multiple tiers, use tiers array
 	let amount: number | undefined;
 	let tiers: UsagePriceConfig["usage_tiers"] | undefined;
-	let tier_behaviour: TierBehaviours | undefined;
+	let tier_behavior: TierBehavior | undefined;
 
 	if (isFixedPrice(price)) {
 		amount = price.config.amount;
@@ -46,14 +46,14 @@ export const customerEntitlementToBalancePrice = ({
 			amount = usageTiers[0].amount;
 		} else {
 			tiers = usageTiers;
-			tier_behaviour = price.tier_behaviour ?? TierBehaviours.Graduated;
+			tier_behavior = price.tier_behavior ?? TierBehavior.Graduated;
 		}
 	}
 
 	return {
 		amount,
 		tiers,
-		tier_behaviour,
+		tier_behavior,
 		billing_units: billingUnits,
 		billing_method: billingMethod,
 		max_purchase: maxPurchase,

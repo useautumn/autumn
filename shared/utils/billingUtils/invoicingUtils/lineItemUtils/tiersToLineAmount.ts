@@ -1,4 +1,4 @@
-import { TierBehaviours } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { volumeTiersToLineAmount } from "@utils/billingUtils/invoicingUtils/lineItemUtils/volumeTiersToLineAmount";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { nullish } from "../../../utils";
@@ -34,7 +34,7 @@ export const tiersToLineAmount = ({
 	billingUnits?: number;
 }): number => {
 	const tiers = price.config.usage_tiers;
-	const isVolume = price.tier_behaviour === TierBehaviours.VolumeBased;
+	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
 
 	if (nullish(tiers)) {
 		throw new Error(
