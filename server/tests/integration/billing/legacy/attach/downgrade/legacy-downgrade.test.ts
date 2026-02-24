@@ -29,6 +29,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addWeeks } from "date-fns";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils";
 
@@ -89,7 +90,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 1: premium -> pro, advan
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 10,
+		waitForSeconds: 30,
 	});
 
 	// Verify: Pro is active, Premium is gone
@@ -164,7 +165,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 2: premium -> free, adva
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 10,
+		waitForSeconds: 30,
 	});
 
 	// Verify: Free is active
@@ -330,17 +331,17 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: pro-quarter -> premiu
 	await expectProductScheduled({ customer, productId: pro.id });
 
 	// Advance clock 3 months (end of quarter) - advance 1.5 months twice
-	await advanceTestClock({
+	const advancedTo = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfWeeks: 6,
-		waitForSeconds: 10,
+		waitForSeconds: 30,
 	});
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		numberOfWeeks: 6,
-		waitForSeconds: 10,
+		advanceTo: addWeeks(advancedTo, 7).getTime(),
+		waitForSeconds: 30,
 	});
 
 	// Verify: Pro (monthly) is active
@@ -443,7 +444,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 5: premium -> pro schedu
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 10,
+		waitForSeconds: 30,
 	});
 
 	// Verify: Pro is active with correct features

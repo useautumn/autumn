@@ -118,7 +118,7 @@ export const handleTransferProductV2 = createRoute({
 			});
 		} else {
 			await CusProductService.update({
-				db,
+				ctx,
 				cusProductId: cusProduct.id,
 				updates: {
 					entity_id: toEntity?.id || null,

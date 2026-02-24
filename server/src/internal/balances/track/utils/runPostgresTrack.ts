@@ -40,7 +40,6 @@ export const runPostgresTrack = async ({
 			options: {
 				overageBehaviour: body.overage_behavior || "cap",
 			},
-			refreshCache: true,
 		}),
 	);
 
