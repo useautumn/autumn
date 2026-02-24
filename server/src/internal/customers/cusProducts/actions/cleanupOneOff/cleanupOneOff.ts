@@ -27,7 +27,7 @@ export const cleanupOneOffCustomerProducts = async ({
 }: {
 	ctx: AutumnContext;
 }): Promise<CleanupOneOffResult> => {
-	const { logger, db } = ctx;
+	const { logger } = ctx;
 
 	// 1. Get customer products eligible for cleanup
 	const toCleanup = await getOneOffCustomerProductsToCleanup({ ctx });
@@ -47,7 +47,7 @@ export const cleanupOneOffCustomerProducts = async ({
 	);
 
 	await batchUpdateCustomerProducts({
-		db,
+		ctx,
 		updates: uniqueIds.map((id) => ({
 			id,
 			updates: { status: CusProductStatus.Expired },

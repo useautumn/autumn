@@ -48,7 +48,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				for (const cusEnt of batch) {
 					batchResets.push(
 						resetCustomerEntitlement({
-							db,
+							ctx,
 							cusEnt: cusEnt,
 							updatedCusEnts,
 						}),

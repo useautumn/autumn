@@ -1,11 +1,14 @@
 import {
+	type Entity,
 	type EntityData,
 	ErrCode,
 	FeatureNotFoundError,
 	type FullCustomer,
 	RecaseError,
 } from "@autumn/shared";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { upsertEntityInCache } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/appendEntityToCache.js";
 
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -24,7 +27,7 @@ export const autoCreateEntity = async ({
 	entityData?: EntityData;
 	customerId: string;
 	fullCus?: FullCustomer;
-}) => {
+}): Promise<Entity | undefined> => {
 	// Validate CreatEntity
 	// Failed to auto-create entity, no `feature_id` provided. Please pass in `feature_id` into the `entity_data` field of the request body",
 	if (!entityData || !entityData.feature_id) {
@@ -79,8 +82,10 @@ export const autoCreateEntity = async ({
 		internalFeatureId: feature.internal_id,
 	});
 
+	let entity: Entity | null | undefined;
+
 	if (replaceEntity) {
-		return await EntityService.update({
+		entity = await EntityService.update({
 			db,
 			internalId: replaceEntity.internal_id,
 			update: {
@@ -103,18 +108,29 @@ export const autoCreateEntity = async ({
 				],
 			});
 
-			return results?.[0];
-		} catch (error: any) {
-			if (error.code === "23505") {
-				return await EntityService.get({
+			entity = results?.[0];
+		} catch (error) {
+			if (isUniqueConstraintError(error)) {
+				entity = (await EntityService.get({
 					db,
 					id: entityId,
 					internalCustomerId: fullCus.internal_id,
 					internalFeatureId: feature.internal_id,
-				});
+				})) as Entity | undefined;
 			} else {
 				throw error;
 			}
 		}
 	}
+
+	// Add/update entity in full customer cache
+	if (entity) {
+		await upsertEntityInCache({
+			ctx,
+			customerId,
+			entity,
+		});
+	}
+
+	return entity;
 };

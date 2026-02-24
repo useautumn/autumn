@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+---
+
+# Redis JSON Cache Gotchas
+
+## JSONPath vs Legacy Path in Lua Scripts
+
+`JSON.GET` behaves differently depending on the path syntax:
+
+- **Legacy path** (e.g., `.` or `.foo.bar`): returns the value **directly**.
+- **JSONPath** (e.g., `$` or `$.foo.bar`): returns the value **wrapped in an array**, because JSONPath can match multiple paths.
+
+This matters in Lua scripts that do **read-modify-write** patterns. If you `JSON.GET` with a `$`-prefixed path, `cjson.decode` the result, modify it, and `JSON.SET` it back — you will write back the outer wrapper array, corrupting the data.
+
+```lua
+-- BAD: rollovers becomes [[{...}]] instead of [{...}]
+local rollovers_json = redis.call('JSON.GET', cache_key, base_path .. '.rollovers')
+local rollovers = cjson.decode(rollovers_json)  -- this is [{actual_array}], NOT the actual array
+redis.call('JSON.SET', cache_key, base_path .. '.rollovers', cjson.encode(rollovers))
+
+-- GOOD: unwrap the JSONPath result with [1]
+local rollovers_json = redis.call('JSON.GET', cache_key, base_path .. '.rollovers')
+local rollovers = cjson.decode(rollovers_json)[1]  -- unwrap the JSONPath wrapper
+redis.call('JSON.SET', cache_key, base_path .. '.rollovers', cjson.encode(rollovers))
+```
+
+This does NOT affect:
+- `JSON.SET` (writes only, no read-modify-write)
+- `JSON.ARRAPPEND` (appends a single value, no read-modify-write)
+- `JSON.NUMINCRBY` (atomic increment, no read-modify-write)
+- `JSON.GET` with legacy `.` root path (returns value directly)
+
+See: https://redis.io/docs/latest/commands/json.get/

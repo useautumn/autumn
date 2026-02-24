@@ -2,20 +2,20 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const updateUsages = async ({
+	ctx,
 	featureId,
 	usage,
 	fullCus,
-	db,
 }: {
+	ctx: AutumnContext;
 	featureId: string;
 	usage: number;
 	fullCus: FullCustomer;
-	db: DrizzleCli;
 }) => {
 	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
@@ -30,7 +30,7 @@ export const updateUsages = async ({
 	const newBalance = cusEnt.balance! - usage;
 
 	await CusEntService.update({
-		db,
+		ctx,
 		id: cusEnt.id,
 		updates: {
 			balance: newBalance,

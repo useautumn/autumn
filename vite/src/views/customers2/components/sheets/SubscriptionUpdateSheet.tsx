@@ -19,6 +19,7 @@ import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 const FormContent = ({
@@ -117,32 +118,14 @@ function SheetContent({
 		: (productV2 ?? undefined);
 	const { prepaidItems } = usePrepaidItems({ product });
 
-	const subscriptionPrepaidValues = useMemo(
+	const initialPrepaidOptions = useMemo(
 		() =>
-			cusProduct.options.reduce(
-				(acc, option) => {
-					acc[option.feature_id] = option.quantity;
-					return acc;
-				},
-				{} as Record<string, number>,
-			),
-		[cusProduct.options],
+			backendToDisplayQuantity({
+				backendOptions: cusProduct.options,
+				prepaidItems,
+			}),
+		[cusProduct.options, prepaidItems],
 	);
-
-	const initialPrepaidOptions = useMemo(() => {
-		if (prepaidItems.length === 0) {
-			return {};
-		}
-
-		return prepaidItems.reduce(
-			(acc, item) => {
-				const featureId = item.feature_id as string;
-				acc[featureId] = subscriptionPrepaidValues[featureId] ?? undefined;
-				return acc;
-			},
-			{} as Record<string, number | undefined>,
-		) as Record<string, number>;
-	}, [prepaidItems, subscriptionPrepaidValues]);
 
 	const form = useAttachProductForm({
 		initialProductId: cusProduct?.product.id ?? undefined,

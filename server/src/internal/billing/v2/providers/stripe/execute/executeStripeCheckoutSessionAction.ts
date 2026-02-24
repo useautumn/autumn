@@ -8,6 +8,7 @@ import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { createStripeSessionWithCardFallback } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/createStripeSessionWithCardFallback";
 import {
 	insertMetadataFromBillingPlan,
 	updateMetadataWithCheckoutSession,
@@ -60,28 +61,15 @@ export const executeStripeCheckoutSessionAction = async ({
 		metadata: { autumn_metadata_id: metadata.id },
 	};
 
-	// 3. Create checkout session with fallback for payment method types
-	let stripeCheckoutSession: Stripe.Checkout.Session;
-	try {
-		stripeCheckoutSession =
-			await stripeCli.checkout.sessions.create(fullParams);
-		logger.info(
-			`✅ Created checkout session for customer ${fullCustomer.id ?? fullCustomer.internal_id}`,
-		);
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : undefined;
-		if (msg?.includes("No valid payment method types")) {
-			stripeCheckoutSession = await stripeCli.checkout.sessions.create({
-				...fullParams,
-				payment_method_types: ["card"],
-			});
-			logger.info(
-				"✅ Created fallback checkout session with card payment method",
-			);
-		} else {
-			throw error;
-		}
-	}
+	// 3. Create checkout session with card-type fallback
+	const stripeCheckoutSession = await createStripeSessionWithCardFallback({
+		stripeCli,
+		params: fullParams,
+	});
+
+	logger.info(
+		`Created checkout session for customer ${fullCustomer.id ?? fullCustomer.internal_id}`,
+	);
 
 	// 4. Update metadata with checkout session ID
 	await updateMetadataWithCheckoutSession({

@@ -1552,7 +1552,7 @@ export async function initScenario({
 			const productGroup = productPrefix;
 
 			await resetAndGetCusEnt({
-				db: ctx.db,
+				ctx,
 				customer,
 				productGroup,
 				featureId: action.featureId,

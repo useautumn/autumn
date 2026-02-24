@@ -36,6 +36,8 @@
       "@sdk": ["../../packages/autumn-js/src/sdk/index.ts"],
       "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
       "@utils/*": ["../../packages/autumn-js/src/utils/*"],
+      "@useautumn/sdk": ["../../packages/sdk/src/index.ts"],
+      "@useautumn/sdk/*": ["../../packages/sdk/src/*"],
       "autumn-js": ["../../packages/autumn-js/src/sdk/index.ts"],
       "autumn-js/react": ["../../packages/autumn-js/src/react/index.ts"],
       "autumn-js/next": [

@@ -1,18 +1,16 @@
-import {
-	type AttachParamsV0,
-	type AttachParamsV0Input,
-	type BillingBehavior,
-	type FeatureOptions,
-	type FreeTrialDuration,
-	type PlanTiming,
-	type ProductItem,
-	type ProductItemInterval,
-	type ProductV2,
-	UsageModel,
+import type {
+	AttachParamsV0,
+	AttachParamsV0Input,
+	BillingBehavior,
+	FreeTrialDuration,
+	PlanTiming,
+	ProductItem,
+	ProductItemInterval,
+	ProductV2,
 } from "@autumn/shared";
-import Decimal from "decimal.js";
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
+import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import { normalizeAttachBillingBehavior } from "../utils/attachBillingBehaviorRules";
 import {
 	type FormDiscount,
@@ -34,44 +32,6 @@ export interface BuildAttachRequestBodyParams {
 	billingBehavior: BillingBehavior | null;
 	newBillingSubscription: boolean;
 	discounts: FormDiscount[];
-}
-
-function convertPrepaidOptionsToFeatureOptions({
-	prepaidOptions,
-	product,
-}: {
-	prepaidOptions: Record<string, number>;
-	product: ProductV2 | undefined;
-}): FeatureOptions[] | undefined {
-	if (!product || Object.keys(prepaidOptions).length === 0) {
-		return undefined;
-	}
-
-	const options: FeatureOptions[] = [];
-
-	for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
-		const prepaidItem = product.items.find(
-			(item) =>
-				item.feature_id === featureId &&
-				item.usage_model === UsageModel.Prepaid,
-		);
-
-		if (prepaidItem) {
-			options.push({
-				feature_id: featureId,
-				quantity: new Decimal(quantity || 0)
-					.mul(prepaidItem.billing_units || 1)
-					.toNumber(),
-			});
-		} else {
-			options.push({
-				feature_id: featureId,
-				quantity: quantity,
-			});
-		}
-	}
-
-	return options.length > 0 ? options : undefined;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */

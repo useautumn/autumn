@@ -88,7 +88,7 @@ export const updateGrantedBalance = async ({
 		};
 
 		await CusEntService.update({
-			db: ctx.db,
+			ctx,
 			id: targetCusEnt.id,
 			updates: { entities: newEntities },
 		});
@@ -97,7 +97,7 @@ export const updateGrantedBalance = async ({
 		targetCusEnt.entities = newEntities;
 	} else {
 		await CusEntService.update({
-			db: ctx.db,
+			ctx,
 			id: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
 		});

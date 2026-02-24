@@ -9,6 +9,7 @@ export enum MetadataType {
 
 	DeferredInvoice = "deferred_invoice",
 	CheckoutSessionV2 = "checkout_session_v2",
+	SetupPaymentV2 = "setup_payment_v2",
 }
 
 export const metadata = pgTable("metadata", {
