@@ -75,7 +75,7 @@ export const handleStripeSubscriptionCanceled = async ({
 		};
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates,
 		});

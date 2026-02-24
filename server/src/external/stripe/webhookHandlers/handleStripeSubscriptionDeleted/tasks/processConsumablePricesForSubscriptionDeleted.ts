@@ -47,7 +47,6 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionDeletedContext;
 }): Promise<void> => {
-	const { db } = ctx;
 	const { stripeSubscription, fullCustomer, customerProducts } = eventContext;
 
 	// Skip if subscription has metered items - Stripe handles metered billing automatically
@@ -106,7 +105,7 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 
 	// 4. Reset usage balances for all affected customer entitlements (only if payment succeeded)
 	await CusEntService.batchUpdate({
-		db,
+		ctx,
 		data: updateCustomerEntitlements,
 	});
 };

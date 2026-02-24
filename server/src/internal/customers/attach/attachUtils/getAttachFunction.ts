@@ -180,7 +180,7 @@ export const runAttachFunction = async ({
 	// 2. If main is trial, cancel it...
 	if (branch === AttachBranch.MainIsTrial) {
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curMainProduct!.id,
 			updates: {
 				ended_at: attachParams.now,

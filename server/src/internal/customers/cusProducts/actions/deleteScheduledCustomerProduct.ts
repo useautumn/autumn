@@ -47,7 +47,7 @@ export const deleteScheduledCustomerProduct = async ({
 	);
 
 	await CusProductService.delete({
-		db,
+		ctx,
 		cusProductId: scheduledCustomerProduct.id,
 	});
 

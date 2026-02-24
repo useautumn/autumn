@@ -66,7 +66,7 @@ export const handleUpdateBalance = createRoute({
 
 		if (notNullish(params.next_reset_at) && params.customer_entitlement_id) {
 			await CusEntService.update({
-				db: ctx.db,
+				ctx,
 				id: params.customer_entitlement_id,
 				updates: {
 					next_reset_at: params.next_reset_at,

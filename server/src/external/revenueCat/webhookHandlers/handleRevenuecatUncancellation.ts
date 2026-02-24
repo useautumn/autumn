@@ -33,7 +33,7 @@ export const handleUncancellation = async ({
 
 	if (cusProduct) {
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: cusProduct.id,
 			updates: {
 				canceled_at: null,

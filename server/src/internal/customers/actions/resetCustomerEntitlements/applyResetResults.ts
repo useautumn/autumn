@@ -59,7 +59,7 @@ export const applyResetResults = async ({
 			// Winner: we inserted the rollover into DB. Clear excess and
 			// update the in-memory array to include the new rollovers.
 			const clearedRollovers = await RolloverService.clearExcessRollovers({
-				db,
+				ctx,
 				newRows: result.rolloverInsert.rows,
 				fullCusEnt: original,
 			});
@@ -68,7 +68,7 @@ export const applyResetResults = async ({
 			// Loser: the winning request already inserted the rollover and
 			// cleared excess. Re-read from DB to get the authoritative state.
 			original.rollovers = await RolloverService.getCurrentRollovers({
-				db,
+				ctx,
 				cusEntID: cusEntId,
 			});
 		}

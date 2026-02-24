@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -168,17 +169,17 @@ export const createUsageInvoiceItems = async ({
 };
 
 export const resetUsageBalances = async ({
-	db,
+	ctx,
 	cusEntIds,
 	cusProduct,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	cusEntIds: string[];
 	cusProduct: FullCusProduct;
 }) => {
 	for (const cusEntId of cusEntIds) {
 		await CusEntService.update({
-			db,
+			ctx,
 			id: cusEntId,
 			updates: {
 				balance: 0,

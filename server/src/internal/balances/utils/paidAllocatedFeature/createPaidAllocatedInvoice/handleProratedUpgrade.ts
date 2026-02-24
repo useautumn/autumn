@@ -4,14 +4,13 @@ import {
 	type FullCustomerPrice,
 	InternalError,
 	OnIncrease,
-	type Organization,
 	type Price,
 	priceToInvoiceAmount,
 	shouldCreateInvoiceItem,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
@@ -94,28 +93,25 @@ export function getReps({
 }
 
 export const handleProratedUpgrade = async ({
-	db,
+	ctx,
 	stripeCli,
 	cusEnt,
-	org,
 	cusPrice,
 	sub,
 	subItem,
 	newBalance,
 	prevBalance,
-	logger,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
-	org: Organization;
 	cusEnt: FullCusEntWithFullCusProduct;
 	cusPrice: FullCustomerPrice;
 	sub: Stripe.Subscription;
 	subItem: Stripe.SubscriptionItem;
 	newBalance: number;
 	prevBalance: number;
-	logger: any;
 }) => {
+	const { logger } = ctx;
 	logger.info(`Handling quantity increase`);
 
 	if (!cusEnt.customer_product) {
@@ -156,7 +152,7 @@ export const handleProratedUpgrade = async ({
 	let invoice = null;
 	if (shouldCreateInvoiceItem(onIncrease) && sub.status !== "trialing") {
 		invoice = await createUpgradeProrationInvoice({
-			org,
+			ctx,
 			cusPrice,
 			stripeCli,
 			sub,
@@ -168,12 +164,11 @@ export const handleProratedUpgrade = async ({
 			product,
 			config,
 			onIncrease,
-			logger,
 		});
 	}
 
 	const deleted = await RepService.deleteInIds({
-		db,
+		ctx,
 		ids: reps.map((r) => r.id),
 	});
 

@@ -106,7 +106,7 @@ export const handleSubCreated = async ({
 
 			const updateCusProd = async () => {
 				await CusProductService.update({
-					db,
+					ctx,
 					cusProductId: cusProd.id,
 					updates: {
 						subscription_ids: subIds,

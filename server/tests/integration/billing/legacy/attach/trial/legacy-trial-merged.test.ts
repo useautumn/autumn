@@ -243,7 +243,7 @@ test.concurrent(`${chalk.yellowBright("legacy-trial-merged 3: upgrade entities f
 		entity_id: entities[1].id,
 	});
 
-	await timeout(4000);
+	await timeout(5000);
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
 	expectProductAttached({
 		customer: entity2,

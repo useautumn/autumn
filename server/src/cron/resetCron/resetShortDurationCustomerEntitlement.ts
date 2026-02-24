@@ -1,18 +1,18 @@
 import type { EntInterval, FullEntitlement, ResetCusEnt } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { Decimal } from "decimal.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 
 export const resetShortDurationCustomerEntitlement = async ({
-	db,
+	ctx,
 	cusEnt,
 	updatedCusEnts,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
 }) => {
@@ -44,7 +44,7 @@ export const resetShortDurationCustomerEntitlement = async ({
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
 		await RolloverService.insert({
-			db,
+			ctx,
 			rows: rolloverUpdate.toInsert,
 			fullCusEnt: cusEnt,
 		});
