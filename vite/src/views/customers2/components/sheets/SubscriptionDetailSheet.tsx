@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	type Entity,
 	featureToOptions,
+	getPrepaidDisplayQuantity,
 	isCustomerProductTrialing,
 	isOneOffProductV2,
 	type ProductItem,
@@ -36,6 +37,7 @@ import {
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { getStripeSubLink } from "@/utils/linkUtils";
@@ -197,10 +199,13 @@ export function SubscriptionDetailSheet() {
 									options: cusProduct.options,
 								});
 
-								// const prepaidQuantity = prepaidOption ? prepaidOption.quantity / (item.billing_units || 1) : null;
 								const prepaidQuantity =
-									item.usage_model === UsageModel.Prepaid
-										? prepaidOption?.quantity
+									item.usage_model === UsageModel.Prepaid &&
+									prepaidOption?.quantity
+										? getPrepaidDisplayQuantity({
+												quantity: prepaidOption.quantity,
+												billingUnits: item.billing_units,
+											})
 										: null;
 
 								return (
