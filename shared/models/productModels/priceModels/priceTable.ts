@@ -14,7 +14,7 @@ import { entitlements } from "../entModels/entTable.js";
 import { products } from "../productTable.js";
 import type { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
 import type {
-	TierBehaviours,
+	TierBehavior,
 	UsagePriceConfig,
 } from "./priceConfig/usagePriceConfig.js";
 import type { ProrationConfig } from "./priceModels.js";
@@ -28,8 +28,8 @@ export const prices = pgTable(
 		config: jsonb().$type<FixedPriceConfig | UsagePriceConfig>(),
 		created_at: numeric({ mode: "number" }).notNull(),
 		billing_type: text("billing_type"),
-		tier_behaviour: text("tier_behaviour")
-			.$type<TierBehaviours>()
+		tier_behavior: text("tier_behavior")
+			.$type<TierBehavior>()
 			.default(sql`null`),
 		is_custom: boolean("is_custom").default(false),
 		entitlement_id: text("entitlement_id").default(sql`null`),

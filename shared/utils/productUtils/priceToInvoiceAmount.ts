@@ -76,7 +76,7 @@ export const itemToInvoiceAmount = ({
 	}
 
 	const price = {
-		tier_behaviour: item.tier_behaviour,
+		tier_behavior: item.tier_behavior,
 		config: {
 			usage_tiers: item.tiers || [
 				{

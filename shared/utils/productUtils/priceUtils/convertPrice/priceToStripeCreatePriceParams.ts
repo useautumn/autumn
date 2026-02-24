@@ -1,5 +1,5 @@
 import type { Organization } from "@models/orgModels/orgTable";
-import { TierBehaviours } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import type { FullProduct } from "@models/productModels/productModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
@@ -43,9 +43,7 @@ export const priceToStripeCreatePriceParams = ({
 	const tiers = priceToStripePrepaidV2Tiers({ price, entitlement, org });
 
 	const tiersMode =
-		price.tier_behaviour === TierBehaviours.VolumeBased
-			? "volume"
-			: "graduated";
+		price.tier_behavior === TierBehavior.VolumeBased ? "volume" : "graduated";
 
 	let priceAmountData = {};
 	if (tiers.length === 1) {

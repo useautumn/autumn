@@ -1,7 +1,7 @@
 import type { Organization } from "@models/orgModels/orgTable";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
 import {
-	TierBehaviours,
+	TierBehavior,
 	type UsagePriceConfig,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
@@ -39,7 +39,7 @@ export const priceToStripePrepaidV2Tiers = ({
 	org: Organization;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const isVolume = price.tier_behaviour === TierBehaviours.VolumeBased;
+	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 
 	// Graduated + allowance: insert a free leading tier and shift paid-tier
