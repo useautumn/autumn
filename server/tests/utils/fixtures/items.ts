@@ -43,6 +43,23 @@ const adminRights = () =>
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * Generic free metered feature - resets each billing cycle
+ * @param featureId - Feature ID
+ * @param includedUsage - Free usage allowance (default: 100)
+ */
+const free = ({
+	featureId,
+	includedUsage = 100,
+}: {
+	featureId: string;
+	includedUsage?: number;
+}): LimitedItem =>
+	constructFeatureItem({
+		featureId,
+		includedUsage,
+	}) as LimitedItem;
+
+/**
  * Monthly messages - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -193,16 +210,20 @@ const freeAllocatedWorkflows = ({
 /**
  * Lifetime messages - never resets (interval: null)
  * @param includedUsage - One-time usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
  */
 const lifetimeMessages = ({
 	includedUsage = 100,
+	entityFeatureId,
 }: {
 	includedUsage?: number;
+	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		interval: null,
+		entityFeatureId,
 	}) as LimitedItem;
 
 /**
@@ -628,6 +649,7 @@ export const items = {
 	adminRights,
 
 	// Free metered
+	free,
 	monthlyMessages,
 	monthlyWords,
 	monthlyCredits,

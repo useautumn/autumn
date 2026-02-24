@@ -7,7 +7,7 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
@@ -18,22 +18,22 @@ import { notNullish } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handlePrepaidPrices = async ({
-	db,
+	ctx,
 	cusProduct,
 	cusPrice,
 	usageSub,
 	invoice,
-	logger,
 	resetBalance = true,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	cusProduct: FullCusProduct;
 	cusPrice: FullCustomerPrice;
 	usageSub: Stripe.Subscription;
 	invoice: Stripe.Invoice;
-	logger: any;
 	resetBalance?: boolean;
 }): Promise<boolean> => {
+	const { logger } = ctx;
+	const { org } = ctx;
 	const { start, end } = subToPeriodStartEnd({ sub: usageSub });
 	const isNewPeriod = invoice.period_start !== start;
 
@@ -93,7 +93,7 @@ export const handlePrepaidPrices = async ({
 		});
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: cusProduct.id,
 			updates: {
 				options: newOptions as FeatureOptions[],
@@ -104,7 +104,7 @@ export const handlePrepaidPrices = async ({
 			const difference =
 				(options?.quantity ?? 0) - (options?.upcoming_quantity ?? 0);
 			await CusEntService.decrement({
-				db,
+				ctx,
 				id: cusEnt.id,
 				amount: difference,
 			});
@@ -118,14 +118,14 @@ export const handlePrepaidPrices = async ({
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
 		await RolloverService.insert({
-			db,
+			ctx,
 			rows: rolloverUpdate.toInsert,
 			fullCusEnt: cusEnt,
 		});
 	}
 
 	await CusEntService.update({
-		db,
+		ctx,
 		id: cusEnt.id,
 		updates: {
 			...resetUpdate,

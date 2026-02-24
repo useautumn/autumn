@@ -30,7 +30,7 @@ export const insertNewCusProducts = async ({
 
 	// 2. Insert cusEnts
 	await CusEntService.insert({
-		db: ctx.db,
+		ctx,
 		data: cusEnts,
 	});
 
@@ -51,7 +51,7 @@ export const insertNewCusProducts = async ({
 
 		if (cusEnt.rollovers.length > 0) {
 			await RolloverService.insert({
-				db: ctx.db,
+				ctx,
 				rows: cusEnt.rollovers,
 				fullCusEnt: cusEnt,
 			});

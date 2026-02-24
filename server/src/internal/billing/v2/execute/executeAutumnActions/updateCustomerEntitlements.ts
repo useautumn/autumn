@@ -25,7 +25,7 @@ export const updateCustomerEntitlements = async ({
 
 		if (updates) {
 			await CusEntService.update({
-				db,
+				ctx,
 				id: customerEntitlement.id,
 				updates,
 			});
@@ -34,7 +34,7 @@ export const updateCustomerEntitlements = async ({
 
 		if (balanceChange > 0) {
 			await CusEntService.increment({
-				db,
+				ctx,
 				id: customerEntitlement.id,
 				amount: balanceChange,
 			});
@@ -42,7 +42,7 @@ export const updateCustomerEntitlements = async ({
 			const absoluteDecrement = Math.abs(balanceChange);
 
 			await CusEntService.decrement({
-				db,
+				ctx,
 				id: customerEntitlement.id,
 				amount: absoluteDecrement,
 			});

@@ -63,6 +63,7 @@ DECLARE
   new_adjustment numeric;
   -- Tracking
   updates_json jsonb := '{}'::jsonb;
+  rollover_updates_json jsonb := '[]'::jsonb;
   result_json jsonb;
   
   -- For calculating total balance
@@ -343,10 +344,36 @@ BEGIN
       remaining_amount;
   END IF;
   
+  -- Read back updated rollovers (if any were involved in this deduction)
+  IF rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0 THEN
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', r.id,
+      'cus_ent_id', r.cus_ent_id,
+      'balance', r.balance,
+      'usage', r.usage,
+      'entities', COALESCE(r.entities, '{}'::jsonb)
+    )), '[]'::jsonb)
+    INTO rollover_updates_json
+    FROM rollovers r
+    WHERE r.id IN (SELECT (jsonb_array_elements(rollovers_arr))->>'id');
+  ELSIF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', r.id,
+      'cus_ent_id', r.cus_ent_id,
+      'balance', r.balance,
+      'usage', r.usage,
+      'entities', COALESCE(r.entities, '{}'::jsonb)
+    )), '[]'::jsonb)
+    INTO rollover_updates_json
+    FROM rollovers r
+    WHERE r.id = ANY(rollover_ids);
+  END IF;
+
   -- Build final result
   result_json := jsonb_build_object(
     'updates', updates_json,
-    'remaining', remaining_amount
+    'remaining', remaining_amount,
+    'rollover_updates', rollover_updates_json
   );
   
   RETURN result_json;

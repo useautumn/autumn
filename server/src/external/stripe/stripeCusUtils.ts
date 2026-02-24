@@ -13,6 +13,7 @@ import { createStripeCustomer } from "@/external/stripe/customers";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
+import { logger } from "../logtail/logtailUtils";
 
 const getStripeCus = async ({
 	stripeCli,
@@ -142,11 +143,16 @@ export const attachPmToCus = async ({
 			options: { testClockId },
 		});
 
-		await CusService.update({
+		const repoContext = {
 			db,
-			idOrInternalId: customer.internal_id,
-			orgId: org.id,
+			org,
 			env,
+			logger: logger,
+		};
+
+		await CusService.update({
+			ctx: repoContext,
+			idOrInternalId: customer.id || customer.internal_id,
 			update: {
 				processor: {
 					id: stripeCustomer.id,

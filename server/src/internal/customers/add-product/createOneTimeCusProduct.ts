@@ -11,39 +11,35 @@ import {
 	type Organization,
 	type Price,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { nullish } from "@/utils/genUtils.js";
-import type { Logger } from "../../../external/logtail/logtailUtils.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 
 const updateOneOffExistingEntitlement = async ({
-	db,
+	ctx,
 	cusEnt,
 	entitlement,
 	org,
 	env,
 	options,
 	relatedPrice,
-	logger,
-	attachParams,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	cusEnt: FullCustomerEntitlement;
 	entitlement: EntitlementWithFeature;
 	org: Organization;
 	env: AppEnv;
 	options?: FeatureOptions;
 	relatedPrice?: Price;
-	logger: any;
-	attachParams: InsertCusProductParams;
 }) => {
+	const { db, logger } = ctx;
 	if (entitlement.allowance_type === AllowanceType.Unlimited) {
 		return;
 	}
@@ -71,7 +67,7 @@ const updateOneOffExistingEntitlement = async ({
 	}
 
 	await CusEntService.update({
-		db,
+		ctx,
 		id: updatedCusEnt.id,
 		updates: {
 			balance: updatedCusEnt.balance! + resetBalance!,
@@ -82,13 +78,11 @@ const updateOneOffExistingEntitlement = async ({
 };
 
 export const updateOneTimeCusProduct = async ({
-	db,
+	ctx,
 	attachParams,
-	logger,
 }: {
-	db: DrizzleCli;
+	ctx: RepoContext;
 	attachParams: InsertCusProductParams;
-	logger: Logger;
 }) => {
 	// 1. Sort cus products by created_at
 	attachParams.cusProducts?.sort((a, b) => b.created_at - a.created_at);
@@ -122,15 +116,13 @@ export const updateOneTimeCusProduct = async ({
 
 		if (existingCusEnt) {
 			await updateOneOffExistingEntitlement({
-				db,
+				ctx,
 				cusEnt: existingCusEnt,
 				entitlement,
 				org: attachParams.org,
 				env: attachParams.customer.env,
 				options: options || undefined,
 				relatedPrice,
-				logger,
-				attachParams,
 			});
 		} else {
 			const newCusEnt = initCusEntitlement({
@@ -147,7 +139,7 @@ export const updateOneTimeCusProduct = async ({
 
 			console.log("Inserting new cus ent");
 			await CusEntService.insert({
-				db,
+				ctx,
 				data: [newCusEnt as any],
 			});
 		}
@@ -173,7 +165,7 @@ export const updateOneTimeCusProduct = async ({
 	}
 
 	await CusProductService.update({
-		db,
+		ctx,
 		cusProductId: existingCusProduct.id,
 		updates: {
 			options: newOptionsList,
@@ -197,7 +189,7 @@ export const updateOneTimeCusProduct = async ({
 	await triggerVerifyCacheConsistency({
 		newCustomerProduct: existingCusProduct,
 		previousFullCustomer: attachParams.customer as FullCustomer,
-		logger,
+		logger: ctx.logger,
 		source: "updateOneTimeCusProduct",
 	});
 };

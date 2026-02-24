@@ -3,7 +3,6 @@ import {
 	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
 	type OnIncrease,
-	type Organization,
 	type Price,
 	type Product,
 	shouldBillNow,
@@ -12,41 +11,41 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 
 const getUpgradeProrationInvoiceItem = ({
+	ctx,
 	prevPrice,
 	newPrice,
 	now,
 	feature,
 	newRoundedUsage,
 	price,
-	org,
 	onIncrease,
 	product,
 	stripeSub,
 	subItem,
-	logger,
 }: {
+	ctx: AutumnContext;
 	prevPrice: number;
 	newPrice: number;
 	now: number;
 	feature: Feature;
 	newRoundedUsage: number;
 	price: Price;
-	org: Organization;
 	onIncrease: OnIncrease;
 	product: Product;
 	stripeSub: Stripe.Subscription;
 	subItem: Stripe.SubscriptionItem;
-	logger: Logger;
 }) => {
+	const { logger, org } = ctx;
+
 	const billingUnits = (price.config as UsagePriceConfig).billing_units;
 	let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
 	let invoiceDescription = getFeatureInvoiceDescription({
@@ -76,7 +75,7 @@ const getUpgradeProrationInvoiceItem = ({
 	const invoiceItem = constructStripeInvoiceItem({
 		product,
 		amount: invoiceAmount,
-		org,
+		ctx,
 		price: price,
 		description: invoiceDescription,
 		stripeSubId: stripeSub.id,
@@ -93,7 +92,7 @@ const getUpgradeProrationInvoiceItem = ({
 };
 
 export const createUpgradeProrationInvoice = async ({
-	org,
+	ctx,
 	cusPrice,
 	stripeCli,
 	sub,
@@ -105,9 +104,8 @@ export const createUpgradeProrationInvoice = async ({
 	product,
 	config,
 	onIncrease,
-	logger,
 }: {
-	org: Organization;
+	ctx: AutumnContext;
 	cusPrice: FullCustomerPrice;
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
@@ -119,8 +117,8 @@ export const createUpgradeProrationInvoice = async ({
 	product: Product;
 	config: UsagePriceConfig;
 	onIncrease: OnIncrease;
-	logger: Logger;
 }) => {
+	const { logger } = ctx;
 	const now = await stripeSubscriptionToNowMs({
 		stripeSubscription: sub,
 		stripeCli,
@@ -132,18 +130,17 @@ export const createUpgradeProrationInvoice = async ({
 	});
 
 	const invoiceItem = getUpgradeProrationInvoiceItem({
+		ctx,
 		prevPrice,
 		newPrice,
 		now,
 		feature,
 		newRoundedUsage,
 		price: cusPrice.price,
-		org,
 		onIncrease,
 		product,
 		stripeSub: sub,
 		subItem,
-		logger,
 	});
 
 	const invoiceAmount =
