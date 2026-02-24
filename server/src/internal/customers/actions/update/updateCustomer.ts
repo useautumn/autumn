@@ -122,10 +122,8 @@ export const updateCustomer = async ({
 	}
 
 	await CusService.update({
-		db,
-		idOrInternalId: originalCustomer.internal_id,
-		orgId: org.id,
-		env,
+		ctx,
+		idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
 		update: updateData,
 	});
 

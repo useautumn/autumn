@@ -1,5 +1,4 @@
 import {
-	type ApiCustomer,
 	type ApiInvoiceV1,
 	type Customer,
 	type CustomerData,
@@ -21,26 +20,25 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { deleteCachedFullCustomer } from "./fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 export const updateCustomerDetails = async ({
 	ctx,
-	customer,
+	fullCustomer,
 	customerData,
 }: {
 	ctx: AutumnContext;
-	customer: FullCustomer | ApiCustomer;
+	fullCustomer: FullCustomer;
 	customerData?: CustomerData;
 }) => {
-	const { db, logger } = ctx;
+	const { logger } = ctx;
 
-	const idOrInternalId = customer.id || (customer as FullCustomer).internal_id;
+	const idOrInternalId = fullCustomer.id || fullCustomer.internal_id;
 
-	const updates: any = {};
-	if (!customer.name && customerData?.name) {
+	const updates: Partial<Customer> = {};
+	if (!fullCustomer.name && customerData?.name) {
 		updates.name = customerData.name;
 	}
-	if (!customer.email && customerData?.email) {
+	if (!fullCustomer.email && customerData?.email) {
 		// Check that email is valid, if not skip...
 		if (z.string().email().safeParse(customerData.email).error) {
 			logger.info(`Invalid email ${customerData.email}, skipping update`);
@@ -49,11 +47,11 @@ export const updateCustomerDetails = async ({
 		}
 	}
 	// Update send_email_receipts if explicitly provided
-	if (customerData?.send_email_receipts !== undefined) {
-		const fullCus = customer as FullCustomer;
-		if (fullCus.send_email_receipts !== customerData.send_email_receipts) {
-			updates.send_email_receipts = customerData.send_email_receipts;
-		}
+	if (
+		customerData?.send_email_receipts !== undefined &&
+		fullCustomer.send_email_receipts !== updates.send_email_receipts
+	) {
+		updates.send_email_receipts = customerData.send_email_receipts;
 	}
 
 	if (Object.keys(updates).length > 0) {
@@ -62,20 +60,12 @@ export const updateCustomerDetails = async ({
 		});
 
 		await CusService.update({
-			db,
+			ctx,
 			idOrInternalId,
-			orgId: ctx.org.id,
-			env: customer.env,
 			update: updates,
 		});
-		customer = { ...customer, ...updates };
 
-		// Invalidate cache after DB update
-		await deleteCachedFullCustomer({
-			customerId: idOrInternalId,
-			ctx,
-			source: "updateCustomerDetails",
-		});
+		fullCustomer = { ...fullCustomer, ...updates };
 
 		return true;
 	}

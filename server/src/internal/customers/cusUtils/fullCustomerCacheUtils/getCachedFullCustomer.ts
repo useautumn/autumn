@@ -95,7 +95,7 @@ export const getCachedFullCustomer = async ({
 	customerId: string;
 	entityId?: string;
 	redisInstance?: Redis;
-}): Promise<FullCustomer | null> => {
+}): Promise<FullCustomer | undefined> => {
 	const { org, env } = ctx;
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: org.id,
@@ -108,13 +108,13 @@ export const getCachedFullCustomer = async ({
 		() => redisClient.call("JSON.GET", cacheKey) as Promise<string | null>,
 	);
 
-	if (!cached) return null;
+	if (!cached) return undefined;
 
 	const fullCustomer = JSON.parse(cached) as FullCustomer;
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
-		if (!fullCustomer.entity) return null; // might need to create?
+		if (!fullCustomer.entity) return undefined; // might need to create?
 	} else {
 		fullCustomer.entity = undefined;
 	}

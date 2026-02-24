@@ -137,10 +137,8 @@ export const checkStripeConnections = async ({
 		customer.email = `${customer.id}-${org.id}@invoices.useautumn.com`;
 		await Promise.all([
 			CusService.update({
-				db,
-				idOrInternalId: customer.internal_id,
-				orgId: org.id,
-				env,
+				ctx,
+				idOrInternalId: customer.id || customer.internal_id,
 				update: {
 					email: customer.email,
 				},
