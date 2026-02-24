@@ -1,0 +1,31 @@
+import type { TestGroup } from "../types";
+
+export const coreUpdateSubscription: TestGroup = {
+	name: "core-update-subscription",
+	description: "Core update-subscription tests",
+	tier: "core",
+	paths: [
+		"billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts",
+		"billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle-addon.test.ts",
+		"billing/update-subscription/cancel/immediately/cancel-immediately.test.ts",
+		"billing/update-subscription/cancel/immediately/cancel-immediately-billing.test.ts",
+		"billing/update-subscription/cancel/uncancel/uncancel-basic.test.ts",
+		"billing/update-subscription/cancel/uncancel/uncancel-combined.test.ts",
+		"billing/update-subscription/update-quantity/increase-quantity.test.ts",
+		"billing/update-subscription/update-quantity/decrease-quantity.test.ts",
+		"billing/update-subscription/custom-plan/update-paid-basic.test.ts",
+		"billing/update-subscription/custom-plan/update-free-to-paid.test.ts",
+		"billing/update-subscription/custom-plan/update-paid-prepaid.test.ts",
+		"billing/update-subscription/custom-plan/update-paid-features.test.ts",
+		"billing/update-subscription/free-trial/update-remove-trial.test.ts",
+		"billing/update-subscription/free-trial/update-paid-trials.test.ts",
+		"billing/update-subscription/free-trial/update-quantity-with-trial.test.ts",
+		"billing/update-subscription/version-update/version-pricing.test.ts",
+		"billing/update-subscription/version-update/version-entitlements.test.ts",
+		"billing/update-subscription/invoice/update-with-invoice-basic.test.ts",
+		"billing/update-subscription/errors/update-errors-basic.test.ts",
+		"billing/update-subscription/discounts/percent-off-discount.test.ts",
+		"billing/update-subscription/billing-behavior/next-cycle-only.test.ts",
+		"billing/update-subscription/billing-behavior/next-cycle-only-cancel.test.ts",
+	],
+};

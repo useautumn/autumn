@@ -20,7 +20,7 @@ export const getOrCreateStripeCustomer = async ({
 		updateDb?: boolean;
 	};
 }): Promise<ExpandedStripeCustomer> => {
-	const { logger, db, org, env } = ctx;
+	const { logger } = ctx;
 
 	const currentStripeCustomer = await getExpandedStripeCustomer({
 		ctx,
@@ -38,10 +38,8 @@ export const getOrCreateStripeCustomer = async ({
 
 	if (options.updateDb) {
 		await CusService.update({
-			db,
-			idOrInternalId: customer.internal_id,
-			orgId: org.id,
-			env,
+			ctx,
+			idOrInternalId: customer.id || customer.internal_id,
 			update: {
 				processor: {
 					id: stripeCustomer.id,

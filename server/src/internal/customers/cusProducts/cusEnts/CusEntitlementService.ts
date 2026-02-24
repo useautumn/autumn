@@ -1,3 +1,4 @@
+import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import {
 	type AppEnv,
 	type CusProduct,
@@ -15,11 +16,14 @@ import {
 	type InsertCustomerEntitlement,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { UpdateCustomerEntitlement } from "@autumn/shared";
+import type { RepoContext } from "@/db/repoContext";
+import { redis } from "@/external/redis/initRedis.js";
+import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
+import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -42,6 +46,17 @@ export class CusEntService {
 				target: customerEntitlements.id,
 				set: updateColumns,
 			});
+	}
+
+	static async getByIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		if (ids.length === 0) return [];
+
+		const data = await db
+			.select()
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.id, ids));
+
+		return data as CustomerEntitlement[];
 	}
 
 	static async getByFeature({
@@ -70,12 +85,13 @@ export class CusEntService {
 	}
 
 	static async insert({
-		db,
+		ctx,
 		data,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		data: InsertCustomerEntitlement[] | FullCustomerEntitlement[];
 	}) {
+		const { db } = ctx;
 		if (Array.isArray(data) && data.length === 0) {
 			return;
 		}
@@ -87,10 +103,12 @@ export class CusEntService {
 		db,
 		customDateUnix,
 		batchSize = 1000,
+		limit,
 	}: {
 		db: DrizzleCli;
 		customDateUnix?: number;
 		batchSize?: number;
+		limit?: number;
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
 		let offset = 0;
@@ -137,7 +155,7 @@ export class CusEntService {
 				.limit(batchSize)
 				.offset(offset);
 
-			if (data.length === 0) {
+			if (data.length === 0 || (limit && allResults.length >= limit)) {
 				hasMore = false;
 			} else {
 				const mappedData = data.map((item) => ({
@@ -163,14 +181,16 @@ export class CusEntService {
 	}
 
 	static async update({
-		db,
+		ctx,
 		id,
 		updates,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		id: string;
 		updates: Partial<InsertCustomerEntitlement>;
 	}) {
+		const { db } = ctx;
+
 		const data = await db
 			.update(customerEntitlements)
 			.set({
@@ -183,11 +203,60 @@ export class CusEntService {
 		return data;
 	}
 
+	static async syncUpdateToCache({
+		ctx,
+		cusEntId,
+		updates,
+	}: {
+		ctx: RepoContext;
+		cusEntId: string;
+		updates: Partial<InsertCustomerEntitlement>;
+	}) {
+		const { org, env, customerId } = ctx;
+
+		if (!customerId) {
+			ctx.logger.warn(
+				`skipping cusEnt sync update to cache, customerId not known`,
+			);
+			return;
+		}
+
+		const cacheKey = buildFullCustomerCacheKey({
+			orgId: org.id,
+			env,
+			customerId: customerId ?? "",
+		});
+
+		const cacheUpdates = [
+			{
+				cus_ent_id: cusEntId,
+				balance: updates.balance ?? null,
+				additional_balance: updates.additional_balance ?? null,
+				adjustment: updates.adjustment ?? null,
+				entities: updates.entities ?? null,
+				next_reset_at: updates.next_reset_at ?? null,
+				expected_next_reset_at: null,
+				rollover_insert: null,
+				rollover_overwrites: null,
+				rollover_delete_ids: null,
+				new_replaceables: null,
+				deleted_replaceable_ids: null,
+			},
+		];
+
+		await tryRedisWrite(() =>
+			redis.updateCustomerEntitlements(
+				cacheKey,
+				JSON.stringify({ updates: cacheUpdates }),
+			),
+		);
+	}
+
 	static async batchUpdate({
-		db,
+		ctx,
 		data,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		data: UpdateCustomerEntitlement[];
 	}) {
 		if (Array.isArray(data) && data.length === 0) {
@@ -202,18 +271,13 @@ export class CusEntService {
 
 			updatePromises.push(
 				CusEntService.update({
-					db,
+					ctx,
 					id: customerEntitlement.id,
 					updates: updates as Partial<InsertCustomerEntitlement>,
 				}),
 			);
 		}
 		await Promise.all(updatePromises);
-
-		// await CusEntService.upsert({
-		// 	db,
-		// 	data: updatedCustomerEntitlements,
-		// });
 	}
 
 	static async getStrict({
@@ -265,14 +329,15 @@ export class CusEntService {
 	}
 
 	static async increment({
-		db,
+		ctx,
 		id,
 		amount,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		id: string;
 		amount: number;
 	}) {
+		const { db } = ctx;
 		const data = await db
 			.update(customerEntitlements)
 			.set({
@@ -286,14 +351,16 @@ export class CusEntService {
 	}
 
 	static async decrement({
-		db,
+		ctx,
 		id,
 		amount,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		id: string;
 		amount: number;
 	}) {
+		const { db } = ctx;
+
 		const data = await db
 			.update(customerEntitlements)
 			.set({

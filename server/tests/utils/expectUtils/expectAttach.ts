@@ -30,7 +30,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { completeStripeCheckoutForm } from "../browserPool";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "../browserPool/completeStripeCheckoutFormV2";
 
 export const attachAndExpectCorrect = async ({
 	autumn,

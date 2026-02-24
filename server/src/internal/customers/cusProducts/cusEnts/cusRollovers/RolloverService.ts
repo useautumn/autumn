@@ -4,8 +4,10 @@ import {
 	rollovers,
 } from "@autumn/shared";
 import { and, eq, gte, inArray } from "drizzle-orm";
+import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import { performMaximumClearing } from "./rolloverUtils.js";
 
 export class RolloverService {
@@ -58,12 +60,15 @@ export class RolloverService {
 	// }
 
 	static async getCurrentRollovers({
-		db,
+		// db,
+		ctx,
 		cusEntID,
 	}: {
-		db: DrizzleCli;
+		// db: DrizzleCli;
+		ctx: CronContext;
 		cusEntID: string;
 	}) {
+		const { db } = ctx;
 		return await db
 			.select()
 			.from(rollovers)
@@ -76,19 +81,44 @@ export class RolloverService {
 	}
 
 	static async insert({
-		db,
+		ctx,
 		rows,
 		fullCusEnt,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		rows: Rollover[];
 		fullCusEnt: FullCustomerEntitlement;
 	}) {
+		const { db } = ctx;
 		if (rows.length === 0) return {};
 
 		await db.insert(rollovers).values(rows).returning();
 
-		let curRollovers = [...fullCusEnt.rollovers, ...rows];
+		const result = await RolloverService.clearExcessRollovers({
+			ctx,
+			newRows: rows,
+			fullCusEnt,
+		});
+
+		return result;
+	}
+
+	/** Enforces the rollover max cap after new rollovers have been inserted into the DB. */
+	static async clearExcessRollovers({
+		ctx,
+		newRows,
+		fullCusEnt,
+	}: {
+		ctx: RepoContext;
+		newRows: Rollover[];
+		fullCusEnt: FullCustomerEntitlement;
+	}): Promise<{
+		rollovers: Rollover[];
+		deletedIds: string[];
+		overwrites: Rollover[];
+	}> {
+		const { db } = ctx;
+		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
 			rows: curRollovers as Rollover[],
@@ -103,17 +133,11 @@ export class RolloverService {
 			await RolloverService.upsert({ db, rows: toUpdate });
 		}
 
-		// Return latest rollovers...?
-		curRollovers = curRollovers.filter((r) => toDelete.includes(r.id));
-		curRollovers = curRollovers.map((r) => {
-			const updatedRow = toUpdate.find((u) => u.id === r.id);
-			if (updatedRow) {
-				return updatedRow;
-			}
-			return r;
-		});
+		const rollovers = curRollovers
+			.filter((r) => !toDelete.includes(r.id))
+			.map((r) => toUpdate.find((u) => u.id === r.id) ?? r);
 
-		return curRollovers;
+		return { rollovers, deletedIds: toDelete, overwrites: toUpdate };
 	}
 
 	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {

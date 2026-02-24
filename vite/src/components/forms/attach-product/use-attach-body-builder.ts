@@ -1,10 +1,10 @@
-import { AppEnv, type ProductV2, UsageModel } from "@autumn/shared";
-import Decimal from "decimal.js";
+import { AppEnv, type ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
@@ -61,37 +61,18 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 
 			// Convert prepaidOptions to options array
 			const options = mergedParams.prepaidOptions
-				? Object.entries(mergedParams.prepaidOptions).map(
-						([featureId, quantity]) => {
-							const prepaidItem = product?.items.find(
-								(item) =>
-									item.feature_id === featureId &&
-									item.usage_model === UsageModel.Prepaid,
-							);
-
-							if (!prepaidItem) {
-								return {
-									feature_id: featureId,
-									quantity: quantity,
-								};
-							}
-
-							return {
-								feature_id: featureId,
-								quantity: new Decimal(quantity || 0)
-									.mul(prepaidItem.billing_units || 1)
-									.toNumber(),
-							};
-						},
-					)
-				: [];
+				? convertPrepaidOptionsToFeatureOptions({
+						prepaidOptions: mergedParams.prepaidOptions,
+						product,
+					})
+				: undefined;
 
 			// Build the attach body
 			return getAttachBody({
 				customerId: mergedParams.customerId,
 				product,
 				entityId: mergedParams.entityId ?? storeEntityId ?? undefined,
-				optionsInput: options.length > 0 ? options : undefined,
+				optionsInput: options,
 				isCustom,
 				version,
 				useInvoice: mergedParams.useInvoice,

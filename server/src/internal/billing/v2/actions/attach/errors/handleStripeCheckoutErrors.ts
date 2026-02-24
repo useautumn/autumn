@@ -53,6 +53,8 @@ export const handleStripeCheckoutErrors = ({
 		autumnBillingPlan,
 	});
 
+	console.log("recurringIntervals", recurringIntervals);
+
 	// If we have more than one unique recurring interval, throw an error
 	if (recurringIntervals.size > 1) {
 		throw new RecaseError({

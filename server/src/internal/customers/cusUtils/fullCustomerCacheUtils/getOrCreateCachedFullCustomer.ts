@@ -1,8 +1,6 @@
 import {
-	type AppEnv,
 	type CheckParams,
 	CustomerExpand,
-	type Entity,
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
@@ -11,7 +9,6 @@ import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../../CusService.js";
 import { updateCustomerDetails } from "../cusUtils.js";
-import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 
@@ -29,7 +26,7 @@ export const getOrCreateCachedFullCustomer = async ({
 	};
 	source?: string;
 }): Promise<FullCustomer> => {
-	const { org, env, db, skipCache, logger } = ctx;
+	const { skipCache, logger } = ctx;
 	const {
 		customer_id: customerId,
 		customer_data: customerData,
@@ -40,16 +37,14 @@ export const getOrCreateCachedFullCustomer = async ({
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
 
-	// 1. Try cache first
+	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	let setCache = true;
 	if (customerId && !skipCache) {
-		fullCustomer =
-			(await getCachedFullCustomer({
-				orgId: org.id,
-				env,
-				customerId,
-				entityId,
-			})) ?? undefined;
+		fullCustomer = await getCachedFullCustomer({
+			ctx,
+			customerId,
+			entityId,
+		});
 
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
@@ -57,13 +52,11 @@ export const getOrCreateCachedFullCustomer = async ({
 		}
 	}
 
-	// 2. Try DB if not in cache
+	// 2. Try DB if not in cache (CusService.getFull handles lazy reset internally)
 	if (!fullCustomer && customerId) {
 		fullCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
 			expand: [CustomerExpand.Invoices],
@@ -80,27 +73,12 @@ export const getOrCreateCachedFullCustomer = async ({
 		});
 	}
 
-	// 4. Update customer details if provided
-	const updated = await updateCustomerDetails({
+	// 4. Update customer details if provided (fullCustomer object is updated in place)
+	await updateCustomerDetails({
 		ctx,
-		customer: fullCustomer,
+		fullCustomer,
 		customerData,
 	});
-
-	if (updated) {
-		setCache = true;
-
-		fullCustomer = await CusService.getFull({
-			db,
-			idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
-			orgId: org.id,
-			env: env as AppEnv,
-			withEntities: true,
-			withSubs: true,
-			entityId,
-			expand: [CustomerExpand.Invoices],
-		});
-	}
 
 	// 5. Auto-create entity if needed
 	if (entityId && !fullCustomer.entity) {
@@ -111,17 +89,7 @@ export const getOrCreateCachedFullCustomer = async ({
 		if (existingEntity) {
 			fullCustomer.entity = existingEntity;
 		} else {
-			setCache = true;
-			await deleteCachedFullCustomer({
-				customerId: fullCustomer.id || fullCustomer.internal_id,
-				ctx,
-				source: "getOrCreateCachedFullCustomer",
-			});
-			logger.info(
-				`Auto creating entity ${entityId} for customer ${customerId}`,
-			);
-
-			const newEntity = (await autoCreateEntity({
+			const newEntity = await autoCreateEntity({
 				ctx,
 				customerId: fullCustomer.id || fullCustomer.internal_id,
 				entityId,
@@ -129,10 +97,12 @@ export const getOrCreateCachedFullCustomer = async ({
 					name: entityData?.name,
 					feature_id: entityData?.feature_id || "",
 				},
-			})) as Entity;
+			});
 
-			fullCustomer.entities = [...(fullCustomer.entities || []), newEntity];
-			fullCustomer.entity = newEntity;
+			if (newEntity) {
+				fullCustomer.entities = [...(fullCustomer.entities || []), newEntity];
+				fullCustomer.entity = newEntity;
+			}
 		}
 	}
 
@@ -145,7 +115,7 @@ export const getOrCreateCachedFullCustomer = async ({
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			fetchTimeMs,
 			source,
-			overwrite: true,
+			// overwrite: true,
 		}).catch((err) => logger.error(`Failed to set cache: ${err}`));
 	}
 

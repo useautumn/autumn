@@ -1,23 +1,16 @@
 import {
-	type AppEnv,
 	BillingType,
-	CusProductStatus,
 	customerPriceToCustomerEntitlement,
 	type FullCusProduct,
 	isFixedPrice,
-	type Organization,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
-import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
-import { getStripeSubs } from "../../stripeSubUtils.js";
 import { handleContUsePrices } from "./handleContUsePrices.js";
 import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";
@@ -28,24 +21,19 @@ import { handleUsagePrices } from "./handleUsagePrices.js";
 // For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
 
 export const sendUsageAndReset = async ({
-	db,
+	ctx,
 	activeProduct,
-	org,
-	env,
 	invoice,
-	logger,
 	submitUsage = true,
 	resetBalance = true,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	activeProduct: FullCusProduct;
-	org: Organization;
-	env: AppEnv;
 	invoice: Stripe.Invoice;
-	logger: any;
 	submitUsage?: boolean;
 	resetBalance?: boolean;
 }) => {
+	const { org, env, logger } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
 	const cusEnts = activeProduct.customer_entitlements;
@@ -85,15 +73,13 @@ export const sendUsageAndReset = async ({
 
 		if (billingType === BillingType.UsageInArrear) {
 			const handledUsage = await handleUsagePrices({
-				db,
-				org,
+				ctx,
 				invoice,
 				customer,
 				relatedCusEnt,
 				stripeCli,
 				price,
 				usageSub: usageBasedSub,
-				logger,
 				activeProduct,
 				submitUsage,
 				resetBalance,
@@ -104,12 +90,11 @@ export const sendUsageAndReset = async ({
 
 		if (billingType === BillingType.InArrearProrated) {
 			const handledContUse = await handleContUsePrices({
-				db,
+				ctx,
 				cusEnts,
 				cusPrice,
 				invoice,
 				usageSub: usageBasedSub,
-				logger,
 				resetBalance,
 			});
 
@@ -118,104 +103,15 @@ export const sendUsageAndReset = async ({
 
 		if (billingType === BillingType.UsageInAdvance) {
 			const handledPrepaid = await handlePrepaidPrices({
-				db,
+				ctx,
 				cusPrice,
 				cusProduct: activeProduct,
 				usageSub: usageBasedSub,
 				invoice,
-				logger,
 				resetBalance,
 			});
 
 			handled.push(handledPrepaid);
 		}
 	}
-};
-
-const handleInvoiceCreated = async ({
-	db,
-	org,
-	data,
-	env,
-	logger,
-}: {
-	db: DrizzleCli;
-	org: Organization;
-	data: Stripe.Invoice;
-	env: AppEnv;
-	logger: any;
-}) => {
-	const stripeCli = createStripeCli({ org, env });
-	const invoice = await getFullStripeInvoice({
-		stripeCli,
-		stripeId: data.id!,
-	});
-
-	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
-
-	if (subId) {
-		const activeProducts = await CusProductService.getByStripeSubId({
-			db,
-			stripeSubId: subId,
-			orgId: org.id,
-			env,
-			inStatuses: [
-				CusProductStatus.Active,
-				// CusProductStatus.Expired,
-				CusProductStatus.PastDue,
-			],
-		});
-
-		if (activeProducts.length === 0) {
-			logger.warn(
-				`Stripe invoice.created -- no active products found (${org.slug})`,
-			);
-			return;
-		}
-
-		await FeatureService.list({
-			db,
-			orgId: org.id,
-			env,
-		});
-
-		const stripeSubs = await getStripeSubs({
-			stripeCli: createStripeCli({ org, env }),
-			subIds: activeProducts.flatMap((p) => p.subscription_ids || []),
-		});
-
-		for (const activeProduct of activeProducts) {
-			const subId = stripeInvoiceToStripeSubscriptionId(invoice);
-			const subscription = stripeSubs.find((s) => s.id === subId);
-
-			await sendUsageAndReset({
-				db,
-				activeProduct,
-				org,
-				env,
-				invoice,
-				logger,
-				submitUsage: true, // Always submit usage during invoice.created
-				resetBalance: validateProductShouldReset({
-					subscription,
-					_invoice: invoice,
-				}), // Skip balance reset for Vercel (wait for payment confirmation)
-			});
-		}
-	}
-};
-
-const validateProductShouldReset = ({
-	subscription,
-	_invoice,
-}: {
-	subscription?: Stripe.Subscription;
-	_invoice: Stripe.Invoice;
-}) => {
-	/**
-	 * This was separated so as to give us headroom to add further Custom Payment Methods in the future.
-	 * e.g RevenueCat etc...
-	 */
-	if (subscription?.metadata?.vercel_installation_id) return false;
-	return true;
 };

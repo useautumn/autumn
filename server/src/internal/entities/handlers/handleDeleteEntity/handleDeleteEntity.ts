@@ -25,10 +25,8 @@ export const handleDeleteEntity = createRoute({
 		const { db, org, env, features, logger } = ctx;
 
 		const fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customer_id,
-			orgId: org.id,
-			env,
 			withEntities: true,
 		});
 
@@ -57,16 +55,13 @@ export const handleDeleteEntity = createRoute({
 			if (!mainCusEnt) continue;
 
 			const { newReplaceables } = await adjustAllowance({
-				db,
-				env,
-				org,
+				ctx,
 				cusPrices: cusProduct.customer_prices,
 				customer: fullCus,
-				affectedFeature: mainCusEnt.entitlement.feature,
+				affectedFeature: mainCusEnt.entitlement.feature!,
 				cusEnt: { ...mainCusEnt, customer_product: cusProduct },
 				originalBalance: mainCusEnt.balance!,
 				newBalance: mainCusEnt.balance! + 1,
-				logger,
 			});
 
 			const linkedCusEnts = findLinkedCusEnts({
@@ -109,22 +104,34 @@ export const handleDeleteEntity = createRoute({
 					newEntities = newEntities_;
 				}
 
-				await CusEntService.update({
+			await CusEntService.update({
+				ctx: {
 					db,
-					id: linkedCusEnt.id,
-					updates: {
-						entities: newEntities,
-					},
-				});
+					logger,
+					org,
+					env,
+					customerId: customer_id,
+				},
+				id: linkedCusEnt.id,
+				updates: {
+					entities: newEntities,
+				},
+			});
 			}
 
-			if (!replaceable) {
-				await CusEntService.increment({
+		if (!replaceable) {
+			await CusEntService.increment({
+				ctx: {
 					db,
-					id: mainCusEnt.id,
-					amount: 1,
-				});
-			}
+					logger,
+					org,
+					env,
+					customerId: customer_id,
+				},
+				id: mainCusEnt.id,
+				amount: 1,
+			});
+		}
 		}
 
 		// Cancel any subs

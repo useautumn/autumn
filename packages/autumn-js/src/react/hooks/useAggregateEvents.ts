@@ -14,7 +14,7 @@ export type UseAggregateEventsParams = HookParams<
 >;
 
 export const useAggregateEvents = (params: UseAggregateEventsParams) => {
-	const client = useAutumnClient();
+	const client = useAutumnClient({ caller: "useAggregateEvents" });
 	const { queryOptions, customRange, ...restParams } = params;
 
 	const startDate = customRange?.start

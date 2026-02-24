@@ -99,7 +99,7 @@ export const handleLegacyUpgradeFlow = async ({
 
 		if (curScheduledProduct) {
 			await CusProductService.delete({
-				db,
+				ctx,
 				cusProductId: curScheduledProduct.id,
 			});
 		}
@@ -219,7 +219,7 @@ export const handleLegacyUpgradeFlow = async ({
 	) {
 		logger.info(`UPGRADE FLOW: expiring previous cus product`);
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curCusProduct.id,
 			updates: {
 				subscription_ids: canceled ? undefined : [],

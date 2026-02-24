@@ -43,16 +43,13 @@ export const handlePaidAllocatedCusEnt = async ({
 	});
 
 	const { newReplaceables, deletedReplaceables } = await adjustAllowance({
-		db,
-		env,
-		org,
-		cusPrices: cusPrices as any,
+		ctx,
+		cusPrices: cusPrices,
 		customer: fullCus,
 		affectedFeature: cusEnt.entitlement.feature,
-		cusEnt: cusEnt as any,
+		cusEnt: cusEnt,
 		originalBalance: originalGrpBalance,
 		newBalance: newGrpBalance,
-		logger: ctx.logger,
 	});
 
 	// Adjust balance based on replaceables
@@ -65,8 +62,12 @@ export const handlePaidAllocatedCusEnt = async ({
 	}
 
 	if (reUpdatedBalance !== update.balance) {
+		ctx.logger.info(
+			`Paid allocated adjustment: created=${newReplaceables?.length ?? 0}, deleted=${deletedReplaceables?.length ?? 0}, balance: ${update.balance} -> ${reUpdatedBalance}`,
+		);
+
 		await CusEntService.update({
-			db,
+			ctx,
 			id: cusEnt.id,
 			updates: {
 				balance: reUpdatedBalance,

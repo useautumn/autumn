@@ -196,14 +196,13 @@ export const syncItemV3 = async ({
 	ctx: AutumnContext;
 	payload: SyncItemV3;
 }): Promise<void> => {
-	const { customerId, orgId, env, region, cusEntIds, rolloverIds } = payload;
+	const { customerId, region, cusEntIds, rolloverIds } = payload;
 	const { db, logger } = ctx;
 
 	const redisInstance = region ? getRegionalRedis(region) : undefined;
 
 	const fullCustomer = await getCachedFullCustomer({
-		orgId,
-		env,
+		ctx,
 		customerId,
 		redisInstance,
 	});

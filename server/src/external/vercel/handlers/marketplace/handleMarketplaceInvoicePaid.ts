@@ -1,12 +1,5 @@
-import {
-	type AppEnv,
-	AttachScenario,
-	type FeatureOptions,
-	type Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AttachScenario, type FeatureOptions } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { sendUsageAndReset } from "@/external/stripe/webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
@@ -72,10 +65,8 @@ export const handleMarketplaceInvoicePaid = async ({
 		}
 
 		const customer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: partialCustomer.internal_id,
-			orgId: org.id,
-			env,
 		});
 
 		if (!customer) {
@@ -140,10 +131,11 @@ export const handleMarketplaceInvoicePaid = async ({
 						status: "ready",
 					},
 				});
-			} catch (error: any) {
-				logger.warn("Could not fetch or parse resource metadata", {
-					error: error.message,
-					resourceId: vercelResourceId,
+			} catch (error) {
+				logger.warn(`Could not fetch or parse resource metadata ${error}`, {
+					data: {
+						resourceId: vercelResourceId,
+					},
 				});
 				// Continue with empty optionsList
 			}
@@ -153,12 +145,9 @@ export const handleMarketplaceInvoicePaid = async ({
 			const activeProduct = existingCusProducts[0];
 
 			await sendUsageAndReset({
-				db,
+				ctx,
 				activeProduct,
-				org,
-				env,
 				invoice,
-				logger,
 				submitUsage: false, // Usage already submitted in invoice.created
 				resetBalance: true, // Payment confirmed - now safe to reset balance
 			});

@@ -32,10 +32,8 @@ export const deleteEntity = async ({
 	const { db, org, env, features, logger } = ctx;
 
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		withEntities: true,
 	});
 
@@ -64,16 +62,13 @@ export const deleteEntity = async ({
 		if (!mainCusEnt) continue;
 
 		const { newReplaceables } = await adjustAllowance({
-			db,
-			env,
-			org,
+			ctx,
 			cusPrices: cusProduct.customer_prices,
 			customer: fullCus,
 			affectedFeature: mainCusEnt.entitlement.feature,
 			cusEnt: { ...mainCusEnt, customer_product: cusProduct },
 			originalBalance: mainCusEnt.balance!,
 			newBalance: mainCusEnt.balance! + 1,
-			logger,
 		});
 
 		const linkedCusEnts = findLinkedCusEnts({
@@ -115,7 +110,7 @@ export const deleteEntity = async ({
 			}
 
 			await CusEntService.update({
-				db,
+				ctx,
 				id: linkedCusEnt.id,
 				updates: {
 					entities: newEntities,
@@ -125,7 +120,7 @@ export const deleteEntity = async ({
 
 		if (!replaceable) {
 			await CusEntService.increment({
-				db,
+				ctx,
 				id: mainCusEnt.id,
 				amount: 1,
 			});

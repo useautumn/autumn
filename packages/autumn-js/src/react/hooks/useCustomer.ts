@@ -101,7 +101,7 @@ export type UseCustomerResult = HookResultWithMethods<
 export const useCustomer = (
 	params: UseCustomerParams = {},
 ): UseCustomerResult => {
-	const client = useAutumnClient();
+	const client = useAutumnClient({ caller: "useCustomer" });
 	const { errorOnNotFound, queryOptions, ...sdkParams } = params;
 
 	const queryResult = useQuery<Customer | null, AutumnClientError>({

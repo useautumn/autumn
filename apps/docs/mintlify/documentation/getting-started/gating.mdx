@@ -22,41 +22,41 @@ Check if a user has enough remaining balance of messages, before executing the a
 
 <CodeGroup>
 
-```jsx React wrap
+```jsx React
 import { useCustomer } from "autumn-js/react";
 
 export function SendChatMessage() {
 	const { check, refetch } = useCustomer();
 
 	const handleSendMessage = async () => {
-		const { data } = check({ featureId: "messages" });
+		const { allowed } = check({ featureId: "messages" });
 
-		if (!data?.allowed) {
+		if (!allowed) {
 			alert("You're out of messages");
 		} else {
-			//send chatbot message
-			//then, refresh customer usage data
+			// Send chatbot message
+			// Then refresh customer usage data
 			await refetch();
 		}
 	};
 }
 ```
 
-```typescript Node.js
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-//check if user can send 1 message
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "messages",
-  required_balance: 1,
+// Check if user can send 1 message
+const { allowed } = await autumn.check({
+  customerId: "user_or_org_id_from_auth",
+  featureId: "messages",
+  requiredBalance: 1,
 });
 
-if (!data.allowed) {
+if (!allowed) {
   console.log("User has run out of messages");
   return;
 }
@@ -64,41 +64,40 @@ if (!data.allowed) {
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-
-    # check feature access
+    # Check feature access
     response = await autumn.check(
-      customer_id='user_or_org_id_from_auth',
-      feature_id='messages'
-      required_balance=1,
+        customer_id='user_or_org_id_from_auth',
+        feature_id='messages',
+        required_balance=1,
     )
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-# check feature access
+# Check feature access
 curl -X POST 'https://api.useautumn.com/v1/check' \
--H 'Authorization: Bearer am_sk_42424242' \
--H 'Content-Type: application/json' \
--d '{
-  "customer_id": "user_123",
-  "feature_id": "messages"
-  "required_balance": 1,
-}'
+  -H 'Authorization: Bearer am_sk_42424242' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages",
+    "required_balance": 1
+  }'
 ```
 
 </CodeGroup>
 
 <Accordion title="Using React hooks to check access client-side">
 
-When using [React hooks](/react/hooks/useCustomer), you have access to the [`customer`](/react/hooks/useCustomer#customer) state object, which you can use to [display billing data](/documentation/getting-started/display-billing) to your users (subscription status, feature permissions, usage balances, etc). 
+When using [React hooks](/react/hooks/useCustomer), you have access to the [`data`](/react/hooks/useCustomer#data) object, which you can use to [display billing data](/documentation/getting-started/display-billing) to your users (subscription status, feature permissions, usage balances, etc). 
 
-You can use the client-side `check` function to gate features and show paywalls. Permissions are determined by reading the local `customer` state, so no call to Autumn's API is made. The "true" state should always be fetched server-side.
+You can use the client-side `check` function to gate features and show paywalls. Permissions are determined by reading the local `data` state, so no call to Autumn's API is made. The "true" state should always be fetched server-side.
 
 </Accordion>
 
@@ -112,36 +111,40 @@ After the user has successfully used a chatbot message, you can record the usage
 
 <CodeGroup>
 
-```typescript Node.js
-//Your own function to send the chat message
+```typescript TypeScript
+// Your own function to send the chat message
 
-//then record 1 message used
+// Then record 1 message used
 await autumn.track({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "messages",
-  value: 1
+  customerId: "user_or_org_id_from_auth",
+  featureId: "messages",
+  value: 1,
 });
 ```
 
 ```python Python
 import asyncio
-#Your own function to send the chat message
+from autumn_sdk import Autumn
 
-#then record 1 message used
+autumn = Autumn('am_sk_42424242')
+
+# Your own function to send the chat message
+
+# Then record 1 message used
 async def main():
     await autumn.track(
         customer_id='user_or_org_id_from_auth',
         feature_id='messages',
-        value=1
+        value=1,
     )
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-#Your own function to send the chat message
+# Your own function to send the chat message
 
-#then record 1 message used
+# Then record 1 message used
 curl -X POST 'https://api.useautumn.com/v1/track' \
   -H 'Authorization: Bearer am_sk_42424242' \
   -H 'Content-Type: application/json' \

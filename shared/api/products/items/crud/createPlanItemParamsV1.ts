@@ -158,6 +158,11 @@ export const CreatePlanItemParamsV1Schema = z
 				});
 			}
 		}
+	})
+	.meta({
+		title: "PlanItem",
+		description:
+			"Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.",
 	});
 export type CreatePlanItemParamsV1 = z.infer<
 	typeof CreatePlanItemParamsV1Schema

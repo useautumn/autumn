@@ -60,10 +60,23 @@ function getIndividualEntValues({
 	ent: FullCusEntWithFullCusProduct;
 	entityId: string | null;
 }) {
-	const balance =
-		entityId && ent.entities?.[entityId]
-			? (ent.entities[entityId].balance ?? ent.balance ?? 0)
-			: (ent.balance ?? 0);
+	const balance = cusEntsToBalance({
+		cusEnts: [ent],
+		entityId: entityId ?? undefined,
+		withRollovers: true,
+	});
+
+	const grantedBalance = cusEntsToGrantedBalance({
+		cusEnts: [ent],
+		entityId: entityId ?? undefined,
+		withRollovers: true,
+	});
+
+	const prepaidAllowance = cusEntsToPrepaidQuantity({
+		cusEnts: [ent],
+		sumAcrossEntities: nullish(entityId),
+	});
+
 	const quantity = ent.customer_product?.quantity || 1;
 	const allowance =
 		(ent.entitlement.allowance ?? 0) * quantity +

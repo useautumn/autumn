@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	BillingType,
 	type Customer,
 	type Entitlement,
@@ -7,16 +6,15 @@ import {
 	type Feature,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
-	type Organization,
 	type Price,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
@@ -59,33 +57,25 @@ export const getUsageFromBalance = ({
 };
 
 export const adjustAllowance = async ({
-	db,
-	env,
-	org,
+	ctx,
 	affectedFeature,
 	cusEnt,
 	cusPrices,
 	customer,
 	originalBalance,
 	newBalance,
-	logger,
 	errorIfIncomplete = false,
-	// deduction,
-	// product,
-	// fromEntities = false,
 }: {
-	db: DrizzleCli;
-	env: AppEnv;
+	ctx: AutumnContext;
 	affectedFeature: Feature;
-	org: Organization;
 	cusEnt: FullCusEntWithFullCusProduct;
 	cusPrices: FullCustomerPrice[];
 	customer: Customer;
 	originalBalance: number;
 	newBalance: number;
-	logger: any;
 	errorIfIncomplete?: boolean;
 }) => {
+	const { logger, org, env } = ctx;
 	const cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
 	const billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
 	const cusProduct = cusEnt.customer_product;
@@ -139,7 +129,7 @@ export const adjustAllowance = async ({
 
 	if (isUpgrade) {
 		return await handleProratedUpgrade({
-			db,
+			ctx,
 			stripeCli,
 			cusEnt,
 			cusPrice,
@@ -147,13 +137,10 @@ export const adjustAllowance = async ({
 			subItem: subItem as Stripe.SubscriptionItem,
 			newBalance,
 			prevBalance: originalBalance,
-			org,
-			logger,
 		});
 	} else {
 		return await handleProratedDowngrade({
-			db,
-			org,
+			ctx,
 			stripeCli,
 			cusEnt,
 			cusPrice,
@@ -161,7 +148,6 @@ export const adjustAllowance = async ({
 			subItem: subItem as Stripe.SubscriptionItem,
 			newBalance,
 			prevBalance: originalBalance,
-			logger,
 		});
 	}
 };

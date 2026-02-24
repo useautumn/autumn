@@ -94,10 +94,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 
 	// Verify no duplicate customer_products in DB
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// Count products with the same product_id
@@ -243,10 +241,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 
 	// Get the full customer to verify Stripe data
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// 2. Verify only 1 Stripe customer was created
@@ -331,10 +327,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 
 	// Get the final customer state from DB
 	const finalCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// Name should be preserved - not overwritten with empty string

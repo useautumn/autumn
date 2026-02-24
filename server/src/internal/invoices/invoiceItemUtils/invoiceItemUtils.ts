@@ -1,16 +1,12 @@
-import type {
-	Organization,
-	Price,
-	Product,
-	UsagePriceConfig,
-} from "@autumn/shared";
+import type { Price, Product, UsagePriceConfig } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const constructStripeInvoiceItem = ({
+	ctx,
 	product,
 	amount,
-	org,
 	price,
 	description,
 	stripeSubId,
@@ -18,9 +14,9 @@ export const constructStripeInvoiceItem = ({
 	periodStart,
 	periodEnd,
 }: {
+	ctx: AutumnContext;
 	product: Product;
 	amount: number;
-	org: Organization;
 	price: Price;
 	description: string;
 	stripeSubId: string;
@@ -28,6 +24,7 @@ export const constructStripeInvoiceItem = ({
 	periodStart: number;
 	periodEnd: number;
 }) => {
+	const { org } = ctx;
 	const config = price.config as UsagePriceConfig;
 
 	const amountInCents = Math.floor(
@@ -40,7 +37,7 @@ export const constructStripeInvoiceItem = ({
 					price_data: {
 						unit_amount: amountInCents,
 						currency: org.default_currency || "usd",
-						product: config.stripe_product_id || product.processor?.id!,
+						product: config.stripe_product_id || (product.processor?.id ?? ""),
 					},
 				}
 			: {

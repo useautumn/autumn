@@ -20,10 +20,8 @@ type CustomerLike =
 	| { products?: any[]; invoices?: any[]; id?: string; features?: any };
 
 import { timeout } from "@/utils/genUtils.js";
-import {
-	completeInvoiceCheckout,
-	completeStripeCheckoutForm,
-} from "../browserPool";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "../browserPool/completeInvoiceCheckoutV2";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "../browserPool/completeStripeCheckoutFormV2";
 
 export const expectMultiAttachCorrect = async ({
 	autumn,

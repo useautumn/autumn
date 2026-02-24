@@ -41,7 +41,7 @@ const processPrepaidPrice = async ({
 
 	const customerProduct = customerEntitlement.customer_product;
 
-	const { stripeSubscription } = eventContext;
+	const { stripeSubscription, fullCustomer } = eventContext;
 	const { db } = ctx;
 
 	if (!options) return;
@@ -80,7 +80,7 @@ const processPrepaidPrice = async ({
 		});
 
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates: {
 				options: newOptions,
@@ -91,7 +91,7 @@ const processPrepaidPrice = async ({
 			const difference =
 				(options?.quantity ?? 0) - (options?.upcoming_quantity ?? 0);
 			await CusEntService.decrement({
-				db,
+				ctx,
 				id: customerEntitlement.id,
 				amount: difference,
 			});
@@ -105,14 +105,14 @@ const processPrepaidPrice = async ({
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
 		await RolloverService.insert({
-			db,
+			ctx,
 			rows: rolloverUpdate.toInsert,
 			fullCusEnt: customerEntitlement,
 		});
 	}
 
 	await CusEntService.update({
-		db,
+		ctx,
 		id: customerEntitlement.id,
 		updates: {
 			...resetUpdate,

@@ -4,7 +4,7 @@ import type {
 } from "@autumn/shared";
 import { customerPriceToCustomerEntitlement } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
@@ -12,22 +12,21 @@ import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleContUsePrices = async ({
-	db,
+	ctx,
 	cusEnts,
 	cusPrice,
 	invoice,
 	usageSub,
-	logger,
 	resetBalance = true,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	cusEnts: FullCustomerEntitlement[];
 	cusPrice: FullCustomerPrice;
 	invoice: Stripe.Invoice;
 	usageSub: Stripe.Subscription;
-	logger: any;
 	resetBalance?: boolean;
 }): Promise<boolean> => {
+	const { logger } = ctx;
 	const cusEnt = customerPriceToCustomerEntitlement({
 		customerPrice: cusPrice,
 		customerEntitlements: cusEnts,
@@ -74,7 +73,7 @@ export const handleContUsePrices = async ({
 		});
 
 		await CusEntService.update({
-			db,
+			ctx,
 			id: linkedCusEnt.id,
 			updates: {
 				entities: newEntities,
@@ -83,13 +82,13 @@ export const handleContUsePrices = async ({
 	}
 
 	await CusEntService.increment({
-		db,
+		ctx,
 		id: cusEnt.id,
 		amount: replaceables.length,
 	});
 
 	await RepService.deleteInIds({
-		db,
+		ctx,
 		ids: replaceables.map((r) => r.id),
 	});
 

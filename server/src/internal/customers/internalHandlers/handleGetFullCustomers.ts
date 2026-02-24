@@ -19,8 +19,10 @@ export const handleGetFullCustomers = createRoute({
 		filters: z.any().optional(),
 	}),
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
 		const { search, page_size, page, last_item, filters } = c.req.valid("json");
+
+		const { org, env, db } = ctx;
 
 		const { data: customers } = await CusSearchService.search({
 			db,
@@ -34,9 +36,7 @@ export const handleGetFullCustomers = createRoute({
 		});
 
 		const fullCustomers = await CusBatchService.getByInternalIds({
-			db,
-			org,
-			env,
+			ctx,
 			internalCustomerIds: customers.map(
 				(customer: Customer) => customer.internal_id,
 			),

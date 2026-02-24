@@ -7,7 +7,6 @@ import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
@@ -16,6 +15,10 @@ import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
+import {
+	type RolloverOverwrite,
+	syncCustomerEntitlementUpdatesToCache,
+} from "./executeDeductionCache.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
@@ -27,7 +30,6 @@ export const executePostgresDeduction = async ({
 	entityId,
 	deductions,
 	options = {},
-	refreshCache = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -36,7 +38,6 @@ export const executePostgresDeduction = async ({
 	deductions: FeatureDeduction[];
 	eventInfo?: EventInfo;
 	options?: DeductionOptions;
-	refreshCache?: boolean;
 }): Promise<{
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
@@ -57,10 +58,8 @@ export const executePostgresDeduction = async ({
 	// Need to getOrCreateCustomer here too...
 	if (!fullCustomer) {
 		fullCustomer = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 			inStatuses: ACTIVE_STATUSES,
 			entityId,
 			withSubs: true,
@@ -78,6 +77,7 @@ export const executePostgresDeduction = async ({
 		Record<string, DeductionUpdate>
 	> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
+		let allRolloverOverwrites: RolloverOverwrite[] = [];
 
 		// Need to deduct from customer entitlement...
 		for (const deduction of deductions) {
@@ -120,6 +120,7 @@ export const executePostgresDeduction = async ({
 			const resultJson = result[0]?.deduct_from_cus_ents as {
 				updates: Record<string, DeductionUpdate>;
 				remaining: number;
+				rollover_updates: RolloverOverwrite[];
 			};
 
 			if (!resultJson) {
@@ -128,7 +129,7 @@ export const executePostgresDeduction = async ({
 				});
 			}
 
-			const { updates } = resultJson;
+			const { updates, rollover_updates } = resultJson;
 			logDeductionUpdates({
 				ctx,
 				fullCustomer,
@@ -136,6 +137,9 @@ export const executePostgresDeduction = async ({
 				source: "executePostgresDeduction",
 			});
 			allUpdates = { ...allUpdates, ...updates };
+			if (rollover_updates?.length > 0) {
+				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
+			}
 
 			try {
 				for (const cusEntId of Object.keys(updates)) {
@@ -183,14 +187,16 @@ export const executePostgresDeduction = async ({
 			});
 		}
 
-		if (refreshCache) {
-			await deleteCachedFullCustomer({
-				customerId,
-				ctx,
-				source: "executePostgresDeduction",
-				skipGuard: true,
-			});
-		}
+		// Atomically update the Redis cache with the deduction results.
+		// Uses the old fullCustomer's next_reset_at as an optimistic guard
+		// to prevent stale writes if a concurrent reset occurred.
+		await syncCustomerEntitlementUpdatesToCache({
+			ctx,
+			customerId,
+			fullCustomer: oldFullCus,
+			cusEntUpdates: allUpdates,
+			rolloverOverwrites: allRolloverOverwrites,
+		});
 
 		return allUpdates;
 	};

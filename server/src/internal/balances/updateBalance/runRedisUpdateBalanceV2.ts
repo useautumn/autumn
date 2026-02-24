@@ -62,7 +62,6 @@ export const runRedisUpdateBalanceV2 = async ({
 				entityId,
 				deductions: featureDeductions,
 				options: deductionOptions,
-				refreshCache: true,
 			});
 
 			return;

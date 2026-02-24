@@ -15,6 +15,10 @@ export * from "./checkout/prevVersions/checkoutResponseV0";
 export * from "./common/index";
 export * from "./openBillingPortal/openBillingPortalParamsV1";
 export * from "./openBillingPortal/openBillingPortalResponse";
+// Setup Payment
+export * from "./setupPayment/setupPaymentParamsV0";
+export * from "./setupPayment/setupPaymentParamsV1";
+
 // Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./updateSubscription/updateSubscriptionV0Params";

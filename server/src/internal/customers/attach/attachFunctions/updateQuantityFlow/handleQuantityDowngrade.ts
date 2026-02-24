@@ -101,9 +101,9 @@ export const handleQuantityDowngrade = async ({
 			(f: Feature) => f.internal_id === newOptions.internal_feature_id,
 		)!;
 		const invoiceItem = constructStripeInvoiceItem({
+			ctx,
 			product,
 			amount: amount,
-			org: org,
 			price: cusPrice.price,
 			description: getFeatureInvoiceDescription({
 				feature: feature,
@@ -189,7 +189,7 @@ export const handleQuantityDowngrade = async ({
 			.toNumber();
 
 		await CusEntService.decrement({
-			db,
+			ctx,
 			id: cusEnt.id,
 			amount: decrementBy,
 		});

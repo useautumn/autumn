@@ -13,11 +13,8 @@ import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceU
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { createReward } from "@tests/utils/productUtils.js";
-import {
-	advanceTestClock,
-	completeCheckoutForm,
-	getDiscount,
-} from "@tests/utils/stripeUtils.js";
+import { advanceTestClock, getDiscount } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutFormV2 as completeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
@@ -185,7 +182,7 @@ describe(
 				product_id: pro.id,
 			});
 
-			await completeCheckoutForm(res.checkout_url, undefined, promoCode);
+			await completeCheckoutForm({ url: res.checkout_url, promoCode });
 
 			await timeout(10000);
 

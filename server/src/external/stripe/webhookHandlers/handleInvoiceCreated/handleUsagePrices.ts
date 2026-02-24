@@ -4,13 +4,12 @@ import {
 	EntInterval,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
-	type Organization,
 	type Price,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInMinutes, subDays } from "date-fns";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
@@ -21,32 +20,31 @@ import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleUsagePrices = async ({
-	db,
-	org,
+	ctx,
 	invoice,
 	customer,
 	relatedCusEnt,
 	stripeCli,
 	price,
 	usageSub,
-	logger,
 	activeProduct,
 	submitUsage = true,
 	resetBalance = true,
 }: {
-	db: DrizzleCli;
-	org: Organization;
+	ctx: AutumnContext;
 	invoice: Stripe.Invoice;
 	customer: Customer;
 	relatedCusEnt: FullCustomerEntitlement;
 	stripeCli: Stripe;
 	price: Price;
 	usageSub: Stripe.Subscription;
-	logger: any;
 	activeProduct: FullCusProduct;
 	submitUsage?: boolean;
 	resetBalance?: boolean;
 }): Promise<boolean> => {
+	const { logger } = ctx;
+	const { org } = ctx;
+
 	const invoiceCreatedRecently =
 		Math.abs(
 			differenceInMinutes(
@@ -153,7 +151,7 @@ export const handleUsagePrices = async ({
 
 	const { end } = subToPeriodStartEnd({ sub: usageSub });
 	await CusEntService.update({
-		db,
+		ctx,
 		id: relatedCusEnt.id,
 		updates: {
 			...resetBalancesUpdate,
@@ -169,7 +167,7 @@ export const handleUsagePrices = async ({
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
 		await RolloverService.insert({
-			db,
+			ctx,
 			rows: rolloverUpdate.toInsert,
 			fullCusEnt: relatedCusEnt,
 		});

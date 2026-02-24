@@ -10,8 +10,8 @@ async function generateTypeScriptSdkQuiet({
 	speakeasySdkDir: string;
 }): Promise<void> {
 	await execAsyncQuiet({
-		command: "bunx",
-		args: ["speakeasy", "run", "-t", "autumn", "-y", "-o", "console"],
+		command: "speakeasy",
+		args: ["run", "-t", "autumn", "-y", "-o", "console"],
 		cwd: speakeasySdkDir,
 		label: "TypeScript SDK generation",
 	});
@@ -35,8 +35,8 @@ async function generatePythonSdkQuiet({
 	pythonSdkDir: string;
 }): Promise<void> {
 	await execAsyncQuiet({
-		command: "bunx",
-		args: ["speakeasy", "run", "-t", "autumn-python", "-y", "-o", "console"],
+		command: "speakeasy",
+		args: ["run", "-t", "autumn-python", "-y", "-o", "console"],
 		cwd: speakeasySdkDir,
 		label: "Python SDK generation",
 	});

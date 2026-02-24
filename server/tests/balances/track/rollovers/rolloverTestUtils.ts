@@ -1,26 +1,25 @@
 import type { Customer } from "@autumn/shared";
-import {
-	clearCusEntsFromCache,
-	resetCustomerEntitlement,
-} from "@/cron/cronUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
+import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 export const resetAndGetCusEnt = async ({
-	db,
+	ctx,
 	customer,
 	productGroup,
 	featureId,
 	skipCacheDeletion = false,
 }: {
-	db: DrizzleCli;
+	ctx: TestContext;
 	customer: Customer;
 	productGroup: string;
 	featureId: string;
 	skipCacheDeletion?: boolean;
 }) => {
+	const { db } = ctx;
 	// Run reset cusEnt on ...
 	let mainCusProduct = await getMainCusProduct({
 		db,
@@ -39,7 +38,7 @@ export const resetAndGetCusEnt = async ({
 	};
 
 	const updatedCusEnt = await resetCustomerEntitlement({
-		db,
+		ctx,
 		cusEnt: resetCusEnt,
 		updatedCusEnts: [],
 	});

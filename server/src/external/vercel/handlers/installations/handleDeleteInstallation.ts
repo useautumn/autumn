@@ -51,10 +51,8 @@ export const handleDeleteInstallation = createRoute({
 
 			// 2. Get customer by Vercel installation ID (customer.id may differ from installation_id)
 			const customer = await CusService.getByVercelId({
-				db,
+				ctx,
 				vercelInstallationId: integrationConfigurationId,
-				orgId,
-				env: ctx.env,
 			});
 
 			// 3. Delete the customer/installation using the actual customer ID

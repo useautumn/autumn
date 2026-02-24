@@ -73,7 +73,7 @@ export const handleInitialPurchase = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,

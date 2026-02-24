@@ -1,5 +1,9 @@
-import type { FullCustomerEntitlement } from "@autumn/shared";
+import type { EntityBalance, FullCustomerEntitlement } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+
+export type ResetBalancesUpdate =
+	| { entities: Record<string, EntityBalance> }
+	| { balance: number; additional_balance: number; adjustment: number };
 
 export const getResetBalancesUpdate = ({
 	cusEnt,
@@ -7,8 +11,7 @@ export const getResetBalancesUpdate = ({
 }: {
 	cusEnt: FullCustomerEntitlement;
 	allowance?: number;
-}) => {
-	let update = {};
+}): ResetBalancesUpdate => {
 	const newBalance = notNullish(allowance)
 		? allowance!
 		: cusEnt.entitlement.allowance || 0;
@@ -21,14 +24,12 @@ export const getResetBalancesUpdate = ({
 			newEntities[entityId].balance = newBalance;
 			newEntities[entityId].adjustment = 0;
 		}
-		update = { entities: newEntities };
-	} else {
-		update = {
-			balance: newBalance,
-			additional_balance: 0,
-			adjustment: 0,
-		};
+		return { entities: newEntities };
 	}
 
-	return update;
+	return {
+		balance: newBalance,
+		additional_balance: 0,
+		adjustment: 0,
+	};
 };

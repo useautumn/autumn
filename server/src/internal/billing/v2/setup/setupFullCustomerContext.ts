@@ -9,14 +9,11 @@ export const setupFullCustomerContext = async ({
 	ctx: AutumnContext;
 	params: { customer_id: string; entity_id?: string };
 }) => {
-	const { db, org, env } = ctx;
 	const { customer_id: customerId } = params;
 
 	const fullCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
 		withSubs: true,
 		withEntities: true,
 		entityId: params.entity_id ?? undefined,

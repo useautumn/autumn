@@ -55,7 +55,9 @@ UpdatePlanPriceIntervalRequest = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class UpdatePlanPriceRequestTypedDict(TypedDict):
+class UpdatePlanBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
     interval: UpdatePlanPriceIntervalRequest
@@ -64,7 +66,9 @@ class UpdatePlanPriceRequestTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
-class UpdatePlanPriceRequest(BaseModel):
+class UpdatePlanBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
     amount: float
     r"""Base price amount for the plan."""
 
@@ -177,7 +181,7 @@ UpdatePlanBillingMethodRequest = Literal[
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class UpdatePlanItemPriceRequestTypedDict(TypedDict):
+class UpdatePlanPriceRequestTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: UpdatePlanItemPriceIntervalRequest
@@ -196,7 +200,7 @@ class UpdatePlanItemPriceRequestTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
-class UpdatePlanItemPriceRequest(BaseModel):
+class UpdatePlanPriceRequest(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: UpdatePlanItemPriceIntervalRequest
@@ -324,7 +328,9 @@ class UpdatePlanRolloverRequest(BaseModel):
         return m
 
 
-class UpdatePlanItemRequestTypedDict(TypedDict):
+class UpdatePlanPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
     included: NotRequired[float]
@@ -333,7 +339,7 @@ class UpdatePlanItemRequestTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     reset: NotRequired[UpdatePlanResetRequestTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[UpdatePlanItemPriceRequestTypedDict]
+    price: NotRequired[UpdatePlanPriceRequestTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[UpdatePlanProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
@@ -341,7 +347,9 @@ class UpdatePlanItemRequestTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class UpdatePlanItemRequest(BaseModel):
+class UpdatePlanPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
     feature_id: str
     r"""The ID of the feature to configure."""
 
@@ -354,7 +362,7 @@ class UpdatePlanItemRequest(BaseModel):
     reset: Optional[UpdatePlanResetRequest] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[UpdatePlanItemPriceRequest] = None
+    price: Optional[UpdatePlanPriceRequest] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     proration: Optional[UpdatePlanProration] = None
@@ -390,7 +398,9 @@ UpdatePlanDurationTypeRequest = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-class UpdatePlanFreeTrialRequestTypedDict(TypedDict):
+class UpdatePlanFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
     duration_type: NotRequired[UpdatePlanDurationTypeRequest]
@@ -399,7 +409,9 @@ class UpdatePlanFreeTrialRequestTypedDict(TypedDict):
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
 
-class UpdatePlanFreeTrialRequest(BaseModel):
+class UpdatePlanFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
+
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
@@ -438,11 +450,11 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Whether the plan is an add-on."""
     auto_enable: NotRequired[bool]
     r"""Whether the plan is automatically enabled."""
-    price: NotRequired[Nullable[UpdatePlanPriceRequestTypedDict]]
+    price: NotRequired[Nullable[UpdatePlanBasePriceTypedDict]]
     r"""The price of the plan. Set to null to remove the base price."""
-    items: NotRequired[List[UpdatePlanItemRequestTypedDict]]
+    items: NotRequired[List[UpdatePlanPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
-    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialRequestTypedDict]]
+    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
     version: NotRequired[float]
     archived: NotRequired[bool]
@@ -468,13 +480,13 @@ class UpdatePlanParams(BaseModel):
     auto_enable: Optional[bool] = None
     r"""Whether the plan is automatically enabled."""
 
-    price: OptionalNullable[UpdatePlanPriceRequest] = UNSET
+    price: OptionalNullable[UpdatePlanBasePrice] = UNSET
     r"""The price of the plan. Set to null to remove the base price."""
 
-    items: Optional[List[UpdatePlanItemRequest]] = None
+    items: Optional[List[UpdatePlanPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
 
-    free_trial: OptionalNullable[UpdatePlanFreeTrialRequest] = UNSET
+    free_trial: OptionalNullable[UpdatePlanFreeTrialParams] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
 
     version: Optional[float] = None
@@ -971,7 +983,7 @@ class UpdatePlanRolloverResponse(BaseModel):
         return m
 
 
-class UpdatePlanItemResponseTypedDict(TypedDict):
+class UpdatePlanItemTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this item configures."""
     included: float
@@ -990,7 +1002,7 @@ class UpdatePlanItemResponseTypedDict(TypedDict):
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
 
-class UpdatePlanItemResponse(BaseModel):
+class UpdatePlanItem(BaseModel):
     feature_id: str
     r"""The ID of the feature this item configures."""
 
@@ -1052,7 +1064,7 @@ UpdatePlanDurationTypeResponse = Union[
 r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
 
-class UpdatePlanFreeTrialResponseTypedDict(TypedDict):
+class UpdatePlanFreeTrialTypedDict(TypedDict):
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
     duration_length: float
@@ -1063,7 +1075,7 @@ class UpdatePlanFreeTrialResponseTypedDict(TypedDict):
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
 
 
-class UpdatePlanFreeTrialResponse(BaseModel):
+class UpdatePlanFreeTrial(BaseModel):
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
     duration_length: float
@@ -1105,7 +1117,7 @@ class UpdatePlanResponseTypedDict(TypedDict):
     r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
     price: Nullable[UpdatePlanPriceResponseTypedDict]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
-    items: List[UpdatePlanItemResponseTypedDict]
+    items: List[UpdatePlanItemTypedDict]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
     created_at: float
     r"""Unix timestamp (ms) when the plan was created."""
@@ -1115,7 +1127,7 @@ class UpdatePlanResponseTypedDict(TypedDict):
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
-    free_trial: NotRequired[UpdatePlanFreeTrialResponseTypedDict]
+    free_trial: NotRequired[UpdatePlanFreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
 
@@ -1146,7 +1158,7 @@ class UpdatePlanResponse(BaseModel):
     price: Nullable[UpdatePlanPriceResponse]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
 
-    items: List[UpdatePlanItemResponse]
+    items: List[UpdatePlanItem]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
 
     created_at: float
@@ -1161,7 +1173,7 @@ class UpdatePlanResponse(BaseModel):
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
 
-    free_trial: Optional[UpdatePlanFreeTrialResponse] = None
+    free_trial: Optional[UpdatePlanFreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
     @model_serializer(mode="wrap")
