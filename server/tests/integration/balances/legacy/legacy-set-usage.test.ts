@@ -398,7 +398,7 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage-prepaid1: set usage with
 			s.attach({ productId: freeProd.id }),
 			s.billing.attach({
 				productId: prepaidAddOn.id,
-				options: { quantity: 2 },
+				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 			}),
 		],
 	});

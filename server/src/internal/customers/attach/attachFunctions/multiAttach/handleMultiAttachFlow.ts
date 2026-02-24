@@ -130,7 +130,7 @@ export const handleMultiAttachFlow = async ({
 	for (const cusProduct of removeCusProducts) {
 		if (cusProduct.status === CusProductStatus.Scheduled) {
 			await CusProductService.delete({
-				db,
+				ctx,
 				cusProductId: cusProduct.id,
 			});
 		}
@@ -138,7 +138,7 @@ export const handleMultiAttachFlow = async ({
 
 	for (const cusProduct of expireCusProducts) {
 		await CusProductService.update({
-			db,
+			ctx,
 			cusProductId: cusProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,

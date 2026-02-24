@@ -4,8 +4,10 @@ import {
 	rollovers,
 } from "@autumn/shared";
 import { and, eq, gte, inArray } from "drizzle-orm";
+import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import { performMaximumClearing } from "./rolloverUtils.js";
 
 export class RolloverService {
@@ -58,12 +60,15 @@ export class RolloverService {
 	// }
 
 	static async getCurrentRollovers({
-		db,
+		// db,
+		ctx,
 		cusEntID,
 	}: {
-		db: DrizzleCli;
+		// db: DrizzleCli;
+		ctx: CronContext;
 		cusEntID: string;
 	}) {
+		const { db } = ctx;
 		return await db
 			.select()
 			.from(rollovers)
@@ -76,20 +81,21 @@ export class RolloverService {
 	}
 
 	static async insert({
-		db,
+		ctx,
 		rows,
 		fullCusEnt,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		rows: Rollover[];
 		fullCusEnt: FullCustomerEntitlement;
 	}) {
+		const { db } = ctx;
 		if (rows.length === 0) return {};
 
 		await db.insert(rollovers).values(rows).returning();
 
 		return RolloverService.clearExcessRollovers({
-			db,
+			ctx,
 			newRows: rows,
 			fullCusEnt,
 		});
@@ -97,14 +103,15 @@ export class RolloverService {
 
 	/** Enforces the rollover max cap after new rollovers have been inserted into the DB. */
 	static async clearExcessRollovers({
-		db,
+		ctx,
 		newRows,
 		fullCusEnt,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		newRows: Rollover[];
 		fullCusEnt: FullCustomerEntitlement;
 	}): Promise<Rollover[]> {
+		const { db } = ctx;
 		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({

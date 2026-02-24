@@ -148,7 +148,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, adv
 		status: CusProductStatus.Active,
 	});
 	expect(
-		entity1.products.filter((p: any) => p.group === premiumAnnualProduct.group)
+		entity1.products.filter((p) => p.group === premiumAnnualProduct.group)
 			.length,
 	).toBe(1);
 
@@ -159,9 +159,9 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: annual + monthly, adv
 		productId: pro.id,
 		status: CusProductStatus.Active,
 	});
-	expect(
-		entity2.products.filter((p: any) => p.group === premium.group).length,
-	).toBe(1);
+	expect(entity2.products.filter((p) => p.group === premium.group).length).toBe(
+		1,
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

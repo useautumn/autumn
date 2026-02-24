@@ -21,6 +21,7 @@ import {
 	or,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RepoContext } from "@/db/repoContext";
 
 export const ACTIVE_STATUSES = [
 	CusProductStatus.Active,
@@ -397,14 +398,15 @@ export class CusProductService {
 	}
 
 	static async update({
-		db,
+		ctx,
 		cusProductId,
 		updates,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		cusProductId: string;
 		updates: Partial<InsertCustomerProduct>;
 	}) {
+		const { db } = ctx;
 		return await db
 			.update(customerProducts)
 			.set(updates)
@@ -497,13 +499,13 @@ export class CusProductService {
 	}
 
 	static async delete({
-		db,
+		ctx,
 		cusProductId,
 	}: {
-		db: DrizzleCli;
+		ctx: RepoContext;
 		cusProductId: string;
 	}) {
-		return await db
+		return await ctx.db
 			.delete(customerProducts)
 			.where(eq(customerProducts.id, cusProductId))
 			.returning();

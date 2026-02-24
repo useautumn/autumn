@@ -37,7 +37,7 @@ export const handleExpiration = async ({
 
 	// Expire the cus_product
 	await CusProductService.update({
-		db,
+		ctx,
 		cusProductId: curSameProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,

@@ -1,7 +1,6 @@
-import type { FullCustomer } from "@autumn/shared";
+import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe.js";
 import type { CreateCustomerContext } from "./createCustomerContext.js";
@@ -28,7 +27,7 @@ export const finalizeCreateCustomer = async ({
 	// Link subscription_ids to customer products
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		await CusProductService.update({
-			db: ctx.db,
+			ctx,
 			cusProductId: customerProduct.id,
 			updates: { subscription_ids: customerProduct.subscription_ids },
 		});
