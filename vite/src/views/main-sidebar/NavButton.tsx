@@ -88,7 +88,7 @@ export const NavButton = ({
 	};
 
 	const outerDivClass = cn(
-		`!cursor-default font-medium
+		`cursor-pointer font-medium
            text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent`,
 		(!isGroup || !expanded) && " hover:text-t1 text-t2",
 		isActive && "border border-border !text-t1 bg-interactive-secondary",
