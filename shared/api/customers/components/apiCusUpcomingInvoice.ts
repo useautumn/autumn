@@ -1,4 +1,4 @@
-import { ApiDiscountSchema } from "@api/others/apiDiscount.js";
+import { ApiDiscountSchema } from "@api/others/apiDiscount";
 import { z } from "zod/v4";
 
 export const ApiCusUpcomingInvoiceSchema = z.object({

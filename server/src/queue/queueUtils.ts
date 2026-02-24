@@ -9,7 +9,10 @@ import {
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { JobName } from "./JobName.js";
-import type { SendProductsUpdatedPayload } from "./workflows.js";
+import type {
+	BatchResetCusEntsPayload,
+	SendProductsUpdatedPayload,
+} from "./workflows.js";
 
 export interface Payloads {
 	[JobName.RewardMigration]: {
@@ -45,6 +48,7 @@ export interface Payloads {
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
+	[JobName.BatchResetCusEnts]: BatchResetCusEntsPayload;
 	[JobName.VerifyCacheConsistency]: {
 		customerId: string;
 		orgId: string;

@@ -1,51 +1,31 @@
 import { z } from "zod/v4";
-import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
-import { InvoiceModeParamsSchema } from "../common/invoiceModeParams.js";
 
-export const UpdateSubscriptionV1ParamsSchema =
+export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
+		cancel_action: CancelActionSchema.optional().meta({
+			description:
+				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
+		}),
+	});
+export const UpdateSubscriptionV1ParamsSchema =
+	ExtUpdateSubscriptionV1ParamsSchema.extend({
 		plan_id: z.string().optional(),
-
-		invoice_mode: InvoiceModeParamsSchema.optional(),
-
-		cancel_action: CancelActionSchema.optional(),
-		billing_behavior: BillingBehaviorSchema.optional(),
-
 		customer_product_id: z.string().optional().meta({
 			internal: true,
 		}),
-	})
-		.refine(
-			(data) => {
-				if (data.cancel_action !== "cancel_immediately") return true;
-
-				const forbiddenFields = [
-					"feature_quantities",
-					"version",
-					"free_trial",
-					"customize",
-				] as const;
-				return !forbiddenFields.some((field) => data[field] !== undefined);
-			},
-			{
-				message:
-					"Cannot pass feature_quantities, customize, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
-			},
-		)
-		.refine(
-			(data) => {
-				if (data.cancel_action !== "cancel_end_of_cycle") return true;
-
-				// Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'
-				return data.free_trial === undefined;
-			},
-			{
-				message:
-					"Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'.",
-			},
-		);
+	}).refine(
+		(data) =>
+			data.feature_quantities !== undefined ||
+			data.version !== undefined ||
+			data.customize !== undefined ||
+			data.cancel_action !== undefined,
+		{
+			message:
+				"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",
+		},
+	);
 
 export type UpdateSubscriptionV1Params = z.infer<
 	typeof UpdateSubscriptionV1ParamsSchema

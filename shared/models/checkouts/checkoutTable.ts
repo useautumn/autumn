@@ -1,5 +1,5 @@
-import type { AttachParamsV1 } from "@api/billing/attachV2/attachParamsV1.js";
-import type { UpdateSubscriptionV1Params } from "@api/billing/updateSubscription/updateSubscriptionV1Params.js";
+import type { AttachParamsV1 } from "@api/billing/attachV2/attachParamsV1";
+import type { UpdateSubscriptionV1Params } from "@api/billing/updateSubscription/updateSubscriptionV1Params";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { integer, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils";

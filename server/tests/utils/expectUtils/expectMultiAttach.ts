@@ -1,4 +1,6 @@
 import {
+	type ApiCustomerV3,
+	type ApiEntityV0,
 	type AppEnv,
 	type CusProductStatus,
 	LegacyVersion,
@@ -8,15 +10,18 @@ import {
 } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
-import type { Customer, Entity } from "autumn-js";
 import { expect } from "chai";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+
+type CustomerLike =
+	| ApiCustomerV3
+	| ApiEntityV0
+	| { products?: any[]; invoices?: any[]; id?: string; features?: any };
+
 import { timeout } from "@/utils/genUtils.js";
-import {
-	completeInvoiceCheckout,
-	completeStripeCheckoutForm,
-} from "../browserPool";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "../browserPool/completeInvoiceCheckoutV2";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "../browserPool/completeStripeCheckoutFormV2";
 
 export const expectMultiAttachCorrect = async ({
 	autumn,
@@ -69,7 +74,6 @@ export const expectMultiAttachCorrect = async ({
 		if (attachParams?.invoice) {
 			await completeInvoiceCheckout({
 				url: attachRes.checkout_url,
-				isLocal: true,
 			});
 		}
 		await completeStripeCheckoutForm({ url: attachRes.checkout_url });
@@ -79,7 +83,7 @@ export const expectMultiAttachCorrect = async ({
 	await timeout(2500);
 
 	for (const result of results) {
-		let customer: Customer | Entity;
+		let customer: CustomerLike;
 		if (result.entityId) {
 			customer = await autumn.entities.get(customerId, result.entityId);
 		} else {
@@ -87,7 +91,7 @@ export const expectMultiAttachCorrect = async ({
 		}
 
 		expectProductAttached({
-			customer: customer as Customer,
+			customer: customer,
 			product: result.product,
 			status: result.status,
 			entityId: result.entityId,
@@ -95,7 +99,7 @@ export const expectMultiAttachCorrect = async ({
 	}
 
 	const customer = await autumn.customers.get(customerId);
-	const latestInvoice = customer.invoices[0];
+	const latestInvoice = customer.invoices?.[0];
 	expect(latestInvoice.total).to.equal(checkoutRes.total);
 
 	await expectSubToBeCorrect({
@@ -127,7 +131,7 @@ export const expectResultsCorrect = async ({
 }) => {
 	autumn = autumn || new AutumnInt({ version: LegacyVersion.v1_2 });
 	for (const result of results) {
-		let customer;
+		let customer: CustomerLike;
 		if (result.entityId) {
 			customer = await autumn.entities.get(customerId, result.entityId);
 		} else {

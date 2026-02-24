@@ -91,6 +91,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ### Framework-Specific Guidance
 
+**Hono:**
+- Hono caches the parsed request body, so you can call `c.req.json()` multiple times without consuming the stream
+- Use `c.req.query()` to access raw query parameters
+- Use `c.req.param()` to get route parameters (NOT `c.req.valid("param")`)
+
 **Next.js:**
 - Use Next.js `<Image>` component for images
 - Use `next/head` or App Router metadata API for head elements

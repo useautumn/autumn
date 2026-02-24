@@ -1,10 +1,10 @@
-import { RedirectModeSchema } from "@api/billing/common/redirectMode.js";
+import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { z } from "zod/v4";
-import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext.js";
-import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
-import { BillingBehaviorSchema } from "../common/billingBehavior.js";
-import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0.js";
-import { AttachDiscountSchema } from "./attachDiscount.js";
+import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
+import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
+import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
+import { AttachDiscountSchema } from "./attachDiscount";
 
 export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// Product identification

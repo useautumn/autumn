@@ -1,11 +1,9 @@
 import {
 	type AppEnv,
 	type Customer,
-	type CustomerData,
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
-import type { Autumn } from "autumn-js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -65,7 +63,7 @@ export const initCustomer = async ({
 	attachPm,
 	withTestClock = true,
 }: {
-	autumn: Autumn | AutumnInt;
+	autumn: AutumnInt;
 	customerId: string;
 	fingerprint?: string;
 	org: Organization;
@@ -206,81 +204,4 @@ export const attachPaymentMethod = async ({
 	} catch (error) {
 		console.log("failed to attach payment method", error);
 	}
-};
-
-// V2 initializes the customer in Stripe, then creates the customer in Autumn
-export const initCustomerV2 = async ({
-	autumn,
-	customerId,
-	customerData,
-	org,
-	env,
-	db,
-	attachPm,
-	withTestClock = true,
-}: {
-	autumn: Autumn | AutumnInt;
-	customerId: string;
-	customerData?: CustomerData;
-	org: Organization;
-	env: AppEnv;
-	db: DrizzleCli;
-	attachPm?: "success" | "fail";
-	withTestClock?: boolean;
-}) => {
-	const name = customerId;
-	const email = `${customerId}@example.com`;
-	const fingerprint_ = "";
-	const stripeCli = createStripeCli({ org, env });
-
-	let testClockId: string | undefined;
-
-	if (withTestClock) {
-		const testClock = await stripeCli.testHelpers.testClocks.create({
-			frozen_time: Math.floor(Date.now() / 1000),
-		});
-		testClockId = testClock.id;
-	}
-
-	// 1. Create stripe customer
-	const stripeCus = await stripeCli.customers.create({
-		email,
-		name,
-		test_clock: testClockId,
-	});
-
-	// 2. Create customer
-	try {
-		await autumn.customers.delete(customerId);
-	} catch (_error) {}
-
-	await autumn.customers.create({
-		id: customerId,
-		name,
-		email,
-		fingerprint: customerData?.fingerprint || undefined,
-		stripe_id: stripeCus.id,
-		metadata: {},
-	});
-
-	// 3. Attach payment method
-	if (attachPm) {
-		await attachPaymentMethod({
-			stripeCli,
-			stripeCusId: stripeCus.id,
-			type: attachPm,
-		});
-	}
-
-	const customer = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env: env,
-	});
-
-	return {
-		testClockId: testClockId || "",
-		customer,
-	};
 };

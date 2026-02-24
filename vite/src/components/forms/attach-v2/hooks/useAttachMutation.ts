@@ -45,7 +45,7 @@ export function useAttachMutation({
 			}
 
 			const response = await axiosInstance.post<BillingResponse>(
-				"/v1/billing/attach",
+				"/v1/billing.attach",
 				requestBody,
 			);
 

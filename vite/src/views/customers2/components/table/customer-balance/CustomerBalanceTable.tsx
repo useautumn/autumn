@@ -1,10 +1,16 @@
 import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerBalanceTableColumns } from "./CustomerBalanceTableColumns";
+
+export type CustomerBalanceRowData = FullCusEntWithFullCusProduct & {
+	subRows?: FullCusEntWithFullCusProduct[];
+};
 
 export function CustomerBalanceTable({
 	allEnts,
@@ -21,54 +27,76 @@ export function CustomerBalanceTable({
 	const setBalanceSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const sheetType = useSheetStore((s) => s.type);
-	const balanceOpen =
-		sheetType === "balance-selection" || sheetType === "balance-edit";
+	const balanceOpen = sheetType === "balance-edit";
 	const selectedCusEntId = useCustomerBalanceSheetStore(
 		(s) => s.selectedCusEntId,
 	);
 	const selectedFeatureId = useCustomerBalanceSheetStore((s) => s.featureId);
 
-	const columns = CustomerBalanceTableColumns({
-		fullCustomer: customer,
-		entityId,
-		aggregatedMap,
-		entities: customer?.entities || [],
-	});
+	const [expanded, setExpanded] = useState<ExpandedState>({});
 
-	const enableSorting = false;
-	const table = useCustomerTable<FullCusEntWithFullCusProduct>({
-		data: allEnts,
+	const rowData: CustomerBalanceRowData[] = useMemo(() => {
+		return allEnts.map((ent) => {
+			const featureId = ent.entitlement.feature.id;
+			const originalEnts = aggregatedMap.get(featureId);
+			if (originalEnts && originalEnts.length > 1) {
+				return { ...ent, subRows: originalEnts };
+			}
+			return ent;
+		});
+	}, [allEnts, aggregatedMap]);
+
+	const columns = useMemo(
+		() =>
+			CustomerBalanceTableColumns({
+				fullCustomer: customer,
+				entityId,
+				entities: customer?.entities || [],
+			}),
+		[customer, entityId],
+	);
+
+	const table = useCustomerTable<CustomerBalanceRowData>({
+		data: rowData,
 		columns,
-		options: {},
+		options: {
+			getExpandedRowModel: getExpandedRowModel(),
+			getSubRows: (row) => row.subRows,
+			getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
+			state: { expanded },
+			onExpandedChange: setExpanded,
+		},
 	});
 
-	const handleRowClick = (ent: FullCusEntWithFullCusProduct) => {
+	const handleRowClick = (ent: CustomerBalanceRowData) => {
+		const hasSubRows = (ent.subRows?.length ?? 0) > 0;
+
+		if (hasSubRows) {
+			const rowId = ent.id || "";
+			setExpanded((prev) => {
+				const current = typeof prev === "boolean" ? {} : { ...prev };
+				current[rowId] = !current[rowId];
+				return current;
+			});
+			return;
+		}
+
+		// Single balance or sub-row: open edit sheet directly
 		const featureId = ent.entitlement.feature.id;
 		const ents = aggregatedMap.get(featureId) || [ent];
-		const hasMultipleBalances = ents.length > 1;
 
-		// Set balance data in balance store
 		setBalanceSheet({
 			type: "edit-balance",
 			featureId,
 			originalEntitlements: ents,
-			selectedCusEntId: hasMultipleBalances ? null : ents[0].id,
+			selectedCusEntId: ent.id,
 		});
-
-		// Open the appropriate inline sheet
-		if (hasMultipleBalances) {
-			setSheet({ type: "balance-selection" });
-		} else {
-			setSheet({ type: "balance-edit" });
-		}
+		setSheet({ type: "balance-edit" });
 	};
 
-	// Determine the selected row ID based on whether it's an aggregated balance or single balance
 	const getSelectedRowId = () => {
 		if (!balanceOpen) return undefined;
-		// For single balance selection, match by customer entitlement ID
 		if (selectedCusEntId) return selectedCusEntId;
-		// For aggregated balance selection, find the row that matches the feature ID
 		if (selectedFeatureId) {
 			const matchingEnt = allEnts.find(
 				(ent) => ent.entitlement.feature.id === selectedFeatureId,
@@ -83,11 +111,11 @@ export function CustomerBalanceTable({
 			config={{
 				table,
 				numberOfColumns: columns.length,
-				enableSorting,
+				enableSorting: false,
 				isLoading,
 				onRowClick: handleRowClick,
 				flexibleTableColumns: true,
-				selectedItemId: getSelectedRowId(), //decides the highlighted row on sheetopen
+				selectedItemId: getSelectedRowId(),
 			}}
 		>
 			<Table.Container>

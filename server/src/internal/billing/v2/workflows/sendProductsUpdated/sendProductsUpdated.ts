@@ -14,7 +14,7 @@ import {
 	ApiVersionClass,
 	addToExpand,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	cusProductToProduct,
 	type EntityLegacyData,
@@ -42,10 +42,8 @@ export const sendProductsUpdated = async ({
 
 	// Fetch FullCustomer
 	const fullCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId ?? "",
-		orgId: org.id,
-		env,
 		withEntities: true,
 		withSubs: true,
 		allowNotFound: true,
@@ -81,9 +79,9 @@ export const sendProductsUpdated = async ({
 		ctx = addToExpand({
 			ctx,
 			add: [
-				CusExpand.BalancesFeature,
-				CusExpand.SubscriptionsPlan,
-				CusExpand.PurchasesPlan,
+				CustomerExpand.BalancesFeature,
+				CustomerExpand.SubscriptionsPlan,
+				CustomerExpand.PurchasesPlan,
 			],
 		});
 	}

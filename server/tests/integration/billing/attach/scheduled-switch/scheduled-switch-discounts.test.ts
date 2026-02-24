@@ -20,9 +20,11 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
+	applyCustomerCoupon,
 	applySubscriptionDiscount,
 	createAmountCoupon,
 	createPercentCoupon,
+	deleteCoupon,
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -717,4 +719,98 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 6: repeating c
 	// The discount end should be the SAME as the original - not reset
 	// If it was reset, it would be ~phase2_start + 3 months (much later)
 	expect(discountEndAfterCycle).toBe(originalDiscountEnd);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 8: Downgrade with deleted coupon (rollover scenario)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario (mirrors handleStripeInvoiceDiscounts rollover flow):
+ * - Customer has premium ($50/mo)
+ * - A coupon is applied to the CUSTOMER (not the subscription) via rawRequest
+ * - The coupon is immediately deleted from Stripe
+ * - The customer-level discount survives but its coupon is gone
+ * - Customer attempts to downgrade to pro ($20/mo)
+ *
+ * Expected Result:
+ * - The downgrade should succeed without Stripe errors
+ * - Premium is canceling, pro is scheduled
+ *
+ * BUG: Without validation, setupStripeDiscountsForBilling falls back to the
+ * customer discount (since there are no subscription discounts). The customer
+ * discount's source.coupon is expanded but references a deleted coupon.
+ * When buildStripePhasesUpdate maps it to { discount: discount.id } and
+ * Stripe tries to resolve it, it throws "No such coupon: '{couponId}'".
+ */
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts 8: downgrade succeeds when coupon was deleted (rollover scenario)")}`, async () => {
+	const customerId = "sched-switch-discount-deleted-coupon";
+
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
+
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
+
+	// Get Stripe client and customer ID
+	const { stripeCli, stripeCustomerId } = await getStripeSubscription({
+		customerId,
+	});
+
+	// Create coupon and apply to the CUSTOMER (not the subscription).
+	// This mirrors the rollover flow in handleStripeInvoiceDiscounts which uses
+	// rawRequest POST /v1/customers/{id} with { coupon: newCoupon.id }
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+	});
+
+	await applyCustomerCoupon({
+		stripeCustomerId,
+		couponId: coupon.id,
+	});
+
+	// DELETE the coupon — mirrors handleStripeInvoiceDiscounts line 148:
+	// stripeCli.coupons.del(newCoupon.id)
+	// The customer-level discount survives but its coupon object is gone
+	await deleteCoupon({ stripeCli, couponId: coupon.id });
+
+	// Schedule downgrade to pro — this is where the bug manifests.
+	// setupStripeDiscountsForBilling finds no subscription discounts, falls back
+	// to customer discount. The customer discount has an expanded source.coupon
+	// referencing the deleted coupon. Without the fix, Stripe throws
+	// "No such coupon: '{couponId}'" when creating the schedule phases.
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
+
+	// Verify product states
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+	});
 });

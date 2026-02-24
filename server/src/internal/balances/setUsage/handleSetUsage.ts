@@ -12,11 +12,9 @@ export const handleSetUsage = createRoute({
 		const ctx = c.get("ctx");
 
 		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
+			ctx,
 			idOrInternalId: body.customer_id,
 			entityId: body.entity_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			inStatuses: ACTIVE_STATUSES,
 		});
 

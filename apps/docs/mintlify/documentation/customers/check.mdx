@@ -1,0 +1,262 @@
+---
+title: "Checking access"
+description: "Learn how to check feature access with the `check` endpoint"
+---
+
+When you create a plan in Autumn, you define what features your customers on that plan get access to.
+
+The `check` method returns the `allowed` field in real-time to check if a customer should have access to a feature. You can use this to block access and prompt an upsell.
+
+## The `allowed` field
+
+The `allowed` field will return `true` for a given feature if:
+- The customer has an active plan with this feature
+- The customer has an active plan with a `credit_system` that grants this feature
+- The plan feature is <Badge>included</Badge> or <Badge>prepaid</Badge>, and the current balance is greater than the `required_balance` parameter
+- The plan feature is <Badge>usage-based</Badge>, and the user has not exceeded their max spend limit
+- The plan feature is <Badge>unlimited</Badge> or a <Badge>boolean</Badge> feature
+
+Under these conditions, you should allow your customer to use the feature. You can then [record the usage event](/documentation/customers/tracking-usage/) so Autumn can update the `allowed` field as necessary.
+
+## Checking metered features
+
+Before your customer uses a feature, you can check if the customer is allowed to use it and their current usage.
+
+<Info>
+**Example**
+
+Let's imagine you have a free plan for a chatbot that allows 5 messages per month. Before your customer sends an AI message, you can check if they have any left.
+
+If they still have messages remaining, they'll be allowed to send an AI message.
+
+</Info>
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { check } = useCustomer();
+
+// check the customer state object locally (no API call)
+const { allowed } = check({ featureId: "messages" });
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "messages",
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="messages",
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+```json
+{
+  "allowed": true,
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "messages",
+    "granted": 5,
+    "remaining": 5,
+    "usage": 0,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1767610960519
+  }
+}
+```
+</Expandable>
+
+<Tip>
+Even if your product doesn't have usage limits (ie your feature is purely usage-based), you can still use the above method to prevent usage if a customer's payment fails.
+
+</Tip>
+
+## Checking for a required balance
+
+If you know the balance a user will consume in advance, you can specify it with the `requiredBalance` parameter. This means you can prevent a user from starting a process that would consume more than their current balance.
+
+By default, `requiredBalance` is 1, so not passing this parameter will return `allowed: true` as long as the customer has a feature balance of 1 or more.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { check } = useCustomer();
+
+const { allowed } = check({ featureId: "messages", requiredBalance: 3 });
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "messages",
+  requiredBalance: 3,
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="messages",
+    required_balance=3,
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages",
+    "required_balance": 3
+  }'
+```
+
+</CodeGroup>
+
+## Checking and reserving usage
+
+You can check access and record usage in a single, atomic API call using the `sendEvent` field. The usage value deducted from the balance will be the `requiredBalance` parameter. This is useful for concurrent events.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.customers.check({
+  customerId: "user_123",
+  featureId: "api_calls",
+  requiredBalance: 3,
+  sendEvent: true,
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.customers.check(
+    customer_id="user_123",
+    feature_id="api_calls",
+    required_balance=3,
+    send_event=True,
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "required_balance": 3,
+    "send_event": true
+  }'
+```
+
+</CodeGroup>
+
+If the operation fails, you can then "refund" the usage with a negative usage `value` in the `track` endpoint.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.customers.track({
+  customerId: "user_123",
+  featureId: "api_calls",
+  value: -3,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.customers.track(
+    customer_id="user_123",
+    feature_id="api_calls",
+    value=-3,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "value": -3
+  }'
+```
+</CodeGroup>
+
+## Checking boolean features
+
+For simple on/off features, use the check method to determine if a customer has access:
+
+```tsx React
+const { check } = useCustomer();
+
+const { allowed } = check({ featureId: "premium-dashboard" });
+
+if (allowed) {
+  // Show premium dashboard
+}
+```

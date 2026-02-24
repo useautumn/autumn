@@ -1,0 +1,223 @@
+---
+title: "Attaching Plans"
+description: "How to attach plans to customers and handle upgrades and downgrades"
+---
+
+Attaching a plan to a customer will:
+
+- Grant the customer access to the features in the plan
+- If the plan has prices, generate a checkout URL for payment
+
+## Basic Usage
+
+Call `billing.attach` to attach a plan to a customer. This always returns a `paymentUrl` that the customer should be redirected to.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ 
+  secretKey: "am_sk_..." 
+});
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// Redirect customer to complete payment or confirm plan change
+redirect(response.paymentUrl);
+```
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+// Hook automatically redirects to checkout
+await attach({ planId: "pro" });
+```
+
+```python Python
+import asyncio
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+async def main():
+    response = await autumn.billing.attach(
+        customer_id="user_123",
+        plan_id="pro",
+    )
+    # Redirect customer to response.payment_url
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+<Note>
+**Default behavior:**
+- **New subscriptions:** `paymentUrl` points to **Stripe Checkout** for payment collection
+- **Plan changes (upgrades/downgrades):** `paymentUrl` points to **Autumn Checkout** where the customer can review prorations before confirming
+</Note>
+
+This handles any plan change scenario: new subscriptions, upgrades, downgrades, add-ons, and renewals.
+
+- **Upgrades** happen immediately with prorated charges
+- **Downgrades** are scheduled for the end of the current billing cycle
+
+## Building Your Own Checkout UI
+
+Autumn's checkout page is designed to get you off the ground quickly, but often you'll want full control over the styling and user experience. For plan changes, you can build your own checkout UI using a two-step flow:
+
+### Step 1: Preview the change
+
+Call `billing.previewAttach` to see exactly what will be charged before making any changes. This returns line items, totals, and next cycle information that you can display in your own UI.
+
+<CodeGroup>
+
+```typescript TypeScript
+const preview = await autumn.billing.previewAttach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// Display to user:
+// - preview.lineItems (array of charges/credits)
+// - preview.total (amount in cents)
+// - preview.currency (e.g., "usd")
+// - preview.nextCycle (next billing cycle info)
+```
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { previewAttach } = useCustomer();
+
+const preview = await previewAttach({ planId: "pro" });
+
+// Use preview data to render your custom checkout UI
+```
+
+```python Python
+preview = await autumn.billing.preview_attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+
+# preview.line_items, preview.total, preview.currency
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/preview-attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="Example response">
+```json
+{
+  "customerId": "user_123",
+  "lineItems": [
+    {
+      "title": "Pro Plan",
+      "description": "Monthly subscription",
+      "amount": 20
+    },
+    {
+      "title": "Credit for Free Plan",
+      "description": "Unused time on current plan",
+      "amount": -5
+    }
+  ],
+  "total": 15,
+  "currency": "usd",
+  "nextCycle": {
+    "startsAt": 1735689600000,
+    "total": 20
+  }
+}
+```
+</Expandable>
+
+### Step 2: Execute the change
+
+Once the customer confirms, call `billing.attach` with `redirectMode: "if_required"`. This will:
+
+- **Charge the customer automatically** if they have a payment method on file
+- **Return a Stripe Checkout URL** only if no payment method exists (for new customers)
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  redirectMode: "if_required",
+});
+
+if (response.paymentUrl) {
+  // No payment method on file — redirect to Stripe Checkout
+  redirect(response.paymentUrl);
+} else {
+  // Plan attached and charged successfully
+  showSuccessMessage();
+}
+```
+
+```tsx React
+const { attach } = useCustomer();
+
+const response = await attach({ 
+  planId: "pro",
+  redirectMode: "if_required",
+});
+
+// If no redirect happened, the plan was attached successfully
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    redirect_mode="if_required",
+)
+
+if response.payment_url:
+    # Redirect to Stripe Checkout
+    pass
+else:
+    # Plan attached successfully
+    pass
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "redirect_mode": "if_required"
+  }'
+```
+
+</CodeGroup>

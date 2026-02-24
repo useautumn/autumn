@@ -1,12 +1,12 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
-} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { CusExpand } from "@models/cusModels/cusExpand.js";
+} from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import type { SharedContext } from "../../../types/sharedContext.js";
-import { GetCustomerQuerySchema } from "../customerOpModels.js";
+import type { SharedContext } from "../../../types/sharedContext";
+import { CustomerExpand } from "../components/customerExpand/customerExpand";
+import { GetCustomerQuerySchema } from "../customerOpModels";
 
 /**
  * V1_2_CustomerQueryChange: Transforms customer query TO latest format
@@ -55,9 +55,9 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 		// Add `plan` and `feature` to expand array
 		const newExpand = [
 			...existingExpand,
-			CusExpand.SubscriptionsPlan,
-			CusExpand.PurchasesPlan,
-			CusExpand.BalancesFeature,
+			CustomerExpand.SubscriptionsPlan,
+			CustomerExpand.PurchasesPlan,
+			CustomerExpand.BalancesFeature,
 		];
 
 		return {

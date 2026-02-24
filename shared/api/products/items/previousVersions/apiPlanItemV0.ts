@@ -10,8 +10,8 @@ import {
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
+} from "@models/productV2Models/productItemModels/productItemEnums";
+import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels";
 import { z } from "zod/v4";
 
 export const ApiPlanItemV0Schema = z

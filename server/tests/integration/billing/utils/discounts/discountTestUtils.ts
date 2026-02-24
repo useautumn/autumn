@@ -18,10 +18,8 @@ export const getStripeSubscription = async ({
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const stripeCustomerId =
@@ -209,4 +207,41 @@ export const createPromotionCode = async ({
 		},
 		code: `${code}${Date.now()}`,
 	});
+};
+
+/*
+ * Apply a coupon directly to a Stripe customer (not a subscription).
+ * Uses a legacy Stripe API version + rawRequest to mirror the exact
+ * handleStripeInvoiceDiscounts rollover flow (line 28 + line 140-146).
+ */
+export const applyCustomerCoupon = async ({
+	stripeCustomerId,
+	couponId,
+}: {
+	stripeCustomerId: string;
+	couponId: string;
+}): Promise<void> => {
+	const legacyCli = createStripeCli({
+		org: ctx.org,
+		env: ctx.env,
+		legacyVersion: true,
+	});
+	await legacyCli.rawRequest("POST", `/v1/customers/${stripeCustomerId}`, {
+		coupon: couponId,
+	});
+};
+
+/**
+ * Delete a coupon from Stripe. The discount on the subscription/customer remains,
+ * but the underlying coupon object no longer exists.
+ * This simulates the state created by handleStripeInvoiceDiscounts rollover.
+ */
+export const deleteCoupon = async ({
+	stripeCli,
+	couponId,
+}: {
+	stripeCli: Stripe;
+	couponId: string;
+}): Promise<void> => {
+	await stripeCli.coupons.del(couponId);
 };

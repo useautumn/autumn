@@ -1,5 +1,7 @@
+import { formatAmount } from "@autumn/shared";
 import { MinusCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
+import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
@@ -38,6 +40,22 @@ export function AttachUpdatesSection() {
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
 	const outgoing = previewData?.outgoing ?? [];
+	const creditAmount = getPreviewCreditAmount({
+		previewData,
+		includeScheduledFallback: true,
+	});
+	const hasCreditIndicator = creditAmount > 0;
+	const formattedCreditAmount = hasCreditIndicator
+		? formatAmount({
+				amount: Number(creditAmount.toFixed(2)),
+				currency: previewData?.currency,
+				minFractionDigits: 2,
+				maxFractionDigits: 2,
+				amountFormatOptions: {
+					currencyDisplay: "narrowSymbol",
+				},
+			})
+		: null;
 
 	if (!hasProductSelected) {
 		return null;
@@ -88,13 +106,28 @@ export function AttachUpdatesSection() {
 					variants={STAGGER_ITEM_LAYOUT}
 				>
 					<InfoBox variant="note">
-						Attaching{" "}
-						<PlusCircleIcon
-							weight="fill"
-							className="text-green-500 size-3.5 inline align-middle mr-1"
-						/>
-						<span className="text-foreground font-medium">{product.name}</span>
-						{outgoing.length > 0 && <> and removing {renderOutgoingPlans()}</>}
+						<span className="leading-6">
+							Attaching{" "}
+							<PlusCircleIcon
+								weight="fill"
+								className="text-green-500 size-3.5 inline align-middle mr-1"
+							/>
+							<span className="text-foreground font-medium">
+								{product.name}
+							</span>
+							{outgoing.length > 0 && (
+								<> and removing {renderOutgoingPlans()}</>
+							)}
+							{hasCreditIndicator && (
+								<>
+									. This update includes{" "}
+									<span className="text-foreground font-medium">
+										{formattedCreditAmount}
+									</span>{" "}
+									in invoice credits.
+								</>
+							)}
+						</span>
 					</InfoBox>
 				</motion.div>
 			</motion.div>

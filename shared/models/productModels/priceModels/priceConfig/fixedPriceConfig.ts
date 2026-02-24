@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { BillingInterval } from "../../intervals/billingInterval.js";
-import { UsageTierSchema } from "./usagePriceConfig.js";
+import { BillingInterval } from "../../intervals/billingInterval";
+import { UsageTierSchema } from "./usagePriceConfig";
 
 export const FixedPriceConfigSchema = z.object({
 	type: z.string(),

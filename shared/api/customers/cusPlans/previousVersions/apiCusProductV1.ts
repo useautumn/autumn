@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiCusProductV0Schema } from "./apiCusProductV0.js";
+import { ApiCusProductV0Schema } from "./apiCusProductV0";
 
 /**
  * ApiCusProductV1Schema - Customer Product schema for API V1.0 (pre V0_2)

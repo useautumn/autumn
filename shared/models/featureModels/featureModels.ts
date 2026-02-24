@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { AppEnv } from "../genModels/genEnums.js";
-import { FeatureType } from "./featureEnums.js";
+import { AppEnv } from "../genModels/genEnums";
+import { FeatureType } from "./featureEnums";
 
 export const FeatureSchema = z.object({
 	internal_id: z.string(),

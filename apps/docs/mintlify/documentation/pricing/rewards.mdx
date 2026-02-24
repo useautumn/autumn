@@ -1,0 +1,209 @@
+---
+title: Rewards and Referrals
+description: Learn how to use rewards and referrals to incentivize your customers.
+---
+
+Rewards like discounts, usage credits, and free products are a powerful way to improve the likelihood of customers purchasing a product.
+
+You can give these rewards to customers yourselves, and also automatically to customers who refer your product to other users via a referral program.
+
+## Rewards
+
+Autumn's rewards are a enhanced layer over Stripe's coupons. In addition to standard fixed and percentage discounts, with Autumn you can:
+
+- Create promo codes for invoice credits that rollover each billing period <br /> (eg, 500 USD free usage for early adopters)
+- Give away free products <br/> (eg 1000 additional AI messages for all users at an event)
+
+You can create a reward from the Autumn dashboard:
+
+1. Navigate to the products page, and click the rewards tab
+2. Click "+ Reward"
+3. Fill out the fields such as Name, Promo Code, Discount value
+4. Select which products it should apply to
+5. Click "Create"
+
+#### Invoice credits
+
+You can create promo codes which customers can enter on Stripe's checkout pages for invoice credits. When applied, these codes will grant the customer a monetary amount of "credits" that lasts until they run out.
+
+<Info>
+**Example**
+
+You have an AI translation product, that is normally billed at 20 USD per month, plus $1 per 100 words translated.
+
+- For alpha adopters, you want to give away 50 USD of credits to apply across all invoices.
+- For beta adopters, you want to give away 50 USD of credits that only applies to the translated words usage-price.
+
+</Info>
+
+To create a code for invoice credits, when creating a reward, select the following:
+
+- Type: fixed discount
+- Duration: one off
+- Select the option: "Rollover credits to the next invoice"
+
+The promo code you create can either apply across all products (and the entire invoice), or you can select to only apply the invoice credits to specific usage-prices.
+
+#### Free products
+
+You can also give away any add-on product you create to customer with a promo code.
+
+<Info>
+**Example**
+
+If a customer has access to 50 AI messages per month, they can redeem a code for a free booster pack of additional 100 messages per month.
+
+</Info>
+
+To create a free product, under reward `type`, select "Free Product". Then choose the add-on product from the selector. You must have at least 1 add-on product created before doing this.
+
+<Warning>
+  Free product promo codes cannot be redeemed through Stripe's checkout page.
+  You should use the redeem endpoint.
+</Warning>
+
+## Referral Programs
+
+Referral programs allow you to automatically grant rewards to customers who bring on new customers. You can define the referral program in the Dashboard.
+
+1. Navigate to the products page, and click the rewards tab
+2. Click "+ Referral Program"
+3. Give the program an ID (you'll use this to refer to it in the API), and select a reward (see above) to be given away
+4. Decide whether the reward should be granted when the new customer signs up, or when the purchase a product
+5. Specify a max redemption number (a limit number of times one customer can be rewarded for referring another customer)
+6. Decide whether this reward should be granted to the referrer only, or both the referrer and the redeemer (new customer)
+
+You can then implement the referral program from your application with just 2 routes.
+
+### Creating a referral code
+
+Generate a referral code for the customer making the referral:
+
+<CodeGroup>
+
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+// Pass the program ID to the hook
+const { data, refetch } = useReferrals({ programId: "free-month" });
+
+// Call refetch() to create/fetch the code
+await refetch();
+
+// Access the code
+console.log(data?.code); // "4EXWV1"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.createCode({
+  customerId: "user_123",
+  programId: "free-month",
+});
+
+console.log(response.code); // "4EXWV1"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.create_code(
+    customer_id="user_123",
+    program_id="free-month",
+)
+print(response.code)  # "4EXWV1"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.create_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "program_id": "free-month"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="Response">
+```json
+{
+  "code": "4EXWV1",
+  "customerId": "user_123",
+  "createdAt": 1744797427206
+}
+```
+</Expandable>
+
+### Redeeming a referral code
+
+From the new customer, redeem the referral code:
+
+<CodeGroup>
+
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+const { redeemCode } = useReferrals({ programId: "free-month" });
+
+const response = await redeemCode({ code: "4EXWV1" });
+
+console.log(response.rewardId); // "free-month"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.redeemCode({
+  code: "4EXWV1",
+  customerId: "new_user_123",
+});
+
+console.log(response.rewardId); // "free-month"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.redeem_code(
+    code="4EXWV1",
+    customer_id="new_user_123",
+)
+print(response.reward_id)  # "free-month"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.redeem_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "code": "4EXWV1",
+    "customer_id": "new_user_123"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="Response">
+```json
+{
+  "id": "rr_2vo3Jt9oqF6XgAlWI1MjYktv4dB",
+  "customerId": "new_user_123",
+  "rewardId": "free-month"
+}
+```
+</Expandable>
+
+The reward will automatically apply on the event that you set (customer creation or product purchase).
+
+In the customer details page, you'll be able to see which customers have made referrals and been referred.

@@ -1,8 +1,8 @@
-export * from "./cycleUtils/getCycleEnd.js";
-export * from "./cycleUtils/getCycleStart.js";
+export * from "./cycleUtils/getCycleEnd";
+export * from "./cycleUtils/getCycleStart";
 // Interval utils
-export * from "./intervalUtils/addDuration.js";
-export * from "./intervalUtils/intervalArithmetic.js";
+export * from "./intervalUtils/addDuration";
+export * from "./intervalUtils/intervalArithmetic";
 
 // Invoicing utils
 

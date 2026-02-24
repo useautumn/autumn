@@ -13,7 +13,8 @@ import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceU
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { createProducts, createReward } from "@tests/utils/productUtils.js";
-import { completeCheckoutForm, getDiscount } from "@tests/utils/stripeUtils.js";
+import { getDiscount } from "@tests/utils/stripeUtils.js";
+import { completeStripeCheckoutFormV2 as completeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
 	addPrefixToProducts,
@@ -112,7 +113,7 @@ describe(
 				product_id: pro.id,
 			});
 
-			await completeCheckoutForm(res.checkout_url, undefined, reward.id);
+			await completeCheckoutForm({ url: res.checkout_url, promoCode: reward.id });
 
 			await timeout(10000);
 

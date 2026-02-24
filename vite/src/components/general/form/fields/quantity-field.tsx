@@ -13,6 +13,7 @@ export function QuantityField({
 	textAfter,
 	min = 1,
 	max,
+	step = 1,
 	className,
 	hideFieldInfo,
 	compact,
@@ -22,24 +23,79 @@ export function QuantityField({
 	textAfter?: string;
 	min?: number;
 	max?: number;
+	step?: number;
 	className?: string;
 	hideFieldInfo?: boolean;
 	compact?: boolean;
 }) {
 	const field = useFieldContext<number>();
+	const stepSize = step > 0 ? step : 1;
+	const getPositiveModulo = ({
+		value,
+		divisor,
+	}: {
+		value: number;
+		divisor: number;
+	}) => ((value % divisor) + divisor) % divisor;
+
+	const getSteppedIncrementValue = ({
+		currentValue,
+	}: {
+		currentValue: number;
+	}) => {
+		if (stepSize === 1) {
+			return currentValue + 1;
+		}
+
+		const remainder = getPositiveModulo({
+			value: currentValue,
+			divisor: stepSize,
+		});
+		if (remainder === 0) {
+			return currentValue + stepSize;
+		}
+
+		return currentValue + (stepSize - remainder);
+	};
+
+	const getSteppedDecrementValue = ({
+		currentValue,
+	}: {
+		currentValue: number;
+	}) => {
+		if (stepSize === 1) {
+			return currentValue - 1;
+		}
+
+		const remainder = getPositiveModulo({
+			value: currentValue,
+			divisor: stepSize,
+		});
+		if (remainder === 0) {
+			return currentValue - stepSize;
+		}
+
+		return currentValue - remainder;
+	};
 
 	const handleIncrement = () => {
-		const newValue = (field.state.value || 0) + 1;
-		if (max === undefined || newValue <= max) {
-			field.handleChange(newValue);
+		const currentValue = field.state.value ?? 0;
+		const newValue = getSteppedIncrementValue({ currentValue });
+		if (max !== undefined) {
+			field.handleChange(Math.min(newValue, max));
+			return;
 		}
+		field.handleChange(newValue);
 	};
 
 	const handleDecrement = () => {
-		const newValue = (field.state.value || 0) - 1;
-		if (newValue >= min) {
-			field.handleChange(newValue);
+		const currentValue = field.state.value ?? min;
+		if (currentValue <= min) {
+			return;
 		}
+		const steppedValue = getSteppedDecrementValue({ currentValue });
+		const newValue = Math.max(min, steppedValue);
+		field.handleChange(newValue);
 	};
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +137,7 @@ export function QuantityField({
 							"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input",
 							compact ? "px-2" : "px-3",
 						)}
-						disabled={field.state.value <= min}
+						disabled={(field.state.value ?? min) <= min}
 						onClick={handleDecrement}
 						size="sm"
 						variant="secondary"
@@ -99,8 +155,10 @@ export function QuantityField({
 							onChange={handleInputChange}
 							type="number"
 							value={field.state.value ?? ""}
+							placeholder={placeholder}
 							min={min}
 							max={max}
+							step={stepSize}
 						/>
 						{field.state.meta.isValidating && (
 							<div className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 text-muted-foreground/80">
@@ -116,7 +174,7 @@ export function QuantityField({
 							"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input",
 							compact ? "px-2" : "px-3",
 						)}
-						disabled={max !== undefined && field.state.value >= max}
+						disabled={max !== undefined && (field.state.value ?? 0) >= max}
 						onClick={handleIncrement}
 						size="sm"
 						variant="secondary"

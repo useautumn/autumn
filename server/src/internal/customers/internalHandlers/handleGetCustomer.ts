@@ -1,4 +1,4 @@
-import { CusExpand, CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, CustomerExpand } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -7,16 +7,14 @@ import { CusService } from "@/internal/customers/CusService";
  */
 export const handleGetCustomer = createRoute({
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
 		const { customer_id } = c.req.param();
 
 		const fullCus = await CusService.getFull({
-			db,
-			orgId: org.id,
-			env,
+			ctx,
 			idOrInternalId: customer_id,
 			withEntities: true,
-			expand: [CusExpand.Invoices],
+			expand: [CustomerExpand.Invoices],
 			inStatuses: [
 				CusProductStatus.Active,
 				CusProductStatus.PastDue,

@@ -1,5 +1,5 @@
-import { sumValues } from "@utils/utils.js";
-import type { ApiBalanceV1 } from "../../apiBalanceV1.js";
+import { sumValues } from "@utils/utils";
+import type { ApiBalanceV1 } from "../../apiBalanceV1";
 
 export const apiBalanceV1ToPrepaidQuantity = ({
 	apiBalance,

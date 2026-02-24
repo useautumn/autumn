@@ -116,3 +116,10 @@ server/autumn.config.ts
 
 
 .tinyb
+
+# Speakeasy SDK logs
+**/.speakeasy/logs/
+
+# Speakeasy
+others/python-sdk/docs
+packages/sdk/docs

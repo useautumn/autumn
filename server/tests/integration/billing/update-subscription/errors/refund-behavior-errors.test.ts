@@ -44,7 +44,7 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method + 
 				customer_id: customerId,
 				product_id: pro.id,
 				items: [messagesItem, newPriceItem],
-				billing_behavior: "next_cycle_only",
+				billing_behavior: "none",
 				refund_behavior: "refund_payment_method",
 			});
 		},
@@ -213,7 +213,7 @@ test.skip(`${chalk.yellowBright("refund_behavior: grant_invoice_credits with nex
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [messagesItem, newPriceItem],
-		billing_behavior: "next_cycle_only",
+		billing_behavior: "none",
 		refund_behavior: "grant_invoice_credits",
 	});
 });

@@ -1,31 +1,31 @@
-import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
-import type { ProrationConfig } from "@models/productModels/priceModels/priceModels.js";
-import { Infinite } from "@models/productModels/productEnums.js";
+import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
+import type { ProrationConfig } from "@models/productModels/priceModels/priceModels";
+import { Infinite } from "@models/productModels/productEnums";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums.js";
+} from "@models/productV2Models/productItemModels/productItemEnums";
 import {
 	type ProductItem,
 	type ProductItemConfig,
 	ProductItemSchema,
 	ProductItemType,
 	type RolloverConfig,
-} from "@models/productV2Models/productItemModels/productItemModels.js";
-import { dbToApiFeatureV1 } from "@utils/featureUtils/apiFeatureToDbFeature.js";
-import { featureToItemFeatureType } from "@utils/featureUtils/convertFeatureUtils.js";
-import { featureUtils } from "@utils/featureUtils/index.js";
-import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
-import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
-import type { SharedContext } from "../../../../types/sharedContext.js";
+} from "@models/productV2Models/productItemModels/productItemModels";
+import { dbToApiFeatureV1 } from "@utils/featureUtils/apiFeatureToDbFeature";
+import { featureToItemFeatureType } from "@utils/featureUtils/convertFeatureUtils";
+import { featureUtils } from "@utils/featureUtils/index";
+import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
+import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils";
+import type { SharedContext } from "../../../../types/sharedContext";
 import {
 	type ApiFeatureV0,
 	type CreateBalanceParamsV0,
 	FeatureNotFoundError,
-} from "../../../models.js";
-import { ApiVersion } from "../../../versionUtils/ApiVersion.js";
-import { ApiVersionClass } from "../../../versionUtils/ApiVersionClass.js";
-import { hasPrice, hasResetInterval } from "../utils/classifyPlanItemV0.js";
+} from "../../../models";
+import { ApiVersion } from "../../../versionUtils/ApiVersion";
+import { ApiVersionClass } from "../../../versionUtils/ApiVersionClass";
+import { hasPrice, hasResetInterval } from "../utils/classifyPlanItemV0";
 
 const planItemV0ToProductItemInterval = ({
 	planItemV0,

@@ -205,3 +205,94 @@ test.concurrent(`${chalk.yellowBright("legacy-new-merged 2: scheduled downgrade 
 		env: ctx.env,
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: Multi-product attach and upgrade across groups
+// (from multiProduct1)
+//
+// Scenario:
+// - Group 1: Pro ($20) and Premium ($50) with Messages feature
+// - Group 2: Pro ($20) and Premium ($50) with Words feature
+// - Attach Pro from both groups simultaneously
+// - Upgrade Group 1: Pro → Premium
+// - Upgrade Group 2: Pro → Premium
+//
+// Expected:
+// - Both Pro products attached initially
+// - Each upgrade replaces only the product in that group
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("legacy-new-merged 3: multi-product attach and upgrade across groups")}`, async () => {
+	const customerId = "legacy-new-merged-multi";
+
+	// Group 1 products (Messages feature)
+	const proGroup1 = products.base({
+		id: "proGroup1",
+		group: `${customerId}-g1`,
+		items: [items.consumableMessages({ includedUsage: 10 })],
+	});
+	const premiumGroup1 = products.base({
+		id: "premiumGroup1",
+		group: `${customerId}-g1`,
+		items: [
+			items.consumableMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 50 }),
+		],
+	});
+
+	// Group 2 products (Words feature)
+	const proGroup2 = products.base({
+		id: "proGroup2",
+		group: `${customerId}-g2`,
+		items: [items.consumableWords({ includedUsage: 10 })],
+	});
+	const premiumGroup2 = products.base({
+		id: "premiumGroup2",
+		group: `${customerId}-g2`,
+		items: [
+			items.consumableWords({ includedUsage: 10 }),
+			items.monthlyPrice({ price: 50 }),
+		],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: true }),
+			s.products({
+				list: [proGroup1, proGroup2, premiumGroup1, premiumGroup2],
+			}),
+		],
+		actions: [],
+	});
+
+	// 1. Attach Pro from both groups simultaneously
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_ids: [proGroup1.id, proGroup2.id],
+	});
+
+	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectProductAttached({ customer, productId: proGroup1.id });
+	expectProductAttached({ customer, productId: proGroup2.id });
+
+	// 2. Upgrade Group 1: Pro → Premium
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: premiumGroup1.id,
+	});
+
+	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectProductAttached({ customer, productId: premiumGroup1.id });
+	expectProductAttached({ customer, productId: proGroup2.id });
+
+	// 3. Upgrade Group 2: Pro → Premium
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: premiumGroup2.id,
+	});
+
+	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectProductAttached({ customer, productId: premiumGroup1.id });
+	expectProductAttached({ customer, productId: premiumGroup2.id });
+});

@@ -5,6 +5,7 @@
  */
 
 import { test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -151,6 +152,52 @@ test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product
 			await autumnV1.billing.attach({
 				customer_id: customerId,
 				product_id: premium.id,
+				redirect_mode: "if_required",
+			});
+		},
+	});
+});
+
+/**
+ * Test 4: Explicit merge is rejected when no paid recurring subscription exists
+ *
+ * Scenario:
+ * - Customer has free main product only
+ * - Attach paid recurring add-on with new_billing_subscription: false
+ *
+ * Expected:
+ * - InvalidRequest error (no eligible paid recurring cycle to merge into)
+ */
+test.concurrent(`${chalk.yellowBright("error: explicit merge requires existing paid recurring cycle")}`, async () => {
+	const customerId = "err-explicit-merge-no-paid-cycle";
+
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 20 })],
+	});
+
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyWords({ includedUsage: 100 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, addon] }),
+		],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "no active paid recurring subscription",
+		func: async () => {
+			await autumnV1.billing.attach({
+				customer_id: customerId,
+				product_id: addon.id,
+				new_billing_subscription: false,
 				redirect_mode: "if_required",
 			});
 		},

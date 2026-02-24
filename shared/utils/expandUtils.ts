@@ -1,9 +1,9 @@
+import { CustomerExpand } from "../api/customers/components/customerExpand/customerExpand.js";
 import {
 	type ApiCustomer,
 	type ApiEntityV1,
 	CheckExpand,
 } from "../api/models.js";
-import { CusExpand } from "../models/cusModels/cusExpand.js";
 
 export const addToExpand = <T extends { expand: string[] }>({
 	ctx,
@@ -49,7 +49,7 @@ export const filterPlanAndFeatureExpand = <
 }): T => {
 	const expandBalanceFeature = expandIncludes({
 		expand,
-		includes: [CusExpand.BalancesFeature, CheckExpand.BalanceFeature],
+		includes: [CustomerExpand.BalancesFeature, CheckExpand.BalanceFeature],
 	});
 
 	if (!expandBalanceFeature && target.balances) {
@@ -60,7 +60,7 @@ export const filterPlanAndFeatureExpand = <
 
 	const expandSubscriptionPlan = expandIncludes({
 		expand,
-		includes: [CusExpand.SubscriptionsPlan],
+		includes: [CustomerExpand.SubscriptionsPlan],
 	});
 
 	if (!expandSubscriptionPlan && target.subscriptions) {
@@ -71,7 +71,7 @@ export const filterPlanAndFeatureExpand = <
 
 	const expandScheduledSubscriptionPlan = expandIncludes({
 		expand,
-		includes: [CusExpand.PurchasesPlan],
+		includes: [CustomerExpand.PurchasesPlan],
 	});
 
 	if (!expandScheduledSubscriptionPlan && target.scheduled_subscriptions) {

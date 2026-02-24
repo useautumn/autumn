@@ -175,10 +175,8 @@ export const expectSubScheduleCorrect = async ({
 	// 1. Check schedule
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
-			db,
+			ctx: { db, org, env } as any,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
 		});
 	}
 

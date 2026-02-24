@@ -18,7 +18,7 @@ export function useUpdateSubscriptionForm({
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 }) {
-	const { customerProduct, prepaidItems, currentVersion } =
+	const { customerProduct, prepaidItems, currentVersion, product } =
 		updateSubscriptionFormContext;
 
 	const initialPrepaidOptions = useMemo(() => {
@@ -44,12 +44,17 @@ export function useUpdateSubscriptionForm({
 	const remainingTrialDays = isTrialing
 		? getRemainingTrialDays({ trialEndsAt: customerProduct.trial_ends_at })
 		: null;
+	const trialCardRequired =
+		product?.free_trial?.card_required ??
+		customerProduct.free_trial?.card_required ??
+		true;
 
 	return useAppForm({
 		defaultValues: {
 			prepaidOptions: initialPrepaidOptions,
 			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
+			trialCardRequired,
 			removeTrial: false,
 			trialEnabled: isTrialing,
 			version: currentVersion,

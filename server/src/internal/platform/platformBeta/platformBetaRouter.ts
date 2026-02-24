@@ -25,16 +25,12 @@ platformBetaRouter.use("*", async (c, next) => {
 
 	try {
 		const autumn = new Autumn();
-		const { data, error } = await autumn.check({
-			customer_id: org.id,
-			feature_id: "platform",
+		const { allowed } = await autumn.check({
+			customerId: org.id,
+			featureId: "platform",
 		});
 
-		if (error) {
-			throw error;
-		}
-
-		if (!data?.allowed) {
+		if (!allowed) {
 			return c.json(
 				{
 					message:

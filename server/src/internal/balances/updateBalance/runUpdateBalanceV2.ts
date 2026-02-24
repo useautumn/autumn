@@ -1,7 +1,7 @@
 import {
 	FeatureNotFoundError,
 	notNullish,
-	type UpdateBalanceParams,
+	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
@@ -23,14 +23,12 @@ export const runUpdateBalanceV2 = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: UpdateBalanceParams;
+	params: UpdateBalanceParamsV0;
 }) => {
 	const { features } = ctx;
-	const {
-		feature_id: featureId,
-		current_balance: targetBalance,
-		add_to_balance: addToBalance,
-	} = params;
+	const { feature_id: featureId, add_to_balance: addToBalance } = params;
+
+	const targetBalance = params.remaining ?? params.current_balance;
 
 	// Look up feature
 	const feature = features.find((f) => f.id === featureId);

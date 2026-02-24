@@ -1,8 +1,8 @@
-import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
-import { defineVersionChange } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+import { ApiVersion } from "@api/versionUtils/ApiVersion";
+import { defineVersionChange } from "@api/versionUtils/versionChangeUtils/VersionChange";
 import type { z } from "zod/v4";
-import { ApiTrialsUsedV1Schema } from "../apiTrialsUsedV1.js";
-import { ApiTrialsUsedV0Schema } from "../prevVersions/apiTrialsUsedV0.js";
+import { ApiTrialsUsedV1Schema } from "../apiTrialsUsedV1";
+import { ApiTrialsUsedV0Schema } from "../prevVersions/apiTrialsUsedV0";
 
 /**
  * Transform trials_used from V2.0 format to V1.2 format

@@ -1,0 +1,23 @@
+---
+title: "Delete Customer"
+openapi: "openapi POST /v1/customers.delete"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  ID of the customer to delete
+</DynamicParamField>
+
+<DynamicParamField body="delete_in_stripe" type="boolean">
+  Whether to also delete the customer in Stripe
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />

@@ -6,7 +6,7 @@ import {
 	getUsageCusEnt,
 } from "@tests/utils/cusProductUtils/cusEntSearchUtils.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import ctx, { type TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -64,23 +64,17 @@ const premium = constructProduct({
 });
 
 export const getPrepaidAndUsageCusEnts = async ({
+	ctx,
 	customerId,
-	db,
-	orgId,
-	env,
 	featureId,
 }: {
+	ctx: TestContext;
 	customerId: string;
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	featureId: string;
 }) => {
 	const mainCusProduct = await getMainCusProduct({
+		ctx,
 		customerId,
-		db,
-		orgId,
-		env,
 	});
 
 	const prepaidCusEnt = getPrepaidCusEnt({
@@ -147,10 +141,8 @@ describe(`${chalk.yellowBright(
 		});
 
 		const { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
+			ctx,
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 
@@ -172,10 +164,8 @@ describe(`${chalk.yellowBright(
 		await timeout(3000);
 
 		const { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
+			ctx,
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 
@@ -196,10 +186,8 @@ describe(`${chalk.yellowBright(
 		await timeout(2500);
 
 		const { usageCusEnt } = await getPrepaidAndUsageCusEnts({
+			ctx,
 			customerId,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			featureId: TestFeature.Messages,
 		});
 
@@ -211,10 +199,8 @@ describe(`${chalk.yellowBright(
 
 		const { prepaidCusEnt, usageCusEnt: newUsageCusEnt } =
 			await getPrepaidAndUsageCusEnts({
+				ctx,
 				customerId,
-				db: ctx.db,
-				orgId: ctx.org.id,
-				env: ctx.env,
 				featureId: TestFeature.Messages,
 			});
 

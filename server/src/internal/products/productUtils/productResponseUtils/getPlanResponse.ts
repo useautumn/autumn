@@ -129,6 +129,7 @@ export const getPlanResponse = async ({
 		items: featureItems,
 		features,
 		expand,
+		currency,
 	});
 
 	planItems = planItems.map((item) => ({ ...item, proration: undefined }));

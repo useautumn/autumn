@@ -1,6 +1,5 @@
 import {
-	type AppEnv,
-	CusExpand,
+	CustomerExpand,
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	type FullCustomer,
@@ -25,13 +24,12 @@ export const getOrSetCachedFullCustomer = async ({
 	entityId?: string;
 	source?: string;
 }): Promise<FullCustomer> => {
-	const { org, env, db, skipCache, logger } = ctx;
+	const { skipCache, logger } = ctx;
 
-	// 1. Try cache first
+	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	if (!skipCache) {
 		const cached = await getCachedFullCustomer({
-			orgId: org.id,
-			env,
+			ctx,
 			customerId,
 		});
 
@@ -63,13 +61,11 @@ export const getOrSetCachedFullCustomer = async ({
 	const fetchTimeMs = Date.now();
 
 	const fullCustomer = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: org.id,
-		env: env as AppEnv,
 		withEntities: true,
 		withSubs: true,
-		expand: [CusExpand.Invoices],
+		expand: [CustomerExpand.Invoices],
 	});
 
 	if (!fullCustomer) {

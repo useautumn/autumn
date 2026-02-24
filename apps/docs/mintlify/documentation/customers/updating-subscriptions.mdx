@@ -1,0 +1,250 @@
+---
+title: "Updating Subscriptions"
+description: "Modify existing subscriptions - update quantities, cancel, or customize"
+---
+
+Use `billing.update` to modify an existing subscription. This is different from `billing.attach` which is for attaching new plans or changing between plans.
+
+**When to use `billing.update`:**
+
+- **Update feature quantities** — if your plan contains prepaid features (like seats)
+- **Cancel or uncancel** — cancel a subscription immediately or at end of cycle
+- **Customize the plan** — modify pricing or feature configuration (advanced)
+
+## Updating prepaid feature quantities
+
+Prepaid features are features where customers pay upfront for a quantity (e.g., seats, team members). Here's an example plan with a prepaid `seats` feature:
+
+<Expandable title="Example plan with prepaid feature">
+```typescript autumn.config.ts
+import { feature, plan, planItem } from "atmn";
+
+export const seats = feature({
+  id: "seats",
+  name: "Seats",
+  type: "metered",
+  consumable: false, // Non-consumable = doesn't reset
+});
+
+export const team = plan({
+  id: "team",
+  name: "Team Plan",
+  price: {
+    amount: 49,
+    interval: "month",
+  },
+  items: [
+    planItem({
+      featureId: seats.id,
+      included: 5, // 5 seats included
+      price: {
+        amount: 10, // $10 per additional seat
+        interval: "month",
+        billingMethod: "prepaid",
+      },
+    }),
+  ],
+});
+```
+</Expandable>
+
+To update the quantity of seats for a customer:
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.update({
+  customerId: "user_123",
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+});
+```
+
+```tsx React
+const { updateSubscription } = useCustomer();
+
+await updateSubscription({
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+});
+```
+
+```python Python
+response = await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="team",
+    feature_quantities=[
+        { "feature_id": "seats", "quantity": 10 }
+    ],
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "team",
+    "feature_quantities": [
+      { "feature_id": "seats", "quantity": 10 }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+## Canceling a subscription
+
+Use `cancelAction` to cancel or uncancel a subscription:
+
+| Action | Description |
+|--------|-------------|
+| `cancel_end_of_cycle` | Cancel at the end of the current billing period. Customer retains access until then. |
+| `cancel_immediately` | Cancel immediately with a prorated refund. |
+| `uncancel` | Reverse a pending cancellation (only works if not yet expired). |
+
+<CodeGroup>
+
+```typescript TypeScript
+// Cancel at end of billing cycle
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+
+// Uncancel a pending cancellation
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "uncancel",
+});
+```
+
+```tsx React
+const { updateSubscription } = useCustomer();
+
+// Cancel at end of billing cycle
+await updateSubscription({
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```python Python
+# Cancel at end of billing cycle
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>
+
+## How billing works
+
+By default, updating a subscription with billing changes will generate an invoice:
+
+- **Increasing quantity** (e.g., adding seats) charges a prorated amount for the remainder of the billing cycle
+- **Decreasing quantity** (e.g., removing seats) generates a credit applied to the next invoice
+- **Canceling immediately** generates a negative invoice granting credits to the customer
+
+### Previewing changes before executing
+
+Similar to [`billing.previewAttach`](/documentation/customers/attaching-plans#step-1-preview-the-change), you can use `billing.previewUpdate` to see exactly what will be charged before making changes. This returns line items and totals that you can display in a confirmation UI.
+
+<CodeGroup>
+
+```typescript TypeScript
+const preview = await autumn.billing.previewUpdate({
+  customerId: "user_123",
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+});
+
+// Display preview.lineItems, preview.total, preview.currency
+// Then call billing.update to execute
+```
+
+```tsx React
+const { previewUpdateSubscription, updateSubscription } = useCustomer();
+
+// Preview the change
+const preview = await previewUpdateSubscription({
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+});
+
+// Show confirmation UI, then execute
+await updateSubscription({
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+});
+```
+
+```python Python
+preview = await autumn.billing.preview_update(
+    customer_id="user_123",
+    plan_id="team",
+    feature_quantities=[
+        { "feature_id": "seats", "quantity": 10 }
+    ],
+)
+
+# Display preview.line_items, preview.total
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/preview-update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "team",
+    "feature_quantities": [
+      { "feature_id": "seats", "quantity": 10 }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+### Skipping charges
+
+If you want to update a subscription without creating any charges or credits, pass `prorationBehavior: "none"`:
+
+```typescript
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "team",
+  featureQuantities: [
+    { featureId: "seats", quantity: 10 }
+  ],
+  prorationBehavior: "none", // No charges or credits created
+});
+```
+
+This is useful for administrative adjustments or when you want to handle billing separately.

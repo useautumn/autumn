@@ -48,10 +48,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: increment entitlement ba
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -71,10 +69,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: increment entitlement ba
 	});
 
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(
@@ -119,10 +115,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: decrement entitlement ba
 	});
 
 	const beforeUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const customerProduct = beforeUpdate.customer_products.find(
@@ -142,10 +136,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: decrement entitlement ba
 	});
 
 	const afterUpdate = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	const afterCustomerProduct = afterUpdate.customer_products.find(

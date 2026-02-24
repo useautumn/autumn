@@ -1,5 +1,7 @@
 import type { AggregatedEventRow, ProcessedEventRow } from "@autumn/shared";
 import {
+	AffectedResource,
+	applyResponseVersionChanges,
 	CustomerNotFoundError,
 	ErrCode,
 	EventsAggregateParamsSchema,
@@ -34,10 +36,8 @@ export const handleExternalAggregateEvents = createRoute({
 		});
 
 		const customer = await CusService.getFull({
-			db,
-			orgId: org.id,
+			ctx,
 			idOrInternalId: customer_id,
-			env,
 			withSubs: true,
 		});
 
@@ -106,9 +106,49 @@ export const handleExternalAggregateEvents = createRoute({
 			usageList = Array.from(grouped.values()) as AggregatedEventRow[];
 		}
 
-		return c.json({
-			list: usageList,
+		let v1List: {
+			period: number;
+			values: Record<string, number>;
+			grouped_values?: Record<string, Record<string, number>>;
+		}[];
+
+		if (group_by) {
+			v1List = usageList.map(({ period, ...groupedValues }) => {
+				const values: Record<string, number> = {};
+				const grouped_values: Record<string, Record<string, number>> = {};
+
+				for (const [featureName, featureData] of Object.entries(
+					groupedValues,
+				)) {
+					if (typeof featureData === "object" && featureData !== null) {
+						grouped_values[featureName] = featureData as Record<string, number>;
+						values[featureName] = Object.values(
+							featureData as Record<string, number>,
+						).reduce((sum, v) => sum + v, 0);
+					}
+				}
+
+				return { period, values, grouped_values };
+			});
+		} else {
+			v1List = usageList.map(({ period, ...values }) => ({
+				period,
+				values: values as Record<string, number>,
+			}));
+		}
+
+		const v1Response = {
+			list: v1List,
 			total,
+		};
+
+		const versionedResponse = applyResponseVersionChanges({
+			input: v1Response,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.EventsAggregate,
+			ctx,
 		});
+
+		return c.json(versionedResponse);
 	},
 });

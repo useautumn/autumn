@@ -2,12 +2,12 @@ import { Decimal } from "decimal.js";
 import type {
 	ApiBalanceBreakdownV1,
 	ApiBalanceV1,
-} from "../../apiBalanceV1.js";
+} from "../../apiBalanceV1";
 import {
 	apiBalanceBreakdownV1ToOverage,
 	apiBalanceV1ToOverage,
-} from "./apiBalanceV1ToOverage.js";
-import { apiBalanceV1ToPrepaidQuantity } from "./apiBalanceV1ToPrepaidQuantity.js";
+} from "./apiBalanceV1ToOverage";
+import { apiBalanceV1ToPrepaidQuantity } from "./apiBalanceV1ToPrepaidQuantity";
 
 export const apiBalanceBreakdownV1ToPurchasedBalance = ({
 	apiBalanceBreakdown,

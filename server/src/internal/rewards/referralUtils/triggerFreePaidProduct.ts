@@ -62,18 +62,14 @@ export const triggerFreePaidProduct = async ({
 
 	const [fullReferrer, fullRedeemer] = await Promise.all([
 		CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: referralCode.internal_customer_id,
-			orgId: org.id,
-			env,
 			withEntities: true,
 			withSubs: true,
 		}),
 		CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: redeemer.id!,
-			orgId: org.id,
-			env,
 			withEntities: true,
 			withSubs: true,
 		}),

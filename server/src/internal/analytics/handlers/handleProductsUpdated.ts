@@ -9,7 +9,7 @@ import {
 	type AuthType,
 	addToExpand,
 	applyResponseVersionChanges,
-	CusExpand,
+	CustomerExpand,
 	type CustomerLegacyData,
 	cusProductToProduct,
 	type EntityLegacyData,
@@ -110,10 +110,8 @@ export const handleProductsUpdated = async ({
 
 	const fullProduct: FullProduct = cusProductToProduct({ cusProduct });
 	const fullCus = await CusService.getFull({
-		db,
+		ctx,
 		idOrInternalId: data.customerId || data.internalCustomerId,
-		orgId: org.id,
-		env: env,
 		entityId: cusProduct.internal_entity_id || undefined,
 		allowNotFound: true,
 	});
@@ -137,9 +135,9 @@ export const handleProductsUpdated = async ({
 		ctx = addToExpand({
 			ctx,
 			add: [
-				CusExpand.BalancesFeature,
-				CusExpand.SubscriptionsPlan,
-				CusExpand.PurchasesPlan,
+				CustomerExpand.BalancesFeature,
+				CustomerExpand.SubscriptionsPlan,
+				CustomerExpand.PurchasesPlan,
 			],
 		});
 	}

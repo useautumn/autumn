@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing.js";
@@ -10,7 +10,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import type { Customer } from "autumn-js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 
@@ -85,20 +84,18 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 	}
 
 	// Get the customer and verify default product
-	const customer = await autumnV1.customers.get<Customer>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectProductAttached({
 		customer,
 		productId: freeDefault.id,
 		status: CusProductStatus.Active,
 	});
-	expect(customer.features[TestFeature.Messages].balance).toBe(100);
+	expect(customer.features[TestFeature.Messages as string]?.balance).toBe(100);
 
 	// Verify no duplicate customer_products in DB
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// Count products with the same product_id
@@ -244,10 +241,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 
 	// Get the full customer to verify Stripe data
 	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// 2. Verify only 1 Stripe customer was created
@@ -332,10 +327,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 
 	// Get the final customer state from DB
 	const finalCustomer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
 	});
 
 	// Name should be preserved - not overwritten with empty string

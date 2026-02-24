@@ -1,12 +1,12 @@
-import { isAllocatedFeature } from "@utils/featureUtils/classifyFeature/isAllocatedFeature.js";
-import { isConsumableFeature } from "@utils/featureUtils/classifyFeature/isConsumableFeature.js";
-import { findFeatureById } from "@utils/featureUtils/findFeatureUtils.js";
+import { isAllocatedFeature } from "@utils/featureUtils/classifyFeature/isAllocatedFeature";
+import { isConsumableFeature } from "@utils/featureUtils/classifyFeature/isConsumableFeature";
+import { findFeatureById } from "@utils/featureUtils/findFeatureUtils";
 
-export * from "./apiFeatureToDbFeature.js";
+export * from "./apiFeatureToDbFeature";
 
-export * from "./convertFeatureUtils.js";
-export * from "./creditSystemUtils.js";
-export * from "./findFeatureUtils.js";
+export * from "./convertFeatureUtils";
+export * from "./creditSystemUtils";
+export * from "./findFeatureUtils";
 
 export const featureUtils = {
 	isConsumable: isConsumableFeature,

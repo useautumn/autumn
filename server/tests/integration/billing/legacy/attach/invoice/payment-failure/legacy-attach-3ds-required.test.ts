@@ -16,7 +16,7 @@ import { type ApiCustomerV3, OnIncrease } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { completeInvoiceConfirmation } from "@tests/utils/browserPool";
+import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import {
 	expectProductAttached,
 	expectProductNotAttached,

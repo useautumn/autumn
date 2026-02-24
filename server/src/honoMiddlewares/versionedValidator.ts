@@ -98,9 +98,29 @@ export const versionedValidator = ({
 			}
 			validatedData = result.data as Record<string, unknown>;
 			c.req.addValidatedData(target, validatedData);
-		} else {
-			// For other targets, use zValidator
+		} else if (target === "json") {
+			// For JSON body, handle empty/null body gracefully
+			let rawBody: unknown;
+			try {
+				rawBody = await c.req.json();
+			} catch {
+				// Empty or malformed body - treat as empty object
+				rawBody = {};
+			}
 
+			// If body is null/undefined, default to empty object
+			if (rawBody === null || rawBody === undefined) {
+				rawBody = {};
+			}
+
+			const result = schema.safeParse(rawBody);
+			if (!result.success) {
+				throw result.error;
+			}
+			validatedData = result.data as Record<string, unknown>;
+			c.req.addValidatedData(target, validatedData);
+		} else {
+			// For other targets (param, header, form), use zValidator
 			const validatorMiddleware = zValidator(target, schema, (result, _c) => {
 				if (!result.success) {
 					// Validation errors reference fields from user's version ✅

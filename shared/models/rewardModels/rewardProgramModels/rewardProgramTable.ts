@@ -6,8 +6,8 @@ import {
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
-import { organizations } from "../../orgModels/orgTable.js";
-import { rewards } from "../rewardModels/rewardTable.js";
+import { organizations } from "../../orgModels/orgTable";
+import { rewards } from "../rewardModels/rewardTable";
 
 export const rewardPrograms = pgTable(
 	"reward_programs",

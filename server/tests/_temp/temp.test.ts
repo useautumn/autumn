@@ -1,32 +1,44 @@
 import { test } from "bun:test";
+import {
+	FreeTrialDuration,
+	type UpdateSubscriptionV1Params,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Test: Attach free default product, then attach pro with invoice mode
- */
-test.concurrent(`${chalk.yellowBright("attach: pro plan with failed payment method")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
+test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
+	const proProd = products.pro({
 		id: "pro",
-		items: [messagesItem],
+		items: [items.monthlyCredits({ includedUsage: 100 })],
 	});
+	const customerId = "temp";
 
-	const { autumnV1 } = await initScenario({
-		customerId: "test-failed-pm",
-		setup: [
-			s.customer({ paymentMethod: "fail" }), // Failed payment method
-			s.products({ list: [pro] }),
-		],
+	const { autumnV1, autumnV2_1 } = await initScenario({
+		customerId,
 		actions: [],
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proProd] }),
+		],
 	});
 
-	const result = await autumnV1.attach({
-		customer_id: "test-failed-pm",
-		product_id: pro.id,
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: proProd.id,
+		free_trial: {
+			length: 14,
+			duration: FreeTrialDuration.Day,
+		},
 	});
 
-	console.log("Attach response:", JSON.stringify(result, null, 2));
+	console.log(result);
+
+	const updateResult =
+		await autumnV2_1.subscriptions.update<UpdateSubscriptionV1Params>({
+			customer_id: customerId,
+			plan_id: proProd.id,
+		});
+	console.log(updateResult);
 });

@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { CusExpand } from "@shared/index";
+import { CustomerExpand } from "@shared/index";
 import { isUsagePrice, ms } from "@shared/utils";
 import { formatMs } from "@shared/utils/common/formatUtils/formatUnix";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -42,11 +42,9 @@ export const expectStripeInvoiceLineItemPeriodCorrect = async ({
 	);
 
 	const customer = await CusService.getFull({
-		db: ctx.db,
+		ctx,
 		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		expand: [CusExpand.Invoices],
+		expand: [CustomerExpand.Invoices],
 	});
 
 	const stripeInvoice = await getStripeInvoice({

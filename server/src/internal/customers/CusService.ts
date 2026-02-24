@@ -1,8 +1,8 @@
 import {
 	AppEnv,
-	CusExpand,
 	type CusProductStatus,
 	type Customer,
+	CustomerExpand,
 	CustomerNotFoundError,
 	customers,
 	type EntityExpand,
@@ -25,6 +25,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
@@ -32,10 +33,8 @@ import { getFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusService {
 	static async getFull({
-		db,
+		ctx,
 		idOrInternalId,
-		orgId,
-		env,
 		inStatuses = RELEVANT_STATUSES,
 		withEntities = false,
 		entityId,
@@ -44,20 +43,21 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 	}: {
-		db: DrizzleCli;
+		ctx: AutumnContext;
 		idOrInternalId: string;
-		orgId: string;
-		env: AppEnv;
 		inStatuses?: CusProductStatus[];
 		withEntities?: boolean;
 		entityId?: string;
-		expand?: (CusExpand | EntityExpand)[];
+		expand?: (CustomerExpand | EntityExpand)[];
 		withSubs?: boolean;
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 	}): Promise<FullCustomer> {
-		const includeInvoices = expand?.includes(CusExpand.Invoices) || false;
-		const withTrialsUsed = expand?.includes(CusExpand.TrialsUsed) || false;
+		const { db, org, env } = ctx;
+		const orgId = org.id;
+
+		const includeInvoices = expand?.includes(CustomerExpand.Invoices) || false;
+		const withTrialsUsed = expand?.includes(CustomerExpand.TrialsUsed) || false;
 
 		return withSpan<FullCustomer>({
 			name: "CusService.getFull",
@@ -109,7 +109,15 @@ export class CusService {
 					}
 				}
 
-				return data as FullCustomer;
+				const fullCus = data as FullCustomer;
+
+				// Lazy reset stale entitlements (mutates fullCus in-memory + writes DB)
+				await resetCustomerEntitlements({
+					fullCus,
+					ctx,
+				});
+
+				return fullCus;
 			},
 		});
 	}
@@ -418,25 +426,23 @@ export class CusService {
 	}
 
 	static async getByVercelId({
-		db,
+		ctx,
 		vercelInstallationId,
-		orgId,
-		env,
 		expand,
 	}: {
-		db: DrizzleCli;
+		ctx: AutumnContext;
 		vercelInstallationId: string;
-		orgId: string;
-		env: AppEnv;
-		expand?: (CusExpand | EntityExpand)[];
+		expand?: (CustomerExpand | EntityExpand)[];
 	}) {
+		const { db, org, env } = ctx;
+
 		// This assumes the "processors" column is a JSONB object that can have a "vercel" object with "installation_id"
 		const results = await db
 			.select()
 			.from(customers as unknown as Table)
 			.where(
 				and(
-					eq(customers.org_id, orgId),
+					eq(customers.org_id, org.id),
 					eq(customers.env, env),
 					// This JSON path works for Postgres jsonb column
 					// Check for 'vercel.installation_id' inside the processors JSONB column
@@ -449,10 +455,8 @@ export class CusService {
 		if (!customer) return null;
 		else {
 			return (await CusService.getFull({
-				db,
+				ctx,
 				idOrInternalId: customer.internal_id,
-				orgId,
-				env,
 				expand,
 			})) as FullCustomer;
 		}

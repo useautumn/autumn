@@ -4,6 +4,7 @@
 		"experimentalSpecifier": true
 	},
 	"compilerOptions": {
+		"lib": ["ES2021", "DOM"],
 		"target": "ES2020",
 		"moduleResolution": "bundler",
 		"module": "Preserve",
@@ -24,13 +25,21 @@
 			"@scripts/*": ["./scripts/*"],
 			"@lua/*": ["./src/_luaScripts/*"],
 			"@tests/*": ["./tests/*"],
+			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
+			"autumn-js/backend/hono": ["../packages/autumn-js/src/backend/adapters/hono.ts"],
+			"@useautumn/sdk": ["../packages/sdk/src/index.ts"],
+			"@useautumn/sdk/*": ["../packages/sdk/src/*"],
 
 			// From shared package?
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
 			"@api/*": ["../shared/api/*"],
 			"@models/*": ["../shared/models/*"],
-			"@utils/*": ["../shared/utils/*"]
+			"@utils/*": ["../shared/utils/*"],
+
+			// Explicitly set drizzle-orm path to avoid monorepo issues
+			"drizzle-orm": ["../node_modules/drizzle-orm"],
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]			
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments"],

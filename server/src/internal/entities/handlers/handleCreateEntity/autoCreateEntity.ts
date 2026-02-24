@@ -49,10 +49,8 @@ export const autoCreateEntity = async ({
 
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
-			db,
+			ctx,
 			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
 			withEntities: true,
 			entityId,
 		});

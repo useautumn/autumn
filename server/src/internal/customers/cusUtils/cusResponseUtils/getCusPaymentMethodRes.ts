@@ -1,6 +1,6 @@
 import {
 	type AppEnv,
-	CusExpand,
+	CustomerExpand,
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
@@ -16,9 +16,9 @@ export const getCusPaymentMethodRes = async ({
 	org: Organization;
 	env: AppEnv;
 	fullCus: FullCustomer;
-	expand: CusExpand[];
+	expand: CustomerExpand[];
 }) => {
-	if (!expand?.includes(CusExpand.PaymentMethod)) {
+	if (!expand?.includes(CustomerExpand.PaymentMethod)) {
 		return undefined;
 	}
 
