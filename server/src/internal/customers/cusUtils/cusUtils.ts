@@ -49,7 +49,7 @@ export const updateCustomerDetails = async ({
 	// Update send_email_receipts if explicitly provided
 	if (
 		customerData?.send_email_receipts !== undefined &&
-		fullCustomer.send_email_receipts !== updates.send_email_receipts
+		fullCustomer.send_email_receipts !== customerData.send_email_receipts
 	) {
 		updates.send_email_receipts = customerData.send_email_receipts;
 	}
