@@ -2,7 +2,7 @@ import type { UsageTier } from "@models/productModels/priceModels/priceConfig/us
 import { Infinite } from "@models/productModels/productEnums";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
 import { nullish } from "@utils/utils";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 export const volumeTiersToLineAmount = ({
 	tiers,

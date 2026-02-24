@@ -126,6 +126,7 @@ export const constructArrearItem = ({
 	featureId,
 	includedUsage = 10000,
 	price = 0.1,
+	tiers,
 	billingUnits = 1000,
 	config = {
 		on_increase: OnIncrease.ProrateImmediately,
@@ -140,6 +141,7 @@ export const constructArrearItem = ({
 	featureId: string;
 	includedUsage?: number;
 	price?: number;
+	tiers?: { amount: number; to: number | "inf" }[];
 	billingUnits?: number;
 	config?: ProductItemConfig;
 	rolloverConfig?: RolloverConfig;
@@ -152,7 +154,8 @@ export const constructArrearItem = ({
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,
-		price: price,
+		price: tiers ? undefined : price,
+		tiers: tiers,
 		billing_units: billingUnits,
 		interval: interval,
 		interval_count: intervalCount,
