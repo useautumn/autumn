@@ -15,7 +15,7 @@ import {
 	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
-	TierBehaviours,
+	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
@@ -175,7 +175,7 @@ const validateProductItem = ({
 		}
 
 		if (
-			item.tier_behaviour === TierBehaviours.VolumeBased &&
+			item.tier_behavior === TierBehavior.VolumeBased &&
 			item.tiers.length > 1 &&
 			item.usage_model !== UsageModel.Prepaid
 		) {

@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
 	Infinite,
-	TierBehaviours,
 	type Price,
+	TierBehavior,
 	tiersToLineAmount,
 } from "@autumn/shared";
 
 const createMockPrice = (
 	tiers: { to: number | typeof Infinite; amount: number }[],
-	tierBehaviour?: TierBehaviours,
+	tierBehaviour?: TierBehavior,
 ): Price =>
 	({
 		id: "test-price",
 		internal_product_id: "test-product",
-		tier_behaviour: tierBehaviour,
+		tier_behavior: tierBehaviour,
 		config: {
 			type: "usage",
 			usage_tiers: tiers,
@@ -189,7 +189,7 @@ describe("tiersToLineAmount", () => {
 				{ to: 500, amount: 0.05 },
 				{ to: Infinite, amount: 0.02 },
 			],
-			TierBehaviours.VolumeBased,
+			TierBehavior.VolumeBased,
 		);
 
 		describe("tier selection", () => {
@@ -235,7 +235,7 @@ describe("tiersToLineAmount", () => {
 			test("100 units @ $0.10/unit = $10", () => {
 				const price = createMockPrice(
 					[{ to: Infinite, amount: 0.1 }],
-					TierBehaviours.VolumeBased,
+					TierBehavior.VolumeBased,
 				);
 				const result = tiersToLineAmount({ price, overage: 100 });
 				expect(result).toBe(10);
@@ -244,7 +244,7 @@ describe("tiersToLineAmount", () => {
 			test("0 units = $0", () => {
 				const price = createMockPrice(
 					[{ to: Infinite, amount: 0.1 }],
-					TierBehaviours.VolumeBased,
+					TierBehavior.VolumeBased,
 				);
 				const result = tiersToLineAmount({ price, overage: 0 });
 				expect(result).toBe(0);
@@ -253,7 +253,7 @@ describe("tiersToLineAmount", () => {
 			test("tier.to = -1 treated same as Infinite", () => {
 				const price = createMockPrice(
 					[{ to: -1, amount: 0.1 }],
-					TierBehaviours.VolumeBased,
+					TierBehavior.VolumeBased,
 				);
 				const result = tiersToLineAmount({ price, overage: 100 });
 				expect(result).toBe(10);
@@ -267,7 +267,7 @@ describe("tiersToLineAmount", () => {
 					{ to: 100000, amount: 1.0 },
 					{ to: Infinite, amount: 0.5 },
 				],
-				TierBehaviours.VolumeBased,
+				TierBehavior.VolumeBased,
 			);
 
 			test("50k tokens (tier 1) @ $1/1k = $50", () => {
@@ -319,5 +319,4 @@ describe("tiersToLineAmount", () => {
 			});
 		});
 	});
-
 });

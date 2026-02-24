@@ -1,4 +1,4 @@
-import { FeatureType, TierBehaviours } from "@autumn/shared";
+import { FeatureType, TierBehavior } from "@autumn/shared";
 import {
 	DropSimpleIcon,
 	PencilSimpleIcon,
@@ -124,18 +124,17 @@ export function EditPlanFeatureSheet({
 										<div className="flex items-center justify-between w-full">
 											<span>Price</span>
 											<Select
-												value={item.tier_behaviour ?? TierBehaviours.Graduated}
+												value={item.tier_behavior ?? TierBehavior.Graduated}
 												onValueChange={(val) =>
 													setItem({
 														...item,
-														tier_behaviour: val as TierBehaviours,
+														tier_behavior: val as TierBehavior,
 													})
 												}
 											>
 												<SelectTrigger className="w-40 h-6 text-xs" size="sm">
 													<SelectValue>
-														{item.tier_behaviour ===
-														TierBehaviours.VolumeBased ? (
+														{item.tier_behavior === TierBehavior.VolumeBased ? (
 															<span className="flex items-center gap-2">
 																<DropSimpleIcon
 																	className="size-3.5"
@@ -155,11 +154,11 @@ export function EditPlanFeatureSheet({
 													</SelectValue>
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value={TierBehaviours.Graduated}>
+													<SelectItem value={TierBehavior.Graduated}>
 														<RulerIcon className="size-4" weight="regular" />
 														Graduated
 													</SelectItem>
-													<SelectItem value={TierBehaviours.VolumeBased}>
+													<SelectItem value={TierBehavior.VolumeBased}>
 														<DropSimpleIcon
 															className="size-4"
 															weight="regular"

@@ -5,7 +5,7 @@ import {
 	type Organization,
 	type Price,
 	type Product,
-	TierBehaviours,
+	TierBehavior,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -115,9 +115,7 @@ export const createStripePrepaid = async ({
 	} else {
 		const tiers = prepaidToStripeTiers({ price, org });
 		const tiersMode =
-			price.tier_behaviour === TierBehaviours.VolumeBased
-				? "volume"
-				: "graduated";
+			price.tier_behavior === TierBehavior.VolumeBased ? "volume" : "graduated";
 
 		let priceAmountData = {};
 		if (tiers.length === 1) {
