@@ -219,7 +219,7 @@ export const pricesAreSame = (
 			},
 			tier_behaviour: {
 				condition: price1.tier_behaviour != price2.tier_behaviour,
-				message: `Tiers type different: ${price1.tier_behaviour} != ${price2.tier_behaviour}`,
+				message: `Tier behaviour different: ${price1.tier_behaviour} != ${price2.tier_behaviour}`,
 			},
 		};
 
