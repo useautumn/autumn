@@ -19,6 +19,7 @@ import {
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
+	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
 // if (!process.env.CACHE_URL) {
@@ -183,6 +184,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("resetCustomerEntitlements", {
 		numberOfKeys: 1,
 		lua: RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCustomerEntitlements", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -360,6 +366,10 @@ declare module "ioredis" {
 			overwrite: string,
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 		resetCustomerEntitlements(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		updateCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;

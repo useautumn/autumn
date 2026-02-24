@@ -8,6 +8,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
+import { runUpdateUsage } from "@/internal/balances/updateBalance/runUpdateUsage";
 import { updateGrantedBalance } from "@/internal/balances/updateBalance/updateGrantedBalance";
 import { buildCustomerEntitlementFilters } from "@/internal/balances/utils/buildCustomerEntitlementFilters";
 import { CusService } from "@/internal/customers/CusService";
@@ -24,6 +25,10 @@ export const handleUpdateBalance = createRoute({
 		const targetBalance = params.remaining ?? params.current_balance;
 		if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
 			await runUpdateBalanceV2({ ctx, params });
+		}
+
+		if (notNullish(params.usage)) {
+			await runUpdateUsage({ ctx, params });
 		}
 
 		if (notNullish(params.granted_balance)) {

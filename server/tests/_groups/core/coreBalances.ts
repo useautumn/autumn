@@ -25,5 +25,9 @@ export const coreBalances: TestGroup = {
 
 		// ── Update ──
 		"integration/balances/update/balance/update-balance-basic.test.ts",
+
+		// ── Usage ──
+		"integration/balances/update/usage/update-usage-basic.test.ts",
+		"integration/balances/update/usage/update-usage-paid-allocated.test.ts",
 	],
 };

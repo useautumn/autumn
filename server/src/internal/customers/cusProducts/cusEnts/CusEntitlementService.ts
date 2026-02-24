@@ -222,11 +222,6 @@ export class CusEntService {
 			);
 		}
 		await Promise.all(updatePromises);
-
-		// await CusEntService.upsert({
-		// 	db,
-		// 	data: updatedCustomerEntitlements,
-		// });
 	}
 
 	static async getStrict({

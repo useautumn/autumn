@@ -9,6 +9,7 @@ const __dirname = dirname(__filename);
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
+const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
 
 // ============================================================================
 // HELPER MODULES
@@ -96,7 +97,7 @@ export const BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
 );
 
 // ============================================================================
-// RESET CUSTOMER ENTITLEMENTS SCRIPT
+// RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)
 // ============================================================================
 
 const resetMainScript = readFileSync(
@@ -105,9 +106,24 @@ const resetMainScript = readFileSync(
 );
 
 /**
- * Lua script for atomically resetting cusEnt fields in the cached FullCustomer.
- * Reuses luaUtils helpers for find_entitlement navigation.
- * Skips if cache doesn't exist or cusEnt already reset (optimistic guard).
+ * @deprecated Use UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT instead.
  */
 export const RESET_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${resetMainScript}`;
+
+// ============================================================================
+// UPDATE CUSTOMER ENTITLEMENTS SCRIPT (unified reset + deduction cache update)
+// ============================================================================
+
+const updateMainScript = readFileSync(
+	join(UPDATE_DIR, "updateCustomerEntitlements.lua"),
+	"utf-8",
+);
+
+/**
+ * Unified Lua script for atomically updating cusEnt fields in the cached
+ * FullCustomer. Handles both reset and deduction cache updates — both are
+ * "apply absolute values to customer entitlements in the Redis cache."
+ */
+export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${updateMainScript}`;
