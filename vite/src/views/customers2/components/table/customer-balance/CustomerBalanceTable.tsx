@@ -63,6 +63,10 @@ export function CustomerBalanceTable({
 			getExpandedRowModel: getExpandedRowModel(),
 			getSubRows: (row) => row.subRows,
 			getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
+			getRowId: (row, index, parent) => {
+				if (parent) return row.id || `sub-${index}`;
+				return `feature-${row.entitlement.feature.id}`;
+			},
 			state: { expanded },
 			onExpandedChange: setExpanded,
 		},
@@ -72,7 +76,7 @@ export function CustomerBalanceTable({
 		const hasSubRows = (ent.subRows?.length ?? 0) > 0;
 
 		if (hasSubRows) {
-			const rowId = ent.id || "";
+			const rowId = `feature-${ent.entitlement.feature.id}`;
 			setExpanded((prev) => {
 				const current = typeof prev === "boolean" ? {} : { ...prev };
 				current[rowId] = !current[rowId];
