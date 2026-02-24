@@ -22,7 +22,7 @@ export const volumeTiersToLineAmount = ({
 	}
 
 	const isNegative = allowNegative && usage < 0;
-	const absoluteUsage = allowNegative ? Math.abs(usage) : usage;
+	const absoluteUsage = allowNegative ? Math.abs(usage) : Math.max(0, usage);
 
 	const roundedUsage = roundUsageToNearestBillingUnit({
 		usage: absoluteUsage,
