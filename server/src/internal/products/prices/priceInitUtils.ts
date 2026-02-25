@@ -1,103 +1,13 @@
+/** biome-ignore-all lint/suspicious/noDoubleEquals: need to use falsy check */
 import {
-	AllowanceType,
-	BillingInterval,
-	BillingType,
-	type Entitlement,
-	ErrCode,
-	type FixedPriceConfig,
 	FixedPriceConfigSchema,
 	type Price,
 	PriceType,
-	type UsagePriceConfig,
 	UsagePriceConfigSchema,
+	type UsageTier,
 } from "@autumn/shared";
-import { getBillingType } from "@server/internal/products/prices/priceUtils";
-import RecaseError from "@server/utils/errorUtils";
-import { generateId } from "@server/utils/genUtils";
 
-const constructPrice = ({
-	name,
-	config,
-	orgId,
-	internalProductId,
-	isCustom = false,
-}: {
-	name: string;
-	config: UsagePriceConfig | FixedPriceConfig;
-	orgId: string;
-	internalProductId: string;
-	isCustom: boolean;
-}) => {
-	return {
-		id: generateId("pr"),
-		org_id: orgId,
-		internal_product_id: internalProductId,
-		created_at: Date.now(),
-		billing_type: getBillingType(config),
-		is_custom: isCustom,
-
-		name,
-		config,
-	};
-};
-
-// GET PRICES
-const validatePrice = (
-	price: Price,
-	relatedEnt?: Entitlement | undefined | null,
-) => {
-	if (!price.config?.type) {
-		throw new RecaseError({
-			message: "Missing `type` field in price config",
-			code: ErrCode.InvalidPriceConfig,
-			statusCode: 400,
-		});
-	}
-
-	if (price.config?.type == PriceType.Fixed) {
-		FixedPriceConfigSchema.parse(price.config);
-	} else {
-		UsagePriceConfigSchema.parse(price.config);
-
-		const config = price.config! as UsagePriceConfig;
-
-		if (config.usage_tiers.length == 0) {
-			throw new RecaseError({
-				message: "Usage based prices should have at least one tier",
-				code: ErrCode.InvalidPriceConfig,
-				statusCode: 400,
-			});
-		}
-
-		if (relatedEnt?.allowance_type == AllowanceType.Unlimited) {
-			if (config.interval == BillingInterval.OneOff) {
-				throw new RecaseError({
-					message: `Usage-based price cannot have unlimited allowance (${relatedEnt.feature_id})`,
-					code: ErrCode.InvalidPriceConfig,
-					statusCode: 400,
-				});
-			}
-		}
-
-		const billingType = getBillingType(config);
-		if (billingType == BillingType.UsageInArrear) {
-			if (config.interval == BillingInterval.OneOff) {
-				throw new RecaseError({
-					message: "One off prices must be billed at start of period",
-					code: ErrCode.InvalidPriceConfig,
-					statusCode: 400,
-				});
-			}
-		}
-	}
-
-	return {
-		valid: true,
-		error: null,
-	};
-};
-
-export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
+export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 	if (tiers1.length !== tiers2.length) return false;
 	for (let i = 0; i < tiers1.length; i++) {
 		const tier1 = tiers1[i];

@@ -13,6 +13,9 @@ import chalk from "chalk";
  * Verifies that `subscriptions.update` charges the correct delta when quantity changes
  * under VOLUME pricing (entire quantity billed at the rate of its tier).
  *
+ * Uses V2 billing.attach (quantity INCLUDES included usage / allowance).
+ * With includedUsage=0, the quantity is purely purchased units.
+ *
  * Tier setup (billingUnits = 100):
  *   Tier 1: 0–500 units  → $10 / pack  →  volumeCost(n) = (n/100) × $10
  *   Tier 2: 501+ units   → $5  / pack  →  volumeCost(n) = (n/100) × $5
@@ -69,7 +72,7 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
 			}),
@@ -132,7 +135,7 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase cr
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
 			}),
@@ -196,7 +199,7 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
 			}),
@@ -259,7 +262,7 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease sa
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
 			}),
@@ -322,7 +325,7 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease cr
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
 			}),
@@ -351,6 +354,152 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease cr
 
 	expectLatestInvoiceCorrect({
 		customer,
+		productId: product.id,
+		amount: expectedDelta,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tests 6–7: With included usage (includedUsage=100)
+//
+// V2 billing.attach quantity INCLUDES included usage.
+// V2 Stripe volume tiers have boundaries shifted by allowance (1 pack),
+// and Stripe quantity = total packs (including included).
+//
+// Stripe tiers: [{up_to: 6, $10}, {up_to: inf, $5}]  (500/100+1=6)
+//   4 total packs (400 units) → tier 1 → 4 × $10 = $40
+//   9 total packs (900 units) → tier 2 → 9 × $5  = $45
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const INCLUDED_USAGE = 100;
+
+// ─── Test 6: Increase with included — crosses tier (400 → 900 total) ─────────
+
+test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase with included 400→900")}`, async () => {
+	const customerId = "volume-update-qty-incl-increase";
+	const initQuantity = 400; // 4 total packs (1 included + 3 purchased)
+	const newQuantity = 900; // 9 total packs (1 included + 8 purchased)
+
+	// Stripe V2 volume tiers shifted by allowance (1 pack): [{up_to:6,$10}, {up_to:inf,$5}]
+	// Old: 4 total packs → tier 1 (≤6) → 4 × $10 = $40
+	// New: 9 total packs → tier 2 (>6) → 9 × $5 = $45
+	// Delta: +$5
+	const oldCost = (initQuantity / BILLING_UNITS) * 10; // $40
+	const newCost = (newQuantity / BILLING_UNITS) * 5; // $45
+	const expectedDelta = newCost - oldCost; // $5
+
+	const volumeItem = items.volumePrepaidMessages({
+		includedUsage: INCLUDED_USAGE,
+		billingUnits: BILLING_UNITS,
+		tiers: VOLUME_TIERS,
+	});
+
+	const product = products.base({
+		id: "vol-upd-qty-incl-inc",
+		items: [volumeItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: product.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
+			}),
+		],
+	});
+
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
+	});
+	expect(preview.total).toBe(expectedDelta);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	expect(customerAfter.features?.[TestFeature.Messages]?.balance).toBe(
+		newQuantity,
+	);
+
+	expectLatestInvoiceCorrect({
+		customer: customerAfter,
+		productId: product.id,
+		amount: expectedDelta,
+	});
+});
+
+// ─── Test 7: Decrease with included — crosses tier (900 → 400 total) ─────────
+
+test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease with included 900→400")}`, async () => {
+	const customerId = "volume-update-qty-incl-decrease";
+	const initQuantity = 900; // 9 total packs (1 included + 8 purchased)
+	const newQuantity = 400; // 4 total packs (1 included + 3 purchased)
+
+	// Stripe V2 volume tiers shifted by allowance (1 pack): [{up_to:6,$10}, {up_to:inf,$5}]
+	// Old: 9 total packs → tier 2 (>6) → 9 × $5 = $45
+	// New: 4 total packs → tier 1 (≤6) → 4 × $10 = $40
+	// Delta: −$5
+	const oldCost = (initQuantity / BILLING_UNITS) * 5; // $45
+	const newCost = (newQuantity / BILLING_UNITS) * 10; // $40
+	const expectedDelta = newCost - oldCost; // -$5
+
+	const volumeItem = items.volumePrepaidMessages({
+		includedUsage: INCLUDED_USAGE,
+		billingUnits: BILLING_UNITS,
+		tiers: VOLUME_TIERS,
+	});
+
+	const product = products.base({
+		id: "vol-upd-qty-incl-dec",
+		items: [volumeItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: product.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: initQuantity }],
+			}),
+		],
+	});
+
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
+	});
+	expect(preview.total).toBe(expectedDelta);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	expect(customerAfter.features?.[TestFeature.Messages]?.balance).toBe(
+		newQuantity,
+	);
+
+	expectLatestInvoiceCorrect({
+		customer: customerAfter,
 		productId: product.id,
 		amount: expectedDelta,
 	});
