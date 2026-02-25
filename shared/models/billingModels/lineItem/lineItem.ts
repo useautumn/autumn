@@ -8,6 +8,7 @@ export const LineItemDiscountSchema = z.object({
 	couponName: z.string().optional(),
 });
 
+// Will be renamed to BillingLineItemSchema (used in the billing actions, different)
 export const LineItemSchema = z
 	.object({
 		amount: z.number(),
@@ -23,8 +24,8 @@ export const LineItemSchema = z
 		stripeProductId: z.string().optional(),
 
 		// Quantity tracking
-		total_quantity: z.number().optional(), // Total usage (e.g., 500 messages used)
-		paid_quantity: z.number().optional(), // Quantity being charged (overage)
+		totalQuantity: z.number().optional(), // Total usage (e.g., 500 messages used)
+		paidQuantity: z.number().optional(), // Quantity being charged (overage)
 
 		// Optional - for testing
 		chargeImmediately: z.boolean().default(true),
