@@ -11,6 +11,7 @@ import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntTo
 import {
 	isConsumablePrice,
 	isPrepaidPrice,
+	isVolumePrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
@@ -58,10 +59,14 @@ export const usagePriceToLineItem = ({
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
 
+	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
+	if (isVolumePrice(cusPrice.price)) {
+		overage = new Decimal(overage).add(allowance).toNumber();
+	}
+
 	// 2. Get usage
 	let usage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 		const prepaidQuantity = cusEntsToPrepaidQuantity({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
@@ -90,6 +95,7 @@ export const usagePriceToLineItem = ({
 	const amount = priceToLineAmount({
 		price,
 		overage,
+		allowance: allowance,
 	});
 
 	// 5. Get stripe price / product IDs

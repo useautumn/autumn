@@ -1,9 +1,6 @@
 import type { Organization } from "@models/orgModels/orgTable";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
-import {
-	TierBehavior,
-	type UsagePriceConfig,
-} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { type UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
 import {
@@ -39,14 +36,14 @@ export const priceToStripePrepaidV2Tiers = ({
 	org: Organization;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
+
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 
 	// Graduated + allowance: insert a free leading tier and shift paid-tier
 	// boundaries up by the allowance so Stripe's per-tier splitting gives the
 	// right amount. Volume prices skip this — the allowance is handled outside
 	// of Stripe (see featureOptionsToV2StripeQuantity).
-	if (!isVolume && entitlement.allowance) {
+	if (entitlement.allowance) {
 		tiers.push({
 			unit_amount_decimal: "0",
 			up_to: entitlement.allowance,
@@ -65,7 +62,7 @@ export const priceToStripePrepaidV2Tiers = ({
 		});
 
 		let upTo = tier.to;
-		if (!isVolume && isNotFinalTier(tier) && entitlement.allowance) {
+		if (isNotFinalTier(tier) && entitlement.allowance) {
 			upTo = tier.to + entitlement.allowance;
 		}
 

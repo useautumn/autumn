@@ -38,6 +38,72 @@ const TIERS = [
 // TEST A: Exact tier boundary — 500 units
 // ═══════════════════════════════════════════════════════════════════════════════
 
+test.concurrent(`${chalk.yellowBright("vol-edge: 600 units (included usage and exact tier 1 boundary) → $60")}`, async () => {
+	const customerId = "vol-included-edge-boundary-500";
+	const includedUsage = 100;
+	const quantity = 600;
+	const expectedPrepaid = (quantity / BILLING_UNITS) * 10;
+
+	const volItem = items.volumePrepaidMessages({
+		includedUsage,
+		billingUnits: BILLING_UNITS,
+		tiers: TIERS,
+	});
+
+	// Distinct groups so the two products don't mutually-exclude each other
+	const volPro = products.pro({
+		id: "vol-pro-500",
+		items: [volItem],
+		group: "vol-500",
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [volPro] }),
+		],
+		actions: [],
+	});
+
+	// Both previews must be $70 — volume bumped to tier 2 would return $45
+	const previewVol = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: volPro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+	});
+	expect(previewVol.total).toBe(BASE_PRICE + expectedPrepaid);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: volPro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+		redirect_mode: "if_required",
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({ customer, productId: volPro.id });
+
+	// 2 invoices, both $70
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: BASE_PRICE + expectedPrepaid,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST A: Exact tier boundary — 500 units
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
  * The boundary check in volumeTiersToLineAmount is `roundedUsage <= tierBoundary`
  * (inclusive upper bound). Exactly 500 units with `{ to: 500 }` must stay in
@@ -67,7 +133,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: 500 units (exact tier 1 boundar
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-500", items: [volItem], group: "vol-500" });
+	const volPro = products.pro({
+		id: "vol-pro-500",
+		items: [volItem],
+		group: "vol-500",
+	});
 	const gradBase = products.base({
 		id: "grad-base-500",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],
@@ -174,7 +244,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: 501 units (ceil to 600) → vol
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-501", items: [volItem], group: "vol-501" });
+	const volPro = products.pro({
+		id: "vol-pro-501",
+		items: [volItem],
+		group: "vol-501",
+	});
 	const gradBase = products.base({
 		id: "grad-base-501",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],
@@ -275,7 +349,7 @@ test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → 
 	const quantity = 800;
 	const includedUsage = 200;
 	// Purchased = 800 - 200 = 600 units, all in tier 2
-	const purchasedUnits = quantity - includedUsage;
+	const purchasedUnits = quantity;
 
 	// Volume: 6 packs × $5 = $30
 	const volExpectedPrepaid = (purchasedUnits / BILLING_UNITS) * 5;
@@ -295,7 +369,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → 
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-inc", items: [volItem], group: "vol-inc" });
+	const volPro = products.pro({
+		id: "vol-pro-inc",
+		items: [volItem],
+		group: "vol-inc",
+	});
 	const gradBase = products.base({
 		id: "grad-base-inc",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],

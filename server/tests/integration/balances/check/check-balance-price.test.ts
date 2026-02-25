@@ -99,9 +99,12 @@ test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field i
 		max_purchase: null,
 	});
 	expect(wordsBreakdown?.price?.amount).toBeUndefined();
+	// Tiers in user-facing response INCLUDE included_usage (50)
+	// Internal tiers: [{to:100}, {to:500}, {to:"inf"}]
+	// User-facing: [{to:150}, {to:550}, {to:"inf"}]
 	expect(wordsBreakdown?.price?.tiers).toEqual([
-		{ to: 100, amount: 0.1 },
-		{ to: 500, amount: 0.05 },
+		{ to: 150, amount: 0.1 },
+		{ to: 550, amount: 0.05 },
 		{ to: "inf", amount: 0.02 },
 	]);
 });

@@ -50,7 +50,7 @@ export const CreatePlanItemParamsV1Schema = z
 				}),
 				tiers: z.array(UsageTierSchema).optional().meta({
 					description:
-						"Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.",
+						"Tiered pricing.  Either 'amount' or 'tiers' is required.",
 				}),
 				tier_behavior: z.enum(TierBehavior).optional(),
 
@@ -159,6 +159,41 @@ export const CreatePlanItemParamsV1Schema = z
 				ctx.issues.push({
 					code: "custom",
 					message: "'amount' and 'tiers' cannot both be defined in 'price'.",
+					input: ctx.value.price,
+				});
+			}
+		}
+
+		if (ctx.value.price?.tiers) {
+			console.log("Tiers:", ctx.value.price?.tiers);
+			console.log("Tier behavior:", ctx.value.price?.tier_behavior);
+			console.log("Billing method:", ctx.value.price?.billing_method);
+			if (
+				ctx.value.price?.tier_behavior === TierBehavior.VolumeBased &&
+				ctx.value.price?.billing_method !== BillingMethod.Prepaid
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"volume-based pricing is only supported for prepaid features.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (ctx.value.price?.tiers.length === 0) {
+				ctx.issues.push({
+					code: "custom",
+					message: "tiers cannot be empty.",
+					input: ctx.value.price,
+				});
+			} else if (
+				ctx.value.included &&
+				typeof ctx.value.price?.tiers[0].to === "number" &&
+				ctx.value.price?.tiers[0].to <= ctx.value.included
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "tiers[0].to must be greater than included.",
 					input: ctx.value.price,
 				});
 			}

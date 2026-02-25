@@ -92,7 +92,7 @@ export const ApiPlanItemV1Schema = z
 				}),
 				tiers: z.array(UsageTierSchema).optional().meta({
 					description:
-						"Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.",
+						"Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.",
 				}),
 				tier_behavior: z.enum(TierBehavior).optional(),
 
