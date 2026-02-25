@@ -28,7 +28,7 @@ export const priceToOneOffAndTiered = ({
 	const quantity = options?.quantity ?? 0;
 	const overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
 
-	const amount = getPriceForOverage({ price, overage });
+	const amount = getPriceForOverage(price, overage);
 	if (!config.stripe_product_id) {
 		console.log(
 			`WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`,

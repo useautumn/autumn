@@ -1,22 +1,9 @@
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels";
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { priceUtils } from "@utils/productUtils/priceUtils/index";
 import { Decimal } from "decimal.js";
 
-/**
- * Computes the Stripe subscription-item quantity for a V2 prepaid price.
- *
- * For **graduated** prices the allowance is encoded as a free leading tier in
- * the Stripe price object, so Stripe needs the *total* packs (purchased +
- * allowance) to bill correctly.
- *
- * For **volume** prices the Stripe price has no free tier offset (the allowance
- * is tracked purely in Autumn), so only the purchased packs are sent. Stripe
- * then applies the single matching tier rate to the purchased quantity only,
- * which matches Autumn's own `volumeTiersToLineAmount` calculation.
- */
 export const featureOptionsToV2StripeQuantity = ({
 	featureOptions,
 	price,
@@ -29,22 +16,14 @@ export const featureOptionsToV2StripeQuantity = ({
 	const packsExcludingAllowance =
 		featureOptions?.upcoming_quantity ?? featureOptions?.quantity;
 
-	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
-
-	// Volume: the Stripe price has no free-tier offset, so only send purchased
-	// packs. Autumn tracks the allowance internally.
-	if (isVolume) {
-		return packsExcludingAllowance ?? 0;
-	}
-
 	const allowanceInPacks = priceUtils.convert.toAllowanceInPacks({
 		price,
 		entitlement,
 	});
 
-	// Graduated: Stripe needs total packs (purchased + allowance) because the
-	// V2 price has a free leading tier that covers the allowance.
+	// 1. If no packs, return allowance
 	if (!packsExcludingAllowance) return allowanceInPacks;
 
+	// 2. Otherwise, return the total quantity
 	return new Decimal(packsExcludingAllowance).add(allowanceInPacks).toNumber();
 };

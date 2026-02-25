@@ -7,7 +7,6 @@ import { priceToStripePrepaidV2Tiers } from "@utils/productUtils/priceUtils/conv
 import { priceToStripeProductName } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeProductName";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import type Stripe from "stripe";
-import { priceToStripeTiersMode } from "./priceToStripeTiersMode";
 
 export const priceToStripeCreatePriceParams = ({
 	price,
@@ -41,7 +40,6 @@ export const priceToStripeCreatePriceParams = ({
 			};
 
 	const tiers = priceToStripePrepaidV2Tiers({ price, entitlement, org });
-	const tiersMode = priceToStripeTiersMode({ price });
 
 	let priceAmountData = {};
 	if (tiers.length === 1) {
@@ -51,7 +49,7 @@ export const priceToStripeCreatePriceParams = ({
 	} else {
 		priceAmountData = {
 			billing_scheme: "tiered",
-			tiers_mode: tiersMode,
+			tiers_mode: "graduated",
 			tiers: tiers,
 		};
 	}

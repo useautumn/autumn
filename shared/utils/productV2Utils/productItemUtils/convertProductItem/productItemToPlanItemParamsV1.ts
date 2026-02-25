@@ -41,7 +41,6 @@ export const productItemToPlanItemParamsV1 = ({
 					billing_units: planItemV1.price.billing_units,
 					billing_method: planItemV1.price.billing_method,
 					max_purchase: planItemV1.price.max_purchase ?? undefined,
-					tier_behavior: planItemV1.price.tier_behavior ?? undefined,
 				}
 			: undefined,
 		proration: planItemV1.proration
