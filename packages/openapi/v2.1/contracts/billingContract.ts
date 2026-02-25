@@ -5,15 +5,18 @@ import {
 	ExtAttachPreviewResponseSchema,
 	ExtPreviewUpdateSubscriptionResponseSchema,
 	ExtUpdateSubscriptionV1ParamsSchema,
+	MultiAttachParamsV0Schema,
 	OpenCustomerPortalParamsV1Schema,
 	OpenCustomerPortalResponseSchema,
-	SetupPaymentParamsSchema,
-	SetupPaymentResultSchema,
+	SetupPaymentParamsV1Schema,
+	SetupPaymentResponseV1Schema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import {
 	billingAttachJsDoc,
+	billingMultiAttachJsDoc,
 	billingPreviewAttachJsDoc,
+	billingPreviewMultiAttachJsDoc,
 	billingPreviewUpdateJsDoc,
 	billingUpdateJsDoc,
 } from "../jsDocs/billingJsDocs";
@@ -202,7 +205,7 @@ export const billingSetupPaymentContract = oc
 		}),
 	})
 	.input(
-		SetupPaymentParamsSchema.meta({
+		SetupPaymentParamsV1Schema.meta({
 			title: "SetupPaymentParams",
 			examples: [
 				{
@@ -213,12 +216,89 @@ export const billingSetupPaymentContract = oc
 		}),
 	)
 	.output(
-		SetupPaymentResultSchema.meta({
+		SetupPaymentResponseV1Schema.meta({
+			title: "SetupPaymentResponse",
 			examples: [
 				{
 					customer_id: "cus_123",
-					payment_url: "https://checkout.stripe.com/...",
+					url: "https://checkout.stripe.com/...",
 				},
 			],
+		}),
+	);
+
+export const billingMultiAttachContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.multi_attach",
+		operationId: "billingMultiAttach",
+		tags: ["billing"],
+		description: billingMultiAttachJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "multiAttach",
+		}),
+	})
+	.input(
+		MultiAttachParamsV0Schema.meta({
+			title: "MultiAttachParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plans: [
+						{ plan_id: "pro_plan" },
+						{ plan_id: "addon_seats", feature_quantities: [{ feature_id: "seats", quantity: 5 }] },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		BillingResponseSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					invoice: {
+						status: "paid",
+						stripe_id: "in_1234",
+						total: 4900,
+						currency: "usd",
+						hosted_invoice_url: "https://invoice.stripe.com/...",
+					},
+					payment_url: null,
+				},
+			],
+		}),
+	);
+
+export const billingPreviewMultiAttachContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.preview_multi_attach",
+		operationId: "previewMultiAttach",
+		tags: ["billing"],
+		description: billingPreviewMultiAttachJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "previewMultiAttach",
+		}),
+	})
+	.input(
+		MultiAttachParamsV0Schema.meta({
+			title: "PreviewMultiAttachParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					plans: [
+						{ plan_id: "pro_plan" },
+						{ plan_id: "addon_seats", feature_quantities: [{ feature_id: "seats", quantity: 5 }] },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		ExtAttachPreviewResponseSchema.meta({
+			examples: [BILLING_PREVIEW_RESPONSE_EXAMPLE],
 		}),
 	);

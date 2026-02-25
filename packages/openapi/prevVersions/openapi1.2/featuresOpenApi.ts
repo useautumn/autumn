@@ -1,16 +1,12 @@
-import { z } from "zod/v4";
-import {
-	getListResponseSchema,
-	SuccessResponseSchema,
-} from "../../../common/commonResponses.js";
 import {
 	ApiFeatureV0Schema,
-	FEATURE_EXAMPLE,
-} from "../../../features/prevVersions/apiFeatureV0.js";
-import {
 	CreateFeatureV0ParamsSchema,
+	FEATURE_EXAMPLE,
+	getListResponseSchema,
+	SuccessResponseSchema,
 	UpdateFeatureV0ParamsSchema,
-} from "../../../features/prevVersions/featureV0OpModels.js";
+} from "@autumn/shared";
+import { z } from "zod/v4";
 
 export const ApiFeatureWithMeta = ApiFeatureV0Schema.extend({
 	type: z.enum(["boolean", "single_use", "continuous_use", "credit_system"]),
