@@ -1,0 +1,27 @@
+TOKEN invoices_cdc_test1 APPEND
+
+DESCRIPTION >
+    Invoice CDC events from Sequin (PlanetScale Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `created_at`               Nullable(Int64)     `json:$.created_at`,
+    `product_ids`              Array(String)       `json:$.product_ids[:]`,
+    `internal_product_ids`     Array(String)       `json:$.internal_product_ids[:]`,
+    `internal_customer_id`     String              `json:$.internal_customer_id`,
+    `internal_entity_id`       Nullable(String)    `json:$.internal_entity_id`,
+    `stripe_id`                String              `json:$.stripe_id`,
+    `status`                   String              `json:$.status`,
+    `hosted_invoice_url`       Nullable(String)    `json:$.hosted_invoice_url`,
+    `total`                    Nullable(Float64)   `json:$.total`,
+    `currency`                 String              `json:$.currency`,
+    `discounts`                JSON                `json:$.discounts`,
+    `items`                    JSON                `json:$.items`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"
