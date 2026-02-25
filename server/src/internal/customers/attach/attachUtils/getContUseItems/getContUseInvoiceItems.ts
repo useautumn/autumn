@@ -98,7 +98,7 @@ const getContUseNewItems = async ({
 			}
 		}
 
-		const amount = getPriceForOverage({ price, overage });
+		const amount = getPriceForOverage(price, overage);
 		const description = getFeatureInvoiceDescription({
 			feature: ent.feature,
 			usage: usage,

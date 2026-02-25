@@ -25,7 +25,7 @@ export const billingIntervalToStripe = ({
 }: {
 	interval: BillingInterval;
 	intervalCount?: number | null;
-}): Partial<Stripe.PriceCreateParams.Recurring> => {
+}): Stripe.PriceCreateParams.Recurring | Record<string, any> => {
 	const finalCount = intervalCount ?? 1;
 	switch (interval) {
 		case BillingInterval.Week:

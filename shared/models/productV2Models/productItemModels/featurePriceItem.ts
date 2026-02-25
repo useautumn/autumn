@@ -11,7 +11,6 @@ export const FeaturePriceItemSchema = ProductItemSchema.pick({
 
 	price: true,
 	tiers: true,
-	tier_behavior: true,
 	billing_units: true,
 
 	reset_usage_when_enabled: true,
