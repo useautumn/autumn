@@ -38,7 +38,7 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			expect(result[0].finalAmount).toBe(100);
+			expect(result[0].amountAfterDiscounts).toBe(100);
 			expect(result[0].discounts).toHaveLength(0);
 		});
 	});
@@ -55,7 +55,7 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			expect(result[0].finalAmount).toBe(75); // 100 - 25
+			expect(result[0].amountAfterDiscounts).toBe(75); // 100 - 25
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(25);
 			expect(result[0].discounts[0].percentOff).toBe(25);
@@ -70,7 +70,7 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			expect(result[0].finalAmount).toBe(85); // 100 - 15
+			expect(result[0].amountAfterDiscounts).toBe(85); // 100 - 15
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(15);
 		});
@@ -90,12 +90,12 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			});
 
 			// Multiplicative stacking:
-			// First discount: 100 * 10% = 10, finalAmount = 90
-			// Second discount: 90 * 20% = 18, finalAmount = 72
+			// First discount: 100 * 10% = 10, amountAfterDiscounts = 90
+			// Second discount: 90 * 20% = 18, amountAfterDiscounts = 72
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(10);
 			expect(result[0].discounts[1].amountOff).toBe(18);
-			expect(result[0].finalAmount).toBe(72);
+			expect(result[0].amountAfterDiscounts).toBe(72);
 		});
 
 		test("percent then amount discounts stack correctly", () => {
@@ -110,12 +110,12 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			// First: 100 * 20% = 20, finalAmount = 80
-			// Second: + $10, total = 30, finalAmount = 70
+			// First: 100 * 20% = 20, amountAfterDiscounts = 80
+			// Second: + $10, total = 30, amountAfterDiscounts = 70
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(20);
 			expect(result[0].discounts[1].amountOff).toBe(10);
-			expect(result[0].finalAmount).toBe(70);
+			expect(result[0].amountAfterDiscounts).toBe(70);
 		});
 
 		test("percent applied before amount regardless of input order", () => {
@@ -130,14 +130,14 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			// Percent always applied first: 100 * 20% = 20, finalAmount = 80
-			// Amount applied second: + $10, total = 30, finalAmount = 70
+			// Percent always applied first: 100 * 20% = 20, amountAfterDiscounts = 80
+			// Amount applied second: + $10, total = 30, amountAfterDiscounts = 70
 			// Discounts array order: percent first, then amount
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(20); // percent discount
 			expect(result[0].discounts[0].percentOff).toBe(20);
 			expect(result[0].discounts[1].amountOff).toBe(10); // amount discount
-			expect(result[0].finalAmount).toBe(70);
+			expect(result[0].amountAfterDiscounts).toBe(70);
 		});
 	});
 
@@ -162,12 +162,12 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(8); // 10%
 			expect(result[0].discounts[1].amountOff).toBe(8); // $10 * 80%
-			expect(result[0].finalAmount).toBe(64);
+			expect(result[0].amountAfterDiscounts).toBe(64);
 
 			expect(result[1].discounts).toHaveLength(2);
 			expect(result[1].discounts[0].amountOff).toBe(2); // 10%
 			expect(result[1].discounts[1].amountOff).toBe(2); // $10 * 20%
-			expect(result[1].finalAmount).toBe(16);
+			expect(result[1].amountAfterDiscounts).toBe(16);
 		});
 	});
 
@@ -194,8 +194,8 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			expect(result[0].finalAmount).toBe(50); // Discounted
-			expect(result[1].finalAmount).toBe(100); // Not discounted
+			expect(result[0].amountAfterDiscounts).toBe(50); // Discounted
+			expect(result[1].amountAfterDiscounts).toBe(100); // Not discounted
 		});
 
 		test("amount discount applies to restricted products only", () => {
@@ -220,8 +220,8 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			expect(result[0].finalAmount).toBe(100); // Not discounted
-			expect(result[1].finalAmount).toBe(80); // Discounted
+			expect(result[0].amountAfterDiscounts).toBe(100); // Not discounted
+			expect(result[1].amountAfterDiscounts).toBe(80); // Discounted
 		});
 
 		test("mixed discounts with different applies_to", () => {
@@ -251,11 +251,11 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 
 			// prod_a: 20% off = $20, final = 80
 			expect(result[0].discounts).toHaveLength(1);
-			expect(result[0].finalAmount).toBe(80);
+			expect(result[0].amountAfterDiscounts).toBe(80);
 
 			// prod_b: $10 off, final = 90
 			expect(result[1].discounts).toHaveLength(1);
-			expect(result[1].finalAmount).toBe(90);
+			expect(result[1].amountAfterDiscounts).toBe(90);
 		});
 	});
 
@@ -273,9 +273,9 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			});
 
 			// Refunds are skipped by discountAppliesToLineItem
-			// finalAmount stays at -100, no discounts applied
+			// amountAfterDiscounts stays at -100, no discounts applied
 			expect(result[0].discounts).toHaveLength(0);
-			expect(result[0].finalAmount).toBe(-100);
+			expect(result[0].amountAfterDiscounts).toBe(-100);
 		});
 	});
 });

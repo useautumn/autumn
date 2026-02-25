@@ -21,7 +21,10 @@ export const shouldCreateManualStripeInvoice = ({
 	if (!stripeSubscription) {
 		const lineItems = autumnBillingPlan.lineItems;
 		const totalAmount =
-			lineItems?.reduce((acc, lineItem) => acc + lineItem.finalAmount, 0) ?? 0;
+			lineItems?.reduce(
+				(acc, lineItem) => acc + lineItem.amountAfterDiscounts,
+				0,
+			) ?? 0;
 
 		return totalAmount !== 0;
 	}

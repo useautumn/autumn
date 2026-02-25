@@ -25,6 +25,7 @@ export const coreUpdateSubscription: TestGroup = {
 		"billing/update-subscription/invoice/update-with-invoice-basic.test.ts",
 		"billing/update-subscription/errors/update-errors-basic.test.ts",
 		"billing/update-subscription/discounts/percent-off-discount.test.ts",
+		"billing/update-subscription/discounts/discount-applies-to.test.ts",
 		"billing/update-subscription/billing-behavior/next-cycle-only.test.ts",
 		"billing/update-subscription/billing-behavior/next-cycle-only-cancel.test.ts",
 	],

@@ -13,7 +13,7 @@ export const LineItemSchema = z
 		amount: z.number(),
 
 		discounts: z.array(LineItemDiscountSchema).default([]),
-		finalAmount: z.number().default(0),
+		amountAfterDiscounts: z.number().default(0),
 
 		description: z.string(),
 
@@ -35,7 +35,7 @@ export const LineItemSchema = z
 	.transform((data) => {
 		return {
 			...data,
-			finalAmount: data.amount,
+			amountAfterDiscounts: data.amount,
 		};
 	});
 

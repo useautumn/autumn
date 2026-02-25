@@ -16,10 +16,12 @@ const toStripeCreateInvoiceItemParams = ({
 	stripeInvoiceId?: string;
 	lineItem: LineItem;
 }): Stripe.InvoiceItemCreateParams => {
-	const { finalAmount, description, context } = lineItem;
-	const { billingPeriod, currency } = context;
+	const { amount, amountAfterDiscounts, description, context } = lineItem;
+	const { billingPeriod, currency, discountable } = context;
 
-	const isNegative = finalAmount < 0;
+	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
+	const lineAmount = discountable ? amount : amountAfterDiscounts;
+	const isNegative = lineAmount < 0;
 	const stripeProductId = context.product.processor?.id ?? "";
 	const shouldUsePriceData = !isNegative && stripeProductId;
 
@@ -30,11 +32,11 @@ const toStripeCreateInvoiceItemParams = ({
 
 		amount: shouldUsePriceData
 			? undefined
-			: atmnToStripeAmount({ amount: finalAmount }),
+			: atmnToStripeAmount({ amount: lineAmount }),
 
 		price_data: shouldUsePriceData
 			? {
-					unit_amount: atmnToStripeAmount({ amount: finalAmount }),
+					unit_amount: atmnToStripeAmount({ amount: lineAmount }),
 					currency,
 					product: stripeProductId,
 				}
@@ -42,7 +44,7 @@ const toStripeCreateInvoiceItemParams = ({
 		metadata: lineItemToMetadata({ lineItem }),
 		currency,
 		description,
-		discountable: false,
+		discountable: discountable ?? false,
 		period: billingPeriod
 			? {
 					start: msToSeconds(billingPeriod.start),

@@ -15,7 +15,7 @@ import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItem
 const formatLineItem = (item: LineItem) => ({
 	description: item.description,
 	amount: item.amount,
-	finalAmount: item.finalAmount,
+	amountAfterDiscounts: item.amountAfterDiscounts,
 });
 
 const logSharedSubscriptionTrialLineItems = ({
@@ -30,7 +30,7 @@ const logSharedSubscriptionTrialLineItems = ({
 	lineItems: LineItem[];
 }) => {
 	const formatLineItemCompact = (item: LineItem) =>
-		`  ${item.description}: ${chalk.yellow(item.finalAmount.toFixed(2))}`;
+		`  ${item.description}: ${chalk.yellow(item.amountAfterDiscounts.toFixed(2))}`;
 
 	// Structured info log
 	// logger.info(`buildSharedSubscriptionTrialLineItems data`, {
