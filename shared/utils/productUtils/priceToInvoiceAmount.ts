@@ -7,7 +7,6 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { tiersToLineAmount } from "../billingUtils/invoicingUtils/lineItemUtils/tiersToLineAmount.js";
 import { isPriceItem } from "../productV2Utils/productItemUtils/getItemType.js";
 import {
 	calculateProrationAmount,
@@ -17,27 +16,6 @@ import { nullish } from "../utils.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 import { getBillingType } from "./priceUtils.js";
 
-/**
- * Prices an arbitrary quantity against a usage price's tier schedule.
- * This is the single entry point for converting a raw unit count into dollars —
- * it does NOT know whether that count represents included allowance, prepaid
- * purchased units, or paid overage. The caller is responsible for passing the
- * correct quantity for the billing context:
- *
- * - **Included usage** (free allowance): pass the size of the free bucket to
- *   find out its monetary value (used internally for proration math).
- * - **Prepaid** (`UsageInAdvance`): pass the quantity the customer is buying
- *   upfront. The result is the immediate charge.
- * - **Pay-per-use overage** (`UsageInArrear`): pass only the units consumed
- *   *above* any included free allowance — i.e. `totalUsage − includedFree`.
- *   Do NOT pass raw total usage here; the caller must subtract the free tier first.
- *
- * @param price - The usage price whose config contains `usage_tiers` and
- *   optionally `billing_units`.
- * @param quantity - The unit count to price. Must already be net of any free
- *   included allowance when called in an overage context.
- * @returns Dollar amount as a number rounded to 10 decimal places.
- */
 export const getAmountForQuantity = ({
 	price,
 	quantity,
@@ -46,13 +24,46 @@ export const getAmountForQuantity = ({
 	quantity: number;
 }) => {
 	const config = price.config as UsagePriceConfig;
+
 	const billingUnits = config.billing_units || 1;
 
-	return tiersToLineAmount({
-		price,
-		overage: quantity,
-		billingUnits,
-	});
+	const roundedQuantity = new Decimal(quantity)
+		.div(billingUnits)
+		.ceil()
+		.mul(billingUnits)
+		.toNumber();
+
+	let lastTierTo: number = 0;
+
+	let amount = new Decimal(0);
+	let remainingUsage = new Decimal(roundedQuantity);
+
+	// console.log("Getting amount for quantity:", roundedQuantity);
+	// console.log("Usage tiers:", config.usage_tiers);
+
+	for (let i = 0; i < config.usage_tiers.length; i++) {
+		const tier = config.usage_tiers[i];
+
+		let usageWithinTier = new Decimal(0);
+		if (tier.to === Infinite || tier.to === -1) {
+			usageWithinTier = remainingUsage;
+		} else {
+			const tierUsage = new Decimal(tier.to).minus(lastTierTo);
+			usageWithinTier = Decimal.min(remainingUsage, tierUsage);
+			lastTierTo = tier.to;
+		}
+
+		const amountPerUnit = new Decimal(tier.amount).div(billingUnits);
+		const amountWithinTier = amountPerUnit.mul(usageWithinTier);
+		amount = amount.plus(amountWithinTier);
+		remainingUsage = remainingUsage.minus(usageWithinTier);
+
+		if (remainingUsage.lte(0)) {
+			break;
+		}
+	}
+
+	return amount.toDecimalPlaces(10).toNumber();
 };
 
 export const itemToInvoiceAmount = ({
@@ -76,7 +87,6 @@ export const itemToInvoiceAmount = ({
 	}
 
 	const price = {
-		tier_behavior: item.tier_behavior,
 		config: {
 			usage_tiers: item.tiers || [
 				{

@@ -41,7 +41,6 @@ export function planItemParamsV1ToPlanItemV0({
 			? {
 					amount: item.price.amount,
 					tiers: item.price.tiers,
-					tier_behavior: item.price.tier_behavior,
 					interval: item.price.interval,
 					interval_count: item.price.interval_count,
 					billing_units: item.price.billing_units ?? 1,

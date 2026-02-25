@@ -1,7 +1,6 @@
 import type { CreatePlanItemParamsV1 } from "@api/models";
 import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { featureUtils } from "@utils/featureUtils/index";
 import type { SharedContext } from "../../../../types/sharedContext";
 import type { ApiPlanItemV1 } from "../apiPlanItemV1";
@@ -38,9 +37,6 @@ export function planItemV1ToV0({
 			? {
 					amount: price.amount,
 					tiers: price.tiers,
-					tier_behavior: price.tiers?.length
-						? (price.tier_behavior ?? TierBehavior.Graduated)
-						: undefined,
 					interval: price.interval,
 					interval_count: price.interval_count,
 					billing_units: billingUnits,
