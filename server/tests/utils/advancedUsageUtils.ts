@@ -82,7 +82,7 @@ export const checkUsageInvoiceAmount = async ({
 	const overage = new Decimal(totalUsage)
 		.minus(featureEntitlement.allowance)
 		.toNumber();
-	const overagePrice = getPriceForOverage({ price: meteredPrice, overage });
+	const overagePrice = getPriceForOverage(meteredPrice, overage);
 
 	let basePrice = 0;
 	if (includeBase && product.prices.length > 1) {

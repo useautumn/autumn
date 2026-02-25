@@ -2,13 +2,10 @@ import { z } from "zod/v4";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "../../productV2Models/productItemModels/productItemEnums.js";
-import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig.js";
-import {
-	TierBehavior,
-	UsagePriceConfigSchema,
-} from "./priceConfig/usagePriceConfig.js";
-import { BillingType } from "./priceEnums.js";
+} from "../../productV2Models/productItemModels/productItemEnums";
+import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig";
+import { UsagePriceConfigSchema } from "./priceConfig/usagePriceConfig";
+import { BillingType } from "./priceEnums";
 
 const ProrationConfigSchema = z.object({
 	on_increase: z.nativeEnum(OnIncrease).default(OnIncrease.ProrateImmediately),
@@ -22,7 +19,6 @@ export const PriceSchema = z.object({
 	org_id: z.string().optional(),
 	created_at: z.number().optional(),
 	billing_type: z.nativeEnum(BillingType).nullish(),
-	tier_behavior: z.nativeEnum(TierBehavior).nullish(),
 	is_custom: z.boolean().optional(),
 	config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
 

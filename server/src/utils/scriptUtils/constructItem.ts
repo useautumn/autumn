@@ -7,7 +7,6 @@ import {
 	type ProductItemFeatureType,
 	ProductItemInterval,
 	type RolloverConfig,
-	type TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
 
@@ -70,7 +69,6 @@ export const constructPrepaidItem = ({
 	featureId,
 	price = 9,
 	tiers,
-	tierBehaviour,
 	billingUnits = 100,
 	includedUsage = 0,
 	isOneOff = false,
@@ -87,7 +85,6 @@ export const constructPrepaidItem = ({
 	featureId: string;
 	price?: number;
 	tiers?: { amount: number; to: number | "inf" }[];
-	tierBehaviour?: TierBehavior;
 	billingUnits?: number;
 	includedUsage?: number;
 	isOneOff?: boolean;
@@ -104,7 +101,6 @@ export const constructPrepaidItem = ({
 
 		price: tiers ? undefined : price,
 		tiers: tiers,
-		tier_behavior: tierBehaviour,
 		billing_units: billingUnits || 100,
 		interval: isOneOff ? null : ProductItemInterval.Month,
 		interval_count: intervalCount,
@@ -126,7 +122,6 @@ export const constructArrearItem = ({
 	featureId,
 	includedUsage = 10000,
 	price = 0.1,
-	tiers,
 	billingUnits = 1000,
 	config = {
 		on_increase: OnIncrease.ProrateImmediately,
@@ -141,7 +136,6 @@ export const constructArrearItem = ({
 	featureId: string;
 	includedUsage?: number;
 	price?: number;
-	tiers?: { amount: number; to: number | "inf" }[];
 	billingUnits?: number;
 	config?: ProductItemConfig;
 	rolloverConfig?: RolloverConfig;
@@ -154,8 +148,7 @@ export const constructArrearItem = ({
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,
-		price: tiers ? undefined : price,
-		tiers: tiers,
+		price: price,
 		billing_units: billingUnits,
 		interval: interval,
 		interval_count: intervalCount,
