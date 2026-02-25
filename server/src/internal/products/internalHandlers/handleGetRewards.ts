@@ -10,12 +10,10 @@ export const handleGetRewards = createRoute({
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 
-		const rewards = await RewardService.list({ db, orgId: org.id, env });
-		const rewardPrograms = await RewardProgramService.list({
-			db,
-			orgId: org.id,
-			env,
-		});
+		const [rewards, rewardPrograms] = await Promise.all([
+			RewardService.list({ db, orgId: org.id, env }),
+			RewardProgramService.list({ db, orgId: org.id, env }),
+		]);
 
 		return c.json({ rewards, rewardPrograms });
 	},
