@@ -17,13 +17,17 @@ export const useCustomerTimeseriesEvents = ({
 	interval = "30d",
 	eventNames: providedEventNames,
 	enabled = true,
+	customerId: providedCustomerId,
 }: {
 	interval?: "24h" | "7d" | "30d" | "90d";
 	eventNames?: string[];
 	/** Prevent the timeseries fetch from firing until prerequisites are ready */
 	enabled?: boolean;
+	/** External customer ID override. Falls back to the `customer_id` URL param. */
+	customerId?: string;
 }) => {
 	const { customer_id } = useParams();
+	const customer_id_to_use = providedCustomerId ?? customer_id;
 
 	// Get user's timezone - memoized since it won't change during session
 	const timezone = useMemo(() => getUserTimezone(), []);
@@ -38,14 +42,14 @@ export const useCustomerTimeseriesEvents = ({
 		url: `/query/events`,
 		enabled,
 		data: {
-			customer_id: customer_id || null,
+			customer_id: customer_id_to_use || null,
 			interval,
 			event_names: eventNames,
 			timezone,
 		},
 		queryKey: [
 			"customer-timeseries-events",
-			customer_id,
+			customer_id_to_use,
 			interval,
 			timezone,
 			...eventNames.sort(),
