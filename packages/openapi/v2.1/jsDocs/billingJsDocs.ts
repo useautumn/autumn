@@ -1,5 +1,6 @@
 import {
 	AttachParamsV1Schema,
+	MultiAttachParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
@@ -124,4 +125,79 @@ export const billingPreviewUpdateJsDoc = createJSDocDescription({
 	methodName: "billing.previewUpdate",
 	returns:
 		"A preview response with line items showing prorated charges or credits for the proposed changes.",
+});
+
+export const billingMultiAttachJsDoc = createJSDocDescription({
+	description:
+		"Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.",
+	whenToUse:
+		"Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.",
+	body: MultiAttachParamsV0Schema,
+	examples: [
+		example({
+			description: "Attach multiple plans to a customer",
+			values: {
+				customerId: "cus_123",
+				plans: [
+					{ planId: "pro_plan" },
+					{ planId: "addon_seats", featureQuantities: [{ featureId: "seats", quantity: 5 }] },
+				],
+			},
+		}),
+		example({
+			description: "Attach with free trial applied to all plans",
+			values: {
+				customerId: "cus_123",
+				plans: [
+					{ planId: "pro_plan" },
+					{ planId: "addon_storage" },
+				],
+				freeTrial: {
+					durationLength: 14,
+					durationType: "day",
+				},
+			},
+		}),
+		example({
+			description: "Attach with custom pricing on one plan",
+			values: {
+				customerId: "cus_123",
+				plans: [
+					{
+						planId: "pro_plan",
+						customize: {
+							price: { amount: 4900, interval: "month" },
+						},
+					},
+					{ planId: "addon_support" },
+				],
+			},
+		}),
+	],
+	methodName: "billing.multiAttach",
+	returns:
+		"A billing response with customer ID, invoice details, and payment URL (if checkout required).",
+});
+
+export const billingPreviewMultiAttachJsDoc = createJSDocDescription({
+	description:
+		"Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.",
+	whenToUse:
+		"Use this endpoint to show customers what they will be charged before confirming a multi-plan subscription.",
+	body: MultiAttachParamsV0Schema,
+	examples: [
+		example({
+			description: "Preview attaching multiple plans",
+			values: {
+				customerId: "cus_123",
+				plans: [
+					{ planId: "pro_plan" },
+					{ planId: "addon_seats", featureQuantities: [{ featureId: "seats", quantity: 5 }] },
+				],
+			},
+		}),
+	],
+	methodName: "billing.previewMultiAttach",
+	returns:
+		"A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.",
 });

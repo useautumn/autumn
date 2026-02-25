@@ -16,8 +16,8 @@ import {
 	CustomerExpandEnum,
 	CustomerIdSchema,
 	PreviewUpdateSubscriptionResponseSchema,
-	SetupPaymentParamsSchema,
-	SetupPaymentResultSchema,
+	SetupPaymentParamsV1Schema,
+	SetupPaymentResponseV1Schema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
 	UpdateBalanceParamsV0Schema,
@@ -51,7 +51,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CreateCustomerParamsV1Schema);
 	registerInternalSchemas(AttachParamsV1Schema);
 	registerInternalSchemas(UpdateSubscriptionV1ParamsSchema);
-	registerInternalSchemas(SetupPaymentParamsSchema);
+	registerInternalSchemas(SetupPaymentParamsV1Schema);
 	registerInternalSchemas(CreateBalanceParamsV0Schema);
 	registerInternalSchemas(UpdateBalanceParamsV0Schema);
 	registerInternalSchemas(CheckParamsSchema);
@@ -59,7 +59,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(BillingResponseSchema);
 	registerInternalSchemas(AttachPreviewResponseSchema);
 	registerInternalSchemas(PreviewUpdateSubscriptionResponseSchema);
-	registerInternalSchemas(SetupPaymentResultSchema);
+	registerInternalSchemas(SetupPaymentResponseV1Schema);
 	registerInternalSchemas(SuccessResponseSchema);
 	registerInternalSchemas(ApiCustomerV5Schema);
 	registerInternalSchemas(ApiBalanceV1Schema);

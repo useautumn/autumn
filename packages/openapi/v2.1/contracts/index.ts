@@ -7,8 +7,10 @@ import {
 } from "./balancesContract.js";
 import {
 	billingAttachContract,
+	billingMultiAttachContract,
 	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
+	billingPreviewMultiAttachContract,
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
@@ -70,7 +72,9 @@ export const v2_1ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,
+	billingPreviewMultiAttach: billingPreviewMultiAttachContract,
 	billingUpdate: billingUpdateContract,
 	billingPreviewUpdate: billingPreviewUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
