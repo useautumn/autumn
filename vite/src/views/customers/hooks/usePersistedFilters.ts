@@ -6,7 +6,6 @@ const FILTERS_KEY = "autumn:customer-filters";
 const ORG_KEY = "autumn_org";
 
 type PersistedCustomerFilters = {
-	q: string;
 	status: string[];
 	version: string[];
 	none: boolean;
@@ -42,7 +41,6 @@ export function restoreCustomerFilters() {
 		const filters = getSavedFilters({ orgId });
 
 		const params = new URLSearchParams();
-		if (filters?.q) params.set("q", filters.q);
 		if (filters?.status?.length)
 			params.set("status", filters.status.join(","));
 		if (filters?.version?.length)
@@ -85,7 +83,6 @@ export function usePersistedFilters() {
 				: {};
 
 			map[orgId] = {
-				q: queryStates.q,
 				status: queryStates.status,
 				version: queryStates.version,
 				none: queryStates.none,
@@ -96,7 +93,6 @@ export function usePersistedFilters() {
 		} catch {}
 	}, [
 		orgId,
-		queryStates.q,
 		queryStates.status,
 		queryStates.version,
 		queryStates.none,
