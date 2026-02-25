@@ -304,7 +304,7 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-consumable 3: mid-cycle,
 		],
 		actions: [
 			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Words, value: 300 }),
+			s.track({ featureId: TestFeature.Words, value: 300, timeout: 4000 }),
 			s.advanceTestClock({ days: 15 }),
 		],
 	});

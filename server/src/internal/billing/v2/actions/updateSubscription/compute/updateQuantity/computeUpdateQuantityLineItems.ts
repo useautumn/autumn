@@ -111,8 +111,8 @@ export const computeUpdateQuantityLineItems = ({
 	// Don't return line items if they sum to 0
 	if (
 		sumValues([
-			refundLineItem?.finalAmount ?? 0,
-			chargeLineItem?.finalAmount ?? 0,
+			refundLineItem?.amountAfterDiscounts ?? 0,
+			chargeLineItem?.amountAfterDiscounts ?? 0,
 		]) === 0
 	) {
 		return [];

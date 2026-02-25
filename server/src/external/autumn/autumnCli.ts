@@ -30,7 +30,7 @@ import {
 	type ProductItem,
 	type RewardRedemption,
 	type SetUsageParams,
-	type SetupPaymentParamsV0,
+	type SetupPaymentParamsV1,
 	type TrackParams,
 	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
@@ -908,8 +908,46 @@ export class AutumnInt {
 			return data;
 		},
 
-		setupPayment: async (params: SetupPaymentParamsV0) => {
-			const data = await this.post(`/setup_payment`, params);
+		setupPayment: async (params: SetupPaymentParamsV1) => {
+			const data = await this.post(`/billing.setup_payment`, params);
+			return data;
+		},
+
+		multiAttach: async (
+			params: any,
+			{
+				skipWebhooks,
+				timeout,
+			}: {
+				skipWebhooks?: boolean;
+				timeout?: number;
+			} = {},
+		): Promise<any> => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/billing.multi_attach`,
+				{ redirect_mode: "if_required", ...params },
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+			return data;
+		},
+
+		previewMultiAttach: async (params: any): Promise<any> => {
+			const data = await this.post(`/billing.preview_multi_attach`, {
+				...params,
+				redirect_mode: "if_required",
+			});
 			return data;
 		},
 	};

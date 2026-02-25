@@ -286,3 +286,33 @@ const deleteAllStripeCustomers = async ({
 		);
 	}
 };
+
+/**
+ * Retrieves the customer's payment method and sets it as their default for invoices.
+ * Returns the payment method if found and set, or null if none available.
+ */
+export const updateDefaultPaymentMethod = async ({
+	stripeCli,
+	stripeCustomerId,
+}: {
+	stripeCli: Stripe;
+	stripeCustomerId: string;
+}) => {
+	const paymentMethod = await getCusPaymentMethod({
+		stripeCli,
+		stripeId: stripeCustomerId,
+		errorIfNone: false,
+	});
+
+	if (!paymentMethod) {
+		return null;
+	}
+
+	await stripeCli.customers.update(stripeCustomerId, {
+		invoice_settings: {
+			default_payment_method: paymentMethod.id,
+		},
+	});
+
+	return paymentMethod;
+};
