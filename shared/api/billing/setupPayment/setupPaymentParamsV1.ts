@@ -1,10 +1,13 @@
-import { AttachParamsV1Schema } from "@api/models";
+import { AttachParamsV1Schema, CustomerDataSchema } from "@api/models";
 import { z } from "zod/v4";
 
 export const SetupPaymentParamsV1Schema = AttachParamsV1Schema.extend({
 	plan_id: z.string().optional().meta({
 		description:
 			"If specified, the plan will be attached to the customer after setup.",
+	}),
+	customer_data: CustomerDataSchema.optional().meta({
+		internal: true,
 	}),
 }).omit({
 	invoice_mode: true,

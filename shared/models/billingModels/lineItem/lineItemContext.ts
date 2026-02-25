@@ -19,6 +19,7 @@ export const LineItemContextSchema = z.object({
 	direction: z.enum(["charge", "refund"]),
 	now: z.number(),
 	billingTiming: z.enum(["in_arrear", "in_advance"]),
+	discountable: z.boolean().optional(), // If true, let Stripe auto-apply discounts to this line item
 });
 
 export type BillingPeriod = z.infer<typeof BillingPeriodSchema>;

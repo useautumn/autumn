@@ -7,15 +7,12 @@ import { spawn } from "bun";
 import { Box, render, Static, Text, useApp } from "ink";
 import pLimit from "p-limit";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { testRunConfig } from "./testRunConfig";
 
 // Base path for shorthand test paths
-const INTEGRATION_TEST_BASE = "server/tests";
+const INTEGRATION_TEST_BASE = testRunConfig.testsBaseDir;
 
-/**
- * Recursively search for a folder whose path ends with the given suffix.
- * e.g. searching for "attach/free-trial" will match ".../billing/attach/free-trial"
- * but NOT ".../update-subscription/free-trial".
- */
+/** Recursively search for a folder whose path ends with the given suffix. */
 async function findFolderByPath(
 	basePath: string,
 	pathSuffix: string,
@@ -33,6 +30,31 @@ async function findFolderByPath(
 				}
 				const found = await findFolderByPath(fullPath, pathSuffix);
 				if (found) return found;
+			}
+		}
+	} catch {
+		// Ignore errors
+	}
+	return null;
+}
+
+/** Recursively search for a file whose path ends with the given suffix. */
+async function findFileByPath(
+	basePath: string,
+	pathSuffix: string,
+): Promise<string | null> {
+	const normalizedSuffix = `/${pathSuffix}`;
+	try {
+		const entries = await readdir(basePath);
+		for (const entry of entries) {
+			const fullPath = join(basePath, entry);
+			const entryStat = await stat(fullPath);
+
+			if (entryStat.isDirectory()) {
+				const found = await findFileByPath(fullPath, pathSuffix);
+				if (found) return found;
+			} else if (fullPath.endsWith(normalizedSuffix)) {
+				return fullPath;
 			}
 		}
 	} catch {
@@ -233,7 +255,7 @@ function extractCurrentTest(output: string): string | null {
 // Test Runner Logic
 // ============================================================================
 
-async function collectTestFiles(directories: string[]): Promise<string[]> {
+async function collectTestFiles(paths: string[]): Promise<string[]> {
 	const testFiles: string[] = [];
 
 	const collectRecursive = async (dirPath: string): Promise<void> => {
@@ -254,12 +276,20 @@ async function collectTestFiles(directories: string[]): Promise<string[]> {
 		}
 	};
 
-	for (const dir of directories) {
-		const resolvedDir = resolve(process.cwd(), dir);
-		await collectRecursive(resolvedDir);
+	for (const p of paths) {
+		const resolved = resolve(process.cwd(), p);
+
+		// If it's a direct .test.ts file, add it directly
+		if (p.endsWith(".test.ts") && existsSync(resolved)) {
+			testFiles.push(resolved);
+			continue;
+		}
+
+		await collectRecursive(resolved);
 	}
 
-	return testFiles;
+	// Deduplicate (same file may appear via multiple paths)
+	return [...new Set(testFiles)];
 }
 
 async function runTestFile({
@@ -1025,26 +1055,28 @@ async function main() {
 	const directories: string[] = [];
 	let maxParallel = process.env.TEST_FILE_CONCURRENCY
 		? Number.parseInt(process.env.TEST_FILE_CONCURRENCY, 10)
-		: 6;
+		: testRunConfig.legacyConcurrency;
 	let verbose = process.env.TEST_VERBOSE === "1";
 
 	for (const arg of args) {
 		if (arg.startsWith("--max=")) {
 			const maxValue = arg.split("=")[1];
-			maxParallel = maxValue ? Number.parseInt(maxValue, 10) : 6;
+			maxParallel = maxValue
+				? Number.parseInt(maxValue, 10)
+				: testRunConfig.legacyConcurrency;
 		} else if (arg === "--verbose" || arg === "-v") {
 			verbose = true;
 		} else if (arg.startsWith("-")) {
 			console.error(`Unknown option: ${arg}`);
 			console.log(
-				"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N] [--verbose]",
+				"Usage: bun scripts/testScripts/runTestsV2.tsx <path1> [path2] [...] [--max=N] [--verbose]",
 			);
 			process.exit(1);
 		} else {
 			// Try to resolve the path in order of priority:
-			// 1. Exact path from cwd
+			// 1. Exact path from cwd (file or directory)
 			// 2. Path under INTEGRATION_TEST_BASE
-			// 3. Search for folder name within INTEGRATION_TEST_BASE
+			// 3. Search for folder/file name within INTEGRATION_TEST_BASE
 			let resolvedPath = arg;
 			const fullPath = resolve(process.cwd(), arg);
 
@@ -1054,12 +1086,19 @@ async function main() {
 				if (existsSync(withBaseFull)) {
 					resolvedPath = withBase;
 				} else {
-					// Search for a folder whose path ends with the given arg
+					// Search for a matching folder or file under INTEGRATION_TEST_BASE
 					const baseFullPath = resolve(process.cwd(), INTEGRATION_TEST_BASE);
-					const found = await findFolderByPath(baseFullPath, arg);
-					if (found) {
-						// Convert back to relative path
-						resolvedPath = found.replace(`${process.cwd()}/`, "");
+
+					if (arg.endsWith(".test.ts")) {
+						const found = await findFileByPath(baseFullPath, arg);
+						if (found) {
+							resolvedPath = found.replace(`${process.cwd()}/`, "");
+						}
+					} else {
+						const found = await findFolderByPath(baseFullPath, arg);
+						if (found) {
+							resolvedPath = found.replace(`${process.cwd()}/`, "");
+						}
 					}
 				}
 			}
@@ -1069,9 +1108,9 @@ async function main() {
 	}
 
 	if (directories.length === 0) {
-		console.error("Error: No test directories specified");
+		console.error("Error: No test paths specified");
 		console.log(
-			"Usage: bun scripts/testScripts/runTestsV2.tsx <dir1> [dir2] [...] [--max=N]",
+			"Usage: bun scripts/testScripts/runTestsV2.tsx <path1> [path2] [...] [--max=N]",
 		);
 		process.exit(1);
 	}

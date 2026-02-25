@@ -1,7 +1,9 @@
+import {
+	CreateBalanceParamsV0Schema,
+	SuccessResponseSchema,
+	xCodeSamplesLegacy,
+} from "@autumn/shared";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
-import { SuccessResponseSchema } from "../../../common/commonResponses.js";
-import { CreateBalanceParamsV0Schema } from "../../../models.js";
-import { xCodeSamplesLegacy } from "../../../utils/xCodeSamplesLegacy.js";
 
 export const balancesOpenApi: ZodOpenApiPathsObject = {
 	"/balances/create": {

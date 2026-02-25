@@ -5,7 +5,7 @@ import type { Logger } from "@/external/logtail/logtailUtils";
 const formatLineItem = (item: LineItem) => ({
 	description: item.description,
 	amount: item.amount,
-	finalAmount: item.finalAmount,
+	amountAfterDiscounts: item.amountAfterDiscounts,
 });
 
 export const logBuildAutumnLineItems = ({
@@ -19,7 +19,7 @@ export const logBuildAutumnLineItems = ({
 }) => {
 	// Debug output (compact table format)
 	const formatLineItemCompact = (item: LineItem) =>
-		`  ${item.description}: ${chalk.yellow(item.finalAmount.toFixed(2))}`;
+		`  ${item.description}: ${chalk.yellow(item.amountAfterDiscounts.toFixed(2))}`;
 
 	logger.debug("========== [buildAutumnLineItems] ==========");
 

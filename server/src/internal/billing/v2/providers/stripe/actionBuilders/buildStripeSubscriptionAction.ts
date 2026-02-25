@@ -24,7 +24,7 @@ export const buildStripeSubscriptionAction = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
-	subscriptionCancelAt?: number;
+	subscriptionCancelAt?: number | null;
 }): StripeSubscriptionAction | undefined => {
 	const { stripeSubscription } = billingContext;
 
@@ -56,7 +56,7 @@ export const buildStripeSubscriptionAction = ({
 			billingContext,
 			subItemsUpdate,
 			addInvoiceItems,
-			subscriptionCancelAt,
+			subscriptionCancelAt: subscriptionCancelAt ?? undefined,
 		});
 	}
 

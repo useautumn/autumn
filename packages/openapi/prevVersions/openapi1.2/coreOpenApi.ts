@@ -1,13 +1,13 @@
-import type { ZodOpenApiPathsObject } from "zod-openapi";
-import { TrackParamsSchema } from "../../../balances/track/trackParams.js";
-import { SetUsageParamsSchema } from "../../../balances/usageModels.js";
-import { SuccessResponseSchema } from "../../../common/commonResponses.js";
-import { setUsageJsDoc } from "../../../common/jsDocs.js";
 import {
 	CheckResponseV1Schema,
 	ExtCheckParamsSchema,
+	setUsageJsDoc,
+	SetUsageParamsSchema,
+	SuccessResponseSchema,
+	TrackParamsSchema,
 	TrackResponseV1Schema,
-} from "../../../models.js";
+} from "@autumn/shared";
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 
 export const coreOpenApi: ZodOpenApiPathsObject = {
 	"/track": {

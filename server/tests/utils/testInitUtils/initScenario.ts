@@ -127,6 +127,20 @@ type BillingAttachAction = {
 	items?: ProductItem[]; // Custom product items (creates is_custom product)
 };
 
+type MultiAttachPlan = {
+	productId: string;
+	featureQuantities?: FeatureOption[];
+	version?: number;
+};
+
+type BillingMultiAttachAction = {
+	type: "billingMultiAttach";
+	plans: MultiAttachPlan[];
+	entityIndex?: number;
+	freeTrial?: { length: number; duration: string; card_required?: boolean };
+	timeout?: number;
+};
+
 type CreateReferralCodeAction = {
 	type: "createReferralCode";
 };
@@ -157,6 +171,7 @@ type ScenarioAction =
 	| UpdateSubscriptionAction
 	| AdvanceToNextInvoiceAction
 	| BillingAttachAction
+	| BillingMultiAttachAction
 	| CreateReferralCodeAction
 	| RedeemReferralCodeAction
 	| CreateAndRedeemReferralCodeAction
@@ -724,7 +739,7 @@ const billingAttach = ({
 	items?: ProductItem[];
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
+	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
 	return (config) => ({
 		...config,
 		actions: [
@@ -739,6 +754,43 @@ const billingAttach = ({
 				planSchedule,
 				timeout: timeout ?? defaultTimeout,
 				items,
+			},
+		],
+	});
+};
+
+/**
+ * Multi-attach multiple plans to a customer or entity via /billing.multi_attach.
+ * @param plans - Array of plans to attach, each with productId and optional featureQuantities/version
+ * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
+ * @param freeTrial - Optional free trial config applied to all plans
+ * @param timeout - Optional timeout in milliseconds
+ * @example s.billing.multiAttach({ plans: [{ productId: "pro" }, { productId: "addon" }] })
+ * @example s.billing.multiAttach({ plans: [{ productId: "pro" }], entityIndex: 0 })
+ */
+const billingMultiAttach = ({
+	plans,
+	entityIndex,
+	freeTrial,
+	timeout,
+}: {
+	plans: MultiAttachPlan[];
+	entityIndex?: number;
+	freeTrial?: { length: number; duration: string; card_required?: boolean };
+	timeout?: number;
+}): ConfigFn => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const defaultTimeout = concurrency > 1 ? 5000 : 2000;
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "billingMultiAttach" as const,
+				plans,
+				entityIndex,
+				freeTrial,
+				timeout: timeout ?? defaultTimeout,
 			},
 		],
 	});
@@ -836,6 +888,7 @@ export const s = {
 	resetFeature,
 	billing: {
 		attach: billingAttach,
+		multiAttach: billingMultiAttach,
 	},
 	referral: {
 		createCode: createReferralCode,
@@ -1398,6 +1451,43 @@ export async function initScenario({
 					new_billing_subscription: action.newBillingSubscription,
 					plan_schedule: action.planSchedule,
 					items: action.items,
+				},
+				{ timeout: action.timeout },
+			);
+		} else if (action.type === "billingMultiAttach") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot multi-attach: customerId is required when using s.billing.multiAttach()",
+				);
+			}
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			// Build plans with prefixed product IDs
+			const plans = action.plans.map((plan) => ({
+				plan_id: `${plan.productId}_${productPrefix}`,
+				feature_quantities: plan.featureQuantities?.map((fq) => ({
+					feature_id: fq.feature_id,
+					quantity: fq.quantity,
+				})),
+				version: plan.version,
+			}));
+
+			await autumnV1.billing.multiAttach(
+				{
+					customer_id: customerId,
+					entity_id: entityId,
+					plans,
+					free_trial: action.freeTrial,
 				},
 				{ timeout: action.timeout },
 			);

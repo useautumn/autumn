@@ -6,6 +6,7 @@ export * from "./attach/prevVersions/attachResponseV1";
 export * from "./attachV2/attachDiscount";
 export * from "./attachV2/attachParamsV0";
 export * from "./attachV2/attachParamsV1";
+export * from "./attachV2/multiAttachParamsV0";
 
 // Checkout
 export * from "./checkout/prevVersions/checkoutParamsV0";

@@ -2,7 +2,11 @@ import { BillingMethod } from "@api/products/components/billingMethod";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import {
+	TierBehavior,
+	UsageTierSchema,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+
 import {
 	OnDecrease,
 	OnIncrease,
@@ -48,6 +52,7 @@ export const CreatePlanItemParamsV1Schema = z
 					description:
 						"Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.",
 				}),
+				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval).meta({
 					description:

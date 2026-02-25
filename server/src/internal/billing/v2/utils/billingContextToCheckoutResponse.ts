@@ -63,7 +63,7 @@ export const billingContextToCheckoutResponse = async ({
 
 			return {
 				description: line.description,
-				amount: line.finalAmount,
+				amount: line.amountAfterDiscounts,
 				item: getProductItemResponse({
 					item: productItem,
 					features,
