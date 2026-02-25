@@ -10,11 +10,15 @@ SQL >
     %
     SELECT
         id,
+        org_id,
+        env,
         customer_id,
         event_name,
         timestamp,
         value,
-        properties
+        properties,
+        idempotency_key,
+        entity_id
     FROM events_by_timestamp_mv
     WHERE
         org_id = {{ String(org_id, '') }}
