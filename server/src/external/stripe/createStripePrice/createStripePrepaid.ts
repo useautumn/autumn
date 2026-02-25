@@ -5,7 +5,6 @@ import {
 	type Organization,
 	type Price,
 	type Product,
-	priceToStripeTiersMode,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -71,14 +70,12 @@ export const createStripePrepaid = async ({
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
-	let recurringData: Partial<Stripe.PriceCreateParams.Recurring> | undefined;
+	let recurringData;
 	if (price.config!.interval !== BillingInterval.OneOff) {
-		recurringData = {
-			...billingIntervalToStripe({
-				interval: price.config!.interval,
-				intervalCount: price.config!.interval_count,
-			}),
-		};
+		recurringData = billingIntervalToStripe({
+			interval: price.config!.interval,
+			intervalCount: price.config!.interval_count,
+		});
 	}
 
 	const config = price.config as UsagePriceConfig;
@@ -116,7 +113,6 @@ export const createStripePrepaid = async ({
 		config.stripe_price_id = stripePrice.id;
 	} else {
 		const tiers = prepaidToStripeTiers({ price, org });
-		const tiersMode = priceToStripeTiersMode({ price });
 
 		let priceAmountData = {};
 		if (tiers.length === 1) {
@@ -126,7 +122,7 @@ export const createStripePrepaid = async ({
 		} else {
 			priceAmountData = {
 				billing_scheme: "tiered",
-				tiers_mode: tiersMode,
+				tiers_mode: "graduated",
 				tiers: tiers,
 			};
 		}

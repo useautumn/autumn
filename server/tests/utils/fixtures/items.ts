@@ -4,7 +4,6 @@ import {
 	type ProductItemConfig,
 	ProductItemInterval,
 	type RolloverConfig,
-	TierBehavior,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -322,9 +321,16 @@ const prepaidUsers = ({
 	}) as LimitedItem;
 
 /**
- * Tiered prepaid messages - graduated pricing with tiers.
- * Default tiers: 0-500 units at $10/pack, 501+ at $5/pack (100 units/pack).
+ * Tiered prepaid messages - volume pricing with tiers
+ * Default tiers:
+ * - 0-500 units: $10/pack (100 units/pack)
+ * - 501+ units: $5/pack
+ *
  * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
+ *
+ * @param includedUsage - Free units (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param tiers - Volume tiers (default: standard volume discount). Last tier must have `to: "inf"`.
  */
 const tieredPrepaidMessages = ({
 	includedUsage = 0,
@@ -343,35 +349,6 @@ const tieredPrepaidMessages = ({
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		tiers: tiers as { to: number; amount: number }[],
-		billingUnits,
-		includedUsage,
-		config,
-	}) as LimitedItem;
-
-/**
- * Volume-priced prepaid messages — the entire purchased quantity is charged at
- * the rate of whichever tier it falls into (not split across tiers).
- * Default tiers: 0-500 units at $10/pack, 501+ at $5/pack (100 units/pack).
- * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
- */
-const volumePrepaidMessages = ({
-	includedUsage = 0,
-	billingUnits = 100,
-	tiers = [
-		{ to: 500, amount: 10 },
-		{ to: "inf", amount: 5 },
-	],
-	config,
-}: {
-	includedUsage?: number;
-	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number }[];
-	config?: ProductItemConfig;
-} = {}): LimitedItem =>
-	constructPrepaidItem({
-		featureId: TestFeature.Messages,
-		tiers: tiers as { to: number; amount: number }[],
-		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
 		includedUsage,
 		config,
@@ -579,31 +556,6 @@ const consumableWords = ({
 		interval,
 	});
 
-/**
- * Tiered consumable messages - graduated pricing with tiers (pay-per-use).
- * Default tiers: 0-500 units at $0.10/unit, 501+ at $0.05/unit.
- * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
- * Note: tier_behavior is undefined, defaulting to graduated pricing.
- */
-const tieredConsumableMessages = ({
-	includedUsage = 0,
-	billingUnits = 1,
-	tiers = [
-		{ to: 500, amount: 0.1 },
-		{ to: "inf", amount: 0.05 },
-	],
-}: {
-	includedUsage?: number;
-	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number }[];
-} = {}): LimitedItem =>
-	constructArrearItem({
-		featureId: TestFeature.Messages,
-		tiers: tiers as { to: number; amount: number }[],
-		billingUnits,
-		includedUsage,
-	}) as LimitedItem;
-
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
 // ═══════════════════════════════════════════════════════════════════
@@ -714,7 +666,6 @@ export const items = {
 	prepaidMessages,
 	prepaidUsers,
 	tieredPrepaidMessages,
-	volumePrepaidMessages,
 
 	// One-off
 	oneOffMessages,
@@ -726,7 +677,6 @@ export const items = {
 	consumable,
 	consumableMessages,
 	consumableWords,
-	tieredConsumableMessages,
 
 	// Allocated
 	allocatedUsers,

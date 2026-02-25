@@ -271,14 +271,12 @@ export const createStripeInArrearPrice = async ({
 		...productData,
 		...priceAmountData,
 		currency: org.default_currency || "usd",
-		recurring: recurringData?.interval
-			? {
-					interval: recurringData.interval,
-					interval_count: recurringData.interval_count,
-					meter: meter.id,
-					usage_type: "metered",
-				}
-			: undefined,
+		recurring: {
+			interval: recurringData.interval,
+			interval_count: recurringData.interval_count,
+			meter: meter.id,
+			usage_type: "metered",
+		},
 		nickname: `Autumn Price (${relatedEnt.feature.name})`,
 	});
 

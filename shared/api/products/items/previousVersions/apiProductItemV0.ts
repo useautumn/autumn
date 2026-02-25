@@ -1,6 +1,5 @@
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import { ProductItemInterval } from "@models/productModels/intervals/productItemInterval.js";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	OnDecrease,
@@ -62,11 +61,6 @@ export const ApiProductItemV0Schema = z
 		tiers: z.array(PriceTierSchema).nullish().meta({
 			description:
 				"Tiered pricing for the product item. Not applicable for fixed price items.",
-		}),
-
-		tier_behavior: z.enum(TierBehavior).nullish().meta({
-			description:
-				"How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.",
 		}),
 
 		usage_model: z.enum(UsageModel).nullish().meta({
