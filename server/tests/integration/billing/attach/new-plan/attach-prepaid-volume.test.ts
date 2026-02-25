@@ -208,7 +208,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 300 units, 100 inc
 	const quantity = 300;
 	const includedUsage = 100;
 	// After free pack: 200 units = 2 packs in tier 1 → 2 × $10 = $20
-	const expectedPrepaidCost = ((quantity - includedUsage) / BILLING_UNITS) * 10;
+	const expectedPrepaidCost = (quantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage,
@@ -358,9 +358,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 4 tiers, 100 inclu
 	];
 
 	// Paid packs after free: (900 - 100) / 100 = 8 packs
-	// 8 packs falls into tier 3 (800 paid units = 501-1000 range)
-	// Volume pricing: all 8 packs at $7 = $56
-	const expectedPrepaidCost = 8 * 7;
+	const expectedPrepaidCost = (quantity / BILLING_UNITS) * 7;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage,

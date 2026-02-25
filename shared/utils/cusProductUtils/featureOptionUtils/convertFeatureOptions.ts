@@ -1,6 +1,5 @@
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels";
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { priceUtils } from "@utils/productUtils/priceUtils/index";
 import { Decimal } from "decimal.js";
@@ -28,14 +27,6 @@ export const featureOptionsToV2StripeQuantity = ({
 }) => {
 	const packsExcludingAllowance =
 		featureOptions?.upcoming_quantity ?? featureOptions?.quantity;
-
-	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
-
-	// Volume: the Stripe price has no free-tier offset, so only send purchased
-	// packs. Autumn tracks the allowance internally.
-	if (isVolume) {
-		return packsExcludingAllowance ?? 0;
-	}
 
 	const allowanceInPacks = priceUtils.convert.toAllowanceInPacks({
 		price,

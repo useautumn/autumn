@@ -13,6 +13,7 @@ import {
 	isPrepaidPrice,
 	isUsagePrice,
 } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
+import { addIncludedToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils.js";
 
 export const customerEntitlementToBalancePrice = ({
 	customerEntitlement,
@@ -38,6 +39,9 @@ export const customerEntitlementToBalancePrice = ({
 	let tiers: UsagePriceConfig["usage_tiers"] | undefined;
 	let tier_behavior: TierBehavior | undefined;
 
+	// Get the entitlement's allowance (included usage) to add to tier `to` values
+	const allowance = customerEntitlement.entitlement.allowance ?? 0;
+
 	if (isFixedPrice(price)) {
 		amount = price.config.amount;
 	} else if (isUsagePrice({ price })) {
@@ -45,7 +49,9 @@ export const customerEntitlementToBalancePrice = ({
 		if (usageTiers.length === 1) {
 			amount = usageTiers[0].amount;
 		} else {
-			tiers = usageTiers;
+			// Internal: tier `to` does NOT include included usage.
+			// User-facing: tier `to` INCLUDES included usage.
+			tiers = addIncludedToTiers({ tiers: usageTiers, included: allowance });
 			tier_behavior = price.tier_behavior ?? TierBehavior.Graduated;
 		}
 	}

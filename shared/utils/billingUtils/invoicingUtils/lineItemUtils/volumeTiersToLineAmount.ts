@@ -1,17 +1,20 @@
 import type { UsageTier } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { Infinite } from "@models/productModels/productEnums";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
+import { addAllowanceToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
 
 export const volumeTiersToLineAmount = ({
 	tiers,
 	usage,
+	allowance = 0,
 	billingUnits = 1,
 	allowNegative = false,
 }: {
 	tiers: UsageTier[];
 	usage: number;
+	allowance?: number;
 	billingUnits?: number;
 	allowNegative?: boolean;
 }): number => {
@@ -35,8 +38,14 @@ export const volumeTiersToLineAmount = ({
 	// if the usage is less than the tier.to,
 	// add the tier.amount * usage to the amount
 	// then break
-	// else keep going.
-	for (const tier of tiers) {
+	// else keep going.-
+
+	const tiersWithAllowance = addAllowanceToTiers({
+		tiers,
+		allowance,
+	});
+
+	for (const tier of tiersWithAllowance) {
 		const isFinalTier = tier.to === Infinite || tier.to === -1;
 		const tierBoundary = isFinalTier ? Infinity : (tier.to as number);
 

@@ -27,10 +27,12 @@ import { graduatedTiersToLineAmount } from "./graduatedTiersToLineAmount";
 export const tiersToLineAmount = ({
 	price,
 	overage,
+	allowance = 0,
 	billingUnits = 1,
 }: {
 	price: Price;
 	overage: number;
+	allowance?: number;
 	billingUnits?: number;
 }): number => {
 	const tiers = price.config.usage_tiers;
@@ -48,6 +50,7 @@ export const tiersToLineAmount = ({
 			usage: overage,
 			billingUnits,
 			allowNegative: true,
+			allowance,
 		});
 	}
 
