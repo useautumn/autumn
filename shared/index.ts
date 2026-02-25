@@ -57,6 +57,8 @@ export * from "./models/cusModels/entityModels/entityExpand";
 export * from "./models/cusModels/entityModels/entityModels";
 export * from "./models/cusModels/entityModels/entityTable";
 export * from "./models/cusModels/fullCusModel";
+export * from "./models/cusModels/invoiceModels/invoiceLineItemModels";
+export * from "./models/cusModels/invoiceModels/invoiceLineItemTable";
 export * from "./models/cusModels/invoiceModels/invoiceModels";
 export * from "./models/cusModels/invoiceModels/invoiceTable";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels";

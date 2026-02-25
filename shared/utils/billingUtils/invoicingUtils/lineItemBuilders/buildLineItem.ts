@@ -68,8 +68,8 @@ export const buildLineItem = ({
 		stripePriceId,
 		stripeProductId,
 		chargeImmediately,
-		total_quantity: usage,
-		paid_quantity: overage,
+		totalQuantity: usage,
+		paidQuantity: overage,
 	} satisfies LineItemCreate;
 
 	const result = LineItemSchema.safeParse(lineItemData);
