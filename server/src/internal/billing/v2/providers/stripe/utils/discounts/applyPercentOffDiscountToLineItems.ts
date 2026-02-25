@@ -14,9 +14,13 @@ import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 export const applyPercentOffDiscountToLineItems = ({
 	lineItems,
 	discount,
+	options = {},
 }: {
 	lineItems: LineItem[];
 	discount: StripeDiscountWithCoupon;
+	options?: {
+		skipDescriptionTag?: boolean;
+	};
 }): LineItem[] => {
 	const coupon = discount.source.coupon;
 	const percentOff = coupon.percent_off;
@@ -31,9 +35,9 @@ export const applyPercentOffDiscountToLineItems = ({
 			return item;
 		}
 
-		// Use current finalAmount as base for multiplicative stacking
-		// If no previous discounts, finalAmount equals amount
-		const currentAmount = item.finalAmount ?? item.amount;
+		// Use current amountAfterDiscounts as base for multiplicative stacking
+		// If no previous discounts, amountAfterDiscounts equals amount
+		const currentAmount = item.amountAfterDiscounts ?? item.amount;
 
 		// Calculate discount amount: |currentAmount| * (percentOff / 100)
 		const itemDiscount = new Decimal(Math.abs(currentAmount))
@@ -55,18 +59,20 @@ export const applyPercentOffDiscountToLineItems = ({
 
 		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
 		// Cap at 0 to prevent negative charges
-		const finalAmount = Math.max(
+		const amountAfterDiscounts = Math.max(
 			new Decimal(currentAmount).minus(itemDiscount).toNumber(),
 			0,
 		);
 
+		const description = options.skipDescriptionTag
+			? item.description
+			: addDiscountTagToDescription({ description: item.description });
+
 		return {
 			...item,
-			description: addDiscountTagToDescription({
-				description: item.description,
-			}),
+			description,
 			discounts: [...existingDiscounts, newDiscount],
-			finalAmount,
+			amountAfterDiscounts,
 		};
 	});
 };

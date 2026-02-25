@@ -16,9 +16,13 @@ import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 export const applyAmountOffDiscountToLineItems = ({
 	lineItems,
 	discount,
+	options = {},
 }: {
 	lineItems: LineItem[];
 	discount: StripeDiscountWithCoupon;
+	options?: {
+		skipDescriptionTag?: boolean;
+	};
 }): LineItem[] => {
 	const coupon = discount.source.coupon;
 	const amountOffCents = coupon.amount_off;
@@ -75,18 +79,20 @@ export const applyAmountOffDiscountToLineItems = ({
 
 		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
 		// Cap at 0 to prevent negative charges
-		const finalAmount = Math.max(
+		const amountAfterDiscounts = Math.max(
 			new Decimal(item.amount).minus(totalDiscount).toNumber(),
 			0,
 		);
 
+		const description = options.skipDescriptionTag
+			? item.description
+			: addDiscountTagToDescription({ description: item.description });
+
 		return {
 			...item,
-			description: addDiscountTagToDescription({
-				description: item.description,
-			}),
+			description,
 			discounts: [...existingDiscounts, newDiscount],
-			finalAmount,
+			amountAfterDiscounts,
 		};
 	});
 };

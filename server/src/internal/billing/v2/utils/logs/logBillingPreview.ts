@@ -12,7 +12,7 @@ const formatCustomerProduct = (customerProduct: FullCusProduct) =>
 	`${customerProduct.product.name} (${customerProduct.product_id}) [${customerProduct.status}]`;
 
 const formatLineItem = (item: LineItem) =>
-	`${item.description}: ${item.finalAmount} (charge: ${item.chargeImmediately})`;
+	`${item.description}: ${item.amountAfterDiscounts} (charge: ${item.chargeImmediately})`;
 
 export const logBillingPreview = ({
 	ctx,

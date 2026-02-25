@@ -1,5 +1,6 @@
 import { atmnToStripeAmount, type LineItem, msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
+import { lineItemToMetadata } from "./lineItemToMetadata";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceAddLinesParams.Line
@@ -12,13 +13,29 @@ const toStripeAddLineParams = ({
 }: {
 	lineItem: LineItem;
 }): Stripe.InvoiceAddLinesParams.Line => {
-	const { finalAmount, description, context } = lineItem;
-	const { effectivePeriod } = context;
+	const { amount, amountAfterDiscounts, description, context } = lineItem;
+	const { effectivePeriod, currency, discountable } = context;
+
+	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
+	const lineAmount = discountable ? amount : amountAfterDiscounts;
+	const isNegative = lineAmount < 0;
+	const stripeProductId = context.product.processor?.id ?? "";
+	const shouldUsePriceData = !isNegative && stripeProductId;
 
 	return {
 		description,
-		amount: atmnToStripeAmount({ amount: finalAmount }),
-		discountable: false,
+		amount: shouldUsePriceData
+			? undefined
+			: atmnToStripeAmount({ amount: lineAmount }),
+		price_data: shouldUsePriceData
+			? {
+					unit_amount: atmnToStripeAmount({ amount: lineAmount }),
+					currency,
+					product: stripeProductId,
+				}
+			: undefined,
+		metadata: lineItemToMetadata({ lineItem }),
+		discountable: discountable ?? false,
 		period: effectivePeriod
 			? {
 					start: msToSeconds(effectivePeriod.start),
