@@ -17,7 +17,7 @@ const toStripeCreateInvoiceItemParams = ({
 	lineItem: LineItem;
 }): Stripe.InvoiceItemCreateParams => {
 	const { amount, amountAfterDiscounts, description, context } = lineItem;
-	const { billingPeriod, currency, discountable } = context;
+	const { effectivePeriod, currency, discountable } = context;
 
 	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
 	const lineAmount = discountable ? amount : amountAfterDiscounts;
@@ -45,10 +45,10 @@ const toStripeCreateInvoiceItemParams = ({
 		currency,
 		description,
 		discountable: discountable ?? false,
-		period: billingPeriod
+		period: effectivePeriod
 			? {
-					start: msToSeconds(billingPeriod.start),
-					end: msToSeconds(billingPeriod.end),
+					start: msToSeconds(effectivePeriod.start),
+					end: msToSeconds(effectivePeriod.end),
 				}
 			: undefined,
 	};
