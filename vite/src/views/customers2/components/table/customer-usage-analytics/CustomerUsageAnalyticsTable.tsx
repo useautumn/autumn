@@ -48,11 +48,13 @@ export function CustomerUsageAnalyticsTable() {
 		return [...new Set(rawEvents.map((e: Event) => e.event_name))].slice(0, 5);
 	}, [rawEvents]);
 
-	// Fetch pre-aggregated timeseries data for the chart
+	// Fetch pre-aggregated timeseries data for the chart — only after raw events
+	// have loaded to avoid a double-fetch with org-wide event name fallbacks
 	const { timeseriesEvents, isLoading: timeseriesLoading } =
 		useCustomerTimeseriesEvents({
 			interval,
 			eventNames: customerEventNames,
+			enabled: !rawEventsLoading,
 		});
 
 	const isLoading = rawEventsLoading || timeseriesLoading;
@@ -80,8 +82,6 @@ export function CustomerUsageAnalyticsTable() {
 			onColumnVisibilityChange: setColumnVisibility,
 		},
 	});
-
-	console.log("Raw Events", rawEvents);
 
 	const handleRowClick = (event: Event) => {
 		setSelectedEvent(event);
