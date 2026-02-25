@@ -97,9 +97,14 @@ export function PriceTiers() {
 		if (
 			item?.tier_behavior === TierBehavior.VolumeBased &&
 			(item?.tiers?.length ?? 0) > 1 &&
-			item?.usage_model !== UsageModel.Prepaid
+			(item?.usage_model === UsageModel.Prepaid ||
+				item?.billing_units !== undefined)
 		) {
-			setItem({ ...item, usage_model: UsageModel.Prepaid });
+			setItem({
+				...item,
+				usage_model: UsageModel.Prepaid,
+				billing_units: undefined,
+			});
 		}
 	}, [item?.tier_behavior, item?.tiers?.length]);
 
@@ -236,7 +241,9 @@ export function PriceTiers() {
 							</InputGroupAddon>
 						</InputGroup>
 
-						<BillingUnits />
+						{item.tier_behavior !== TierBehavior.VolumeBased && (
+							<BillingUnits />
+						)}
 
 						<div className="flex items-center gap-1 shrink-0">
 							<IconButton

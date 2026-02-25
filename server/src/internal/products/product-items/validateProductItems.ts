@@ -185,6 +185,17 @@ const validateProductItem = ({
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
+
+		if (
+			item.tier_behavior === TierBehavior.VolumeBased &&
+			item.billing_units !== undefined
+		) {
+			throw new RecaseError({
+				message: `Billing units are not supported for volume-based pricing`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 
 	if (
