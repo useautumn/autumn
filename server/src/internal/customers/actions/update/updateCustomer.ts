@@ -23,6 +23,7 @@ export const updateCustomer = async ({
 	const {
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
+		billing_controls,
 		...newCusData
 	} = params;
 
@@ -109,6 +110,9 @@ export const updateCustomer = async ({
 			...oldMetadata,
 			...newMetadata,
 		},
+		...(billing_controls && {
+			auto_topup: billing_controls.auto_topup,
+		}),
 	};
 
 	if (newStripeId) {

@@ -19,6 +19,7 @@ type CustomerDataUpdates = Pick<
 	| "send_email_receipts"
 	| "processor"
 	| "processors"
+	| "auto_topup"
 >;
 
 /**
