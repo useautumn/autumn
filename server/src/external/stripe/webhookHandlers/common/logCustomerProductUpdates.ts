@@ -48,11 +48,7 @@ export const logCustomerProductUpdates = ({
 		status: customerProduct.status,
 	}));
 
-	if (
-		updates.length === 0 &&
-		deletions.length === 0 &&
-		insertions.length === 0
-	)
+	if (updates.length === 0 && deletions.length === 0 && insertions.length === 0)
 		return;
 
 	addToExtraLogs({

@@ -12,7 +12,7 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 	return {
 		title,
 		description: line.description,
-		amount: line.finalAmount,
+		amount: line.amountAfterDiscounts,
 		discounts: line.discounts,
 		is_base: isBase,
 		total_quantity: line.total_quantity ?? 1,

@@ -17,16 +17,21 @@ import { logWebhookArrearLineItems } from "./logs/logWebhookArrearLineItems";
 /**
  * Generates arrear (usage-in-arrear) line items from webhook event context.
  *
- * This function is used by both:
+ * Used by:
  * - `invoice.created` webhook: adds consumable usage line items to renewal invoice
  * - `subscription.deleted` webhook: creates final arrear invoice for usage
  *
- * @param ctx - Autumn context (for org currency, etc.)
- * @param eventContext - Common webhook context (stripeSubscription, stripeCustomer, fullCustomer, customerProducts, nowMs, paymentMethod)
- * @param periodEndMs - End of billing period (optional, falls back to nowMs)
- * @param cusEntFilter - Optional filter for multi-interval billing (invoice.created uses this)
+ * ## Discount handling
  *
- * @returns Object with line items and the billing context used
+ * Line items are created with `discountable: true`, which tells Stripe to auto-apply
+ * subscription/customer discounts when adding these items to an invoice.
+ *
+ * We also call `applyStripeDiscountsToLineItems` locally to calculate the discounted
+ * amounts for our own records (stored in `amountAfterDiscounts`). This is purely for
+ * audit/tracking purposes - Stripe handles the actual discount application.
+ *
+ * We use `skipDescriptionTag: true` so the description doesn't include "[inc. discount]"
+ * since we're not pre-deducting the discount from the amount sent to Stripe.
  */
 export const eventContextToArrearLineItems = ({
 	ctx,
@@ -60,20 +65,26 @@ export const eventContextToArrearLineItems = ({
 			customerProduct,
 			billingContext,
 			filters: { cusEntFilter },
-			options: { updateNextResetAt: true },
+			options: { updateNextResetAt: true, discountable: true },
 		});
 		lineItems.push(...productLineItems);
 		updateCustomerEntitlements.push(...productUpdates);
 	}
 
-	// Apply discounts to line items
+	// Apply discounts to line items (for our DB records)
+	// Note: discountable: true lets Stripe auto-apply discounts, but we still
+	// need to track discounts on our side for accurate DB storage
 	const discounts = extractStripeDiscounts({
 		stripeSubscription: eventContext.stripeSubscription,
 		stripeCustomer: eventContext.stripeCustomer,
 	});
 
 	if (discounts.length > 0) {
-		lineItems = applyStripeDiscountsToLineItems({ lineItems, discounts });
+		lineItems = applyStripeDiscountsToLineItems({
+			lineItems,
+			discounts,
+			options: { skipDescriptionTag: true },
+		});
 	}
 
 	// Log the arrear line items and customer entitlement updates

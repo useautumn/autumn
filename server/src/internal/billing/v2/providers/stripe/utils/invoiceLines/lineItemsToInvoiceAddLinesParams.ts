@@ -13,10 +13,12 @@ const toStripeAddLineParams = ({
 }: {
 	lineItem: LineItem;
 }): Stripe.InvoiceAddLinesParams.Line => {
-	const { finalAmount, description, context } = lineItem;
-	const { effectivePeriod, currency } = context;
+	const { amount, amountAfterDiscounts, description, context } = lineItem;
+	const { effectivePeriod, currency, discountable } = context;
 
-	const isNegative = finalAmount < 0;
+	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
+	const lineAmount = discountable ? amount : amountAfterDiscounts;
+	const isNegative = lineAmount < 0;
 	const stripeProductId = context.product.processor?.id ?? "";
 	const shouldUsePriceData = !isNegative && stripeProductId;
 
@@ -24,16 +26,16 @@ const toStripeAddLineParams = ({
 		description,
 		amount: shouldUsePriceData
 			? undefined
-			: atmnToStripeAmount({ amount: finalAmount }),
+			: atmnToStripeAmount({ amount: lineAmount }),
 		price_data: shouldUsePriceData
 			? {
-					unit_amount: atmnToStripeAmount({ amount: finalAmount }),
+					unit_amount: atmnToStripeAmount({ amount: lineAmount }),
 					currency,
 					product: stripeProductId,
 				}
 			: undefined,
 		metadata: lineItemToMetadata({ lineItem }),
-		discountable: false,
+		discountable: discountable ?? false,
 		period: effectivePeriod
 			? {
 					start: msToSeconds(effectivePeriod.start),

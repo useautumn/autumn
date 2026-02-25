@@ -10,14 +10,14 @@ import type { LineItem } from "@autumn/shared";
  * @param direction - "charge" or "refund" (default: inferred from amount sign)
  * @param stripeProductId - Optional Stripe product ID for applies_to matching
  * @param discounts - Existing discounts on this line item
- * @param finalAmount - Override finalAmount (default: same as amount)
+ * @param amountAfterDiscounts - Override amountAfterDiscounts (default: same as amount)
  */
 const create = ({
 	amount,
 	direction,
 	stripeProductId,
 	discounts = [],
-	finalAmount,
+	amountAfterDiscounts,
 	description = "Test line item",
 	chargeImmediately = true,
 }: {
@@ -25,12 +25,12 @@ const create = ({
 	direction?: "charge" | "refund";
 	stripeProductId?: string;
 	discounts?: LineItem["discounts"];
-	finalAmount?: number;
+	amountAfterDiscounts?: number;
 	description?: string;
 	chargeImmediately?: boolean;
 }): LineItem => ({
 	amount,
-	finalAmount: finalAmount ?? amount,
+	amountAfterDiscounts: amountAfterDiscounts ?? amount,
 	description,
 	discounts,
 	chargeImmediately,
@@ -53,19 +53,19 @@ const charge = ({
 	amount = 100,
 	stripeProductId,
 	discounts = [],
-	finalAmount,
+	amountAfterDiscounts,
 }: {
 	amount?: number;
 	stripeProductId?: string;
 	discounts?: LineItem["discounts"];
-	finalAmount?: number;
+	amountAfterDiscounts?: number;
 } = {}): LineItem =>
 	create({
 		amount: Math.abs(amount),
 		direction: "charge",
 		stripeProductId,
 		discounts,
-		finalAmount,
+		amountAfterDiscounts,
 	});
 
 /**
@@ -76,19 +76,19 @@ const refund = ({
 	amount = 100,
 	stripeProductId,
 	discounts = [],
-	finalAmount,
+	amountAfterDiscounts,
 }: {
 	amount?: number;
 	stripeProductId?: string;
 	discounts?: LineItem["discounts"];
-	finalAmount?: number;
+	amountAfterDiscounts?: number;
 } = {}): LineItem =>
 	create({
 		amount: -Math.abs(amount),
 		direction: "refund",
 		stripeProductId,
 		discounts,
-		finalAmount,
+		amountAfterDiscounts,
 	});
 
 /**
@@ -128,7 +128,7 @@ const withExistingDiscount = ({
 	stripeProductId?: string;
 }): LineItem => {
 	const existingDiscount = { amountOff: existingDiscountAmount };
-	const adjustedFinalAmount =
+	const adjustedAmountAfterDiscounts =
 		direction === "charge"
 			? amount - existingDiscountAmount
 			: amount + existingDiscountAmount;
@@ -138,7 +138,7 @@ const withExistingDiscount = ({
 		direction,
 		stripeProductId,
 		discounts: [existingDiscount],
-		finalAmount: adjustedFinalAmount,
+		amountAfterDiscounts: adjustedAmountAfterDiscounts,
 	});
 };
 
