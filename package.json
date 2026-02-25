@@ -79,7 +79,7 @@
 		"prepare": "husky",
 		"api": "cd packages/openapi && bun generate",
 		"docs:pull": "bun -F @autumn/docs pull",
-		"docs:dev": "bun -F @autumn/docs dev",
+		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts",
 		"js:ts": "bun -F autumn-js ts",
