@@ -8,6 +8,7 @@ import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useEnv } from "@/utils/envUtils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
 import { EmptyState } from "../EmptyState";
@@ -23,6 +24,7 @@ import { EventDetailsDialog } from "./EventDetailsDialog";
 
 export function CustomerUsageAnalyticsTable() {
 	const env = useEnv();
+	const { customer } = useCustomerContext();
 	const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 	const [eventDialogOpen, setEventDialogOpen] = useState(false);
 
@@ -37,10 +39,14 @@ export function CustomerUsageAnalyticsTable() {
 		return "30d" as const;
 	}, [selectedDays]);
 
-	// Fetch raw events for the table via API - use same interval as chart
-	const { events: rawEvents, isLoading: rawEventsLoading } = useCusEventsQuery({
-		interval,
-	});
+	// Fetch raw events for the table via API - use same interval as chart.
+	// Pass the external customer ID (customer.id) since the API expects that,
+	// not the internal UUID that lives in the URL param.
+	const {
+		events: rawEvents,
+		isLoading: rawEventsLoading,
+		isFetching: rawEventsFetching,
+	} = useCusEventsQuery({ interval, customerId: customer.id ?? undefined });
 
 	// Extract unique event names from raw events for the chart query
 	const customerEventNames = useMemo(() => {
@@ -49,15 +55,18 @@ export function CustomerUsageAnalyticsTable() {
 	}, [rawEvents]);
 
 	// Fetch pre-aggregated timeseries data for the chart — only after raw events
-	// have loaded to avoid a double-fetch with org-wide event name fallbacks
+	// have fully settled (including background revalidations) to avoid firing with
+	// stale cached event names from a previously viewed customer.
+	// Pass the external customer ID since ClickHouse stores events keyed by that.
 	const { timeseriesEvents, isLoading: timeseriesLoading } =
 		useCustomerTimeseriesEvents({
 			interval,
 			eventNames: customerEventNames,
-			enabled: !rawEventsLoading,
+			enabled: !rawEventsFetching,
+			customerId: customer.id ?? undefined,
 		});
 
-	const isLoading = rawEventsLoading || timeseriesLoading;
+	const isLoading = rawEventsLoading || rawEventsFetching || timeseriesLoading;
 
 	// Generate dynamic columns from event properties
 	const columns = useMemo(() => {
