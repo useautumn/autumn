@@ -10,8 +10,12 @@ export const handleGetStripeCoupons = createRoute({
 		const { org, env } = c.get("ctx");
 
 		const stripeCli = createStripeCli({ org, env });
-		const coupons = await stripeCli.coupons.list({ limit: 100 });
-		const validCoupons = coupons.data.filter((coupon) => coupon.valid);
+		const validCoupons = [];
+		for await (const coupon of stripeCli.coupons.list({ limit: 100 })) {
+			if (coupon.valid) {
+				validCoupons.push(coupon);
+			}
+		}
 		return c.json({ coupons: validCoupons });
 	},
 });
