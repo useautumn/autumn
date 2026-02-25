@@ -27,6 +27,7 @@ export const usagePriceToLineItem = ({
 		shouldProrateOverride?: boolean;
 		chargeImmediatelyOverride?: boolean;
 		includePeriodDescription?: boolean;
+		discountable?: boolean;
 	};
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
@@ -75,6 +76,7 @@ export const usagePriceToLineItem = ({
 		...context,
 		price: cusPrice.price,
 		feature: cusEnt.entitlement.feature,
+		discountable: options.discountable ?? false,
 	};
 
 	// 3. Generate description
@@ -98,7 +100,7 @@ export const usagePriceToLineItem = ({
 		options.shouldProrateOverride ?? !isConsumablePrice(price);
 
 	return buildLineItem({
-		context,
+		context: lineItemContext,
 		amount,
 		description,
 
