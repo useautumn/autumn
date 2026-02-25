@@ -16,9 +16,12 @@ const getUserTimezone = (): string => {
 export const useCustomerTimeseriesEvents = ({
 	interval = "30d",
 	eventNames: providedEventNames,
+	enabled = true,
 }: {
 	interval?: "24h" | "7d" | "30d" | "90d";
 	eventNames?: string[];
+	/** Prevent the timeseries fetch from firing until prerequisites are ready */
+	enabled?: boolean;
 }) => {
 	const { customer_id } = useParams();
 
@@ -33,6 +36,7 @@ export const useCustomerTimeseriesEvents = ({
 
 	const { data, isLoading, error } = usePostSWR({
 		url: `/query/events`,
+		enabled,
 		data: {
 			customer_id: customer_id || null,
 			interval,
