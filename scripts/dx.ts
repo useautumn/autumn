@@ -1,17 +1,45 @@
+import { createConnection } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const worktreeNum = Number.parseInt(process.argv[2] || "", 10);
-if (Number.isNaN(worktreeNum) || worktreeNum < 2) {
-	console.error("Usage: bun dx <N>  (where N >= 2)");
-	console.error("  e.g. bun dx 2  -> vite:3100, server:8180, checkout:3101");
+function isPortInUse({ port }: { port: number }): Promise<boolean> {
+	return new Promise((resolve) => {
+		const socket = createConnection({ port, host: "127.0.0.1" });
+		socket.on("connect", () => {
+			socket.destroy();
+			resolve(true);
+		});
+		socket.on("error", () => {
+			socket.destroy();
+			resolve(false);
+		});
+	});
+}
+
+async function findFreeWorktree(): Promise<number> {
+	for (let n = 2; n <= 10; n++) {
+		const serverPort = 8080 + (n - 1) * 100;
+		if (!(await isPortInUse({ port: serverPort }))) return n;
+	}
+	console.error("No free worktree slots (2-10). All server ports in use.");
 	process.exit(1);
 }
+
+// Allow explicit override: `bun dx 3`, otherwise auto-detect
+const explicitArg = Number.parseInt(process.argv[2] || "", 10);
+const worktreeNum =
+	!Number.isNaN(explicitArg) && explicitArg >= 2
+		? explicitArg
+		: await findFreeWorktree();
 
 const offset = (worktreeNum - 1) * 100;
 const vitePort = 3000 + offset;
 const serverPort = 8080 + offset;
 const checkoutPort = 3001 + offset;
+
+console.log(
+	`Worktree ${worktreeNum} -> vite:${vitePort}, server:${serverPort}, checkout:${checkoutPort}\n`,
+);
 
 const portArgs = [
 	`-ti:${vitePort}`,
