@@ -1,4 +1,4 @@
-TOKEN invoices_cdc_test1 APPEND
+TOKEN sequin_cdc APPEND
 
 DESCRIPTION >
     Invoice CDC events from Sequin (PlanetScale Postgres → Tinybird via WAL).
@@ -15,8 +15,8 @@ SCHEMA >
     `hosted_invoice_url`       Nullable(String)    `json:$.hosted_invoice_url`,
     `total`                    Nullable(Float64)   `json:$.total`,
     `currency`                 String              `json:$.currency`,
-    `discounts`                JSON                `json:$.discounts`,
-    `items`                    JSON                `json:$.items`,
+    `discounts`                String              `json:$.discounts`,
+    `items`                    String              `json:$.items`,
     `__action`                 String              `json:$.__action`,
     `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
     `__commit_lsn`             Int64               `json:$.__commit_lsn`,

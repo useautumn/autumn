@@ -1,0 +1,26 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    prices CDC events from Sequin (Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `org_id`                   String              `json:$.org_id`,
+    `internal_product_id`      String              `json:$.internal_product_id`,
+    `config`                   String              `json:$.config`,
+    `created_at`               Int64               `json:$.created_at`,
+    `billing_type`             Nullable(String)    `json:$.billing_type`,
+    `tier_behavior`            Nullable(String)    `json:$.tier_behavior`,
+    `is_custom`                UInt8               `json:$.is_custom`,
+    `entitlement_id`           Nullable(String)    `json:$.entitlement_id`,
+    `proration_config`         String              `json:$.proration_config`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"
