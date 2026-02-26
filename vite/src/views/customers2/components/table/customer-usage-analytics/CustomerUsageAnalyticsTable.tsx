@@ -57,7 +57,7 @@ export function CustomerUsageAnalyticsTable() {
 	// Fetch pre-aggregated timeseries data for the chart — only after raw events
 	// have fully settled (including background revalidations) to avoid firing with
 	// stale cached event names from a previously viewed customer.
-	// Pass the external customer ID since ClickHouse stores events keyed by that.
+	// Pass the external customer ID since events are keyed by that.
 	const { timeseriesEvents, isLoading: timeseriesLoading } =
 		useCustomerTimeseriesEvents({
 			interval,

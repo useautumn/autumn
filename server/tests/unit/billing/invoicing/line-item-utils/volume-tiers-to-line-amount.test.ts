@@ -232,6 +232,125 @@ describe("volumeTiersToLineAmount", () => {
 		});
 	});
 
+	describe("allowance (free tier prepended)", () => {
+		// With allowance=50, tiers become:
+		// [{to:50, amt:0}, {to:150, amt:0.10}, {to:550, amt:0.05}, {to:Inf, amt:0.02}]
+		// Volume: entire usage charged at whichever tier it falls into.
+
+		test("usage below allowance → $0 (falls in free tier)", () => {
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 30,
+					allowance: 50,
+				}),
+			).toBe(0);
+		});
+
+		test("usage exactly at allowance → $0 (boundary of free tier)", () => {
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 50,
+					allowance: 50,
+				}),
+			).toBe(0);
+		});
+
+		test("usage just above allowance → falls in shifted tier 1: 51 @ $0.10 = $5.10", () => {
+			// Tiers with allowance=50: [{to:50,$0}, {to:150,$0.10}, ...]
+			// 51 > 50, 51 <= 150 → entire 51 × $0.10
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 51,
+					allowance: 50,
+				}),
+			).toBe(5.1);
+		});
+
+		test("usage in shifted tier 1: 120 @ $0.10 = $12 (includes free portion)", () => {
+			// 120 > 50, 120 <= 150 → entire 120 × $0.10
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 120,
+					allowance: 50,
+				}),
+			).toBe(12);
+		});
+
+		test("usage in shifted tier 2: 200 @ $0.05 = $10", () => {
+			// 200 > 50, > 150, 200 <= 550 → entire 200 × $0.05
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 200,
+					allowance: 50,
+				}),
+			).toBe(10);
+		});
+
+		test("usage in shifted tier 3: 600 @ $0.02 = $12", () => {
+			// 600 > 50, > 150, > 550 → entire 600 × $0.02
+			expect(
+				volumeTiersToLineAmount({
+					tiers: THREE_TIERS,
+					usage: 600,
+					allowance: 50,
+				}),
+			).toBe(12);
+		});
+
+		test("allowance with billingUnits: usage below allowance rounds up but stays in free tier → $0", () => {
+			// Tiers: [{to:500, $10}, {to:Inf, $5}], allowance=100, billingUnits=100
+			// Tiers with allowance: [{to:100,$0}, {to:600,$10}, {to:Inf,$5}]
+			// Usage 50 rounds up to 100, 100 <= 100 → free tier → $0
+			expect(
+				volumeTiersToLineAmount({
+					tiers: [
+						{ to: 500, amount: 10 },
+						{ to: Infinite, amount: 5 },
+					],
+					usage: 50,
+					allowance: 100,
+					billingUnits: 100,
+				}),
+			).toBe(0);
+		});
+
+		test("allowance with billingUnits: usage above allowance → paid tier", () => {
+			// Tiers with allowance=100: [{to:100,$0}, {to:600,$10}, {to:Inf,$5}]
+			// Usage 300, billingUnits=100 → rounded=300, 300 > 100, 300 <= 600
+			// → 10/100 * 300 = $30
+			expect(
+				volumeTiersToLineAmount({
+					tiers: [
+						{ to: 500, amount: 10 },
+						{ to: Infinite, amount: 5 },
+					],
+					usage: 300,
+					allowance: 100,
+					billingUnits: 100,
+				}),
+			).toBe(30);
+		});
+
+		test("allowance=0 behaves identically to no allowance", () => {
+			const withZero = volumeTiersToLineAmount({
+				tiers: THREE_TIERS,
+				usage: 250,
+				allowance: 0,
+			});
+			const withoutAllowance = volumeTiersToLineAmount({
+				tiers: THREE_TIERS,
+				usage: 250,
+			});
+			expect(withZero).toBe(withoutAllowance);
+			expect(withZero).toBe(12.5);
+		});
+	});
+
 	describe("throws on bad input", () => {
 		test("throws when tiers is null/undefined", () => {
 			expect(() =>

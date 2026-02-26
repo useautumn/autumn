@@ -3,10 +3,10 @@
  */
 
 export * from "./aggregate-events-op.js";
+export * from "./attach-op.js";
 export * from "./autumn-default-error.js";
 export * from "./autumn-error.js";
 export * from "./balance.js";
-export * from "./billing-attach-op.js";
 export * from "./billing-update-op.js";
 export * from "./check-op.js";
 export * from "./create-balance-op.js";
@@ -30,9 +30,11 @@ export * from "./list-customers-op.js";
 export * from "./list-events-op.js";
 export * from "./list-features-op.js";
 export * from "./list-plans-op.js";
+export * from "./multi-attach-op.js";
 export * from "./open-customer-portal-op.js";
 export * from "./plan.js";
 export * from "./preview-attach-op.js";
+export * from "./preview-multi-attach-op.js";
 export * from "./preview-update-op.js";
 export * from "./redeem-referral-code-op.js";
 export * from "./response-validation-error.js";

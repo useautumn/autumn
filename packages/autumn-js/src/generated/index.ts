@@ -2,7 +2,7 @@
 // Run `bun api` to regenerate
 
 export * from "./aggregateEventsSchemas";
-export * from "./billingAttachSchemas";
+export * from "./attachSchemas";
 export * from "./createReferralCodeSchemas";
 export * from "./getOrCreateCustomerSchemas";
 export * from "./listEventsSchemas";

@@ -179,7 +179,6 @@
       "version": "1.0.0",
       "dependencies": {
         "@autumn/shared": "workspace:*",
-        "@clickhouse/client": "catalog:",
         "chalk": "^5.3.0",
         "dotenv": "^16.5.0",
         "drizzle-orm": "catalog:",

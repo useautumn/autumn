@@ -110,7 +110,16 @@ export type BillingUpdateTo = number | string;
 export type BillingUpdateTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const BillingUpdateTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type BillingUpdateTierBehavior = ClosedEnum<
+  typeof BillingUpdateTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -153,9 +162,10 @@ export type BillingUpdatePrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<BillingUpdateTier> | undefined;
+  tierBehavior?: BillingUpdateTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -632,16 +642,25 @@ export function billingUpdateToToJSON(
 export type BillingUpdateTier$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
   BillingUpdateTier$Outbound,
   BillingUpdateTier
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function billingUpdateTierToJSON(
   billingUpdateTier: BillingUpdateTier,
@@ -650,6 +669,11 @@ export function billingUpdateTierToJSON(
     BillingUpdateTier$outboundSchema.parse(billingUpdateTier),
   );
 }
+
+/** @internal */
+export const BillingUpdateTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateTierBehavior
+> = z.enum(BillingUpdateTierBehavior);
 
 /** @internal */
 export const BillingUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -665,6 +689,7 @@ export const BillingUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
 export type BillingUpdatePrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<BillingUpdateTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -680,6 +705,7 @@ export const BillingUpdatePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.optional(z.number()),
     tiers: z.optional(z.array(z.lazy(() => BillingUpdateTier$outboundSchema))),
+    tierBehavior: z.optional(BillingUpdateTierBehavior$outboundSchema),
     interval: BillingUpdateItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -688,6 +714,7 @@ export const BillingUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
