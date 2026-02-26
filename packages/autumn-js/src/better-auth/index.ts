@@ -47,6 +47,9 @@ export function autumn(options: AutumnOptions = {}): AutumnPlugin {
 		listPlans: createAutumnEndpoint("listPlans", handleRoute),
 		listEvents: createAutumnEndpoint("listEvents", handleRoute),
 		aggregateEvents: createAutumnEndpoint("aggregateEvents", handleRoute),
+		multiAttach: createAutumnEndpoint("multiAttach", handleRoute),
+		previewMultiAttach: createAutumnEndpoint("previewMultiAttach", handleRoute),
+		setupPayment: createAutumnEndpoint("setupPayment", handleRoute),
 	};
 
 	return {

@@ -13,7 +13,6 @@ import {
 	type Price,
 	PriceType,
 	type Product,
-	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import RecaseError from "@server/utils/errorUtils.js";
@@ -228,63 +227,6 @@ export const getPriceOptions = (
 	);
 
 	return options;
-};
-
-const pricesAreSame = (price1: Price, price2: Price) => {
-	for (const key in price1.config) {
-		const originalValue = (price1.config as any)[key];
-		const newValue = (price2.config as any)[key];
-
-		if (key === "usage_tiers") {
-			for (let i = 0; i < originalValue.length; i++) {
-				const originalTier = originalValue[i];
-				const newTier = newValue[i];
-				if (!compareObjects(originalTier, newTier)) {
-					return false;
-				}
-			}
-		} else if (originalValue !== newValue) {
-			return false;
-		}
-	}
-
-	return true;
-};
-
-const getUsageTier = (price: Price, quantity: number) => {
-	const usageConfig = price.config as UsagePriceConfig;
-	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		if (i === usageConfig.usage_tiers.length - 1) {
-			return usageConfig.usage_tiers[i];
-		}
-
-		const tier = usageConfig.usage_tiers[i];
-		if (tier.to === TierInfinite || tier.to >= quantity) {
-			return tier;
-		}
-	}
-	return usageConfig.usage_tiers[0];
-};
-
-const priceToEventName = (productName: string, featureName: string) => {
-	return `${productName} - ${featureName}`;
-};
-
-const roundPriceAmounts = (price: Price) => {
-	if (price.config!.type === PriceType.Fixed) {
-		const config = price.config as FixedPriceConfig;
-		config.amount = Number(config.amount.toFixed(10));
-		price.config = config;
-	} else if (price.config!.type === PriceType.Usage) {
-		const config = price.config as UsagePriceConfig;
-		for (let i = 0; i < config.usage_tiers.length; i++) {
-			config.usage_tiers[i].amount = Number(
-				config.usage_tiers[i].amount.toFixed(10),
-			);
-		}
-
-		price.config = config;
-	}
 };
 
 export const priceIsOneOffAndTiered = (

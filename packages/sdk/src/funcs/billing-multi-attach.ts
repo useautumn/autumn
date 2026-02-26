@@ -26,51 +26,48 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
+ * Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
  *
- * Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
+ * Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
  *
  * @example
  * ```typescript
- * // Attach a plan to a customer
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan" });
+ * // Attach multiple plans to a customer
+ * const response = await client.billing.multiAttach({ customerId: "cus_123", plans: [{"planId":"pro_plan"},{"planId":"addon_seats","featureQuantities":[{"featureId":"seats","quantity":5}]}] });
  * ```
  *
  * @example
  * ```typescript
- * // Attach with a free trial
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", freeTrial: {"durationLength":14,"durationType":"day"} });
+ * // Attach with free trial applied to all plans
+ * const response = await client.billing.multiAttach({ customerId: "cus_123", plans: [{"planId":"pro_plan"},{"planId":"addon_storage"}], freeTrial: {"durationLength":14,"durationType":"day"} });
  * ```
  *
  * @example
  * ```typescript
- * // Attach with custom pricing
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", customize: {"price":{"amount":4900,"interval":"month"}} });
+ * // Attach with custom pricing on one plan
+ * const response = await client.billing.multiAttach({ customerId: "cus_123", plans: [{"planId":"pro_plan","customize":{"price":{"amount":4900,"interval":"month"}}},{"planId":"addon_support"}] });
  * ```
  *
- * @param customerId - The ID of the customer to attach the plan to.
- * @param entityId - The ID of the entity to attach the plan to. (optional)
- * @param planId - The ID of the plan.
- * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
- * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
- * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
- * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+ * @param customerId - The ID of the customer to attach the plans to.
+ * @param entityId - The ID of the entity to attach the plans to. (optional)
+ * @param plans - The list of plans to attach to the customer.
+ * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+ * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
  * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
  * @param successUrl - URL to redirect to after successful checkout. (optional)
- * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
- * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+ * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
+ * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
  */
-export function billingAttach(
+export function billingMultiAttach(
   client: AutumnCore,
-  request: models.AttachParams,
+  request: models.MultiAttachParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.AttachResponse,
+    models.MultiAttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -90,12 +87,12 @@ export function billingAttach(
 
 async function $do(
   client: AutumnCore,
-  request: models.AttachParams,
+  request: models.MultiAttachParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.AttachResponse,
+      models.MultiAttachResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -110,7 +107,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.AttachParams$outboundSchema, value),
+    (value) => z.parse(models.MultiAttachParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -119,7 +116,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.attach")();
+  const path = pathToFunc("/v1/billing.multi_attach")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -138,7 +135,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "attach",
+    operationID: "multiAttach",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -177,7 +174,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.AttachResponse,
+    models.MultiAttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -187,7 +184,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.AttachResponse$inboundSchema),
+    M.json(200, models.MultiAttachResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

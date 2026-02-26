@@ -25,7 +25,7 @@ export const billingAttachContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/billing.attach",
-		operationId: "billingAttach",
+		operationId: "attach",
 		tags: ["billing"],
 		description: billingAttachJsDoc,
 		spec: (spec) => ({
@@ -231,7 +231,7 @@ export const billingMultiAttachContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/billing.multi_attach",
-		operationId: "billingMultiAttach",
+		operationId: "multiAttach",
 		tags: ["billing"],
 		description: billingMultiAttachJsDoc,
 		spec: (spec) => ({
@@ -247,7 +247,10 @@ export const billingMultiAttachContract = oc
 					customer_id: "cus_123",
 					plans: [
 						{ plan_id: "pro_plan" },
-						{ plan_id: "addon_seats", feature_quantities: [{ feature_id: "seats", quantity: 5 }] },
+						{
+							plan_id: "addon_seats",
+							feature_quantities: [{ feature_id: "seats", quantity: 5 }],
+						},
 					],
 				},
 			],
@@ -291,7 +294,10 @@ export const billingPreviewMultiAttachContract = oc
 					customer_id: "cus_123",
 					plans: [
 						{ plan_id: "pro_plan" },
-						{ plan_id: "addon_seats", feature_quantities: [{ feature_id: "seats", quantity: 5 }] },
+						{
+							plan_id: "addon_seats",
+							feature_quantities: [{ feature_id: "seats", quantity: 5 }],
+						},
 					],
 				},
 			],

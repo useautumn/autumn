@@ -244,7 +244,13 @@ const { allowed } = await autumn.check({
 
                 <DynamicResponseField name="amount" type="number" />
 
+                <DynamicResponseField name="flat_amount" type="number | null" />
+
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+              How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
             </DynamicResponseField>
 
             <DynamicResponseField name="billing_units" type="number">
@@ -390,7 +396,15 @@ const { allowed } = await autumn.check({
                   The price of the product item for this tier.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="flat_amount" type="number | null">
+                  A flat fee charged for this tier, in addition to the per-unit amount.
+                </DynamicResponseField>
+
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+              How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
             </DynamicResponseField>
 
             <DynamicResponseField name="usage_model" type="'prepaid' | 'pay_per_use'">

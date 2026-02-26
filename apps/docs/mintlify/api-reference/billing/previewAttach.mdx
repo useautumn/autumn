@@ -101,14 +101,18 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
             </DynamicParamField>
 
             <DynamicParamField body="tiers" type="object[]">
-              Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+              Tiered pricing. Either 'amount' or 'tiers' is required.
               <Expandable title="properties">
                 <DynamicParamField body="to" type="number" required />
 
                 <DynamicParamField body="amount" type="number" required />
 
+                <DynamicParamField body="flat_amount" type="number | null" />
+
               </Expandable>
             </DynamicParamField>
+
+            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
               Billing interval. For consumable features, should match reset.interval.
@@ -235,6 +239,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'">
   When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+</DynamicParamField>
+
+<DynamicParamField body="checkout_session_params" type="object">
+  Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
 
 

@@ -85,6 +85,18 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 		bodySchema: redeemReferralCodeParamsSchema,
 	},
 	{
+		route: "multiAttach",
+		sdkMethod: (autumn, args) => autumn.billing.multiAttach(args),
+	},
+	{
+		route: "previewMultiAttach",
+		sdkMethod: (autumn, args) => autumn.billing.previewMultiAttach(args),
+	},
+	{
+		route: "setupPayment",
+		sdkMethod: (autumn, args) => autumn.billing.setupPayment(args),
+	},
+	{
 		route: "listPlans",
 		sdkMethod: (autumn, args) => autumn.plans.list(args),
 		requireCustomer: false,
