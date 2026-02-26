@@ -48,7 +48,8 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: two recurring plans i
 
 	// 1. Preview — $20 (planA) + $30 (planB) = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
-	expect(preview.total).toBeCloseTo(50, 0);
+	console.log("preview", preview);
+	expect(preview.total).toEqual(50);
 
 	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);

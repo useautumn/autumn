@@ -17,11 +17,7 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import RecaseError from "@server/utils/errorUtils.js";
-import {
-	compareObjects,
-	generateId,
-	notNullish,
-} from "@server/utils/genUtils.js";
+import { generateId, notNullish } from "@server/utils/genUtils.js";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";

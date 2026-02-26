@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import { ClickHouseManager } from "@/external/clickhouse/ClickHouseManager.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -15,7 +14,7 @@ import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
 
 /**
  * Base middleware that sets up the request context
- * Sets up: db, logger, clickhouseClient, id, timestamp
+ * Sets up: db, logger, id, timestamp
  */
 export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// const env = (c.req.header("app_env") as AppEnv) || AppEnv.Sandbox;
@@ -26,8 +25,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		generateId("local_req");
 
 	const timestamp = Date.now();
-
-	const clickhouseClient = await ClickHouseManager.getClient();
 
 	const { data: body } = await tryCatch(c.req.json());
 
@@ -52,7 +49,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// Core objects
 		db,
 		logger: childLogger,
-		clickhouseClient,
 
 		// Request info
 		id,
