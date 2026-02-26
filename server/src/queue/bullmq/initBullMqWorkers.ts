@@ -3,6 +3,7 @@ import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { handleAutoTopUpJob } from "@/internal/balances/autoTopUp/handleAutoTopUpJob.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -132,6 +133,19 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 						ctx,
 						payload: job.data,
 					});
+					return;
+				}
+
+				if (job.name === JobName.AutoTopUp) {
+					if (!ctx) {
+						workerLogger.error("No context found for auto top-up job");
+						return;
+					}
+					await handleAutoTopUpJob({
+						ctx,
+						payload: job.data,
+					});
+					return;
 				}
 			} catch (error: any) {
 				workerLogger.error(`Failed to process bullmq job: ${job.name}`, {
