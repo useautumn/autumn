@@ -86,7 +86,7 @@ export const constructPrepaidItem = ({
 }: {
 	featureId: string;
 	price?: number;
-	tiers?: { amount: number; to: number | "inf" }[];
+	tiers?: { amount: number; to: number | "inf"; flat_amount?: number | null }[];
 	tierBehaviour?: TierBehavior;
 	billingUnits?: number;
 	includedUsage?: number;

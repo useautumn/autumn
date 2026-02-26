@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
 import { componentsRouter } from "@/internal/misc/components/componentsRouter.js";
@@ -73,7 +72,6 @@ apiRouter.route("/rewards", rewardRouter);
 apiRouter.route("/reward_programs", rewardProgramRouter);
 apiRouter.route("/referrals", referralRouter);
 apiRouter.route("/redemptions", redemptionRouter);
-apiRouter.route("/insights", insightsRouter);
 apiRouter.route("/query", legacyAnalyticsRouter);
 apiRouter.route("/events", eventsRouter);
 

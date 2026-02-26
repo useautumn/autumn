@@ -217,9 +217,15 @@ Use this after an action happens to decrement usage, or send a negative value to
 * [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
+* [multi_attach](docs/sdks/billing/README.md#multi_attach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
+
+Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
 * [preview_attach](docs/sdks/billing/README.md#preview_attach) - Previews the billing changes that would occur when attaching a plan, without actually making any changes.
 
 Use this endpoint to show customers what they will be charged before confirming a subscription change.
+* [preview_multi_attach](docs/sdks/billing/README.md#preview_multi_attach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
+
+Use this endpoint to show customers what they will be charged before confirming a multi-plan subscription.
 * [update](docs/sdks/billing/README.md#update) - Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
 
 Use this endpoint to update prepaid quantities, cancel a subscription (immediately or at end of cycle), or modify subscription settings.

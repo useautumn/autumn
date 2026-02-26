@@ -6,12 +6,10 @@
 	"scripts": {
 		"setup": "tsx setup/setup.js",
 		"setup-test": "tsx setup/setup-test.ts",
-		"replicate": "bun run db/replicate.ts",
-		"create-clickhouse-event-views:prod": "infisical run --env=prod -- bun run setup/events/recreate-clickhouse-event-views.ts"
+		"replicate": "bun run db/replicate.ts"
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",
-		"@clickhouse/client": "catalog:",
 		"chalk": "^5.3.0",
 		"dotenv": "^16.5.0",
 		"drizzle-orm": "catalog:",

@@ -10,6 +10,7 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 	const isBase = !feature;
 
 	return {
+		object: "billing_preview_line_item" as const,
 		title,
 		description: line.description,
 		amount: line.amountAfterDiscounts,

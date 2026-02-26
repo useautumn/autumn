@@ -5,12 +5,18 @@ import type {
 	CustomerExpand,
 	EventsAggregateParams,
 	EventsListParams,
+	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
+	PreviewMultiAttachParams,
 	PreviewUpdateParams,
 	RedeemReferralCodeParams,
+	SetupPaymentParams,
 	UpdateSubscriptionParams,
 } from "@useautumn/sdk";
+
+/** Flattens Omit/Pick/intersection types so hover shows all fields */
+type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 /** Fields injected by backend - stripped from frontend params */
 export type ProtectedFields = "customerId" | "customerData";
@@ -22,15 +28,17 @@ export type ClientGetOrCreateCustomerParams = {
 };
 
 /** Check params for local balance check */
-export type ClientCheckParams = Omit<CheckParams, ProtectedFields>;
+export type ClientCheckParams = Prettify<Omit<CheckParams, ProtectedFields>>;
 
 /** Attach params without protected fields (for frontend use) */
-export type ClientAttachParams = Omit<
-	AttachParams,
-	ProtectedFields | "sendEvent" | "properties" | "withPreview"
-> & {
-	openInNewTab?: boolean;
-};
+export type ClientAttachParams = Prettify<
+	Omit<
+		AttachParams,
+		ProtectedFields | "sendEvent" | "properties" | "withPreview"
+	> & {
+		openInNewTab?: boolean;
+	}
+>;
 
 /** Open customer portal params without protected fields (for frontend use) */
 export type ClientOpenCustomerPortalParams = Omit<
@@ -80,3 +88,25 @@ export type ClientPreviewUpdateSubscriptionParams = Omit<
 	PreviewUpdateParams,
 	ProtectedFields
 >;
+
+/** Multi-attach params without protected fields (for frontend use) */
+export type ClientMultiAttachParams = Omit<
+	MultiAttachParams,
+	ProtectedFields
+> & {
+	openInNewTab?: boolean;
+};
+
+/** Preview multi-attach params without protected fields (for frontend use) */
+export type ClientPreviewMultiAttachParams = Omit<
+	PreviewMultiAttachParams,
+	ProtectedFields
+>;
+
+/** Setup payment params without protected fields (for frontend use) */
+export type ClientSetupPaymentParams = Omit<
+	SetupPaymentParams,
+	ProtectedFields
+> & {
+	openInNewTab?: boolean;
+};

@@ -13,7 +13,6 @@ export type SharedContext = {
 	logger: AutumnLogger;
 	expand: string[];
 	// db: DrizzleCli;
-	// clickhouseClient?: ClickHouseClient;
 
 	// // Info
 	// id: string;

@@ -7,6 +7,7 @@ import {
 	ErrCode,
 	ProcessorType,
 	RecaseError,
+	TierBehavior,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -173,6 +174,21 @@ export const handleExternalPSPErrors = ({
 	}
 };
 
+export const handlePrepaidVolumeErrors = ({
+	attachParams,
+}: {
+	attachParams: AttachParams;
+}) => {
+	for (const price of attachParams.prices) {
+		if (price.tier_behavior === TierBehavior.VolumeBased) {
+			throw new RecaseError({
+				message:
+					"Volume pricing is not supported on attach V1. Please upgrade to V2 of the Autumn API to use prepaid volume tiers",
+			});
+		}
+	}
+};
+
 export const handleAttachErrors = async ({
 	attachParams,
 	attachBody,
@@ -193,6 +209,10 @@ export const handleAttachErrors = async ({
 	});
 
 	handleExternalPSPErrors({
+		attachParams,
+	});
+
+	handlePrepaidVolumeErrors({
 		attachParams,
 	});
 

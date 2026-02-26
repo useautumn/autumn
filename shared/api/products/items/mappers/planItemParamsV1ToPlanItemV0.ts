@@ -3,6 +3,7 @@ import { billingMethodToUsageModel } from "@api/products/components/mappers/bill
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0.js";
 import { featureUtils } from "@utils/index";
+import { subtractIncludedFromTiers } from "@utils/productV2Utils/productItemUtils/tierUtils.js";
 import type { SharedContext } from "../../../../types/sharedContext.js";
 
 /**
@@ -24,9 +25,17 @@ export function planItemParamsV1ToPlanItemV0({
 
 	const isAllocatedFeature = featureUtils.isAllocated(feature);
 
+	const included = item.included ?? 0;
+
+	// V1 API: tier `to` values INCLUDE included usage.
+	// Internal: tier `to` values do NOT include included usage.
+	const internalTiers = item.price?.tiers
+		? subtractIncludedFromTiers({ tiers: item.price.tiers, included })
+		: undefined;
+
 	return {
 		feature_id: item.feature_id,
-		granted_balance: item.included ?? 0,
+		granted_balance: included,
 		unlimited: item.unlimited ?? false,
 
 		reset: item.reset
@@ -40,7 +49,7 @@ export function planItemParamsV1ToPlanItemV0({
 		price: item.price
 			? {
 					amount: item.price.amount,
-					tiers: item.price.tiers,
+					tiers: internalTiers,
 					tier_behavior: item.price.tier_behavior,
 					interval: item.price.interval,
 					interval_count: item.price.interval_count,
