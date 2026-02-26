@@ -2,7 +2,11 @@ import { BillingMethod } from "@api/products/components/billingMethod";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import {
+	TierBehavior,
+	UsageTierSchema,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+
 import {
 	OnDecrease,
 	OnIncrease,
@@ -46,8 +50,9 @@ export const CreatePlanItemParamsV1Schema = z
 				}),
 				tiers: z.array(UsageTierSchema).optional().meta({
 					description:
-						"Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.",
+						"Tiered pricing.  Either 'amount' or 'tiers' is required.",
 				}),
+				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval).meta({
 					description:
@@ -154,6 +159,74 @@ export const CreatePlanItemParamsV1Schema = z
 				ctx.issues.push({
 					code: "custom",
 					message: "'amount' and 'tiers' cannot both be defined in 'price'.",
+					input: ctx.value.price,
+				});
+			}
+		}
+
+		if (ctx.value.price?.tiers) {
+			const hasFlatAmount = ctx.value.price.tiers.some(
+				(t) => t.flat_amount && t.flat_amount > 0,
+			);
+
+			if (
+				hasFlatAmount &&
+				ctx.value.price.tier_behavior !== TierBehavior.VolumeBased
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"flat_amount on tiers is only supported for volume-based pricing.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (hasFlatAmount && ctx.value.price.tiers.length <= 1) {
+				ctx.issues.push({
+					code: "custom",
+					message: "flat_amount is not supported on single-tier pricing.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (
+				ctx.value.price.tiers.some(
+					(t) => t.flat_amount != null && t.flat_amount < 0,
+				)
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "flat_amount must be 0 or greater.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (
+				ctx.value.price?.tier_behavior === TierBehavior.VolumeBased &&
+				ctx.value.price?.billing_method !== BillingMethod.Prepaid
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"volume-based pricing is only supported for prepaid features.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (ctx.value.price?.tiers.length === 0) {
+				ctx.issues.push({
+					code: "custom",
+					message: "tiers cannot be empty.",
+					input: ctx.value.price,
+				});
+			} else if (
+				ctx.value.included &&
+				typeof ctx.value.price?.tiers[0].to === "number" &&
+				ctx.value.price?.tiers[0].to <= ctx.value.included
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "tiers[0].to must be greater than included.",
 					input: ctx.value.price,
 				});
 			}

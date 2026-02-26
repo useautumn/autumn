@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	AttachParamsV1Input,
+	CheckResponseV3,
+} from "@autumn/shared";
+import { BillingMethod, TierInfinite } from "@autumn/shared";
 import {
 	expectCustomerFeatureCorrect,
 	expectCustomerFeatureExists,
@@ -392,5 +397,83 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: paid feature mix (co
 		customer,
 		count: 1,
 		latestTotal: preview.total,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("v2-customize attach: tiered prepaid with included (tiers include included)")}`, async () => {
+	const customerId = "v2-attach-customize-tiered-prepaid";
+
+	const base = products.base({
+		id: "base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, autumnV2, autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [base] }),
+		],
+		actions: [],
+	});
+
+	// Customize with tiered prepaid messages
+	// Tiers `to` INCLUDES included (200): [{to:700}, {to:"inf"}]
+	// Internally stored as [{to:500}, {to:"inf"}] (without included)
+	const params: AttachParamsV1Input = {
+		customer_id: customerId,
+		plan_id: base.id,
+		redirect_mode: "if_required",
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 700 }],
+		customize: {
+			price: null,
+			items: [
+				itemsV2.volumePrepaidMessages({
+					included: 200,
+					tiers: [
+						{ to: 700, amount: 10 },
+						{ to: TierInfinite, amount: 5 },
+					],
+				}),
+			],
+		},
+	};
+
+	const PREPAID_PRICE = 70; // 7 packs * 10
+	const preview =
+		await autumnV2.billing.previewAttach<AttachParamsV1Input>(params);
+	expect(preview.total).toBe(PREPAID_PRICE);
+
+	await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: base.id });
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 700,
+		balance: 700,
+		usage: 0,
+	});
+
+	// Verify via V2.1 check that balance.price tiers include included
+	const checkRes = (await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	})) as unknown as CheckResponseV3;
+
+	expect(checkRes.allowed).toBe(true);
+	const breakdown = checkRes.balance?.breakdown?.[0];
+	expect(breakdown?.price).toBeDefined();
+	expect(breakdown?.price?.billing_method).toBe(BillingMethod.Prepaid);
+	expect(breakdown?.price?.tiers).toEqual([
+		{ to: 700, amount: 10 },
+		{ to: "inf", amount: 5 },
+	]);
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: PREPAID_PRICE,
 	});
 });
