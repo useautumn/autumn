@@ -1,0 +1,36 @@
+DESCRIPTION >
+    Chunked backfill of organizations from Postgres into organizations.
+    Chunks by created_at (epoch ms). Cast numeric/timestamp columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                              AS id,
+        assumeNotNull(slug)                                            AS slug,
+        assumeNotNull(name)                                            AS name,
+        logo,
+        createdAt::String                                              AS created_at_ts,
+        metadata,
+        coalesce(default_currency, 'usd')                             AS default_currency,
+        if(stripe_connected = true, 1, 0)                             AS stripe_connected,
+        created_at::Int64                                              AS created_at,
+        if(onboarded = true, 1, 0)                                    AS onboarded,
+        if(deployed = true, 1, 0)                                     AS deployed,
+        'read'                                                        AS __action,
+        now()                                                         AS __commit_timestamp,
+        0                                                             AS __commit_lsn,
+        concat('backfill-', id)                                      AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'organizations',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE organizations

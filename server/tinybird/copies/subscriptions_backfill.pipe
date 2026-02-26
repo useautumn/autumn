@@ -1,0 +1,35 @@
+DESCRIPTION >
+    Chunked backfill of subscriptions from Postgres into subscriptions.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        coalesce(org_id, '')                                           AS org_id,
+        stripe_id,
+        stripe_schedule_id,
+        created_at::Int64                                               AS created_at,
+        ifNull(toString(metadata), '{}')                AS metadata,
+        arrayMap(x -> assumeNotNull(x), coalesce(usage_features, [])) AS usage_features,
+        env,
+        if(current_period_start IS NULL, NULL, current_period_start::Int64) AS current_period_start,
+        if(current_period_end IS NULL, NULL, current_period_end::Int64) AS current_period_end,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'subscriptions',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE subscriptions

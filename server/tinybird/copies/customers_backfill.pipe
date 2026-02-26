@@ -1,0 +1,37 @@
+DESCRIPTION >
+    Chunked backfill of customers from Postgres into customers.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        coalesce(internal_id, '')                                       AS internal_id,
+        coalesce(org_id, '')                                           AS org_id,
+        created_at::Int64                                               AS created_at,
+        name,
+        id,
+        email,
+        fingerprint,
+        coalesce(toString(metadata), '{}')                             AS metadata,
+        coalesce(env, '')                                              AS env,
+        coalesce(toString(processor), 'null')                          AS processor,
+        coalesce(toString(processors), '{}')                           AS processors,
+        if(coalesce(send_email_receipts, false) = true, 1, 0)          AS send_email_receipts,
+        'read'                                                         AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                              AS __commit_lsn,
+        concat('backfill-', coalesce(internal_id, ''))                AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'customers',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE customers

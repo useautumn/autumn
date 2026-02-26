@@ -124,7 +124,7 @@ function exec(cmd: string, silent = false): string {
 
 function execCapture(cmd: string): string {
 	try {
-		return execSync(cmd, { encoding: "utf-8", stderr: "pipe" }).trim();
+		return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 	} catch (error: any) {
 		return error.stdout?.trim() ?? "";
 	}
