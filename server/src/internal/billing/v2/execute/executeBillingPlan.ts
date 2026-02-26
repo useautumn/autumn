@@ -31,6 +31,7 @@ export const executeBillingPlan = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
+		stripeInvoice: stripeBillingResult.stripeInvoice,
 	});
 
 	// Queue webhooks after Autumn billing plan is executed
