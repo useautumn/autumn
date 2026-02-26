@@ -1,21 +1,27 @@
 "use client";
 
 import type {
-	BillingAttachResponse,
+	AttachResponse,
 	BillingUpdateResponse,
 	CheckResponse,
 	Customer,
+	MultiAttachResponse,
 	OpenCustomerPortalResponse,
 	PreviewAttachResponse,
+	PreviewMultiAttachResponse,
 	PreviewUpdateResponse,
+	SetupPaymentResponse,
 } from "@useautumn/sdk";
 import { useCallback } from "react";
 import type {
 	AttachParams,
 	CheckParams,
+	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
+	PreviewMultiAttachParams,
 	PreviewUpdateSubscriptionParams,
+	SetupPaymentParams,
 	UpdateSubscriptionParams,
 } from "../../../types";
 import type { IAutumnClient } from "../../client/IAutumnClient";
@@ -35,11 +41,6 @@ const redirectToUrl = ({
 	}
 };
 
-type SetupPaymentParams = {
-	successUrl?: string;
-	openInNewTab?: boolean;
-};
-
 export const useCustomerActions = ({
 	client,
 	customer,
@@ -48,7 +49,7 @@ export const useCustomerActions = ({
 	customer: Customer | null;
 }) => {
 	const attach = useCallback(
-		async (params: AttachParams): Promise<BillingAttachResponse> => {
+		async (params: AttachParams): Promise<AttachResponse> => {
 			const response = await client.attach({
 				...params,
 				successUrl: params.successUrl ?? window.location.href,
@@ -127,20 +128,41 @@ export const useCustomerActions = ({
 		[client],
 	);
 
-	const setupPayment = useCallback(
-		async (params: SetupPaymentParams = {}) => {
-			const setupPaymentClient = client as IAutumnClient & {
-				setupPayment: (args: { successUrl?: string }) => Promise<{
-					paymentUrl?: string | null;
-					url?: string;
-				}>;
-			};
-
-			const response = await setupPaymentClient.setupPayment({
+	const multiAttach = useCallback(
+		async (params: MultiAttachParams): Promise<MultiAttachResponse> => {
+			const response = await client.multiAttach({
+				...params,
 				successUrl: params.successUrl ?? window.location.href,
 			});
 
-			const redirectUrl = response.url ?? response.paymentUrl;
+			if (response.paymentUrl) {
+				redirectToUrl({
+					url: response.paymentUrl,
+					openInNewTab: params.openInNewTab,
+				});
+			}
+			return response;
+		},
+		[client],
+	);
+
+	const previewMultiAttach = useCallback(
+		async (
+			params: PreviewMultiAttachParams,
+		): Promise<PreviewMultiAttachResponse> => {
+			return client.previewMultiAttach(params);
+		},
+		[client],
+	);
+
+	const setupPayment = useCallback(
+		async (params: SetupPaymentParams = {}): Promise<SetupPaymentResponse> => {
+			const response = await client.setupPayment({
+				...params,
+				successUrl: params.successUrl ?? window.location.href,
+			});
+
+			const redirectUrl = response.url;
 			if (redirectUrl) {
 				redirectToUrl({
 					url: redirectUrl,
@@ -158,6 +180,8 @@ export const useCustomerActions = ({
 		previewAttach,
 		updateSubscription,
 		previewUpdateSubscription,
+		multiAttach,
+		previewMultiAttach,
 		check,
 		openCustomerPortal,
 		setupPayment,
@@ -167,8 +191,10 @@ export const useCustomerActions = ({
 export type {
 	AttachParams,
 	CheckParams,
+	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
+	PreviewMultiAttachParams,
 	PreviewUpdateSubscriptionParams,
 	SetupPaymentParams,
 	UpdateSubscriptionParams,

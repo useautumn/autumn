@@ -237,6 +237,7 @@ class Balances(BaseSDK):
         entity_id: Optional[str] = None,
         remaining: Optional[float] = None,
         add_to_balance: Optional[float] = None,
+        usage: Optional[float] = None,
         interval: Optional[models.UpdateBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -250,6 +251,7 @@ class Balances(BaseSDK):
         :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
         :param remaining: Set the remaining balance to this exact value. Cannot be combined with add_to_balance.
         :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
+        :param usage: The usage amount to update. Cannot be combined with remaining or add_to_balance.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -272,6 +274,7 @@ class Balances(BaseSDK):
             entity_id=entity_id,
             remaining=remaining,
             add_to_balance=add_to_balance,
+            usage=usage,
             interval=interval,
         )
 
@@ -342,6 +345,7 @@ class Balances(BaseSDK):
         entity_id: Optional[str] = None,
         remaining: Optional[float] = None,
         add_to_balance: Optional[float] = None,
+        usage: Optional[float] = None,
         interval: Optional[models.UpdateBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -355,6 +359,7 @@ class Balances(BaseSDK):
         :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
         :param remaining: Set the remaining balance to this exact value. Cannot be combined with add_to_balance.
         :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
+        :param usage: The usage amount to update. Cannot be combined with remaining or add_to_balance.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -377,6 +382,7 @@ class Balances(BaseSDK):
             entity_id=entity_id,
             remaining=remaining,
             add_to_balance=add_to_balance,
+            usage=usage,
             interval=interval,
         )
 

@@ -92,7 +92,16 @@ export type UpdatePlanToRequest = number | string;
 export type UpdatePlanTierRequest = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const UpdatePlanTierBehaviorRequest = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type UpdatePlanTierBehaviorRequest = ClosedEnum<
+  typeof UpdatePlanTierBehaviorRequest
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -135,9 +144,10 @@ export type UpdatePlanPriceRequest = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<UpdatePlanTierRequest> | undefined;
+  tierBehavior?: UpdatePlanTierBehaviorRequest | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -499,7 +509,16 @@ export type UpdatePlanToResponse = number | string;
 export type UpdatePlanTierResponse = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const UpdatePlanTierBehaviorResponse = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type UpdatePlanTierBehaviorResponse = OpenEnum<
+  typeof UpdatePlanTierBehaviorResponse
+>;
 
 /**
  * Billing interval for this price. For consumable features, should match reset.interval.
@@ -539,9 +558,10 @@ export type UpdatePlanItemPriceResponse = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+   * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
   tiers?: Array<UpdatePlanTierResponse> | undefined;
+  tierBehavior?: UpdatePlanTierBehaviorResponse | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
    */
@@ -691,6 +711,36 @@ export const UpdatePlanEnv = {
 export type UpdatePlanEnv = OpenEnum<typeof UpdatePlanEnv>;
 
 /**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export const UpdatePlanScenario = {
+  Scheduled: "scheduled",
+  Active: "active",
+  New: "new",
+  Renew: "renew",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  Cancel: "cancel",
+  Expired: "expired",
+  PastDue: "past_due",
+} as const;
+/**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export type UpdatePlanScenario = OpenEnum<typeof UpdatePlanScenario>;
+
+export type UpdatePlanCustomerEligibility = {
+  /**
+   * Whether a free trial is available for this customer.
+   */
+  trialAvailable?: boolean | undefined;
+  /**
+   * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+   */
+  scenario: UpdatePlanScenario;
+};
+
+/**
  * A plan defines a set of features, pricing, and entitlements that can be attached to customers.
  */
 export type UpdatePlanResponse = {
@@ -750,6 +800,7 @@ export type UpdatePlanResponse = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  customerEligibility?: UpdatePlanCustomerEligibility | undefined;
 };
 
 /** @internal */
@@ -845,16 +896,25 @@ export function updatePlanToRequestToJSON(
 export type UpdatePlanTierRequest$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const UpdatePlanTierRequest$outboundSchema: z.ZodMiniType<
   UpdatePlanTierRequest$Outbound,
   UpdatePlanTierRequest
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function updatePlanTierRequestToJSON(
   updatePlanTierRequest: UpdatePlanTierRequest,
@@ -863,6 +923,11 @@ export function updatePlanTierRequestToJSON(
     UpdatePlanTierRequest$outboundSchema.parse(updatePlanTierRequest),
   );
 }
+
+/** @internal */
+export const UpdatePlanTierBehaviorRequest$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanTierBehaviorRequest
+> = z.enum(UpdatePlanTierBehaviorRequest);
 
 /** @internal */
 export const UpdatePlanItemPriceIntervalRequest$outboundSchema: z.ZodMiniEnum<
@@ -878,6 +943,7 @@ export const UpdatePlanBillingMethodRequest$outboundSchema: z.ZodMiniEnum<
 export type UpdatePlanPriceRequest$Outbound = {
   amount?: number | undefined;
   tiers?: Array<UpdatePlanTierRequest$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -895,6 +961,7 @@ export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
     tiers: z.optional(
       z.array(z.lazy(() => UpdatePlanTierRequest$outboundSchema)),
     ),
+    tierBehavior: z.optional(UpdatePlanTierBehaviorRequest$outboundSchema),
     interval: UpdatePlanItemPriceIntervalRequest$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -903,6 +970,7 @@ export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
@@ -1339,10 +1407,18 @@ export function updatePlanToResponseFromJSON(
 export const UpdatePlanTierResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanTierResponse,
   unknown
-> = z.object({
-  to: smartUnion([types.number(), types.string()]),
-  amount: types.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
 
 export function updatePlanTierResponseFromJSON(
   jsonString: string,
@@ -1353,6 +1429,12 @@ export function updatePlanTierResponseFromJSON(
     `Failed to parse 'UpdatePlanTierResponse' from JSON`,
   );
 }
+
+/** @internal */
+export const UpdatePlanTierBehaviorResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanTierBehaviorResponse,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanTierBehaviorResponse);
 
 /** @internal */
 export const UpdatePlanPriceItemIntervalResponse$inboundSchema: z.ZodMiniType<
@@ -1376,6 +1458,7 @@ export const UpdatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
     tiers: types.optional(
       z.array(z.lazy(() => UpdatePlanTierResponse$inboundSchema)),
     ),
+    tier_behavior: types.optional(UpdatePlanTierBehaviorResponse$inboundSchema),
     interval: UpdatePlanPriceItemIntervalResponse$inboundSchema,
     interval_count: types.optional(types.number()),
     billing_units: types.number(),
@@ -1384,6 +1467,7 @@ export const UpdatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
       "billing_method": "billingMethod",
@@ -1541,6 +1625,38 @@ export const UpdatePlanEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanEnv);
 
 /** @internal */
+export const UpdatePlanScenario$inboundSchema: z.ZodMiniType<
+  UpdatePlanScenario,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanScenario);
+
+/** @internal */
+export const UpdatePlanCustomerEligibility$inboundSchema: z.ZodMiniType<
+  UpdatePlanCustomerEligibility,
+  unknown
+> = z.pipe(
+  z.object({
+    trial_available: types.optional(types.boolean()),
+    scenario: UpdatePlanScenario$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "trial_available": "trialAvailable",
+    });
+  }),
+);
+
+export function updatePlanCustomerEligibilityFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanCustomerEligibility, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanCustomerEligibility$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanCustomerEligibility' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanResponse,
   unknown
@@ -1560,6 +1676,9 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
     env: UpdatePlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    customer_eligibility: types.optional(
+      z.lazy(() => UpdatePlanCustomerEligibility$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1568,6 +1687,7 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
       "free_trial": "freeTrial",
       "created_at": "createdAt",
       "base_variant_id": "baseVariantId",
+      "customer_eligibility": "customerEligibility",
     });
   }),
 );

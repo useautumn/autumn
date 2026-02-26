@@ -75,6 +75,7 @@ export const billingPlanToPreviewResponse = ({
 	const periodEnd = firstLineWithPeriod?.context.billingPeriod?.end;
 
 	return {
+		object: "billing_preview" as const,
 		customer_id: fullCustomer.id || "",
 		line_items: previewImmediateLineItems,
 		total,

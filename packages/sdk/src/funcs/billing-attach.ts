@@ -60,6 +60,7 @@ import { Result } from "../types/fp.js";
  * @param successUrl - URL to redirect to after successful checkout. (optional)
  * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
  * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+ * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
  */
@@ -69,7 +70,7 @@ export function billingAttach(
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.BillingAttachResponse,
+    models.AttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -94,7 +95,7 @@ async function $do(
 ): Promise<
   [
     Result<
-      models.BillingAttachResponse,
+      models.AttachResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -137,7 +138,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "billingAttach",
+    operationID: "attach",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -176,7 +177,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.BillingAttachResponse,
+    models.AttachResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -186,7 +187,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.BillingAttachResponse$inboundSchema),
+    M.json(200, models.AttachResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

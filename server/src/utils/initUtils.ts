@@ -36,16 +36,6 @@ export const checkEnvVars = () => {
 		);
 	}
 
-	if (
-		!process.env.CLICKHOUSE_URL ||
-		!process.env.CLICKHOUSE_USERNAME ||
-		!process.env.CLICKHOUSE_PASSWORD
-	) {
-		logger.warn(
-			`CLICKHOUSE_URL or CLICKHOUSE_USERNAME or CLICKHOUSE_PASSWORD is not set, some actions will be skipped`,
-		);
-	}
-
 	if (!process.env.SVIX_API_KEY) {
 		logger.warn(`SVIX_API_KEY is not set, some actions will be skipped`);
 		return;

@@ -1,7 +1,9 @@
 import type { CreatePlanItemParamsV1 } from "@api/models";
 import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { featureUtils } from "@utils/featureUtils/index";
+import { subtractIncludedFromTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 import type { SharedContext } from "../../../../types/sharedContext";
 import type { ApiPlanItemV1 } from "../apiPlanItemV1";
 
@@ -22,6 +24,12 @@ export function planItemV1ToV0({
 		? featureUtils.isConsumable(feature)
 		: true;
 
+	// V1 API: tier `to` values INCLUDE included usage.
+	// Internal: tier `to` values do NOT include included usage.
+	const internalTiers = price?.tiers
+		? subtractIncludedFromTiers({ tiers: price.tiers, included })
+		: undefined;
+
 	return {
 		...restItem,
 		unlimited: item.unlimited ?? false,
@@ -36,7 +44,10 @@ export function planItemV1ToV0({
 		price: price
 			? {
 					amount: price.amount,
-					tiers: price.tiers,
+					tiers: internalTiers,
+					tier_behavior: internalTiers?.length
+						? (price.tier_behavior ?? TierBehavior.Graduated)
+						: undefined,
 					interval: price.interval,
 					interval_count: price.interval_count,
 					billing_units: billingUnits,
