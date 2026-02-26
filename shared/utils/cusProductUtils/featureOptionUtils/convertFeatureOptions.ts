@@ -7,14 +7,14 @@ import { Decimal } from "decimal.js";
 /**
  * Computes the Stripe subscription-item quantity for a V2 prepaid price.
  *
- * For **graduated** prices the allowance is encoded as a free leading tier in
- * the Stripe price object, so Stripe needs the *total* packs (purchased +
- * allowance) to bill correctly.
+ * Always returns total packs (purchased + allowance) for both graduated and
+ * volume pricing. The V2 Stripe price has a free leading tier that covers
+ * the allowance, so Stripe needs the full quantity to bill correctly.
  *
- * For **volume** prices the Stripe price has no free tier offset (the allowance
- * is tracked purely in Autumn), so only the purchased packs are sent. Stripe
- * then applies the single matching tier rate to the purchased quantity only,
- * which matches Autumn's own `volumeTiersToLineAmount` calculation.
+ * For **volume** prices: if total quantity exceeds the free tier, the ENTIRE
+ * quantity (including included) is charged at the matching paid tier's rate.
+ * This is the intended behavior — volume pricing does not subtract included
+ * usage before applying the tier rate.
  */
 export const featureOptionsToV2StripeQuantity = ({
 	featureOptions,
@@ -33,8 +33,6 @@ export const featureOptionsToV2StripeQuantity = ({
 		entitlement,
 	});
 
-	// Graduated: Stripe needs total packs (purchased + allowance) because the
-	// V2 price has a free leading tier that covers the allowance.
 	if (!packsExcludingAllowance) return allowanceInPacks;
 
 	return new Decimal(packsExcludingAllowance).add(allowanceInPacks).toNumber();

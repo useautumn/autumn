@@ -20,6 +20,7 @@ export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 		}
 
 		if (tier1.amount !== tier2.amount) return false;
+		if ((tier1.flat_amount ?? 0) !== (tier2.flat_amount ?? 0)) return false;
 	}
 	return true;
 };
