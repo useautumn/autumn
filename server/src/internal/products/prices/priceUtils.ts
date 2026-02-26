@@ -22,6 +22,8 @@ import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";
 
+export { getPriceForOverage } from "@autumn/shared";
+
 export const constructPrice = ({
 	internalProductId,
 	entitlementId,
@@ -228,52 +230,40 @@ export const getPriceOptions = (
 	return options;
 };
 
-export const getPriceForOverage = (price: Price, overage?: number) => {
+const pricesAreSame = (price1: Price, price2: Price) => {
+	for (const key in price1.config) {
+		const originalValue = (price1.config as any)[key];
+		const newValue = (price2.config as any)[key];
+
+		if (key === "usage_tiers") {
+			for (let i = 0; i < originalValue.length; i++) {
+				const originalTier = originalValue[i];
+				const newTier = newValue[i];
+				if (!compareObjects(originalTier, newTier)) {
+					return false;
+				}
+			}
+		} else if (originalValue !== newValue) {
+			return false;
+		}
+	}
+
+	return true;
+};
+
+const getUsageTier = (price: Price, quantity: number) => {
 	const usageConfig = price.config as UsagePriceConfig;
-	const billingType = getBillingType(usageConfig);
-
-	if (
-		billingType === BillingType.FixedCycle ||
-		billingType === BillingType.OneOff
-	) {
-		const config = price.config as FixedPriceConfig;
-		return config.amount;
-	}
-
-	let amount = 0;
-	const billingUnits = usageConfig.billing_units || 1;
-	let remainingUsage = new Decimal(
-		Math.ceil(new Decimal(overage!).div(billingUnits).toNumber()),
-	)
-		.mul(billingUnits)
-		.toNumber();
-
-	let lastTo: number = 0;
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		const tier = usageConfig.usage_tiers[i];
-
-		let amountUsed = 0;
-		if (tier.to === TierInfinite || tier.to === -1) {
-			amountUsed = remainingUsage;
-		} else {
-			amountUsed = Math.min(remainingUsage, tier.to - lastTo);
-			lastTo = tier.to;
+		if (i === usageConfig.usage_tiers.length - 1) {
+			return usageConfig.usage_tiers[i];
 		}
 
-		// Divide amount by billing units
-		const amountPerUnit = new Decimal(tier.amount)
-			.div(usageConfig.billing_units!)
-			.toNumber();
-
-		amount += amountPerUnit * amountUsed;
-		remainingUsage -= amountUsed;
-
-		if (remainingUsage <= 0) {
-			break;
+		const tier = usageConfig.usage_tiers[i];
+		if (tier.to === TierInfinite || tier.to >= quantity) {
+			return tier;
 		}
 	}
-
-	return Number(amount.toFixed(10));
+	return usageConfig.usage_tiers[0];
 };
 
 const priceToEventName = (productName: string, featureName: string) => {

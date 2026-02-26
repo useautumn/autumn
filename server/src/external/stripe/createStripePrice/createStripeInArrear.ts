@@ -138,10 +138,19 @@ export const priceToInArrearTiers = ({
 			currency: org.default_currency || undefined,
 		});
 
-		tiers.push({
+		const stripeTier: Record<string, unknown> = {
 			unit_amount_decimal: stripeUnitAmountDecimal,
 			up_to: tier.to === -1 ? "inf" : tier.to,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: org.default_currency || undefined,
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	return tiers;
@@ -271,12 +280,14 @@ export const createStripeInArrearPrice = async ({
 		...productData,
 		...priceAmountData,
 		currency: org.default_currency || "usd",
-		recurring: {
-			interval: recurringData.interval,
-			interval_count: recurringData.interval_count,
-			meter: meter.id,
-			usage_type: "metered",
-		},
+		recurring: recurringData?.interval
+			? {
+					interval: recurringData.interval,
+					interval_count: recurringData.interval_count,
+					meter: meter.id,
+					usage_type: "metered",
+				}
+			: undefined,
 		nickname: `Autumn Price (${relatedEnt.feature.name})`,
 	});
 

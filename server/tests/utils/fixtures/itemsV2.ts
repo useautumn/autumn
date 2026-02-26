@@ -4,6 +4,8 @@ import {
 	OnDecrease,
 	OnIncrease,
 	ResetInterval,
+	TierBehavior,
+	TierInfinite,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 
@@ -120,6 +122,61 @@ const allocatedUsers = ({
 	},
 });
 
+/**
+ * Tiered prepaid messages - tier `to` values INCLUDE the included amount.
+ * Default: included=100, tiers=[{to:600, amount:10}, {to:"inf", amount:5}]
+ * (internally stored as [{to:500}, {to:"inf"}] after subtracting included)
+ */
+const tieredPrepaidMessages = ({
+	included = 100,
+	billingUnits = 100,
+	tiers = [
+		{ to: 600, amount: 10 },
+		{ to: TierInfinite, amount: 5 },
+	],
+}: {
+	included?: number;
+	billingUnits?: number;
+	tiers?: { to: number | typeof TierInfinite; amount: number }[];
+} = {}) => ({
+	feature_id: TestFeature.Messages,
+	included,
+	price: {
+		tiers,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: billingUnits,
+	},
+});
+
+/**
+ * Volume prepaid messages - tier `to` values INCLUDE the included amount.
+ * Entire quantity is charged at whichever single tier it falls into.
+ * Default: included=100, tiers=[{to:600, amount:10}, {to:"inf", amount:5}]
+ */
+const volumePrepaidMessages = ({
+	included = 100,
+	billingUnits = 100,
+	tiers = [
+		{ to: 600, amount: 10 },
+		{ to: TierInfinite, amount: 5 },
+	],
+}: {
+	included?: number;
+	billingUnits?: number;
+	tiers?: { to: number | typeof TierInfinite; amount: number }[];
+} = {}) => ({
+	feature_id: TestFeature.Messages,
+	included,
+	price: {
+		tiers,
+		tier_behavior: TierBehavior.VolumeBased,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: billingUnits,
+	},
+});
+
 export const itemsV2 = {
 	monthlyPrice,
 	annualPrice,
@@ -130,4 +187,6 @@ export const itemsV2 = {
 	prepaidWords,
 	consumableMessages,
 	allocatedUsers,
+	tieredPrepaidMessages,
+	volumePrepaidMessages,
 } as const;
