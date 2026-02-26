@@ -58,52 +58,6 @@ export const getNewProductRollovers = async ({
 				continue;
 			}
 
-			// Bring over current balance (if greater > 0), and any existing rollover
-			// if (
-			//   oldCusEnt.balance &&
-			//   oldCusEnt.balance > 0 &&
-			//   !oldCusEnt.entitlement.entity_feature_id &&
-			//   rollover
-			// ) {
-			//   newRollovers.push({
-			//     id: generateId("roll"),
-			//     cus_ent_id: newCusEnt.id,
-			//     balance: oldCusEnt.balance,
-			//     entities: {},
-			//     usage: 0,
-			//     expires_at: calculateNextExpiry(Date.now(), rollover),
-			//   });
-			// } else if (
-			//   oldCusEnt.entitlement.entity_feature_id &&
-			//   oldCusEnt.entities
-			// ) {
-			//   const entityRollovers = Object.keys(oldCusEnt.entities || {}).reduce(
-			//     (acc, entityId) => {
-			//       const entityBalance = oldCusEnt.entities?.[entityId];
-			//       if (entityBalance && entityBalance.balance > 0) {
-			//         acc[entityId] = {
-			//           id: entityId,
-			//           balance: entityBalance.balance || 0,
-			//           usage: 0,
-			//         };
-			//       }
-			//       return acc;
-			//     },
-			//     {} as Record<string, { id: string; balance: number; usage: number }>
-			//   );
-
-			//   if (Object.keys(entityRollovers).length > 0) {
-			//     newRollovers.push({
-			//       id: generateId("roll"),
-			//       cus_ent_id: newCusEnt.id,
-			//       balance: 0,
-			//       entities: entityRollovers,
-			//       usage: 0,
-			//       expires_at: calculateNextExpiry(Date.now(), rollover),
-			//     });
-			//   }
-			// }
-
 			const curRollovers = oldCusEnt.rollovers;
 
 			for (const curRollover of curRollovers) {
@@ -113,8 +67,6 @@ export const getNewProductRollovers = async ({
 					cus_ent_id: newCusEnt.id,
 				});
 			}
-
-			console.log(`Feature ${newEnt?.feature_id} rollovers:`, newRollovers);
 
 			// // Add this entitlement's rollover operations
 			rolloverOperations.push({
