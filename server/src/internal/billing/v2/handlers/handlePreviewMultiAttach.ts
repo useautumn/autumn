@@ -42,6 +42,7 @@ export const handlePreviewMultiAttach = createRoute({
 		return c.json(
 			{
 				...previewResponse,
+				object: "attach_preview" as const,
 				incoming,
 				outgoing,
 				redirect_type: (billingContext as MultiAttachBillingContext)
