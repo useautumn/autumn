@@ -54,6 +54,7 @@ export const updateOneOffTieredItems = ({
 			direction: "charge",
 			now: Date.now(),
 			billingTiming: "in_advance",
+			customerProduct: autumnCusEnt.customer_product ?? undefined,
 		};
 
 		// Use usagePriceToLineItem to get amount and description

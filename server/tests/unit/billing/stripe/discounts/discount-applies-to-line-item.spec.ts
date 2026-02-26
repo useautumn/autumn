@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
-import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/db/lineItems";
 import chalk from "chalk";
 import { discountAppliesToLineItem } from "@/internal/billing/v2/providers/stripe/utils/discounts/discountAppliesToLineItem";
 

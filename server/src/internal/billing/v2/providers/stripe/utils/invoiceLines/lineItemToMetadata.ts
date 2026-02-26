@@ -5,6 +5,7 @@ import type Stripe from "stripe";
  * Converts a LineItem to Stripe metadata for invoice line items.
  *
  * Metadata includes:
+ * - autumn_line_item_id: The Autumn line item ID (for matching back from Stripe)
  * - autumn_product_id: The Autumn product ID
  * - autumn_price_id: The Autumn price ID
  * - stripe_product_id: The Stripe product ID (if available)
@@ -15,10 +16,11 @@ export const lineItemToMetadata = ({
 }: {
 	lineItem: LineItem;
 }): Stripe.MetadataParam => {
-	const { context, discounts } = lineItem;
+	const { id, context, discounts } = lineItem;
 	const { product, price } = context;
 
 	const metadata: Stripe.MetadataParam = {
+		autumn_line_item_id: id,
 		autumn_product_id: product.id,
 		autumn_price_id: price.id,
 	};

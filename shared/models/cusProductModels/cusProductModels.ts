@@ -59,7 +59,7 @@ export const CusProductSchema = z.object({
 			// subscription_schedule_id: z.string().optional().nullable(),
 			// last_invoice_id: z.string().optional().nullable(),
 		})
-		.optional(),
+		.nullish(),
 
 	quantity: z.number().default(1),
 	api_semver: z.enum(ApiVersion).nullable(),

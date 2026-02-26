@@ -31,7 +31,7 @@ export const InvoiceLineItemSchema = z.object({
 	description: z.string(),
 	direction: z.enum(["charge", "refund"]),
 	billing_timing: z.enum(["in_advance", "in_arrear"]).nullable(),
-	proration: z.boolean(),
+	prorated: z.boolean(),
 
 	// Autumn entity relationships
 	price_id: z.string().nullable(),

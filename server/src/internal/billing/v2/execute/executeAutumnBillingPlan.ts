@@ -1,20 +1,26 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
+import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
+// import { stripeLineItemToDbLineItem } from "@/internal/billing/v2/utils/lineItems/stripeLineItemToDbLineItem";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
+import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import { SubService } from "@/internal/subscriptions/SubService";
+import { stripeLineItemToDbLineItem } from "../providers/stripe/utils/invoiceLines/stripeLineItemToDbLineItem";
 
 export const executeAutumnBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
+	stripeInvoice,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	stripeInvoice?: Stripe.Invoice;
 }) => {
 	const { db } = ctx;
 	const {
@@ -97,6 +103,24 @@ export const executeAutumnBillingPlan = async ({
 		await InvoiceService.upsert({
 			db,
 			invoice: autumnBillingPlan.upsertInvoice,
+		});
+	}
+
+	// 8. Insert invoice line items (if invoice and stripeInvoice exist)
+	const autumnInvoice = autumnBillingPlan.upsertInvoice;
+	if (autumnInvoice && stripeInvoice && stripeInvoice.lines?.data) {
+		const dbLineItems = stripeInvoice.lines.data.map((stripeLineItem) =>
+			stripeLineItemToDbLineItem({
+				stripeLineItem,
+				invoiceId: autumnInvoice.id,
+				stripeInvoiceId: stripeInvoice.id,
+				autumnLineItems: autumnBillingPlan.lineItems,
+			}),
+		);
+
+		await invoiceLineItemRepo.insertMany({
+			db,
+			lineItems: dbLineItems,
 		});
 	}
 };

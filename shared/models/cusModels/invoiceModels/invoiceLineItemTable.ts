@@ -38,7 +38,7 @@ export const invoiceLineItems = pgTable(
 		description: text("description").notNull(),
 		direction: text("direction").notNull(), // "charge" or "refund"
 		billing_timing: text("billing_timing"), // "in_advance" or "in_arrear"
-		proration: boolean("proration").notNull().default(false),
+		prorated: boolean("prorated").notNull().default(false),
 
 		// Autumn entity relationships
 		price_id: text("price_id"), // External Autumn price ID

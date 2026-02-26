@@ -1,3 +1,4 @@
+import { generateKsuid } from "@autumn/ksuid";
 import type { LineItem } from "@autumn/shared";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -29,6 +30,7 @@ const create = ({
 	description?: string;
 	chargeImmediately?: boolean;
 }): LineItem => ({
+	id: generateKsuid({ prefix: "invoice_li_" }),
 	amount,
 	amountAfterDiscounts: amountAfterDiscounts ?? amount,
 	description,
@@ -43,6 +45,7 @@ const create = ({
 		now: Date.now(),
 		billingTiming: "in_advance",
 	},
+	prorated: false,
 });
 
 /**

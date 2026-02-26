@@ -87,6 +87,7 @@ export const customerProductToLineItems = ({
 			billingTiming: "in_advance",
 			now: currentEpochMs,
 			currency: orgToCurrency({ org: ctx.org }),
+			customerProduct,
 		};
 
 		if (isFixedPrice(price)) {

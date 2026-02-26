@@ -11,6 +11,7 @@ export const LineItemDiscountSchema = z.object({
 // Will be renamed to BillingLineItemSchema (used in the billing actions, different)
 export const LineItemSchema = z
 	.object({
+		id: z.string(),
 		amount: z.number(),
 
 		discounts: z.array(LineItemDiscountSchema).default([]),
@@ -32,6 +33,9 @@ export const LineItemSchema = z
 
 		// Trial deferral - item will be charged after trial ends
 		deferredForTrial: z.boolean().optional(),
+
+		// Whether this line item was prorated (mid-cycle change)
+		prorated: z.boolean().default(false),
 	})
 	.transform((data) => {
 		return {

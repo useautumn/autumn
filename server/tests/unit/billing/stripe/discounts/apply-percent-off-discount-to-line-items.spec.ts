@@ -11,8 +11,8 @@
 
 import { describe, expect, test } from "bun:test";
 import type { LineItem } from "@autumn/shared";
+import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
-import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/db/lineItems";
 import chalk from "chalk";
 import { applyPercentOffDiscountToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyPercentOffDiscountToLineItems";
 

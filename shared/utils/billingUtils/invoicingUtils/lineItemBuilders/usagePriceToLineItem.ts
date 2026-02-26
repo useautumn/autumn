@@ -77,6 +77,8 @@ export const usagePriceToLineItem = ({
 		price: cusPrice.price,
 		feature: cusEnt.entitlement.feature,
 		discountable: options.discountable ?? false,
+		customerProduct: cusEnt.customer_product ?? undefined,
+		customerEntitlement: cusEnt,
 	};
 
 	// 3. Generate description
