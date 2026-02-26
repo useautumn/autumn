@@ -24,6 +24,8 @@ export enum JobName {
 
 	BatchResetCusEnts = "batch-reset-cus-ents",
 
+	AutoTopUp = "auto-top-up",
+
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 }

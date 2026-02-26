@@ -45,6 +45,13 @@ export type BatchResetCusEntsPayload = {
 	}[];
 };
 
+export type AutoTopUpPayload = {
+	orgId: string;
+	env: AppEnv;
+	customerId: string;
+	featureId: string;
+};
+
 // ============ Workflow Registry ============
 
 type WorkflowRunner = "sqs" | "hatchet";
@@ -80,6 +87,11 @@ const workflowRegistry = {
 		jobName: JobName.BatchResetCusEnts,
 		runner: "sqs",
 	} as WorkflowConfig<BatchResetCusEntsPayload>,
+
+	autoTopUp: {
+		jobName: JobName.AutoTopUp,
+		runner: "sqs",
+	} as WorkflowConfig<AutoTopUpPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -151,4 +163,7 @@ export const workflows = {
 		payload: BatchResetCusEntsPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
+
+	triggerAutoTopUp: (payload: AutoTopUpPayload, options?: TriggerOptions) =>
+		triggerWorkflow({ name: "autoTopUp", payload, options }),
 };
