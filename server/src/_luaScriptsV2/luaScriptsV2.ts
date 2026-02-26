@@ -145,6 +145,19 @@ export const INCREMENT_CUS_ENT_BALANCE_SCRIPT = `${LUA_UTILS}
 ${incrementMainScript}`;
 
 // ============================================================================
+// UPDATE CUSTOMER PRODUCT OPTIONS SCRIPT
+// ============================================================================
+
+/**
+ * Lua script for atomically incrementing a cusProduct's options[].quantity
+ * in the cached FullCustomer via JSON.NUMINCRBY.
+ */
+export const UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT = readFileSync(
+	join(__dirname, "updateCusProductOptions.lua"),
+	"utf-8",
+);
+
+// ============================================================================
 // UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
 // ============================================================================
 

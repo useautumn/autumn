@@ -132,19 +132,17 @@ export const handleAutoTopUpJob = async ({
 		throw error;
 	}
 
-	// 7. Find feature object from context
-	const feature = ctx.features.find((f) => f.id === featureId);
-
-	if (!feature) {
-		logger.warn(
-			`[handleAutoTopUpJob] Feature ${featureId} not found in org features, skipping`,
-		);
-		await clearLock({ lockKey });
-		return;
-	}
-
-	// 8. Execute the top-up under the lock
+	// 7. Execute under the lock
 	try {
+		const feature = ctx.features.find((f) => f.id === featureId);
+
+		if (!feature) {
+			logger.warn(
+				`[handleAutoTopUpJob] Feature ${featureId} not found in org features, skipping`,
+			);
+			return;
+		}
+
 		const start = performance.now();
 		await executeAutoTopUp({
 			ctx,

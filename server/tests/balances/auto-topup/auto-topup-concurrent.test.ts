@@ -9,7 +9,7 @@ import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
 /** Wait time for SQS auto top-up processing (concurrent needs more time) */
-const AUTO_TOPUP_WAIT_MS = 10000;
+const AUTO_TOPUP_WAIT_MS = 20000;
 
 const makeAutoTopupConfig = ({
 	threshold = 20,

@@ -42,7 +42,14 @@ end
 
 local balance_path = base_path .. '.balance'
 
--- Atomic relative increment
-local new_balance = redis.call('JSON.NUMINCRBY', cache_key, balance_path, delta)
+-- Atomic relative increment (JSON.NUMINCRBY with $ path returns a JSON array e.g. "[105]")
+local result = redis.call('JSON.NUMINCRBY', cache_key, balance_path, delta)
+local new_balance = cjson.decode(result)[1]
 
-return cjson.encode({ ok = true, new_balance = tonumber(new_balance) })
+-- Bump cache_version so sync_balances_v2 conflict detection stays in sync
+-- with CusEntService.increment (which bumps Postgres cache_version atomically).
+local version_path = base_path .. '.cache_version'
+local version_result = redis.call('JSON.NUMINCRBY', cache_key, version_path, 1)
+local new_cache_version = cjson.decode(version_result)[1]
+
+return cjson.encode({ ok = true, new_balance = new_balance, new_cache_version = new_cache_version })
