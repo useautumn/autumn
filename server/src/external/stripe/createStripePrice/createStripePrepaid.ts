@@ -43,10 +43,19 @@ const prepaidToStripeTiers = ({
 				? "inf"
 				: Math.round(tier.to / billingUnits!);
 
-		tiers.push({
+		const stripeTier: Record<string, unknown> = {
 			unit_amount_decimal: amount,
 			up_to: upTo,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: org.default_currency || undefined,
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	return tiers;
@@ -84,9 +93,10 @@ export const createStripePrepaid = async ({
 	const config = price.config as UsagePriceConfig;
 
 	// 1. Product name
-	const productName = `${product.name} - ${
-		config.billing_units === 1 ? "" : `${config.billing_units} `
-	}${relatedEnt.feature.name}`;
+	// const productName = `${product.name} - ${
+	// 	config.billing_units === 1 ? "" : `${config.billing_units} `
+	// }${relatedEnt.feature.name}`;
+	const productName = `${product.name} - ${relatedEnt.feature.name}`;
 
 	const productData = curStripeProd
 		? { product: curStripeProd.id }

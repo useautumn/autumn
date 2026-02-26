@@ -108,8 +108,8 @@ export const pricesAreSame = (
 					usageConfig2.usage_tiers,
 				),
 				message: `Usage tiers different: ${usageConfig1.usage_tiers.map(
-					(t) => `${t.to} (${t.amount})`,
-				)} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount})`)}`,
+					(t) => `${t.to} (${t.amount}, flat: ${t.flat_amount ?? 0})`,
+				)} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount}, flat: ${t.flat_amount ?? 0})`)}`,
 			},
 		};
 

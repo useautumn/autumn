@@ -15,7 +15,7 @@ export const subtractIncludedFromTiers = ({
 	if (included === 0) return tiers;
 
 	return tiers.map((tier) => ({
-		amount: tier.amount,
+		...tier,
 		to:
 			typeof tier.to === "number" && tier.to > 0
 				? new Decimal(tier.to).minus(included).toNumber()
@@ -27,15 +27,13 @@ export const subtractIncludedFromTiers = ({
  * Adds included usage to tier `to` values (internal → user-facing).
  * Infinite (`"inf"`) tier `to` values are left unchanged.
  */
-export const addIncludedToTiers = <
-	T extends { to: number | string; amount: number },
->({
+export const addIncludedToTiers = ({
 	tiers,
 	included,
 }: {
-	tiers: T[];
+	tiers: UsageTier[];
 	included: number;
-}): T[] => {
+}): UsageTier[] => {
 	if (included === 0) return tiers;
 
 	return tiers.map((tier) => ({
@@ -47,21 +45,19 @@ export const addIncludedToTiers = <
 	}));
 };
 
-export const addAllowanceToTiers = <
-	T extends { to: number | "inf"; amount: number },
->({
+export const addAllowanceToTiers = ({
 	tiers,
 	allowance,
 }: {
-	tiers: T[];
+	tiers: UsageTier[];
 	allowance: number;
-}): T[] => {
+}): UsageTier[] => {
 	if (allowance === 0) return tiers;
 
-	const firstTier = {
+	const firstTier: UsageTier = {
 		to: allowance,
 		amount: 0,
-	} as T;
+	};
 
 	const tiersWithAllowance = addIncludedToTiers({
 		tiers,

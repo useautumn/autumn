@@ -165,9 +165,22 @@ export const CreatePlanItemParamsV1Schema = z
 		}
 
 		if (ctx.value.price?.tiers) {
-			console.log("Tiers:", ctx.value.price?.tiers);
-			console.log("Tier behavior:", ctx.value.price?.tier_behavior);
-			console.log("Billing method:", ctx.value.price?.billing_method);
+			const hasFlatAmount = ctx.value.price.tiers.some(
+				(t) => t.flat_amount && t.flat_amount > 0,
+			);
+
+			if (
+				hasFlatAmount &&
+				ctx.value.price.tier_behavior !== TierBehavior.VolumeBased
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"flat_amount on tiers is only supported for volume-based pricing.",
+					input: ctx.value.price,
+				});
+			}
+
 			if (
 				ctx.value.price?.tier_behavior === TierBehavior.VolumeBased &&
 				ctx.value.price?.billing_method !== BillingMethod.Prepaid

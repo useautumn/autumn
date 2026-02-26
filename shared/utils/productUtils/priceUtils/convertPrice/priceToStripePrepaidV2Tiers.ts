@@ -1,6 +1,6 @@
 import type { Organization } from "@models/orgModels/orgTable";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
-import { type UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
 import {
@@ -66,10 +66,19 @@ export const priceToStripePrepaidV2Tiers = ({
 			upTo = tier.to + entitlement.allowance;
 		}
 
-		tiers.push({
+		const stripeTier: Stripe.PriceCreateParams.Tier = {
 			unit_amount_decimal: stripeUnitAmountDecimal,
 			up_to: isFinalTier(tier) ? "inf" : upTo,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: orgToCurrency({ org }),
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	// Divide all tiers by billing units

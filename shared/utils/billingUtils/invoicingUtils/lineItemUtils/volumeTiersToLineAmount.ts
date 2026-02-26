@@ -54,6 +54,10 @@ export const volumeTiersToLineAmount = ({
 			// Assume the total amount is THIS tier's cost * the usage
 			const rate = new Decimal(tier.amount).div(billingUnits);
 			amount = rate.mul(roundedUsage);
+			// Add the flat fee for this tier if present
+			if (tier.flat_amount) {
+				amount = amount.plus(tier.flat_amount);
+			}
 			// Do not consider each tier individually, just use the total amount for this tier.
 			break;
 		}

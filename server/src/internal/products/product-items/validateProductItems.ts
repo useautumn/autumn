@@ -148,7 +148,7 @@ const validateProductItem = ({
 	if (isFeaturePriceItem(item) && item.tiers) {
 		if (
 			item.tiers.some((x) => {
-				return x.amount <= 0;
+				return x.amount <= 0 && (x.flat_amount ?? 0) <= 0;
 			})
 		) {
 			throw new RecaseError({
