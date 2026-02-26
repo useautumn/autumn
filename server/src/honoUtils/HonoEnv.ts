@@ -5,7 +5,6 @@ import type {
 	Feature,
 	Organization,
 } from "@autumn/shared";
-import type { ClickHouseClient } from "@clickhouse/client";
 import type { User } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
@@ -23,7 +22,6 @@ export type RequestContext = {
 	// Objects
 	db: DrizzleCli;
 	logger: Logger;
-	clickhouseClient?: ClickHouseClient;
 
 	// Info
 	id: string;
