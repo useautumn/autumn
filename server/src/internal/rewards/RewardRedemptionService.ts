@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	customers,
 	ErrCode,
 	type RewardRedemption,
@@ -13,12 +14,30 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class RewardRedemptionService {
-	static async getById({ db, id }: { db: DrizzleCli; id: string }) {
+	static async getById({
+		db,
+		id,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		orgId: string;
+		env: AppEnv;
+	}) {
 		const data = await db.query.rewardRedemptions.findFirst({
 			where: eq(rewardRedemptions.id, id),
+			with: {
+				customer: true,
+			},
 		});
 
-		if (!data) {
+		if (
+			!data ||
+			!data.customer ||
+			data.customer.org_id !== orgId ||
+			data.customer.env !== env
+		) {
 			throw new RecaseError({
 				code: ErrCode.RewardRedemptionNotFound,
 				message: `Reward redemption ${id} not found`,

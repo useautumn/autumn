@@ -65,6 +65,14 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		if (notNullish(params.next_reset_at) && params.customer_entitlement_id) {
+			// Validate the customer entitlement belongs to this org before updating
+			await CusEntService.getStrict({
+				db: ctx.db,
+				id: params.customer_entitlement_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+
 			await CusEntService.update({
 				ctx,
 				id: params.customer_entitlement_id,
