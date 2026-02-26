@@ -92,10 +92,6 @@ export const createStripePrepaid = async ({
 
 	const config = price.config as UsagePriceConfig;
 
-	// 1. Product name
-	// const productName = `${product.name} - ${
-	// 	config.billing_units === 1 ? "" : `${config.billing_units} `
-	// }${relatedEnt.feature.name}`;
 	const productName = `${product.name} - ${relatedEnt.feature.name}`;
 
 	const productData = curStripeProd

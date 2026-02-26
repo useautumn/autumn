@@ -59,6 +59,9 @@ export const usagePriceToLineItem = ({
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
 
+	// Volume pricing: the total quantity (purchased + allowance) determines
+	// which tier applies, and the ENTIRE total is charged at that tier's rate.
+	// So we add allowance back to overage before pricing.
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 	if (isVolumePrice(cusPrice.price)) {
 		overage = new Decimal(overage).add(allowance).toNumber();

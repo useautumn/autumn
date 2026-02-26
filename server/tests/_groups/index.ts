@@ -44,8 +44,6 @@ const allGroups: TestGroup[] = [
 	webhooks,
 	advanced,
 	misc,
-
-	prepaidVolume,
 ];
 
 export const getAllGroups = (): TestGroup[] => allGroups;

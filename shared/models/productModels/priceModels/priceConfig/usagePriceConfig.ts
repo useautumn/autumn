@@ -16,7 +16,7 @@ export enum TierBehavior {
 export const UsageTierSchema = z.object({
 	to: z.number().or(z.literal(Infinite)),
 	amount: z.number(),
-	flat_amount: z.number().optional(), // defaults to 0
+	flat_amount: z.number().nullish(),
 });
 
 export type UsageTier = z.infer<typeof UsageTierSchema>;

@@ -181,6 +181,26 @@ export const CreatePlanItemParamsV1Schema = z
 				});
 			}
 
+			if (hasFlatAmount && ctx.value.price.tiers.length <= 1) {
+				ctx.issues.push({
+					code: "custom",
+					message: "flat_amount is not supported on single-tier pricing.",
+					input: ctx.value.price,
+				});
+			}
+
+			if (
+				ctx.value.price.tiers.some(
+					(t) => t.flat_amount != null && t.flat_amount < 0,
+				)
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "flat_amount must be 0 or greater.",
+					input: ctx.value.price,
+				});
+			}
+
 			if (
 				ctx.value.price?.tier_behavior === TierBehavior.VolumeBased &&
 				ctx.value.price?.billing_method !== BillingMethod.Prepaid
