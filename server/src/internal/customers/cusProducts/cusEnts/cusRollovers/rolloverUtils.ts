@@ -40,6 +40,7 @@ export const getRolloverUpdates = ({
 		usage: 0,
 		expires_at: nextExpiry,
 		entities: {},
+		created_at: new Date(),
 	};
 
 	if (notNullish(ent.entity_feature_id)) {
