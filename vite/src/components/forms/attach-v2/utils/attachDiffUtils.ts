@@ -38,7 +38,9 @@ function tiersAreEqual({
 
 	return tiersA.every(
 		(tier, index) =>
-			tier.amount === tiersB[index]?.amount && tier.to === tiersB[index]?.to,
+			tier.amount === tiersB[index]?.amount &&
+			tier.to === tiersB[index]?.to &&
+			(tier.flat_amount ?? 0) === (tiersB[index]?.flat_amount ?? 0),
 	);
 }
 
