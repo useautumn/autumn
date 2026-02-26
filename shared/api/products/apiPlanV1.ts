@@ -116,10 +116,7 @@ export const ApiPlanV1Schema = z.object({
 					"The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).",
 			}),
 		})
-		.optional()
-		.meta({
-			internal: true,
-		}),
+		.optional(),
 });
 
 export type ApiPlanV1 = z.infer<typeof ApiPlanV1Schema>;

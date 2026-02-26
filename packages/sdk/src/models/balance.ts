@@ -126,7 +126,20 @@ export type BalanceTo = number | string;
 export type BalanceTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+/**
+ * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
+ */
+export const BalanceTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+/**
+ * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
+ */
+export type BalanceTierBehavior = OpenEnum<typeof BalanceTierBehavior>;
 
 /**
  * Whether usage is prepaid or billed pay-per-use.
@@ -149,6 +162,10 @@ export type BalancePrice = {
    * Tiered pricing configuration if applicable.
    */
   tiers?: Array<BalanceTier> | undefined;
+  /**
+   * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
+   */
+  tierBehavior?: BalanceTierBehavior | undefined;
   /**
    * The number of units per billing increment (eg. $9 / 250 units).
    */
@@ -411,10 +428,18 @@ export function balanceToFromJSON(
 
 /** @internal */
 export const BalanceTier$inboundSchema: z.ZodMiniType<BalanceTier, unknown> = z
-  .object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-  });
+  .pipe(
+    z.object({
+      to: smartUnion([types.number(), types.string()]),
+      amount: types.number(),
+      flat_amount: z.optional(z.nullable(types.number())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "flat_amount": "flatAmount",
+      });
+    }),
+  );
 
 export function balanceTierFromJSON(
   jsonString: string,
@@ -425,6 +450,12 @@ export function balanceTierFromJSON(
     `Failed to parse 'BalanceTier' from JSON`,
   );
 }
+
+/** @internal */
+export const BalanceTierBehavior$inboundSchema: z.ZodMiniType<
+  BalanceTierBehavior,
+  unknown
+> = openEnums.inboundSchema(BalanceTierBehavior);
 
 /** @internal */
 export const BalanceBillingMethod$inboundSchema: z.ZodMiniType<
@@ -438,12 +469,14 @@ export const BalancePrice$inboundSchema: z.ZodMiniType<BalancePrice, unknown> =
     z.object({
       amount: types.optional(types.number()),
       tiers: types.optional(z.array(z.lazy(() => BalanceTier$inboundSchema))),
+      tier_behavior: types.optional(BalanceTierBehavior$inboundSchema),
       billing_units: types.number(),
       billing_method: BalanceBillingMethod$inboundSchema,
       max_purchase: types.nullable(types.number()),
     }),
     z.transform((v) => {
       return remap$(v, {
+        "tier_behavior": "tierBehavior",
         "billing_units": "billingUnits",
         "billing_method": "billingMethod",
         "max_purchase": "maxPurchase",

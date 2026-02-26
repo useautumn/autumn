@@ -672,12 +672,20 @@ components:
                                 - const: inf
                             amount:
                               type: number
+                            flat_amount:
+                              anyOf:
+                                - type: number
+                                - type: "null"
                           required:
                             - to
                             - amount
-                        description: Tiered pricing configuration. Each tier's 'up_to' does NOT include
-                          the included amount. Either 'tiers' or 'amount' is
+                        description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                          included amount. Either 'tiers' or 'amount' is
                           required.
+                      tier_behavior:
+                        enum:
+                          - graduated
+                          - volume
                       interval:
                         enum:
                           - one_off
@@ -798,6 +806,27 @@ components:
             - type: string
             - type: "null"
           description: If this is a variant, the ID of the base plan it was created from.
+        customer_eligibility:
+          type: object
+          properties:
+            trial_available:
+              type: boolean
+              description: Whether a free trial is available for this customer.
+            scenario:
+              enum:
+                - scheduled
+                - active
+                - new
+                - renew
+                - upgrade
+                - downgrade
+                - cancel
+                - expired
+                - past_due
+              description: The attach scenario for this customer (e.g. new_subscription,
+                upgrade, downgrade).
+          required:
+            - scenario
       required:
         - id
         - name
@@ -996,10 +1025,20 @@ components:
                                 - const: inf
                             amount:
                               type: number
+                            flat_amount:
+                              anyOf:
+                                - type: number
+                                - type: "null"
                           required:
                             - to
                             - amount
                         description: Tiered pricing configuration if applicable.
+                      tier_behavior:
+                        enum:
+                          - graduated
+                          - volume
+                        description: "How tiers are applied: graduated (split across bands) or volume
+                          (flat rate for the matched tier)."
                       billing_units:
                         type: number
                         description: The number of units per billing increment (eg. $9 / 250 units).
@@ -2104,11 +2143,18 @@ paths:
                                     - const: inf
                                 amount:
                                   type: number
+                                flat_amount:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
                               required:
                                 - to
                                 - amount
-                            description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                              Either 'amount' or 'tiers' is required.
+                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                          tier_behavior:
+                            enum:
+                              - graduated
+                              - volume
                           interval:
                             enum:
                               - one_off
@@ -2451,12 +2497,20 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include
-                                    the included amount. Either 'tiers' or
-                                    'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                                    included amount. Either 'tiers' or 'amount'
+                                    is required.
+                                tier_behavior:
+                                  enum:
+                                    - graduated
+                                    - volume
                                 interval:
                                   enum:
                                     - one_off
@@ -2579,6 +2633,27 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription,
+                          upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -2927,12 +3002,20 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include
-                                    the included amount. Either 'tiers' or
-                                    'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                                    included amount. Either 'tiers' or 'amount'
+                                    is required.
+                                tier_behavior:
+                                  enum:
+                                    - graduated
+                                    - volume
                                 interval:
                                   enum:
                                     - one_off
@@ -3055,6 +3138,27 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription,
+                          upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -3383,12 +3487,20 @@ paths:
                                                 - const: inf
                                             amount:
                                               type: number
+                                            flat_amount:
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
                                           required:
                                             - to
                                             - amount
-                                        description: Tiered pricing configuration. Each tier's 'up_to' does NOT include
-                                          the included amount. Either 'tiers' or
+                                        description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                                          included amount. Either 'tiers' or
                                           'amount' is required.
+                                      tier_behavior:
+                                        enum:
+                                          - graduated
+                                          - volume
                                       interval:
                                         enum:
                                           - one_off
@@ -3513,6 +3625,27 @@ paths:
                             - type: string
                             - type: "null"
                           description: If this is a variant, the ID of the base plan it was created from.
+                        customer_eligibility:
+                          type: object
+                          properties:
+                            trial_available:
+                              type: boolean
+                              description: Whether a free trial is available for this customer.
+                            scenario:
+                              enum:
+                                - scheduled
+                                - active
+                                - new
+                                - renew
+                                - upgrade
+                                - downgrade
+                                - cancel
+                                - expired
+                                - past_due
+                              description: The attach scenario for this customer (e.g. new_subscription,
+                                upgrade, downgrade).
+                          required:
+                            - scenario
                       required:
                         - id
                         - name
@@ -3732,11 +3865,18 @@ paths:
                                     - const: inf
                                 amount:
                                   type: number
+                                flat_amount:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
                               required:
                                 - to
                                 - amount
-                            description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                              Either 'amount' or 'tiers' is required.
+                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                          tier_behavior:
+                            enum:
+                              - graduated
+                              - volume
                           interval:
                             enum:
                               - one_off
@@ -4065,12 +4205,20 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include
-                                    the included amount. Either 'tiers' or
-                                    'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                                    included amount. Either 'tiers' or 'amount'
+                                    is required.
+                                tier_behavior:
+                                  enum:
+                                    - graduated
+                                    - volume
                                 interval:
                                   enum:
                                     - one_off
@@ -4193,6 +4341,27 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription,
+                          upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -5163,7 +5332,7 @@ paths:
             res = autumn.features.delete(feature_id="old-feature")
   /v1/billing.attach:
     post:
-      operationId: billingAttach
+      operationId: attach
       description: >-
         Attaches a plan to a customer. Handles new subscriptions, upgrades and
         downgrades.
@@ -5301,11 +5470,18 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                                  Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
                               interval:
                                 enum:
                                   - one_off
@@ -5475,6 +5651,13 @@ paths:
                     'end_of_cycle' schedules for the end of the current billing
                     cycle. By default, upgrades are immediate and downgrades are
                     scheduled.
+                checkout_session_params:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional parameters to pass into the creation of the Stripe
+                    checkout session.
               required:
                 - customer_id
                 - plan_id
@@ -5591,6 +5774,503 @@ paths:
             res = autumn.billing.attach(
                 customer_id="cus_123",
                 plan_id="pro_plan",
+            )
+  /v1/billing.multi_attach:
+    post:
+      operationId: multiAttach
+      description: >-
+        Attaches multiple plans to a customer in a single request. Creates a
+        single Stripe subscription with all plans consolidated.
+
+
+        Use this endpoint when you need to subscribe a customer to multiple
+        plans at once, such as a base plan plus add-ons, or to create a bundle
+        of products.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to attach the plans to.
+                entity_id:
+                  type: string
+                  description: The ID of the entity to attach the plans to.
+                plans:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: The ID of the plan to attach.
+                      customize:
+                        type: object
+                        properties:
+                          price:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  amount:
+                                    type: number
+                                    description: Base price amount for the plan.
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    description: Billing interval (e.g. 'month', 'year').
+                                  interval_count:
+                                    type: number
+                                    description: Number of intervals per billing cycle. Defaults to 1.
+                                required:
+                                  - amount
+                                  - interval
+                                title: BasePrice
+                                description: Base price configuration for a plan.
+                              - type: "null"
+                            description: Override the base price of the plan. Pass null to remove the base
+                              price.
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                feature_id:
+                                  type: string
+                                  description: The ID of the feature to configure.
+                                included:
+                                  type: number
+                                  description: Number of free units included. Balance resets to this each interval
+                                    for consumable features.
+                                unlimited:
+                                  type: boolean
+                                  description: If true, customer has unlimited access to this feature.
+                                reset:
+                                  type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                        consumable features only.
+                                    interval_count:
+                                      type: number
+                                      description: Number of intervals between resets. Defaults to 1.
+                                  required:
+                                    - interval
+                                  description: Reset configuration for consumable features. Omit for
+                                    non-consumable features like seats.
+                                price:
+                                  type: object
+                                  properties:
+                                    amount:
+                                      type: number
+                                      description: Price per billing_units after included usage. Either 'amount' or
+                                        'tiers' is required.
+                                    tiers:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          to:
+                                            anyOf:
+                                              - type: number
+                                              - const: inf
+                                          amount:
+                                            type: number
+                                          flat_amount:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
+                                        required:
+                                          - to
+                                          - amount
+                                      description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                    tier_behavior:
+                                      enum:
+                                        - graduated
+                                        - volume
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      description: Billing interval. For consumable features, should match
+                                        reset.interval.
+                                    interval_count:
+                                      type: number
+                                      default: 1
+                                      description: Number of intervals per billing cycle. Defaults to 1.
+                                    billing_units:
+                                      type: number
+                                      default: 1
+                                      description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                        billing_units=100 means 101 rounds to
+                                        200).
+                                    billing_method:
+                                      enum:
+                                        - prepaid
+                                        - usage_based
+                                      description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                        pay-as-you-go."
+                                    max_purchase:
+                                      type: number
+                                      description: Max units purchasable beyond included. E.g. included=100,
+                                        max_purchase=300 allows 400 total.
+                                  required:
+                                    - interval
+                                    - billing_method
+                                  description: Pricing for usage beyond included units. Omit for free features.
+                                proration:
+                                  type: object
+                                  properties:
+                                    on_increase:
+                                      enum:
+                                        - bill_immediately
+                                        - prorate_immediately
+                                        - prorate_next_cycle
+                                        - bill_next_cycle
+                                      description: Billing behavior when quantity increases mid-cycle.
+                                    on_decrease:
+                                      enum:
+                                        - prorate
+                                        - prorate_immediately
+                                        - prorate_next_cycle
+                                        - none
+                                        - no_prorations
+                                      description: Credit behavior when quantity decreases mid-cycle.
+                                  required:
+                                    - on_increase
+                                    - on_decrease
+                                  description: Proration settings for prepaid features. Controls mid-cycle
+                                    quantity change billing.
+                                rollover:
+                                  type: object
+                                  properties:
+                                    max:
+                                      type: number
+                                      description: Max rollover units. Omit for unlimited rollover.
+                                    expiry_duration_type:
+                                      enum:
+                                        - month
+                                        - forever
+                                      description: When rolled over units expire.
+                                    expiry_duration_length:
+                                      type: number
+                                      description: Number of periods before expiry.
+                                  required:
+                                    - expiry_duration_type
+                                  description: Rollover config for unused units. If set, unused included units
+                                    carry over.
+                              required:
+                                - feature_id
+                              title: PlanItem
+                              description: Configuration for a feature item in a plan, including usage limits,
+                                pricing, and rollover settings.
+                            description: Override the items in the plan.
+                        description: Customize the plan to attach. Can override the price or items.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The ID of the feature to set quantity for.
+                            quantity:
+                              type: number
+                              minimum: 0
+                              description: The quantity of the feature.
+                            adjustable:
+                              type: boolean
+                              description: Whether the customer can adjust the quantity.
+                          required:
+                            - feature_id
+                          title: FeatureQuantity
+                          description: Quantity configuration for a prepaid feature.
+                        description: If this plan contains prepaid features, use this field to specify
+                          the quantity of each prepaid feature.
+                      version:
+                        type: number
+                        description: The version of the plan to attach.
+                    required:
+                      - plan_id
+                  description: The list of plans to attach to the customer.
+                free_trial:
+                  anyOf:
+                    - type: object
+                      properties:
+                        duration_length:
+                          type: number
+                          description: Number of duration_type periods the trial lasts.
+                        duration_type:
+                          enum:
+                            - day
+                            - month
+                            - year
+                          default: month
+                          description: Unit of time for the trial ('day', 'month', 'year').
+                        card_required:
+                          type: boolean
+                          default: true
+                          description: If true, payment method required to start trial. Customer is
+                            charged after trial ends.
+                      required:
+                        - duration_length
+                      title: FreeTrialParams
+                      description: Free trial configuration for a plan.
+                    - type: "null"
+                  description: Free trial configuration applied to all plans. Pass an object to
+                    set a custom trial, or null to remove any trial.
+                invoice_mode:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: When true, creates an invoice and sends it to the customer instead
+                        of charging their card immediately. Uses Stripe's
+                        send_invoice collection method.
+                    enable_plan_immediately:
+                      type: boolean
+                      default: false
+                      description: If true, enables the plan immediately even though the invoice is
+                        not paid yet.
+                    finalize:
+                      type: boolean
+                      default: true
+                      description: If true, finalizes the invoice so it can be sent to the customer.
+                        If false, keeps it as a draft for manual review.
+                  required:
+                    - enabled
+                  description: Invoice mode creates a draft or open invoice and sends it to the
+                    customer, instead of charging their card immediately.
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
+                    description: A discount to apply. Can be either a reward ID or a promotion code.
+                  description: List of discounts to apply. Each discount can be an Autumn reward
+                    ID, Stripe coupon ID, or Stripe promotion code.
+                success_url:
+                  type: string
+                  description: URL to redirect to after successful checkout.
+                checkout_session_params:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional parameters to pass into the creation of the Stripe
+                    checkout session.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even
+                    if payment succeeds, 'if_required' only when payment action
+                    is needed, 'never' disables redirects.
+                  default: if_required
+                new_billing_subscription:
+                  type: boolean
+                  description: Only applicable when the customer has an existing Stripe
+                    subscription. If true, creates a new separate subscription
+                    instead of merging into the existing one.
+                customer_data:
+                  $ref: "#/components/schemas/CustomerData"
+                entity_data:
+                  type: object
+                  properties:
+                    feature_id:
+                      type: string
+                      description: The feature ID that this entity is associated with
+                    name:
+                      type: string
+                      description: Name of the entity
+                  required:
+                    - feature_id
+              required:
+                - customer_id
+                - plans
+              title: MultiAttachParams
+              examples:
+                - &a28
+                  customer_id: cus_123
+                  plans:
+                    - plan_id: pro_plan
+                    - plan_id: addon_seats
+                      feature_quantities:
+                        - feature_id: seats
+                          quantity: 5
+            example: *a28
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if the plan was attached to an entity.
+                  invoice:
+                    type: object
+                    properties:
+                      status:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The status of the invoice (e.g., 'paid', 'open', 'draft').
+                      stripe_id:
+                        type: string
+                        description: The Stripe invoice ID.
+                      total:
+                        type: number
+                        description: The total amount of the invoice in cents.
+                      currency:
+                        type: string
+                        description: The three-letter ISO currency code (e.g., 'usd').
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL to the hosted invoice page where the customer can view and pay
+                          the invoice.
+                    required:
+                      - status
+                      - stripe_id
+                      - total
+                      - currency
+                      - hosted_invoice_url
+                    description: Invoice details if an invoice was created. Only present when a
+                      charge was made.
+                  payment_url:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: URL to redirect the customer to complete payment. Null if no
+                      payment action is required.
+                  required_action:
+                    type: object
+                    properties:
+                      code:
+                        enum:
+                          - 3ds_required
+                          - payment_method_required
+                          - payment_failed
+                        description: The type of action required to complete the payment.
+                      reason:
+                        type: string
+                        description: A human-readable explanation of why this action is required.
+                    required:
+                      - code
+                      - reason
+                    description: Details about any action required to complete the payment. Present
+                      when the payment could not be processed automatically.
+                required:
+                  - customer_id
+                  - payment_url
+                examples:
+                  - &a29
+                    customer_id: cus_123
+                    invoice:
+                      status: paid
+                      stripe_id: in_1234
+                      total: 4900
+                      currency: usd
+                      hosted_invoice_url: https://invoice.stripe.com/...
+                    payment_url: null
+              example: *a29
+      x-speakeasy-name-override: multiAttach
+      parameters:
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "2.1"
+          x-speakeasy-globals-hidden: true
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.billing.multiAttach({
+              customerId: "cus_123",
+              plans: [
+                {
+                  planId: "pro_plan",
+                },
+                {
+                  planId: "addon_seats",
+                  featureQuantities: [
+                    {
+                      featureId: "seats",
+                      quantity: 5,
+                    },
+                  ],
+                },
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.billing.multi_attach(
+                customer_id="cus_123",
+                plans=[
+                    {
+                        "plan_id": "pro_plan",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "feature_quantities": [
+                            {
+                                "feature_id": "seats",
+                                "quantity": 5,
+                            },
+                        ],
+                    },
+                ],
+                redirect_mode="if_required",
             )
   /v1/billing.preview_attach:
     post:
@@ -5732,11 +6412,18 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                                  Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
                               interval:
                                 enum:
                                   - one_off
@@ -5906,15 +6593,22 @@ paths:
                     'end_of_cycle' schedules for the end of the current billing
                     cycle. By default, upgrades are immediate and downgrades are
                     scheduled.
+                checkout_session_params:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional parameters to pass into the creation of the Stripe
+                    checkout session.
               required:
                 - customer_id
                 - plan_id
               title: PreviewAttachParams
               examples:
-                - &a28
+                - &a30
                   customer_id: cus_123
                   plan_id: pro_plan
-            example: *a28
+            example: *a30
       responses:
         "200":
           description: OK
@@ -5988,7 +6682,7 @@ paths:
                   - total
                   - currency
                 examples:
-                  - &a29
+                  - &a31
                     customerId: charles
                     lineItems:
                       - title: Pro seed
@@ -5997,7 +6691,7 @@ paths:
                         discounts: []
                     total: 20
                     currency: usd
-              example: *a29
+              example: *a31
       x-speakeasy-name-override: previewAttach
       parameters:
         - name: x-api-version
@@ -6029,6 +6723,503 @@ paths:
             res = autumn.billing.preview_attach(
                 customer_id="cus_123",
                 plan_id="pro_plan",
+            )
+  /v1/billing.preview_multi_attach:
+    post:
+      operationId: previewMultiAttach
+      description: >-
+        Previews the billing changes that would occur when attaching multiple
+        plans, without actually making any changes.
+
+
+        Use this endpoint to show customers what they will be charged before
+        confirming a multi-plan subscription.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to attach the plans to.
+                entity_id:
+                  type: string
+                  description: The ID of the entity to attach the plans to.
+                plans:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: The ID of the plan to attach.
+                      customize:
+                        type: object
+                        properties:
+                          price:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  amount:
+                                    type: number
+                                    description: Base price amount for the plan.
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    description: Billing interval (e.g. 'month', 'year').
+                                  interval_count:
+                                    type: number
+                                    description: Number of intervals per billing cycle. Defaults to 1.
+                                required:
+                                  - amount
+                                  - interval
+                                title: BasePrice
+                                description: Base price configuration for a plan.
+                              - type: "null"
+                            description: Override the base price of the plan. Pass null to remove the base
+                              price.
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                feature_id:
+                                  type: string
+                                  description: The ID of the feature to configure.
+                                included:
+                                  type: number
+                                  description: Number of free units included. Balance resets to this each interval
+                                    for consumable features.
+                                unlimited:
+                                  type: boolean
+                                  description: If true, customer has unlimited access to this feature.
+                                reset:
+                                  type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                        consumable features only.
+                                    interval_count:
+                                      type: number
+                                      description: Number of intervals between resets. Defaults to 1.
+                                  required:
+                                    - interval
+                                  description: Reset configuration for consumable features. Omit for
+                                    non-consumable features like seats.
+                                price:
+                                  type: object
+                                  properties:
+                                    amount:
+                                      type: number
+                                      description: Price per billing_units after included usage. Either 'amount' or
+                                        'tiers' is required.
+                                    tiers:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          to:
+                                            anyOf:
+                                              - type: number
+                                              - const: inf
+                                          amount:
+                                            type: number
+                                          flat_amount:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
+                                        required:
+                                          - to
+                                          - amount
+                                      description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                    tier_behavior:
+                                      enum:
+                                        - graduated
+                                        - volume
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      description: Billing interval. For consumable features, should match
+                                        reset.interval.
+                                    interval_count:
+                                      type: number
+                                      default: 1
+                                      description: Number of intervals per billing cycle. Defaults to 1.
+                                    billing_units:
+                                      type: number
+                                      default: 1
+                                      description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                        billing_units=100 means 101 rounds to
+                                        200).
+                                    billing_method:
+                                      enum:
+                                        - prepaid
+                                        - usage_based
+                                      description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                        pay-as-you-go."
+                                    max_purchase:
+                                      type: number
+                                      description: Max units purchasable beyond included. E.g. included=100,
+                                        max_purchase=300 allows 400 total.
+                                  required:
+                                    - interval
+                                    - billing_method
+                                  description: Pricing for usage beyond included units. Omit for free features.
+                                proration:
+                                  type: object
+                                  properties:
+                                    on_increase:
+                                      enum:
+                                        - bill_immediately
+                                        - prorate_immediately
+                                        - prorate_next_cycle
+                                        - bill_next_cycle
+                                      description: Billing behavior when quantity increases mid-cycle.
+                                    on_decrease:
+                                      enum:
+                                        - prorate
+                                        - prorate_immediately
+                                        - prorate_next_cycle
+                                        - none
+                                        - no_prorations
+                                      description: Credit behavior when quantity decreases mid-cycle.
+                                  required:
+                                    - on_increase
+                                    - on_decrease
+                                  description: Proration settings for prepaid features. Controls mid-cycle
+                                    quantity change billing.
+                                rollover:
+                                  type: object
+                                  properties:
+                                    max:
+                                      type: number
+                                      description: Max rollover units. Omit for unlimited rollover.
+                                    expiry_duration_type:
+                                      enum:
+                                        - month
+                                        - forever
+                                      description: When rolled over units expire.
+                                    expiry_duration_length:
+                                      type: number
+                                      description: Number of periods before expiry.
+                                  required:
+                                    - expiry_duration_type
+                                  description: Rollover config for unused units. If set, unused included units
+                                    carry over.
+                              required:
+                                - feature_id
+                              title: PlanItem
+                              description: Configuration for a feature item in a plan, including usage limits,
+                                pricing, and rollover settings.
+                            description: Override the items in the plan.
+                        description: Customize the plan to attach. Can override the price or items.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The ID of the feature to set quantity for.
+                            quantity:
+                              type: number
+                              minimum: 0
+                              description: The quantity of the feature.
+                            adjustable:
+                              type: boolean
+                              description: Whether the customer can adjust the quantity.
+                          required:
+                            - feature_id
+                          title: FeatureQuantity
+                          description: Quantity configuration for a prepaid feature.
+                        description: If this plan contains prepaid features, use this field to specify
+                          the quantity of each prepaid feature.
+                      version:
+                        type: number
+                        description: The version of the plan to attach.
+                    required:
+                      - plan_id
+                  description: The list of plans to attach to the customer.
+                free_trial:
+                  anyOf:
+                    - type: object
+                      properties:
+                        duration_length:
+                          type: number
+                          description: Number of duration_type periods the trial lasts.
+                        duration_type:
+                          enum:
+                            - day
+                            - month
+                            - year
+                          default: month
+                          description: Unit of time for the trial ('day', 'month', 'year').
+                        card_required:
+                          type: boolean
+                          default: true
+                          description: If true, payment method required to start trial. Customer is
+                            charged after trial ends.
+                      required:
+                        - duration_length
+                      title: FreeTrialParams
+                      description: Free trial configuration for a plan.
+                    - type: "null"
+                  description: Free trial configuration applied to all plans. Pass an object to
+                    set a custom trial, or null to remove any trial.
+                invoice_mode:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: When true, creates an invoice and sends it to the customer instead
+                        of charging their card immediately. Uses Stripe's
+                        send_invoice collection method.
+                    enable_plan_immediately:
+                      type: boolean
+                      default: false
+                      description: If true, enables the plan immediately even though the invoice is
+                        not paid yet.
+                    finalize:
+                      type: boolean
+                      default: true
+                      description: If true, finalizes the invoice so it can be sent to the customer.
+                        If false, keeps it as a draft for manual review.
+                  required:
+                    - enabled
+                  description: Invoice mode creates a draft or open invoice and sends it to the
+                    customer, instead of charging their card immediately.
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
+                    description: A discount to apply. Can be either a reward ID or a promotion code.
+                  description: List of discounts to apply. Each discount can be an Autumn reward
+                    ID, Stripe coupon ID, or Stripe promotion code.
+                success_url:
+                  type: string
+                  description: URL to redirect to after successful checkout.
+                checkout_session_params:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional parameters to pass into the creation of the Stripe
+                    checkout session.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even
+                    if payment succeeds, 'if_required' only when payment action
+                    is needed, 'never' disables redirects.
+                  default: if_required
+                new_billing_subscription:
+                  type: boolean
+                  description: Only applicable when the customer has an existing Stripe
+                    subscription. If true, creates a new separate subscription
+                    instead of merging into the existing one.
+                customer_data:
+                  $ref: "#/components/schemas/CustomerData"
+                entity_data:
+                  type: object
+                  properties:
+                    feature_id:
+                      type: string
+                      description: The feature ID that this entity is associated with
+                    name:
+                      type: string
+                      description: Name of the entity
+                  required:
+                    - feature_id
+              required:
+                - customer_id
+                - plans
+              title: PreviewMultiAttachParams
+              examples:
+                - &a32
+                  customer_id: cus_123
+                  plans:
+                    - plan_id: pro_plan
+                    - plan_id: addon_seats
+                      feature_quantities:
+                        - feature_id: seats
+                          quantity: 5
+            example: *a32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  line_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: The title of the line item.
+                        description:
+                          type: string
+                          description: A detailed description of the line item.
+                        amount:
+                          type: number
+                          description: The amount in cents for this line item.
+                        discounts:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              amountOff:
+                                type: number
+                              percentOff:
+                                type: number
+                              stripeCouponId:
+                                type: string
+                              couponName:
+                                type: string
+                            required:
+                              - amountOff
+                          default: []
+                          description: List of discounts applied to this line item.
+                      required:
+                        - title
+                        - description
+                        - amount
+                    description: List of line items for the current billing period.
+                  total:
+                    type: number
+                    description: The total amount in cents for the current billing period.
+                  currency:
+                    type: string
+                    description: The three-letter ISO currency code (e.g., 'usd').
+                  next_cycle:
+                    type: object
+                    properties:
+                      starts_at:
+                        type: number
+                        description: Unix timestamp (milliseconds) when the next billing cycle starts.
+                      total:
+                        type: number
+                        description: The total amount in cents for the next cycle.
+                    required:
+                      - starts_at
+                      - total
+                    description: Preview of the next billing cycle, if applicable. This shows what
+                      the customer will be charged in subsequent cycles.
+                required:
+                  - customer_id
+                  - line_items
+                  - total
+                  - currency
+                examples:
+                  - &a33
+                    customerId: charles
+                    lineItems:
+                      - title: Pro seed
+                        description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                        amount: 20
+                        discounts: []
+                    total: 20
+                    currency: usd
+              example: *a33
+      x-speakeasy-name-override: previewMultiAttach
+      parameters:
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "2.1"
+          x-speakeasy-globals-hidden: true
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.billing.previewMultiAttach({
+              customerId: "cus_123",
+              plans: [
+                {
+                  planId: "pro_plan",
+                },
+                {
+                  planId: "addon_seats",
+                  featureQuantities: [
+                    {
+                      featureId: "seats",
+                      quantity: 5,
+                    },
+                  ],
+                },
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.billing.preview_multi_attach(
+                customer_id="cus_123",
+                plans=[
+                    {
+                        "plan_id": "pro_plan",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "feature_quantities": [
+                            {
+                                "feature_id": "seats",
+                                "quantity": 5,
+                            },
+                        ],
+                    },
+                ],
+                redirect_mode="if_required",
             )
   /v1/billing.update:
     post:
@@ -6170,11 +7361,18 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                                  Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
                               interval:
                                 enum:
                                   - one_off
@@ -6326,13 +7524,13 @@ paths:
                 - plan_id
               title: UpdateSubscriptionParams
               examples:
-                - &a30
+                - &a34
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 10
-            example: *a30
+            example: *a34
       responses:
         "200":
           description: OK
@@ -6405,7 +7603,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a31
+                  - &a35
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -6414,7 +7612,7 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a31
+              example: *a35
       x-speakeasy-name-override: update
       parameters:
         - name: x-api-version
@@ -6599,11 +7797,18 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount.
-                                  Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
                               interval:
                                 enum:
                                   - one_off
@@ -6755,13 +7960,13 @@ paths:
                 - plan_id
               title: PreviewUpdateParams
               examples:
-                - &a32
+                - &a36
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 15
-            example: *a32
+            example: *a36
       responses:
         "200":
           description: OK
@@ -6835,7 +8040,7 @@ paths:
                   - total
                   - currency
                 examples:
-                  - &a33
+                  - &a37
                     customerId: charles
                     lineItems:
                       - title: Pro seed
@@ -6844,7 +8049,7 @@ paths:
                         discounts: []
                     total: 20
                     currency: usd
-              example: *a33
+              example: *a37
       x-speakeasy-name-override: previewUpdate
       parameters:
         - name: x-api-version
@@ -6918,10 +8123,10 @@ paths:
                 - customer_id
               title: OpenCustomerPortalParams
               examples:
-                - &a34
+                - &a38
                   customer_id: cus_123
                   return_url: https://useautumn.com
-            example: *a34
+            example: *a38
       responses:
         "200":
           description: OK
@@ -6940,10 +8145,10 @@ paths:
                   - customer_id
                   - url
                 examples:
-                  - &a35
+                  - &a39
                     customer_id: cus_123
                     url: https://billing.stripe.com/session/...
-              example: *a35
+              example: *a39
       x-speakeasy-name-override: openCustomerPortal
       parameters:
         - name: x-api-version
@@ -6992,27 +8197,286 @@ paths:
               properties:
                 customer_id:
                   type: string
-                  description: The ID of the customer
+                  description: The ID of the customer to attach the plan to.
+                entity_id:
+                  type: string
+                  description: The ID of the entity to attach the plan to.
+                plan_id:
+                  type: string
+                  description: If specified, the plan will be attached to the customer after
+                    setup.
+                feature_quantities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      feature_id:
+                        type: string
+                        description: The ID of the feature to set quantity for.
+                      quantity:
+                        type: number
+                        minimum: 0
+                        description: The quantity of the feature.
+                      adjustable:
+                        type: boolean
+                        description: Whether the customer can adjust the quantity.
+                    required:
+                      - feature_id
+                    title: FeatureQuantity
+                    description: Quantity configuration for a prepaid feature.
+                  description: If this plan contains prepaid features, use this field to specify
+                    the quantity of each prepaid feature. This quantity includes
+                    the included amount and billing units defined when setting
+                    up the plan.
+                version:
+                  type: number
+                  description: The version of the plan to attach.
+                customize:
+                  type: object
+                  properties:
+                    price:
+                      anyOf:
+                        - type: object
+                          properties:
+                            amount:
+                              type: number
+                              description: Base price amount for the plan.
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              description: Billing interval (e.g. 'month', 'year').
+                            interval_count:
+                              type: number
+                              description: Number of intervals per billing cycle. Defaults to 1.
+                          required:
+                            - amount
+                            - interval
+                          title: BasePrice
+                          description: Base price configuration for a plan.
+                        - type: "null"
+                      description: Override the base price of the plan. Pass null to remove the base
+                        price.
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
+                                  required:
+                                    - to
+                                    - amount
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Override the items in the plan.
+                    free_trial:
+                      anyOf:
+                        - type: object
+                          properties:
+                            duration_length:
+                              type: number
+                              description: Number of duration_type periods the trial lasts.
+                            duration_type:
+                              enum:
+                                - day
+                                - month
+                                - year
+                              default: month
+                              description: Unit of time for the trial ('day', 'month', 'year').
+                            card_required:
+                              type: boolean
+                              default: true
+                              description: If true, payment method required to start trial. Customer is
+                                charged after trial ends.
+                          required:
+                            - duration_length
+                          title: FreeTrialParams
+                          description: Free trial configuration for a plan.
+                        - type: "null"
+                      description: Override the plan's default free trial. Pass an object to set a
+                        custom trial, or null to remove the trial entirely.
+                  description: Customize the plan to attach. Can override the price, items, free
+                    trial, or a combination.
+                proration_behavior:
+                  enum:
+                    - prorate_immediately
+                    - none
+                  description: How to handle proration when updating an existing subscription.
+                    'prorate_immediately' charges/credits prorated amounts now,
+                    'none' skips creating any charges.
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
+                    description: A discount to apply. Can be either a reward ID or a promotion code.
+                  description: List of discounts to apply. Each discount can be an Autumn reward
+                    ID, Stripe coupon ID, or Stripe promotion code.
                 success_url:
                   type: string
-                  description: URL to redirect to after successful payment setup. Must start with
-                    either http:// or https://
-                customer_data:
-                  $ref: "#/components/schemas/CustomerData"
+                  description: URL to redirect to after successful checkout.
                 checkout_session_params:
                   type: object
                   propertyNames:
                     type: string
                   additionalProperties: {}
-                  description: Additional parameters for the checkout session
+                  description: Additional parameters to pass into the creation of the Stripe
+                    checkout session.
               required:
                 - customer_id
               title: SetupPaymentParams
               examples:
-                - &a36
+                - &a40
                   customer_id: cus_123
                   success_url: https://example.com/account/billing
-            example: *a36
+            example: *a40
       responses:
         "200":
           description: OK
@@ -7024,17 +8488,22 @@ paths:
                   customer_id:
                     type: string
                     description: The ID of the customer
+                  entity_id:
+                    type: string
+                    description: The ID of the entity the plan (if specified) will be attached to
+                      after setup.
                   url:
                     type: string
-                    description: URL to the payment setup page
+                    description: URL to redirect the customer to setup their payment.
                 required:
                   - customer_id
                   - url
+                title: SetupPaymentResponse
                 examples:
-                  - &a37
+                  - &a41
                     customer_id: cus_123
-                    payment_url: https://checkout.stripe.com/...
-              example: *a37
+                    url: https://checkout.stripe.com/...
+              example: *a41
       x-speakeasy-name-override: setupPayment
       parameters:
         - name: x-api-version
@@ -7132,13 +8601,13 @@ paths:
                 - feature_id
               title: CreateBalanceParams
               examples:
-                - &a38
+                - &a42
                   customer_id: cus_123
                   feature_id: api_calls
                   included: 1000
                   reset:
                     interval: month
-            example: *a38
+            example: *a42
       responses:
         "200":
           description: OK
@@ -7222,6 +8691,10 @@ paths:
                   type: number
                   description: Add this amount to the current balance. Use negative values to
                     subtract. Cannot be combined with current_balance.
+                usage:
+                  type: number
+                  description: The usage amount to update. Cannot be combined with remaining or
+                    add_to_balance.
                 interval:
                   enum:
                     - one_off
@@ -7241,11 +8714,11 @@ paths:
                 - feature_id
               title: UpdateBalanceParams
               examples:
-                - &a39
+                - &a43
                   customer_id: cus_123
                   feature_id: api_calls
                   remaining: 5
-            example: *a39
+            example: *a43
       responses:
         "200":
           description: OK
@@ -7343,14 +8816,14 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a40
+                - &a44
                   customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a40
+            example: *a44
       responses:
         "200":
           description: OK
@@ -7519,12 +8992,27 @@ paths:
                                             amount:
                                               type: number
                                               description: The price of the product item for this tier.
+                                            flat_amount:
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
+                                              description: A flat fee charged for this tier, in addition to the per-unit
+                                                amount.
                                           required:
                                             - to
                                             - amount
                                       - type: "null"
                                     description: Tiered pricing for the product item. Not applicable for fixed price
                                       items.
+                                  tier_behavior:
+                                    anyOf:
+                                      - enum:
+                                          - graduated
+                                          - volume
+                                      - type: "null"
+                                    description: "How tiers are applied: graduated (split across bands) or volume
+                                      (flat rate for the matched tier). Defaults
+                                      to graduated."
                                   usage_model:
                                     anyOf:
                                       - enum:
@@ -7731,7 +9219,7 @@ paths:
                   - customer_id
                   - balance
                 examples:
-                  - &a41
+                  - &a45
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -7758,7 +9246,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a41
+              example: *a45
       x-speakeasy-name-override: check
       parameters:
         - name: x-api-version
@@ -7837,11 +9325,11 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a42
+                - &a46
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a42
+            example: *a46
       responses:
         "200":
           description: OK
@@ -7882,7 +9370,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a43
+                  - &a47
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -7907,7 +9395,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a43
+              example: *a47
       x-speakeasy-name-override: track
       parameters:
         - name: x-api-version
@@ -7992,14 +9480,14 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a44
+                - &a48
                   customer_id: cus_123
                   limit: 50
                 - feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a44
+            example: *a48
       responses:
         "200":
           description: OK
@@ -8058,7 +9546,7 @@ paths:
                   - limit
                   - total
                 examples:
-                  - &a45
+                  - &a49
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -8076,7 +9564,7 @@ paths:
                     has_more: false
                     offset: 0
                     limit: 100
-              example: *a45
+              example: *a49
       x-speakeasy-name-override: list
       parameters:
         - name: x-api-version
@@ -8178,7 +9666,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a46
+                - &a50
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -8189,7 +9677,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a46
+            example: *a50
       responses:
         "200":
           description: OK
@@ -8251,7 +9739,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a47
+                  - &a51
                     list:
                       - period: 1762905600000
                         values:
@@ -8298,7 +9786,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a47
+              example: *a51
       x-speakeasy-name-override: aggregate
       parameters:
         - name: x-api-version
@@ -8377,12 +9865,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a48
+                - &a52
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a48
+            example: *a52
       responses:
         "200":
           description: OK
@@ -8572,7 +10060,7 @@ paths:
                   - purchases
                   - balances
                 examples:
-                  - &a49
+                  - &a53
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -8617,7 +10105,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a49
+              example: *a53
       x-speakeasy-name-override: create
       parameters:
         - name: x-api-version
@@ -8682,11 +10170,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a50
+                - &a54
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a50
+            example: *a54
       responses:
         "200":
           description: OK
@@ -8876,7 +10364,7 @@ paths:
                   - purchases
                   - balances
                 examples:
-                  - &a51
+                  - &a55
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -8921,7 +10409,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a51
+              example: *a55
       x-speakeasy-name-override: get
       parameters:
         - name: x-api-version
@@ -8978,10 +10466,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a52
+                - &a56
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a52
+            example: *a56
       responses:
         "200":
           description: OK
@@ -8995,9 +10483,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a53
+                  - &a57
                     success: true
-              example: *a53
+              example: *a57
       x-speakeasy-name-override: delete
       parameters:
         - name: x-api-version
@@ -9054,10 +10542,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a54
+                - &a58
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a54
+            example: *a58
       responses:
         "200":
           description: OK
@@ -9080,11 +10568,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a55
+                  - &a59
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a55
+              example: *a59
       x-speakeasy-name-override: createCode
       parameters:
         - name: x-api-version
@@ -9141,10 +10629,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a56
+                - &a60
                   code: REF123
                   customer_id: cus_456
-            example: *a56
+            example: *a60
       responses:
         "200":
           description: OK
@@ -9167,11 +10655,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a57
+                  - &a61
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a57
+              example: *a61
       x-speakeasy-name-override: redeemCode
       parameters:
         - name: x-api-version

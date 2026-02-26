@@ -109,7 +109,16 @@ export type PreviewAttachTo = number | string;
 export type PreviewAttachTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const PreviewAttachTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PreviewAttachTierBehavior = ClosedEnum<
+  typeof PreviewAttachTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -152,9 +161,10 @@ export type PreviewAttachPrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewAttachTier> | undefined;
+  tierBehavior?: PreviewAttachTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -450,6 +460,10 @@ export type PreviewAttachParams = {
    * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
    */
   planSchedule?: PreviewAttachPlanSchedule | undefined;
+  /**
+   * Additional parameters to pass into the creation of the Stripe checkout session.
+   */
+  checkoutSessionParams?: { [k: string]: any } | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -643,16 +657,25 @@ export function previewAttachToToJSON(
 export type PreviewAttachTier$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const PreviewAttachTier$outboundSchema: z.ZodMiniType<
   PreviewAttachTier$Outbound,
   PreviewAttachTier
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function previewAttachTierToJSON(
   previewAttachTier: PreviewAttachTier,
@@ -661,6 +684,11 @@ export function previewAttachTierToJSON(
     PreviewAttachTier$outboundSchema.parse(previewAttachTier),
   );
 }
+
+/** @internal */
+export const PreviewAttachTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachTierBehavior
+> = z.enum(PreviewAttachTierBehavior);
 
 /** @internal */
 export const PreviewAttachItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -676,6 +704,7 @@ export const PreviewAttachBillingMethod$outboundSchema: z.ZodMiniEnum<
 export type PreviewAttachPrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewAttachTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -691,6 +720,7 @@ export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.optional(z.number()),
     tiers: z.optional(z.array(z.lazy(() => PreviewAttachTier$outboundSchema))),
+    tierBehavior: z.optional(PreviewAttachTierBehavior$outboundSchema),
     interval: PreviewAttachItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -699,6 +729,7 @@ export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
@@ -1002,6 +1033,7 @@ export type PreviewAttachParams$Outbound = {
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
+  checkout_session_params?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
@@ -1030,6 +1062,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
+    checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1042,6 +1075,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
+      checkoutSessionParams: "checkout_session_params",
     });
   }),
 );
