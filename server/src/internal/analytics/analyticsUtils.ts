@@ -242,7 +242,7 @@ export function generateEventCountExpressions(
 	noCount: boolean = false,
 ): string {
 	const expressions = eventNames.map((eventName) => {
-		// Replicate ClickHouse's replaceAll(eventName, '''', '''''')
+		// Escape single quotes for SQL safety
 		const escapedEventName = eventName.replace(/'/g, "''");
 		const columnName = noCount ? eventName : `${eventName}_count`;
 		return `coalesce(sumIf(e.value, e.event_name = '${escapedEventName}'), 0) as \`${columnName}\``;

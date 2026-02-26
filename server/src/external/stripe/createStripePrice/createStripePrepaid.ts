@@ -5,6 +5,7 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	priceToStripeTiersMode,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -42,10 +43,19 @@ const prepaidToStripeTiers = ({
 				? "inf"
 				: Math.round(tier.to / billingUnits!);
 
-		tiers.push({
+		const stripeTier: Record<string, unknown> = {
 			unit_amount_decimal: amount,
 			up_to: upTo,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: org.default_currency || undefined,
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	return tiers;
@@ -70,20 +80,19 @@ export const createStripePrepaid = async ({
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
-	let recurringData;
+	let recurringData: Partial<Stripe.PriceCreateParams.Recurring> | undefined;
 	if (price.config!.interval !== BillingInterval.OneOff) {
-		recurringData = billingIntervalToStripe({
-			interval: price.config!.interval,
-			intervalCount: price.config!.interval_count,
-		});
+		recurringData = {
+			...billingIntervalToStripe({
+				interval: price.config!.interval,
+				intervalCount: price.config!.interval_count,
+			}),
+		};
 	}
 
 	const config = price.config as UsagePriceConfig;
 
-	// 1. Product name
-	const productName = `${product.name} - ${
-		config.billing_units === 1 ? "" : `${config.billing_units} `
-	}${relatedEnt.feature.name}`;
+	const productName = `${product.name} - ${relatedEnt.feature.name}`;
 
 	const productData = curStripeProd
 		? { product: curStripeProd.id }
@@ -113,6 +122,7 @@ export const createStripePrepaid = async ({
 		config.stripe_price_id = stripePrice.id;
 	} else {
 		const tiers = prepaidToStripeTiers({ price, org });
+		const tiersMode = priceToStripeTiersMode({ price });
 
 		let priceAmountData = {};
 		if (tiers.length === 1) {
@@ -122,7 +132,7 @@ export const createStripePrepaid = async ({
 		} else {
 			priceAmountData = {
 				billing_scheme: "tiered",
-				tiers_mode: "graduated",
+				tiers_mode: tiersMode,
 				tiers: tiers,
 			};
 		}

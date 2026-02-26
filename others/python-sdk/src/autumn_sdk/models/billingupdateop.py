@@ -193,12 +193,46 @@ BillingUpdateTo = TypeAliasType("BillingUpdateTo", Union[float, str])
 class BillingUpdateTierTypedDict(TypedDict):
     to: BillingUpdateToTypedDict
     amount: float
+    flat_amount: NotRequired[Nullable[float]]
 
 
 class BillingUpdateTier(BaseModel):
     to: BillingUpdateTo
 
     amount: float
+
+    flat_amount: OptionalNullable[float] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        nullable_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+BillingUpdateTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
 
 
 BillingUpdateItemPriceInterval = Literal[
@@ -229,7 +263,8 @@ class BillingUpdatePriceTypedDict(TypedDict):
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     tiers: NotRequired[List[BillingUpdateTierTypedDict]]
-    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[BillingUpdateTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -251,7 +286,9 @@ class BillingUpdatePrice(BaseModel):
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     tiers: Optional[List[BillingUpdateTier]] = None
-    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[BillingUpdateTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -265,7 +302,14 @@ class BillingUpdatePrice(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["amount", "tiers", "interval_count", "billing_units", "max_purchase"]
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
         )
         serialized = handler(self)
         m = {}

@@ -175,7 +175,6 @@
       "version": "1.0.0",
       "dependencies": {
         "@autumn/shared": "workspace:*",
-        "@clickhouse/client": "catalog:",
         "chalk": "^5.3.0",
         "dotenv": "^16.5.0",
         "drizzle-orm": "catalog:",
@@ -331,6 +330,7 @@
         "@types/bun": "latest",
         "@types/node": "^24.0.3",
         "cross-env": "^7.0.3",
+        "tsx": "^4.21.0",
         "typescript": "^5.7.2",
       },
       "peerDependencies": {
@@ -5400,6 +5400,8 @@
     "@typescript-eslint/visitor-keys/eslint-visitor-keys": ["eslint-visitor-keys@5.0.1", "", {}, "sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA=="],
 
     "@useautumn/sdk/typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
+
+    "@useautumn/sdk/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@vercel/sdk/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 

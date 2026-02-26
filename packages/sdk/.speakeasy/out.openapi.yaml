@@ -653,10 +653,14 @@ components:
                                 - const: inf
                             amount:
                               type: number
+                            flat_amount:
+                              anyOf:
+                                - type: number
+                                - type: "null"
                           required:
                             - to
                             - amount
-                        description: Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+                        description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                       tier_behavior:
                         enum:
                           - graduated
@@ -768,6 +772,26 @@ components:
             - type: string
             - type: "null"
           description: If this is a variant, the ID of the base plan it was created from.
+        customer_eligibility:
+          type: object
+          properties:
+            trial_available:
+              type: boolean
+              description: Whether a free trial is available for this customer.
+            scenario:
+              enum:
+                - scheduled
+                - active
+                - new
+                - renew
+                - upgrade
+                - downgrade
+                - cancel
+                - expired
+                - past_due
+              description: The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+          required:
+            - scenario
       required:
         - id
         - name
@@ -954,6 +978,10 @@ components:
                                 - const: inf
                             amount:
                               type: number
+                            flat_amount:
+                              anyOf:
+                                - type: number
+                                - type: "null"
                           required:
                             - to
                             - amount
@@ -2023,10 +2051,14 @@ paths:
                                     - const: inf
                                 amount:
                                   type: number
+                                flat_amount:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
                               required:
                                 - to
                                 - amount
-                            description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
                               - graduated
@@ -2349,10 +2381,14 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
                                     - graduated
@@ -2464,6 +2500,26 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -2773,10 +2829,14 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
                                     - graduated
@@ -2888,6 +2948,26 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -3175,10 +3255,14 @@ paths:
                                                 - const: inf
                                             amount:
                                               type: number
+                                            flat_amount:
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
                                           required:
                                             - to
                                             - amount
-                                        description: Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+                                        description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                       tier_behavior:
                                         enum:
                                           - graduated
@@ -3290,6 +3374,26 @@ paths:
                             - type: string
                             - type: "null"
                           description: If this is a variant, the ID of the base plan it was created from.
+                        customer_eligibility:
+                          type: object
+                          properties:
+                            trial_available:
+                              type: boolean
+                              description: Whether a free trial is available for this customer.
+                            scenario:
+                              enum:
+                                - scheduled
+                                - active
+                                - new
+                                - renew
+                                - upgrade
+                                - downgrade
+                                - cancel
+                                - expired
+                                - past_due
+                              description: The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+                          required:
+                            - scenario
                       required:
                         - id
                         - name
@@ -3514,10 +3618,14 @@ paths:
                                     - const: inf
                                 amount:
                                   type: number
+                                flat_amount:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
                               required:
                                 - to
                                 - amount
-                            description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
                               - graduated
@@ -3826,10 +3934,14 @@ paths:
                                           - const: inf
                                       amount:
                                         type: number
+                                      flat_amount:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
                                     required:
                                       - to
                                       - amount
-                                  description: Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+                                  description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
                                     - graduated
@@ -3941,6 +4053,26 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  customer_eligibility:
+                    type: object
+                    properties:
+                      trial_available:
+                        type: boolean
+                        description: Whether a free trial is available for this customer.
+                      scenario:
+                        enum:
+                          - scheduled
+                          - active
+                          - new
+                          - renew
+                          - upgrade
+                          - downgrade
+                          - cancel
+                          - expired
+                          - past_due
+                        description: The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+                    required:
+                      - scenario
                 required:
                   - id
                   - name
@@ -4766,7 +4898,7 @@ paths:
         - *a1
   /v1/billing.attach:
     post:
-      operationId: billingAttach
+      operationId: attach
       description: >-
         Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
@@ -4957,10 +5089,14 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
                                   - graduated
@@ -5198,7 +5334,7 @@ paths:
         - *a1
   /v1/billing.multi_attach:
     post:
-      operationId: billingMultiAttach
+      operationId: multiAttach
       description: |-
         Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
@@ -5339,10 +5475,14 @@ paths:
                                               - const: inf
                                           amount:
                                             type: number
+                                          flat_amount:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
                                         required:
                                           - to
                                           - amount
-                                      description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                      description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
                                         - graduated
@@ -5796,10 +5936,14 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
                                   - graduated
@@ -6176,10 +6320,14 @@ paths:
                                               - const: inf
                                           amount:
                                             type: number
+                                          flat_amount:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
                                         required:
                                           - to
                                           - amount
-                                      description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                      description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
                                         - graduated
@@ -6649,10 +6797,14 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
                                   - graduated
@@ -7033,10 +7185,14 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
                                   - graduated
@@ -7437,10 +7593,14 @@ paths:
                                         - const: inf
                                     amount:
                                       type: number
+                                    flat_amount:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                   required:
                                     - to
                                     - amount
-                                description: Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
                                   - graduated
@@ -7997,6 +8157,11 @@ paths:
                                             amount:
                                               type: number
                                               description: The price of the product item for this tier.
+                                            flat_amount:
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
+                                              description: A flat fee charged for this tier, in addition to the per-unit amount.
                                           required:
                                             - to
                                             - amount

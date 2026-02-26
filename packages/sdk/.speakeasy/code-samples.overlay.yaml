@@ -124,6 +124,42 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.multi_attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.multiAttach({
+                customerId: "cus_123",
+                plans: [
+                  {
+                    planId: "pro_plan",
+                  },
+                  {
+                    planId: "addon_seats",
+                    featureQuantities: [
+                      {
+                        featureId: "seats",
+                        quantity: 5,
+                      },
+                    ],
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.open_customer_portal"]["post"]
     update:
       x-codeSamples:
@@ -164,6 +200,42 @@ actions:
               const result = await autumn.billing.previewAttach({
                 customerId: "cus_123",
                 planId: "pro_plan",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/billing.preview_multi_attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.previewMultiAttach({
+                customerId: "cus_123",
+                plans: [
+                  {
+                    planId: "pro_plan",
+                  },
+                  {
+                    planId: "addon_seats",
+                    featureQuantities: [
+                      {
+                        featureId: "seats",
+                        quantity: 5,
+                      },
+                    ],
+                  },
+                ],
               });
 
               console.log(result);

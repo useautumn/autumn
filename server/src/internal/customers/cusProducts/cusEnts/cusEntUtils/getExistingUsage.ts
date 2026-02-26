@@ -213,11 +213,7 @@ export const addExistingUsagesToCusEnts = ({
 		let usage = existingUsages[key].usage;
 		const entityUsages = existingUsages[key].entityUsages;
 
-		const {
-			feature_id = "",
-			interval = "",
-			interval_count = 1,
-		} = existingUsages[key] || {};
+		const { feature_id = "" } = existingUsages[key] || {};
 
 		for (const cusEnt of fullCusEnts) {
 			const ent = cusEnt.entitlement;
@@ -273,6 +269,5 @@ export const addExistingUsagesToCusEnts = ({
 		}
 	}
 
-	// console.log("Full cusEnts:", fullCusEnts);
 	return fullCusEnts.map((ce) => CustomerEntitlementSchema.parse(ce));
 };
