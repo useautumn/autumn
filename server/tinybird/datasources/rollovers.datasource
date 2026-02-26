@@ -1,0 +1,23 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    rollovers CDC events from Sequin (Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+    No created_at — deduplication is by id + __commit_lsn.
+
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `cus_ent_id`               String              `json:$.cus_ent_id`,
+    `balance`                  Float64             `json:$.balance`,
+    `expires_at`               Nullable(Int64)     `json:$.expires_at`,
+    `usage`                    Float64             `json:$.usage`,
+    `entities`                 String              `json:$.entities`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"
