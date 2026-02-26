@@ -11,6 +11,20 @@ import { atmnToStripeAmountDecimal } from "@utils/productUtils/priceUtils/conver
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
+/**
+ * Builds the Stripe tier array for a V2 prepaid price.
+ *
+ * For both graduated and volume prices with an allowance, a free $0 leading
+ * tier is inserted and all paid-tier boundaries are shifted up by the allowance.
+ * Stripe receives total packs (purchased + allowance) as the quantity.
+ *
+ * - **Graduated**: Stripe splits charges across tier bands. The free tier
+ *   covers the included units at $0, so only units above the allowance incur cost.
+ * - **Volume**: if total quantity exceeds the free tier, the ENTIRE quantity
+ *   (including the included portion) is charged at the matching paid tier's
+ *   rate. This is intentional — volume pricing does not subtract included
+ *   usage before applying the rate.
+ */
 export const priceToStripePrepaidV2Tiers = ({
 	price,
 	entitlement,
@@ -21,9 +35,11 @@ export const priceToStripePrepaidV2Tiers = ({
 	org: Organization;
 }) => {
 	const config = price.config as UsagePriceConfig;
+
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 
-	// If there is an allowance, first tier is free
+	// Insert a free leading tier and shift paid-tier boundaries up by the
+	// allowance. Applies to both graduated and volume pricing.
 	if (entitlement.allowance) {
 		tiers.push({
 			unit_amount_decimal: "0",
@@ -47,10 +63,19 @@ export const priceToStripePrepaidV2Tiers = ({
 			upTo = tier.to + entitlement.allowance;
 		}
 
-		tiers.push({
+		const stripeTier: Stripe.PriceCreateParams.Tier = {
 			unit_amount_decimal: stripeUnitAmountDecimal,
 			up_to: isFinalTier(tier) ? "inf" : upTo,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: orgToCurrency({ org }),
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	// Divide all tiers by billing units

@@ -15,6 +15,7 @@ import { updateBalance } from "./domains/balances/updateBalance";
 import { billing } from "./domains/billing/billing";
 import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
+import { prepaidVolume } from "./domains/billing/prepaidVolume";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
@@ -38,6 +39,7 @@ const allGroups: TestGroup[] = [
 	billing,
 	billingV1,
 	billingV2,
+	prepaidVolume,
 	crud,
 	webhooks,
 	advanced,

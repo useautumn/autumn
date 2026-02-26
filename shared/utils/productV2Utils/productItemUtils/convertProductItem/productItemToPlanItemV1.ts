@@ -20,6 +20,7 @@ import { toApiFeature } from "../../../featureUtils.js";
 import { getProductItemDisplay } from "../../../productDisplayUtils.js";
 import { isFeaturePriceItem } from "../getItemType.js";
 import { itemToBillingInterval } from "../itemIntervalUtils.js";
+import { addIncludedToTiers } from "../tierUtils.js";
 import { itemIntvToResetIntv } from "./planItemIntervals.js";
 
 const itemToReset = ({
@@ -62,12 +63,17 @@ const itemToPlanFeaturePrice = ({
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;
 
+	// Internal: tier `to` does NOT include included usage.
+	// V1 API: tier `to` INCLUDES included usage.
 	const tiers =
 		item.tiers && item.tiers.length > 1
-			? item.tiers.map((tier) => ({
-					to: tier.to,
-					amount: tier.amount,
-				}))
+			? addIncludedToTiers({
+					tiers: item.tiers.map((tier) => ({
+						to: tier.to,
+						amount: tier.amount,
+					})),
+					included: includedUsage,
+				})
 			: undefined;
 
 	// V1 schema uses billing_method, NOT usage_model
@@ -79,6 +85,7 @@ const itemToPlanFeaturePrice = ({
 	return {
 		amount: price ?? undefined,
 		tiers: tiers,
+		tier_behavior: item.tier_behavior ?? undefined,
 
 		interval: itemToBillingInterval({ item }),
 		interval_count:

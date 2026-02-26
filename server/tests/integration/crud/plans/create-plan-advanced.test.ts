@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiPlan,
+	type ApiPlanV1,
 	type ApiProduct,
 	ApiVersion,
 	BillingInterval,
@@ -10,6 +11,7 @@ import {
 	Infinite,
 	ProductItemInterval,
 	ResetInterval,
+	TierBehavior,
 	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
@@ -18,6 +20,7 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
+const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -104,11 +107,11 @@ test.concurrent(`${chalk.yellowBright("create: usage pricing (pay-per-use)")}`, 
 test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, async () => {
 	const productId = "tiered_pricing";
 	try {
-		await autumnV2.products.delete(productId);
+		await autumnV2_1.products.delete(productId);
 	} catch (_error) {}
 
-	const created = await autumnV2.products.create<
-		ApiPlan,
+	const created = await autumnV2_1.products.create<
+		ApiPlanV1,
 		CreatePlanParamsInput
 	>({
 		id: productId,
@@ -130,15 +133,25 @@ test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, 
 		],
 	});
 
-	const feature = created.features[0];
-	expect(feature.price!.tiers).toHaveLength(3);
-	expect(feature.price!.tiers).toEqual([
+	// V2.1: ApiPlanV1 — no included, so tiers are same across all versions
+	const item = created.items[0];
+	expect(item.price!.tiers).toHaveLength(3);
+	expect(item.price!.tiers).toEqual([
 		{ to: 100, amount: 0.1 },
 		{ to: 500, amount: 0.08 },
 		{ to: TierInfinite, amount: 0.05 },
 	]);
-	expect(feature.price!.usage_model).toBe(UsageModel.PayPerUse);
+	expect(item.price!.billing_method).toBe(BillingMethod.UsageBased);
 
+	// V2.0: ApiPlan — same tiers (no included to subtract)
+	const v2 = await autumnV2.products.get<ApiPlan>(productId);
+	expect(v2.features[0].price!.tiers).toEqual([
+		{ to: 100, amount: 0.1 },
+		{ to: 500, amount: 0.08 },
+		{ to: TierInfinite, amount: 0.05 },
+	]);
+
+	// V1.2: ApiProduct — same tiers
 	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
 	expect(v1_2.items[0].tiers).toHaveLength(3);
 	expect(v1_2.items[0].tiers).toEqual([
@@ -307,6 +320,123 @@ test.concurrent(`${chalk.yellowBright("cross-version: tiered pricing transformat
 	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
 	expect(v1_2.items[0].tiers).toHaveLength(3);
 	expect(v1_2.items[0].tiers![2]).toMatchObject({ to: TierInfinite });
+});
+
+test.concurrent(`${chalk.yellowBright("create: tiered pricing with included usage (to INCLUDES included)")}`, async () => {
+	const productId = "tiered_with_included";
+	try {
+		await autumnV2_1.products.delete(productId);
+	} catch (_error) {}
+
+	// User-facing API: tier `to` INCLUDES included usage.
+	// included=200, tiers=[{to:700}, {to:1200}, {to:inf}]
+	// Internally stored as tiers=[{to:500}, {to:1000}, {to:inf}] (without included)
+	const created = await autumnV2_1.products.create<
+		ApiPlanV1,
+		CreatePlanParamsInput
+	>({
+		id: productId,
+		name: "Tiered With Included",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 200,
+				price: {
+					tiers: [
+						{ to: 700, amount: 10 },
+						{ to: 1200, amount: 5 },
+						{ to: TierInfinite, amount: 2 },
+					],
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+					billing_units: 100,
+				},
+			},
+		],
+	});
+
+	// V2.1: ApiPlanV1 — tiers INCLUDE included usage
+	const item = created.items[0];
+	expect(item.price!.tiers).toHaveLength(3);
+	expect(item.price!.tiers).toEqual([
+		{ to: 700, amount: 10 },
+		{ to: 1200, amount: 5 },
+		{ to: TierInfinite, amount: 2 },
+	]);
+	expect(item.included).toBe(200);
+
+	// V2.0: ApiPlan — tiers do NOT include included usage (subtracted in V2.1→V2.0 conversion)
+	const v2 = await autumnV2.products.get<ApiPlan>(productId);
+	expect(v2.features[0].price!.tiers).toEqual([
+		{ to: 500, amount: 10 },
+		{ to: 1000, amount: 5 },
+		{ to: TierInfinite, amount: 2 },
+	]);
+	expect(v2.features[0].granted_balance).toBe(200);
+
+	// V1.2: ApiProduct — internal tiers do NOT include included usage
+	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
+	expect(v1_2.items[0].tiers).toHaveLength(3);
+	expect(v1_2.items[0].tiers).toEqual([
+		{ to: 500, amount: 10 },
+		{ to: 1000, amount: 5 },
+		{ to: TierInfinite, amount: 2 },
+	]);
+	expect(v1_2.items[0].included_usage).toBe(200);
+});
+
+test.concurrent(`${chalk.yellowBright("create: volume tiered pricing with included usage (to INCLUDES included)")}`, async () => {
+	const productId = "volume_tiered_with_included";
+	try {
+		await autumnV2_1.products.delete(productId);
+	} catch (_error) {}
+
+	const created = await autumnV2_1.products.create<
+		ApiPlanV1,
+		CreatePlanParamsInput
+	>({
+		id: productId,
+		name: "Volume Tiered With Included",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 100,
+				price: {
+					tiers: [
+						{ to: 600, amount: 10 },
+						{ to: TierInfinite, amount: 5 },
+					],
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+					billing_units: 100,
+				},
+			},
+		],
+	});
+
+	// V2.1: ApiPlanV1 — tiers INCLUDE included
+	const item = created.items[0];
+	expect(item.price!.tiers).toEqual([
+		{ to: 600, amount: 10 },
+		{ to: TierInfinite, amount: 5 },
+	]);
+	expect(item.included).toBe(100);
+
+	// V2.0: ApiPlan — tiers do NOT include included (subtracted in V2.1→V2.0 conversion)
+	const v2 = await autumnV2.products.get<ApiPlan>(productId);
+	expect(v2.features[0].price!.tiers).toEqual([
+		{ to: 500, amount: 10 },
+		{ to: TierInfinite, amount: 5 },
+	]);
+	expect(v2.features[0].granted_balance).toBe(100);
+
+	// V1.2: ApiProduct — internal tiers do NOT include included
+	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
+	expect(v1_2.items[0].tiers).toEqual([
+		{ to: 500, amount: 10 },
+		{ to: TierInfinite, amount: 5 },
+	]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
