@@ -38,7 +38,7 @@ export const rollovers = pgTable(
 			.$type<Record<string, EntityRolloverBalance>>()
 			.notNull()
 			.default({}),
-		created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		created_at: timestamp("created_at", { precision: 3, withTimezone: true, mode: "date" }).defaultNow(),
 	},
 	(table) => [
 		foreignKey({
