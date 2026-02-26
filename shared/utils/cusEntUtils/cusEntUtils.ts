@@ -88,6 +88,30 @@ export const addCusProductToCusEnt = ({
 	};
 };
 
+/** Returns a cusEnt with one option's quantity overridden (shallow copy). */
+export const cusEntWithOptionQuantity = ({
+	cusEnt,
+	feature,
+	quantity,
+}: {
+	cusEnt: FullCusEntWithFullCusProduct;
+	feature: Feature;
+	quantity: number;
+}): FullCusEntWithFullCusProduct => ({
+	...cusEnt,
+	customer_product: cusEnt.customer_product
+		? {
+				...cusEnt.customer_product,
+				options: cusEnt.customer_product.options.map((opt) =>
+					opt.internal_feature_id === feature.internal_id ||
+					opt.feature_id === feature.id
+						? { ...opt, quantity }
+						: opt,
+				),
+			}
+		: cusEnt.customer_product,
+});
+
 /**
  * Clones a customer entitlement and updates the quantity in its options.
  * Needed because usagePriceToLineItem reads quantity from customer_product.options.

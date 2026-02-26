@@ -7,9 +7,10 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 /** Wait time for SQS auto top-up processing */
-const AUTO_TOPUP_WAIT_MS = 15000;
+const AUTO_TOPUP_WAIT_MS = 20000;
 
 const makeAutoTopupConfig = ({
 	threshold = 20,
@@ -41,7 +42,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track below threshold t
 		items: [oneOffItem],
 	});
 
-	const { customerId, autumnV2_1 } = await initScenario({
+	const { customerId, autumnV2_1, ctx } = await initScenario({
 		customerId: "auto-topup-b1",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -81,6 +82,21 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track below threshold t
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const expectedBalance = new Decimal(100).sub(85).add(100).toNumber();
 	expect(after.balances[TestFeature.Messages].remaining).toBe(expectedBalance);
+
+	// Verify cusProduct.options.quantity incremented correctly (in packs).
+	// Initial: 100 credits / 100 billingUnits = 1 pack.
+	// After 1 top-up of 100 credits (1 pack): expected = 2 packs.
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const cusProduct = fullCustomer.customer_products.find(
+		(cp) => cp.product.id === oneOffProd.id,
+	);
+	const featureOptions = cusProduct?.options.find(
+		(o) => o.feature_id === TestFeature.Messages,
+	);
+	expect(featureOptions?.quantity).toBe(2);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup basic: track above threshold does NOT trigger")}`, async () => {
@@ -197,7 +213,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 		items: [oneOffItem],
 	});
 
-	const { customerId, autumnV2_1 } = await initScenario({
+	const { customerId, autumnV2_1, ctx } = await initScenario({
 		customerId: "auto-topup-b4",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -247,6 +263,21 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 	// 120 - 100 + 100 = 120
 	const expectedAfter = new Decimal(120).sub(100).add(100).toNumber();
 	expect(after.balances[TestFeature.Messages].remaining).toBe(expectedAfter);
+
+	// Verify cusProduct.options.quantity after two top-ups (in packs).
+	// Initial: 200 credits / 100 billingUnits = 2 packs.
+	// After 2 top-ups of 100 credits (1 pack each): expected = 4 packs.
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const cusProduct = fullCustomer.customer_products.find(
+		(cp) => cp.product.id === oneOffProd.id,
+	);
+	const featureOptions = cusProduct?.options.find(
+		(o) => o.feature_id === TestFeature.Messages,
+	);
+	expect(featureOptions?.quantity).toBe(4);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup basic: cache and DB agree after top-up")}`, async () => {
