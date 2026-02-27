@@ -19,7 +19,11 @@ import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
 function CustomersPage() {
 	restoreCustomerFilters();
 	const { org } = useOrg();
-	const { customers, isLoading: customersLoading } = useCusSearchQuery();
+	const {
+		customers,
+		isLoading: customersLoading,
+		isFetchingUncached,
+	} = useCusSearchQuery();
 	usePersistedFilters();
 
 	const { isLoading: productsLoading } = useProductsQuery();
@@ -30,7 +34,7 @@ function CustomersPage() {
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
 
-	if (productsLoading) {
+	if (productsLoading || customersLoading) {
 		return <LoadingScreen />;
 	}
 
@@ -45,7 +49,7 @@ function CustomersPage() {
 				<CustomerListTable
 					key={org?.id}
 					customers={customers}
-					isLoading={customersLoading}
+					isFetchingUncached={isFetchingUncached}
 				/>
 			</div>
 		</CustomersContext.Provider>
