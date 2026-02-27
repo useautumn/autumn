@@ -11,9 +11,11 @@ import { cusProductToFeatureOptions } from "../../cusProductUtils/convertCusProd
 export const cusEntToPrepaidQuantity = ({
 	cusEnt,
 	sumAcrossEntities = false,
+	useUpcomingQuantity = false,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	sumAcrossEntities?: boolean;
+	useUpcomingQuantity?: boolean;
 }) => {
 	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
@@ -30,7 +32,11 @@ export const cusEntToPrepaidQuantity = ({
 
 	if (!options) return 0;
 
-	const quantityWithUnits = new Decimal(options.quantity)
+	const quantity = useUpcomingQuantity
+		? (options.upcoming_quantity ?? options.quantity ?? 0)
+		: (options.quantity ?? 0);
+
+	const quantityWithUnits = new Decimal(quantity)
 		.mul(cusPrice.price.config.billing_units ?? 1)
 		.toNumber();
 
@@ -46,13 +52,19 @@ export const cusEntToPrepaidQuantity = ({
 export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
 	sumAcrossEntities = false,
+	useUpcomingQuantity = false,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	sumAcrossEntities?: boolean;
+	useUpcomingQuantity?: boolean;
 }) => {
 	return sumValues(
 		cusEnts.map((cusEnt) =>
-			cusEntToPrepaidQuantity({ cusEnt, sumAcrossEntities }),
+			cusEntToPrepaidQuantity({
+				cusEnt,
+				sumAcrossEntities,
+				useUpcomingQuantity,
+			}),
 		),
 	);
 };
