@@ -1,5 +1,6 @@
 import { createFormHook } from "@tanstack/react-form";
 import { SubmitButton } from "@/components/general/form/buttons/submit-button";
+import { AreaCheckboxField } from "@/components/general/form/fields/area-checkbox-field";
 import { CheckboxField } from "@/components/general/form/fields/checkbox-field";
 import { NumberField } from "@/components/general/form/fields/number-field";
 import { QuantityField } from "@/components/general/form/fields/quantity-field";
@@ -16,6 +17,7 @@ export const { useAppForm } = createFormHook({
 		QuantityField,
 		CheckboxField,
 		NumberField,
+		AreaCheckboxField,
 	},
 	formComponents: {
 		SubmitButton,

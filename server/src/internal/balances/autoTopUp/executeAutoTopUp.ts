@@ -3,7 +3,6 @@ import {
 	type AutumnBillingPlan,
 	cusEntsToCurrentBalance,
 	cusEntWithOptionQuantity,
-	type Feature,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	type FullCustomerPrice,
@@ -29,14 +28,12 @@ import { buildUpdatedOptions } from "./autoTopUpUtils.js";
 export const executeAutoTopUp = async ({
 	ctx,
 	fullCustomer,
-	feature,
 	autoTopupConfig,
 	cusEnts,
 	cusPrice,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	feature: Feature;
 	autoTopupConfig: AutoTopup;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	cusPrice: FullCustomerPrice;
@@ -45,6 +42,7 @@ export const executeAutoTopUp = async ({
 	const quantity = autoTopupConfig.quantity;
 	const cusEnt = cusEnts[0];
 	const cusProduct = cusEnt.customer_product;
+	const feature = cusEnt.entitlement.feature;
 
 	logger.info(
 		`[executeAutoTopUp] Starting auto top-up for feature ${feature.id}, quantity: ${quantity}`,
@@ -84,7 +82,7 @@ export const executeAutoTopUp = async ({
 	// and cusEntsToPrepaidQuantity multiplies options.quantity × billing_units
 	// to get credits. So we divide by billing_units here.
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
-	const billingUnits = priceConfig.billing_units ?? 1;
+	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
 
 	// 2. Build line item via usagePriceToLineItem
@@ -189,13 +187,13 @@ export const executeAutoTopUp = async ({
 	});
 
 	// 8. Increment rate limit counter
-	if (autoTopupConfig.max_purchases) {
+	if (autoTopupConfig.purchase_limit) {
 		await incrementAutoTopUpCounter({
 			orgId: org.id,
 			env,
 			customerId,
 			featureId: feature.id,
-			maxPurchases: autoTopupConfig.max_purchases,
+			purchaseLimit: autoTopupConfig.purchase_limit,
 		});
 	}
 

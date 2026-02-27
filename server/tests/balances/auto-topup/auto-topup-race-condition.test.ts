@@ -19,7 +19,7 @@ const makeAutoTopupConfig = ({
 	threshold?: number;
 	quantity?: number;
 } = {}): CustomerBillingControls => ({
-	auto_topup: [
+	auto_topups: [
 		{
 			feature_id: TestFeature.Messages,
 			enabled: true,
@@ -102,11 +102,11 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: concurrent track during 
 	expect(fromDb.balances[TestFeature.Messages].remaining).toBe(expectedBalance);
 
 	// 3. Verify billing_controls survived
-	expect(cached.billing_controls?.auto_topup).toBeDefined();
-	expect(cached.billing_controls?.auto_topup?.[0]?.feature_id).toBe(
+	expect(cached.billing_controls?.auto_topups).toBeDefined();
+	expect(cached.billing_controls?.auto_topups?.[0]?.feature_id).toBe(
 		TestFeature.Messages,
 	);
-	expect(cached.billing_controls?.auto_topup?.[0]?.enabled).toBe(true);
+	expect(cached.billing_controls?.auto_topups?.[0]?.enabled).toBe(true);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup race: rapid sequential tracks — deductions interleaved with top-up")}`, async () => {

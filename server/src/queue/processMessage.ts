@@ -4,7 +4,7 @@ import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { handleAutoTopUpJob } from "@/internal/balances/autoTopUp/handleAutoTopUpJob.js";
+import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
@@ -205,7 +205,7 @@ export const processMessage = async ({
 				workerLogger.error("No context found for auto top-up job");
 				return;
 			}
-			await handleAutoTopUpJob({
+			await autoTopup({
 				ctx,
 				payload: job.data,
 			});

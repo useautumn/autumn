@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 export function NumberField({
 	label,
+	description,
 	placeholder,
 	min,
 	max,
@@ -13,8 +14,10 @@ export function NumberField({
 	inputClassName,
 	hideFieldInfo,
 	disabled,
+	float,
 }: {
 	label: string;
+	description?: string;
 	placeholder?: string;
 	min?: number;
 	max?: number;
@@ -22,6 +25,8 @@ export function NumberField({
 	inputClassName?: string;
 	hideFieldInfo?: boolean;
 	disabled?: boolean;
+	/** Use parseFloat instead of parseInt */
+	float?: boolean;
 }) {
 	const field = useFieldContext<number | null>();
 
@@ -31,7 +36,9 @@ export function NumberField({
 			field.handleChange(null);
 			return;
 		}
-		const numValue = Number.parseInt(value, 10);
+		const numValue = float
+			? Number.parseFloat(value)
+			: Number.parseInt(value, 10);
 		if (!Number.isNaN(numValue)) {
 			if (max !== undefined && numValue > max) {
 				field.handleChange(max);
@@ -46,6 +53,7 @@ export function NumberField({
 	return (
 		<div className={cn("*:not-first:mt-2", className)}>
 			{label && <Label>{label}</Label>}
+			{description && <p className="text-t3 text-xs">{description}</p>}
 			<Input
 				type="number"
 				min={min}

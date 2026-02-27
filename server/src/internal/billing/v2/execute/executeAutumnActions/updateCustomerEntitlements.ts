@@ -57,7 +57,7 @@ export const updateCustomerEntitlements = async ({
 		// detection works correctly.
 		if (balanceChange !== 0) {
 			const customerId =
-				customerEntitlement.customer_id ||
+				customerEntitlement.customer_id ??
 				customerEntitlement.internal_customer_id;
 
 			await incrementCachedCusEntBalance({

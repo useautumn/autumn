@@ -5,7 +5,6 @@ import {
 	fullCustomerToCustomerEntitlements,
 	isOneOffPrice,
 	isPrepaidPrice,
-	RecaseError,
 } from "@autumn/shared";
 import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,10 +12,11 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import { checkAutoTopUpRateLimit } from "./autoTopUpRateLimit.js";
+import { buildAutoTopUpLockKey } from "./autoTopUpUtils.js";
 import { executeAutoTopUp } from "./executeAutoTopUp.js";
 
-/** SQS job handler for auto top-ups. Re-fetches fresh data and re-validates all conditions. */
-export const handleAutoTopUpJob = async ({
+/** Workflow handler for auto top-ups. Re-fetches fresh data and re-validates all conditions. */
+export const autoTopup = async ({
 	ctx,
 	payload,
 }: {
@@ -39,9 +39,7 @@ export const handleAutoTopUpJob = async ({
 	}
 
 	if (!fullCustomer) {
-		logger.warn(
-			`[handleAutoTopUpJob] Customer ${customerId} not found, skipping`,
-		);
+		logger.warn(`[autoTopup] Customer ${customerId} not found, skipping`);
 		return;
 	}
 
@@ -54,7 +52,7 @@ export const handleAutoTopUpJob = async ({
 		return;
 	}
 
-	// 3. Find customer entitlements for this feature + validate one-off prepaid price
+	// 3. Find customer entitlements for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId,
@@ -64,97 +62,76 @@ export const handleAutoTopUpJob = async ({
 		return;
 	}
 
-	const cusPrice = cusEntToCusPrice({ cusEnt: cusEnts[0] });
+	// 4. Find the cusEnt linked to the one-off prepaid price
+	const cusEntWithPrice = cusEnts.find((ce) => {
+		const cp = cusEntToCusPrice({ cusEnt: ce });
+		return cp && isOneOffPrice(cp.price) && isPrepaidPrice(cp.price);
+	});
 
-	if (!cusPrice) {
-		logger.warn(`[handleAutoTopUpJob] No price found for feature ${featureId}`);
-		return;
-	}
-
-	if (!isOneOffPrice(cusPrice.price)) {
+	if (!cusEntWithPrice) {
 		logger.warn(
-			`[handleAutoTopUpJob] Price for feature ${featureId} is not one-off, skipping`,
+			`[autoTopup] No cusEnt with one-off prepaid price for feature ${featureId}, skipping`,
 		);
 		return;
 	}
 
-	if (!isPrepaidPrice(cusPrice.price)) {
-		logger.warn(
-			`[handleAutoTopUpJob] Price for feature ${featureId} is not prepaid, skipping`,
-		);
-		return;
-	}
+	const cusPrice = cusEntToCusPrice({ cusEnt: cusEntWithPrice })!;
 
-	// 4. Re-check balance against threshold (critical: handles queued duplicates)
+	// 5. Re-check balance against threshold (critical: handles queued duplicates)
 	const remainingBalance = cusEntsToCurrentBalance({ cusEnts });
 
 	if (remainingBalance >= autoTopupConfig.threshold) {
 		logger.info(
-			`[handleAutoTopUpJob] Balance ${remainingBalance} is above threshold ${autoTopupConfig.threshold} for feature ${featureId}, skipping (likely already topped up)`,
+			`[autoTopup] Balance ${remainingBalance} is above threshold ${autoTopupConfig.threshold} for feature ${featureId}, skipping (likely already topped up)`,
 		);
 		return;
 	}
 
-	// 5. Check max_purchases rate limit
-	if (autoTopupConfig.max_purchases) {
+	// 6. Check purchase_limit rate limit
+	if (autoTopupConfig.purchase_limit) {
 		const allowed = await checkAutoTopUpRateLimit({
 			orgId: org.id,
 			env,
 			customerId,
 			featureId,
-			maxPurchases: autoTopupConfig.max_purchases,
+			purchaseLimit: autoTopupConfig.purchase_limit,
 		});
 
 		if (!allowed) {
 			logger.info(
-				`[handleAutoTopUpJob] Max purchases rate limit reached for feature ${featureId}, customer ${customerId}`,
+				`[autoTopup] Purchase limit reached for feature ${featureId}, customer ${customerId}`,
 			);
 			return;
 		}
 	}
 
-	// 6. Acquire lock to prevent duplicate top-ups
-	const lockKey = `auto_topup:${org.id}:${env}:${customerId}:${featureId}`;
+	// 7. Acquire lock to prevent duplicate top-ups
+	const lockKey = buildAutoTopUpLockKey({
+		orgId: org.id,
+		env,
+		customerId,
+		featureId,
+	});
 
+	await acquireLock({
+		lockKey,
+		ttlMs: 60000,
+		errorMessage: `Auto top-up already in progress for feature ${featureId}`,
+	});
+
+	// 8. Execute under the lock
 	try {
-		await acquireLock({
-			lockKey,
-			ttlMs: 60000,
-			errorMessage: `Auto top-up already in progress for feature ${featureId}`,
-		});
-	} catch (error) {
-		if (error instanceof RecaseError && error.statusCode === 429) {
-			logger.info(
-				`[handleAutoTopUpJob] Lock already held for feature ${featureId}, customer ${customerId}`,
-			);
-			return;
-		}
-		throw error;
-	}
-
-	// 7. Execute under the lock
-	try {
-		const feature = ctx.features.find((f) => f.id === featureId);
-
-		if (!feature) {
-			logger.warn(
-				`[handleAutoTopUpJob] Feature ${featureId} not found in org features, skipping`,
-			);
-			return;
-		}
-
 		const start = performance.now();
 		await executeAutoTopUp({
 			ctx,
 			fullCustomer,
-			feature,
 			autoTopupConfig,
 			cusEnts,
 			cusPrice,
 		});
 		const durationMs = Math.round(performance.now() - start);
 		logger.info(
-			`[handleAutoTopUpJob] Completed for feature ${featureId}, customer ${customerId}, duration: ${durationMs}ms`,
+			`[autoTopup] Completed for feature ${featureId}, customer ${customerId}, duration: ${durationMs}ms`,
 		);
 	} finally {
 		await clearLock({ lockKey });

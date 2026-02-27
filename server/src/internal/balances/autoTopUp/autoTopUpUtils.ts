@@ -5,6 +5,21 @@ import type {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
+/** Build the Redis lock key for auto top-up deduplication. */
+export const buildAutoTopUpLockKey = ({
+	orgId,
+	env,
+	customerId,
+	featureId,
+}: {
+	orgId: string;
+	env: string;
+	customerId: string;
+	featureId: string;
+}) => {
+	return `auto_topup:${orgId}:${env}:${customerId}:${featureId}`;
+};
+
 /** Compute updated options array with the top-up packs added. */
 export const buildUpdatedOptions = ({
 	cusProduct,
