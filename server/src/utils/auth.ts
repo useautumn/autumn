@@ -75,6 +75,11 @@ export const auth = betterAuth({
 			for (let i = 0; i <= 10; i++) {
 				origins.push(`http://localhost:${3000 + i}`);
 			}
+
+			// Support multi-worktree dev with offset ports (e.g. localhost:3100)
+			if (process.env.CLIENT_URL) {
+				origins.push(process.env.CLIENT_URL);
+			}
 		}
 
 		return origins;

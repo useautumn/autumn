@@ -1,4 +1,5 @@
 import { cusEntsToAllowance } from "@utils/cusEntUtils";
+import { cusEntToPrepaidInvoiceOverage } from "@utils/cusEntUtils/balanceUtils/cusEntsToPrepaidInvoiceOverage";
 import { Decimal } from "decimal.js";
 import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
@@ -11,7 +12,6 @@ import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntTo
 import {
 	isConsumablePrice,
 	isPrepaidPrice,
-	isVolumePrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
@@ -49,12 +49,10 @@ export const usagePriceToLineItem = ({
 	const price = cusPrice.price;
 
 	// 1. Get overage
+	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
 	let overage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		overage = cusEntsToPrepaidQuantity({
-			cusEnts: [cusEnt],
-			sumAcrossEntities: false,
-		});
+		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
 	} else {
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
@@ -63,9 +61,6 @@ export const usagePriceToLineItem = ({
 	// which tier applies, and the ENTIRE total is charged at that tier's rate.
 	// So we add allowance back to overage before pricing.
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
-	if (isVolumePrice(cusPrice.price)) {
-		overage = new Decimal(overage).add(allowance).toNumber();
-	}
 
 	// 2. Get usage
 	let usage = 0;

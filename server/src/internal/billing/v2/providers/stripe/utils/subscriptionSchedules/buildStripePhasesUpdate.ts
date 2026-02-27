@@ -7,6 +7,7 @@ import {
 import type Stripe from "stripe";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { stripeItemSpecToPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
@@ -28,8 +29,8 @@ const normalizeCustomerProductTimestamps = (
 
 /**
  * Converts customer products to Stripe schedule phase items.
- * Merges quantities for duplicate price IDs.
- * For metered prices (quantity undefined), we don't set quantity as Stripe requires.
+ * Merges quantities for duplicate stored price IDs.
+ * Entity-scoped inline items are kept separate (never merged).
  */
 const customerProductsToPhaseItems = ({
 	ctx,
@@ -40,8 +41,8 @@ const customerProductsToPhaseItems = ({
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 }): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
-	// Track stripePriceId -> quantity (undefined means metered/no quantity)
-	const itemMap = new Map<string, number | undefined>();
+	const storedPriceMap = new Map<string, number | undefined>();
+	const inlineItems: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] = [];
 
 	for (const customerProduct of customerProducts) {
 		const { recurringItems } = customerProductToStripeItemSpecs({
@@ -51,26 +52,34 @@ const customerProductsToPhaseItems = ({
 		});
 
 		for (const item of recurringItems) {
-			// For metered prices, quantity is undefined and should stay undefined
+			// Entity-scoped inline prices — never merge
+			if (item.stripeInlinePrice) {
+				inlineItems.push(stripeItemSpecToPhaseItem({ spec: item }));
+				continue;
+			}
+
+			const priceId = item.stripePriceId!;
 			if (item.quantity === undefined) {
-				// Metered price - don't set quantity
-				if (!itemMap.has(item.stripePriceId)) {
-					itemMap.set(item.stripePriceId, undefined);
+				if (!storedPriceMap.has(priceId)) {
+					storedPriceMap.set(priceId, undefined);
 				}
 			} else {
-				// Licensed price - accumulate quantity
-				const currentQuantity = itemMap.get(item.stripePriceId) ?? 0;
-				itemMap.set(item.stripePriceId, currentQuantity + item.quantity);
+				const current = storedPriceMap.get(priceId) ?? 0;
+				storedPriceMap.set(priceId, current + item.quantity);
 			}
 		}
 	}
 
-	return Array.from(itemMap.entries()).map(([price, quantity]) => {
-		if (quantity === undefined) {
-			return { price };
-		}
-		return { price, quantity };
-	});
+	const storedItems = Array.from(storedPriceMap.entries()).map(
+		([price, quantity]) => {
+			if (quantity === undefined) {
+				return { price };
+			}
+			return { price, quantity };
+		},
+	);
+
+	return [...storedItems, ...inlineItems];
 };
 
 /**

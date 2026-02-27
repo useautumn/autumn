@@ -1,0 +1,31 @@
+DESCRIPTION >
+    Chunked backfill of customer_prices from Postgres into customer_prices.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        created_at::Int64                                               AS created_at,
+        price_id,
+        ifNull(toString(options), 'null')                  AS options,
+        internal_customer_id,
+        customer_product_id,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'customer_prices',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE customer_prices

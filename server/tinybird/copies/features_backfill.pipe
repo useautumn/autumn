@@ -1,0 +1,36 @@
+DESCRIPTION >
+    Chunked backfill of features from Postgres into features.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        coalesce(internal_id, '')                                      AS internal_id,
+        coalesce(org_id, '')                                           AS org_id,
+        if(created_at IS NULL, NULL, created_at::Int64)                AS created_at,
+        env,
+        coalesce(id, '')                                               AS id,
+        name,
+        coalesce(type, '')                                             AS type,
+        ifNull(toString(config), 'null')                   AS config,
+        ifNull(toString(display), 'null')                 AS display,
+        toUInt8(if(archived = true, 1, 0))                            AS archived,
+        arrayMap(x -> assumeNotNull(x), coalesce(event_names, []))    AS event_names,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', coalesce(internal_id, ''))                AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'features',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE features

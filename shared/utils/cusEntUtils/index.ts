@@ -1,6 +1,10 @@
 // Balance utils
+
+// Balance utils barrel
+export * from "./balanceUtils";
 export * from "./balanceUtils/cusEntsToBalance";
 export * from "./balanceUtils/cusEntsToCurrentBalance";
+export * from "./balanceUtils/cusEntsToPrepaidInvoiceOverage";
 export * from "./balanceUtils/cusEntsToPrepaidQuantity";
 export * from "./balanceUtils/cusEntsToPurchasedBalance";
 export * from "./balanceUtils/cusEntsToReset";
@@ -18,23 +22,19 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
-
-// Balance utils barrel
-export * from "./balanceUtils";
-
 // Classify utils
 export * from "./classifyCusEntUtils";
-
+// Convert utils barrel
+export * from "./convertCusEntUtils";
 // Convert utils
 export * from "./convertCusEntUtils/cusEntsToMaxPurchase";
 export * from "./convertCusEntUtils/cusEntsToStartingBalance";
+export * from "./convertCusEntUtils/cusEntToBillingObjects";
 export * from "./convertCusEntUtils/cusEntToCusPrice";
 export * from "./convertCusEntUtils/cusEntToKey";
 export * from "./convertCusEntUtils/cusEntToStripeIds";
 // Convert utils barrel
 export * from "./convertCusEntUtils/customerEntitlementToOptions";
-// Convert utils barrel
-export * from "./convertCusEntUtils";
 // Core utils
 export * from "./cusEntUtils";
 export * from "./filterCusEntUtils";

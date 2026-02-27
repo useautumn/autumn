@@ -3,6 +3,7 @@ import {
 	type DeferredAutumnBillingPlanData,
 	featureOptionUtils,
 	getStartingBalance,
+	isCustomerProductEntityScoped,
 	priceUtils,
 } from "@autumn/shared";
 import { stripeCheckoutSessionUtils } from "@/external/stripe/checkoutSessions/utils";
@@ -35,6 +36,12 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 
 			if (!price || priceUtils.isTieredOneOff({ price, product: fullProduct }))
 				continue;
+
+			// Entity-scoped products use inline prices with pre-calculated amounts;
+			// the checkout line item quantity is not meaningful, so keep original options.
+			if (isCustomerProductEntityScoped(newCustomerProduct)) {
+				continue;
+			}
 
 			const featureOptionsQuantity =
 				stripeCheckoutSessionUtils.convert.toFeatureOptionsQuantity({
