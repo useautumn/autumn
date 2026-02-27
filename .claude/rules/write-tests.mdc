@@ -43,6 +43,12 @@ When attaching a prepaid feature and passing `options` with a quantity:
 1. **Legacy attach** (`autumnV1.attach`): `quantity` should NOT be divided by billing units and should be **exclusive** of included usage (i.e. only the prepaid amount, not counting what's already included free).
 2. **New attach** (`autumnV1.billing.attach`): `quantity` should NOT be divided by billing units and should be **inclusive** of included usage (i.e. total desired amount including the free included portion).
 
+## Subscription Verification
+
+- **New tests**: Use `expectStripeSubscriptionCorrect` from `@tests/integration/billing/utils/expectStripeSubCorrect` — it uses production code (`buildStripePhasesUpdate`) to compute expected state and handles inline entity-scoped prices, schedule phases, and post-cycle schedule release.
+- **Existing tests**: Keep using `expectSubToBeCorrect` unless you're updating the test.
+- Always call `expectStripeSubscriptionCorrect({ ctx, customerId })` after any `billing.attach()` or `subscriptions.update()` call in new tests.
+
 ## Type Checking
 
 - After writing or editing test files, ALWAYS run `bun ts` in the `server/` directory to check for type errors before considering the task done.

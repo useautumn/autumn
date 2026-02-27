@@ -78,10 +78,27 @@ export const subToNewSchedule = async ({
 		await stripeCli.subscriptionSchedules.update(newScheduleId, {
 			phases: [
 				{
-					items: newSchedule.phases[0].items.map((item) => ({
-						price: item.price as string,
-						quantity: item.quantity,
-					})),
+					items: newSchedule.phases[0].items.map((item) => {
+						const priceId = item.price as string;
+
+						// Re-apply metadata from subscription items since
+						// Stripe's from_subscription doesn't copy item metadata
+						const subItem = sub.items.data.find(
+							(si) => si.price.id === priceId,
+						);
+						const metadata =
+							subItem?.metadata && Object.keys(subItem.metadata).length > 0
+								? subItem.metadata
+								: item.metadata && Object.keys(item.metadata).length > 0
+									? item.metadata
+									: undefined;
+
+						return {
+							price: priceId,
+							quantity: item.quantity,
+							...(metadata && { metadata }),
+						};
+					}),
 					start_date: newSchedule.phases[0].start_date,
 					end_date: endOfBillingPeriod,
 					trial_end: sub?.trial_end || undefined,

@@ -1,0 +1,35 @@
+DESCRIPTION >
+    Offset-based backfill of rollovers from Postgres into rollovers.
+    Pages through the full table using LIMIT + OFFSET ordered by id.
+    Stop when a page returns fewer rows than page_size.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        coalesce(cus_ent_id, '')                                       AS cus_ent_id,
+        coalesce(balance, 0)::Float64                                  AS balance,
+        if(expires_at IS NULL, NULL, expires_at::Int64)                AS expires_at,
+        coalesce(usage, 0)::Float64                                    AS usage,
+        ifNull(toString(entities), '{}')                               AS entities,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'rollovers',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE balance < 1e15
+      AND usage < 1e15
+    ORDER BY id ASC
+    LIMIT {{Int32(page_size, 5000)}}
+    OFFSET {{Int32(offset, 0)}}
+
+TYPE COPY
+TARGET_DATASOURCE rollovers

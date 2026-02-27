@@ -8,6 +8,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProducts, expectProductActive, expectProductCanceling, expectProductScheduled, expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing, expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { expectProductAttached, expectScheduledApiSub } from "@tests/utils/expectUtils/expectProductAttached";
 ```
@@ -274,7 +275,56 @@ expectPreviewNextCycleCorrect({
 
 This ensures the Stripe subscription state matches Autumn's internal state.
 
-### `expectSubToBeCorrect`
+### `expectStripeSubscriptionCorrect` (PREFERRED for new tests)
+
+Verifies Stripe subscriptions match expected state derived from customer products.
+Handles inline entity-scoped prices, subscription schedules, and cancellation.
+Uses `buildStripePhasesUpdate` (production code) to compute expected state.
+
+```typescript
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+
+await expectStripeSubscriptionCorrect({
+  ctx,                          // TestContext from initScenario
+  customerId,
+  options?: {
+    subCount?: number,          // Expected total subscription count
+    subId?: string,             // Verify a specific subscription only
+    status?: "active" | "trialing",
+    shouldBeCanceling?: boolean, // Override: expect canceling state
+    rewards?: string[],         // Expected coupon/discount IDs
+    debug?: boolean,            // Log detailed comparison info
+  },
+});
+```
+
+**Key features:**
+- Matches inline items by `autumn_customer_price_id` metadata
+- Validates `unit_amount_decimal` on inline prices — catches stale/wrong price amounts on Stripe subscription items
+- Validates schedule phases (multi_phase scenarios) including item-level comparison
+- Handles post-cycle schedule release (Stripe keeps schedule ID but status is "released")
+- Works with entity-scoped prepaid products
+
+```typescript
+// Basic usage — verify all subscriptions for a customer
+await expectStripeSubscriptionCorrect({ ctx, customerId });
+
+// With subscription count check
+await expectStripeSubscriptionCorrect({
+  ctx,
+  customerId,
+  options: { subCount: 1 },
+});
+
+// Debug mode for troubleshooting
+await expectStripeSubscriptionCorrect({
+  ctx,
+  customerId,
+  options: { debug: true },
+});
+```
+
+### `expectSubToBeCorrect` (Legacy — use for existing tests only)
 
 Deep verification of subscription state in database. **Use for paid products.**
 
@@ -315,11 +365,11 @@ await expectNoStripeSubscription({
 
 | Scenario | Utility |
 |----------|---------|
-| Attached paid product | `expectSubToBeCorrect` |
-| Attached free product | `expectNoStripeSubscription` |
-| Upgraded free → paid | `expectSubToBeCorrect` |
-| Downgraded paid → free (after cycle) | `expectNoStripeSubscription` |
-| Scheduled downgrade (before cycle) | `expectSubToBeCorrect` (sub still exists until cycle end) |
+| New test with paid product | `expectStripeSubscriptionCorrect` |
+| New test with entity-scoped inline prices | `expectStripeSubscriptionCorrect` |
+| Existing test (don't change unless updating) | `expectSubToBeCorrect` |
+| Free product / downgrade to free | `expectNoStripeSubscription` |
+| Scheduled downgrade (before cycle) | `expectStripeSubscriptionCorrect` (validates schedule phases) |
 
 ## Complete Example
 
@@ -399,14 +449,8 @@ test.concurrent(`${chalk.yellowBright("trial: full lifecycle")}`, async () => {
     latestTotal: 20,
   });
 
-  // Verify subscription state in DB
-  await expectSubToBeCorrect({
-    db: ctx.db,
-    customerId,
-    org: ctx.org,
-    env: ctx.env,
-    flags: { checkNotTrialing: true },
-  });
+  // Verify Stripe subscription matches expected state
+  await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 ```
 
