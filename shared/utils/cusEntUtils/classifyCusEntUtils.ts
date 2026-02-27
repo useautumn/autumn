@@ -1,5 +1,6 @@
 import { InternalError } from "@api/errors";
 import { ms } from "@utils/common";
+import { isVolumePrice } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import type {
 	EntityBalance,
 	FullCustomerEntitlement,
@@ -100,4 +101,10 @@ export const customerEntitlementShouldBeBilled = ({
 	const TOLERANCE_MS = ms.days(1);
 
 	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
+};
+
+export const isVolumeBasedCusEnt = (cusEnt: FullCusEntWithFullCusProduct) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	return isVolumePrice(cusPrice.price);
 };

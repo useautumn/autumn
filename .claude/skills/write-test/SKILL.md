@@ -34,6 +34,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
 - **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
 - **Set up all prerequisite state in `initScenario` actions** - the test body should only call the single action being tested
+- **ALWAYS call `expectStripeSubscriptionCorrect({ ctx, customerId })` after billing actions** — this uses production code to verify Stripe subscription state matches expectations
 
 **DON'T:**
 - Use plain `test()` - **ALWAYS use `test.concurrent()`**

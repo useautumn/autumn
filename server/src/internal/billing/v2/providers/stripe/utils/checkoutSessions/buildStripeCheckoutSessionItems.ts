@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductsToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToOneOffStripeItemSpecs";
 import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
 import { filterStripeItemSpecsByLargestInterval } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/filterStripeItemSpecsByLargestInterval";
+import { stripeItemSpecToCheckoutLineItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { updateOneOffTieredItems } from "./updateOneOffTieredItems";
 
 export const buildStripeCheckoutSessionItems = ({
@@ -50,7 +51,8 @@ export const buildStripeCheckoutSessionItems = ({
 
 	// 5. Convert recurring item specs to line items
 	const recurringLineItems = recurringStripeItemSpecs.map((item) => {
-		const { autumnPrice, quantity, stripePriceId, autumnEntitlement } = item;
+		const { autumnPrice, autumnEntitlement } = item;
+		const lineItem = stripeItemSpecToCheckoutLineItem({ spec: item });
 
 		// If it's a prepaid price, allow adjustable quantity
 		if (autumnPrice && autumnEntitlement && isPrepaidPrice(autumnPrice)) {
@@ -60,8 +62,7 @@ export const buildStripeCheckoutSessionItems = ({
 			);
 
 			return {
-				price: stripePriceId,
-				quantity: quantity ?? 0,
+				...lineItem,
 				adjustable_quantity: isAdjustable
 					? {
 							enabled: true,
@@ -75,11 +76,7 @@ export const buildStripeCheckoutSessionItems = ({
 			} as Stripe.Checkout.SessionCreateParams.LineItem;
 		}
 
-		// Fixed price
-		return {
-			price: stripePriceId,
-			quantity: quantity ?? 0,
-		};
+		return lineItem;
 	});
 
 	// 6. Convert one-off item specs to line items (handles tiered one-off prices)
