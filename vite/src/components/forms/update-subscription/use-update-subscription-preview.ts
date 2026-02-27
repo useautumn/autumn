@@ -1,65 +1,26 @@
 import type {
-	BillingBehavior,
-	CancelAction,
-	CreateFreeTrial,
 	PreviewUpdateSubscriptionResponse,
-	ProductItem,
-	RefundBehavior,
+	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
-import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormProvider";
+import { useEffect, useState } from "react";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useUpdateSubscriptionBodyBuilder } from "./use-update-subscription-body-builder";
 
+/** Debounced preview query for update subscription. Accepts a pre-built request body. */
 export function useUpdateSubscriptionPreview({
-	updateSubscriptionFormContext,
-	prepaidOptions,
-	freeTrial,
+	body,
 	enabled,
-	items,
-	version,
-	cancelAction,
-	billingBehavior,
-	refundBehavior,
 }: {
-	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
-	prepaidOptions?: Record<string, number>;
-	freeTrial?: CreateFreeTrial | null;
+	body: UpdateSubscriptionV0Params | null;
 	enabled?: boolean;
-	items?: ProductItem[] | null;
-	version?: number;
-	cancelAction?: CancelAction | null;
-	billingBehavior?: BillingBehavior | null;
-	refundBehavior?: RefundBehavior | null;
 }) {
-	const { customerId, product, entityId } = updateSubscriptionFormContext;
 	const axiosInstance = useAxiosInstance();
 
-	const { updateSubscriptionBody } = useUpdateSubscriptionBodyBuilder({
-		customerId,
-		product,
-		entityId,
-		prepaidOptions,
-		version: version ?? product?.version,
-		freeTrial,
-		items,
-		cancelAction,
-		billingBehavior,
-		refundBehavior,
-	});
+	const shouldEnable = enabled !== undefined ? enabled : !!body;
 
-	const shouldEnable =
-		enabled !== undefined
-			? enabled
-			: !!(customerId && product && updateSubscriptionBody);
-
-	const queryKeyDeps = useMemo(
-		() => JSON.stringify(updateSubscriptionBody),
-		[updateSubscriptionBody],
-	);
+	const queryKeyDeps = JSON.stringify(body);
 
 	const [debouncedQueryKey, setDebouncedQueryKey] = useState(queryKeyDeps);
 	const [isDebouncing, setIsDebouncing] = useState(false);
@@ -81,14 +42,12 @@ export function useUpdateSubscriptionPreview({
 	const query = useQuery({
 		queryKey: ["update-subscription-preview", debouncedQueryKey],
 		queryFn: async () => {
-			if (!updateSubscriptionBody || !customerId) {
-				return null;
-			}
+			if (!body) return null;
 
 			const response =
 				await axiosInstance.post<PreviewUpdateSubscriptionResponse>(
 					"/v1/billing.preview_update",
-					updateSubscriptionBody,
+					body,
 				);
 
 			return response.data;

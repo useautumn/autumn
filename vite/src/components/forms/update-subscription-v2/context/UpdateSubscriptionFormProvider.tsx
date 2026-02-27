@@ -37,7 +37,6 @@ import {
 import { useUpdateSubscriptionMutation } from "../hooks/useUpdateSubscriptionMutation";
 import { useUpdateSubscriptionRequestBody } from "../hooks/useUpdateSubscriptionRequestBody";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
-import { getFreeTrial } from "../utils/getFreeTrial";
 import {
 	getProductWithSupportedFormValues,
 	getSupportedFormPatchFromDraftProduct,
@@ -168,10 +167,12 @@ export function UpdateSubscriptionFormProvider({
 
 	const defaultValues = form.options.defaultValues;
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
+	const initialBillingBehavior = defaultValues?.billingBehavior ?? null;
 
 	const hasChanges = useHasSubscriptionChanges({
 		formValues,
 		initialPrepaidOptions,
+		initialBillingBehavior,
 		prepaidItems,
 		customerProduct,
 		currentVersion,
@@ -233,28 +234,21 @@ export function UpdateSubscriptionFormProvider({
 		!hasPrepaidQuantityChanges &&
 		!isVersionLoading;
 
-	const freeTrial = getFreeTrial({
-		removeTrial: formValues.removeTrial,
-		trialLength: formValues.trialLength,
-		trialDuration: formValues.trialDuration,
-		trialEnabled: formValues.trialEnabled,
-		trialCardRequired: formValues.trialCardRequired,
-	});
-
-	const previewQuery = useUpdateSubscriptionPreview({
-		updateSubscriptionFormContext: formContext,
-		prepaidOptions: changedPrepaidOptions,
-		freeTrial,
-		items: formValues.items,
-		version: formValues.version,
-		cancelAction: formValues.cancelAction,
-		billingBehavior: formValues.billingBehavior,
-		refundBehavior: formValues.refundBehavior,
-	});
-
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
 		form,
+	});
+
+	// Build the preview body reactively — formValues triggers recomputation,
+	// buildRequestBody reads the latest snapshot from the form store.
+	const previewBody = useMemo(
+		() => buildRequestBody(),
+		[buildRequestBody, formValues],
+	);
+
+	const previewQuery = useUpdateSubscriptionPreview({
+		body: previewBody,
+		enabled: !!(formContext.customerId && formContext.product),
 	});
 
 	const { handleConfirm, handleInvoiceUpdate, isPending } =
