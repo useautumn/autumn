@@ -26,17 +26,23 @@ function getSavedFilters({
 	}
 }
 
-let hasRestored = false;
+let restoredForOrg: string | null = null;
 
-/** Call synchronously at the top of CustomersPage render, before any hooks. On first call per mount cycle, replaces URL params with the current org's saved filters from localStorage (or clears them). This ensures stale params from a previous org are never carried over. */
+/** Call synchronously at the top of CustomersPage render, before any hooks. On each render, checks whether the current org differs from the last-restored org and, if so, replaces URL params with that org's saved filters from localStorage (or clears them). This ensures stale params from a previous org are never carried over. Skips restoration when the navigation carried `preAppliedFilters` state (e.g. clicking active customers on the products page). */
 export function restoreCustomerFilters() {
-	if (hasRestored) return;
-	hasRestored = true;
-
 	try {
 		const orgData = localStorage.getItem(ORG_KEY);
 		if (!orgData) return;
 		const { id: orgId } = JSON.parse(orgData);
+
+		// Already restored for this org — nothing to do.
+		if (restoredForOrg === orgId) return;
+		restoredForOrg = orgId;
+
+		// React Router stores navigation state under `usr` in history state.
+		// If the navigation explicitly set filters, don't overwrite them with localStorage.
+		const routerState = window.history.state?.usr;
+		if (routerState?.preAppliedFilters) return;
 
 		const filters = getSavedFilters({ orgId });
 
@@ -68,7 +74,7 @@ export function usePersistedFilters() {
 	// navigating back to the customers page re-reads from localStorage.
 	useEffect(() => {
 		return () => {
-			hasRestored = false;
+			restoredForOrg = null;
 		};
 	}, []);
 
