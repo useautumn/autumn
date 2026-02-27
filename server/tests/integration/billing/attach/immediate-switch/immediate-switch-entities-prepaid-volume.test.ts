@@ -27,7 +27,7 @@ import {
 	expectCustomerProducts,
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -240,12 +240,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: graduated
 		count: 4,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -426,10 +421,5 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: graduated
 		count: 4,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

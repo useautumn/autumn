@@ -1,15 +1,15 @@
-import type { BillingContext, StripeItemSpec } from "@autumn/shared";
+import type {
+	BillingContext,
+	FullCusProduct,
+	StripeItemSpec,
+} from "@autumn/shared";
 import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
-import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 /**
- * Convert customer products to recurring stripe item specs.
- * For metered prices (quantity undefined), we preserve undefined as Stripe requires.
- * @param ctx - The context
- * @param billingContext - The billing context
- * @param customerProducts - The customer products
- * @returns The recurring stripe item specs
+ * Converts customer products to recurring stripe item specs.
+ * Deduplicates stored-price items by stripePriceId (accumulating quantities).
+ * Entity-scoped inline items are never deduplicated — each entity gets its own item.
  */
 export const customerProductsToRecurringStripeItemSpecs = ({
 	ctx,
@@ -20,7 +20,8 @@ export const customerProductsToRecurringStripeItemSpecs = ({
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 }): StripeItemSpec[] => {
-	const stripeItemSpecsByPriceId = new Map<string, StripeItemSpec>();
+	const storedPriceSpecs = new Map<string, StripeItemSpec>();
+	const inlineSpecs: StripeItemSpec[] = [];
 
 	for (const customerProduct of customerProducts) {
 		const { recurringItems } = customerProductToStripeItemSpecs({
@@ -29,31 +30,29 @@ export const customerProductsToRecurringStripeItemSpecs = ({
 			customerProduct,
 		});
 
-		for (const recurringItem of recurringItems) {
-			const existingItem = stripeItemSpecsByPriceId.get(
-				recurringItem.stripePriceId,
-			);
+		for (const item of recurringItems) {
+			// Entity-scoped inline items are never deduplicated
+			if (item.stripeInlinePrice) {
+				inlineSpecs.push(item);
+				continue;
+			}
 
-			if (existingItem) {
-				// For metered prices, quantity is undefined and should stay undefined
-				if (
-					recurringItem.quantity === undefined &&
-					existingItem.quantity === undefined
-				) {
-					// Both metered - keep undefined
+			const priceId = item.stripePriceId!;
+			const existing = storedPriceSpecs.get(priceId);
+
+			if (existing) {
+				// Metered prices: quantity is undefined, keep undefined
+				if (item.quantity === undefined && existing.quantity === undefined) {
+					// Both metered — keep as-is
 				} else {
-					// Licensed prices - accumulate quantity
-					existingItem.quantity =
-						(existingItem.quantity ?? 0) + (recurringItem.quantity ?? 0);
+					// Licensed prices — accumulate quantity
+					existing.quantity = (existing.quantity ?? 0) + (item.quantity ?? 0);
 				}
 			} else {
-				stripeItemSpecsByPriceId.set(
-					recurringItem.stripePriceId,
-					recurringItem,
-				);
+				storedPriceSpecs.set(priceId, item);
 			}
 		}
 	}
 
-	return Array.from(stripeItemSpecsByPriceId.values());
+	return [...Array.from(storedPriceSpecs.values()), ...inlineSpecs];
 };
