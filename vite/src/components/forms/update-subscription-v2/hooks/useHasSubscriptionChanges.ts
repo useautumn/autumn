@@ -1,4 +1,5 @@
 import {
+	type BillingBehavior,
 	type Feature,
 	type FullCusProduct,
 	generateItemChanges,
@@ -14,6 +15,7 @@ import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 export function useHasSubscriptionChanges({
 	formValues,
 	initialPrepaidOptions,
+	initialBillingBehavior,
 	prepaidItems,
 	customerProduct,
 	currentVersion,
@@ -22,6 +24,7 @@ export function useHasSubscriptionChanges({
 }: {
 	formValues: UpdateSubscriptionForm;
 	initialPrepaidOptions: Record<string, number>;
+	initialBillingBehavior: BillingBehavior | null;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;
 	currentVersion: number;
@@ -29,6 +32,8 @@ export function useHasSubscriptionChanges({
 	features?: Feature[];
 }): boolean {
 	return useMemo(() => {
+		if (formValues.billingBehavior !== initialBillingBehavior) return true;
+
 		const trialChanges = generateTrialChanges({
 			customerProduct,
 			removeTrial: formValues.removeTrial,
@@ -73,6 +78,8 @@ export function useHasSubscriptionChanges({
 
 		return prepaidChanges.length > 0;
 	}, [
+		formValues.billingBehavior,
+		initialBillingBehavior,
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
