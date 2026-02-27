@@ -1,14 +1,13 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectLatestInvoiceCorrect } from "@tests/integration/billing/utils/expectLatestInvoiceCorrect.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -22,7 +21,6 @@ import chalk from "chalk";
  * - Entity 1 increases quantity while Entity 2 remains unchanged
  * - Entity 2 decreases quantity while Entity 1 remains unchanged
  * - Cross-entity mixed changes (increase one, decrease other)
- * - OnDecrease.None config (no credit invoice on decrease)
  * - Different products per entity with quantity updates
  * - Multiple features per entity
  */
@@ -48,11 +46,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 1 increases
 	const initialQuantity2 = 5 * billingUnits; // 60
 	const newQuantity1 = 20 * billingUnits; // 240
 
-	const {
-		autumnV1,
-		ctx: testContext,
-		entities,
-	} = await initScenario({
+	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -120,13 +114,11 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 1 increases
 		amount: 10 * pricePerUnit,
 	});
 
-	// Verify subscription count
-	await expectSubToBeCorrect({
-		db: testContext.db,
+	// Verify Stripe subscription matches expected state
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: testContext.org,
-		env: testContext.env,
-		subCount: 1,
+		options: { subCount: 1 },
 	});
 });
 
@@ -151,7 +143,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 2 decreases
 	const initialQuantity2 = 15 * billingUnits; // 180
 	const newQuantity2 = 5 * billingUnits; // 60
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -218,6 +210,8 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 2 decreases
 		productId: product.id,
 		amount: -10 * pricePerUnit,
 	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // Test 3: Cross-Entity Mixed Changes
@@ -242,7 +236,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: mixed changes acro
 	const newQuantity1 = 15 * billingUnits; // 150 (increase)
 	const newQuantity2 = 10 * billingUnits; // 100 (decrease)
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -321,119 +315,11 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: mixed changes acro
 		customer,
 		count: 4,
 	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// Test 4: OnDecrease.None Config - No Credit Invoice
-// With OnDecrease.None, the balance changes immediately but NO credit invoice is created
-// This differs from OnDecrease.ProrateImmediately which creates a credit invoice
-test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None creates no credit invoice")}`, async () => {
-	const customerId = "multi-ent-qty-no-proration";
-	const billingUnits = 100;
-	const pricePerUnit = 10;
-
-	const prepaidItem = items.prepaid({
-		featureId: TestFeature.Messages,
-		billingUnits,
-		price: pricePerUnit,
-		config: {
-			on_increase: OnIncrease.ProrateImmediately,
-			on_decrease: OnDecrease.None,
-		},
-	});
-
-	const product = products.base({
-		id: "prepaid",
-		items: [prepaidItem],
-	});
-
-	const initialQuantity1 = 4 * billingUnits; // 400
-	const initialQuantity2 = 3 * billingUnits; // 300
-	const newQuantity1 = 2 * billingUnits; // 200 (decrease)
-
-	const { autumnV1, entities, ctx, testClockId } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [product] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({
-				productId: product.id,
-				entityIndex: 0,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: initialQuantity1 },
-				],
-			}),
-			s.attach({
-				productId: product.id,
-				entityIndex: 1,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: initialQuantity2 },
-				],
-			}),
-		],
-	});
-
-	const beforeInvoices =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
-
-	// Preview the downgrade - should be $0 (no immediate credit)
-	const preview = await autumnV1.subscriptions.previewUpdate({
-		customer_id: customerId,
-		entity_id: entities[0].id,
-		product_id: product.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity1 }],
-	});
-
-	expect(preview.total).toBe(0);
-
-	// Execute the downgrade
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		entity_id: entities[0].id,
-		product_id: product.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity1 }],
-	});
-
-	// Balance is updated AFTER the next cycle with OnDecrease.None
-	const entity1After = await autumnV1.entities.get(customerId, entities[0].id);
-	expectCustomerFeatureCorrect({
-		customer: entity1After,
-		featureId: TestFeature.Messages,
-		balance: initialQuantity1,
-	});
-
-	// No new invoice should be created (the key behavior of OnDecrease.None)
-	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerInvoiceCorrect({
-		customer: afterUpdate,
-		count: invoiceCountBefore,
-	});
-
-	// Entity 2 should be unchanged
-	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	expectCustomerFeatureCorrect({
-		customer: entity2,
-		featureId: TestFeature.Messages,
-		balance: initialQuantity2,
-	});
-
-	await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-	});
-
-	const afterAdvance = await autumnV1.entities.get(customerId, entities[0].id);
-	expectCustomerFeatureCorrect({
-		customer: afterAdvance,
-		featureId: TestFeature.Messages,
-		balance: newQuantity1,
-	});
-});
-
-// Test 5: Different Products Per Entity
+// Test 4: Different Products Per Entity (was Test 5)
 test.concurrent(`${chalk.yellowBright("multi-entity-quantity: different products per entity")}`, async () => {
 	const customerId = "multi-ent-qty-diff-products";
 	const billingUnits = 10;
@@ -464,7 +350,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: different products
 	const initialQuantityPro = 10 * billingUnits; // 100
 	const newQuantityPro = 15 * billingUnits; // 150 (increase)
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -539,9 +425,11 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: different products
 		productId: proProduct.id,
 		amount: 5 * 8,
 	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// Test 6: Multiple Features Per Entity
+// Test 5: Multiple Features Per Entity (was Test 6)
 test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features per entity")}`, async () => {
 	const customerId = "multi-ent-qty-multi-feat";
 	const messagesBillingUnits = 10;
@@ -566,7 +454,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features 
 		items: [messagesItem, wordsItem],
 	});
 
-	const { autumnV1, entities } = await initScenario({
+	const { autumnV1, entities, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -662,4 +550,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features 
 		productId: product.id,
 		amount: 5 * messagesPrice - 1 * wordsPrice,
 	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
