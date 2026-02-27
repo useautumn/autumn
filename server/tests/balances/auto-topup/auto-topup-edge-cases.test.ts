@@ -19,20 +19,20 @@ const makeAutoTopupConfig = ({
 	threshold = 20,
 	quantity = 100,
 	enabled = true,
-	maxPurchases,
+	purchaseLimit,
 }: {
 	threshold?: number;
 	quantity?: number;
 	enabled?: boolean;
-	maxPurchases?: { interval: BillingInterval; limit: number };
+	purchaseLimit?: { interval: BillingInterval; limit: number };
 } = {}): CustomerBillingControls => ({
-	auto_topup: [
+	auto_topups: [
 		{
 			feature_id: TestFeature.Messages,
 			enabled,
 			threshold,
 			quantity,
-			...(maxPurchases ? { max_purchases: maxPurchases } : {}),
+			...(purchaseLimit ? { purchase_limit: purchaseLimit } : {}),
 		},
 	],
 });
@@ -168,12 +168,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: rate limit (max_purchase
 		],
 	});
 
-	// Configure auto top-up with max_purchases = 2 per month
+	// Configure auto top-up with purchase_limit = 2 per month
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 50,
 			quantity: 100,
-			maxPurchases: {
+			purchaseLimit: {
 				interval: BillingInterval.Month,
 				limit: 2,
 			},
@@ -601,7 +601,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: multiple features top-up
 	// Locks are per-feature, so both SQS jobs can execute in parallel.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
-			auto_topup: [
+			auto_topups: [
 				{
 					feature_id: TestFeature.Messages,
 					enabled: true,

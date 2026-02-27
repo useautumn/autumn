@@ -111,7 +111,7 @@ export const updateCustomer = async ({
 			...newMetadata,
 		},
 		...(billing_controls && {
-			auto_topup: billing_controls.auto_topup,
+			auto_topup: billing_controls.auto_topups,
 		}),
 	};
 

@@ -1,5 +1,5 @@
 import {
-	type AutoTopupMaxPurchases,
+	type AutoTopupPurchaseLimit,
 	billingIntervalToSeconds,
 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
@@ -19,19 +19,19 @@ const buildRateLimitKey = ({
 	return `auto_topup_count:${orgId}:${env}:${customerId}:${featureId}`;
 };
 
-/** Check if auto top-up is within the max_purchases rate limit */
+/** Check if auto top-up is within the purchase limit */
 export const checkAutoTopUpRateLimit = async ({
 	orgId,
 	env,
 	customerId,
 	featureId,
-	maxPurchases,
+	purchaseLimit,
 }: {
 	orgId: string;
 	env: string;
 	customerId: string;
 	featureId: string;
-	maxPurchases: AutoTopupMaxPurchases;
+	purchaseLimit: AutoTopupPurchaseLimit;
 }): Promise<boolean> => {
 	if (redis.status !== "ready") {
 		return true;
@@ -44,7 +44,7 @@ export const checkAutoTopUpRateLimit = async ({
 		return true;
 	}
 
-	return Number.parseInt(current, 10) < maxPurchases.limit;
+	return Number.parseInt(current, 10) < purchaseLimit.limit;
 };
 
 /** Increment the auto top-up purchase counter. Sets TTL on first increment. */
@@ -53,16 +53,16 @@ export const incrementAutoTopUpCounter = async ({
 	env,
 	customerId,
 	featureId,
-	maxPurchases,
+	purchaseLimit,
 }: {
 	orgId: string;
 	env: string;
 	customerId: string;
 	featureId: string;
-	maxPurchases: AutoTopupMaxPurchases;
+	purchaseLimit: AutoTopupPurchaseLimit;
 }): Promise<void> => {
 	const key = buildRateLimitKey({ orgId, env, customerId, featureId });
-	const ttl = billingIntervalToSeconds({ interval: maxPurchases.interval });
+	const ttl = billingIntervalToSeconds({ interval: purchaseLimit.interval });
 
 	await tryRedisWrite(async () => {
 		const count = await redis.incr(key);

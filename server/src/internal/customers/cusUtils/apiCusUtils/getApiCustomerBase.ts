@@ -62,7 +62,7 @@ export const getApiCustomerBase = async ({
 		balances: apiBalances,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: fullCus.auto_topup
-			? { auto_topup: fullCus.auto_topup }
+			? { auto_topups: fullCus.auto_topup }
 			: undefined,
 
 		invoices:

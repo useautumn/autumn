@@ -21,7 +21,7 @@ const makeAutoTopupConfig = ({
 	quantity?: number;
 	enabled?: boolean;
 } = {}): CustomerBillingControls => ({
-	auto_topup: [
+	auto_topups: [
 		{
 			feature_id: TestFeature.Messages,
 			enabled,

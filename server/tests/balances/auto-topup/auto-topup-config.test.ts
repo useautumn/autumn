@@ -11,7 +11,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 const autoTopupConfig: CustomerBillingControls = {
-	auto_topup: [
+	auto_topups: [
 		{
 			feature_id: TestFeature.Messages,
 			enabled: true,
@@ -55,8 +55,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: update customer with b
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(customer.billing_controls).toBeDefined();
-	expect(customer.billing_controls?.auto_topup).toHaveLength(1);
-	expect(customer.billing_controls?.auto_topup?.[0]).toMatchObject({
+	expect(customer.billing_controls?.auto_topups).toHaveLength(1);
+	expect(customer.billing_controls?.auto_topups?.[0]).toMatchObject({
 		feature_id: TestFeature.Messages,
 		enabled: true,
 		threshold: 20,
@@ -97,7 +97,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: disable auto_topup")}`
 	// Now disable it
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
-			auto_topup: [
+			auto_topups: [
 				{
 					feature_id: TestFeature.Messages,
 					enabled: false,
@@ -110,7 +110,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: disable auto_topup")}`
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
-	expect(customer.billing_controls?.auto_topup?.[0]?.enabled).toBe(false);
+	expect(customer.billing_controls?.auto_topups?.[0]?.enabled).toBe(false);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup config: remove auto_topup with empty array")}`, async () => {
@@ -145,13 +145,13 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: remove auto_topup with
 
 	// Remove by setting empty array
 	await autumnV2_1.customers.update(customerId, {
-		billing_controls: { auto_topup: [] },
+		billing_controls: { auto_topups: [] },
 	});
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	// Either undefined/null or empty array — both are acceptable
-	const topups = customer.billing_controls?.auto_topup;
+	const topups = customer.billing_controls?.auto_topups;
 	expect(!topups || topups.length === 0).toBe(true);
 });
 
@@ -182,13 +182,13 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: with max_purchases rat
 
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
-			auto_topup: [
+			auto_topups: [
 				{
 					feature_id: TestFeature.Messages,
 					enabled: true,
 					threshold: 20,
 					quantity: 100,
-					max_purchases: {
+					purchase_limit: {
 						interval: BillingInterval.Month,
 						limit: 5,
 					},
@@ -200,7 +200,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: with max_purchases rat
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(
-		customer.billing_controls?.auto_topup?.[0]?.max_purchases,
+		customer.billing_controls?.auto_topups?.[0]?.purchase_limit,
 	).toMatchObject({
 		interval: BillingInterval.Month,
 		limit: 5,
