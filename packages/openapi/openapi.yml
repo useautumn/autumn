@@ -8515,6 +8515,18 @@ paths:
                   description: Target a specific balance by its reset interval. Use when the
                     customer has multiple balances for the same feature with
                     different reset intervals.
+                current_balance:
+                  type: number
+                  description: Alias for remaining. Set the current balance to this exact value.
+                    Cannot be combined with add_to_balance.
+                granted_balance:
+                  type: number
+                  description: Set the granted (included) balance for this entitlement. Requires
+                    current_balance to also be provided.
+                next_reset_at:
+                  type: number
+                  description: Override the next reset timestamp for this balance (Unix timestamp
+                    in milliseconds).
               required:
                 - customer_id
                 - feature_id
