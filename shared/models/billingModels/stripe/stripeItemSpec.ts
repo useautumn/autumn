@@ -7,11 +7,12 @@ import type { FullProduct } from "../../productModels/productModels";
 /**
  * Inline Stripe price data for entity-scoped items.
  * Pre-calculated flat amount (not tiered) — Stripe doesn't support tiered price_data.
+ * `recurring` is omitted for one-off prices.
  */
 export type StripeInlinePrice = {
 	product: string;
 	currency: string;
-	recurring: Stripe.PriceCreateParams.Recurring;
+	recurring?: Stripe.PriceCreateParams.Recurring;
 	unit_amount_decimal: string;
 };
 
