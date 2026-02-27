@@ -6,6 +6,6 @@ export const customerProductsToStripeSubscriptionIds = ({
 	customerProducts: FullCusProduct[];
 }) => {
 	return deduplicateArray(
-		customerProducts.flatMap((cp) => cp.subscription_ids),
+		customerProducts.flatMap((cp) => cp.subscription_ids ?? []),
 	);
 };

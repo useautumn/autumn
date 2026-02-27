@@ -291,7 +291,7 @@ await expectStripeSubscriptionCorrect({
     subCount?: number,          // Expected total subscription count
     subId?: string,             // Verify a specific subscription only
     status?: "active" | "trialing",
-    shouldBeCanceled?: boolean, // Override: expect canceling state
+    shouldBeCanceling?: boolean, // Override: expect canceling state
     rewards?: string[],         // Expected coupon/discount IDs
     debug?: boolean,            // Log detailed comparison info
   },

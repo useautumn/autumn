@@ -4,6 +4,7 @@
 export * from "./balanceUtils";
 export * from "./balanceUtils/cusEntsToBalance";
 export * from "./balanceUtils/cusEntsToCurrentBalance";
+export * from "./balanceUtils/cusEntsToPrepaidInvoiceOverage";
 export * from "./balanceUtils/cusEntsToPrepaidQuantity";
 export * from "./balanceUtils/cusEntsToPurchasedBalance";
 export * from "./balanceUtils/cusEntsToReset";
@@ -21,7 +22,6 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
-
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel
