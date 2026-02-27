@@ -21,7 +21,11 @@ export const validateSchedulePhases = async ({
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	debug?: boolean;
 }) => {
-	if (!sub.schedule) return;
+	expect(
+		sub.schedule,
+		`Expected subscription ${sub.id} to have a schedule for phase validation`,
+	).not.toBeNull();
+	if (!sub.schedule) return; // type narrowing only — expect above will fail first
 
 	const scheduleId =
 		typeof sub.schedule === "string" ? sub.schedule : sub.schedule.id;

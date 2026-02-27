@@ -184,12 +184,12 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: volume wi
 	const quantity1 = 800;
 	const quantity2 = 400;
 
-	// Entity 1: 600 purchased → 6 packs → tier 2 → 6×$5 = $30
-	const purchasedPacks1 = (quantity1 - includedUsage) / BILLING_UNITS;
+	// Entity 1: 800 (including included usage) purchased
+	const purchasedPacks1 = quantity1 / BILLING_UNITS;
 	const volExpected1 = purchasedPacks1 * 5; // tier 2 rate (>5 packs)
 
-	// Entity 2: 200 purchased → 2 packs → tier 1 → 2×$10 = $20
-	const purchasedPacks2 = (quantity2 - includedUsage) / BILLING_UNITS;
+	// Entity 2: 400 (including included usage) purchased
+	const purchasedPacks2 = quantity2 / BILLING_UNITS;
 	const volExpected2 = purchasedPacks2 * 10; // tier 1 rate (≤5 packs)
 
 	const volItem = items.volumePrepaidMessages({

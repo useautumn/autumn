@@ -102,7 +102,7 @@ export const verifySubscription = async ({
 		sub,
 		scenario,
 		cancelAtSeconds,
-		shouldBeCanceled: options?.shouldBeCanceled,
+		shouldBeCanceling: options?.shouldBeCanceling,
 		debug,
 	});
 

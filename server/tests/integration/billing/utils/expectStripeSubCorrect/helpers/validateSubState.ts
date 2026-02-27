@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { PhaseScenario } from "../classifyPhaseScenario";
 
 /**
@@ -52,30 +53,30 @@ export const validateSubState = async ({
 	sub,
 	scenario,
 	cancelAtSeconds,
-	shouldBeCanceled,
+	shouldBeCanceling,
 	debug,
 }: {
 	ctx: TestContext;
 	sub: Stripe.Subscription;
 	scenario: PhaseScenario;
 	cancelAtSeconds?: number;
-	shouldBeCanceled?: boolean;
+	shouldBeCanceling?: boolean;
 	debug?: boolean;
 }) => {
 	// Explicit override takes priority
-	if (shouldBeCanceled === true) {
+	if (shouldBeCanceling === true) {
 		expect(
-			sub.cancel_at !== null ||
-				sub.canceled_at !== null ||
-				sub.cancel_at_period_end,
+			isStripeSubscriptionCanceling(sub),
 			"Expected subscription to be canceling",
 		).toBe(true);
 		return;
 	}
 
-	if (shouldBeCanceled === false) {
-		expect(sub.cancel_at).toBeNull();
-		expect(sub.canceled_at).toBeNull();
+	if (shouldBeCanceling === false) {
+		expect(
+			isStripeSubscriptionCanceling(sub),
+			"Expected subscription to NOT be canceling",
+		).toBe(false);
 		return;
 	}
 
