@@ -112,11 +112,6 @@ export const executeStripeBillingPlan = async ({
 				stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
 			});
 		}
-
-		console.log(
-			"STRIPE SUBSCRIPTION SCHEDULE: ",
-			JSON.stringify(stripeSubscriptionSchedule, null, 2),
-		);
 	}
 
 	const stripeInvoice =
