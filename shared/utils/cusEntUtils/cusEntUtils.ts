@@ -21,7 +21,8 @@ export const isEntityCusEnt = ({
 }): boolean => {
 	return !!(
 		cusEnt.entitlement.entity_feature_id ||
-		cusEnt.customer_product?.internal_entity_id
+		cusEnt.customer_product?.internal_entity_id ||
+		cusEnt.internal_entity_id
 	);
 };
 
