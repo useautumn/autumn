@@ -2,7 +2,7 @@ import type { BillingVersion } from "@autumn/shared";
 
 export type ExpectStripeSubOptions = {
 	status?: "active" | "trialing";
-	shouldBeCanceled?: boolean;
+	shouldBeCanceling?: boolean;
 	subId?: string;
 	subCount?: number;
 	rewards?: string[];

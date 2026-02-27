@@ -4,6 +4,7 @@ import {
 	featureOptionUtils,
 	InternalError,
 	isPrepaidPrice,
+	priceUtils,
 	type StripeItemSpec,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -36,8 +37,9 @@ export const prepaidToStripeItemSpec = ({
 
 	const config = price.config as UsagePriceConfig;
 	const isEntityScoped = notNullish(cusProduct.internal_entity_id);
+	const isTieredOneOff = priceUtils.isTieredOneOff({ price, product });
 
-	if (isEntityScoped) {
+	if (isEntityScoped || isTieredOneOff) {
 		const inlinePrice = cusEntToInlineStripePrice({
 			cusEnt: cusEntWithCusProduct,
 			org: ctx.org,
@@ -53,6 +55,12 @@ export const prepaidToStripeItemSpec = ({
 		};
 	}
 
+	if (!config.stripe_prepaid_price_v2_id) {
+		throw new InternalError({
+			message: `[prepaidToStripeItemSpec] Price ${price.id} has no stripe_prepaid_price_v2_id`,
+		});
+	}
+
 	const quantity = featureOptionUtils.convert.toV2StripeQuantity({
 		featureOptions: options ?? undefined,
 		price,
@@ -60,7 +68,7 @@ export const prepaidToStripeItemSpec = ({
 	});
 
 	return {
-		stripePriceId: config.stripe_prepaid_price_v2_id!,
+		stripePriceId: config.stripe_prepaid_price_v2_id,
 		quantity,
 		autumnPrice: price,
 		autumnEntitlement: entitlement,

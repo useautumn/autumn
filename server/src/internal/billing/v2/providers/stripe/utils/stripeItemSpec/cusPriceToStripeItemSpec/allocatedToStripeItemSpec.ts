@@ -1,6 +1,7 @@
 import {
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
+	InternalError,
 	type StripeItemSpec,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -21,10 +22,16 @@ export const allocatedToStripeItemSpec = ({
 	const { price, product } = billing;
 	const config = price.config as UsagePriceConfig;
 
+	if (!config.stripe_price_id) {
+		throw new InternalError({
+			message: `[allocatedToStripeItemSpec] config.stripe_price_id is empty for autumn price: ${price.id}`,
+		});
+	}
+
 	const existingUsage = cusEntToInvoiceUsage({ cusEnt: cusEntWithCusProduct });
 
 	return {
-		stripePriceId: config.stripe_price_id!,
+		stripePriceId: config.stripe_price_id,
 		quantity: existingUsage,
 		autumnPrice: price,
 		autumnProduct: product,
