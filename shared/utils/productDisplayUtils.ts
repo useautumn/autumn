@@ -120,8 +120,7 @@ export const getFeatureItemDisplay = ({
 		const intervalDisplay = getIntervalDisplay(item);
 		if (intervalDisplay) {
 			secondaryText = intervalDisplay;
-		} else if (isSingleUseFeature(feature)) {
-			// Only show "one-off" for single-use features, not continuous use
+		} else if (isSingleUseFeature(feature) && item.included_usage !== Infinite) {
 			secondaryText = "one-off";
 		}
 	}
