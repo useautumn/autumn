@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useOrg } from "@/hooks/common/useOrg";
+import { clearOrgCache, useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
@@ -247,6 +247,7 @@ export const handleSwitchOrg = async (
 			organizationId: orgId,
 		});
 
+		clearOrgCache();
 		window.location.reload();
 	} catch (error: any) {
 		toast.error(error.message);
