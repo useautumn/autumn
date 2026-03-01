@@ -9,6 +9,7 @@ import {
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import {
 	shouldBillNow,
+	shouldCreateReplaceables,
 	shouldProrate,
 	shouldSkipLineItems,
 } from "@utils/billingUtils";
@@ -79,6 +80,7 @@ export const priceToProrationConfig = ({
 	shouldApplyProration: boolean;
 	chargeImmediately: boolean;
 	skipLineItems: boolean;
+	shouldCreateReplaceables: boolean;
 } => {
 	const prorationBehaviorConfig = isUpgrade
 		? (price.proration_config?.on_increase ?? OnIncrease.ProrateImmediately)
@@ -89,5 +91,6 @@ export const priceToProrationConfig = ({
 		shouldApplyProration: shouldProrate(prorationBehaviorConfig),
 		chargeImmediately: shouldBillNow(prorationBehaviorConfig),
 		skipLineItems: shouldSkipLineItems(prorationBehaviorConfig),
+		shouldCreateReplaceables: shouldCreateReplaceables(prorationBehaviorConfig),
 	};
 };

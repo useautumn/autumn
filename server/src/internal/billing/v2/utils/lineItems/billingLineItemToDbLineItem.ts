@@ -42,8 +42,15 @@ export const billingLineItemToInsertDbLineItem = ({
 		prorated: lineItem.prorated,
 
 		price_id: context.price.id,
-		customer_product_id: context.customerProduct?.id ?? null,
-		customer_entitlement_id: context.customerEntitlement?.id ?? null,
+		customer_product_ids: context.customerProduct?.id
+			? [context.customerProduct.id]
+			: [],
+		customer_price_ids: context.customerPrice?.id
+			? [context.customerPrice.id]
+			: [],
+		customer_entitlement_ids: context.customerEntitlement?.id
+			? [context.customerEntitlement.id]
+			: [],
 		internal_product_id: context.product.internal_id,
 		product_id: context.product.id,
 		internal_feature_id: context.feature?.internal_id ?? null,

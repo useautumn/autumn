@@ -10,9 +10,11 @@ import {
 	FullCustomerEntitlementSchema,
 	InvoiceSchema,
 	PriceSchema,
+	ReplaceableSchema,
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
@@ -30,6 +32,9 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			balance: z.number().optional(),
 		})
 		.optional(),
+
+	deletedReplaceables: z.array(ReplaceableSchema).optional(),
+	insertReplaceables: z.array(z.custom<InsertReplaceable>()).optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({

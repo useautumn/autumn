@@ -45,6 +45,15 @@ export type BatchResetCusEntsPayload = {
 	}[];
 };
 
+export type StoreInvoiceLineItemsPayload = {
+	orgId: string;
+	env: AppEnv;
+	stripeInvoiceId: string;
+	autumnInvoiceId: string;
+	/** LineItem[] for matching Stripe line items back to Autumn billing context */
+	billingLineItems?: unknown[];
+};
+
 // ============ Workflow Registry ============
 
 type WorkflowRunner = "sqs" | "hatchet";
@@ -80,6 +89,11 @@ const workflowRegistry = {
 		jobName: JobName.BatchResetCusEnts,
 		runner: "sqs",
 	} as WorkflowConfig<BatchResetCusEntsPayload>,
+
+	storeInvoiceLineItems: {
+		jobName: JobName.StoreInvoiceLineItems,
+		runner: "sqs",
+	} as WorkflowConfig<StoreInvoiceLineItemsPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -151,4 +165,9 @@ export const workflows = {
 		payload: BatchResetCusEntsPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
+
+	triggerStoreInvoiceLineItems: (
+		payload: StoreInvoiceLineItemsPayload,
+		options?: TriggerOptions,
+	) => triggerWorkflow({ name: "storeInvoiceLineItems", payload, options }),
 };

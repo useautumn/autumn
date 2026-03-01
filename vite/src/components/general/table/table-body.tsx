@@ -11,6 +11,7 @@ export function TableBody() {
 		isLoading,
 		getRowHref,
 		onRowClick,
+		onRowDoubleClick,
 		rowClassName,
 		emptyStateChildren,
 		emptyStateText,
@@ -52,6 +53,11 @@ export function TableBody() {
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}
 						onClick={!rowHref ? () => onRowClick?.(row.original) : undefined}
+						onDoubleClick={
+							onRowDoubleClick
+								? () => onRowDoubleClick(row.original)
+								: undefined
+						}
 					>
 						<TableRowCells
 							row={row}

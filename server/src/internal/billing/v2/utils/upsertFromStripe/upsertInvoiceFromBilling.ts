@@ -22,4 +22,6 @@ export const upsertInvoiceFromBilling = async ({
 		fullCustomer,
 	});
 	await InvoiceService.upsert({ db: ctx.db, invoice });
+
+	return invoice;
 };

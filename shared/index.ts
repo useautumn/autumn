@@ -186,6 +186,7 @@ export * from "./utils/cusEntUtils/index";
 export * from "./utils/displayUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";
+export * from "./utils/invoices/index";
 export * from "./utils/planFeatureUtils/planToDbFreeTrial";
 export * from "./utils/productDisplayUtils";
 export * from "./utils/productDisplayUtils/sortProductItems";

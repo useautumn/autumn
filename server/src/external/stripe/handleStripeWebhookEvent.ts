@@ -9,10 +9,10 @@ import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
-import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
+import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
@@ -62,7 +62,7 @@ export const handleStripeWebhookEvent = async (
 				break;
 
 			case "invoice.finalized": {
-				await handleInvoiceFinalized({ ctx });
+				await handleStripeInvoiceFinalized({ ctx, event });
 				break;
 			}
 

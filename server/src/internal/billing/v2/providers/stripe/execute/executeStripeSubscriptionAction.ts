@@ -1,6 +1,7 @@
 import type {
 	BillingContext,
 	BillingPlan,
+	Invoice,
 	StripeBillingPlanResult,
 } from "@autumn/shared";
 import { ms, StripeBillingStage, tryCatch } from "@autumn/shared";
@@ -90,9 +91,10 @@ export const executeStripeSubscriptionAction = async ({
 			})
 		: false;
 
+	let autumnInvoice: Invoice | undefined;
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		await upsertInvoiceFromBilling({
+		autumnInvoice = await upsertInvoiceFromBilling({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
 			fullProducts: billingContext.fullProducts,
@@ -152,5 +154,6 @@ export const executeStripeSubscriptionAction = async ({
 	return {
 		stripeSubscription,
 		stripeInvoice: latestStripeInvoice,
+		autumnInvoice,
 	};
 };

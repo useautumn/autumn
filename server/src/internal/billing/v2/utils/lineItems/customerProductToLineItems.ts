@@ -52,7 +52,7 @@ export const customerProductToLineItems = ({
 		direction,
 	});
 
-	let lineItems: LineItem[] = [];
+	const lineItems: LineItem[] = [];
 
 	let filteredCustomerPrices = customerProduct.customer_prices;
 	if (priceFilters?.excludeOneOffPrices) {
@@ -88,6 +88,7 @@ export const customerProductToLineItems = ({
 			now: currentEpochMs,
 			currency: orgToCurrency({ org: ctx.org }),
 			customerProduct,
+			customerPrice: cusPrice,
 		};
 
 		if (isFixedPrice(price)) {
@@ -128,7 +129,7 @@ export const customerProductToLineItems = ({
 		);
 	}
 
-	lineItems = lineItems.filter((item) => item.amount !== 0);
+	// lineItems = lineItems.filter((item) => item.amount !== 0);
 
 	return lineItems;
 };
