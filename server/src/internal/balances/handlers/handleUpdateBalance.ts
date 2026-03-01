@@ -1,10 +1,14 @@
 import {
+	customerEntitlements,
+	customerProducts,
+	customers,
 	ErrCode,
 	notNullish,
 	nullish,
 	RecaseError,
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
@@ -12,7 +16,6 @@ import { runUpdateUsage } from "@/internal/balances/updateBalance/runUpdateUsage
 import { updateGrantedBalance } from "@/internal/balances/updateBalance/updateGrantedBalance";
 import { buildCustomerEntitlementFilters } from "@/internal/balances/utils/buildCustomerEntitlementFilters";
 import { CusService } from "@/internal/customers/CusService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const handleUpdateBalance = createRoute({
@@ -65,13 +68,48 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		if (notNullish(params.next_reset_at) && params.customer_entitlement_id) {
-			await CusEntService.update({
-				ctx,
-				id: params.customer_entitlement_id,
-				updates: {
+			// Update only if the entitlement belongs to the authenticated org
+			// (scoped via customer_entitlements → customer_products → customers.org_id)
+			const orgScopedCusEntIds = ctx.db
+				.select({ id: customerEntitlements.id })
+				.from(customerEntitlements)
+				.innerJoin(
+					customerProducts,
+					eq(
+						customerEntitlements.customer_product_id,
+						customerProducts.id,
+					),
+				)
+				.innerJoin(
+					customers,
+					eq(
+						customerProducts.internal_customer_id,
+						customers.internal_id,
+					),
+				)
+				.where(
+					and(
+						eq(customerEntitlements.id, params.customer_entitlement_id),
+						eq(customers.org_id, ctx.org.id),
+						eq(customers.env, ctx.env),
+					),
+				);
+
+			const updated = await ctx.db
+				.update(customerEntitlements)
+				.set({
 					next_reset_at: params.next_reset_at,
-				},
-			});
+				})
+				.where(inArray(customerEntitlements.id, orgScopedCusEntIds))
+				.returning({ id: customerEntitlements.id });
+
+			if (updated.length === 0) {
+				throw new RecaseError({
+					message: "Customer entitlement not found",
+					code: ErrCode.CustomerEntitlementNotFound,
+					statusCode: StatusCodes.NOT_FOUND,
+				});
+			}
 
 			await deleteCachedApiCustomer({
 				ctx,
