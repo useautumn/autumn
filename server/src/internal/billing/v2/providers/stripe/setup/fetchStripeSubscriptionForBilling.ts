@@ -7,7 +7,10 @@ import {
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/subscriptions";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import {
+	isStripeSubscriptionCanceled,
+	isStripeSubscriptionUnhealthy,
+} from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
@@ -61,6 +64,15 @@ export const fetchStripeSubscriptionForBilling = async ({
 		throw new InternalError({
 			message: `[Stripe Subscription] Subscription is canceled: ${subId}`,
 		});
+	}
+
+	// Don't merge new products onto unhealthy subscriptions (past_due, incomplete, etc.)
+	// Force creation of a new subscription so the new product isn't affected by existing payment issues
+	if (isStripeSubscriptionUnhealthy(sub)) {
+		ctx.logger.info(
+			`[fetchStripeSubscriptionForBilling] Skipping unhealthy subscription ${subId} (status: ${sub.status}), will create new subscription`,
+		);
+		return undefined;
 	}
 
 	return sub as StripeSubscriptionWithDiscounts;
