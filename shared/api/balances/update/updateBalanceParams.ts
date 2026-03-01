@@ -26,13 +26,20 @@ export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
 export const UpdateBalanceParamsV0Schema =
 	ExtUpdateBalanceParamsV0Schema.extend({
 		current_balance: z.number().optional().meta({
-			internal: true,
+			description:
+				"Alias for remaining. Set the current balance to this exact value. Cannot be combined with add_to_balance.",
 		}),
 
-		granted_balance: z.number().optional().meta({ internal: true }),
+		granted_balance: z.number().optional().meta({
+			description:
+				"Set the granted (included) balance for this entitlement. Requires current_balance to also be provided.",
+		}),
 
 		customer_entitlement_id: z.string().optional().meta({ internal: true }),
-		next_reset_at: z.number().optional().meta({ internal: true }),
+		next_reset_at: z.number().optional().meta({
+			description:
+				"Override the next reset timestamp for this balance (Unix timestamp in milliseconds).",
+		}),
 	})
 		.refine(
 			(data) => {
