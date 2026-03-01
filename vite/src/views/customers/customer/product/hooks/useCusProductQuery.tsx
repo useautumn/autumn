@@ -1,6 +1,6 @@
 import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
