@@ -10,6 +10,7 @@ const create = ({
 	usage = 0,
 	expiresAt = null,
 	entities = {},
+	createdAt = new Date(),
 }: {
 	id?: string;
 	cusEntId: string;
@@ -17,6 +18,7 @@ const create = ({
 	usage?: number;
 	expiresAt?: number | null;
 	entities?: Record<string, EntityRolloverBalance>;
+	createdAt?: Date | null;
 }): Rollover => ({
 	id: id ?? `rollover_${crypto.randomUUID().slice(0, 8)}`,
 	cus_ent_id: cusEntId,
@@ -24,6 +26,7 @@ const create = ({
 	usage,
 	expires_at: expiresAt,
 	entities,
+	created_at: createdAt,
 });
 
 // ═══════════════════════════════════════════════════════════════════

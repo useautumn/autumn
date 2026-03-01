@@ -5,6 +5,7 @@ import {
 	numeric,
 	pgTable,
 	text,
+	timestamp,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { customerEntitlements } from "../cusEntTable.js";
@@ -22,6 +23,7 @@ export const RolloverSchema = z.object({
 	usage: z.number().default(0),
 	expires_at: z.number().nullable(),
 	entities: z.record(z.string(), EntityRolloverBalanceSchema),
+	created_at: z.date().nullable().optional(),
 });
 
 export const rollovers = pgTable(
@@ -36,6 +38,7 @@ export const rollovers = pgTable(
 			.$type<Record<string, EntityRolloverBalance>>()
 			.notNull()
 			.default({}),
+		created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 	},
 	(table) => [
 		foreignKey({
