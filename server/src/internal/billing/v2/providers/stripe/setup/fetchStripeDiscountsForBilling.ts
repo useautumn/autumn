@@ -1,4 +1,5 @@
 import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
+import { RecaseError } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
@@ -65,7 +66,8 @@ export const filterDeletedCouponDiscounts = async ({
 				if (
 					error instanceof Stripe.errors.StripeError &&
 					error.code?.includes("resource_missing")
-				) return false;
+				)
+					return false;
 				throw error;
 			}
 		}),
@@ -76,8 +78,8 @@ export const filterDeletedCouponDiscounts = async ({
 
 /**
  * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
- * Resolves param discounts via Stripe API and merges with existing subscription/customer discounts.
- * Deduplicates by coupon ID. Filters out discounts with deleted coupons.
+ * Throws if any param discount coupon is already applied to the subscription (prevents double-use).
+ * Filters out discounts with deleted coupons.
  */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
@@ -109,14 +111,20 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Merge with existing discounts, deduplicating by coupon ID
+	// Reject if any param discount coupon is already applied to the subscription
 	const existingCouponIds = new Set(
 		existingDiscounts.map((d) => d.source.coupon.id),
 	);
-	const newDiscounts = resolvedParamDiscounts.filter(
-		(d) => !existingCouponIds.has(d.source.coupon.id),
-	);
+	for (const d of resolvedParamDiscounts) {
+		if (existingCouponIds.has(d.source.coupon.id)) {
+			throw new RecaseError({
+				message: `Discount ${d.source.coupon.id} is already applied to this subscription`,
+				code: "",
+				statusCode: 400,
+			});
+		}
+	}
 
-	const allDiscounts = [...existingDiscounts, ...newDiscounts];
+	const allDiscounts = [...existingDiscounts, ...resolvedParamDiscounts];
 	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
 };
