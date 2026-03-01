@@ -56,6 +56,7 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		queryKey: params?.env ? ["org", params.env] : ["org"],
 		queryFn: fetcher,
 		initialData: getInitialData(),
+		initialDataUpdatedAt: 0, // Always treat cached data as stale so it refetches immediately
 	});
 
 	useEffect(() => {

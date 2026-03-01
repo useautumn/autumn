@@ -243,6 +243,9 @@ export const handleSwitchOrg = async (
 		setSearchParams?.(new URLSearchParams());
 		window.history.replaceState(null, "", window.location.pathname);
 
+		// Clear cached org data so stale name isn't shown after reload
+		localStorage.removeItem("autumn_org");
+
 		await authClient.organization.setActive({
 			organizationId: orgId,
 		});
