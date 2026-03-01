@@ -12,6 +12,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -110,7 +111,7 @@ test.concurrent(`${chalk.yellowBright("attach-discount-stacking 1: param discoun
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Duplicate coupon deduped with existing sub discount
+// TEST 2: Duplicate coupon already on sub → error
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -119,12 +120,9 @@ test.concurrent(`${chalk.yellowBright("attach-discount-stacking 1: param discoun
  * - Upgrade to premium ($50/mo) with same coupon as param discount
  *
  * Expected:
- * - Deduped: only one instance of the coupon
- * - Charge: $50 * 0.8 = $40
- * - Refund: -$20
- * - Total: -$20 + $40 = $20
+ * - ErrCode.InvalidRequest: coupon already applied to subscription
  */
-test.concurrent(`${chalk.yellowBright("attach-discount-stacking 2: duplicate coupon deduped with existing")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-discount-stacking 2: duplicate coupon already on sub → error")}`, async () => {
 	const customerId = "att-disc-stack-dedup";
 
 	const pro = products.pro({
@@ -158,15 +156,16 @@ test.concurrent(`${chalk.yellowBright("attach-discount-stacking 2: duplicate cou
 		couponIds: [coupon.id],
 	});
 
-	// Pass the same coupon as param discount
-	const preview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: premium.id,
-		discounts: [{ reward_id: coupon.id }],
+	// Passing the same coupon should now error
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.billing.previewAttach({
+				customer_id: customerId,
+				product_id: premium.id,
+				discounts: [{ reward_id: coupon.id }],
+			});
+		},
 	});
-
-	// Only one 20% discount (deduped): $50 * 0.8 = $40, refund -$20, total $20
-	expect(preview.total).toBe(20);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
