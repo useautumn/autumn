@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/modifyStripeSubscriptionFromCheckout";
+import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -43,6 +44,13 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		deferredData: updatedDeferredData,
 	});
 
+	// 3. Sync Autumn metadata onto subscription items created by checkout
+	await syncSubscriptionItemMetadataFromCheckout({
+		ctx,
+		checkoutContext,
+		deferredData: updatedDeferredData,
+	});
+
 	addToExtraLogs({
 		ctx,
 		extras: {
@@ -60,6 +68,7 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		stripeInvoice: checkoutContext.stripeInvoice,
 	});
 
 	// Delete metadata after successful execution

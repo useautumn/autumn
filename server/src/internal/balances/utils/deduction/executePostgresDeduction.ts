@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
-import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -13,6 +12,7 @@ import type { EventInfo } from "../../events/initEvent.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import {
@@ -148,12 +148,19 @@ export const executePostgresDeduction = async ({
 
 					if (!cusEnt) continue;
 
-					await handlePaidAllocatedCusEnt({
+					await createAllocatedInvoice({
 						ctx,
-						cusEnt,
-						fullCus: fullCustomer,
-						updates,
+						customerEntitlement: cusEnt,
+						fullCustomer,
+						update,
 					});
+
+					// await handlePaidAllocatedCusEnt({
+					// 	ctx,
+					// 	cusEnt,
+					// 	fullCus: fullCustomer,
+					// 	updates,
+					// });
 
 					applyDeductionUpdateToFullCustomer({
 						fullCus: fullCustomer,

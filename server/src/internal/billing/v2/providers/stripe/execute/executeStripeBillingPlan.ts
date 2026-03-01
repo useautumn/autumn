@@ -117,10 +117,14 @@ export const executeStripeBillingPlan = async ({
 	const stripeInvoice =
 		subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice;
 
+	const autumnInvoice =
+		subscriptionResult?.autumnInvoice ?? invoiceResult?.autumnInvoice;
+
 	return {
 		stripeSubscription: subscriptionResult?.stripeSubscription,
 		stripeInvoice,
 		requiredAction:
 			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
+		autumnInvoice,
 	};
 };

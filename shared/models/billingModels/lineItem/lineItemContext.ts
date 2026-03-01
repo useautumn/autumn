@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { FullCustomerEntitlementSchema } from "../../cusProductModels/cusEntModels/cusEntModels";
+import { FullCustomerPriceSchema } from "../../cusProductModels/cusPriceModels/cusPriceModels";
 import { FullCusProductSchema } from "../../cusProductModels/cusProductModels";
 import { FeatureSchema } from "../../featureModels/featureModels";
 import { PriceSchema } from "../../productModels/priceModels/priceModels";
@@ -25,6 +26,7 @@ export const LineItemContextSchema = z.object({
 
 	// Entity references (optional - not all line items have these)
 	customerProduct: FullCusProductSchema.optional(),
+	customerPrice: FullCustomerPriceSchema.optional(),
 	customerEntitlement: FullCustomerEntitlementSchema.optional(),
 });
 

@@ -1,6 +1,7 @@
 import type {
 	BillingContext,
 	BillingPlan,
+	Invoice,
 	StripeBillingPlanResult,
 	StripeInvoiceMetadata,
 } from "@autumn/shared";
@@ -24,6 +25,7 @@ export const executeStripeInvoiceAction = async ({
 	const { logger } = ctx;
 
 	let invoiceMetadata: StripeInvoiceMetadata | undefined;
+	let autumnInvoice: Invoice | undefined;
 
 	const { invoiceAction: stripeInvoiceAction } = billingPlan.stripe;
 
@@ -66,7 +68,7 @@ export const executeStripeInvoiceAction = async ({
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
-		await upsertInvoiceFromBilling({
+		autumnInvoice = await upsertInvoiceFromBilling({
 			ctx,
 			stripeInvoice: invoice,
 			fullProducts: billingContext.fullProducts,
@@ -77,12 +79,13 @@ export const executeStripeInvoiceAction = async ({
 			stripeInvoice: invoice,
 			deferred: true,
 			requiredAction,
+			autumnInvoice,
 		};
 	}
 
 	if (invoice) {
 		logger.debug("[executeStripeInvoiceAction] Upserting invoice from billing");
-		await upsertInvoiceFromBilling({
+		autumnInvoice = await upsertInvoiceFromBilling({
 			ctx,
 			stripeInvoice: invoice,
 			fullProducts: billingContext.fullProducts,
@@ -94,5 +97,5 @@ export const executeStripeInvoiceAction = async ({
 		`[executeStripeInvoiceAction] Completed, invoice: ${invoice?.id}`,
 	);
 
-	return { stripeInvoice: invoice };
+	return { stripeInvoice: invoice, autumnInvoice };
 };
