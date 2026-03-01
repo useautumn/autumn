@@ -34,6 +34,7 @@ const initCustomer = ({
 				}
 			: null,
 		send_email_receipts: customerData?.send_email_receipts ?? false,
+		auto_topup: customerData?.billing_controls?.auto_topup,
 	};
 };
 

@@ -46,6 +46,7 @@ export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultTable";
 export * from "./models/checkModels/checkPreviewModels";
 // 8. Customer Models
+export * from "./models/cusModels/billingControlModels";
 export * from "./models/cusModels/cusModels";
 // Processor Models
 export * from "./models/processorModels/processorModels";

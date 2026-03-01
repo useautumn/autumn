@@ -54,7 +54,9 @@ export const V2_0_CustomerChange = defineVersionChange({
 		// Convert purchases to subscriptions and add to subscriptions array
 		const purchasesAsSubscriptions: ApiSubscription[] = (
 			input.purchases ?? []
-		).map((purchase) => apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }));
+		).map((purchase) =>
+			apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }),
+		);
 
 		// Return V0 customer format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;

@@ -52,6 +52,24 @@ export const entIntervalToValue = (
 	return new Decimal(baseValue).mul(intervalCount ?? 1);
 };
 
+/** Convert a BillingInterval to its approximate duration in seconds. */
+export const billingIntervalToSeconds = ({
+	interval,
+}: {
+	interval: BillingInterval;
+}): number => {
+	const intervalToSeconds: Record<BillingInterval, number> = {
+		[BillingInterval.OneOff]: 0,
+		[BillingInterval.Week]: 7 * 24 * 60 * 60,
+		[BillingInterval.Month]: 30 * 24 * 60 * 60,
+		[BillingInterval.Quarter]: 90 * 24 * 60 * 60,
+		[BillingInterval.SemiAnnual]: 180 * 24 * 60 * 60,
+		[BillingInterval.Year]: 365 * 24 * 60 * 60,
+	};
+
+	return intervalToSeconds[interval] ?? 30 * 24 * 60 * 60;
+};
+
 export const entIntervalsSame = ({
 	intervalA,
 	intervalB,

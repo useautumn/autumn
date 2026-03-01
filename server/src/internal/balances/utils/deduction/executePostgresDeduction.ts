@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
+import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -182,7 +183,17 @@ export const executePostgresDeduction = async ({
 				feature: deduction.feature,
 			}).catch((error) => {
 				ctx.logger.error(
-					`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
+					`[executePostgresDeduction] Failed to handle threshold reached: ${error}`,
+				);
+			});
+
+			triggerAutoTopUp({
+				ctx,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
 				);
 			});
 		}

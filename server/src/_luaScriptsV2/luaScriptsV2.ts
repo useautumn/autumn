@@ -129,6 +129,35 @@ export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${updateMainScript}`;
 
 // ============================================================================
+// INCREMENT CUSTOMER ENTITLEMENT BALANCE SCRIPT
+// ============================================================================
+
+const incrementMainScript = readFileSync(
+	join(__dirname, "incrementCusEntBalance.lua"),
+	"utf-8",
+);
+
+/**
+ * Lua script for atomically incrementing a cusEnt balance in the cached
+ * FullCustomer via JSON.NUMINCRBY. Safe with concurrent deductions.
+ */
+export const INCREMENT_CUS_ENT_BALANCE_SCRIPT = `${LUA_UTILS}
+${incrementMainScript}`;
+
+// ============================================================================
+// UPDATE CUSTOMER PRODUCT OPTIONS SCRIPT
+// ============================================================================
+
+/**
+ * Lua script for atomically incrementing a cusProduct's options[].quantity
+ * in the cached FullCustomer via JSON.NUMINCRBY.
+ */
+export const UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT = readFileSync(
+	join(__dirname, "updateCusProductOptions.lua"),
+	"utf-8",
+);
+
+// ============================================================================
 // UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
 // ============================================================================
 

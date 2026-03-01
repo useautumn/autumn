@@ -18,8 +18,10 @@ import {
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	INCREMENT_CUS_ENT_BALANCE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
+	UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
@@ -203,6 +205,16 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
+	redisInstance.defineCommand("incrementCusEntBalance", {
+		numberOfKeys: 1,
+		lua: INCREMENT_CUS_ENT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCusProductOptions", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT,
+	});
+
 	redisInstance.on("error", (error) => {
 		console.error(`[Redis] Connection error:`, error.message);
 	});
@@ -382,6 +394,14 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		updateCustomerEntitlements(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		incrementCusEntBalance(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		updateCusProductOptions(
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
