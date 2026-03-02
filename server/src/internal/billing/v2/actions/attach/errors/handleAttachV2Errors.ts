@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
+import { handleCarryOverBalancesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverBalancesErrors";
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
@@ -53,7 +54,10 @@ export const handleAttachV2Errors = async ({
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
 
-	// 8. Proration behavior errors (none restrictions)
+	// 8. Carry over balances errors (non-consumable features)
+	handleCarryOverBalancesErrors({ ctx, params });
+
+	// 9. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
 		billingContext,
 		currentCustomerProduct: billingContext.currentCustomerProduct,
