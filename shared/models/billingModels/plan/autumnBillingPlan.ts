@@ -2,6 +2,7 @@ import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymen
 import {
 	type AppEnv,
 	CusProductStatus,
+	CustomerEntitlementSchema,
 	EntitlementSchema,
 	EntityBalanceSchema,
 	FeatureOptionsSchema,
@@ -66,6 +67,7 @@ export const AutumnBillingPlanSchema = z.object({
 
 	lineItems: z.array(LineItemSchema).optional(),
 
+	insertCustomerEntitlements: z.array(CustomerEntitlementSchema).optional(),
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),
