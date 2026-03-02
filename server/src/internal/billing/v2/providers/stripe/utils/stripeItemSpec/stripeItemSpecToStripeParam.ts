@@ -72,6 +72,7 @@ export const stripeItemSpecToCheckoutLineItem = ({
 	return {
 		...toPriceParam({ spec }),
 		quantity: spec.quantity,
+		...(spec.metadata && { metadata: spec.metadata }),
 	};
 };
 

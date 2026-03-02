@@ -2,7 +2,6 @@ import type { MultiAttachBillingContext } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
-import { handleMultiAttachPrepaidErrors } from "./handleMultiAttachPrepaidErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 
 /** Runs all multi-attach validation checks. */
@@ -16,10 +15,6 @@ export const handleMultiAttachErrors = async ({
 	redirectMode: string;
 }) => {
 	handleMultiAttachCurrentProductErrors({
-		productContexts: billingContext.productContexts,
-	});
-
-	handleMultiAttachPrepaidErrors({
 		productContexts: billingContext.productContexts,
 	});
 

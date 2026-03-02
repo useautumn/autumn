@@ -32,6 +32,7 @@ export const executeStripeSubscriptionOperation = async ({
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
+
 			if (
 				stripeSubscription &&
 				stripeSubscription.billing_mode.type !== "flexible"

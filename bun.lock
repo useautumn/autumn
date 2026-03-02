@@ -135,6 +135,10 @@
         "react",
       ],
     },
+    "packages/ksuid": {
+      "name": "@autumn/ksuid",
+      "version": "1.0.0",
+    },
     "packages/openapi": {
       "name": "@autumn/openapi",
       "version": "1.0.0",
@@ -313,6 +317,7 @@
       "name": "@autumn/shared",
       "version": "1.0.0",
       "dependencies": {
+        "@autumn/ksuid": "workspace:*",
         "@date-fns/utc": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/openapi": "^1.13.4",
@@ -494,6 +499,8 @@
     "@asyncapi/specs": ["@asyncapi/specs@6.8.1", "", { "dependencies": { "@types/json-schema": "^7.0.11" } }, "sha512-czHoAk3PeXTLR+X8IUaD+IpT+g+zUvkcgMDJVothBsan+oHN3jfcFcFUNdOPAAFoUCQN1hXF1dWuphWy05THlA=="],
 
     "@autumn/docs": ["@autumn/docs@workspace:apps/docs"],
+
+    "@autumn/ksuid": ["@autumn/ksuid@workspace:packages/ksuid"],
 
     "@autumn/openapi": ["@autumn/openapi@workspace:packages/openapi"],
 

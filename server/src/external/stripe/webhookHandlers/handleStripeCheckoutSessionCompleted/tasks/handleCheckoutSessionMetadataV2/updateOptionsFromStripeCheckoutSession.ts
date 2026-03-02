@@ -39,9 +39,15 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 
 			// Entity-scoped products use inline prices with pre-calculated amounts;
 			// the checkout line item quantity is not meaningful, so keep original options.
-			if (isCustomerProductEntityScoped(newCustomerProduct)) {
-				continue;
-			}
+			if (isCustomerProductEntityScoped(newCustomerProduct)) continue;
+
+			const lineItem = stripeCheckoutSessionUtils.find.lineItemByAutumnPrice({
+				lineItems: stripeCheckoutSession.line_items?.data ?? [],
+				price,
+				product: fullProduct,
+			});
+
+			if (lineItem?.metadata?.inline_price) continue;
 
 			const featureOptionsQuantity =
 				stripeCheckoutSessionUtils.convert.toFeatureOptionsQuantity({

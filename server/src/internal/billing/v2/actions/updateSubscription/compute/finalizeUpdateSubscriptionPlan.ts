@@ -28,6 +28,7 @@ export const finalizeUpdateSubscriptionPlan = ({
 		lineItems: plan.lineItems ?? [],
 		billingContext,
 		autumnBillingPlan: plan,
+		customLineItems: params.custom_line_items,
 	});
 
 	// Guard: if current customer product is one off, make sure there are no line items

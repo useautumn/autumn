@@ -14,10 +14,14 @@
 		"paths": {
 			"@api/*": ["./api/*"],
 			"@models/*": ["./models/*"],
-			"@utils/*": ["./utils/*"]
+			"@utils/*": ["./utils/*"],
+			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"]
 		}
 	},
 	"include": ["./**/*"],
 	"types": ["node"],
-	"exclude": ["node_modules", "dist"]
+	"exclude": ["node_modules", "dist"],
+	"references": [
+		{ "path": "../packages/ksuid" }
+	]
 }
