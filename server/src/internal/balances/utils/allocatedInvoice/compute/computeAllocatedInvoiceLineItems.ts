@@ -79,7 +79,7 @@ export const computeAllocatedInvoiceLineItems = ({
 	});
 
 	const newLineItem = usagePriceToLineItem({
-		cusEnt: billingContext.updatedCutomerEntitlement,
+		cusEnt: billingContext.updatedCustomerEntitlement,
 		context: lineItemContext,
 		options: {
 			shouldProrateOverride: shouldApplyProration,

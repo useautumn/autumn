@@ -125,7 +125,7 @@ export const setupAllocatedInvoiceContext = async ({
 
 		// Allocated invoice specific fields
 		customerEntitlement,
-		updatedCutomerEntitlement: applyDeductionUpdateToCustomerEntitlement({
+		updatedCustomerEntitlement: applyDeductionUpdateToCustomerEntitlement({
 			customerEntitlement,
 			update,
 		}),

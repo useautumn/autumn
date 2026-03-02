@@ -60,8 +60,8 @@ export const computeAllocatedInvoicePlan = ({
 
 	if (!updateCustomerEntitlementPlan) return undefined;
 
-	billingContext.updatedCutomerEntitlement = applyEntitlementPlanToCusEnt({
-		cusEnt: billingContext.updatedCutomerEntitlement,
+	billingContext.updatedCustomerEntitlement = applyEntitlementPlanToCusEnt({
+		cusEnt: billingContext.updatedCustomerEntitlement,
 		plan: updateCustomerEntitlementPlan,
 	});
 

@@ -6,7 +6,7 @@ import type { DeductionUpdate } from "../types/deductionUpdate.js";
 
 export interface AllocatedInvoiceContext extends BillingContext {
 	customerEntitlement: FullCusEntWithFullCusProduct; // Contains OLD customer entitlement (no balance changes, from before track)
-	updatedCutomerEntitlement: FullCusEntWithFullCusProduct; // Contains NEW customer entitlement (with balance changes, from after track)
+	updatedCustomerEntitlement: FullCusEntWithFullCusProduct; // Contains NEW customer entitlement (with balance changes, from after track)
 	update: DeductionUpdate;
 
 	previousUsage: number;
