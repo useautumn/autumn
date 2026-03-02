@@ -1,7 +1,7 @@
 /**
- * Multi-Attach Same Add-On Checkout Tests
+ * Multi-Attach Same Add-On Basic Tests
  *
- * Tests attaching 2x the same add-on product via Stripe Checkout,
+ * Tests attaching 2x the same add-on product in a single multi-attach call,
  * with different feature_quantities for each instance.
  */
 
@@ -12,33 +12,32 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════
-// Test 1: 2x same tiered prepaid add-on via checkout
+// Test 1: 2x same tiered prepaid add-on with distinct quantities
 //
 // Scenario:
-// - No payment method (forces Stripe Checkout)
-// - Main plan: Pro ($20/mo)
-// - Add-on: tiered prepaid messages (100 included, $10/100 units)
-// - Multi-attach: main plan + 2x add-on with different quantities
+// - Main plan: Pro ($20/mo) with 500 monthly messages
+// - Add-on: tiered prepaid messages (100 included, $10/pack after)
+// - Instance A: quantity 200 messages
+// - Instance B: quantity 500 messages
 //
 // Expected:
-// - Checkout URL returned
-// - After checkout: all products active
-// - Messages balance correct
-// - Stripe subscription has inline items for each add-on
+// - Pro + 2x add-on instances active
+// - Messages: 500 (main) + 300 (A: 100 included + 200 purchased) + 600 (B: 100 included + 500 purchased) = 1400
+// - Invoice = $20 (pro) + tiered cost A + tiered cost B
+// - Stripe subscription has 2 separate inline items (independent tier calculations)
 // ═══════════════════════════════════════════════════════════════════
-test.concurrent(`${chalk.yellowBright("multi-attach checkout same add-on: 2x tiered prepaid add-on via checkout")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 200 });
+test.concurrent(`${chalk.yellowBright("multi-attach same add-on: 2x same tiered prepaid add-on with distinct quantities")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
 
 	const mainPlan = products.pro({ id: "main", items: [messagesItem] });
 
+	// Add-on with tiered prepaid: 100 included, then $10/100 units, $5/100 after 500
 	const prepaidAddon = products.base({
 		id: "prepaid-addon",
 		isAddOn: true,
@@ -55,18 +54,17 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout same add-on: 2x tie
 	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
-		customerId: "ma-co-same-addon-tiered",
+		customerId: "ma-same-addon-basic",
 		setup: [
-			s.customer({ testClock: true }), // No payment method → checkout
+			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [mainPlan, prepaidAddon] }),
 		],
-		actions: [],
+		actions: [s.billing.attach({ productId: mainPlan.id })],
 	});
 
 	const multiAttachParams = {
 		customer_id: customerId,
 		plans: [
-			{ plan_id: mainPlan.id },
 			{
 				plan_id: prepaidAddon.id,
 				feature_quantities: [
@@ -76,32 +74,23 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout same add-on: 2x tie
 			{
 				plan_id: prepaidAddon.id,
 				feature_quantities: [
-					{ feature_id: TestFeature.Messages, quantity: 300 },
+					{ feature_id: TestFeature.Messages, quantity: 500 },
 				],
 			},
 		],
 	};
 
-	// Preview:
-	// Pro base = $20
-	// A: (200 - 100 included) / 100 = 1 pack @ $10 = $10
-	// B: (300 - 100 included) / 100 = 2 packs @ $10 = $20
-	// Total: $20 + $10 + $20 = $50
+	// 1. Preview
+	// Instance A: 100 purchased / 100 billing units = 2 packs @ $10 = $10
+	// Instance B: 400 purchased / 100 billing units = 4 packs @ $10 = $40
+	// Total: $10 + $40 = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toEqual(50);
 
-	const result = await autumnV1.billing.multiAttach(multiAttachParams, {
-		timeout: 0,
-	});
+	// 2. Attach
+	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	expect(result.payment_url).toBeDefined();
-	expect(result.payment_url).toContain("checkout.stripe.com");
-
-	// Complete checkout
-	await completeStripeCheckoutForm({ url: result.payment_url });
-	await timeout(12000);
-
-	// Verify
+	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -109,22 +98,20 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout same add-on: 2x tie
 		active: [mainPlan.id, prepaidAddon.id],
 	});
 
-	// Messages: 200 (main) + 200 (addon A) + 300 (addon B) = 700
+	// Messages: 500 (main) + 200 (addon A) + 500 (addon B) = 1200
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 700,
+		balance: 1200,
 	});
 
-	// Invoice: $20 (pro) + addon A cost + addon B cost
-	// A: (200 - 100 included) / 100 = 1 pack @ $10 = $10
-	// B: (300 - 100 included) / 100 = 2 packs @ $10 = $20
-	// Total: $20 + $10 + $20 = $50
+	// Invoice: $20 (pro base from initial attach) + latest should be the multi-attach invoice
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
+		count: 2,
 		latestTotal: 50,
 	});
 
+	// Stripe subscription must have separate inline items for each add-on
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

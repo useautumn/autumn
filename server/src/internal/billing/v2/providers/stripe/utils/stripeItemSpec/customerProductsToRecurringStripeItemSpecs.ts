@@ -1,7 +1,8 @@
-import type {
-	BillingContext,
-	FullCusProduct,
-	StripeItemSpec,
+import {
+	type BillingContext,
+	customerProductsHaveDuplicateProductId,
+	type FullCusProduct,
+	type StripeItemSpec,
 } from "@autumn/shared";
 import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -10,6 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  * Converts customer products to recurring stripe item specs.
  * Deduplicates stored-price items by stripePriceId (accumulating quantities).
  * Entity-scoped inline items are never deduplicated — each entity gets its own item.
+ * Duplicate add-on products use inline prices so each instance gets independent tier calculations.
  */
 export const customerProductsToRecurringStripeItemSpecs = ({
 	ctx,
@@ -24,10 +26,16 @@ export const customerProductsToRecurringStripeItemSpecs = ({
 	const inlineSpecs: StripeItemSpec[] = [];
 
 	for (const customerProduct of customerProducts) {
+		const isDuplicateProductId = customerProductsHaveDuplicateProductId({
+			customerProducts,
+			productId: customerProduct.product.id,
+		});
+
 		const { recurringItems } = customerProductToStripeItemSpecs({
 			ctx,
 			billingContext,
 			customerProduct,
+			options: { isDuplicateProductId },
 		});
 
 		for (const item of recurringItems) {
