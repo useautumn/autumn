@@ -143,8 +143,14 @@ const mergeStripeAndBillingLineItems = ({
 	if (hasAutumnDiscounts) {
 		// Non-discountable: Autumn pre-calculated discounts
 		// Stripe amount is already post-discount, use Autumn's original values
-		amount = primaryLineItem.amount;
-		amountAfterDiscounts = primaryLineItem.amountAfterDiscounts;
+		amount = billingLineItems.reduce(
+			(sum, billingLineItem) => sum + billingLineItem.amount,
+			0,
+		);
+		amountAfterDiscounts = billingLineItems.reduce(
+			(sum, billingLineItem) => sum + billingLineItem.amountAfterDiscounts,
+			0,
+		);
 		discounts = primaryLineItem.discounts.map((d) => ({
 			amount_off: d.amountOff,
 			percent_off: d.percentOff,
