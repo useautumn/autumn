@@ -1,9 +1,14 @@
-import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	InsertCustomerEntitlement,
+	Invoice,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -32,6 +37,7 @@ export const executeAutumnBillingPlan = async ({
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
+		insertCustomerEntitlements,
 	} = autumnBillingPlan;
 
 	if (customEntitlements) {
@@ -52,6 +58,13 @@ export const executeAutumnBillingPlan = async ({
 		await FreeTrialService.insert({
 			db,
 			data: customFreeTrial,
+		});
+	}
+
+	if (insertCustomerEntitlements) {
+		await CusEntService.insert({
+			ctx,
+			data: insertCustomerEntitlements as InsertCustomerEntitlement[],
 		});
 	}
 

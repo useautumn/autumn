@@ -1,49 +1,64 @@
 import { test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const BILLING_UNITS = 100;
-const PRICE_PER_UNIT = 10;
+// =============================================================================
+// carry_over_balances basic1
+//
+// Pro: 100 messages, 30 used (balance=70)
+// Upgrade to Premium (500 messages) with carry_over_balances: { enabled: true }
+// Expected: balance = 570 (70 loose entitlement + 500 from new plan), usage = 0
+// =============================================================================
 
-const INCLUDED_USAGE = 100;
+test.concurrent(`${chalk.yellowBright("carry_over_balances basic1: remaining balance is carried over as loose entitlement on immediate upgrade")}`, async () => {
+	const proMessages = items.monthlyMessages({ includedUsage: 100 });
+	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
 
-test.concurrent(`${chalk.yellowBright("temp: rest update then rpc inverse update returns product to baseline")}`, async () => {
-	const customerId = "prepaid-ent-two-included";
-	const quantity1 = 300;
+	const pro = products.pro({ id: "pro", items: [proMessages] });
+	const premium = products.premium({ id: "premium", items: [premiumMessages] });
 
-	const prepaidItem = items.prepaidMessages({
-		includedUsage: INCLUDED_USAGE,
-		billingUnits: BILLING_UNITS,
-		price: PRICE_PER_UNIT,
-	});
-
-	const pro = products.base({
-		id: "base-prepaid-ent-inc",
-		items: [prepaidItem],
-	});
-
-	const { autumnV1, entities } = await initScenario({
-		customerId,
+	const { customerId, autumnV2_1, autumnV1 } = await initScenario({
+		customerId: "carry-over-balances-basic1",
 		setup: [
-			s.customer({}),
-			s.products({ list: [pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
 		],
-		actions: [],
+		actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 	});
 
-	// Attach to entity 1
-	const attach1 = await autumnV1.billing.attach({
+	// Track 30 units of usage on Pro (balance goes from 100 → 70)
+	await autumnV2_1.track({
 		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entities[0].id,
-		options: [{ feature_id: TestFeature.Messages, quantity: quantity1 }],
-		redirect_mode: "if_required",
+		feature_id: TestFeature.Messages,
+		value: 30,
 	});
 
-	console.log("attach1", attach1);
-	return;
+	// Wait for usage to sync to Postgres before attach
+	await new Promise((resolve) => setTimeout(resolve, 2000));
+
+	// Upgrade to Premium carrying over the remaining 70 balance
+	await autumnV2_1.billing.attach({
+		customer_id: customerId,
+		plan_id: premium.id,
+		carry_over_balances: { enabled: true },
+	});
+
+	// Wait for plan switch to settle
+	await new Promise((resolve) => setTimeout(resolve, 2000));
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	console.log("customer:", JSON.stringify(customer, null, 4));
+	// Balance = 500 (Premium grant) + 70 (carried-over loose entitlement)
+	// Usage resets to 0 on new plan
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 570,
+		usage: 0,
+	});
 });
