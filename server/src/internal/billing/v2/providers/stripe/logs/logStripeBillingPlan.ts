@@ -39,7 +39,8 @@ export const logStripeBillingPlan = ({
 				...restBillingPlan,
 				subscription: subscriptionAction,
 				addInvoiceLines: invoiceAction?.addLineParams?.lines.map(
-					(line) => `${line.description}: ${line.amount}`,
+					(line) =>
+						`${line.description}: ${line.amount ?? line.price_data?.unit_amount}`,
 				),
 			},
 		},

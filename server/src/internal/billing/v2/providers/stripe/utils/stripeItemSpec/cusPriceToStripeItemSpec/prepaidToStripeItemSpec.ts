@@ -20,14 +20,22 @@ import { cusEntToInlineStripePrice } from "./cusEntToInlineStripePrice";
 export const prepaidToStripeItemSpec = ({
 	ctx,
 	cusEntWithCusProduct,
+	options,
 }: {
 	ctx: AutumnContext;
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
+	options?: { isDuplicateProductId?: boolean };
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
 	if (!billing) return null;
 
-	const { cusProduct, price, product, entitlement, options } = billing;
+	const {
+		cusProduct,
+		price,
+		product,
+		entitlement,
+		options: featureOptions,
+	} = billing;
 
 	if (!isPrepaidPrice(price)) {
 		throw new InternalError({
@@ -39,7 +47,7 @@ export const prepaidToStripeItemSpec = ({
 	const isEntityScoped = notNullish(cusProduct.internal_entity_id);
 	const isTieredOneOff = priceUtils.isTieredOneOff({ price, product });
 
-	if (isEntityScoped || isTieredOneOff) {
+	if (isEntityScoped || isTieredOneOff || options?.isDuplicateProductId) {
 		const inlinePrice = cusEntToInlineStripePrice({
 			cusEnt: cusEntWithCusProduct,
 			org: ctx.org,
@@ -52,6 +60,9 @@ export const prepaidToStripeItemSpec = ({
 			autumnEntitlement: entitlement,
 			autumnProduct: product,
 			autumnCusEnt: cusEntWithCusProduct,
+			metadata: {
+				inline_price: "true",
+			},
 		};
 	}
 
@@ -62,7 +73,7 @@ export const prepaidToStripeItemSpec = ({
 	}
 
 	const quantity = featureOptionUtils.convert.toV2StripeQuantity({
-		featureOptions: options ?? undefined,
+		featureOptions: featureOptions ?? undefined,
 		price,
 		entitlement,
 	});

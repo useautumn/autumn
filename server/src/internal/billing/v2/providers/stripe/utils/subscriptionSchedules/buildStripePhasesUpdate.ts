@@ -1,5 +1,6 @@
 import type { BillingContext, StripeDiscountWithCoupon } from "@autumn/shared";
 import {
+	customerProductsHaveDuplicateProductId,
 	type FullCusProduct,
 	msToSeconds,
 	truncateMsToSecondPrecision,
@@ -45,10 +46,16 @@ const customerProductsToPhaseItems = ({
 	const inlineItems: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] = [];
 
 	for (const customerProduct of customerProducts) {
+		const isDuplicateProductId = customerProductsHaveDuplicateProductId({
+			customerProducts,
+			productId: customerProduct.product.id,
+		});
+
 		const { recurringItems } = customerProductToStripeItemSpecs({
 			ctx,
 			customerProduct,
 			billingContext,
+			options: { isDuplicateProductId },
 		});
 
 		for (const item of recurringItems) {

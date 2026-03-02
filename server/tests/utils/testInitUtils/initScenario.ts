@@ -801,6 +801,11 @@ const billingMultiAttach = ({
 	});
 };
 
+/**
+ * Alias for billing multi-attach to keep the short, top-level scenario-builder API consistent.
+ */
+const multiAttach = billingMultiAttach;
+
 // ═══════════════════════════════════════════════════════════════════
 // REFERRAL ACTIONS
 // ═══════════════════════════════════════════════════════════════════
@@ -895,6 +900,7 @@ export const s = {
 		attach: billingAttach,
 		multiAttach: billingMultiAttach,
 	},
+	multiAttach,
 	referral: {
 		createCode: createReferralCode,
 		redeem: redeemReferralCode,

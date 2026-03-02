@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
+	type ApiCustomer,
 	type ApiCustomerV3,
 	type ApiEntityV0,
 	CustomerExpand,
@@ -430,3 +431,91 @@ test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents dup
 		expectedBalance2,
 	);
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-MISC10: Distributed lock prevents concurrent paid-allocated races
+//
+// Sends 5 concurrent track requests for a paid-allocated feature.
+// The lock ensures only 1 succeeds — others are rejected.
+// ═══════════════════════════════════════════════════════════════════
+
+test(
+	`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serialized by distributed lock")}`,
+	async () => {
+		const allocatedUsersItem = items.allocatedUsers({ includedUsage: 0 });
+		const priceItem = items.monthlyPrice({ price: 20 });
+		const pro = products.base({
+			id: "pro",
+			items: [allocatedUsersItem, priceItem],
+		});
+
+		const { customerId, autumnV2 } = await initScenario({
+			customerId: "track-misc10",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
+
+		// Verify initial balance
+		const customerBefore =
+			await autumnV2.customers.get<ApiCustomer>(customerId);
+		expect(customerBefore.balances[TestFeature.Users].current_balance).toBe(0);
+
+		// Send 5 concurrent requests — lock should serialize, only 1 succeeds
+		const promises = Array(5)
+			.fill(null)
+			.map(() =>
+				autumnV2.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Users,
+					value: 2,
+				}),
+			);
+
+		const results = await Promise.allSettled(promises);
+		const successCount = results.filter((r) => r.status === "fulfilled").length;
+
+		expect(successCount).toEqual(1);
+
+		// Verify balance is mathematically correct
+		await timeout(2000);
+		const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
+		const balance = customerAfter.balances[TestFeature.Users];
+
+		const expectedUsage = successCount * 2;
+		expect(balance.usage).toBe(expectedUsage);
+		expect(balance.granted_balance).toBe(0);
+
+		expect(customerAfter.invoices?.length).toBe(2);
+
+		// Balance equation: granted + purchased - usage = current
+		const expectedCurrentBalance =
+			balance.granted_balance + balance.purchased_balance - balance.usage;
+		expect(balance.current_balance).toBe(expectedCurrentBalance);
+
+		// Sequential track after concurrent burst should work
+		await autumnV2.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 1,
+		});
+
+		const customerFinal = await autumnV2.customers.get<ApiCustomer>(customerId);
+		expect(customerFinal.balances[TestFeature.Users].usage).toBe(
+			expectedUsage + 1,
+		);
+
+		// Verify DB consistency
+		await timeout(3000);
+		const dbCustomer = await autumnV2.customers.get<ApiCustomer>(customerId, {
+			skip_cache: "true",
+		});
+		expect(dbCustomer.balances[TestFeature.Users].usage).toBe(
+			expectedUsage + 1,
+		);
+		expect(dbCustomer.invoices?.length).toBe(3);
+	},
+	{ timeout: 60_000 },
+);

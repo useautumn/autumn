@@ -1,5 +1,6 @@
 // shared/utils/billingUtils/invoicingUtils/lineItemBuilders/buildLineItem.ts
 
+import { generateKsuid } from "@autumn/ksuid";
 import {
 	type LineItem,
 	type LineItemCreate,
@@ -47,12 +48,14 @@ export const buildLineItem = ({
 	};
 
 	// 2. Apply proration if needed
+	let prorated = false;
 	if (shouldProrate && context.billingPeriod) {
 		amount = applyProration({
 			now: context.now,
 			billingPeriod: context.billingPeriod,
 			amount,
 		});
+		prorated = true;
 	}
 
 	// 3. Handle refund direction
@@ -60,16 +63,18 @@ export const buildLineItem = ({
 		amount = -amount;
 	}
 
-	// 4. Return LineItem
+	// 5. Return LineItem
 	const lineItemData = {
+		id: generateKsuid({ prefix: "invoice_li_" }),
 		amount,
 		description,
 		context: updatedContext,
 		stripePriceId,
 		stripeProductId,
 		chargeImmediately,
-		total_quantity: usage,
-		paid_quantity: overage,
+		totalQuantity: usage,
+		paidQuantity: overage,
+		prorated: prorated,
 	} satisfies LineItemCreate;
 
 	const result = LineItemSchema.safeParse(lineItemData);
