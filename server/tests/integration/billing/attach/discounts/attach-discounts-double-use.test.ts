@@ -1,19 +1,15 @@
 /**
- * Integration tests for double-use prevention of discount codes.
+ * Integration tests for duplicate discount handling across billing cycles.
  *
- * Tests that a discount code already applied to a subscription cannot be
- * applied again on a subsequent billing cycle via the billing.attach or
- * billing.multiAttach routes.
- *
- * Both tests should FAIL initially (demonstrating the bug), then pass
- * once the fix is applied.
+ * Tests that when a discount code already applied to a subscription is passed
+ * again on a subsequent billing cycle, it is silently ignored (not applied twice)
+ * and the attach still succeeds.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
@@ -22,10 +18,13 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createPercentCoupon } from "../../utils/discounts/discountTestUtils.js";
+import {
+	createPercentCoupon,
+	getStripeSubscription,
+} from "../../utils/discounts/discountTestUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: billing.attach - cannot reuse discount code on next cycle
+// TEST 1: billing.attach - duplicate discount on next cycle is silently ignored
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -33,14 +32,13 @@ import { createPercentCoupon } from "../../utils/discounts/discountTestUtils.js"
  * - Customer on free (no subscription)
  * - Cycle 1: Attach pro WITH a 20% forever coupon → subscription created with coupon
  * - Advance to next invoice (cycle 2)
- * - Cycle 2: Upgrade to premium WITH same coupon → should fail (coupon already on sub)
+ * - Cycle 2: Upgrade to premium WITH same coupon → attach succeeds, duplicate ignored
  *
- * Expected (after fix):
- * - ErrCode.InvalidRequest error on second attach
- *
- * This test FAILS initially (bug: system silently deduplicates instead of erroring).
+ * Expected:
+ * - No error — attach succeeds
+ * - premium is active, coupon not double-applied
  */
-test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.attach - cannot reuse discount on next cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.attach - duplicate discount on next cycle silently ignored")}`, async () => {
 	const customerId = "att-disc-double-use-attach";
 
 	const free = products.base({
@@ -88,20 +86,32 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 		waitForSeconds: 30,
 	});
 
-	// Cycle 2: Try to upgrade with same discount — should fail
-	await expectAutumnError({
-		func: async () => {
-			await autumnV1.billing.attach({
-				customer_id: customerId,
-				product_id: premium.id,
-				discounts: [{ reward_id: coupon.id }],
-			});
-		},
+	// Cycle 2: Upgrade with same discount — should succeed, duplicate silently ignored
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		discounts: [{ reward_id: coupon.id }],
 	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
+
+	// Coupon must appear exactly once — not double-applied
+	const { subscription } = await getStripeSubscription({ customerId });
+	const couponDiscounts = subscription.discounts.filter((d) => {
+		if (typeof d === "string") return false;
+		const c = d.source?.coupon;
+		return typeof c !== "string" && c?.id === coupon.id;
+	});
+	expect(couponDiscounts).toHaveLength(1);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: billing.multiAttach - cannot reuse discount code on next cycle
+// TEST 2: billing.multiAttach - duplicate discount on next cycle is silently ignored
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -109,14 +119,13 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
  * - Customer on free (no subscription)
  * - Cycle 1: multiAttach [pro] WITH a 20% forever coupon → subscription created with coupon
  * - Advance to next invoice (cycle 2)
- * - Cycle 2: Try to attach addon WITH same coupon via multiAttach → should fail
+ * - Cycle 2: multiAttach [addon] WITH same coupon → attach succeeds, duplicate ignored
  *
- * Expected (after fix):
- * - ErrCode.InvalidRequest error on second multiAttach
- *
- * This test FAILS initially (bug: system silently deduplicates instead of erroring).
+ * Expected:
+ * - No error — attach succeeds
+ * - addon is active
  */
-test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.multiAttach - cannot reuse discount on next cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.multiAttach - duplicate discount on next cycle silently ignored")}`, async () => {
 	const customerId = "att-disc-double-use-multi";
 
 	const free = products.base({
@@ -147,7 +156,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
 	// Cycle 1: multiAttach pro with discount
-	// Note: pro.id is already prefixed with customerId by initScenario (e.g. "pro_att-disc-double-use-multi")
 	await autumnV1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [{ plan_id: pro.id }],
@@ -165,16 +173,28 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 		waitForSeconds: 30,
 	});
 
-	// Cycle 2: Try to attach addon with same discount via multiAttach — should fail
-	await expectAutumnError({
-		func: async () => {
-			await autumnV1.billing.multiAttach({
-				customer_id: customerId,
-				plans: [{ plan_id: addon.id }],
-				discounts: [{ reward_id: coupon.id }],
-			});
-		},
+	// Cycle 2: multiAttach addon with same discount — should succeed, duplicate silently ignored
+	await autumnV1.billing.multiAttach({
+		customer_id: customerId,
+		plans: [{ plan_id: addon.id }],
+		discounts: [{ reward_id: coupon.id }],
 	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id, addon.id],
+		notPresent: [free.id],
+	});
+
+	// Coupon must appear exactly once on the pro subscription — not double-applied
+	const { subscription } = await getStripeSubscription({ customerId });
+	const couponDiscounts = subscription.discounts.filter((d) => {
+		if (typeof d === "string") return false;
+		const c = d.source?.coupon;
+		return typeof c !== "string" && c?.id === coupon.id;
+	});
+	expect(couponDiscounts).toHaveLength(1);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
