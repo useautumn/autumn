@@ -77,10 +77,8 @@ export const getApiCustomerExpand = async ({
 			expand: cusExpand,
 		}),
 		getCusTrialsUsed({
-			db,
+			ctx,
 			fullCus,
-			orgId: org.id,
-			env,
 			expand: cusExpand,
 		}),
 	]);
