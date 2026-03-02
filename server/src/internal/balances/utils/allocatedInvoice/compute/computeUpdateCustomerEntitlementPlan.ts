@@ -47,7 +47,10 @@ export const computeUpdateCustomerEntitlementPlan = ({
 	// Downgrade case
 	if (previousOverage <= 0) {
 		// Just return
-		return undefined;
+		return {
+			customerEntitlement,
+			balanceChange: 0,
+		};
 	} else {
 		// Plan for downgrade
 		const customerPrice = cusEntToCusPrice({
