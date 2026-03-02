@@ -1,13 +1,11 @@
-import { ExtEventsAggregateParamsSchema } from "@api/events/aggregate/eventsAggregateParams.js";
 import {
-	EVENTS_AGGREGATE_EXAMPLE,
-	EventsAggregateResponseSchema,
-} from "@api/events/aggregate/eventsAggregateResponse.js";
-import { ApiEventsListParamsSchema } from "@api/events/list/eventsListParams.js";
-import {
+	ApiEventsListParamsSchema,
 	ApiEventsListResponseSchema,
+	EVENTS_AGGREGATE_EXAMPLE_V0,
 	EVENTS_LIST_EXAMPLE,
-} from "@api/events/list/eventsListResponse.js";
+	EventsAggregateResponseV0Schema,
+	ExtEventsAggregateParamsSchema,
+} from "@autumn/shared";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 
 export const eventsOpenApi: ZodOpenApiPathsObject = {
@@ -52,8 +50,8 @@ export const eventsOpenApi: ZodOpenApiPathsObject = {
 					description: "",
 					content: {
 						"application/json": {
-							schema: EventsAggregateResponseSchema.meta({
-								example: EVENTS_AGGREGATE_EXAMPLE,
+							schema: EventsAggregateResponseV0Schema.meta({
+								example: EVENTS_AGGREGATE_EXAMPLE_V0,
 							}),
 						},
 					},
@@ -79,7 +77,7 @@ export const eventsOpenApi: ZodOpenApiPathsObject = {
 					description: "Analytics aggregation results",
 					content: {
 						"application/json": {
-							schema: EventsAggregateResponseSchema,
+							schema: EventsAggregateResponseV0Schema,
 						},
 					},
 				},

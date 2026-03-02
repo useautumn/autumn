@@ -18,8 +18,8 @@ generation:
     sharedErrorComponentsApr2025: true
     sharedNestedComponentsJan2026: true
   auth:
-    oAuth2ClientCredentialsEnabled: true
-    oAuth2PasswordEnabled: true
+    oAuth2ClientCredentialsEnabled: false
+    oAuth2PasswordEnabled: false
     hoistGlobalSecurity: true
   inferSSEOverload: true
   sdkHooksConfigAccess: true

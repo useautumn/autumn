@@ -1,6 +1,6 @@
 import { type Feature, FeatureType } from "@autumn/shared";
+import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { AnalyticsService } from "../AnalyticsService.js";
 import { eventActions } from "../actions/eventActions.js";
 
 /**
@@ -8,10 +8,9 @@ import { eventActions } from "../actions/eventActions.js";
  */
 export const handleGetEventNames = createRoute({
 	handler: async (c) => {
+		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
 		const { features } = ctx;
-
-		AnalyticsService.handleEarlyExit();
 
 		const res = await eventActions.getTopEventNames({ ctx });
 		const result = res.eventNames;

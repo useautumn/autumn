@@ -340,8 +340,8 @@ test.concurrent(`${chalk.yellowBright("migrate-paid-4: mid-cycle migration - NO 
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: "pro" }),
-			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
+			s.billing.attach({ productId: "pro", timeout: 10000 }),
+			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 4000 }),
 			s.advanceTestClock({ days: 15 }),
 		],
 	});
@@ -368,6 +368,7 @@ test.concurrent(`${chalk.yellowBright("migrate-paid-4: mid-cycle migration - NO 
 	});
 
 	await waitForMigration();
+	// await timeout(30000);
 
 	// Verify migrated state
 	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

@@ -55,6 +55,10 @@ export type UpdateBalanceParams = {
    */
   addToBalance?: number | undefined;
   /**
+   * The usage amount to update. Cannot be combined with remaining or add_to_balance.
+   */
+  usage?: number | undefined;
+  /**
    * Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
    */
   interval?: UpdateBalanceInterval | undefined;
@@ -79,6 +83,7 @@ export type UpdateBalanceParams$Outbound = {
   entity_id?: string | undefined;
   remaining?: number | undefined;
   add_to_balance?: number | undefined;
+  usage?: number | undefined;
   interval?: string | undefined;
 };
 
@@ -93,6 +98,7 @@ export const UpdateBalanceParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     remaining: z.optional(z.number()),
     addToBalance: z.optional(z.number()),
+    usage: z.optional(z.number()),
     interval: z.optional(UpdateBalanceInterval$outboundSchema),
   }),
   z.transform((v) => {

@@ -33,10 +33,3 @@ export {
 	listEventsPaginatedPipeParamsSchema,
 	listEventsPaginatedPipeResponseSchema,
 } from "./listEventsPaginatedPipe.js";
-export {
-	createListEventsPipe,
-	type ListEventsPipeParams,
-	type ListEventsPipeRow,
-	listEventsPipeParamsSchema,
-	listEventsPipeResponseSchema,
-} from "./listEventsPipe.js";

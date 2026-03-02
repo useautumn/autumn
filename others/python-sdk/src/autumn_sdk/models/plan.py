@@ -268,12 +268,49 @@ PlanTo = TypeAliasType("PlanTo", Union[float, str])
 class PlanTierTypedDict(TypedDict):
     to: PlanToTypedDict
     amount: float
+    flat_amount: NotRequired[Nullable[float]]
 
 
 class PlanTier(BaseModel):
     to: PlanTo
 
     amount: float
+
+    flat_amount: OptionalNullable[float] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        nullable_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+PlanTierBehavior = Union[
+    Literal[
+        "graduated",
+        "volume",
+    ],
+    UnrecognizedStr,
+]
 
 
 PlanPriceItemInterval = Union[
@@ -312,7 +349,8 @@ class PlanItemPriceTypedDict(TypedDict):
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
     tiers: NotRequired[List[PlanTierTypedDict]]
-    r"""Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required."""
+    r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
+    tier_behavior: NotRequired[PlanTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
@@ -334,14 +372,16 @@ class PlanItemPrice(BaseModel):
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
     tiers: Optional[List[PlanTier]] = None
-    r"""Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required."""
+    r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
+
+    tier_behavior: Optional[PlanTierBehavior] = None
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "tiers", "interval_count"])
+        optional_fields = set(["amount", "tiers", "tier_behavior", "interval_count"])
         nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
@@ -574,6 +614,54 @@ PlanEnv = Union[
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
+Scenario = Union[
+    Literal[
+        "scheduled",
+        "active",
+        "new",
+        "renew",
+        "upgrade",
+        "downgrade",
+        "cancel",
+        "expired",
+        "past_due",
+    ],
+    UnrecognizedStr,
+]
+r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+
+
+class CustomerEligibilityTypedDict(TypedDict):
+    scenario: Scenario
+    r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+    trial_available: NotRequired[bool]
+    r"""Whether a free trial is available for this customer."""
+
+
+class CustomerEligibility(BaseModel):
+    scenario: Scenario
+    r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+
+    trial_available: Optional[bool] = None
+    r"""Whether a free trial is available for this customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["trial_available"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PlanTypedDict(TypedDict):
     id: str
     r"""Unique identifier for the plan."""
@@ -603,6 +691,7 @@ class PlanTypedDict(TypedDict):
     r"""If this is a variant, the ID of the base plan it was created from."""
     free_trial: NotRequired[FreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
+    customer_eligibility: NotRequired[CustomerEligibilityTypedDict]
 
 
 class Plan(BaseModel):
@@ -648,9 +737,11 @@ class Plan(BaseModel):
     free_trial: Optional[FreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
+    customer_eligibility: Optional[CustomerEligibility] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["free_trial"])
+        optional_fields = set(["free_trial", "customer_eligibility"])
         nullable_fields = set(["description", "group", "price", "base_variant_id"])
         serialized = handler(self)
         m = {}

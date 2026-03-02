@@ -58,6 +58,8 @@ const convertPipeRowToClickHouseFormat = (
 	timestamp: row.timestamp,
 	value: row.value,
 	properties: row.properties,
+	idempotency_key: row.idempotency_key,
+	entity_id: row.entity_id,
 });
 
 export type ListRawEventsParams = {

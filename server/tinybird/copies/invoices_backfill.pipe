@@ -1,0 +1,39 @@
+DESCRIPTION >
+    Chunked backfill of invoices from Postgres into invoices.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        created_at::Int64                                               AS created_at,
+        arrayMap(x -> assumeNotNull(x), product_ids)                   AS product_ids,
+        arrayMap(x -> assumeNotNull(x), internal_product_ids)          AS internal_product_ids,
+        assumeNotNull(internal_customer_id)                             AS internal_customer_id,
+        internal_entity_id,
+        assumeNotNull(stripe_id)                                        AS stripe_id,
+        assumeNotNull(status)                                           AS status,
+        hosted_invoice_url,
+        total::Float64                                                  AS total,
+        assumeNotNull(currency)                                         AS currency,
+        coalesce(discounts::String, '[]')                               AS discounts,
+        coalesce(items::String, '[]')                                   AS items,
+        'read'                                                          AS __action,
+        now()                                                           AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', id)                                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'invoices',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+      AND (total IS NULL OR total < 1e15)
+
+TYPE COPY
+TARGET_DATASOURCE invoices

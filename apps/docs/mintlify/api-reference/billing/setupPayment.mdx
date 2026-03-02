@@ -10,53 +10,213 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ### Body Parameters
 
 <DynamicParamField body="customer_id" type="string" required>
-  The ID of the customer
+  The ID of the customer to attach the plan to.
 </DynamicParamField>
 
-<DynamicParamField body="success_url" type="string">
-  URL to redirect to after successful payment setup. Must start with either http:// or https://
+<DynamicParamField body="entity_id" type="string">
+  The ID of the entity to attach the plan to.
 </DynamicParamField>
 
-<DynamicParamField body="customer_data" type="object">
-  Customer details to set when creating a customer
+<DynamicParamField body="plan_id" type="string">
+  If specified, the plan will be attached to the customer after setup.
+</DynamicParamField>
+
+<DynamicParamField body="feature_quantities" type="object[]">
+  If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
   <Expandable title="properties">
-    <DynamicParamField body="name" type="string | null">
-      Customer's name
+    <DynamicParamField body="feature_id" type="string" required>
+      The ID of the feature to set quantity for.
     </DynamicParamField>
 
-    <DynamicParamField body="email" type="string | null">
-      Customer's email address
+    <DynamicParamField body="quantity" type="number">
+      The quantity of the feature.
     </DynamicParamField>
 
-    <DynamicParamField body="fingerprint" type="string | null">
-      Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse
-    </DynamicParamField>
-
-    <DynamicParamField body="metadata" type="object | null">
-      Additional metadata for the customer
-    </DynamicParamField>
-
-    <DynamicParamField body="stripe_id" type="string | null">
-      Stripe customer ID if you already have one
-    </DynamicParamField>
-
-    <DynamicParamField body="create_in_stripe" type="boolean">
-      Whether to create the customer in Stripe
-    </DynamicParamField>
-
-    <DynamicParamField body="auto_enable_plan_id" type="string">
-      The ID of the free plan to auto-enable for the customer
-    </DynamicParamField>
-
-    <DynamicParamField body="send_email_receipts" type="boolean">
-      Whether to send email receipts to this customer
+    <DynamicParamField body="adjustable" type="boolean">
+      Whether the customer can adjust the quantity.
     </DynamicParamField>
 
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="version" type="number">
+  The version of the plan to attach.
+</DynamicParamField>
+
+<DynamicParamField body="customize" type="object">
+  Customize the plan to attach. Can override the price, items, free trial, or a combination.
+  <Expandable title="properties">
+    <DynamicParamField body="price" type="object | null">
+      Base price configuration for a plan.
+      <Expandable title="properties">
+        <DynamicParamField body="amount" type="number" required>
+          Base price amount for the plan.
+        </DynamicParamField>
+
+        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+          Billing interval (e.g. 'month', 'year').
+        </DynamicParamField>
+
+        <DynamicParamField body="interval_count" type="number">
+          Number of intervals per billing cycle. Defaults to 1.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="items" type="object[]">
+      Override the items in the plan.
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required>
+          The ID of the feature to configure.
+        </DynamicParamField>
+
+        <DynamicParamField body="included" type="number">
+          Number of free units included. Balance resets to this each interval for consumable features.
+        </DynamicParamField>
+
+        <DynamicParamField body="unlimited" type="boolean">
+          If true, customer has unlimited access to this feature.
+        </DynamicParamField>
+
+        <DynamicParamField body="reset" type="object">
+          Reset configuration for consumable features. Omit for non-consumable features like seats.
+          <Expandable title="properties">
+            <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+              Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="number">
+              Number of intervals between resets. Defaults to 1.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="price" type="object">
+          Pricing for usage beyond included units. Omit for free features.
+          <Expandable title="properties">
+            <DynamicParamField body="amount" type="number">
+              Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+            </DynamicParamField>
+
+            <DynamicParamField body="tiers" type="object[]">
+              Tiered pricing. Either 'amount' or 'tiers' is required.
+              <Expandable title="properties">
+                <DynamicParamField body="to" type="number" required />
+
+                <DynamicParamField body="amount" type="number" required />
+
+                <DynamicParamField body="flat_amount" type="number | null" />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+              Billing interval. For consumable features, should match reset.interval.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="number">
+              Number of intervals per billing cycle. Defaults to 1.
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_units" type="number">
+              Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+              'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+            </DynamicParamField>
+
+            <DynamicParamField body="max_purchase" type="number">
+              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="proration" type="object">
+          Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+          <Expandable title="properties">
+            <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+              Billing behavior when quantity increases mid-cycle.
+            </DynamicParamField>
+
+            <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+              Credit behavior when quantity decreases mid-cycle.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="rollover" type="object">
+          Rollover config for unused units. If set, unused included units carry over.
+          <Expandable title="properties">
+            <DynamicParamField body="max" type="number">
+              Max rollover units. Omit for unlimited rollover.
+            </DynamicParamField>
+
+            <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+              When rolled over units expire.
+            </DynamicParamField>
+
+            <DynamicParamField body="expiry_duration_length" type="number">
+              Number of periods before expiry.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="free_trial" type="object | null">
+      Free trial configuration for a plan.
+      <Expandable title="properties">
+        <DynamicParamField body="duration_length" type="number" required>
+          Number of duration_type periods the trial lasts.
+        </DynamicParamField>
+
+        <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
+          Unit of time for the trial ('day', 'month', 'year').
+        </DynamicParamField>
+
+        <DynamicParamField body="card_required" type="boolean">
+          If true, payment method required to start trial. Customer is charged after trial ends.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
+  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+</DynamicParamField>
+
+<DynamicParamField body="discounts" type="object[]">
+  List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string">
+      The ID of the reward to apply as a discount.
+    </DynamicParamField>
+
+    <DynamicParamField body="promotion_code" type="string">
+      The promotion code to apply as a discount.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="success_url" type="string">
+  URL to redirect to after successful checkout.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
-  Additional parameters for the checkout session
+  Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
 
 
@@ -66,8 +226,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   The ID of the customer
 </DynamicResponseField>
 
+<DynamicResponseField name="entity_id" type="string">
+  The ID of the entity the plan (if specified) will be attached to after setup.
+</DynamicResponseField>
+
 <DynamicResponseField name="url" type="string">
-  URL to the payment setup page
+  URL to redirect the customer to setup their payment.
 </DynamicResponseField>
 
 
@@ -75,7 +239,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ```json 200
 {
   "customer_id": "cus_123",
-  "payment_url": "https://checkout.stripe.com/..."
+  "url": "https://checkout.stripe.com/..."
 }
 ```
 </ResponseExample>

@@ -92,7 +92,16 @@ export type CreatePlanToRequest = number | string;
 export type CreatePlanTierRequest = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const CreatePlanTierBehaviorRequest = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type CreatePlanTierBehaviorRequest = ClosedEnum<
+  typeof CreatePlanTierBehaviorRequest
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -135,9 +144,10 @@ export type CreatePlanItemPriceRequest = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<CreatePlanTierRequest> | undefined;
+  tierBehavior?: CreatePlanTierBehaviorRequest | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -496,7 +506,16 @@ export type CreatePlanToResponse = number | string;
 export type CreatePlanTierResponse = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const CreatePlanTierBehaviorResponse = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type CreatePlanTierBehaviorResponse = OpenEnum<
+  typeof CreatePlanTierBehaviorResponse
+>;
 
 /**
  * Billing interval for this price. For consumable features, should match reset.interval.
@@ -536,9 +555,10 @@ export type CreatePlanItemPriceResponse = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+   * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
   tiers?: Array<CreatePlanTierResponse> | undefined;
+  tierBehavior?: CreatePlanTierBehaviorResponse | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
    */
@@ -688,6 +708,36 @@ export const CreatePlanEnv = {
 export type CreatePlanEnv = OpenEnum<typeof CreatePlanEnv>;
 
 /**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export const CreatePlanScenario = {
+  Scheduled: "scheduled",
+  Active: "active",
+  New: "new",
+  Renew: "renew",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  Cancel: "cancel",
+  Expired: "expired",
+  PastDue: "past_due",
+} as const;
+/**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export type CreatePlanScenario = OpenEnum<typeof CreatePlanScenario>;
+
+export type CreatePlanCustomerEligibility = {
+  /**
+   * Whether a free trial is available for this customer.
+   */
+  trialAvailable?: boolean | undefined;
+  /**
+   * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+   */
+  scenario: CreatePlanScenario;
+};
+
+/**
  * A plan defines a set of features, pricing, and entitlements that can be attached to customers.
  */
 export type CreatePlanResponse = {
@@ -747,6 +797,7 @@ export type CreatePlanResponse = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  customerEligibility?: CreatePlanCustomerEligibility | undefined;
 };
 
 /** @internal */
@@ -842,16 +893,25 @@ export function createPlanToRequestToJSON(
 export type CreatePlanTierRequest$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const CreatePlanTierRequest$outboundSchema: z.ZodMiniType<
   CreatePlanTierRequest$Outbound,
   CreatePlanTierRequest
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function createPlanTierRequestToJSON(
   createPlanTierRequest: CreatePlanTierRequest,
@@ -860,6 +920,11 @@ export function createPlanTierRequestToJSON(
     CreatePlanTierRequest$outboundSchema.parse(createPlanTierRequest),
   );
 }
+
+/** @internal */
+export const CreatePlanTierBehaviorRequest$outboundSchema: z.ZodMiniEnum<
+  typeof CreatePlanTierBehaviorRequest
+> = z.enum(CreatePlanTierBehaviorRequest);
 
 /** @internal */
 export const CreatePlanItemPriceIntervalRequest$outboundSchema: z.ZodMiniEnum<
@@ -875,6 +940,7 @@ export const CreatePlanBillingMethodRequest$outboundSchema: z.ZodMiniEnum<
 export type CreatePlanItemPriceRequest$Outbound = {
   amount?: number | undefined;
   tiers?: Array<CreatePlanTierRequest$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -892,6 +958,7 @@ export const CreatePlanItemPriceRequest$outboundSchema: z.ZodMiniType<
     tiers: z.optional(
       z.array(z.lazy(() => CreatePlanTierRequest$outboundSchema)),
     ),
+    tierBehavior: z.optional(CreatePlanTierBehaviorRequest$outboundSchema),
     interval: CreatePlanItemPriceIntervalRequest$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -900,6 +967,7 @@ export const CreatePlanItemPriceRequest$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
@@ -1325,10 +1393,18 @@ export function createPlanToResponseFromJSON(
 export const CreatePlanTierResponse$inboundSchema: z.ZodMiniType<
   CreatePlanTierResponse,
   unknown
-> = z.object({
-  to: smartUnion([types.number(), types.string()]),
-  amount: types.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
 
 export function createPlanTierResponseFromJSON(
   jsonString: string,
@@ -1339,6 +1415,12 @@ export function createPlanTierResponseFromJSON(
     `Failed to parse 'CreatePlanTierResponse' from JSON`,
   );
 }
+
+/** @internal */
+export const CreatePlanTierBehaviorResponse$inboundSchema: z.ZodMiniType<
+  CreatePlanTierBehaviorResponse,
+  unknown
+> = openEnums.inboundSchema(CreatePlanTierBehaviorResponse);
 
 /** @internal */
 export const CreatePlanPriceItemIntervalResponse$inboundSchema: z.ZodMiniType<
@@ -1362,6 +1444,7 @@ export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
     tiers: types.optional(
       z.array(z.lazy(() => CreatePlanTierResponse$inboundSchema)),
     ),
+    tier_behavior: types.optional(CreatePlanTierBehaviorResponse$inboundSchema),
     interval: CreatePlanPriceItemIntervalResponse$inboundSchema,
     interval_count: types.optional(types.number()),
     billing_units: types.number(),
@@ -1370,6 +1453,7 @@ export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
       "billing_method": "billingMethod",
@@ -1527,6 +1611,38 @@ export const CreatePlanEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreatePlanEnv);
 
 /** @internal */
+export const CreatePlanScenario$inboundSchema: z.ZodMiniType<
+  CreatePlanScenario,
+  unknown
+> = openEnums.inboundSchema(CreatePlanScenario);
+
+/** @internal */
+export const CreatePlanCustomerEligibility$inboundSchema: z.ZodMiniType<
+  CreatePlanCustomerEligibility,
+  unknown
+> = z.pipe(
+  z.object({
+    trial_available: types.optional(types.boolean()),
+    scenario: CreatePlanScenario$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "trial_available": "trialAvailable",
+    });
+  }),
+);
+
+export function createPlanCustomerEligibilityFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanCustomerEligibility, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanCustomerEligibility$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanCustomerEligibility' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanResponse$inboundSchema: z.ZodMiniType<
   CreatePlanResponse,
   unknown
@@ -1548,6 +1664,9 @@ export const CreatePlanResponse$inboundSchema: z.ZodMiniType<
     env: CreatePlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    customer_eligibility: types.optional(
+      z.lazy(() => CreatePlanCustomerEligibility$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1556,6 +1675,7 @@ export const CreatePlanResponse$inboundSchema: z.ZodMiniType<
       "free_trial": "freeTrial",
       "created_at": "createdAt",
       "base_variant_id": "baseVariantId",
+      "customer_eligibility": "customerEligibility",
     });
   }),
 );

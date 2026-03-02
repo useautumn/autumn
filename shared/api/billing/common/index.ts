@@ -8,6 +8,7 @@ export * from "./cancelAction";
 export * from "./customizePlan/customizePlanV0";
 export * from "./customizePlan/customizePlanV1";
 export * from "./customizePlan/mappers/customizePlanV1ToV0";
+export * from "./customLineItem";
 export * from "./featureQuantity/featureQuantityParamsV0";
 export * from "./invoiceModeParams";
 export * from "./redirectMode";

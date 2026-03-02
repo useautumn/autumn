@@ -6,28 +6,25 @@ import {
 } from "@/hooks/useColumnVisibility";
 import {
 	BASE_COLUMN_IDS,
-	type CustomerWithProducts,
 	createCustomerListColumns,
 	createUsageColumn,
 } from "../components/table/customer-list/CustomerListColumns";
 
-interface UseCustomerListColumnsOptions {
-	features: Feature[];
-}
-
 export function useCustomerListColumns({
 	features,
-}: UseCustomerListColumnsOptions) {
+	storageKey,
+}: {
+	features: Feature[];
+	storageKey: string;
+}) {
 	return useMemo(() => {
 		const baseColumns = createCustomerListColumns();
 
-		// Filter to only metered features (non-boolean)
 		const meteredFeatures = features.filter(
 			(f) =>
 				f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem,
 		);
 
-		// Create usage columns for each metered feature
 		const usageColumnsFromFeatures = meteredFeatures.map((feature) =>
 			createUsageColumn({
 				featureId: feature.id,
@@ -35,16 +32,15 @@ export function useCustomerListColumns({
 			}),
 		);
 
-		// If features haven't loaded yet, create columns from localStorage with saved names
+		// Before features load, pre-create columns from localStorage so saved
+		// usage columns are present on the very first render (no pop-in).
 		let usageColumns = usageColumnsFromFeatures;
 		if (meteredFeatures.length === 0) {
-			const storedUsageColumns =
-				getVisibleUsageColumnsFromStorage("customer-list");
+			const storedUsageColumns = getVisibleUsageColumnsFromStorage({
+				storageKey,
+			});
 			usageColumns = storedUsageColumns.map(({ featureId, featureName }) =>
-				createUsageColumn({
-					featureId,
-					featureName, // Now uses the saved name from localStorage!
-				}),
+				createUsageColumn({ featureId, featureName }),
 			);
 		}
 
@@ -80,5 +76,5 @@ export function useCustomerListColumns({
 			defaultVisibleColumnIds: BASE_COLUMN_IDS,
 			columnGroups,
 		};
-	}, [features]);
+	}, [features, storageKey]);
 }

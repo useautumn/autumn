@@ -1,25 +1,15 @@
-import { z } from "zod/v4";
-import { SuccessResponseSchema } from "../../common/commonResponses.js";
 import {
 	ApiCustomerSchema,
 	BaseApiCustomerSchema,
-} from "../../customers/apiCustomer.js";
-
-// export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
-// 	id: "Customer",
-// 	// examples: [PLAN_EXAMPLE],
-// });
-
-import {
 	CreateCustomerParamsV0Schema,
 	CreateCustomerQuerySchema,
-} from "../../customers/crud/createCustomerParams.js";
-import { ListCustomersV2ParamsSchema } from "../../customers/crud/listCustomersParamsV2.js";
-import {
+	createPagePaginatedResponseSchema,
 	GetCustomerQuerySchema,
-	UpdateCustomerParamsSchema,
-} from "../../customers/customerOpModels.js";
-import { createPagePaginatedResponseSchema } from "../../models.js";
+	ListCustomersV2ParamsSchema,
+	SuccessResponseSchema,
+	UpdateCustomerParamsV0Schema,
+} from "@autumn/shared";
+import { z } from "zod/v4";
 
 export const customersOpenApi = {
 	"/customers": {
@@ -93,7 +83,7 @@ export const customersOpenApi = {
 			},
 			requestBody: {
 				content: {
-					"application/json": { schema: UpdateCustomerParamsSchema },
+					"application/json": { schema: UpdateCustomerParamsV0Schema },
 				},
 			},
 			responses: {

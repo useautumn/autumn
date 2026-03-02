@@ -3,6 +3,12 @@ import {
 	ApiBalanceBreakdownV1Schema,
 	type ApiBalanceV1,
 	ApiBalanceV1Schema,
+	type AttachPreviewResponse,
+	AttachPreviewResponseSchema,
+	type BillingPreviewResponse,
+	BillingPreviewResponseSchema,
+	type PreviewLineItem,
+	PreviewLineItemSchema,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 
@@ -53,6 +59,33 @@ const filterConfigs = [
 	createFilterConfig<ApiBalanceV1>({
 		schema: ApiBalanceV1Schema,
 		omitFields: ["object"],
+	}),
+	createFilterConfig<PreviewLineItem>({
+		schema: PreviewLineItemSchema,
+		omitFields: [
+			"effective_period",
+			"deferred_for_trial",
+			"is_base",
+			"object",
+			"total_quantity",
+			"paid_quantity",
+			"title",
+		],
+	}),
+	createFilterConfig<BillingPreviewResponse>({
+		schema: BillingPreviewResponseSchema,
+		omitFields: ["period_start", "period_end", "object"],
+	}),
+	createFilterConfig<AttachPreviewResponse>({
+		schema: AttachPreviewResponseSchema,
+		omitFields: [
+			"redirect_type",
+			"incoming",
+			"outgoing",
+			"object",
+			"period_start",
+			"period_end",
+		],
 	}),
 ];
 

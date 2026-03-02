@@ -25,6 +25,7 @@ export const customerProductToArrearLineItems = ({
 	options = {
 		includePeriodDescription: false,
 		updateNextResetAt: true,
+		discountable: false,
 	},
 }: {
 	ctx: AutumnContext;
@@ -38,6 +39,7 @@ export const customerProductToArrearLineItems = ({
 	options?: {
 		includePeriodDescription?: boolean;
 		updateNextResetAt?: boolean;
+		discountable?: boolean;
 	};
 }): {
 	lineItems: LineItem[];
@@ -93,12 +95,17 @@ export const customerProductToArrearLineItems = ({
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
 			currency: orgToCurrency({ org: ctx.org }),
+			customerProduct,
+			customerPrice: cusPrice,
 		};
 
 		const lineItem = usagePriceToLineItem({
 			cusEnt,
 			context,
-			options: { includePeriodDescription: options.includePeriodDescription },
+			options: {
+				includePeriodDescription: options.includePeriodDescription,
+				discountable: options.discountable,
+			},
 		});
 
 		// Only include line items with non-zero amounts

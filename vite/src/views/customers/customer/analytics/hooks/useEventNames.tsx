@@ -7,11 +7,7 @@ export type EventNameWithCount = {
 };
 
 export const useEventNames = (limit?: number) => {
-	const {
-		data,
-		isLoading,
-		error,
-	} = usePostSWR<{ eventNames: EventNameWithCount[] }>({
+	const { data, isLoading, error } = usePostSWR({
 		method: "get",
 		url: `/query/event_names/list${limit ? `?limit=${limit}` : ""}`,
 		queryKey: ["query-event-names-list", limit],

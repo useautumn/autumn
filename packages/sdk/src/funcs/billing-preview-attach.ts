@@ -48,6 +48,7 @@ import { Result } from "../types/fp.js";
  * @param successUrl - URL to redirect to after successful checkout. (optional)
  * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
  * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+ * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */

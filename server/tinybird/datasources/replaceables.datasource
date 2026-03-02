@@ -1,0 +1,21 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    replaceables CDC events from Sequin (Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `cus_ent_id`               String              `json:$.cus_ent_id`,
+    `created_at`               Int64               `json:$.created_at`,
+    `from_entity_id`           Nullable(String)    `json:$.from_entity_id`,
+    `delete_next_cycle`        UInt8               `json:$.delete_next_cycle`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"

@@ -21,8 +21,8 @@ import {
 	ExtCheckParamsSchema,
 	QueryParamsSchema,
 	QueryResultSchema,
-	SetupPaymentParamsSchema,
-	SetupPaymentResultSchema,
+	SetupPaymentParamsV0Schema,
+	SetupPaymentResponseV0Schema,
 	TrackParamsSchema,
 	TrackResponseV2Schema,
 } from "@api/models.js";
@@ -161,13 +161,13 @@ export const coreOps: ZodOpenApiPathsObject = {
 			tags: ["core"],
 			requestBody: {
 				content: {
-					"application/json": { schema: SetupPaymentParamsSchema },
+					"application/json": { schema: SetupPaymentParamsV0Schema },
 				},
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: SetupPaymentResultSchema } },
+					content: { "application/json": { schema: SetupPaymentResponseV0Schema } },
 				},
 			},
 		},

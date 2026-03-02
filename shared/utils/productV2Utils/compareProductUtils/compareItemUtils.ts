@@ -81,9 +81,11 @@ export const findSimilarItem = ({
 	return null;
 };
 
+type TierLike = { to: number | "inf"; amount: number; flat_amount?: number | null };
+
 const tiersAreSame = (
-	tiers1: UsageTier[] | null,
-	tiers2: UsageTier[] | null,
+	tiers1: TierLike[] | null,
+	tiers2: TierLike[] | null,
 ) => {
 	if (!tiers1 && !tiers2) {
 		return true;
@@ -98,8 +100,10 @@ const tiersAreSame = (
 	}
 
 	return tiers1.every(
-		(tier: UsageTier, index: number) =>
-			tier.amount === tiers2[index].amount && tier.to === tiers2[index].to,
+		(tier, index) =>
+			tier.amount === tiers2[index].amount &&
+			tier.to === tiers2[index].to &&
+			(tier.flat_amount ?? 0) === (tiers2[index].flat_amount ?? 0),
 	);
 };
 

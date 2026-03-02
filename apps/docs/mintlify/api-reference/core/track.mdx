@@ -243,7 +243,13 @@ await autumn.track({
 
                 <DynamicResponseField name="amount" type="number" />
 
+                <DynamicResponseField name="flat_amount" type="number | null" />
+
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+              How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
             </DynamicResponseField>
 
             <DynamicResponseField name="billing_units" type="number">
@@ -441,7 +447,13 @@ await autumn.track({
 
                 <DynamicResponseField name="amount" type="number" />
 
+                <DynamicResponseField name="flat_amount" type="number | null" />
+
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+              How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
             </DynamicResponseField>
 
             <DynamicResponseField name="billing_units" type="number">

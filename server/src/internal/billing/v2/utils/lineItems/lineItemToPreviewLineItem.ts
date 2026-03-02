@@ -10,13 +10,14 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 	const isBase = !feature;
 
 	return {
+		object: "billing_preview_line_item" as const,
 		title,
 		description: line.description,
-		amount: line.finalAmount,
+		amount: line.amountAfterDiscounts,
 		discounts: line.discounts,
 		is_base: isBase,
-		total_quantity: line.total_quantity ?? 1,
-		paid_quantity: line.paid_quantity ?? 1,
+		total_quantity: line.totalQuantity ?? 1,
+		paid_quantity: line.paidQuantity ?? 1,
 		plan_id: line.context.product.id,
 		deferred_for_trial: line.deferredForTrial,
 		effective_period: line.context.effectivePeriod,

@@ -1,0 +1,25 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    Organization CDC events from Sequin (PlanetScale Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `slug`                     String              `json:$.slug`,
+    `name`                     String              `json:$.name`,
+    `logo`                     Nullable(String)    `json:$.logo`,
+    `created_at_ts`            Nullable(String)    `json:$.created_at_ts`,
+    `metadata`                 Nullable(String)    `json:$.metadata`,
+    `default_currency`         String              `json:$.default_currency`,
+    `stripe_connected`         UInt8               `json:$.stripe_connected`,
+    `created_at`               Nullable(Int64)     `json:$.created_at`,
+    `onboarded`                UInt8               `json:$.onboarded`,
+    `deployed`                 UInt8               `json:$.deployed`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"

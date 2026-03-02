@@ -97,7 +97,7 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200",
+								"shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200 cursor-pointer",
 								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
 							)}
 							variant="ghost"
@@ -241,6 +241,7 @@ export const handleSwitchOrg = async (
 
 	try {
 		setSearchParams?.(new URLSearchParams());
+		window.history.replaceState(null, "", window.location.pathname);
 
 		await authClient.organization.setActive({
 			organizationId: orgId,

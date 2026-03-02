@@ -1,7 +1,9 @@
-import { CreateBalanceParamsV0Schema } from "@api/balances/create/createBalanceParams.js";
+import {
+	CreateBalanceParamsV0Schema,
+	ExtUpdateBalanceParamsV0Schema,
+	SuccessResponseSchema,
+} from "@autumn/shared";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
-import { ExtBalancesUpdateParamsSchema } from "../../balances/balancesUpdateModels.js";
-import { SuccessResponseSchema } from "../../common/commonResponses.js";
 
 export const balancesOpenApi: ZodOpenApiPathsObject = {
 	"/balances/update": {
@@ -12,7 +14,7 @@ export const balancesOpenApi: ZodOpenApiPathsObject = {
 			tags: ["balances"],
 			requestBody: {
 				content: {
-					"application/json": { schema: ExtBalancesUpdateParamsSchema },
+					"application/json": { schema: ExtUpdateBalanceParamsV0Schema },
 				},
 			},
 			responses: {

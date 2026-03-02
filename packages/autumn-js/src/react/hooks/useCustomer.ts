@@ -2,21 +2,27 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type {
-	BillingAttachResponse,
+	AttachResponse,
 	BillingUpdateResponse,
 	CheckResponse,
 	Customer,
+	MultiAttachResponse,
 	OpenCustomerPortalResponse,
 	PreviewAttachResponse,
+	PreviewMultiAttachResponse,
 	PreviewUpdateResponse,
+	SetupPaymentResponse,
 } from "@useautumn/sdk";
 import type {
 	AttachParams,
 	CheckParams,
 	GetOrCreateCustomerClientParams,
+	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
+	PreviewMultiAttachParams,
 	PreviewUpdateSubscriptionParams,
+	SetupPaymentParams,
 	UpdateSubscriptionParams,
 } from "../../types";
 import { useAutumnClient } from "../AutumnContext";
@@ -43,7 +49,7 @@ export type UseCustomerResult = HookResultWithMethods<
 		 * @param params - Plan ID and optional configuration (free trial, custom pricing, discounts).
 		 * @returns Billing response with customer ID, invoice details, and payment URL if checkout required.
 		 */
-		attach: (params: AttachParams) => Promise<BillingAttachResponse>;
+		attach: (params: AttachParams) => Promise<AttachResponse>;
 
 		/**
 		 * Previews the billing changes that would occur when attaching a plan, without making any changes.
@@ -83,6 +89,33 @@ export type UseCustomerResult = HookResultWithMethods<
 		check: (params: UseCustomerCheckParams) => CheckResponse;
 
 		/**
+		 * Attaches multiple plans to the customer in one operation.
+		 * Automatically redirects to checkout if payment is required.
+		 * @param params - List of plans with optional feature quantities, free trial, and discounts.
+		 * @returns Billing response with customer ID, invoice details, and payment URL if checkout required.
+		 */
+		multiAttach: (params: MultiAttachParams) => Promise<MultiAttachResponse>;
+
+		/**
+		 * Previews the billing changes for attaching multiple plans, without making changes.
+		 * @param params - List of plans with optional feature quantities to preview.
+		 * @returns Preview with line items, totals, and effective dates for the proposed changes.
+		 */
+		previewMultiAttach: (
+			params: PreviewMultiAttachParams,
+		) => Promise<PreviewMultiAttachResponse>;
+
+		/**
+		 * Creates a payment setup session for the customer to add or update their payment method.
+		 * Automatically redirects to the Stripe setup page.
+		 * @param params - Optional success URL and plan to attach after setup.
+		 * @returns Setup response with URL to redirect the customer.
+		 */
+		setupPayment: (
+			params?: SetupPaymentParams,
+		) => Promise<SetupPaymentResponse>;
+
+		/**
 		 * Opens the Stripe customer billing portal for this customer.
 		 * @param params - Optional return URL and configuration.
 		 * @returns Portal session response with URL to redirect the customer.
@@ -96,7 +129,7 @@ export type UseCustomerResult = HookResultWithMethods<
 /**
  * Fetches or creates an Autumn customer and provides billing actions.
  *
- * @returns Customer data along with billing methods: `attach`, `previewAttach`, `updateSubscription`, `previewUpdateSubscription`, `check`, and `openCustomerPortal`.
+ * @returns Customer data along with billing methods: `attach`, `previewAttach`, `updateSubscription`, `previewUpdateSubscription`, `multiAttach`, `previewMultiAttach`, `check`, `setupPayment`, and `openCustomerPortal`.
  */
 export const useCustomer = (
 	params: UseCustomerParams = {},

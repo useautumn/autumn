@@ -20,6 +20,8 @@ export const handleListPlansV2 = createRoute({
 
 		const startedAt = Date.now();
 
+		console.log("Customer ID:", customer_id);
+
 		const [products, customer] = await Promise.all([
 			ProductService.listFull({
 				db,
@@ -56,6 +58,7 @@ export const handleListPlansV2 = createRoute({
 		}
 
 		const plansList = await Promise.all(batchResponse);
+
 		const res = plansList.map((p) => {
 			return applyResponseVersionChanges<ApiPlanV1>({
 				input: p,

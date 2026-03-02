@@ -143,7 +143,9 @@ export const billingPlanToNextCyclePreview = ({
 	);
 
 	const previewLineItems = autumnLineItems.map(lineItemToPreviewLineItem);
-	const total = sumValues(autumnLineItems.map((line) => line.finalAmount));
+	const total = sumValues(
+		autumnLineItems.map((line) => line.amountAfterDiscounts),
+	);
 
 	return {
 		nextCycle: {

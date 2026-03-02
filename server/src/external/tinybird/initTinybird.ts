@@ -5,7 +5,6 @@ import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
 import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
-import { createListEventsPipe } from "./pipes/listEventsPipe.js";
 
 const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
@@ -50,8 +49,6 @@ export const tinybirdPipes = tinybirdClient
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
 			listEventNames: createListEventNamesPipe(tinybirdClient),
 			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
-			/** @deprecated Use listEventsPaginated instead. Kept for backwards compatibility. */
-			listEvents: createListEventsPipe(tinybirdClient),
 		}
 	: null;
 
@@ -99,6 +96,4 @@ export type {
 	ListEventNamesPipeRow,
 	ListEventsPaginatedPipeParams,
 	ListEventsPaginatedPipeRow,
-	ListEventsPipeParams,
-	ListEventsPipeRow,
 } from "./pipes/index.js";

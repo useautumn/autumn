@@ -109,7 +109,16 @@ export type PreviewUpdateTo = number | string;
 export type PreviewUpdateTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const PreviewUpdateTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PreviewUpdateTierBehavior = ClosedEnum<
+  typeof PreviewUpdateTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -152,9 +161,10 @@ export type PreviewUpdatePrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewUpdateTier> | undefined;
+  tierBehavior?: PreviewUpdateTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -618,16 +628,25 @@ export function previewUpdateToToJSON(
 export type PreviewUpdateTier$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const PreviewUpdateTier$outboundSchema: z.ZodMiniType<
   PreviewUpdateTier$Outbound,
   PreviewUpdateTier
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function previewUpdateTierToJSON(
   previewUpdateTier: PreviewUpdateTier,
@@ -636,6 +655,11 @@ export function previewUpdateTierToJSON(
     PreviewUpdateTier$outboundSchema.parse(previewUpdateTier),
   );
 }
+
+/** @internal */
+export const PreviewUpdateTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateTierBehavior
+> = z.enum(PreviewUpdateTierBehavior);
 
 /** @internal */
 export const PreviewUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -651,6 +675,7 @@ export const PreviewUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
 export type PreviewUpdatePrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewUpdateTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -666,6 +691,7 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.optional(z.number()),
     tiers: z.optional(z.array(z.lazy(() => PreviewUpdateTier$outboundSchema))),
+    tierBehavior: z.optional(PreviewUpdateTierBehavior$outboundSchema),
     interval: PreviewUpdateItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -674,6 +700,7 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",

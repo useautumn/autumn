@@ -38,6 +38,72 @@ const TIERS = [
 // TEST A: Exact tier boundary — 500 units
 // ═══════════════════════════════════════════════════════════════════════════════
 
+test.concurrent(`${chalk.yellowBright("vol-edge: 600 units (included usage and exact tier 1 boundary) → $60")}`, async () => {
+	const customerId = "vol-included-edge-boundary-500";
+	const includedUsage = 100;
+	const quantity = 600;
+	const expectedPrepaid = (quantity / BILLING_UNITS) * 10;
+
+	const volItem = items.volumePrepaidMessages({
+		includedUsage,
+		billingUnits: BILLING_UNITS,
+		tiers: TIERS,
+	});
+
+	// Distinct groups so the two products don't mutually-exclude each other
+	const volPro = products.pro({
+		id: "vol-pro-500",
+		items: [volItem],
+		group: "vol-500",
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [volPro] }),
+		],
+		actions: [],
+	});
+
+	// Both previews must be $70 — volume bumped to tier 2 would return $45
+	const previewVol = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: volPro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+	});
+	expect(previewVol.total).toBe(BASE_PRICE + expectedPrepaid);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: volPro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+		redirect_mode: "if_required",
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({ customer, productId: volPro.id });
+
+	// 2 invoices, both $70
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: BASE_PRICE + expectedPrepaid,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST A: Exact tier boundary — 500 units
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
  * The boundary check in volumeTiersToLineAmount is `roundedUsage <= tierBoundary`
  * (inclusive upper bound). Exactly 500 units with `{ to: 500 }` must stay in
@@ -67,7 +133,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: 500 units (exact tier 1 boundar
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-500", items: [volItem], group: "vol-500" });
+	const volPro = products.pro({
+		id: "vol-pro-500",
+		items: [volItem],
+		group: "vol-500",
+	});
 	const gradBase = products.base({
 		id: "grad-base-500",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],
@@ -174,7 +244,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: 501 units (ceil to 600) → vol
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-501", items: [volItem], group: "vol-501" });
+	const volPro = products.pro({
+		id: "vol-pro-501",
+		items: [volItem],
+		group: "vol-501",
+	});
 	const gradBase = products.base({
 		id: "grad-base-501",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],
@@ -257,29 +331,24 @@ test.concurrent(`${chalk.yellowBright("vol-edge: 501 units (ceil to 600) → vol
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Volume pricing applies to PURCHASED units only (total − includedUsage).
- * featureOptionsToV2StripeQuantity sends only purchased packs to Stripe for
- * volume prices — no free leading tier is inserted in the Stripe price object.
+ * Volume pricing charges the TOTAL quantity (including included) at whichever
+ * single tier it falls into. A free $0 tier covers the allowance (2 packs).
+ * Stripe tiers with allowance=200: [{up_to:2,$0}, {up_to:7,$10}, {up_to:inf,$5}]
  *
- * includedUsage=200, quantity=800 → purchased = 600 units (6 packs), tier 2
+ * includedUsage=200, quantity=800 → 8 total packs
  *
- * Volume:    600 purchased → tier 2 → 6 × $5  = $30  → invoice $50
- * Graduated: 600 purchased → split  → 500×($10/100) + 100×($5/100)
- *                                    = $50 + $5 = $55 → invoice $75
- *
- * A bug that sent 8 total packs (not 6 purchased) to Stripe for volume would
- * charge 8 × $5 = $40 instead of $30. The $50 preview assertion catches this.
+ * Volume:    8 total packs → tier 2 (>7) → 8 × $5 = $40  → invoice $60
+ * Graduated: 2 free + 5×$10 + 1×$5 = $0 + $50 + $5 = $55 → invoice $75
  */
-test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → volume 6 purchased packs $30 (not 8 packs $40), graduated $55")}`, async () => {
+test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → volume 8 total packs $40, graduated $55")}`, async () => {
 	const customerId = "vol-edge-included-800";
 	const quantity = 800;
 	const includedUsage = 200;
-	// Purchased = 800 - 200 = 600 units, all in tier 2
-	const purchasedUnits = quantity - includedUsage;
+	const totalUnits = quantity;
 
-	// Volume: 6 packs × $5 = $30
-	const volExpectedPrepaid = (purchasedUnits / BILLING_UNITS) * 5;
-	// Graduated: 500×($10/100) + 100×($5/100) = $50 + $5 = $55
+	// Volume: 8 total packs → tier 2 (shifted boundary at 700: (500+200)/100=7) → 8 × $5 = $40
+	const volExpectedPrepaid = (totalUnits / BILLING_UNITS) * 5;
+	// Graduated: free tier covers 200 (2 packs), then 500×($10/100) + 100×($5/100) = $55
 	const gradExpectedPrepaid =
 		500 * (10 / BILLING_UNITS) + 100 * (5 / BILLING_UNITS);
 
@@ -295,7 +364,11 @@ test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → 
 	});
 
 	// Distinct groups so the two products don't mutually-exclude each other
-	const volPro = products.pro({ id: "vol-pro-inc", items: [volItem], group: "vol-inc" });
+	const volPro = products.pro({
+		id: "vol-pro-inc",
+		items: [volItem],
+		group: "vol-inc",
+	});
 	const gradBase = products.base({
 		id: "grad-base-inc",
 		items: [gradItem, items.monthlyPrice({ price: BASE_PRICE })],
@@ -311,7 +384,7 @@ test.concurrent(`${chalk.yellowBright("vol-edge: includedUsage=200, qty=800 → 
 		actions: [],
 	});
 
-	// Volume: $20 + $30 = $50 (wrong impl sending 8 packs would give $60)
+	// Volume: $20 base + $40 prepaid = $60
 	const previewVol = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: volPro.id,

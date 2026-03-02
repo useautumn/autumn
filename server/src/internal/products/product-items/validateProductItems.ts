@@ -147,9 +147,9 @@ const validateProductItem = ({
 
 	if (isFeaturePriceItem(item) && item.tiers) {
 		if (
-			item.tiers.some((x) => {
-				return x.amount <= 0;
-			})
+			item.tiers.some(
+				(x) => x.amount < 0 || (x.amount === 0 && (x.flat_amount ?? 0) <= 0),
+			)
 		) {
 			throw new RecaseError({
 				message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
@@ -181,6 +181,37 @@ const validateProductItem = ({
 		) {
 			throw new RecaseError({
 				message: `Volume-based pricing is only supported for prepaid items`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// flat_amount validations
+		const hasFlatAmount = item.tiers.some(
+			(t) => t.flat_amount != null && t.flat_amount > 0,
+		);
+
+		if (hasFlatAmount) {
+			if (item.tier_behavior !== TierBehavior.VolumeBased) {
+				throw new RecaseError({
+					message: `flat_amount on tiers is only supported for volume-based pricing`,
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+
+			if (item.tiers.length <= 1) {
+				throw new RecaseError({
+					message: `flat_amount is not supported on single-tier pricing`,
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		if (item.tiers.some((t) => t.flat_amount != null && t.flat_amount < 0)) {
+			throw new RecaseError({
+				message: `flat_amount must be 0 or greater`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

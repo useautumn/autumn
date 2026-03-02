@@ -29,6 +29,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
 </DynamicParamField>
 
+<DynamicParamField body="usage" type="number">
+  The usage amount to update. Cannot be combined with remaining or add_to_balance.
+</DynamicParamField>
+
 <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
   Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
 </DynamicParamField>

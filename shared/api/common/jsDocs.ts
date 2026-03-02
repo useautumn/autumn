@@ -10,8 +10,8 @@ import {
 	BillingPortalParamsSchema,
 	CancelBodySchema,
 	QueryParamsSchema,
-	SetupPaymentParamsSchema,
 } from "../core/coreOpModels";
+import { SetupPaymentParamsV1Schema } from "../billing/setupPayment/setupPaymentParamsV1";
 import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models";
 /**
  * Centralized JSDoc declarations for all core API methods.
@@ -135,7 +135,7 @@ export const setupPaymentJsDoc = createJSDocDescription({
 		"Creates a session for a customer to add or update their payment method.",
 	whenToUse:
 		"Use this to collect payment information without immediately charging the customer.",
-	body: SetupPaymentParamsSchema.meta({
+	body: SetupPaymentParamsV1Schema.meta({
 		id: "SetupPaymentParams",
 		description: "Parameters for setting up a payment method",
 	}),

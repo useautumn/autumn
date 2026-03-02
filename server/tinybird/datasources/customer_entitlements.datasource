@@ -1,0 +1,34 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    customer_entitlements CDC events from Sequin (Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `customer_product_id`      Nullable(String)    `json:$.customer_product_id`,
+    `entitlement_id`           String              `json:$.entitlement_id`,
+    `internal_customer_id`     String              `json:$.internal_customer_id`,
+    `internal_entity_id`       Nullable(String)    `json:$.internal_entity_id`,
+    `internal_feature_id`      String              `json:$.internal_feature_id`,
+    `unlimited`                UInt8               `json:$.unlimited`,
+    `balance`                  Float64             `json:$.balance`,
+    `created_at`               Int64               `json:$.created_at`,
+    `next_reset_at`            Nullable(Int64)     `json:$.next_reset_at`,
+    `usage_allowed`            UInt8               `json:$.usage_allowed`,
+    `adjustment`               Nullable(Float64)   `json:$.adjustment`,
+    `additional_balance`       Float64             `json:$.additional_balance`,
+    `entities`                 String              `json:$.entities`,
+    `expires_at`               Nullable(Int64)     `json:$.expires_at`,
+    `cache_version`            Int32               `json:$.cache_version`,
+    `customer_id`              Nullable(String)    `json:$.customer_id`,
+    `feature_id`               Nullable(String)    `json:$.feature_id`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"

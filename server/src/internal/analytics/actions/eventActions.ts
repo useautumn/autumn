@@ -1,4 +1,3 @@
-import { _legacyListRawEvents } from "@/internal/analytics/actions/_legacyListRawEvents";
 import { aggregate } from "./aggregate";
 import { getCountAndSum } from "./getCountAndSum.js";
 import { getEventById } from "./getEventById.js";
@@ -15,6 +14,4 @@ export const eventActions = {
 	listEventNames,
 	listEvents,
 	listRawEvents,
-	/** @deprecated Use listRawEvents instead. Returns additional fields (idempotency_key, entity_id). */
-	_legacyListRawEvents,
 } as const;

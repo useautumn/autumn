@@ -13,6 +13,8 @@ export interface RawEventFromClickHouse {
 	customer_id: string;
 	value: number | null;
 	properties: string | null;
+	idempotency_key?: string | null;
+	entity_id?: string | null;
 }
 
 export type TotalEventsParams = {

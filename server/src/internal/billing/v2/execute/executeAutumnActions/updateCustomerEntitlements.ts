@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 import { incrementCachedCusEntBalance } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/incrementCachedCusEntBalance";
 
 /**
@@ -9,6 +10,10 @@ import { incrementCachedCusEntBalance } from "@/internal/customers/cusUtils/full
  * bump cache_version, and also applies matching Redis increments to keep the
  * FullCustomer cache in sync (safe for all callers — other billing actions
  * typically nuke the cache afterward; for auto top-up it's essential).
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
+
+/**
+ * Update customer entitlement balances and replaceables based on quantity changes.
  */
 export const updateCustomerEntitlements = async ({
 	ctx,
@@ -20,12 +25,19 @@ export const updateCustomerEntitlements = async ({
 	const { logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange = 0, customerEntitlement, updates } = updateDetail;
+		const {
+			balanceChange = 0,
+			customerEntitlement,
+			updates,
+			insertReplaceables,
+			deletedReplaceables,
+		} = updateDetail;
 
 		logger.debug(
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
 		);
 
+		// 1. Handle field-level updates (e.g. next_reset_at, adjustment, entities)
 		if (updates) {
 			await CusEntService.update({
 				ctx,
@@ -35,6 +47,7 @@ export const updateCustomerEntitlements = async ({
 			continue;
 		}
 
+		// 2. Handle balance change
 		if (balanceChange > 0) {
 			await CusEntService.increment({
 				ctx,
@@ -42,12 +55,26 @@ export const updateCustomerEntitlements = async ({
 				amount: balanceChange,
 			});
 		} else if (balanceChange < 0) {
-			const absoluteDecrement = Math.abs(balanceChange);
-
 			await CusEntService.decrement({
 				ctx,
 				id: customerEntitlement.id,
-				amount: absoluteDecrement,
+				amount: Math.abs(balanceChange),
+			});
+		}
+
+		// 3. Handle replaceable inserts
+		if (insertReplaceables && insertReplaceables.length > 0) {
+			await RepService.insert({
+				ctx,
+				data: insertReplaceables,
+			});
+		}
+
+		// 4. Handle replaceable deletes
+		if (deletedReplaceables && deletedReplaceables.length > 0) {
+			await RepService.deleteInIds({
+				ctx,
+				ids: deletedReplaceables.map((r) => r.id),
 			});
 		}
 

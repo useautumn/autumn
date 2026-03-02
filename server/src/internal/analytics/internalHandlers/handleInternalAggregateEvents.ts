@@ -7,9 +7,9 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
+import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { AnalyticsService } from "../AnalyticsService.js";
 import { eventActions } from "../actions/eventActions.js";
 
 const InternalAggregateEventsSchema = z.object({
@@ -27,13 +27,12 @@ const InternalAggregateEventsSchema = z.object({
 export const handleInternalAggregateEvents = createRoute({
 	body: InternalAggregateEventsSchema,
 	handler: async (c) => {
+		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
 		const { db, org, env, features } = ctx;
 		const { interval, customer_id, group_by, bin_size, timezone } =
 			c.req.valid("json");
 		let { event_names } = c.req.valid("json");
-
-		AnalyticsService.handleEarlyExit();
 
 		let aggregateAll = false;
 		let customer: FullCustomer | undefined;

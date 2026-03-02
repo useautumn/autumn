@@ -4,11 +4,15 @@ import { z } from "zod";
 /** Response schema for the list_events_paginated pipe */
 export const listEventsPaginatedPipeResponseSchema = z.object({
 	id: z.string(),
+	org_id: z.string(),
+	env: z.string(),
 	customer_id: z.string(),
 	event_name: z.string(),
 	timestamp: z.string(),
 	value: z.number().nullable(),
 	properties: z.string().nullable(),
+	idempotency_key: z.string().nullable(),
+	entity_id: z.string().nullable(),
 });
 
 export type ListEventsPaginatedPipeRow = z.infer<

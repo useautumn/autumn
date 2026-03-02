@@ -1,0 +1,35 @@
+DESCRIPTION >
+    Chunked backfill of prices from Postgres into prices.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        coalesce(org_id, '')                                           AS org_id,
+        coalesce(internal_product_id, '')                              AS internal_product_id,
+        ifNull(toString(config), 'null')                   AS config,
+        created_at::Int64                                               AS created_at,
+        billing_type,
+        tier_behavior,
+        toUInt8(if(coalesce(is_custom, false) = true, 1, 0))          AS is_custom,
+        entitlement_id,
+        ifNull(toString(proration_config), 'null') AS proration_config,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'prices',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE prices

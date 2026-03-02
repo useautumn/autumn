@@ -7,6 +7,7 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
+	cusEntToPrepaidQuantity,
 	EntInterval,
 	nullish,
 } from "@autumn/shared";
@@ -84,7 +85,12 @@ function getIndividualEntValues({
 	});
 
 	const quantity = ent.customer_product?.quantity || 1;
-	const allowance = grantedBalance + prepaidAllowance;
+	const allowance =
+		(ent.entitlement.allowance ?? 0) * quantity +
+		(entityId && ent.entities?.[entityId]
+			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
+			: (ent.adjustment ?? 0)) +
+		cusEntToPrepaidQuantity({ cusEnt: ent });
 	return { balance, allowance, quantity };
 }
 

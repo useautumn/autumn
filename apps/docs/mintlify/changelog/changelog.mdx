@@ -4,6 +4,84 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="February 25th 2026">
+  ## Volume-Based Tiered Pricing
+
+  You can now choose between graduated and volume-based tiered pricing for your plans. With volume pricing, the entire usage quantity falls into a single tier instead of splitting across tiers — useful for models where the per-unit price depends on total consumption.
+
+  - **Two tier modes**: Choose graduated (split across tiers) or volume (single tier applies to all units)
+  - **Backward compatible**: Existing graduated plans work without changes; volume is opt-in via `tier_behavior`
+  - **Full stack**: Supported in the plan editor, attach/checkout previews, Stripe invoices, and the API
+
+
+  ## Batch Attach
+
+  Attach multiple plans to a customer in a single API request. Each plan can have its own customization, feature quantities, and trial settings — all validated and applied atomically with a distributed lock.
+
+  - **One request, multiple plans**: Attach several plans at once with per-plan customization
+  - **Preview support**: Preview the combined batch before committing via `/billing.preview_multi_attach`
+  - **Concurrency safe**: Distributed lock prevents conflicting concurrent attaches
+
+  ## Lazy Entitlement Resets
+
+  Entitlement resets now happen lazily on read, so customers see fresh balances instantly without waiting for a cron cycle. An atomic Postgres function and Redis Lua script prevent double-resets under concurrency.
+
+  - **Instant resets**: Stale entitlements are reset the moment they're fetched
+  - **Atomic & safe**: Per-row locking in Postgres and atomic Redis Lua patching prevent double-resets
+  - **Hardened cron fallback**: Batch reset cron bounded with max iterations and timeouts
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Volume-based tiered pricing alongside graduated pricing - [#765](https://github.com/useautumn/autumn/pull/765)
+      - Batch attach: attach multiple plans in one request - [#815](https://github.com/useautumn/autumn/pull/815)
+      - Lazy entitlement resets for instant balance refreshes - [#800](https://github.com/useautumn/autumn/pull/800), [#802](https://github.com/useautumn/autumn/pull/802)
+      - Atomic Redis updates for customer data and entities (CRDT-safe) - [#812](https://github.com/useautumn/autumn/pull/812), [#813](https://github.com/useautumn/autumn/pull/813)
+      - Mobile navigation with sticky top bar and slide-in sidebar - [#760](https://github.com/useautumn/autumn/pull/760)
+      - 12/24-hour date and time picker for balance reset scheduling - [#760](https://github.com/useautumn/autumn/pull/760)
+      - Stripe coupon support in attach discount dropdown - [#819](https://github.com/useautumn/autumn/pull/819)
+      - Metadata on Stripe invoice line items (product ID, price ID, coupon IDs) - [#817](https://github.com/useautumn/autumn/pull/817)
+      - RPC router for Plans (create/get/update/delete) - [#750](https://github.com/useautumn/autumn/pull/750)
+      - RPC router for Features (list/get/create/update/delete) - [#762](https://github.com/useautumn/autumn/pull/762)
+      - Hardened reset cron with bounded batches and timeouts - [#808](https://github.com/useautumn/autumn/pull/808)
+      - Customer filter and UI cleanups - [#755](https://github.com/useautumn/autumn/pull/755)
+      - Unit tests GitHub Action - [#801](https://github.com/useautumn/autumn/pull/801)
+    </Accordion>
+    
+    <Accordion title="Bug Fixes">
+      - Fixed scheduled switches failing when a Stripe coupon was deleted - [#759](https://github.com/useautumn/autumn/pull/759)
+      - Fixed events table showing empty - [#822](https://github.com/useautumn/autumn/pull/822)
+      - Fixed customer balance UI - [#816](https://github.com/useautumn/autumn/pull/816)
+      - Fixed balance subrow to always show /granted - [#779](https://github.com/useautumn/autumn/pull/779), [#780](https://github.com/useautumn/autumn/pull/780)
+      - Fixed attach dashboard one-off products - [#789](https://github.com/useautumn/autumn/pull/789)
+      - Fixed create customer body expand - [#787](https://github.com/useautumn/autumn/pull/787)
+      - Fixed Vercel marketplace status not ready - [#778](https://github.com/useautumn/autumn/pull/778)
+      - Fixed discounts on upgrades in legacy attach - [#772](https://github.com/useautumn/autumn/pull/772)
+      - Fixed invoice without payment method - [#770](https://github.com/useautumn/autumn/pull/770)
+      - Fixed SQS client restart - [#767](https://github.com/useautumn/autumn/pull/767), [#768](https://github.com/useautumn/autumn/pull/768)
+      - Fixed impersonation - [#793](https://github.com/useautumn/autumn/pull/793)
+      - Fixed reset for past-due customer entitlements - [#805](https://github.com/useautumn/autumn/pull/805), [#806](https://github.com/useautumn/autumn/pull/806)
+      - Fixed zero denominator issue - [#746](https://github.com/useautumn/autumn/pull/746)
+      - Fixed Vercel transfer request blocking - [#744](https://github.com/useautumn/autumn/pull/744)
+      - Fixed discounts on scheduled subscriptions - [#742](https://github.com/useautumn/autumn/pull/742)
+      - Fixed invoice cron race condition - [#747](https://github.com/useautumn/autumn/pull/747)
+      - Fixed custom plan detection in subscription updates - [#784](https://github.com/useautumn/autumn/pull/784)
+      - Fixed success URL handling for v2 attach checkout - [#786](https://github.com/useautumn/autumn/pull/786)
+      - Fixed preview attach concurrency lock - [#758](https://github.com/useautumn/autumn/pull/758)
+    </Accordion>
+    
+    <Accordion title="API">
+      - New `POST /billing.multi_attach` and `POST /billing.preview_multi_attach` for batch plan attaches - [#815](https://github.com/useautumn/autumn/pull/815)
+      - New `POST /billing.setup_payment` for collecting payment methods before plan attach - [#797](https://github.com/useautumn/autumn/pull/797)
+      - New attach/update subscription V1 params: `plan_id`, `feature_quantities`, `customize`, `free_trial`, `transition_rules` - [#749](https://github.com/useautumn/autumn/pull/749), [#752](https://github.com/useautumn/autumn/pull/752)
+      - RPC endpoints for Plans: `/plans.create`, `/plans.get`, `/plans.update`, `/plans.delete` - [#750](https://github.com/useautumn/autumn/pull/750)
+      - RPC endpoints for Features: `/features.list`, `/features.get`, `/features.create`, `/features.update`, `/features.delete` - [#762](https://github.com/useautumn/autumn/pull/762)
+      - Added `PATCH /customers/:customer_id` for partial updates - [#774](https://github.com/useautumn/autumn/pull/774)
+      - Metadata added to Stripe invoice line items - [#817](https://github.com/useautumn/autumn/pull/817)
+      - V2 API docs with multi-version OpenAPI specs and SDK generation pipeline - [#773](https://github.com/useautumn/autumn/pull/773)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update
   label="January 12th 2026"
 >

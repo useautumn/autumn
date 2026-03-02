@@ -365,12 +365,16 @@ const volumePrepaidMessages = ({
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number }[];
+	tiers?: { to: number | "inf"; amount: number; flat_amount?: number | null }[];
 	config?: ProductItemConfig;
 } = {}): LimitedItem =>
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
-		tiers: tiers as { to: number; amount: number }[],
+		tiers: tiers as {
+			to: number;
+			amount: number;
+			flat_amount?: number | null;
+		}[],
 		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
 		includedUsage,

@@ -1,3 +1,4 @@
+import { AuthType } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { responseFilterConfig } from "./responseFilterConfig.js";
@@ -43,6 +44,10 @@ export const responseFilterMiddleware = async (
 	next: Next,
 ) => {
 	await next();
+
+	// Skip filtering for dashboard requests
+	const ctx = c.get("ctx");
+	if (ctx?.authType === AuthType.Dashboard) return;
 
 	// Only process JSON responses
 	const contentType = c.res.headers.get("content-type");

@@ -1,12 +1,10 @@
-import type { ZodOpenApiPathsObject } from "zod-openapi";
-import {
-	CreateReferralCodeResponseSchema,
-	RedeemReferralCodeResponseSchema,
-} from "../../referrals/apiReferralCode.js";
 import {
 	CreateReferralCodeParamsSchema,
+	CreateReferralCodeResponseSchema,
 	RedeemReferralCodeParamsSchema,
-} from "../../referrals/referralOpModels.js";
+	RedeemReferralCodeResponseSchema,
+} from "@autumn/shared";
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 
 const ReferralCodeSchema = CreateReferralCodeResponseSchema.meta({
 	id: "ReferralCode",

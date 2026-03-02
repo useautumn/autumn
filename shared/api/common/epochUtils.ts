@@ -1,4 +1,4 @@
-/** Converts epoch ms to ClickHouse DateTime string format */
+/** Converts epoch ms to DateTime string format (YYYY-MM-DD HH:MM:SS) */
 export const epochToDateTime = (epochMs: number): string => {
 	const date = new Date(epochMs);
 	const year = date.getUTCFullYear();

@@ -5,9 +5,13 @@ import { applyPercentOffDiscountToLineItems } from "./applyPercentOffDiscountToL
 export const applyStripeDiscountsToLineItems = ({
 	lineItems,
 	discounts,
+	options = {},
 }: {
 	lineItems: LineItem[];
 	discounts: StripeDiscountWithCoupon[];
+	options?: {
+		skipDescriptionTag?: boolean;
+	};
 }): LineItem[] => {
 	const percentOffDiscounts = discounts.filter(
 		(d) => d.source.coupon.percent_off,
@@ -20,11 +24,16 @@ export const applyStripeDiscountsToLineItems = ({
 		lineItems = applyPercentOffDiscountToLineItems({
 			lineItems,
 			discount,
+			options,
 		});
 	}
 
 	for (const discount of amountOffDiscounts) {
-		lineItems = applyAmountOffDiscountToLineItems({ lineItems, discount });
+		lineItems = applyAmountOffDiscountToLineItems({
+			lineItems,
+			discount,
+			options,
+		});
 	}
 
 	return lineItems;

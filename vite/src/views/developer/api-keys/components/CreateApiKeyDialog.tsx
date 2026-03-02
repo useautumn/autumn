@@ -35,6 +35,7 @@ export const CreateApiKeyDialog = ({
 	const [name, setName] = useState("");
 	const [apiKey, setApiKey] = useState("");
 	const [copied, setCopied] = useState(false);
+	const [copiedEnv, setCopiedEnv] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -42,6 +43,7 @@ export const CreateApiKeyDialog = ({
 			setName("");
 			setApiKey("");
 			setCopied(false);
+			setCopiedEnv(false);
 			setValidationError(null);
 		} else if (!open) {
 			refetch();
@@ -65,6 +67,12 @@ export const CreateApiKeyDialog = ({
 			setTimeout(() => setCopied(false), 1000);
 		}
 	}, [copied]);
+
+	useEffect(() => {
+		if (copiedEnv) {
+			setTimeout(() => setCopiedEnv(false), 1000);
+		}
+	}, [copiedEnv]);
 
 	const handleCreate = async () => {
 		const result = createApiKeySchema.safeParse({ name });
@@ -145,6 +153,30 @@ export const CreateApiKeyDialog = ({
 								}}
 							>
 								{copied ? <Check size={15} /> : <Copy size={15} />}
+							</button>
+						</motion.div>
+						<motion.div
+							key="api-key-env"
+							initial={{ opacity: 0, y: -10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{
+								type: "spring",
+								bounce: 0.15,
+								duration: 0.3,
+								delay: 0.05,
+							}}
+							className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center mt-2"
+						>
+							<p className="text-sm font-mono">AUTUMN_SECRET_KEY="{apiKey}"</p>
+							<button
+								type="button"
+								className="text-t2 hover:text-t2/80 cursor-pointer"
+								onClick={() => {
+									setCopiedEnv(true);
+									navigator.clipboard.writeText(`AUTUMN_SECRET_KEY="${apiKey}"`);
+								}}
+							>
+								{copiedEnv ? <Check size={15} /> : <Copy size={15} />}
 							</button>
 						</motion.div>
 					) : (

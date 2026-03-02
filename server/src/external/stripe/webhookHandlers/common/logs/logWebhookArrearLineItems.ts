@@ -1,6 +1,6 @@
+import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import { formatMs, type LineItem } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logWebhookArrearLineItems = ({
@@ -16,13 +16,12 @@ export const logWebhookArrearLineItems = ({
 		ctx,
 		extras: {
 			arrearLineItems: {
-				lineItems: lineItems.map((item) => {
-					const hasDiscount =
-						item.finalAmount !== undefined && item.finalAmount !== item.amount;
-					return hasDiscount
-						? `${item.description}: ${item.amount} → ${item.finalAmount} (discounted)`
-						: `${item.description}: ${item.amount}`;
-				}),
+				lineItems: lineItems.map((item) => ({
+					description: item.description,
+					amount: item.amount,
+					amountAfterDiscounts: item.amountAfterDiscounts,
+					discountable: item.context.discountable ?? false,
+				})),
 				updateCustomerEntitlements: updateCustomerEntitlements.map(
 					(update) => ({
 						featureId: update.customerEntitlement.entitlement.feature?.id,

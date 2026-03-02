@@ -15,6 +15,7 @@ import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.
 import { handleGetProductCounts } from "./internalHandlers/handleGetProductCounts.js";
 import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
 import { handleGetRewards } from "./internalHandlers/handleGetRewards.js";
+import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupons.js";
 
 // Hono router for internal/dashboard product routes
 export const internalProductRouter = new Hono<HonoEnv>();
@@ -23,6 +24,7 @@ internalProductRouter.get("/products", ...handleGetProducts);
 internalProductRouter.get("/product_counts", ...handleGetProductCounts);
 internalProductRouter.get("/features", ...handleGetFeatures);
 internalProductRouter.get("/rewards", ...handleGetRewards);
+internalProductRouter.get("/stripe_coupons", ...handleGetStripeCoupons);
 internalProductRouter.get("/migrations", ...handleGetMigrations);
 
 // SINGLE PRODUCT ENDPOINTS

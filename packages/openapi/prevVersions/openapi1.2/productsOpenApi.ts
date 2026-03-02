@@ -1,13 +1,11 @@
-import { z } from "zod/v4";
-import { SuccessResponseSchema } from "../../../common/commonResponses.js";
 import {
 	ApiProductSchema,
-	PRODUCT_EXAMPLE,
-} from "../../../products/previousVersions/apiProduct.js";
-import {
 	CreateProductV2ParamsSchema,
+	PRODUCT_EXAMPLE,
+	SuccessResponseSchema,
 	UpdateProductV2ParamsSchema,
-} from "../../../products/productOpModels.js";
+} from "@autumn/shared";
+import { z } from "zod/v4";
 
 // Register schema with .meta() for OpenAPI spec generation
 export const ApiProductWithMeta = ApiProductSchema.meta({

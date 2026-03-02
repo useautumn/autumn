@@ -49,7 +49,7 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: "pro",
 				options: [{ feature_id: TestFeature.Messages, quantity }],
 			}),
@@ -159,7 +159,7 @@ test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered c
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: "pro",
 				options: [{ feature_id: TestFeature.Messages, quantity }],
 			}),

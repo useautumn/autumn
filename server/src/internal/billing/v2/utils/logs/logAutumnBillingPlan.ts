@@ -57,7 +57,7 @@ export const logAutumnBillingPlan = ({
 
 				lineItems:
 					plan.lineItems?.map(
-						(item) => `${item.description}: ${item.finalAmount}`,
+						(item) => `${item.description}: ${item.amountAfterDiscounts}`,
 					) ?? "none",
 			},
 		},

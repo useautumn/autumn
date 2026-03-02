@@ -15,5 +15,7 @@
 			"type": "remote",
 			"url": "https://mcp.pscale.dev/mcp/planetscale"
 		}
-	}
+	},
+
+	"plugin": ["opencode-supermemory@latest"]
 }

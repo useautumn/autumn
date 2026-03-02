@@ -80,3 +80,7 @@ export * from "./others/apiInvoice/apiInvoiceItem.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Models
 export * from "./platform/platformModels.js";
+// Utils
+export * from "./utils/xCodeSamplesLegacy.js";
+// JSDocs
+export * from "./common/jsDocs.js";
