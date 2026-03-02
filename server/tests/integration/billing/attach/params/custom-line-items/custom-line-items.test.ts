@@ -14,6 +14,7 @@ import { expect, test } from "bun:test";
 import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -241,4 +242,88 @@ test.concurrent(`${chalk.yellowBright("custom-line-items 3: single custom line i
 	);
 	expect(stripeInvoice.lines.data.length).toBe(1);
 	expect(stripeInvoice.lines.data[0].description).toBe("Flat upgrade fee");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: Custom line items summing to zero — no invoice created
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has pro ($20/mo)
+ * - Upgrade to premium ($50/mo) with custom_line_items that sum to $0
+ *
+ * Expected Result:
+ * - Subscription update succeeds (premium replaces pro)
+ * - No upgrade invoice is created (total is $0)
+ * - Only the initial pro invoice exists (count: 1)
+ * - Preview also shows total of $0
+ */
+test.concurrent(`${chalk.yellowBright("custom-line-items 4: zero-sum custom line items — no invoice")}`, async () => {
+	const customerId = "cli-zero-sum";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+
+	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const customLineItems = [
+		{ amount: 15, description: "Upgrade charge" },
+		{ amount: -15, description: "Loyalty credit" },
+	];
+
+	// 1. Preview should show total of $0
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: premium.id,
+		custom_line_items: customLineItems,
+	});
+
+	expect(preview.total).toBe(0);
+	expect(preview.line_items.length).toBe(2);
+
+	// 2. Attach premium with zero-sum custom line items
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required",
+		custom_line_items: customLineItems,
+	});
+
+	// 3. No upgrade invoice should be created (total is $0)
+	expect(result.invoice).toBeUndefined();
+
+	// 4. Verify product states — premium active, pro gone
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
+
+	// 5. Only the initial pro invoice should exist (no upgrade invoice)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 20, // Only the original pro subscription invoice
+	});
+
+	// 6. Verify Stripe subscription state is correct
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
