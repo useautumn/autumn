@@ -1,9 +1,9 @@
 import {
 	type AttachBillingContext,
 	type AttachParamsV1,
-	type CustomerEntitlement,
 	type Entitlement,
 	featureUtils,
+	type InsertCustomerEntitlement,
 	isBooleanCusEnt,
 	isEntityScopedCusEnt,
 	isUnlimitedCusEnt,
@@ -21,7 +21,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 	params: AttachParamsV1;
 }): {
 	entitlements: Entitlement[];
-	customerEntitlements: CustomerEntitlement[];
+	customerEntitlements: InsertCustomerEntitlement[];
 } => {
 	const { currentCustomerProduct, planTiming, endOfCycleMs, fullCustomer } =
 		attachBillingContext;
@@ -41,7 +41,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 	const orgId = customer.org_id;
 
 	const entitlements: Entitlement[] = [];
-	const customerEntitlements: CustomerEntitlement[] = [];
+	const customerEntitlements: InsertCustomerEntitlement[] = [];
 
 	for (const cusEnt of currentCustomerProduct.customer_entitlements) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
@@ -76,9 +76,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 				});
 
 			entitlements.push(...entityPairs.map((p) => p.ent));
-			customerEntitlements.push(
-				...entityPairs.map((p) => p.cusEntRow as CustomerEntitlement),
-			);
+			customerEntitlements.push(...entityPairs.map((p) => p.cusEntRow));
 			continue;
 		}
 
@@ -101,7 +99,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		});
 
 		entitlements.push(ent);
-		customerEntitlements.push(cusEntRow as CustomerEntitlement);
+		customerEntitlements.push(cusEntRow);
 	}
 
 	return { entitlements, customerEntitlements };
