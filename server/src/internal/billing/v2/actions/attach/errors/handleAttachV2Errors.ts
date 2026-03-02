@@ -54,8 +54,8 @@ export const handleAttachV2Errors = async ({
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
 
-	// 8. Carry over balances errors (non-consumable features)
-	handleCarryOverBalancesErrors({ ctx, params });
+	// 8. Carry over balances errors (non-consumable features, downgrade block)
+	handleCarryOverBalancesErrors({ ctx, params, billingContext });
 
 	// 9. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
