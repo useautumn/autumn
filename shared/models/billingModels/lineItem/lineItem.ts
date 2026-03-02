@@ -15,7 +15,7 @@ export const LineItemSchema = z
 		amount: z.number(),
 
 		discounts: z.array(LineItemDiscountSchema).default([]),
-		amountAfterDiscounts: z.number().default(0),
+		amountAfterDiscounts: z.number().optional(),
 
 		description: z.string(),
 
@@ -40,7 +40,7 @@ export const LineItemSchema = z
 	.transform((data) => {
 		return {
 			...data,
-			amountAfterDiscounts: data.amount,
+			amountAfterDiscounts: data.amountAfterDiscounts ?? data.amount,
 		};
 	});
 

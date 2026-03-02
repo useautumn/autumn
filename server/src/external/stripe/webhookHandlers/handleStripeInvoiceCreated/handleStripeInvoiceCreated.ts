@@ -1,10 +1,11 @@
+import { secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
-import { cusProductsToRenewalLineItems } from "@/external/stripe/webhookHandlers/common";
+import {
+	storeRenewalLineItems,
+	upsertAutumnInvoice,
+} from "@/external/stripe/webhookHandlers/common";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
-import { upsertAutumnInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/upsertAutumnInvoice";
-import { InvoiceService } from "@/internal/invoices/InvoiceService";
-import { workflows } from "@/queue/workflows";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceCreatedContext } from "./setupInvoiceCreatedContext";
 import { processConsumablePricesForInvoiceCreated } from "./tasks/processConsumablePricesForInvoiceCreated";
@@ -35,28 +36,25 @@ export const handleStripeInvoiceCreated = async ({
 	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
 	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
 
-	await upsertAutumnInvoice({ ctx, eventContext });
-
-	// Store invoice line items (async via SQS workflow)
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: eventContext.stripeInvoice.id,
+	// Upsert Autumn invoice record
+	const autumnInvoice = await upsertAutumnInvoice({
+		ctx,
+		stripeInvoice: eventContext.stripeInvoice,
+		stripeSubscription: eventContext.stripeSubscription,
+		customerProducts: eventContext.customerProducts,
+		options: { skipNonCycleInvoices: true },
 	});
 
+	// Store invoice line items (async via SQS workflow)
 	if (autumnInvoice) {
-		// Generate billing line items for matching
-		const renewalLineItems = cusProductsToRenewalLineItems({
+		const periodEndMs = secondsToMs(eventContext.stripeInvoice.period_end);
+		await storeRenewalLineItems({
 			ctx,
-			eventContext,
-			arrearLineItems,
-		});
-
-		await workflows.triggerStoreInvoiceLineItems({
-			orgId: ctx.org.id,
-			env: ctx.env,
+			autumnInvoice,
 			stripeInvoiceId: eventContext.stripeInvoice.id,
-			autumnInvoiceId: autumnInvoice.id,
-			billingLineItems: renewalLineItems,
+			arrearLineItems,
+			eventContext,
+			periodEndMs,
 		});
 	}
 };

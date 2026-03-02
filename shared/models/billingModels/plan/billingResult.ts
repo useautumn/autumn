@@ -6,6 +6,7 @@ export interface StripeBillingPlanResult {
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
 	stripeCheckoutSession?: Stripe.Checkout.Session;
+	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	requiredAction?: {
 		code: PaymentFailureCode;
 		reason: string;

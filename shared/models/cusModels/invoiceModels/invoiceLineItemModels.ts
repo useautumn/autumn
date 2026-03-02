@@ -10,11 +10,12 @@ export const InvoiceLineItemDiscountSchema = z.object({
 export const InvoiceLineItemSchema = z.object({
 	id: z.string(),
 	created_at: z.number(),
-	invoice_id: z.string(),
+	invoice_id: z.string().nullable(),
 
 	// Stripe identifiers
 	stripe_id: z.string().nullable(),
 	stripe_invoice_id: z.string().nullable(),
+	stripe_invoice_item_id: z.string().nullable(),
 	stripe_subscription_item_id: z.string().nullable(),
 	stripe_product_id: z.string().nullable(),
 	stripe_price_id: z.string().nullable(),

@@ -1,35 +1,24 @@
 import { InvoiceStatus } from "@autumn/shared";
-import { cn } from "@/lib/utils";
 
 const statusConfig = {
 	[InvoiceStatus.Draft]: {
-		dot: "bg-gray-400 dark:bg-gray-500",
-		bg: "bg-gray-500/10",
-		text: "text-gray-600 dark:text-gray-400",
+		color: "bg-gray-400 dark:bg-gray-600",
 		label: "Draft",
 	},
 	[InvoiceStatus.Open]: {
-		dot: "bg-orange-500 dark:bg-orange-500",
-		bg: "bg-orange-500/10",
-		text: "text-orange-600 dark:text-orange-400",
+		color: "bg-orange-500 dark:bg-orange-600",
 		label: "Open",
 	},
 	[InvoiceStatus.Void]: {
-		dot: "bg-red-500 dark:bg-red-500",
-		bg: "bg-red-500/10",
-		text: "text-red-600 dark:text-red-400",
+		color: "bg-red-500 dark:bg-red-600",
 		label: "Voided",
 	},
 	[InvoiceStatus.Paid]: {
-		dot: "bg-green-500 dark:bg-green-500",
-		bg: "bg-green-500/10",
-		text: "text-green-600 dark:text-green-400",
+		color: "bg-green-500 dark:bg-green-600",
 		label: "Paid",
 	},
 	[InvoiceStatus.Uncollectible]: {
-		dot: "bg-gray-500 dark:bg-gray-500",
-		bg: "bg-gray-500/10",
-		text: "text-gray-600 dark:text-gray-400",
+		color: "bg-gray-500 dark:bg-gray-600",
 		label: "Uncollectible",
 	},
 };
@@ -42,18 +31,12 @@ export function CustomerInvoiceStatus({
 	if (!status) return null;
 
 	const config = statusConfig[status];
-	if (!config) return <span className="text-xs">{status}</span>;
+	if (!config) return <div>{status}</div>;
 
 	return (
-		<span
-			className={cn(
-				"inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
-				config.bg,
-				config.text,
-			)}
-		>
-			<span className={cn("w-1 h-1 rounded-full", config.dot)} />
-			{config.label}
-		</span>
+		<div className="flex items-center gap-1">
+			<div className={`w-1.5 h-1.5 rounded-full ${config.color}`} />
+			<span>{config.label}</span>
+		</div>
 	);
 }

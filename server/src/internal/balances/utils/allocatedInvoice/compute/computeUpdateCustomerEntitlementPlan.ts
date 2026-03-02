@@ -13,7 +13,13 @@ export const computeUpdateCustomerEntitlementPlan = ({
 }: {
 	billingContext: AllocatedInvoiceContext;
 }): UpdateCustomerEntitlement | undefined => {
-	const { customerEntitlement, previousOverage, newOverage } = billingContext;
+	const {
+		customerEntitlement,
+		previousUsage,
+		newUsage,
+		previousOverage,
+		newOverage,
+	} = billingContext;
 
 	// 1. Compute autumn billing plan
 	const isUpgrade = allocatedInvoiceIsUpgrade({
@@ -33,40 +39,52 @@ export const computeUpdateCustomerEntitlementPlan = ({
 
 		return {
 			customerEntitlement,
-			balanceChange: -replaceablesToDelete.length,
+			balanceChange: replaceablesToDelete.length,
 			deletedReplaceables: replaceablesToDelete,
 		};
 	}
 
-	// Plan for downgrade
-	const customerPrice = cusEntToCusPrice({
-		cusEnt: customerEntitlement,
-		errorOnNotFound: true,
-	});
+	// Downgrade case
+	if (previousOverage <= 0) {
+		// Just return
+		return undefined;
+	} else {
+		// Plan for downgrade
+		const customerPrice = cusEntToCusPrice({
+			cusEnt: customerEntitlement,
+			errorOnNotFound: true,
+		});
 
-	const { shouldCreateReplaceables } = priceToProrationConfig({
-		price: customerPrice.price,
-		isUpgrade,
-	});
+		const { shouldCreateReplaceables } = priceToProrationConfig({
+			price: customerPrice.price,
+			isUpgrade,
+		});
 
-	if (shouldCreateReplaceables) {
-		const numReplaceablesToCreate = Math.max(
-			0,
-			new Decimal(previousOverage).sub(newOverage).toNumber(),
-		);
+		if (shouldCreateReplaceables) {
+			const numReplaceablesToCreate = Math.max(
+				0,
+				new Decimal(previousUsage).sub(newUsage).toNumber(),
+			);
 
+			return {
+				customerEntitlement,
+				balanceChange: -numReplaceablesToCreate,
+				insertReplaceables: Array.from(
+					{ length: numReplaceablesToCreate },
+					() => ({
+						id: generateId("rep"),
+						cus_ent_id: customerEntitlement.id,
+						created_at: Date.now(),
+						delete_next_cycle: true,
+					}),
+				),
+			};
+		}
+
+		// When shouldCreateReplaceables is false, no customer entitlement update, but still do billing updates...
 		return {
 			customerEntitlement,
-			balanceChange: numReplaceablesToCreate,
-			insertReplaceables: Array.from(
-				{ length: numReplaceablesToCreate },
-				() => ({
-					id: generateId("rep"),
-					cus_ent_id: customerEntitlement.id,
-					created_at: Date.now(),
-					delete_next_cycle: true,
-				}),
-			),
+			balanceChange: 0,
 		};
 	}
 };

@@ -3,13 +3,16 @@ import {
 	cusEntToCusPrice,
 	cusEntToInvoiceOverage,
 	cusEntToInvoiceUsage,
+	cusProductToProduct,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	secondsToMs,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext.js";
+import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { applyDeductionUpdateToCustomerEntitlement } from "../deduction/applyDeductionUpdateToCustomerEntitlement.js";
+import { applyDeductionUpdateToFullCustomer } from "../deduction/applyDeductionUpdateToFullCustomer.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { AllocatedInvoiceContext } from "./allocatedInvoiceContext.js";
 
@@ -19,15 +22,31 @@ import type { AllocatedInvoiceContext } from "./allocatedInvoiceContext.js";
  */
 export const setupAllocatedInvoiceContext = async ({
 	ctx,
+	oldFullCustomer,
 	customerEntitlement,
-	fullCustomer,
 	update,
 }: {
 	ctx: AutumnContext;
+	oldFullCustomer: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
-	fullCustomer: FullCustomer;
 	update: DeductionUpdate;
 }): Promise<AllocatedInvoiceContext | null> => {
+	// Fetch full customer again just in case...
+	const fullCustomer = await setupFullCustomerContext({
+		ctx,
+		params: {
+			customer_id: oldFullCustomer.id ?? oldFullCustomer.internal_id,
+			entity_id: oldFullCustomer.entity?.id,
+		},
+	});
+
+	// Need to have the "latest" full customer so that when we apply the new updates, the state is correct, and stripe subscription state is correct too.
+	applyDeductionUpdateToFullCustomer({
+		fullCus: fullCustomer,
+		cusEntId: customerEntitlement.id,
+		update,
+	});
+
 	const { logger } = ctx;
 
 	const cusProduct = customerEntitlement.customer_product;
@@ -40,6 +59,7 @@ export const setupAllocatedInvoiceContext = async ({
 	// Fetch Stripe context (subscription, customer, discounts, payment method)
 	const {
 		stripeSubscription,
+		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
 		paymentMethod,
@@ -91,19 +111,24 @@ export const setupAllocatedInvoiceContext = async ({
 	return {
 		// BillingContext fields
 		fullCustomer,
-		fullProducts: [],
+		fullProducts: [cusProductToProduct({ cusProduct })],
 		featureQuantities: [],
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs: billingCycleAnchorMs,
 		stripeCustomer,
 		stripeSubscription,
+		stripeSubscriptionSchedule,
 		stripeDiscounts,
 		paymentMethod,
 		billingVersion: BillingVersion.V2,
 
 		// Allocated invoice specific fields
 		customerEntitlement,
+		updatedCutomerEntitlement: applyDeductionUpdateToCustomerEntitlement({
+			customerEntitlement,
+			update,
+		}),
 		update,
 
 		previousUsage,

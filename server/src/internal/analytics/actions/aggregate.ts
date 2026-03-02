@@ -332,7 +332,6 @@ export const aggregate = async ({
 
 	const { startDate, endDate } = await calculateDateRange({ ctx, params });
 
-	const startTime = performance.now();
 	let formatted: ClickHouseResult;
 	let truncated = false;
 
@@ -372,9 +371,9 @@ export const aggregate = async ({
 			property_key: propertyKey,
 		};
 
-		ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
-			pipeParams,
-		});
+		// ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
+		// 	pipeParams,
+		// });
 
 		const result = await pipes.aggregateGroupable(pipeParams);
 
@@ -394,15 +393,6 @@ export const aggregate = async ({
 			binSize,
 		});
 
-		ctx.logger.debug("Aggregate groupable results", {
-			queryMs: Math.round(performance.now() - startTime),
-			rawRows: result.data.length,
-			rawSample: result.data.slice(0, 3),
-			formattedRows: formatted.rows,
-			formattedSample: formatted.data.slice(0, 3),
-			columns: formatted.meta.map((m) => m.name),
-			truncated,
-		});
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
 		const pipeParams = {
@@ -416,8 +406,6 @@ export const aggregate = async ({
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
 		};
 
-		ctx.logger.debug("Calling Tinybird aggregate_simple pipe", { pipeParams });
-
 		const result = await pipes.aggregateSimple(pipeParams);
 
 		formatted = formatSimpleResults({
@@ -427,15 +415,6 @@ export const aggregate = async ({
 			startDate,
 			endDate,
 			binSize,
-		});
-
-		ctx.logger.debug("Aggregate simple results", {
-			queryMs: Math.round(performance.now() - startTime),
-			rawRows: result.data.length,
-			rawSample: result.data.slice(0, 3),
-			formattedRows: formatted.rows,
-			formattedSample: formatted.data.slice(0, 3),
-			columns: formatted.meta.map((m) => m.name),
 		});
 	}
 

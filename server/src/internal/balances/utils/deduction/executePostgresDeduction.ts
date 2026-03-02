@@ -151,7 +151,7 @@ export const executePostgresDeduction = async ({
 					await createAllocatedInvoice({
 						ctx,
 						customerEntitlement: cusEnt,
-						fullCustomer,
+						oldFullCustomer: oldFullCus,
 						update,
 					});
 

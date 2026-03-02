@@ -1,5 +1,3 @@
-import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
-import { findCheckoutLineItemByAutumnPrice } from "@/external/stripe/checkoutSessions/utils/findCheckoutLineItem";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 
@@ -15,11 +13,9 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 export const syncSubscriptionItemMetadataFromCheckout = async ({
 	ctx,
 	checkoutContext,
-	deferredData,
 }: {
 	ctx: StripeWebhookContext;
 	checkoutContext: CheckoutSessionCompletedContext;
-	deferredData: DeferredAutumnBillingPlanData;
 }) => {
 	const { stripeCli } = ctx;
 	const checkoutLineItems =
@@ -28,50 +24,47 @@ export const syncSubscriptionItemMetadataFromCheckout = async ({
 
 	if (!checkoutLineItems?.length || !subscriptionItems?.length) return;
 
-	const { insertCustomerProducts } = deferredData.billingPlan.autumn;
-
 	const updates: Promise<unknown>[] = [];
 
-	for (const cusProduct of insertCustomerProducts) {
-		const product = cusProduct.product;
+	for (const checkoutLineItem of checkoutLineItems) {
+		const subscriptionItem = subscriptionItems.find(
+			(si) => si.price?.id === checkoutLineItem.price?.id,
+		);
 
-		for (const cusPrice of cusProduct.customer_prices) {
-			const price = cusPrice.price;
+		if (!subscriptionItem) continue;
 
-			// 1. Match Autumn price → checkout line item
-			const checkoutLineItem = findCheckoutLineItemByAutumnPrice({
-				lineItems: checkoutLineItems,
-				price,
-				product,
-				errorOnNotFound: false,
-			});
+		const checkoutLineItemMetadata = checkoutLineItem.metadata;
 
-			if (!checkoutLineItem?.price?.id) continue;
+		if (!checkoutLineItemMetadata) continue;
 
-			// 2. Match checkout line item → subscription item by Stripe price ID
-			const subItem = subscriptionItems.find(
-				(si) => si.price.id === checkoutLineItem.price!.id,
-			);
+		const updatedMetadata = {
+			...subscriptionItem.metadata,
+			...checkoutLineItemMetadata,
+		};
 
-			if (!subItem) continue;
-
-			// 3. Update subscription item metadata (merge, don't override)
-			updates.push(
-				stripeCli.subscriptionItems.update(subItem.id, {
-					metadata: {
-						...subItem.metadata,
-						autumn_price_id: price.id,
-						autumn_customer_price_id: cusPrice.id,
+		const updateSubscriptionItemMetadata = async () => {
+			try {
+				await stripeCli.subscriptionItems.update(subscriptionItem.id, {
+					metadata: updatedMetadata,
+				});
+			} catch (error) {
+				ctx.logger.error(
+					`[syncSubscriptionItemMetadataFromCheckout] Error updating subscription item metadata: ${error}`,
+					{
+						data: {
+							subscriptionItemId: subscriptionItem.id,
+							updatedMetadata,
+						},
 					},
-				}),
-			);
-		}
+				);
+			}
+		};
+
+		updates.push(updateSubscriptionItemMetadata());
 	}
 
 	if (updates.length > 0) {
 		await Promise.all(updates);
-		ctx.logger.info("[checkout.completed] Synced subscription item metadata", {
-			data2: [`${updates.length} items updated`],
-		});
+		ctx.logger.info("[checkout.completed] Synced subscription item metadata");
 	}
 };

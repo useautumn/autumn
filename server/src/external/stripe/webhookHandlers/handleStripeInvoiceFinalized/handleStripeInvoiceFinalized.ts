@@ -1,9 +1,9 @@
 import type Stripe from "stripe";
+import { storeRenewalLineItems } from "@/external/stripe/webhookHandlers/common";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceFinalizedContext } from "./setupInvoiceFinalizedContext";
 import { processVercelInvoice } from "./tasks/processVercelInvoice";
-import { storeInvoiceLineItems } from "./tasks/storeInvoiceLineItems";
-import { upsertAutumnInvoice } from "./tasks/upsertAutumnInvoice";
 
 /**
  * Handles invoice.finalized webhook.
@@ -33,8 +33,22 @@ export const handleStripeInvoiceFinalized = async ({
 	await processVercelInvoice({ ctx, eventContext });
 
 	// 2. Upsert Autumn invoice record
-	await upsertAutumnInvoice({ ctx, eventContext });
+	// 2. Try to update existing invoice first (works even without subscription)
+	const autumnInvoice = await InvoiceService.updateFromStripeInvoice({
+		db: ctx.db,
+		stripeInvoice: eventContext.stripeInvoice,
+	});
 
-	// 3. Store/reconcile invoice line items (async workflow)
-	await storeInvoiceLineItems({ ctx, eventContext });
+	// 3. Reconcile invoice line items (async workflow)
+	// Uses reconcileOnly mode to only update Stripe-authoritative fields (amounts,
+	// quantities, discounts), preserving Autumn metadata set during invoice.created.
+	if (autumnInvoice) {
+		await storeRenewalLineItems({
+			ctx,
+			autumnInvoice,
+			stripeInvoiceId: eventContext.stripeInvoice.id,
+			arrearLineItems: [],
+			reconcileOnly: true,
+		});
+	}
 };
