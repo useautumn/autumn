@@ -35,6 +35,7 @@ export const CreateApiKeyDialog = ({
 	const [name, setName] = useState("");
 	const [apiKey, setApiKey] = useState("");
 	const [copied, setCopied] = useState(false);
+	const [copiedEnv, setCopiedEnv] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -42,6 +43,7 @@ export const CreateApiKeyDialog = ({
 			setName("");
 			setApiKey("");
 			setCopied(false);
+			setCopiedEnv(false);
 			setValidationError(null);
 		} else if (!open) {
 			refetch();
@@ -65,6 +67,12 @@ export const CreateApiKeyDialog = ({
 			setTimeout(() => setCopied(false), 1000);
 		}
 	}, [copied]);
+
+	useEffect(() => {
+		if (copiedEnv) {
+			setTimeout(() => setCopiedEnv(false), 1000);
+		}
+	}, [copiedEnv]);
 
 	const handleCreate = async () => {
 		const result = createApiKeySchema.safeParse({ name });

@@ -26,6 +26,7 @@ export const finalizeAttachPlan = ({
 		lineItems: plan.lineItems ?? [],
 		billingContext: attachBillingContext,
 		autumnBillingPlan: plan,
+		customLineItems: params.custom_line_items,
 	});
 
 	// Guard: if proration_behavior is 'none', clear line items (skip proration charges)

@@ -227,5 +227,7 @@ export const setupAttachBillingContext = async ({
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
+
+		externalId: params.subscription_id,
 	};
 };

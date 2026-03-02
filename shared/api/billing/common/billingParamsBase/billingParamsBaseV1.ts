@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
@@ -57,6 +58,15 @@ export const BillingParamsBaseV1Schema = z.object({
 		.meta({
 			description: "Whether to carry over balances from the previous plan.",
 		}),
+  
+	subscription_id: z.string().optional().meta({
+		description:
+			"A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.",
+	}),
+	custom_line_items: z.array(CustomLineItemSchema).optional().meta({
+		description:
+			"Custom line items that override the auto-generated proration invoice. Only valid for immediate subscription updates that don't create a Stripe-managed invoice.",
+	}),
 
 	// Internal
 	customer_data: CustomerDataSchema.optional().meta({
