@@ -1,4 +1,5 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
+import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -8,13 +9,20 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import { SubService } from "@/internal/subscriptions/SubService";
+import { workflows } from "@/queue/workflows";
 
 export const executeAutumnBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
+	stripeInvoice,
+	stripeInvoiceItems,
+	autumnInvoice,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	stripeInvoice?: Stripe.Invoice;
+	stripeInvoiceItems?: Stripe.InvoiceItem[];
+	autumnInvoice?: Invoice;
 }) => {
 	const { db } = ctx;
 	const {
@@ -93,10 +101,36 @@ export const executeAutumnBillingPlan = async ({
 	}
 
 	// 7. Upsert invoice (if provided)
-	if (autumnBillingPlan.upsertInvoice) {
-		await InvoiceService.upsert({
+	if (!autumnInvoice && autumnBillingPlan.upsertInvoice) {
+		autumnInvoice = await InvoiceService.upsert({
 			db,
 			invoice: autumnBillingPlan.upsertInvoice,
+		});
+	}
+
+	// 8. Trigger workflow to store invoice line items (async via SQS)
+	if (autumnInvoice && stripeInvoice) {
+		await workflows.triggerStoreInvoiceLineItems({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			stripeInvoiceId: stripeInvoice.id,
+			autumnInvoiceId: autumnInvoice.id,
+			billingLineItems: autumnBillingPlan.lineItems,
+		});
+	}
+
+	// 9. Trigger workflow to store deferred line items (ProrateNextCycle pending items)
+	// These are invoice items created without an invoice — stored with invoice_id = null
+	if (
+		stripeInvoiceItems &&
+		stripeInvoiceItems.length > 0 &&
+		autumnBillingPlan.lineItems
+	) {
+		await workflows.triggerStoreDeferredInvoiceLineItems({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			deferredStripeInvoiceItems: stripeInvoiceItems,
+			billingLineItems: autumnBillingPlan.lineItems,
 		});
 	}
 };

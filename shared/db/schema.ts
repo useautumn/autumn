@@ -12,6 +12,7 @@ import { customersRelations } from "../models/cusModels/cusRelations.js";
 import { customers } from "../models/cusModels/cusTable.js";
 import { entitiesRelations } from "../models/cusModels/entityModels/entityRelations.js";
 import { entities } from "../models/cusModels/entityModels/entityTable.js";
+import { invoiceLineItems } from "../models/cusModels/invoiceModels/invoiceLineItemTable.js";
 import { invoiceRelations } from "../models/cusModels/invoiceModels/invoiceRelations.js";
 import { invoices } from "../models/cusModels/invoiceModels/invoiceTable.js";
 import { customerEntitlementsRelations } from "../models/cusProductModels/cusEntModels/cusEntRelations.js";
@@ -96,6 +97,7 @@ export {
 	customerPrices,
 	customerEntitlements,
 	invoices,
+	invoiceLineItems,
 	customers,
 	entities,
 	apiKeys,
