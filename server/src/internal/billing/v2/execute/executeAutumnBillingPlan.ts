@@ -1,8 +1,4 @@
-import type {
-	AutumnBillingPlan,
-	InsertCustomerEntitlement,
-	Invoice,
-} from "@autumn/shared";
+import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
@@ -64,7 +60,7 @@ export const executeAutumnBillingPlan = async ({
 	if (insertCustomerEntitlements) {
 		await CusEntService.insert({
 			ctx,
-			data: insertCustomerEntitlements as InsertCustomerEntitlement[],
+			data: insertCustomerEntitlements,
 		});
 	}
 
