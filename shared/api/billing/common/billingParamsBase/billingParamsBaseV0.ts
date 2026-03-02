@@ -20,6 +20,7 @@ export const BillingParamsBaseV0Schema = z.object({
 	items: z.array(ProductItemSchema).optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),
+	subscription_id: z.string().optional(),
 
 	custom_line_items: z.array(CustomLineItemSchema).optional(),
 });

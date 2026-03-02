@@ -4,7 +4,7 @@ import {
 	type LineItem,
 	type StripeInvoiceAction,
 } from "@autumn/shared";
-import type { LineItem, StripeInvoiceAction } from "@autumn/shared";
+
 import { lineItemsToInvoiceAddLinesParams } from "../utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 
 /**

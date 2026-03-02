@@ -49,6 +49,8 @@ export const computeMultiAttachPlan = ({
 			scheduledCustomerProduct: productContext.scheduledCustomerProduct,
 			planTiming: "immediate",
 			endOfCycleMs: undefined,
+
+			externalId: productContext.externalId,
 		};
 
 		// Track the transitioning product's context for computing updates
