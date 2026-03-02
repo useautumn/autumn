@@ -11,6 +11,7 @@ import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
@@ -57,5 +58,12 @@ export const handleAttachV2Errors = ({
 		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,
 		params,
+	});
+
+	// 9. Custom line items errors (only valid for subscription updates)
+	handleCustomLineItemsErrors({
+		params,
+		billingContext,
+		billingPlan,
 	});
 };

@@ -17,6 +17,16 @@ export const shouldCreateManualStripeInvoice = ({
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
 	if (isCreateAction) return false;
 
+	// Custom line items always need a manual invoice
+	const customLineItems = autumnBillingPlan.customLineItems;
+	if (customLineItems?.length) {
+		const customTotal = customLineItems.reduce(
+			(acc, item) => acc + item.amount,
+			0,
+		);
+		return customTotal !== 0;
+	}
+
 	const { stripeSubscription } = billingContext;
 	if (!stripeSubscription) {
 		const lineItems = autumnBillingPlan.lineItems;
