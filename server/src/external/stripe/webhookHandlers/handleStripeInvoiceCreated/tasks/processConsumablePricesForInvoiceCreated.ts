@@ -1,4 +1,8 @@
-import { customerEntitlementShouldBeBilled, secondsToMs } from "@autumn/shared";
+import {
+	customerEntitlementShouldBeBilled,
+	type LineItem,
+	secondsToMs,
+} from "@autumn/shared";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
@@ -31,6 +35,9 @@ const hasTrialJustEnded = ({
  * Processes consumable (usage-in-arrear) prices for an invoice.
  * Adds usage line items to the invoice for the billing period.
  *
+ * Returns the generated arrear line items so they can be used for matching
+ * during line item storage.
+ *
  * TODO: Handle conflict with entity consumable prices (Case B)
  * When a customer cancels end-of-cycle with entity-level consumables:
  * - subscription.deleted fires → creates arrear invoice via createInvoiceForArrearPrices
@@ -44,7 +51,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
-}): Promise<void> => {
+}): Promise<LineItem[]> => {
 	const { stripeInvoice, stripeSubscription } = eventContext;
 
 	const isPeriodicInvoice =
@@ -52,13 +59,13 @@ export const processConsumablePricesForInvoiceCreated = async ({
 
 	const trialJustEnded = hasTrialJustEnded({ stripeSubscription });
 
-	if (!isPeriodicInvoice) return;
+	if (!isPeriodicInvoice) return [];
 
 	if (trialJustEnded) {
 		ctx.logger.info(
 			"[invoice.created] Trial just ended, skipping consumable charges",
 		);
-		return;
+		return [];
 	}
 
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
@@ -105,4 +112,6 @@ export const processConsumablePricesForInvoiceCreated = async ({
 			fullCusEnt: update.customerEntitlement,
 		});
 	});
+
+	return lineItems;
 };

@@ -8,6 +8,8 @@ import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBa
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
+import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
+import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -193,6 +195,32 @@ export const processMessage = async ({
 				return;
 			}
 			await batchResetCustomerEntitlements({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StoreInvoiceLineItems) {
+			if (!ctx) {
+				workerLogger.error("No context found for store invoice line items job");
+				return;
+			}
+			await storeInvoiceLineItems({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StoreDeferredInvoiceLineItems) {
+			if (!ctx) {
+				workerLogger.error(
+					"No context found for store deferred invoice line items job",
+				);
+				return;
+			}
+			await storeDeferredInvoiceLineItems({
 				ctx,
 				payload: job.data,
 			});

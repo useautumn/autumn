@@ -6,15 +6,27 @@ import { cusEntToInvoiceOverage } from "./cusEntToInvoiceOverage";
 
 export const cusEntToInvoiceUsage = ({
 	cusEnt,
+	subtractReplaceables = false,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	subtractReplaceables?: boolean;
 }) => {
 	const startingBalance = cusEntToStartingBalance({ cusEnt });
 	const invoiceOverage = cusEntToInvoiceOverage({ cusEnt });
 
 	// 1. If invoice overage > 0:
 	if (invoiceOverage > 0) {
-		return new Decimal(startingBalance).add(invoiceOverage).toNumber();
+		const usage = new Decimal(startingBalance).add(invoiceOverage);
+
+		if (subtractReplaceables) {
+			const numReplaceables =
+				cusEnt.replaceables?.filter((r) => r.delete_next_cycle).length ?? 0;
+			const finalUsage = usage.sub(numReplaceables).toNumber();
+
+			return Math.max(finalUsage, 0);
+		}
+
+		return usage.toNumber();
 	}
 
 	// 1. If entity scoped
@@ -31,5 +43,6 @@ export const cusEntToInvoiceUsage = ({
 
 	// 2. If not entity scoped
 	const usage = new Decimal(startingBalance).sub(cusEnt.balance || 0);
+
 	return usage.toNumber();
 };

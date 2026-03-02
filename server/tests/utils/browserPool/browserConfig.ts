@@ -9,7 +9,7 @@ export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
 // export const USE_KERNEL = false;
 
 /** Run browsers in headless mode (set false to watch the browser) */
-export const HEADLESS = false;
+export const HEADLESS = true;
 
 /** Path to local Chromium/Chrome executable (auto-detected if not set in env) */
 export const CHROMIUM_PATH =
