@@ -1,0 +1,88 @@
+---
+title: "Migrating to Autumn"
+description: "How to migrate your existing Stripe customers to Autumn"
+---
+
+It's easy to move your existing customers to Autumn. The Autumn team will help you move your subscriptions and purchases over without any disruption. The main reasons teams migrate are:
+- **Speed** - Team-based billing, multi-interval usage limits, auto-topups, timeseries charts: all handled by Autumn out of the box.
+- **Flexibility** — Plan versioning, custom deals, and pricing changes without code deploys
+- **Reliability** — No webhook edge cases, race conditions, or state sync issues to debug
+
+## Migration Steps
+
+<Steps>
+<Step>
+### Replace your existing billing code with Autumn
+
+Start by integrating Autumn in your development environment. Replace your existing Stripe billing logic with Autumn's SDK:
+
+- Set up your pricing plans in the [Autumn dashboard](https://app.useautumn.com)
+- Install the Autumn SDK and configure your API keys
+- Replace Stripe checkout, subscription management, and usage tracking with Autumn equivalents
+
+See our [setup guides](/documentation/getting-started/setup/react) for detailed integration instructions.
+
+</Step>
+
+<Step>
+### Link your production Stripe account
+
+Connect your existing Stripe account to Autumn in your production environment. This gives us access to your active subscriptions so we can link them during migration.
+
+</Step>
+
+<Step>
+### Prepare your customer mapping CSV
+
+When you're ready to move to production, prepare a CSV file with the following columns:
+
+| Column | Description |
+|--------|-------------|
+| `autumn_id` | The customer ID you'll use in Autumn (typically your internal user/org ID from auth) |
+| `stripe_id` | The customer's existing Stripe customer ID (e.g., `cus_xxx`) |
+| `plan` | The Autumn product ID the customer should be on |
+
+You can also optionally include user's names and emails as separate columns.
+
+**Example CSV:**
+
+```csv
+autumn_id,stripe_id,plan
+user_123,cus_ABC123,pro
+user_456,cus_DEF456,enterprise
+user_789,cus_GHI789,starter
+```
+
+</Step>
+
+<Step>
+### Submit your CSV
+
+Send your CSV to the Autumn team via the [Discord](https://discord.gg/STqxY92zuS) support channel or email at hey@useautumn.com. We'll import the data into your production account within 8 hours. 
+
+We will reuse your existing Stripe products and subscriptions — **there will be no change or disruption to your customers' billing**. We're simply linking what's already there so Autumn can manage it going forward. We'll also make sure **all your active subscriptions and purchases are accounted for**, in case customers made payments after you exported your CSV.
+
+</Step>
+<Step>
+### Deploy your Autumn integration
+
+Once the import is complete, you can deploy your Autumn integration to production. Your existing customers will be seamlessly linked to their Stripe subscriptions through Autumn.
+</Step>
+
+</Steps>
+
+<Note>
+**Usage balances will reset mid-cycle**
+
+With this migration method, customers' usage balances will be reset when they're imported. This means they may get some extra usage during their current billing cycle.
+
+If preserving exact usage counts is critical for your business, reach out to us and we can work with you on a rolling deploy strategy.
+</Note>
+
+<Info>
+**Forward deploy service**
+
+If you're processing $1M+ ARR, we can handle the migration and deployment for you at no extra charge. We'll work directly with your engineering team to ensure a smooth transition.
+
+Contact us on [Discord](https://discord.gg/STqxY92zuS) or at hey@useautumn.com to learn more.
+</Info>

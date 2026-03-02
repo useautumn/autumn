@@ -1,0 +1,186 @@
+---
+title: "Managing Balances"
+description: "Create, update, and manage balances via the dashboard or API"
+---
+
+You can manage customer balances through the Autumn dashboard or programmatically via the API.
+
+## From the Dashboard
+
+### Viewing Balances
+
+1. Go to the [Customers page](https://app.useautumn.com/customers)
+2. Click on a customer to view their details
+3. Their balances are displayed in the **Balances** section, including breakdown by source
+
+### Modifying a Balance
+
+To set or add to a feature's balance:
+
+1. Navigate to the customer's detail page
+2. Under the balances section, click on the feature you want to modify. If there are [stacked balances](/documentation/customers/balance-stacking), choose the one you want to modify.
+3. Choose whether to **set the balance** to a specific value or **add to the balance**
+4. Enter the amount and save
+
+## Creating Standalone Balances (API)
+
+You can use the `/balances/create` endpoint to grant balances independent of any plan, for example to issue one-time promotional credits, referral rewards, or make manual customer adjustments.
+
+You can also set expiration dates for promotional usage grants and configure reset intervals.
+
+<CodeGroup>
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.balances.create({
+  customer_id: "user_123",
+  feature_id: "credits",
+  granted_balance: 500,
+  reset: {
+    interval: "one_off"
+  }
+});
+```
+
+```python Python
+from autumn import Autumn
+
+autumn = Autumn(secret_key="am_sk_...")
+
+autumn.balances.create(
+    customer_id="user_123",
+    feature_id="credits",
+    granted_balance=500,
+    reset={
+        "interval": "one_off"
+    }
+)
+```
+
+```bash cURL
+curl -X POST https://api.useautumn.com/v1/balances/create \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "credits",
+    "granted_balance": 500,
+    "reset": {
+      "interval": "one_off"
+    }
+  }'
+```
+
+</CodeGroup>
+
+See the [Create Balance API reference](/api-reference/features/create-balance) for all available parameters.
+
+## Updating Balances (API)
+
+Use the `/customers/{customer_id}/balances` endpoint to set balances for a customer.
+
+<CodeGroup>
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.updateBalances("user_123", {
+  balances: [{ feature_id: "credits", balance: 750 }]
+});
+```
+
+```python Python
+from autumn import Autumn
+
+autumn = Autumn(secret_key="am_sk_...")
+
+autumn.customers.update_balances(
+    "user_123",
+    balances=[{"feature_id": "credits", "balance": 750}]
+)
+```
+
+```bash cURL
+curl -X POST https://api.useautumn.com/v1/customers/user_123/balances \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "balances": [{ "feature_id": "credits", "balance": 750 }]
+  }'
+```
+
+</CodeGroup>
+
+See the [Set Feature Balance API reference](/api-reference/features/set-feature-balances) for all available parameters.
+
+## Querying Balances
+
+### Via Get Customer
+
+Retrieve all balances for a customer:
+
+<CodeGroup>
+
+```typescript Node.js
+const customer = await autumn.customers.get("user_123");
+console.log(customer.balances);
+```
+
+```python Python
+customer = autumn.customers.get("user_123")
+print(customer.balances)
+```
+
+```bash cURL
+curl https://api.useautumn.com/v1/customers/user_123 \
+  -H "Authorization: Bearer am_sk_..."
+```
+
+</CodeGroup>
+
+See the [Get Customer API reference](/api-reference/customers/get-customer) for the full response schema.
+
+### Via Check Endpoint
+
+Check access and get the current balance for a specific feature:
+
+<CodeGroup>
+
+```typescript Node.js
+const result = await autumn.check({
+  customer_id: "user_123",
+  feature_id: "credits"
+});
+
+console.log(result.allowed);
+console.log(result.balance);
+```
+
+```python Python
+result = autumn.check(
+    customer_id="user_123",
+    feature_id="credits"
+)
+
+print(result.allowed)
+print(result.balance)
+```
+
+```bash cURL
+curl -X POST https://api.useautumn.com/v1/check \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "credits"
+  }'
+```
+
+</CodeGroup>
+
+See the [Check API reference](/api-reference/core/check) for more details.

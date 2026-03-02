@@ -1,0 +1,364 @@
+---
+title: "Configuration reference"
+description: "Define features, plans, and pricing in autumn.config.ts"
+---
+
+Your `autumn.config.ts` file is the source of truth for your pricing. It exports features and plans using helper functions from the `atmn` package.
+
+```ts autumn.config.ts
+import { feature, plan, planFeature } from 'atmn';
+
+export const messages = feature({ ... });
+export const pro = plan({ ... });
+```
+
+Push changes with `atmn push`, or pull existing config with `atmn pull`.
+
+## Features
+
+Features define what can be gated, metered, or billed in your app.
+
+### `feature(config)`
+
+<ParamField body="id" type="string" required>
+  Unique identifier used in API calls (`check`, `track`, etc).
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Display name shown in the dashboard and billing UI.
+</ParamField>
+
+<ParamField body="type" type="enum" required>
+  `"boolean"` | `"metered"` | `"credit_system"`
+</ParamField>
+
+<ParamField body="consumable" type="boolean">
+  **Required for `metered` features.** 
+  - `true` -- usage is consumed (messages, API calls, credits)
+  - `false` -- usage is ongoing (seats, storage, workspaces)
+</ParamField>
+
+<ParamField body="credit_schema" type="array">
+  **Required for `credit_system` features.** Maps metered features to credit costs.
+  
+  Each entry: `{ metered_feature_id: string, credit_cost: number }`
+</ParamField>
+
+### Feature types
+
+**Boolean** -- simple on/off flag:
+
+```ts
+export const sso = feature({
+  id: 'sso',
+  name: 'SSO Authentication',
+  type: 'boolean',
+});
+```
+
+**Metered, consumable** -- used up and replenished (messages, API calls):
+
+```ts
+export const messages = feature({
+  id: 'messages',
+  name: 'Messages',
+  type: 'metered',
+  consumable: true,
+});
+```
+
+**Metered, non-consumable** -- ongoing usage (seats, storage):
+
+```ts
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+```
+
+**Credit system** -- maps multiple metered features to credit costs:
+
+```ts
+export const basicModel = feature({
+  id: 'basic_model',
+  name: 'Basic Model',
+  type: 'metered',
+  consumable: true,
+});
+
+export const premiumModel = feature({
+  id: 'premium_model',
+  name: 'Premium Model',
+  type: 'metered',
+  consumable: true,
+});
+
+export const credits = feature({
+  id: 'credits',
+  name: 'AI Credits',
+  type: 'credit_system',
+  credit_schema: [
+    { metered_feature_id: basicModel.id, credit_cost: 1 },
+    { metered_feature_id: premiumModel.id, credit_cost: 5 },
+  ],
+});
+```
+
+<Tip>
+If you set the price per credit to 1 cent, credits become monetary credits (eg, 5 credits = $0.05 per premium message).
+</Tip>
+
+## Plans
+
+Plans combine features with pricing to create your subscription tiers, add-ons, and top-ups.
+
+### `plan(config)`
+
+<ParamField body="id" type="string" required>
+  Unique identifier used in checkout and subscription APIs.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Display name shown in pricing tables and billing.
+</ParamField>
+
+<ParamField body="price" type="object">
+  Base subscription price:
+  - `amount: number` -- price amount (eg, `20` for $20)
+  - `interval: string` -- `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`
+</ParamField>
+
+<ParamField body="items" type="array">
+  Array of `planFeature()` objects defining what's included.
+</ParamField>
+
+<ParamField body="auto_enable" type="boolean" default="false">
+  Automatically assign this plan to new customers. Typically used for free plans.
+</ParamField>
+
+<ParamField body="add_on" type="boolean" default="false">
+  Allow this plan to be purchased alongside other plans (instead of replacing them).
+</ParamField>
+
+<ParamField body="free_trial" type="object">
+  Free trial before billing starts:
+  - `duration_length: number` -- eg, `14`
+  - `duration_type: string` -- `"day"` | `"month"` | `"year"`
+  - `card_required: boolean` -- whether a card is needed to start the trial
+</ParamField>
+
+<ParamField body="group" type="string">
+  Group related plans together. Plans in the same group replace each other on upgrade/downgrade.
+</ParamField>
+
+## Plan features
+
+Plan features define what each plan includes -- usage limits, pricing, and billing behavior.
+
+### `planFeature(config)`
+
+<ParamField body="feature_id" type="string" required>
+  The `id` of the feature to include.
+</ParamField>
+
+<ParamField body="included" type="number">
+  Amount included for free. Omit for boolean features.
+</ParamField>
+
+<ParamField body="unlimited" type="boolean">
+  Grant unlimited usage of this feature.
+</ParamField>
+
+<ParamField body="reset" type="object">
+  How often the included amount resets:
+  - `interval: string` -- `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`
+  - `interval_count: number` -- defaults to `1`
+</ParamField>
+
+<ParamField body="price" type="object">
+  Pricing for usage beyond the included amount. See [pricing patterns](#pricing-patterns) below.
+</ParamField>
+
+<ParamField body="proration" type="object">
+  How to handle mid-cycle quantity changes:
+  - `on_increase:` `"prorate"` | `"charge_immediately"`
+  - `on_decrease:` `"prorate"` | `"refund_immediately"` | `"no_action"`
+</ParamField>
+
+<ParamField body="rollover" type="object">
+  Carry unused balance forward:
+  - `max: number` -- maximum rollover amount
+  - `expiry_duration_type:` `"month"` | `"forever"`
+  - `expiry_duration_length: number` -- ignored if type is `"forever"`
+</ParamField>
+
+### Pricing patterns
+
+The `price` object on a plan feature supports different billing models:
+
+**Usage-based** -- charge based on actual usage:
+
+```ts
+planFeature({
+  feature_id: seats.id,
+  included: 5,
+  price: {
+    amount: 10,
+    interval: 'month',
+    billing_method: 'usage_based',
+    billing_units: 1,
+  },
+})
+```
+
+**Prepaid** -- customer buys a fixed quantity upfront:
+
+```ts
+planFeature({
+  feature_id: credits.id,
+  price: {
+    amount: 5,
+    billing_units: 100,
+    billing_method: 'prepaid',
+  },
+})
+```
+
+**Tiered** -- price changes based on usage volume:
+
+```ts
+planFeature({
+  feature_id: apiCalls.id,
+  price: {
+    tiers: [
+      { to: 1000, amount: 0.01 },
+      { to: 10000, amount: 0.008 },
+      { to: 'inf', amount: 0.005 },
+    ],
+    billing_method: 'usage_based',
+    interval: 'month',
+  },
+})
+```
+
+#### Price fields
+
+<ParamField body="amount" type="number">
+  Price per `billing_units`. Mutually exclusive with `tiers`.
+</ParamField>
+
+<ParamField body="tiers" type="array">
+  Tiered pricing. Each entry: `{ to: number | "inf", amount: number }`. Mutually exclusive with `amount`.
+</ParamField>
+
+<ParamField body="billing_method" type="enum" required>
+  `"usage_based"` | `"prepaid"`
+</ParamField>
+
+<ParamField body="interval" type="enum">
+  `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`. Omit for one-time charges. Not needed if the plan feature has a top-level `reset`.
+</ParamField>
+
+<ParamField body="billing_units" type="number" default="1">
+  Units per price. Eg, $5 per 100 credits = `amount: 5, billing_units: 100`.
+</ParamField>
+
+<ParamField body="max_purchase" type="number">
+  Maximum quantity that can be purchased.
+</ParamField>
+
+## Full example
+
+A complete config with a free plan, a paid plan with a trial, and a credits top-up add-on:
+
+```ts autumn.config.ts
+import { feature, plan, planFeature } from 'atmn';
+
+// Features
+export const messages = feature({
+  id: 'messages',
+  name: 'Messages',
+  type: 'metered',
+  consumable: true,
+});
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const sso = feature({
+  id: 'sso',
+  name: 'SSO',
+  type: 'boolean',
+});
+
+// Plans
+export const free = plan({
+  id: 'free',
+  name: 'Free',
+  auto_enable: true,
+  items: [
+    planFeature({
+      feature_id: messages.id,
+      included: 5,
+      reset: { interval: 'month' },
+    }),
+    planFeature({
+      feature_id: seats.id,
+      included: 1,
+    }),
+  ],
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  free_trial: {
+    duration_length: 14,
+    duration_type: 'day',
+    card_required: true,
+  },
+  items: [
+    planFeature({
+      feature_id: messages.id,
+      included: 1000,
+      reset: { interval: 'month' },
+    }),
+    planFeature({
+      feature_id: seats.id,
+      included: 5,
+      price: {
+        amount: 10,
+        interval: 'month',
+        billing_method: 'usage_based',
+        billing_units: 1,
+      },
+    }),
+    planFeature({
+      feature_id: sso.id,
+    }),
+  ],
+});
+
+export const topUp = plan({
+  id: 'top_up',
+  name: 'Message Top-Up',
+  add_on: true,
+  items: [
+    planFeature({
+      feature_id: messages.id,
+      price: {
+        amount: 5,
+        billing_units: 100,
+        billing_method: 'prepaid',
+      },
+    }),
+  ],
+});
+```
