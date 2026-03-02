@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
@@ -41,6 +42,11 @@ export const BillingParamsBaseV1Schema = z.object({
 
 	transition_rules: TransitionRulesSchema.optional().meta({
 		internal: true,
+	}),
+
+	custom_line_items: z.array(CustomLineItemSchema).optional().meta({
+		description:
+			"Custom line items that override the auto-generated proration invoice. Only valid for immediate subscription updates that don't create a Stripe-managed invoice.",
 	}),
 
 	// Internal
