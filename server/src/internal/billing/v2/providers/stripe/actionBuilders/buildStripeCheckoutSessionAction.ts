@@ -7,7 +7,7 @@ import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
-import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -64,7 +64,7 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 6. Build discounts for checkout session
 	const discounts = stripeDiscounts?.length
-		? stripeDiscountsToParams({ stripeDiscounts })
+		? stripeDiscountsToCheckoutParams({ stripeDiscounts })
 		: undefined;
 
 	// 7. Build params (only variable params - static params added in execute)
