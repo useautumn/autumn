@@ -8,9 +8,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleMultiAttach = createRoute({
-	versionedBody: {
-		latest: MultiAttachParamsV0Schema,
-	},
+	body: MultiAttachParamsV0Schema,
 	resource: AffectedResource.MultiAttach,
 	lock:
 		process.env.NODE_ENV !== "development"

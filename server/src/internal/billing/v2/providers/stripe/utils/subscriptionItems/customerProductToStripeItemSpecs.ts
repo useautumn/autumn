@@ -15,10 +15,12 @@ export const customerProductToStripeItemSpecs = ({
 	ctx,
 	customerProduct,
 	billingContext,
+	options,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	billingContext?: BillingContext;
+	options?: { isDuplicateProductId?: boolean };
 }): {
 	recurringItems: StripeItemSpec[];
 	oneOffItems: StripeItemSpec[];
@@ -32,6 +34,7 @@ export const customerProductToStripeItemSpecs = ({
 			cusPrice,
 			cusProduct: customerProduct,
 			billingContext,
+			options,
 		});
 
 		if (!spec) continue;
