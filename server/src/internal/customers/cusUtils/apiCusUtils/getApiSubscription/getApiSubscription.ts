@@ -100,6 +100,7 @@ export const getApiSubscription = async <
 		: undefined;
 
 	const apiSubscription = ApiSubscriptionV1Schema.parse({
+		id: cusProduct.external_id ?? cusProduct.id ?? "",
 		plan: apiPlan,
 
 		plan_id: fullProduct.id,

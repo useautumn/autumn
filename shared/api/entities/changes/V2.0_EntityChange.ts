@@ -1,5 +1,7 @@
 import type { ApiBalance } from "@api/customers/cusFeatures/apiBalance";
 import { balanceV1ToV0 } from "@api/customers/cusFeatures/mappers/balanceV1ToV0";
+import { apiPurchasesV0ToSubscriptionsV0 } from "@api/customers/cusPlans/mappers/apiPurchasesV0ToSubscriptionsV0";
+import { apiSubscriptionsV1ToV0 } from "@api/customers/cusPlans/mappers/apiSubscriptionsV1ToV0";
 import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
@@ -8,8 +10,6 @@ import {
 import type { z } from "zod/v4";
 import type { SharedContext } from "../../../types/sharedContext";
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription";
-import { apiPurchaseV0ToSubscriptionV0 } from "../../customers/cusPlans/mappers/apiPurchaseV0ToSubscriptionV0";
-import { apiSubscriptionV1ToV0 } from "../../customers/cusPlans/mappers/apiSubscriptionV1ToV0";
 import { ApiEntityV1Schema } from "../apiEntity";
 import { ApiEntityV2Schema } from "../apiEntityV2";
 
@@ -23,6 +23,10 @@ import { ApiEntityV2Schema } from "../apiEntityV2";
  * 1. Subscription schema changes:
  *    - V2.1+: Single "subscriptions" array with ApiSubscriptionV1 (auto_enable, ApiPlanV1)
  *    - V2.0: Split arrays "subscriptions" + "scheduled_subscriptions" with ApiSubscription (default, ApiPlanV0)
+ *
+ * 2. Subscription merging:
+ *    - V2.1+: Each customer product is a separate entry (unmerged)
+ *    - V2.0: Same plan_id + status are merged (quantities summed)
  *
  * Input: ApiEntityV2 (V2.1+ format)
  * Output: ApiEntityV1 (V2.0 format)
@@ -46,23 +50,25 @@ export const V2_0_EntityChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof ApiEntityV2Schema>;
 	}): z.infer<typeof ApiEntityV1Schema> => {
-		// Transform subscriptions from V1 to V0
-		const allSubscriptions = input.subscriptions ?? [];
+		// Merge subscriptions first (V2.1 returns unmerged, V2.0 expects merged)
+		const mergedSubscriptions = apiSubscriptionsV1ToV0({
+			ctx,
+			input: input.subscriptions ?? [],
+		});
 
-		const activeSubscriptionsV0: ApiSubscription[] = allSubscriptions
-			.filter((sub) => sub.status === "active")
-			.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
+		// Merge purchases as subscriptions
+		const purchasesAsSubscriptions: ApiSubscription[] =
+			apiPurchasesV0ToSubscriptionsV0({
+				ctx,
+				purchases: input.purchases ?? [],
+			});
 
-		const scheduledSubscriptionsV0: ApiSubscription[] = allSubscriptions
-			.filter((sub) => sub.status === "scheduled")
-			.map((sub) => apiSubscriptionV1ToV0({ ctx, input: sub }));
-
-		// Convert purchases to subscriptions and add to active subscriptions
-		const purchasesAsSubscriptions: ApiSubscription[] = (
-			input.purchases ?? []
-		).map((purchase) =>
-			apiPurchaseV0ToSubscriptionV0({ ctx, input: purchase }),
+		const activeSubscriptionsV0: ApiSubscription[] = mergedSubscriptions.filter(
+			(sub) => sub.status === "active",
 		);
+
+		const scheduledSubscriptionsV0: ApiSubscription[] =
+			mergedSubscriptions.filter((sub) => sub.status === "scheduled");
 
 		const balancesV0: Record<string, ApiBalance> = {};
 		if (input.balances) {

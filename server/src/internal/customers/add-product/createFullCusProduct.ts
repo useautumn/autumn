@@ -154,6 +154,7 @@ const initCusProduct = ({
 		entity_id: entityId,
 		api_semver: apiVersion || null,
 		billing_version: BillingVersion.V1,
+		external_id: null,
 	};
 };
 
