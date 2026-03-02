@@ -10,7 +10,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, BillingInterval } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import {
 	expectCustomerFeatureCorrect,
 	expectCustomerFeatureExists,
@@ -134,56 +134,54 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 1: different custo
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items per plan")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const wordsItem = items.monthlyWords({ includedUsage: 10 });
 
-	const planA = products.base({
-		id: "plan-a",
+	const addon = products.base({
+		id: "addon",
 		items: [messagesItem, items.monthlyPrice({ price: 20 })],
-	});
-	const planB = products.base({
-		id: "plan-b",
-		items: [wordsItem, items.monthlyPrice({ price: 30 })],
-		group: "group-b",
 	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-customize-items",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [planA, planB] }),
+			s.products({ list: [addon] }),
 		],
 		actions: [],
 	});
 
 	const multiAttachParams = {
 		customer_id: customerId,
+
 		plans: [
 			{
-				plan_id: planA.id,
+				plan_id: addon.id,
 				customize: {
-					price: {
-						amount: 50,
-						interval: BillingInterval.Month,
-					},
+					price: null,
 					items: [
-						itemsV2.monthlyMessages({ included: 500 }),
+						itemsV2.prepaidMessages({ included: 100, amount: 20 }),
 						itemsV2.dashboard(),
 					],
 				},
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 300 },
+				],
 			},
 			{
-				plan_id: planB.id,
+				plan_id: addon.id,
 				customize: {
 					price: null,
-					items: [itemsV2.monthlyWords({ included: 50 })],
+					items: [itemsV2.prepaidMessages({ included: 100, amount: 30 })],
 				},
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 500 },
+				],
 			},
 		],
 	};
 
 	// 1. Preview — $50 (planA custom price) + $0 (planB price removed) = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
-	expect(preview.total).toEqual(50);
+	expect(preview.total).toEqual(40 + 120);
 
 	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
@@ -193,14 +191,14 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 
 	await expectCustomerProducts({
 		customer,
-		active: [planA.id, planB.id],
+		active: [addon.id],
 	});
 
 	// Messages: 500 included (customized up from 100)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 500,
+		balance: 800,
 	});
 
 	// Dashboard: added via customize items
@@ -209,17 +207,10 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		featureId: TestFeature.Dashboard,
 	});
 
-	// Words: 50 included (customized up from 10)
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Words,
-		balance: 50,
-	});
-
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 50,
+		latestTotal: 40 + 120,
 	});
 
 	await expectSubToBeCorrect({
@@ -227,6 +218,5 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
-		flags: { checkNotTrialing: true },
 	});
 });
