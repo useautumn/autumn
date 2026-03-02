@@ -36,7 +36,7 @@ export const handleCarryOverBalancesErrors = ({
 
 		if (featureUtils.isAllocated(feature)) {
 			throw new RecaseError({
-				message: `carry_over_balances is not supported for allocated features. Feature '${featureId}' is an allocated (continuous_use) feature and does not have a consumable balance.`,
+				message: `carry_over_balances is not supported for non-consumable features. Feature '${featureId}' is a non-consumable feature and does not have a consumable balance to carry over.`,
 			});
 		}
 	}
