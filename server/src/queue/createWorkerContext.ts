@@ -62,7 +62,6 @@ export const createWorkerContext = async ({
 		isPublic: false,
 		authType: AuthType.Worker,
 		apiVersion,
-		clickhouseClient: undefined,
 		expand: [],
 		skipCache: true,
 		extraLogs: {},

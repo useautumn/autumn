@@ -4,7 +4,8 @@
 	"version": "1.0.0",
 	"private": true,
 	"scripts": {
-		"generate": "bun api.ts"
+		"generate": "bun api.ts",
+		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",

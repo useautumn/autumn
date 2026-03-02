@@ -88,6 +88,7 @@ export const ErrCode = {
 
 	// Cus Product
 	CusProductNotFound: "cus_product_not_found",
+	DuplicateSubscriptionId: "duplicate_subscription_id",
 
 	// Entitlements
 	InvalidEntitlement: "invalid_entitlement",
@@ -159,8 +160,10 @@ export const ErrCode = {
 	// Entities
 	EntityBalanceNotFound: "entity_balance_not_found",
 
-	// ClickHouse
-	ClickHouseDisabled: "clickhouse_disabled",
+	// Tinybird
+	TinybirdDisabled: "tinybird_disabled",
+	/** @deprecated Use TinybirdDisabled instead — kept for frontend compat */
+	ClickHouseDisabled: "tinybird_disabled",
 
 	// Payment method
 	PaymentMethodNotFound: "payment_method_not_found",

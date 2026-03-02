@@ -31,6 +31,7 @@ export const listPlansToSchema = z.union([z.number(), z.string()]);
 export const listPlansTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.number(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const listPlansItemDisplaySchema = z.object({
@@ -79,6 +80,8 @@ export const listPlansResetSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const listPlansTierBehaviorSchema = openEnumSchema;
+
 export const listPlansPriceItemIntervalSchema = openEnumSchema;
 
 export const listPlansBillingMethodSchema = openEnumSchema;
@@ -86,6 +89,9 @@ export const listPlansBillingMethodSchema = openEnumSchema;
 export const listPlansItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	tiers: z.union([z.array(listPlansTierSchema), z.undefined()]).optional(),
+	tierBehavior: z
+		.union([listPlansTierBehaviorSchema, z.undefined()])
+		.optional(),
 	interval: listPlansPriceItemIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.number(),
@@ -122,6 +128,13 @@ export const listPlansFreeTrialSchema = z.object({
 
 export const listPlansEnvSchema = openEnumSchema;
 
+export const listPlansScenarioSchema = openEnumSchema;
+
+export const listPlansCustomerEligibilitySchema = z.object({
+	trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
+	scenario: listPlansScenarioSchema,
+});
+
 export const listPlansListSchema = z.object({
 	id: z.string(),
 	name: z.string(),
@@ -137,6 +150,9 @@ export const listPlansListSchema = z.object({
 	env: listPlansEnvSchema,
 	archived: z.boolean(),
 	baseVariantId: z.string().nullable(),
+	customerEligibility: z
+		.union([listPlansCustomerEligibilitySchema, z.undefined()])
+		.optional(),
 });
 
 export const listPlansResponseSchema = z.object({

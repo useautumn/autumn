@@ -98,3 +98,44 @@ export const buildBillingContextForArrearInvoice = ({
 		billingVersion: BillingVersion.V2,
 	};
 };
+
+/**
+ * Builds a BillingContext for generating in-advance (upcoming cycle) invoice line items.
+ *
+ * Unlike `buildBillingContextForArrearInvoice`, this uses `periodEndMs` directly as
+ * `currentEpochMs`. This places us at the start of the NEW cycle, so:
+ * - `getCycleStart(now = Feb 1)` → Feb 1 (new cycle start)
+ * - `getCycleEnd(now = Feb 1)` → Mar 1 (new cycle end)
+ *
+ * This is correct for in-advance line items (base prices, prepaid, allocated) which
+ * are charging for the upcoming billing period.
+ *
+ * @param eventContext - Common webhook context fields
+ * @param periodEndMs - The billing period boundary (end of old cycle = start of new cycle)
+ */
+export const buildBillingContextForInAdvanceInvoice = ({
+	eventContext,
+	periodEndMs,
+}: {
+	eventContext: BaseWebhookEventContext;
+	periodEndMs: number;
+}): BillingContext => {
+	const { stripeSubscription, fullCustomer, paymentMethod } = eventContext;
+
+	return {
+		fullCustomer,
+		fullProducts: [],
+		featureQuantities: [],
+
+		// Use periodEndMs directly - this is the start of the new cycle
+		currentEpochMs: periodEndMs,
+		billingCycleAnchorMs: secondsToMs(stripeSubscription.billing_cycle_anchor),
+		resetCycleAnchorMs: secondsToMs(stripeSubscription.billing_cycle_anchor),
+
+		stripeCustomer: stripeSubscription.customer,
+		stripeSubscription,
+		paymentMethod: paymentMethod ?? undefined,
+
+		billingVersion: BillingVersion.V2,
+	};
+};

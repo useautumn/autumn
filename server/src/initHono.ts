@@ -3,7 +3,6 @@ import {
 	oauthProviderAuthServerMetadata,
 	oauthProviderOpenIdConfigMetadata,
 } from "@better-auth/oauth-provider";
-import { getRequestListener } from "@hono/node-server";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -16,31 +15,14 @@ import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
+import { heapSnapshotRouter } from "./internal/debug/heapSnapshotRoute.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
-import { heapSnapshotRouter } from "./internal/debug/heapSnapshotRoute.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
-
-const ALLOWED_ORIGINS = [
-	"http://localhost:3000",
-	"http://localhost:3001",
-	"http://localhost:3002",
-	"http://localhost:3003",
-	"http://localhost:3004",
-	"http://localhost:3005",
-	"http://localhost:3006",
-	"http://localhost:3007",
-	"http://localhost:5173",
-	"http://localhost:5174",
-	"https://app.useautumn.com",
-	"https://staging.useautumn.com",
-	"https://dev.useautumn.com",
-	"https://api.staging.useautumn.com",
-	"https://localhost:8080",
-];
+import { isAllowedOrigin } from "./utils/corsOrigins.js";
 
 const ALLOWED_HEADERS = [
 	"app_env",
@@ -66,14 +48,14 @@ const ALLOWED_HEADERS = [
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 ];
 
-const createHonoApp = () => {
+export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
 	// CORS configuration (must be before routes)
 	app.use(
 		"*",
 		cors({
-			origin: ALLOWED_ORIGINS,
+			origin: isAllowedOrigin,
 			allowHeaders: ALLOWED_HEADERS,
 			allowMethods: ["POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"],
 			exposeHeaders: ["Content-Length"],
@@ -158,66 +140,5 @@ const createHonoApp = () => {
 
 	app.onError(errorMiddleware);
 
-	// Create request listener for integration with Express
-	const requestListener = getRequestListener(app.fetch);
-	return { honoApp: app, requestListener };
-};
-
-/**
- * Smart middleware that checks if Hono has a matching route.
- * If yes: forwards the request to Hono (fresh, unmodified)
- * If no: calls next() to continue Express flow (untouched)
- */
-export const redirectToHono = () => {
-	const { honoApp, requestListener } = createHonoApp();
-
-	// Get all routes from Hono app
-	const routes = honoApp.routes;
-
-	return async (req: any, res: any, next: any) => {
-		const method = req.method;
-		const path = req.path;
-
-		// Check if Hono has a matching route for this method + path
-		const hasMatch = routes.some((route) => {
-			// Check if method matches
-			if (route.method !== method && route.method !== "ALL") {
-				return false;
-			}
-
-			// Check if path matches (handle dynamic routes)
-			const routePath = route.path;
-
-			// Exact match
-			if (routePath === path) {
-				return true;
-			}
-
-			// Check for wildcard patterns (e.g., /api/autumn/*)
-			if (routePath.endsWith("/*")) {
-				const basePath = routePath.slice(0, -2); // Remove "/*"
-				if (path.startsWith(`${basePath}/`) || path === basePath) {
-					return true;
-				}
-			}
-
-			// Check for dynamic routes (e.g., /v1/products/:id)
-			if (routePath.includes(":")) {
-				const routeRegex = new RegExp(
-					`^${routePath.replace(/:[^/]+/g, "([^/]+)")}$`,
-				);
-				return routeRegex.test(path);
-			}
-
-			return false;
-		});
-
-		if (hasMatch) {
-			// Route exists in Hono - forward the FRESH request
-			return requestListener(req, res);
-		}
-
-		// No match - continue to Express (completely untouched)
-		next();
-	};
+	return app;
 };

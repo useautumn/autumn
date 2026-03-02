@@ -1,13 +1,13 @@
 import { writeFileSync } from "node:fs";
-import { ApiPlanItemV0WithMeta } from "@api/products/items/previousVersions/apiPlanItemV0.js";
-import yaml from "yaml";
-import { createDocument } from "zod-openapi";
-import { CustomerDataSchema } from "../../common/customerData.js";
 import {
 	ApiCustomerSchema,
+	ApiPlanItemV0WithMeta,
 	BaseApiCustomerSchema,
+	CustomerDataSchema,
 	EntityDataSchema,
-} from "../../models.js";
+} from "@autumn/shared";
+import yaml from "yaml";
+import { createDocument } from "zod-openapi";
 import { balancesOpenApi } from "./balancesOpenApi.js";
 import { coreOps } from "./coreOpenApi.js";
 import { customersOpenApi } from "./customersOpenApi.js";

@@ -21,6 +21,10 @@ export interface TableProps<T> {
 	columnVisibilityStorageKey?: string;
 	/** Column groups for UI organization (renders as submenus in visibility dropdown) */
 	columnGroups?: ColumnGroup[];
+	/** Whether the user has unsaved column visibility changes */
+	columnVisibilityIsDirty?: boolean;
+	/** Save current column visibility to localStorage */
+	onColumnVisibilitySave?: () => void;
 	/** Render column visibility in the toolbar instead of inside table content */
 	columnVisibilityInToolbar?: boolean;
 	/** Custom className for the column visibility button container (for positioning overrides) */
@@ -29,6 +33,8 @@ export interface TableProps<T> {
 	getRowHref?: (row: T) => string;
 	/** For non-navigation actions like opening sheets/modals */
 	onRowClick?: (row: T) => void;
+	/** For double-click actions (e.g. opening external links) */
+	onRowDoubleClick?: (row: T) => void;
 	rowClassName?: string;
 	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;

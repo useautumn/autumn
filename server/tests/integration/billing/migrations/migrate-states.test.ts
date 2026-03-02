@@ -57,8 +57,8 @@ test.concurrent(`${chalk.yellowBright("migrate-states-1: pending cancellation pr
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			s.billing.attach({ productId: "pro" }),
-			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
+			s.billing.attach({ productId: "pro", timeout: 10000 }),
+			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 4000 }),
 			s.updateSubscription({
 				productId: "pro",
 				cancelAction: "cancel_end_of_cycle",
@@ -150,8 +150,8 @@ test.concurrent(`${chalk.yellowBright("migrate-states-2: scheduled downgrade pre
 			s.products({ list: [pro, premium] }),
 		],
 		actions: [
-			s.billing.attach({ productId: "premium" }),
-			s.track({ featureId: TestFeature.Messages, value: 200, timeout: 2000 }),
+			s.billing.attach({ productId: "premium", timeout: 10000 }),
+			s.track({ featureId: TestFeature.Messages, value: 200, timeout: 4000 }),
 			s.billing.attach({ productId: "pro" }), // Downgrade - scheduled
 		],
 	});

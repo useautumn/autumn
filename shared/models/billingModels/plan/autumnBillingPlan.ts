@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import {
 	type AppEnv,
@@ -10,9 +11,11 @@ import {
 	FullCustomerEntitlementSchema,
 	InvoiceSchema,
 	PriceSchema,
+	ReplaceableSchema,
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
@@ -30,6 +33,9 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			balance: z.number().optional(),
 		})
 		.optional(),
+
+	deletedReplaceables: z.array(ReplaceableSchema).optional(),
+	insertReplaceables: z.array(z.custom<InsertReplaceable>()).optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
@@ -65,6 +71,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
 	lineItems: z.array(LineItemSchema).optional(),
+	customLineItems: z.array(CustomLineItemSchema).optional(),
 
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)

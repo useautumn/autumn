@@ -554,3 +554,80 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: tiered prepaid with quan
 		env: ctx.env,
 	});
 });
+
+const VOLUME_TIERS: { to: number | "inf"; amount: number }[] = [
+	{ to: 500, amount: 30 },
+	{ to: 1500, amount: 50 },
+	{ to: "inf", amount: 70 },
+];
+const BASE_PRICE = 20;
+
+test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid volume: 300 units, 100 included, tier 1 → $30")}`, async () => {
+	const customerId = "attach-prepaid-volume-included-tier1";
+	const quantity = 300;
+	const includedUsage = 100;
+
+	const expectedPrepaidCost = 90;
+
+	const volumeItem = items.volumePrepaidMessages({
+		includedUsage,
+		tiers: VOLUME_TIERS,
+	});
+
+	const pro = products.pro({
+		id: "pro-volume-included-tier1",
+		items: [volumeItem],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [pro] })],
+		actions: [],
+	});
+
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+	});
+	expect(preview.total).toBe(BASE_PRICE + expectedPrepaidCost);
+
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+		redirect_mode: "if_required",
+	});
+	expect(result.payment_url).toBeDefined();
+	expect(result.payment_url).toContain("checkout.stripe.com");
+
+	await completeStripeCheckoutForm({ url: result.payment_url });
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({
+		customer,
+		productId: pro.id,
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: quantity,
+		balance: quantity,
+		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: BASE_PRICE + expectedPrepaidCost,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});

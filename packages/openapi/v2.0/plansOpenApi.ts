@@ -1,9 +1,11 @@
-import { CreatePlanParamsV1Schema } from "@api/products/crud/createPlanParamsV0.js";
-import { ListPlansQuerySchema } from "@api/products/crud/listPlanParams.js";
-import { UpdatePlanParamsV1Schema } from "@api/products/crud/updatePlanParamsV0.js";
+import {
+	ApiPlanV0Schema,
+	CreatePlanParamsV1Schema,
+	ListPlansQuerySchema,
+	SuccessResponseSchema,
+	UpdatePlanParamsV1Schema,
+} from "@autumn/shared";
 import { z } from "zod/v4";
-import { SuccessResponseSchema } from "../../common/commonResponses.js";
-import { ApiPlanV0Schema } from "../../products/previousVersions/apiPlanV0.js";
 
 export const ApiPlanWithMeta = ApiPlanV0Schema.meta({
 	id: "Plan",

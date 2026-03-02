@@ -49,6 +49,8 @@ export const computeMultiAttachPlan = ({
 			scheduledCustomerProduct: productContext.scheduledCustomerProduct,
 			planTiming: "immediate",
 			endOfCycleMs: undefined,
+
+			externalId: productContext.externalId,
 		};
 
 		// Track the transitioning product's context for computing updates
@@ -101,6 +103,7 @@ export const computeMultiAttachPlan = ({
 		lineItems: plan.lineItems ?? [],
 		billingContext: multiAttachBillingContext,
 		autumnBillingPlan: plan,
+		// multiAttach does not support custom_line_items
 	});
 
 	return plan;

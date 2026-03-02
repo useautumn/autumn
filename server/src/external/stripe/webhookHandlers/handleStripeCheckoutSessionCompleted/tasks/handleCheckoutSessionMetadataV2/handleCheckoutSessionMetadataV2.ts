@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/modifyStripeSubscriptionFromCheckout";
+import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -29,14 +30,20 @@ export const handleCheckoutSessionMetadataV2 = async ({
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
-	// 1. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
+	// 1. Sync Autumn metadata onto subscription items created by checkout
+	await syncSubscriptionItemMetadataFromCheckout({
+		ctx,
+		checkoutContext,
+	});
+
+	// 2. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
 	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData,
 	});
 
-	// 2. Modify Stripe subscription to include other interval prices / 0 quantity prices
+	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
 	await modifyStripeSubscriptionFromCheckout({
 		ctx,
 		checkoutContext,
@@ -60,6 +67,7 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		stripeInvoice: checkoutContext.stripeInvoice,
 	});
 
 	// Delete metadata after successful execution

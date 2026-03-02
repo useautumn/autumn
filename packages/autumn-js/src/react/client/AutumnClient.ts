@@ -1,15 +1,18 @@
 import type {
 	AggregateEventsResponse,
-	BillingAttachResponse,
+	AttachResponse,
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
 	ListEventsResponse,
 	ListPlansResponse,
+	MultiAttachResponse,
 	OpenCustomerPortalResponse,
 	PreviewAttachResponse,
+	PreviewMultiAttachResponse,
 	PreviewUpdateResponse,
 	RedeemReferralCodeResponse,
+	SetupPaymentResponse,
 } from "@useautumn/sdk";
 import type { IAutumnClient } from "./IAutumnClient";
 import { createHttpClient } from "./internal/httpClient";
@@ -37,7 +40,7 @@ export const createAutumnClient = (
 				body: params,
 			}),
 		attach: (params) =>
-			http.request<BillingAttachResponse>({
+			http.request<AttachResponse>({
 				route: "attach",
 				body: params,
 			}),
@@ -54,6 +57,21 @@ export const createAutumnClient = (
 		previewUpdateSubscription: (params) =>
 			http.request<PreviewUpdateResponse>({
 				route: "previewUpdateSubscription",
+				body: params,
+			}),
+		multiAttach: (params) =>
+			http.request<MultiAttachResponse>({
+				route: "multiAttach",
+				body: params,
+			}),
+		previewMultiAttach: (params) =>
+			http.request<PreviewMultiAttachResponse>({
+				route: "previewMultiAttach",
+				body: params,
+			}),
+		setupPayment: (params) =>
+			http.request<SetupPaymentResponse>({
+				route: "setupPayment",
 				body: params,
 			}),
 		openCustomerPortal: (params) =>

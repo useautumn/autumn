@@ -6,7 +6,7 @@ export const validatePropertyPathForJSON = ({
 }: {
 	propertyKey: string;
 }) => {
-	// Validate property path segments (matches old ClickHouse behavior)
+	// Validate property path segments are alphanumeric/underscore only
 	const pathSegments = propertyKey.split(".");
 	for (const segment of pathSegments) {
 		if (!/^[a-zA-Z0-9_]+$/.test(segment)) {

@@ -17,6 +17,7 @@ import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
+import { temp } from "./domains/temp";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
 import type { TestGroup, TestSuite } from "./types";
@@ -38,6 +39,7 @@ const allGroups: TestGroup[] = [
 	billing,
 	billingV1,
 	billingV2,
+	temp,
 	crud,
 	webhooks,
 	advanced,

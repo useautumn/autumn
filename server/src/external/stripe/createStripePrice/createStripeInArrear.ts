@@ -138,10 +138,19 @@ export const priceToInArrearTiers = ({
 			currency: org.default_currency || undefined,
 		});
 
-		tiers.push({
+		const stripeTier: Record<string, unknown> = {
 			unit_amount_decimal: stripeUnitAmountDecimal,
 			up_to: tier.to === -1 ? "inf" : tier.to,
-		});
+		};
+
+		if (tier.flat_amount) {
+			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
+				amount: tier.flat_amount,
+				currency: org.default_currency || undefined,
+			});
+		}
+
+		tiers.push(stripeTier);
 	}
 
 	return tiers;

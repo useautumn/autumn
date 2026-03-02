@@ -1,3 +1,4 @@
+import type { Invoice, InvoiceLineItem } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
@@ -13,6 +14,7 @@ import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/S
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
+import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
@@ -20,6 +22,7 @@ import { SHEET_ANIMATION } from "./customerAnimations";
 export function CustomerSheets() {
 	const isMobile = useIsMobile();
 	const sheetType = useSheetStore((s) => s.type);
+	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	useSheetEscapeHandler();
@@ -47,6 +50,12 @@ export function CustomerSheets() {
 				return <SubscriptionUncancelSheet />;
 			case "balance-edit":
 				return <BalanceEditSheet />;
+			case "invoice-detail": {
+				const invoice = sheetData?.invoice as Invoice | undefined;
+				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
+				if (!invoice) return null;
+				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
+			}
 			default:
 				return null;
 		}

@@ -5,32 +5,28 @@ import { nullish } from "../../../utils";
 import { graduatedTiersToLineAmount } from "./graduatedTiersToLineAmount";
 
 /**
- * Translates a price's overage quantity into a dollar amount using the price's
- * tier behaviour (graduated or volume). Called at invoicing time for both
- * prepaid and pay-per-use prices.
+ * Translates usage into a dollar amount using the price's tier behaviour.
  *
- * "Overage" here means any usage that exceeds the customer's free included
- * allowance (if any). For **prepaid** prices this is the quantity purchased
- * upfront above the free tier. For **pay-per-use** (arrear) prices this is
- * total consumption minus any included free units.
+ * - **Graduated**: `overage` should be net of allowance. Each tier band is
+ *   charged at its own rate. `allowance` param is unused.
+ * - **Volume**: `overage` should be total usage (purchased + allowance).
+ *   `allowance` is passed through to prepend a free $0 tier and shift
+ *   boundaries. If total exceeds the free tier, the ENTIRE quantity
+ *   (including included) is charged at the matching tier's rate.
  *
- * Negative overage is allowed — used when a downgrade or proration produces a
- * credit line-item that needs to be negated.
- *
- * @param price - The price whose `config.usage_tiers` defines the rate schedule.
- * @param overage - Units to price. Positive = charge, negative = credit.
- *   Must be net of any included free allowance before calling.
- * @param billingUnits - Passed through to the underlying tier calculator.
- *   Defaults to 1 (per-unit pricing).
- * @returns Dollar amount (positive = charge, negative = credit).
+ * Callers (e.g. `usagePriceToLineItem`) are responsible for adjusting
+ * `overage` before calling — volume adds allowance to overage, graduated
+ * does not.
  */
 export const tiersToLineAmount = ({
 	price,
 	overage,
+	allowance = 0,
 	billingUnits = 1,
 }: {
 	price: Price;
 	overage: number;
+	allowance?: number;
 	billingUnits?: number;
 }): number => {
 	const tiers = price.config.usage_tiers;
@@ -48,6 +44,7 @@ export const tiersToLineAmount = ({
 			usage: overage,
 			billingUnits,
 			allowNegative: true,
+			allowance,
 		});
 	}
 
