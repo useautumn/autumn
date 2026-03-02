@@ -1,6 +1,5 @@
 import type { MultiAttachBillingContext } from "@autumn/shared";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
-import { handleMultiAttachPrepaidErrors } from "./handleMultiAttachPrepaidErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 
 /**
@@ -14,10 +13,6 @@ export const handleMultiAttachErrors = ({
 	redirectMode: string;
 }) => {
 	handleMultiAttachCurrentProductErrors({
-		productContexts: billingContext.productContexts,
-	});
-
-	handleMultiAttachPrepaidErrors({
 		productContexts: billingContext.productContexts,
 	});
 
