@@ -11,6 +11,7 @@ import { CusService } from "../../CusService.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
+import { getCusTrialsUsed } from "../cusResponseUtils/getCusTrialsUsed.js";
 
 export const getApiCustomerExpand = async ({
 	ctx,
@@ -21,7 +22,7 @@ export const getApiCustomerExpand = async ({
 	customerId?: string;
 	fullCus?: FullCustomer;
 }): Promise<ApiCusExpand> => {
-	const { org, env, db, logger, expand } = ctx;
+	const { org, env, db, expand } = ctx;
 
 	// Filter out balances.feature and subscriptions.plan
 	const filteredExpand = filterExpand({
@@ -45,19 +46,6 @@ export const getApiCustomerExpand = async ({
 		});
 	}
 
-	const getCusTrialsUsed = () => {
-		if (expand.includes(CustomerExpand.TrialsUsed)) {
-			return (
-				fullCus.trials_used?.map((t) => ({
-					plan_id: t.product_id,
-					customer_id: t.customer_id,
-					fingerprint: t.fingerprint,
-				})) ?? []
-			);
-		}
-		return undefined;
-	};
-
 	const getApiCusEntities = () => {
 		if (expand.includes(CustomerExpand.Entities)) {
 			return fullCus.entities.map((e) => ApiBaseEntitySchema.parse(e));
@@ -67,7 +55,7 @@ export const getApiCustomerExpand = async ({
 
 	const cusExpand = expand as CustomerExpand[];
 
-	const [rewards, referrals, paymentMethod] = await Promise.all([
+	const [rewards, referrals, paymentMethod, trialsUsed] = await Promise.all([
 		getCusRewards({
 			org,
 			env,
@@ -77,7 +65,6 @@ export const getApiCustomerExpand = async ({
 			),
 			expand: cusExpand,
 		}),
-
 		getCusReferrals({
 			db,
 			fullCus,
@@ -89,10 +76,17 @@ export const getApiCustomerExpand = async ({
 			fullCus,
 			expand: cusExpand,
 		}),
+		getCusTrialsUsed({
+			db,
+			fullCus,
+			orgId: org.id,
+			env,
+			expand: cusExpand,
+		}),
 	]);
 
 	return {
-		trials_used: getCusTrialsUsed() ?? undefined,
+		trials_used: trialsUsed ?? undefined,
 		entities: getApiCusEntities() ?? undefined,
 		rewards: rewards ?? undefined,
 		// upcoming_invoice: upcomingInvoice,
