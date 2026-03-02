@@ -12,7 +12,8 @@
 			"apps/sdk-test",
 			"packages/sdk",
 			"packages/autumn-js",
-			"packages/openapi"
+			"packages/openapi",
+			"packages/ksuid"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",

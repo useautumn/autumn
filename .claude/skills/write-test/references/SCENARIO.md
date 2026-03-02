@@ -10,7 +10,7 @@ The `initScenario` function is the primary way to set up test scenarios. It hand
 - Time advancement
 
 ```typescript
-const { customerId, autumnV1, autumnV2, ctx, testClockId, entities, advancedTo } = await initScenario({
+const { customerId, autumnV1, autumnV2, ctx, testClockId, entities, advancedTo, otherCustomers } = await initScenario({
   customerId: "unique-test-id",  // MUST be unique across all tests
   setup: [...],                   // Configuration functions
   actions: [...],                 // Actions to execute in order
@@ -29,6 +29,7 @@ s.customer({
   testClock?: boolean,      // Default: true - enables Stripe test clock
   data?: CustomerData,      // Custom metadata (fingerprint, name, email)
   withDefault?: boolean,    // Attach default product on creation
+  skipWebhooks?: boolean,   // Skip webhook processing (for webhook tests)
 })
 ```
 
@@ -59,24 +60,138 @@ s.entities({
 })
 ```
 
+### `s.otherCustomers([...])`
+
+Define additional customers that share the same test clock as the primary customer. No new test clock is created.
+
+```typescript
+s.otherCustomers([
+  { id: "cus-b", paymentMethod: "success" },
+  { id: "cus-c", paymentMethod: "fail", data: { name: "Customer C" } },
+])
+```
+
+Access after init:
+```typescript
+const { otherCustomers } = await initScenario({ ... });
+// otherCustomers is Map<string, OtherCustomerResult>
+```
+
+### `s.deleteCustomer({ ... })`
+
+Pre-test cleanup — delete a customer before creating. Silently ignores if customer doesn't exist.
+
+```typescript
+// Delete by customer ID
+s.deleteCustomer({ customerId: "old-customer" })
+
+// Delete by email — removes ALL customers with that email
+s.deleteCustomer({ email: "test@example.com" })
+```
+
+### `s.reward({ ... })`
+
+Define a standalone reward/coupon. Reward ID is auto-suffixed with productPrefix.
+
+```typescript
+s.reward({
+  reward: CreateReward,   // Reward configuration
+  productId: string,      // Apply to specific product
+})
+```
+
+### `s.referralProgram({ ... })`
+
+Define a referral program. IDs are auto-suffixed with productPrefix. `program.product_ids` are also prefixed.
+
+```typescript
+s.referralProgram({
+  reward: CreateReward,          // Reward config
+  program: CreateRewardProgram,  // Program config with product_ids
+})
+```
+
 ## Action Functions (`s.*`)
 
 Actions execute **in order**. You can interleave different action types.
 
-### `s.attach({ ... })`
+### Timeout Behavior Table
 
-Attach a product to customer or entity.
+**CRITICAL: Know which actions wait and which don't.**
+
+| Function | Built-in Timeout | Type |
+|----------|-----------------|------|
+| `s.billing.attach` | **5-8s** | Request timeout |
+| `s.attach` | **4-5s** | Post-request sleep |
+| `s.billing.multiAttach` | **2-5s** | Request timeout |
+| `s.cancel` | **None** | — |
+| `s.track` | **None** — must pass `timeout` | Post-request sleep |
+| `s.advanceTestClock` | Waits for Stripe | — |
+| `s.advanceToNextInvoice` | **30s** | Advances 1mo + 96h |
+| `s.updateSubscription` | **None** | — |
+| `s.attachPaymentMethod` | **None** | — |
+| `s.removePaymentMethod` | **None** | — |
+| `s.resetFeature` | **2s default** | Post-request sleep |
+| `s.referral.createCode` | **None** | — |
+| `s.referral.redeem` | **None** | — |
+
+### `s.billing.attach({ ... })` — V2 Billing Endpoint
+
+```typescript
+s.billing.attach({
+  productId: pro.id,              // Use product.id, NOT string literals
+  customerId?: string,            // Override customer (for otherCustomers)
+  entityIndex?: 0,                // 0-based index into entities array
+  options?: [{                    // For prepaid items
+    feature_id: TestFeature.Messages,
+    quantity: 200,                // INCLUSIVE of includedUsage
+  }],
+  newBillingSubscription?: true,  // Create separate Stripe subscription
+  planSchedule?: "immediate" | "end_of_cycle",  // V2-only
+  items?: ProductItem[],          // V2-only: custom plan items
+  timeout?: 5000,                 // Override default timeout (ms)
+})
+```
+
+### `s.attach({ ... })` — V1 Legacy Endpoint
 
 ```typescript
 s.attach({
   productId: pro.id,              // Use product.id, NOT string literals
+  customerId?: string,            // Override customer
   entityIndex?: 0,                // 0-based index into entities array
   options?: [{                    // For prepaid items
     feature_id: TestFeature.Messages,
-    quantity: 200,
+    quantity: 200,                // EXCLUSIVE of includedUsage
   }],
   newBillingSubscription?: true,  // Create separate Stripe subscription
-  timeout?: 5000,                 // Wait after attach (ms)
+  timeout?: 5000,                 // Override default timeout (ms)
+})
+```
+
+### `s.billing.attach` vs `s.attach` — THEY ARE DIFFERENT
+
+| | `s.attach` | `s.billing.attach` |
+|---|---|---|
+| **Endpoint** | V1 `/attach` | V2 `/billing.attach` |
+| **Extra params** | none | `planSchedule`, `items` |
+| **Prepaid quantity** | **Exclusive** of `includedUsage` | **Inclusive** of `includedUsage` |
+| **Default timeout** | 4-5s (post-request sleep) | 5-8s (request timeout) |
+| **Use when** | Legacy tests, update-subscription setup | New billing/attach tests |
+
+### `s.billing.multiAttach({ ... })`
+
+Attach multiple products at once.
+
+```typescript
+s.billing.multiAttach({
+  plans: [
+    { productId: pro.id, featureQuantities?: [{ feature_id: TestFeature.Messages, quantity: 200 }] },
+    { productId: addon.id },
+  ],
+  entityIndex?: 0,
+  freeTrial?: { length: 14, duration: "day", card_required: true },
+  timeout?: 5000,
 })
 ```
 
@@ -91,6 +206,19 @@ s.cancel({
 })
 ```
 
+### `s.track({ ... })`
+
+Track feature usage. **No built-in timeout** — pass `timeout` explicitly if you need side effects to settle.
+
+```typescript
+s.track({
+  featureId: TestFeature.Messages,
+  value: 50,
+  entityIndex?: 0,
+  timeout?: 2000,  // MUST be passed explicitly if needed
+})
+```
+
 ### `s.advanceTestClock({ ... })`
 
 Advance Stripe test clock. Multiple calls are cumulative.
@@ -102,6 +230,27 @@ s.advanceTestClock({
   hours?: 6,
   months?: 1,
   toNextInvoice?: true,  // Advance to next billing cycle + finalization
+})
+```
+
+### `s.advanceToNextInvoice({ ... })`
+
+Advance to next billing cycle + 96h for invoice finalization. ~30s timeout.
+
+```typescript
+s.advanceToNextInvoice({ withPause?: boolean })
+```
+
+### `s.updateSubscription({ ... })`
+
+Update an existing subscription. No timeout.
+
+```typescript
+s.updateSubscription({
+  productId: pro.id,
+  entityIndex?: 0,
+  cancelAction?: "cancel_end_of_cycle" | "cancel_immediately" | "uncancel",
+  items?: ProductItem[],  // Custom item changes
 })
 ```
 
@@ -137,20 +286,20 @@ s.resetFeature({
 })
 ```
 
-**Example - Creating rollovers on a free product:**
+### `s.referral.createCode()`
+
+Create a referral code. No timeout.
+
 ```typescript
-const { autumnV1 } = await initScenario({
-  customerId,
-  setup: [
-    s.customer({ paymentMethod: "success" }),
-    s.products({ list: [free, pro] }),
-  ],
-  actions: [
-    s.billing.attach({ productId: free.id }),
-    s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
-    s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }), // Creates rollover
-  ],
-});
+s.referral.createCode()
+```
+
+### `s.referral.redeem({ ... })`
+
+Redeem a referral code for another customer. No timeout.
+
+```typescript
+s.referral.redeem({ customerId: "cus-b" })
 ```
 
 ## Complete Example
@@ -182,6 +331,22 @@ test.concurrent(`${chalk.yellowBright("upgrade: pro mid-cycle then cancel")}`, a
 });
 ```
 
+## Returned Values
+
+```typescript
+const {
+  customerId,     // The customer ID used
+  autumnV1,       // Autumn client (v1.2)
+  autumnV2,       // Autumn client (v2.0)
+  ctx,            // Test context (db, stripeCli, org, env)
+  testClockId,    // Stripe test clock ID (if enabled)
+  customer,       // Customer object after creation
+  entities,       // Array of generated entities [{id, name, featureId}]
+  advancedTo,     // Timestamp after all clock advancements
+  otherCustomers, // Map<string, OtherCustomerResult>
+} = await initScenario({ ... });
+```
+
 ## Product Configuration Rules
 
 ### Product ID Usage
@@ -202,117 +367,33 @@ Products are auto-prefixed with customerId:
 ```typescript
 const pro = products.pro({ id: "pro" });  // id = "pro"
 // After initScenario with customerId "test-123":
-// Actual product ID in Autumn = "pro_test-123"
+// product.id is MUTATED to "pro_test-123"
 ```
 
 The `s.attach()` handles this automatically when you use `productId: pro.id`.
 
-### Building Products
-
-Use fixtures, add items as needed:
+### Multiple Customers — NEVER Call initScenario Twice
 
 ```typescript
-// Free product (no base price)
-const free = products.base({
-  id: "free",
-  items: [items.monthlyMessages({ includedUsage: 100 })],
-});
-
-// Pro product (has $20/mo base price built-in)
-const pro = products.pro({
-  items: [items.monthlyMessages({ includedUsage: 1000 })],
-});
-
-// Custom pricing - use products.base and add price item
-const custom = products.base({
-  id: "custom",
-  items: [
-    items.monthlyPrice({ price: 30 }),
-    items.monthlyMessages({ includedUsage: 500 }),
-    items.prepaidUsers({ includedUsage: 0 }),
+// ✅ Using s.otherCustomers
+const { autumnV1, otherCustomers } = await initScenario({
+  customerId: "cus-a",
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+    s.otherCustomers([{ id: "cus-b", paymentMethod: "success" }]),
   ],
+  actions: [s.billing.attach({ productId: pro.id })],
 });
+
+// ✅ Or create manually
+await autumnV1.customers.create("cus-b", { name: "B" });
+await autumnV1.billing.attach({ customer_id: "cus-b", product_id: pro.id });
 ```
 
-## Prepaid/Allocated Items
-
-Prepaid and allocated items require `options` with `quantity`:
-
-```typescript
-const prepaidItem = items.prepaidMessages({ billingUnits: 100, price: 10 });
-const pro = products.base({ id: "pro", items: [prepaidItem] });
-
-await initScenario({
-  // ...
-  actions: [
-    s.attach({
-      productId: pro.id,
-      options: [{ feature_id: TestFeature.Messages, quantity: 200 }],  // 2 packs
-    }),
-  ],
-});
-```
-
-## Returned Values
-
-```typescript
-const {
-  customerId,     // The customer ID used
-  autumnV1,       // Autumn client (v1.2)
-  autumnV2,       // Autumn client (v2.0)
-  ctx,            // Test context (db, stripeCli, org, env)
-  testClockId,    // Stripe test clock ID (if enabled)
-  customer,       // Customer object after creation
-  entities,       // Array of generated entities [{id, name, featureId}]
-  advancedTo,     // Timestamp after all clock advancements
-} = await initScenario({ ... });
-```
-
-## Setup vs Test Body
-
-**Rule:** Put setup actions in `initScenario.actions`, keep only the behavior under test in the test body.
-
-Ask: "What is the test actually testing?" Everything else is setup.
-
-```typescript
-// ❌ BAD - Downgrade is setup, not what we're testing
-const { autumnV1 } = await initScenario({
-  actions: [s.attach({ productId: premium.id })],
-});
-
-// Setup in test body (wrong place)
-await autumnV1.attach({ customer_id: customerId, product_id: pro.id });
-
-// The actual test: cancel behavior
-await autumnV1.subscriptions.update({
-  customer_id: customerId,
-  product_id: premium.id,
-  cancel: "end_of_cycle",
-});
-
-// ✅ GOOD - Setup in initScenario, only test behavior in body
-const { autumnV1 } = await initScenario({
-  actions: [
-    s.attach({ productId: premium.id }),
-    s.attach({ productId: pro.id }), // Downgrade is setup
-  ],
-});
-
-// The actual test: cancel behavior
-await autumnV1.subscriptions.update({
-  customer_id: customerId,
-  product_id: premium.id,
-  cancel: "end_of_cycle",
-});
-```
-
-**Benefits:**
-- Clearer test intent - reader immediately sees what's being tested
-- Less verification boilerplate - no need to verify setup worked
-- Faster test writing - `s.*` builders handle common patterns
 ## AutumnInt Generic Types (IMPORTANT)
 
-**ALWAYS use generic type parameters** when calling `AutumnInt` methods to get proper type safety:
+**ALWAYS use generic type parameters** when calling `AutumnInt` methods:
 
 | Client | Method | Type Parameter |
 |--------|--------|----------------|
@@ -324,26 +405,32 @@ await autumnV1.subscriptions.update({
 | `autumnV2` | `.check<T>()` | `CheckResponseV2` |
 
 ```typescript
-// ✅ GOOD - Use generic types
+// ✅ GOOD
 const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-const checkRes = await autumnV1.check<CheckResponseV1>({ ... });
-const entity = await autumnV2.entities.get<ApiEntityV1>(entityId);
 
-// ❌ BAD - Casting with `as unknown as`
+// ❌ BAD
 const customer = await autumnV1.customers.get(customerId) as unknown as ApiCustomerV3;
-const checkRes = (await autumnV1.check({ ... })) as unknown as CheckResponseV1;
 ```
 
-Import the types from `@autumn/shared`:
+## Setup vs Test Body
+
+**Rule:** Put setup actions in `initScenario.actions`, keep only the behavior under test in the test body.
+
 ```typescript
-import {
-  type ApiCustomerV3,
-  type ApiCustomer,
-  type ApiEntityV0,
-  type ApiEntityV1,
-  type CheckResponseV1,
-  type CheckResponseV2,
-} from "@autumn/shared";
+// ✅ GOOD — prerequisite in initScenario, only tested action in body
+const { autumnV1 } = await initScenario({
+  actions: [
+    s.billing.attach({ productId: premium.id }),
+    s.billing.attach({ productId: pro.id }), // Downgrade is setup
+  ],
+});
+
+// The actual test: cancel behavior
+await autumnV1.subscriptions.update({
+  customer_id: customerId,
+  product_id: premium.id,
+  cancel: "end_of_cycle",
+});
 ```
 
 ## Test Clock Timing
@@ -358,9 +445,26 @@ const { advancedTo } = await initScenario({
   ],
 });
 
-// WRONG
-expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(14));
+// WRONG: expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(14));
+// CORRECT: expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(14));
+```
 
-// CORRECT
-expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(14));
+## Resetting Features: Free vs Paid
+
+- **Free products** (no Stripe sub): `s.resetFeature({ featureId, productId })` — simulates cron
+- **Paid products** (has Stripe sub): `s.advanceToNextInvoice()` — advances clock, triggers `invoice.paid`
+
+```typescript
+// Free product rollover
+actions: [
+  s.billing.attach({ productId: free.id }),
+  s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+  s.resetFeature({ featureId: TestFeature.Messages, productId: free.id }),
+]
+
+// Paid product cycle renewal
+actions: [
+  s.billing.attach({ productId: pro.id }),
+  s.advanceToNextInvoice(),
+]
 ```

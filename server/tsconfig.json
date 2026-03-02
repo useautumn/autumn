@@ -31,6 +31,7 @@
 			"@useautumn/sdk/*": ["../packages/sdk/src/*"],
 
 			// From shared package?
+			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
 			"@api/*": ["../shared/api/*"],
