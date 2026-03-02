@@ -2,59 +2,25 @@
  * Integration tests for Stripe discounts in update subscription flow.
  *
  * These tests verify that discounts applied at subscription or customer level
- * are correctly reflected in preview totals.
+ * are correctly reflected in preview totals, and that discount identity/duration
+ * is preserved through cancel/uncancel operations.
  */
 
 import { expect, test } from "bun:test";
+import {
+	applySubscriptionDiscount,
+	createPercentCoupon,
+	getStripeSubscription,
+} from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { CusService } from "@/internal/customers/CusService.js";
 
 const billingUnits = 12;
 const pricePerUnit = 10;
-
-/**
- * Helper to get Stripe subscription for a customer
- */
-const getStripeSubscription = async ({
-	customerId,
-}: {
-	customerId: string;
-}) => {
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
-
-	const stripeCustomerId =
-		fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
-
-	if (!stripeCustomerId) {
-		throw new Error("Missing Stripe customer ID");
-	}
-
-	const subscriptions = await stripeCli.subscriptions.list({
-		customer: stripeCustomerId,
-		status: "all",
-	});
-
-	if (subscriptions.data.length === 0) {
-		throw new Error("No subscriptions found");
-	}
-
-	return {
-		stripeCli,
-		stripeCustomerId,
-		subscription: subscriptions.data[0],
-	};
-};
 
 // =============================================================================
 // PERCENT-OFF DISCOUNT TESTS
@@ -517,4 +483,108 @@ test.concurrent(`${chalk.yellowBright("discount: promotion code applied to subsc
 	const expectedAmount = refundAmount + discountedCharge;
 
 	expect(preview.total).toBe(expectedAmount);
+});
+
+// =============================================================================
+// DISCOUNT PRESERVATION: CANCEL / UNCANCEL
+// =============================================================================
+
+/**
+ * Scenario:
+ * - Customer has pro ($20/mo) with 2-month repeating 20% off coupon
+ * - Advance 2 weeks (mid-cycle)
+ * - Cancel at end of cycle
+ * - Uncancel
+ *
+ * Expected:
+ * - Discount ID unchanged (same di_xxx)
+ * - Discount end timestamp unchanged (duration not reset)
+ */
+test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves discount identity and duration")}`, async () => {
+	const customerId = "discount-cancel-uncancel";
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1, testClockId, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	// Apply 2-month repeating 20% off coupon
+	const { stripeCli, subscription: sub } = await getStripeSubscription({
+		customerId,
+	});
+
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 2,
+	});
+
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: sub.id,
+		couponIds: [coupon.id],
+	});
+
+	// Record discount before any changes
+	const subWithDiscount = await stripeCli.subscriptions.retrieve(sub.id, {
+		expand: ["discounts.source.coupon"],
+	});
+	expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
+
+	const discountBefore = subWithDiscount.discounts![0];
+	const discountIdBefore =
+		typeof discountBefore !== "string" ? discountBefore.id : null;
+	const discountEndBefore =
+		typeof discountBefore !== "string" ? discountBefore.end : null;
+	expect(discountIdBefore).not.toBeNull();
+	expect(discountEndBefore).not.toBeNull();
+
+	// Advance 2 weeks
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		numberOfDays: 14,
+	});
+
+	// Cancel at end of cycle
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel_action: "cancel_end_of_cycle",
+	});
+
+	// Uncancel
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel_action: "uncancel",
+	});
+
+	// Verify discount is preserved
+	const subAfter = await stripeCli.subscriptions.retrieve(sub.id, {
+		expand: ["discounts.source.coupon"],
+	});
+	expect(subAfter.discounts?.length).toBeGreaterThanOrEqual(1);
+
+	const discountAfter = subAfter.discounts![0];
+	const discountIdAfter =
+		typeof discountAfter !== "string" ? discountAfter.id : null;
+	const discountEndAfter =
+		typeof discountAfter !== "string" ? discountAfter.end : null;
+
+	// Discount ID must be the same (not re-created)
+	expect(discountIdAfter).toBe(discountIdBefore);
+
+	// Discount end must be the same (duration not reset)
+	expect(discountEndAfter).toBe(discountEndBefore);
 });
