@@ -18,6 +18,8 @@ export const completeStripeCheckoutFormV2 = async ({
 	overrideQuantity?: number;
 	promoCode?: string;
 }): Promise<void> => {
+	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+	const timeout = concurrency > 1 ? 10000 : 0; // additional 10 seconds if concurrency
 	if (USE_KERNEL) {
 		console.log(
 			"[completeStripeCheckoutFormV2] Using Kernel Playwright execution...",
@@ -29,6 +31,10 @@ export const completeStripeCheckoutFormV2 = async ({
 			args: { url, overrideQuantity, promoCode },
 		});
 		console.log("[completeStripeCheckoutFormV2] Done");
+
+		if (timeout > 0) {
+			await new Promise((resolve) => setTimeout(resolve, timeout));
+		}
 		return;
 	}
 
@@ -38,5 +44,11 @@ export const completeStripeCheckoutFormV2 = async ({
 		fn: stripeCheckout,
 		args: { url, overrideQuantity, promoCode },
 	});
+
+	// If concurrency, wait for 10 more seconds
+	if (timeout > 0) {
+		await new Promise((resolve) => setTimeout(resolve, timeout));
+	}
+
 	console.log("[completeStripeCheckoutFormV2] Done");
 };

@@ -6,7 +6,11 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, BillingInterval } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingInterval,
+	type MultiAttachParamsV0Input,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -54,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach same add-on customize: 2x sa
 		],
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1, autumnV2, ctx } = await initScenario({
 		customerId: "ma-same-addon-customize",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -63,7 +67,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach same add-on customize: 2x sa
 		actions: [s.billing.attach({ productId: mainPlan.id })],
 	});
 
-	const multiAttachParams = {
+	const multiAttachParams: MultiAttachParamsV0Input = {
 		customer_id: customerId,
 		plans: [
 			{
@@ -93,13 +97,17 @@ test.concurrent(`${chalk.yellowBright("multi-attach same add-on customize: 2x sa
 		],
 	};
 
+	const basePriceTotal = 25 + 15;
+	const prepaidPriceTotal = 1 * 10 + 2 * 10;
+	const expectedTotal = basePriceTotal + prepaidPriceTotal;
 	// 1. Preview
-	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
+	const preview = await autumnV2.billing.previewMultiAttach(multiAttachParams);
 	// Instance A: $15 custom price, Instance B: $25 custom price
-	expect(preview.total).toBeCloseTo(40, 0);
+	expect(preview.total).toBeGreaterThanOrEqual(expectedTotal - 0.01);
+	expect(preview.total).toBeLessThanOrEqual(expectedTotal + 0.01);
 
 	// 2. Attach
-	await autumnV1.billing.multiAttach(multiAttachParams);
+	await autumnV2.billing.multiAttach(multiAttachParams);
 
 	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -110,17 +118,17 @@ test.concurrent(`${chalk.yellowBright("multi-attach same add-on customize: 2x sa
 		active: [mainPlan.id, prepaidAddon.id],
 	});
 
-	// Messages: 500 (main) + 100 (addon A included) + 200 (addon A purchased) + 100 (addon B included) + 300 (addon B purchased)
+	// Messages: 500 (main) + 200 (addon A purchased) + 300 (addon B purchased)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 1200,
+		balance: 1000,
 	});
 
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 40,
+		latestTotal: expectedTotal,
 	});
 
 	// Stripe subscription should have separate inline items for each add-on

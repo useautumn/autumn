@@ -1,6 +1,6 @@
 import type { DbInvoiceLineItem } from "../../..";
 
-/** Logs invoice line items in a readable table format for debugging. */
+/** Logs invoice line items in a compact tree format for debugging. */
 export const logInvoiceLineItems = ({
 	lineItems,
 	stripeInvoiceId,
@@ -8,12 +8,26 @@ export const logInvoiceLineItems = ({
 	lineItems: DbInvoiceLineItem[];
 	stripeInvoiceId: string;
 }) => {
-	console.log(
-		`\n📄 Invoice line items for ${stripeInvoiceId} (${lineItems.length} items):`,
-	);
+	console.log(`\n📄 ${stripeInvoiceId} (${lineItems.length} items)`);
+
+	const grouped = new Map<string, DbInvoiceLineItem[]>();
 	for (const li of lineItems) {
-		console.log(
-			`  [${li.direction}] ${li.description} | amount: ${li.amount} | after_discounts: ${li.amount_after_discounts} | product: ${li.product_id ?? "—"} | feature: ${li.feature_id ?? "—"} | prorated: ${li.prorated}`,
-		);
+		const key = li.product_id ?? "—";
+		const bucket = grouped.get(key) ?? [];
+		bucket.push(li);
+		grouped.set(key, bucket);
+	}
+
+	for (const [productId, items] of grouped) {
+		console.log(`  ├─ ${productId}`);
+		for (let i = 0; i < items.length; i++) {
+			const li = items[i];
+			const branch = i === items.length - 1 ? "└─" : "├─";
+			const dir = li.direction === "charge" ? "+" : "-";
+			const feat = li.feature_id ?? "base";
+			const prorated = li.prorated ? " ~" : "";
+			const amt = `$${Math.abs(li.amount).toFixed(2)}`;
+			console.log(`  │  ${branch} [${dir}] ${feat}${prorated}  ${amt}`);
+		}
 	}
 };

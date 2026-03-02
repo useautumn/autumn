@@ -7,7 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomerV3, AttachParamsV0Input } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -70,19 +70,19 @@ test.concurrent(`${chalk.yellowBright("attach prepaid addon: attach tiered prepa
 	});
 
 	// First add-on already attached in setup. Now attach the same one again.
-	const attachParams = {
+	const attachParams: AttachParamsV0Input = {
 		customer_id: customerId,
-		plan_id: prepaidAddon.id,
-		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+		product_id: prepaidAddon.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 	};
 
 	// 1. Preview second add-on
 	// (300 - 100 included) / 100 = 2 packs @ $10 = $20
-	const preview = await autumnV1.billing.previewAttach(attachParams);
+	const preview = await autumnV1.billing.previewAttach<AttachParamsV0Input>(attachParams);
 	expect(preview.total).toEqual(20);
 
 	// 2. Attach second instance
-	await autumnV1.billing.attach(attachParams);
+	await autumnV1.billing.attach<AttachParamsV0Input>(attachParams);
 
 	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -159,18 +159,18 @@ test.concurrent(`${chalk.yellowBright("attach prepaid addon: flat prepaid add-on
 		],
 	});
 
-	const attachParams = {
+	const attachParams: AttachParamsV0Input = {
 		customer_id: customerId,
-		plan_id: prepaidAddon.id,
-		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 400 }],
+		product_id: prepaidAddon.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
 	};
 
 	// 1. Preview: 400/100 = 4 packs @ $10 = $40
-	const preview = await autumnV1.billing.previewAttach(attachParams);
+	const preview = await autumnV1.billing.previewAttach<AttachParamsV0Input>(attachParams);
 	expect(preview.total).toEqual(40);
 
 	// 2. Attach
-	await autumnV1.billing.attach(attachParams);
+	await autumnV1.billing.attach<AttachParamsV0Input>(attachParams);
 
 	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
