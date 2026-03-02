@@ -2,54 +2,167 @@
 alwaysApply: true
 ---
 
-## Test Assertion Style
+## Test Writing Rules — NEVER Get These Wrong
 
-- Use `toMatchObject` when comparing multiple properties at once
-- Use `toEqual` for single-value comparisons (not `toMatchObject({ prop: value })`)
-- Use `items.free()` for free metered features, not `items.consumable()` with `price: 0`
-
-## Test Scenario Reuse (Conservative Tests)
-
-- Be CONSERVATIVE with test scenarios. Avoid creating the same scenario (same product/feature setup + initScenario) more than once when the **action** being tested is the same.
-- "Combining" means running **multiple assertions/checks after one action**, NOT chaining different actions into one giant test. For example, after calling `attach`, you might check that the feature resets correctly, the product is correct, AND the invoice is correct — all in the same test. That's combining checks.
-- If two tests perform **different actions** (e.g., "set usage to 30" vs "set usage to 130 causing overage"), those are separate tests even if the setup is identical. Each test should verify one distinct behavior.
-- Only create a new test case when either the **setup** genuinely differs (different feature type, product config, billing model) OR the **action** being tested differs.
-- Don't duplicate scenarios needlessly — if two tests have the exact same setup AND the exact same action, they should be one test with multiple assertions.
-
-## Filtering Breakdowns by Interval
-
-When checking individual breakdown items from `balance.breakdown`, always filter using `b.reset?.interval` with the `ResetInterval` enum. Do NOT use `b.reset === null` for one-off/lifetime breakdowns — they have a `reset` object with `interval === "one_off"`.
+### 1. NEVER Call `initScenario` Twice
 
 ```typescript
-import { ResetInterval } from "@autumn/shared";
+// WRONG — calling initScenario twice for multiple customers
+const { autumnV1: a } = await initScenario({ customerId: "cus-a", ... });
+const { autumnV1: b } = await initScenario({ customerId: "cus-b", ... }); // BREAKS
 
-const breakdowns = customer.balances[TestFeature.Messages].breakdown!;
+// RIGHT — single initScenario, create additional customers manually
+const { autumnV1, ctx } = await initScenario({
+  customerId: "cus-a",
+  setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro] })],
+  actions: [s.billing.attach({ productId: pro.id })],
+});
+await autumnV1.customers.create("cus-b", { name: "Customer B" });
+await autumnV1.billing.attach({ customer_id: "cus-b", product_id: pro.id });
 
-// Monthly breakdown
-const monthly = breakdowns.find(
-  (b) => b.reset?.interval === ResetInterval.Month,
-)!;
-
-// One-off / lifetime breakdown
-const lifetime = breakdowns.find(
-  (b) => b.reset?.interval === ResetInterval.OneOff,
-)!;
+// ALSO RIGHT — use s.otherCustomers for additional customers sharing the same test clock
+const { autumnV1, otherCustomers } = await initScenario({
+  customerId: "cus-a",
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+    s.otherCustomers([{ id: "cus-b", paymentMethod: "success" }]),
+  ],
+  actions: [s.billing.attach({ productId: pro.id })],
+});
 ```
 
-## Prepaid Attach Options (quantity)
+### 2. `s.billing.attach` and `s.attach` Already Have Timeouts
 
-When attaching a prepaid feature and passing `options` with a quantity:
+Both `s.billing.attach` (5-8s) and `s.attach` (4-5s) sleep after the API call. Do NOT add extra `await timeout()` after `initScenario` that already uses these in `actions`. Only add manual timeouts when calling `autumnV1.billing.attach()` directly in the test body.
 
-1. **Legacy attach** (`autumnV1.attach`): `quantity` should NOT be divided by billing units and should be **exclusive** of included usage (i.e. only the prepaid amount, not counting what's already included free).
-2. **New attach** (`autumnV1.billing.attach`): `quantity` should NOT be divided by billing units and should be **inclusive** of included usage (i.e. total desired amount including the free included portion).
+### 3. `s.track()` Has NO Built-In Timeout
 
-## Subscription Verification
+Unlike attach, `s.track()` fires and moves on immediately. If you need side effects to settle (e.g., before an attach that rebuilds from Postgres), pass `timeout` explicitly:
+```typescript
+s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 })
+```
 
-- **New tests**: Use `expectStripeSubscriptionCorrect` from `@tests/integration/billing/utils/expectStripeSubCorrect` — it uses production code (`buildStripePhasesUpdate`) to compute expected state and handles inline entity-scoped prices, schedule phases, and post-cycle schedule release.
-- **Existing tests**: Keep using `expectSubToBeCorrect` unless you're updating the test.
-- Always call `expectStripeSubscriptionCorrect({ ctx, customerId })` after any `billing.attach()` or `subscriptions.update()` call in new tests.
+### 4. `s.billing.attach` Is NOT the Same as `s.attach`
 
-## Type Checking
+| | `s.attach` | `s.billing.attach` |
+|---|---|---|
+| Endpoint | V1 `/attach` | V2 `/billing.attach` |
+| Extra params | none | `planSchedule`, `items` |
+| Use for | Legacy tests, simple setup | New billing tests |
 
-- After writing or editing test files, ALWAYS run `bun ts` in the `server/` directory to check for type errors before considering the task done.
-- Fix all type errors before moving on. Common issues include missing imports, wrong generic types, and optional chaining on nullable fields.
+### 5. Prepaid Quantity: Inclusive vs Exclusive of `includedUsage`
+
+- **`s.billing.attach` (new V2)**: `quantity` is **inclusive** of `includedUsage`
+- **`s.attach` (legacy V1)**: `quantity` is **exclusive** of `includedUsage`
+
+### 6. `includedUsage` Must Be a Multiple of `billingUnits`
+
+Stripe requires integer tier values. `includedUsage: 50` with `billingUnits: 100` = 0.5, which Stripe rejects.
+
+### 7. `products.pro()` Already Includes $20/mo Base Price
+
+Don't also add `items.monthlyPrice()` — you'll get double pricing. Same for `products.premium()` ($50/mo), `products.growth()` ($100/mo), `products.ultra()` ($200/mo).
+
+### 8. Always Use `product.id`, Never String Literals
+
+```typescript
+// WRONG
+s.attach({ productId: "pro" })
+// RIGHT
+s.attach({ productId: pro.id })
+```
+
+`initScenario` auto-prefixes product IDs with `customerId`. The product object's `.id` is mutated to include the prefix.
+
+### 9. Always Use `test.concurrent()`, Never Plain `test()`
+
+### 10. `expectCustomerFeatureCorrect` Requires `customer` Object
+
+It does NOT fetch from the API. Passing only `customerId` without `customer` silently returns undefined features. Always pass the fetched customer object.
+
+### 11. Lifetime/One-Off Breakdowns Use `ResetInterval.OneOff`, Not `null`
+
+```typescript
+// WRONG
+breakdowns.find(b => b.reset?.interval === null)
+// RIGHT
+breakdowns.find(b => b.reset?.interval === ResetInterval.OneOff)
+```
+
+### 12. Assertion Style
+
+- `toMatchObject` for comparing multiple properties at once
+- `toEqual` for single-value comparisons (not `toMatchObject({ prop: value })`)
+- `items.free()` for free metered features, not `items.consumable()` with `price: 0`
+
+### 13. `Date.now()` Doesn't Change With Test Clocks
+
+Always use `advancedTo` from `initScenario`:
+```typescript
+// WRONG
+expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(14));
+// RIGHT
+expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(14));
+```
+
+### 14. Consumable + Prepaid on Same Feature: `includedUsage` Is the SUM
+
+If a product has both consumable (includedUsage: 50) and prepaid (quantity: 100) for the same feature, total `included_usage` = 150, not 100.
+
+### 15. "Canceling" Is NOT a Status Value
+
+A canceling product has `status: "active"` with `canceled_at` set. Use `expectProductCanceling`, not `expect(status).toBe("canceling")`.
+
+### 16. Always Call `expectStripeSubscriptionCorrect` After Billing Actions
+
+After any `billing.attach()` or `subscriptions.update()` in new tests:
+```typescript
+await expectStripeSubscriptionCorrect({ ctx, customerId });
+```
+
+### 17. Tiered Pricing Must End With `"inf"`
+
+```typescript
+// WRONG — Stripe rejects without catch-all
+tiers: [{ to: 500, amount: 10 }]
+// RIGHT
+tiers: [{ to: 500, amount: 10 }, { to: "inf", amount: 5 }]
+```
+
+### 18. Setup Actions Go in `initScenario`, Test Body Has Only the Action Under Test
+
+```typescript
+// WRONG — multiple attaches in test body
+const { autumnV1 } = await initScenario({ actions: [] });
+await autumnV1.billing.attach({ product_id: pro.id }); // should be setup
+await autumnV1.billing.attach({ product_id: addon.id }); // the actual test
+
+// RIGHT — prerequisite in initScenario, only tested action in body
+const { autumnV1 } = await initScenario({
+  actions: [s.billing.attach({ productId: pro.id })],
+});
+await autumnV1.billing.attach({ customer_id: customerId, product_id: addon.id });
+```
+
+### 19. Type Check After Writing Tests
+
+Run `bun ts` in the `server/` directory after writing or editing test files. This runs `bunx tsgo --build --noEmit`. Fix all type errors before considering the task done.
+
+### 20. Use Generic Types With AutumnInt, Not `as unknown as`
+
+```typescript
+// WRONG
+const customer = await autumnV1.customers.get(customerId) as unknown as ApiCustomerV3;
+// RIGHT
+const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+```
+
+| Client | customers.get | entities.get | check |
+|--------|---------------|--------------|-------|
+| `autumnV1` | `ApiCustomerV3` | `ApiEntityV0` | `CheckResponseV1` |
+| `autumnV2` | `ApiCustomer` | `ApiEntityV1` | `CheckResponseV2` |
+
+### 21. NEVER Run Tests Without Asking
+
+Always ask the user for permission before running any test command. The user likely has a dev server running and needs to coordinate. Present the exact command you plan to run and wait for approval.

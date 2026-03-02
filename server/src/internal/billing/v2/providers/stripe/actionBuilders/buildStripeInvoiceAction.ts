@@ -4,6 +4,7 @@ import {
 	type LineItem,
 	type StripeInvoiceAction,
 } from "@autumn/shared";
+import type { LineItem, StripeInvoiceAction } from "@autumn/shared";
 import { lineItemsToInvoiceAddLinesParams } from "../utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 
 /**
@@ -35,7 +36,7 @@ export const buildStripeInvoiceAction = ({
 	}
 
 	const immediateLineItems = lineItems.filter(
-		(line) => line.chargeImmediately === true,
+		(line) => line.chargeImmediately === true && line.amount !== 0,
 	);
 
 	if (immediateLineItems.length === 0) {

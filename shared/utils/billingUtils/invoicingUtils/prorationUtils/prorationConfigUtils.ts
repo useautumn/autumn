@@ -84,3 +84,9 @@ export const shouldSkipLineItems = (
 		prorationConfig === OnIncrease.BillNextCycle
 	);
 };
+
+export const shouldCreateReplaceables = (
+	prorationConfig: OnIncrease | OnDecrease,
+) => {
+	return prorationConfig === OnDecrease.None;
+};

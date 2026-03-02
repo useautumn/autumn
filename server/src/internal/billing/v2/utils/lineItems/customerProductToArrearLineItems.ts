@@ -95,6 +95,8 @@ export const customerProductToArrearLineItems = ({
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
 			currency: orgToCurrency({ org: ctx.org }),
+			customerProduct,
+			customerPrice: cusPrice,
 		};
 
 		const lineItem = usagePriceToLineItem({

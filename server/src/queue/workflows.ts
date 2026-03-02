@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import { logger } from "better-auth";
 import { JobName } from "./JobName.js";
 import { addTaskToQueue, runHatchetWorkflow } from "./queueUtils.js";
 
@@ -45,6 +46,26 @@ export type BatchResetCusEntsPayload = {
 	}[];
 };
 
+export type StoreInvoiceLineItemsPayload = {
+	orgId: string;
+	env: AppEnv;
+	stripeInvoiceId: string;
+	autumnInvoiceId: string;
+	/** LineItem[] for matching Stripe line items back to Autumn billing context */
+	billingLineItems?: unknown[];
+	/** When true, only update Stripe-authoritative fields (amounts, quantities) and preserve Autumn metadata */
+	reconcileOnly?: boolean;
+};
+
+export type StoreDeferredInvoiceLineItemsPayload = {
+	orgId: string;
+	env: AppEnv;
+	/** Stripe InvoiceItem[] from createStripeInvoiceItems for ProrateNextCycle deferred charges */
+	deferredStripeInvoiceItems: unknown[];
+	/** LineItem[] (chargeImmediately=false) for matching to Stripe invoice items */
+	billingLineItems: unknown[];
+};
+
 // ============ Workflow Registry ============
 
 type WorkflowRunner = "sqs" | "hatchet";
@@ -80,6 +101,16 @@ const workflowRegistry = {
 		jobName: JobName.BatchResetCusEnts,
 		runner: "sqs",
 	} as WorkflowConfig<BatchResetCusEntsPayload>,
+
+	storeInvoiceLineItems: {
+		jobName: JobName.StoreInvoiceLineItems,
+		runner: "sqs",
+	} as WorkflowConfig<StoreInvoiceLineItemsPayload>,
+
+	storeDeferredInvoiceLineItems: {
+		jobName: JobName.StoreDeferredInvoiceLineItems,
+		runner: "sqs",
+	} as WorkflowConfig<StoreDeferredInvoiceLineItemsPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -116,11 +147,15 @@ const triggerWorkflow = async <T extends WorkflowName>({
 			metadata: options?.metadata,
 		});
 	} else {
-		await addTaskToQueue({
-			jobName: config.jobName,
-			payload: payload,
-			delayMs: options?.delayMs,
-		});
+		try {
+			await addTaskToQueue({
+				jobName: config.jobName,
+				payload: payload,
+				delayMs: options?.delayMs,
+			});
+		} catch (error) {
+			logger.error(`Failed to trigger workflow ${name}: ${error}`);
+		}
 	}
 };
 
@@ -151,4 +186,19 @@ export const workflows = {
 		payload: BatchResetCusEntsPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
+
+	triggerStoreInvoiceLineItems: (
+		payload: StoreInvoiceLineItemsPayload,
+		options?: TriggerOptions,
+	) => triggerWorkflow({ name: "storeInvoiceLineItems", payload, options }),
+
+	triggerStoreDeferredInvoiceLineItems: (
+		payload: StoreDeferredInvoiceLineItemsPayload,
+		options?: TriggerOptions,
+	) =>
+		triggerWorkflow({
+			name: "storeDeferredInvoiceLineItems",
+			payload,
+			options,
+		}),
 };

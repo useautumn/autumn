@@ -83,8 +83,9 @@ export const computeUpdateQuantityLineItems = ({
 		currency: orgToCurrency({ org }),
 		direction: "charge",
 		now: currentEpochMs,
-		billingTiming: "in_arrear",
+		billingTiming: "in_advance",
 		billingPeriod,
+		customerProduct,
 	};
 
 	const refundLineItem = usagePriceToLineItem({
