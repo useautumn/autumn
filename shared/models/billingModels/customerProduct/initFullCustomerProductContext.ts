@@ -58,4 +58,5 @@ export interface InitFullCustomerProductOptions {
 	// Optional + random
 	apiSemver?: ApiVersion;
 	collectionMethod?: CollectionMethod;
+	externalId?: string;
 }

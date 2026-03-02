@@ -70,7 +70,7 @@ export async function attach({
 	};
 
 	// 4. Errors (requires full billing plan)
-	handleAttachV2Errors({
+	await handleAttachV2Errors({
 		ctx,
 		billingContext,
 		billingPlan,
