@@ -12,6 +12,7 @@ import {
 	type UseAttachProductForm,
 	useAttachProductForm,
 } from "@/components/forms/attach-product/use-attach-product-form";
+import { useUpdateSubscriptionBodyBuilder } from "@/components/forms/update-subscription/use-update-subscription-body-builder";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { Button } from "@/components/v2/buttons/Button";
@@ -44,12 +45,17 @@ const FormContent = ({
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
 
-	const previewQuery = useUpdateSubscriptionPreview({
+	const { updateSubscriptionBody } = useUpdateSubscriptionBodyBuilder({
 		customerId,
-		product,
+		product: productV2,
 		entityId,
 		prepaidOptions: prepaidOptions ?? undefined,
 		version: product?.version,
+	});
+
+	const previewQuery = useUpdateSubscriptionPreview({
+		body: updateSubscriptionBody,
+		enabled: !!(customerId && product),
 	});
 
 	const { prepaidItems, isLoading } = usePrepaidItems({

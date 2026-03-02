@@ -4,6 +4,7 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
+	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	nullish,
@@ -13,6 +14,7 @@ export interface FeatureUsageBalanceParams {
 	fullCustomer: FullCustomer | null | undefined;
 	featureId: string;
 	entityId?: string | null;
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }
 
 export interface FeatureUsageBalanceResult {
@@ -34,14 +36,17 @@ export function useFeatureUsageBalance({
 	fullCustomer,
 	featureId,
 	entityId,
+	customerEntitlements,
 }: FeatureUsageBalanceParams): FeatureUsageBalanceResult {
-	const cusEnts = fullCustomer
-		? fullCustomerToCustomerEntitlements({
-				fullCustomer,
-				featureId,
-				inStatuses: ACTIVE_STATUSES,
-			})
-		: [];
+	const cusEnts = customerEntitlements
+		? customerEntitlements
+		: fullCustomer
+			? fullCustomerToCustomerEntitlements({
+					fullCustomer,
+					featureId,
+					inStatuses: ACTIVE_STATUSES,
+				})
+			: [];
 
 	//without manual update adjustment, no rollovers
 	const initialAllowance = cusEntsToAllowance({
