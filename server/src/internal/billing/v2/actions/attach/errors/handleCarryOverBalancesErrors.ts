@@ -1,22 +1,38 @@
-import type { AttachParamsV1 } from "@autumn/shared";
-import { featureUtils, isBooleanFeature, RecaseError } from "@autumn/shared";
+import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
+import {
+	ErrCode,
+	featureUtils,
+	isBooleanFeature,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 /**
  * Validates carry_over_balances params.
  *
- * - Boolean and allocated (continuous_use) features cannot have balances carried over,
- *   since they don't have consumable balance values.
+ * - Only valid for immediate switches — errors on scheduled/downgrade.
+ * - Boolean and allocated (continuous_use) features cannot have balances carried over.
  */
 export const handleCarryOverBalancesErrors = ({
 	ctx,
 	params,
+	billingContext,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1;
+	billingContext: AttachBillingContext;
 }) => {
 	const carryOver = params.carry_over_balances;
 	if (!carryOver?.enabled) return;
+
+	if (billingContext.planTiming !== "immediate") {
+		throw new RecaseError({
+			message:
+				"carry_over_balances is only supported for immediate plan switches (upgrades). It cannot be used with scheduled downgrades.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	const featureIds = carryOver.feature_ids;
 	if (!featureIds?.length) return;
