@@ -1,4 +1,5 @@
 import {
+	BillingVersion,
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
 	featureOptionUtils,
@@ -24,7 +25,7 @@ export const prepaidToStripeItemSpec = ({
 }: {
 	ctx: AutumnContext;
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
-	options?: { isDuplicateProductId?: boolean };
+	options?: { isDuplicateProductId?: boolean; billingVersion?: BillingVersion };
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
 	if (!billing) return null;
@@ -46,6 +47,21 @@ export const prepaidToStripeItemSpec = ({
 	const config = price.config as UsagePriceConfig;
 	const isEntityScoped = notNullish(cusProduct.internal_entity_id);
 	const isTieredOneOff = priceUtils.isTieredOneOff({ price, product });
+
+	if (options?.billingVersion === BillingVersion.V1) {
+		const optionsQuantity =
+			featureOptions?.upcoming_quantity ?? featureOptions?.quantity;
+		const finalQuantity = optionsQuantity;
+
+		return {
+			stripePriceId: config.stripe_price_id ?? undefined,
+			quantity: finalQuantity,
+			autumnPrice: price,
+			autumnEntitlement: entitlement,
+			autumnProduct: product,
+			autumnCusEnt: cusEntWithCusProduct,
+		};
+	}
 
 	if (isEntityScoped || isTieredOneOff || options?.isDuplicateProductId) {
 		const inlinePrice = cusEntToInlineStripePrice({

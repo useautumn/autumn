@@ -62,8 +62,9 @@ export const storeInvoiceLineItems = async ({
 			stripeLineItems,
 		});
 
-		// 3. Filter out $0 metered placeholder line items
-		// Stripe creates these as bookkeeping entries for usage-based prices with zero usage
+		// 3. Filter out $0 placeholder line items
+		// Stripe creates these for usage-based prices with zero usage, and for
+		// empty price placeholders (stripe_empty_price_id) used on entity subscriptions
 		const filteredStripeLineItems = stripeLineItems.filter((li) => {
 			if (li.amount !== 0) return true;
 			if ((li.quantity ?? 0) !== 0) return true;
@@ -71,8 +72,14 @@ export const storeInvoiceLineItems = async ({
 			const subItemId = li.parent?.subscription_item_details?.subscription_item;
 			if (typeof subItemId !== "string") return true;
 
+			// Filter metered $0 placeholders (zero-usage bookkeeping entries)
 			const info = subscriptionItemInfo.get(subItemId);
-			return !info?.isMetered;
+			if (info?.isMetered) return false;
+
+			// Filter $0 empty price placeholders (e.g. stripe_empty_price_id)
+			if (li.pricing?.unit_amount_decimal === "0") return false;
+
+			return true;
 		});
 
 		// 4. Update deferred line items that were stored at billing time

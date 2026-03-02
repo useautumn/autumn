@@ -340,7 +340,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: pro-quarter -> premiu
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		advanceTo: addWeeks(advancedTo, 7).getTime(),
+		advanceTo: addWeeks(advancedTo, 8).getTime(),
 		waitForSeconds: 30,
 	});
 
