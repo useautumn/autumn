@@ -22,6 +22,7 @@ export const BillingParamsBaseV1Schema = z.object({
 		description:
 			"If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.",
 	}),
+
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),
@@ -42,6 +43,20 @@ export const BillingParamsBaseV1Schema = z.object({
 	transition_rules: TransitionRulesSchema.optional().meta({
 		internal: true,
 	}),
+
+	carry_over_balances: z
+		.object({
+			enabled: z.boolean().meta({
+				description: "Whether to carry over balances from the previous plan.",
+			}),
+			feature_ids: z.array(z.string()).optional().meta({
+				description: "The IDs of the features to carry over balances from.",
+			}),
+		})
+		.optional()
+		.meta({
+			description: "Whether to carry over balances from the previous plan.",
+		}),
 
 	// Internal
 	customer_data: CustomerDataSchema.optional().meta({
