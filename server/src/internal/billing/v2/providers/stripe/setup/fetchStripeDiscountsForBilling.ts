@@ -1,5 +1,4 @@
 import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
-import { RecaseError } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
@@ -78,7 +77,7 @@ export const filterDeletedCouponDiscounts = async ({
 
 /**
  * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
- * Throws if any param discount coupon is already applied to the subscription (prevents double-use).
+ * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
  * Filters out discounts with deleted coupons.
  */
 export const fetchStripeDiscountsForBilling = async ({
@@ -111,20 +110,20 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Reject if any param discount coupon is already applied to the subscription
+	// Deduplicate by coupon ID — skip param discounts already on the subscription
 	const existingCouponIds = new Set(
 		existingDiscounts.map((d) => d.source.coupon.id),
 	);
-	for (const d of resolvedParamDiscounts) {
+	const newDiscounts = resolvedParamDiscounts.filter((d) => {
 		if (existingCouponIds.has(d.source.coupon.id)) {
-			throw new RecaseError({
-				message: `Discount ${d.source.coupon.id} is already applied to this subscription`,
-				code: "",
-				statusCode: 400,
-			});
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Skipping duplicate discount ${d.source.coupon.id} — already applied to subscription`,
+			);
+			return false;
 		}
-	}
+		return true;
+	});
 
-	const allDiscounts = [...existingDiscounts, ...resolvedParamDiscounts];
+	const allDiscounts = [...existingDiscounts, ...newDiscounts];
 	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
 };
