@@ -55,6 +55,8 @@ export const customerProducts = pgTable(
 
 		api_version: numeric({ mode: "number" }),
 		api_semver: text("api_semver"),
+
+		external_id: text("external_id"),
 	},
 	(table) => [
 		foreignKey({

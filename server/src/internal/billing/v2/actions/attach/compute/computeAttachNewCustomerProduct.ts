@@ -35,6 +35,7 @@ export const computeAttachNewCustomerProduct = ({
 		isCustom,
 		billingVersion,
 		transitionConfig,
+		externalId,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -91,6 +92,7 @@ export const computeAttachNewCustomerProduct = ({
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			status: isScheduled ? CusProductStatus.Scheduled : undefined,
 			startsAt: isScheduled ? endOfCycleMs : undefined,
+			externalId,
 		},
 	});
 

@@ -1,7 +1,21 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	ApiEntityV0,
+	ApiEntityV2,
+} from "@autumn/shared";
 import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
+import {
+	expectSubscriptionCorrect,
+	expectSubscriptionActive,
+	expectSubscriptionCanceling,
+	expectSubscriptionScheduled,
+	expectSubscriptionPastDue,
+	expectSubscriptionNotPresent,
+	expectSubscriptions,
+} from "./expect-customer-products/expectSubscriptionState";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -11,14 +25,27 @@ type ProductState =
 	| "scheduled"
 	| "past_due"
 	| "undefined";
-type CustomerOrEntity = ApiCustomerV3 | ApiEntityV0;
+type CustomerOrEntity =
+	| ApiCustomerV3
+	| ApiEntityV0
+	| ApiCustomerV5
+	| ApiEntityV2;
+type V5CustomerOrEntity = ApiCustomerV5 | ApiEntityV2;
+
+/** Type guard for V5/V2 customer/entity (has subscriptions instead of products). */
+const isV5Customer = (
+	customer: CustomerOrEntity,
+): customer is V5CustomerOrEntity => "subscriptions" in customer;
+
+/** Maps V3 state names to V5 state names. */
+const toV5State = (
+	state: ProductState,
+): "active" | "canceling" | "scheduled" | "past_due" | "undefined" =>
+	state === "canceled" ? "canceling" : state;
 
 /**
  * Verify a customer/entity has the expected product in the expected state.
- *
- * @param customer - Customer or entity data (can also fetch by customerId)
- * @param productId - The product ID to check
- * @param state - Expected state: "active", "canceled", "scheduled", or "undefined" (product not present)
+ * Routes to V5 subscription checks when the customer has `subscriptions`.
  */
 export const expectCustomerProductCorrect = async ({
 	customerId,
@@ -27,13 +54,22 @@ export const expectCustomerProductCorrect = async ({
 	state,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
 	state: ProductState;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
+
+	// Route to V5 functions
+	if (isV5Customer(customer)) {
+		return expectSubscriptionCorrect({
+			customer,
+			productId,
+			state: toV5State(state),
+		});
+	}
 
 	const products = customer.products ?? [];
 	const product = products.find((p: { id?: string }) => p.id === productId);
@@ -77,32 +113,42 @@ export const expectCustomerProductCorrect = async ({
 	}
 };
 
-/**
- * Shorthand for checking product is active
- */
+/** Shorthand for checking product is active. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductActive = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "active" });
+}) => {
+	if (params.customer && isV5Customer(params.customer)) {
+		return expectSubscriptionActive({
+			customer: params.customer,
+			productId: params.productId,
+		});
+	}
+	return expectCustomerProductCorrect({ ...params, state: "active" });
+};
 
 /**
  * Shorthand for checking product is canceling (active but with canceled_at set).
- * This is the state a product enters after a downgrade - it remains active until
- * the billing cycle ends, then transitions to the new product.
+ * Prefer {@link expectCustomerProducts} for batch checks.
  */
 export const expectProductCanceling = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "canceled" });
+}) => {
+	if (params.customer && isV5Customer(params.customer)) {
+		return expectSubscriptionCanceling({
+			customer: params.customer,
+			productId: params.productId,
+		});
+	}
+	return expectCustomerProductCorrect({ ...params, state: "canceled" });
+};
 
 /**
- * Shorthand for checking product is scheduled.
+ * Shorthand for checking product is scheduled. Prefer {@link expectCustomerProducts} for batch checks.
  * Optionally verify the `started_at` timestamp is within a tolerance of the expected value.
- *
- * @param startsAt - Expected timestamp in milliseconds when the product will start
- * @param toleranceMs - Allowed deviation in milliseconds (default: 2 minutes)
  */
 export const expectProductScheduled = async ({
 	customerId,
@@ -112,7 +158,7 @@ export const expectProductScheduled = async ({
 	toleranceMs = 2 * 60 * 1000,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
 	startsAt?: number;
 	toleranceMs?: number;
@@ -121,8 +167,18 @@ export const expectProductScheduled = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
+	// Route to V5
+	if (isV5Customer(customer)) {
+		return expectSubscriptionScheduled({
+			customer,
+			productId,
+			startsAt,
+			toleranceMs,
+		});
+	}
+
 	await expectCustomerProductCorrect({
-		customer: customer as ApiCustomerV3,
+		customer,
 		productId,
 		state: "scheduled",
 	});
@@ -145,37 +201,39 @@ export const expectProductScheduled = async ({
 	}
 };
 
-/**
- * Shorthand for checking product is past_due (payment failed).
- */
+/** Shorthand for checking product is past_due. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductPastDue = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "past_due" });
+}) => {
+	if (params.customer && isV5Customer(params.customer)) {
+		return expectSubscriptionPastDue({
+			customer: params.customer,
+			productId: params.productId,
+		});
+	}
+	return expectCustomerProductCorrect({ ...params, state: "past_due" });
+};
 
-/**
- * Shorthand for checking product does not exist
- */
+/** Shorthand for checking product does not exist. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductNotPresent = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "undefined" });
+}) => {
+	if (params.customer && isV5Customer(params.customer)) {
+		return expectSubscriptionNotPresent({
+			customer: params.customer,
+			productId: params.productId,
+		});
+	}
+	return expectCustomerProductCorrect({ ...params, state: "undefined" });
+};
 
 /**
  * Verify multiple product states in a single call.
  * Each array contains product IDs that should be in that state.
- *
- * @example
- * await expectProducts({
- *   customer,
- *   active: [pro.id, addon.id],
- *   canceling: [premium.id],
- *   scheduled: [free.id],
- *   pastDue: [overdue.id],
- *   notPresent: [oldProduct.id],
- * });
  */
 export const expectCustomerProducts = async ({
 	customerId,
@@ -198,9 +256,21 @@ export const expectCustomerProducts = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
+	// Route to V5
+	if (isV5Customer(customer)) {
+		return expectSubscriptions({
+			customer,
+			active,
+			canceling,
+			scheduled,
+			pastDue,
+			notPresent,
+		});
+	}
+
 	for (const productId of active) {
 		await expectCustomerProductCorrect({
-			customer: customer as ApiCustomerV3,
+			customer,
 			productId,
 			state: "active",
 		});
@@ -208,7 +278,7 @@ export const expectCustomerProducts = async ({
 
 	for (const productId of canceling) {
 		await expectCustomerProductCorrect({
-			customer: customer as ApiCustomerV3,
+			customer,
 			productId,
 			state: "canceled",
 		});
@@ -216,7 +286,7 @@ export const expectCustomerProducts = async ({
 
 	for (const productId of scheduled) {
 		await expectCustomerProductCorrect({
-			customer: customer as ApiCustomerV3,
+			customer,
 			productId,
 			state: "scheduled",
 		});
@@ -224,7 +294,7 @@ export const expectCustomerProducts = async ({
 
 	for (const productId of pastDue) {
 		await expectCustomerProductCorrect({
-			customer: customer as ApiCustomerV3,
+			customer,
 			productId,
 			state: "past_due",
 		});
@@ -232,7 +302,7 @@ export const expectCustomerProducts = async ({
 
 	for (const productId of notPresent) {
 		await expectCustomerProductCorrect({
-			customer: customer as ApiCustomerV3,
+			customer,
 			productId,
 			state: "undefined",
 		});

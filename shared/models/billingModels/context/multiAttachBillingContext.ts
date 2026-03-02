@@ -17,6 +17,8 @@ export interface MultiAttachProductContext {
 	currentCustomerProduct?: FullCusProduct;
 	/** A previously scheduled product in the same group to delete. */
 	scheduledCustomerProduct?: FullCusProduct;
+	/** User-provided subscription ID for this product. */
+	externalId?: string;
 }
 
 export interface MultiAttachBillingContext extends BillingContext {

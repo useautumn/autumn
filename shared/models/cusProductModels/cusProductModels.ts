@@ -67,6 +67,8 @@ export const CusProductSchema = z.object({
 	is_custom: z.boolean().default(false),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
+
+	external_id: z.string().nullable(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

@@ -19,6 +19,7 @@ export const BillingParamsBaseV0Schema = z.object({
 	items: z.array(ProductItemSchema).optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),
+	subscription_id: z.string().optional(),
 });
 
 export type BillingParamsBaseV0 = z.infer<typeof BillingParamsBaseV0Schema>;

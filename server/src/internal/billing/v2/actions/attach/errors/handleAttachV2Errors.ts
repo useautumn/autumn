@@ -12,9 +12,10 @@ import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
+import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
-export const handleAttachV2Errors = ({
+export const handleAttachV2Errors = async ({
 	ctx,
 	billingContext,
 	billingPlan,
@@ -57,5 +58,12 @@ export const handleAttachV2Errors = ({
 		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,
 		params,
+	});
+
+	// 9. Subscription ID uniqueness
+	await handleSubscriptionIdErrors({
+		db: ctx.db,
+		internalCustomerId: billingContext.fullCustomer.internal_id,
+		subscriptionIds: [billingContext.externalId],
 	});
 };
