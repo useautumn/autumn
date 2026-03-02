@@ -51,14 +51,15 @@ export const BillingParamsBaseV1Schema = z.object({
 				description: "Whether to carry over balances from the previous plan.",
 			}),
 			feature_ids: z.array(z.string()).optional().meta({
-				description: "The IDs of the features to carry over balances from.",
+				description:
+					"The IDs of the features to carry over balances from. If left undefined, all features will be carried over.",
 			}),
 		})
 		.optional()
 		.meta({
 			description: "Whether to carry over balances from the previous plan.",
 		}),
-  
+
 	subscription_id: z.string().optional().meta({
 		description:
 			"A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.",
