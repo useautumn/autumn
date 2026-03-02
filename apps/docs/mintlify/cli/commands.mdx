@@ -1,0 +1,259 @@
+---
+title: "Command reference"
+description: "Every command, flag, and option available in the atmn CLI"
+---
+
+## Global flags
+
+These flags work with any command:
+
+| Flag | Description |
+|------|-------------|
+| `-p, --prod` | Target production instead of sandbox |
+| `-l, --local` | Use `localhost:8080` API server |
+| `--headless` | Force non-interactive mode (for CI/agents) |
+| `-c, --config <path>` | Path to config file (default: `autumn.config.ts`) |
+| `-v, --version` | Show CLI version |
+
+Flags can be combined -- for example, `atmn push -lp` targets production on a local API server.
+
+## Authentication
+
+### `atmn login`
+
+Authenticate with Autumn via OAuth. Opens your browser, lets you select an organization, and saves sandbox + production API keys to `.env`.
+
+```bash
+atmn login
+```
+
+In non-TTY environments (CI), it prints a URL you can open manually.
+
+### `atmn logout`
+
+Remove `AUTUMN_SECRET_KEY` and `AUTUMN_PROD_SECRET_KEY` from your `.env` file.
+
+```bash
+atmn logout
+```
+
+### `atmn env`
+
+Show your current organization and environment:
+
+```bash
+atmn env
+```
+
+```
+Organization: Acme Corp
+Slug: acme-corp
+Environment: Sandbox
+```
+
+## Configuration
+
+### `atmn init`
+
+Create an `autumn.config.ts` from a starter template. Prompts for login if you haven't authenticated yet.
+
+```bash
+atmn init
+```
+
+### `atmn push`
+
+Push your local `autumn.config.ts` to Autumn.
+
+```bash
+atmn push [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-y, --yes` | Auto-confirm all prompts |
+
+The CLI compares your local config with what's in Autumn and shows a summary of changes before applying. If plans with existing customers are modified, it will prompt about versioning.
+
+### `atmn pull`
+
+Pull plans and features from Autumn into your local `autumn.config.ts`.
+
+```bash
+atmn pull [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --force` | Overwrite config instead of smart in-place update |
+
+By default, `pull` does a smart in-place update -- it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--force` to overwrite the entire file.
+
+`pull` also generates an `@useautumn-sdk.d.ts` file with typed `FeatureIds` and `PlanIds` for IDE autocompletion.
+
+### `atmn preview`
+
+Render a pricing table from your local config without making any API calls.
+
+```bash
+atmn preview [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--plan <id>` | Preview a specific plan |
+| `--currency <code>` | Currency for display (default: `USD`) |
+
+### `atmn nuke`
+
+Permanently delete all data in your **sandbox**. This command refuses to run with `--prod`.
+
+```bash
+atmn nuke
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dangerously-skip-all-confirmation-prompts` | Skip all safety prompts |
+
+<Warning>
+This is irreversible. The flag name is intentionally long to prevent accidental use.
+</Warning>
+
+## Data browsing
+
+These commands open a full interactive TUI for browsing and inspecting your Autumn data. Use the `--headless` flag to get structured data instead.
+
+### `atmn customers`
+
+```bash
+atmn customers [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <id>` | Get a specific customer |
+| `--search <query>` | Filter customers |
+| `--page <n>` | Page number (default: `1`) |
+| `--limit <n>` | Results per page (default: `50`) |
+| `--format <fmt>` | Output: `text`, `json`, `csv` (default: `text`) |
+
+### `atmn plans`
+
+```bash
+atmn plans [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <id>` | Get a specific plan |
+| `--search <query>` | Filter plans |
+| `--include-archived` | Include archived plans |
+| `--page <n>` | Page number (default: `1`) |
+| `--limit <n>` | Results per page (default: `50`) |
+| `--format <fmt>` | Output: `text`, `json`, `csv` (default: `text`) |
+
+<Note>
+`atmn products` is an alias for `atmn plans`.
+</Note>
+
+### `atmn features`
+
+```bash
+atmn features [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <id>` | Get a specific feature |
+| `--search <query>` | Filter features |
+| `--include-archived` | Include archived features |
+| `--page <n>` | Page number (default: `1`) |
+| `--limit <n>` | Results per page (default: `50`) |
+| `--format <fmt>` | Output: `text`, `json`, `csv` (default: `text`) |
+
+### `atmn events`
+
+```bash
+atmn events [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--customer <id>` | Filter by customer |
+| `--feature <id>` | Filter by feature (comma-separated for multiple) |
+| `--time <range>` | Time range: `24h`, `7d`, `30d`, `90d` (default: `7d`) |
+| `--mode <mode>` | `list` or `aggregate` (default: `list`) |
+| `--bin <size>` | Bin size for aggregate: `hour`, `day`, `month` |
+| `--group-by <prop>` | Group by property in aggregate mode |
+| `--page <n>` | Page number (default: `1`) |
+| `--limit <n>` | Results per page (default: `100`) |
+| `--format <fmt>` | Output: `text`, `json`, `csv` (default: `text`) |
+
+## Configuration
+
+### `atmn config`
+
+View and manage persistent CLI settings.
+
+```bash
+atmn config                                    # Show help and config file location
+atmn config --global                           # Same as above
+atmn config --global <key>                     # Read a setting
+atmn config --global <key> <value>             # Write a setting
+```
+
+Running `atmn config` with no arguments shows the full path to your config file, supported keys, and usage info.
+
+| Flag | Description |
+|------|-------------|
+| `-g, --global` | Use global config |
+
+#### Available keys
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `noDeclarationFile` | `boolean` | `false` | Skip generating `@useautumn-sdk.d.ts` on `atmn pull` |
+
+#### Priority order
+
+Settings are resolved in this order: **CLI flag** → **global config** → **default value**. For example, `--no-declaration-file` on `atmn pull` always takes priority over the global `noDeclarationFile` setting.
+
+#### Config file location
+
+Running `atmn config` or `atmn config --global` (with no key) prints the exact path to your config file on disk.
+
+| OS | Path |
+|----|------|
+| macOS | `~/Library/Preferences/atmn/config.json` |
+| Linux | `~/.config/atmn/config.json` (or `$XDG_CONFIG_HOME`) |
+| Windows | `%APPDATA%\atmn\config.json` |
+
+## Utilities
+
+### `atmn dashboard`
+
+Open the Autumn dashboard in your browser.
+
+```bash
+atmn dashboard
+```
+
+### `atmn version`
+
+Print the CLI version. Alias: `atmn v`.
+
+```bash
+atmn version
+```
+
+## Headless mode
+
+The CLI automatically detects non-TTY environments and switches to headless mode with plain text output and no interactive prompts. You can also force it with `--headless`.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error (network, auth, validation, or confirmation required) |

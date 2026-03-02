@@ -1,19 +1,60 @@
 ---
 title: Welcome to Autumn
 sidebarTitle: Introduction 
-description: "Open-source billing infrastructure that manages webhooks, usage limits and credits."
+description: "Open source, drop-in system of record for AI billing and monetization."
 ---
 
 ## What is Autumn?
 
-Autumn handles your billing flows and makes sure your customers have the access to the right features and limits. 
+Autumn is an infrastructure layer between your application and Stripe. It acts as your source of truth for subscription status, usage metering and credit balances.
 
-It sits between your server and Stripe billing, and acts as your managed database for subscription status, usage metering and credit balances.
+Your app queries Autumn in real-time to check if a customer is allowed to do something (eg, send an AI message, access SSO, etc).
 
-1000s of founders and fast-growing startups use Autumn to make billing easier and more reliable. No webhooks needed!
+```mermaid actions={false}
+flowchart TD
+    subgraph app["Your Application"]
+        A["Frontend App"]
+        B["Backend Server"]
+    end
+
+    subgraph autumn["Autumn"]
+        C["Autumn Server"]
+        D["Dashboard or CLI"]
+        E["Database & Cache"]
+    end
+
+    F["Stripe"]
+
+    A -- "Autumn hooks (optional)" --> B
+    B -- "Balance checks + usage tracking" --> C
+    C -- "Customer state" --> E
+    C -- "Payments" --> F
+    F -- "Webhooks" --> C
+    D -- "Configure Pricing" --> C
+```
+
+## Why use Autumn?
+
+AI made pricing and billing significantly harder for engineers to build and maintain. For reference, OpenAI wrote a [blog post](https://openai.com/index/beyond-rate-limits/) about the system they built in-house. Some of the things you will need to build and maintain are:
+
+| Feature               | Requirements                                                                                          |
+|-----------------------|--------------------------------------------------------------------------------------------------|
+| Subscription logic    | Checkouts, prorated upgrades, scheduled downgrades, add-ons, trials. 10+ webhook cases to handle.              |
+| Credit system         | Monthly limits, rollovers, promotional grants with exipry, waterfall deduction rules, real-time enforcement |
+| Spend controls        | Auto top ups, spend caps, per-seat allowances, usage analytics, observability                     |
+| Enterprise plans   | Tiered pricing, custom credit grants, pilots, expansion logic                                            |
+| Edge cases            | Plan switching, failed payments, 3DS, race conditions, refunds                                                  |
+
+At some point you or your GTM team will want to change your pricing, and you will need to rebuild everything. 
+
+Autumn offloads all this logic out of your codebase. After you set it up, everything about your pricing can be managed through our dashboard. 
+
+It gives you easier setup, saves months of engineering time, more flexibility and more reliability.
+
+## Core concepts
 
 
-## How it works
+
 
 <Steps>
 <Step title="Model your pricing in Autumn">
@@ -65,7 +106,6 @@ This gives you flexibility to make pricing changes, or define custom plans for i
 ## What Autumn is not
 
 - **A Stripe billing replacement**: although you don't need to deal with Stripe's APIs, you are still using (and paying for) Stripe's subscriptions, payments and invoicing. You bring your own Stripe account and are never "locked in" to our system.
-- **For fully sales-led companies**: Autumn is designed to be used by product-led, or hybrid product-sales teams with self-serve billing. If your customers only pay via custom invoices, Autumn is probably not for you yet.
 
 
 

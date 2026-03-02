@@ -1,0 +1,70 @@
+---
+title: "Vercel Marketplace"
+description: "Set up the Vercel Marketplace integration in Autumn"
+---
+
+When you use Autumn, you can also add your product to [Vercel's Marketplace](https://vercel.com/marketplace) without any additional code. Follow these steps to connect the Autumn partner API and webhooks to Vercel.
+
+<Note>
+ This is currently in beta, please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at hey@useautumn.com to get access.
+</Note>
+
+<Steps>
+    <Step>
+    ### Step 1: Gather integration credentials and IDs
+
+        In your Vercel Integration Console, open your integration entry.
+
+        - Copy the **Client Integration ID**.
+        - Copy the **Client Integration Secret**.
+
+        In Stripe:
+
+        - Open **Settings > Custom payment methods**.
+        - Create a custom payment method named **Vercel Marketplace**.
+        - Upload the Vercel logo.
+        - Copy the resulting **Custom Payment Method ID**.
+
+        In the Autumn Dashboard:
+
+        - Open **Developer > Vercel Webhook**.
+        - Add a new endpoint.
+        - Set the endpoint URL to your production API endpoint plus `/autumn/webhooks/vercel`.
+        - Confirm the router path is current before saving.
+    </Step>
+
+    <Step>
+    ### Step 2: Configure values in Autumn
+
+        In the Autumn Dashboard, open **Developer > Vercel** and set:
+
+        - `Client Integration ID`
+        - `Client Integration Secret`
+        - `Custom Payment Method ID`
+
+        Also save the **Base URL** shown in this section.
+    </Step>
+
+    <Step>
+    ### Step 3: Configure values in Vercel
+
+        In the Vercel Integration Console, paste the Autumn **Base URL** into:
+
+        - **Partner API Base URL**
+        - **Webhooks URL**
+
+        This ensures Vercel can call Autumn when onboarding users and when key lifecycle events occur.
+    </Step>
+
+    <Step>
+    ### Step 4: Validate the webhook
+
+        Confirm webhook delivery in both systems:
+
+        - Trigger a test event flow in Vercel.
+        - Verify Vercel receives callback requests for **key create/delete** events.
+        - Verify Autumn logs/receives the payload and updates API keys as expected.
+
+        If events are not delivered, confirm the exact webhook route in your deployment (for example `.../autumn/webhooks/vercel`) and update both sides if it has changed.
+    </Step>
+</Steps>

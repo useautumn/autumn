@@ -1,0 +1,129 @@
+---
+title: "Webhooks"
+description: "Receive real-time notifications when customer billing events occur"
+---
+
+With Autumn, you don't need webhooks for managing billing — subscription state, usage tracking, and access control are all synchronized automatically. 
+
+However, webhooks can still be useful for specific use cases where you want to trigger actions in your own systems.
+
+<Note>
+Webhooks are currently in beta. Please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at support@useautumn.com to enable webhooks for your account.
+</Note>
+
+## Use Cases
+
+While Autumn handles billing complexity for you, webhooks are helpful for:
+
+- **Sending activation emails** — Welcome new subscribers or notify users when their plan changes
+- **Triggering workflows** — Start onboarding sequences, provision resources, or update CRM records
+- **Syncing with external systems** — Keep your database, analytics, or other tools in sync with subscription changes
+- **Deprovisioning access to services** — Shut off access to downstream services when a customer cancels their subscription
+
+## Available Events
+
+### customer.products.updated
+
+Fired when a customer's product or plan changes. The `scenario` field indicates what type of change occurred.
+
+| Scenario | Description |
+|----------|-------------|
+| `new` | Customer subscribed to a new product |
+| `upgrade` | Customer upgraded to a higher-tier plan |
+| `downgrade` | Customer downgraded to a lower-tier plan |
+| `renew` | Subscription renewed for another billing period |
+| `cancel` | Subscription was canceled |
+| `expired` | Subscription has expired |
+| `past_due` | Payment is past due |
+| `scheduled` | A plan change has been scheduled |
+
+**Example payload:**
+
+```json expandable
+{
+  "type": "customer.products.updated",
+  "data": {
+    "scenario": "new",
+    "customer": {
+      "id": "user_123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "balances": { ... },
+      "subscriptions": [ ... ]
+    },
+    "updated_product": {
+      "id": "pro_plan",
+      "name": "Pro Plan",
+      "features": [ ... ]
+    }
+  }
+}
+```
+
+### customer.threshold_reached
+
+Fired when a customer reaches a usage threshold for a feature. This is useful for notifying users before they hit hard limits.
+
+| Threshold Type | Description |
+|----------------|-------------|
+| `limit_reached` | Customer has reached their usage limit |
+| `allowance_used` | Customer has exhausted their allowance |
+
+In most cases, these events will fire at the same time, as the included allowance is the same as the user's usage limit. However, you may have a feature with a different included allowance and a different "max purchase" limit. 
+
+Eg: 100 API calls included, then 0.1 per API call, with a maximum purchase limit of 1000 API calls.
+
+**Example payload:**
+
+```json expandable
+{
+  "type": "customer.threshold_reached",
+  "data": {
+    "threshold_type": "limit_reached",
+    "customer": {
+      "id": "user_123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "balances": { ... }
+    },
+    "feature": {
+      "id": "api_calls",
+      "name": "API Calls",
+      "type": "metered"
+    }
+  }
+}
+```
+
+## Setup
+
+Once webhooks are enabled for your account, you can configure your webhook endpoints in the Autumn dashboard:
+
+<Steps>
+  <Step title="Navigate to Developer Settings">
+    Go to the **Developer** section in your Autumn dashboard and select the **Webhooks** tab.
+  </Step>
+  <Step title="Add an Endpoint">
+    Click **Add Endpoint** and enter the URL where you want to receive webhook events.
+  </Step>
+  <Step title="Select Events">
+    Choose which events you want to subscribe to. You can select all events or specific ones.
+  </Step>
+  <Step title="Save and Test">
+    Save your endpoint configuration. You can use the **Send Test Event** button to verify your endpoint is receiving events correctly.
+  </Step>
+</Steps>
+
+## Webhook Security
+
+Autumn uses [Svix](https://www.svix.com/) for reliable webhook delivery. Each webhook request includes signature headers that you can use to verify the request is genuinely from Autumn:
+
+- `svix-id` — Unique message identifier
+- `svix-timestamp` — Timestamp of when the message was sent
+- `svix-signature` — Signature for verifying authenticity
+
+You can use the [Svix libraries](https://docs.svix.com/receiving/verifying-payloads/how) to easily verify webhook signatures in your application.
+
+## Retry Policy
+
+If your endpoint returns an error or is unavailable, Autumn will automatically retry the webhook with exponential backoff. You can view delivery attempts and retry failed webhooks from the dashboard.
