@@ -8,14 +8,12 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
-import { useMounted } from "@/hooks/useMounted";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
@@ -27,14 +25,12 @@ import { CustomerListSearchBar } from "./CustomerListSearchBar";
 
 export function CustomerListTable({
 	customers,
-	isLoading,
+	isFetchingUncached,
 }: {
 	customers: CustomerWithProducts[];
-	isLoading: boolean;
+	isFetchingUncached: boolean;
 }) {
 	const { org } = useOrg();
-	// Defer rendering until after mount to ensure correct table layout on navigation
-	const isMounted = useMounted();
 	const env = useEnv();
 
 	// Account for sandbox banner height (40px) in table container height
@@ -129,11 +125,6 @@ export function CustomerListTable({
 		},
 	});
 
-	// Don't render table until mounted to ensure correct layout on navigation
-	if (!isMounted) {
-		return <LoadingScreen />;
-	}
-
 	const getRowHref = (customer: CustomerWithProducts) =>
 		pushPage({
 			path: `/customers/${customer.id || customer.internal_id}`,
@@ -149,11 +140,6 @@ export function CustomerListTable({
 		queryStates.version.length > 0 ||
 		queryStates.none;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
-
-	// Show loading state while customers data is being fetched
-	if (isLoading) {
-		return <LoadingScreen />;
-	}
 
 	// Only show empty state if org has NO customers (no filters/search active and no results)
 	if (!hasRows && !hasActiveFiltersOrSearch) {
@@ -188,7 +174,7 @@ export function CustomerListTable({
 				table,
 				numberOfColumns: columns.length,
 				enableSorting,
-				isLoading: false,
+				isLoading: isFetchingUncached,
 				getRowHref,
 				emptyStateText: "No matching results found.",
 				rowClassName: "h-10",
