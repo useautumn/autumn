@@ -3,6 +3,10 @@ import { z } from "zod/v4";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
 export const ExtCreateBalanceParamsSchema = BalanceParamsBaseSchema.extend({
+	balance_id: z.string().optional().meta({
+		description:
+			"An optional external ID for this balance. Can be used later to target this specific balance in update/delete operations.",
+	}),
 	included: z.number().optional().meta({
 		description:
 			"The initial balance amount to grant. For metered features, this is the number of units the customer can use.",

@@ -3,6 +3,10 @@ import { z } from "zod/v4";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
 export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
+	balance_id: z.string().optional().meta({
+		description:
+			"Target a specific balance by its external ID. Use when the customer has multiple balances for the same feature.",
+	}),
 	remaining: z.number().optional().meta({
 		description:
 			"Set the remaining balance to this exact value. Cannot be combined with add_to_balance.",
