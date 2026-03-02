@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import {
 	type AppEnv,
@@ -70,6 +71,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
 	lineItems: z.array(LineItemSchema).optional(),
+	customLineItems: z.array(CustomLineItemSchema).optional(),
 
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
