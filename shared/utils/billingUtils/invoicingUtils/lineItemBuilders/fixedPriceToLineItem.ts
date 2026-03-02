@@ -30,8 +30,15 @@ export const fixedPriceToLineItem = ({
 	const stripeProductId =
 		price.config.stripe_product_id || product.processor?.id || undefined;
 
+	// Default discountable to false so Autumn pre-calculates discounts
+	// and they are properly stored in the DB (not baked into the amount)
+	const updatedContext: LineItemContext = {
+		...context,
+		discountable: context.discountable ?? false,
+	};
+
 	return buildLineItem({
-		context,
+		context: updatedContext,
 		amount,
 		description,
 		stripePriceId,

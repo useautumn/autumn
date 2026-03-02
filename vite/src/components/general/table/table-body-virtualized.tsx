@@ -19,6 +19,7 @@ interface VirtualRowProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	onRowClick?: (row: T) => void;
+	onRowDoubleClick?: (row: T) => void;
 	visibleColumnKey?: string;
 }
 
@@ -32,11 +33,16 @@ const VirtualRowInner = <T,>({
 	enableSelection,
 	flexibleTableColumns,
 	onRowClick,
+	onRowDoubleClick,
 	visibleColumnKey,
 }: VirtualRowProps<T>) => {
 	const handleClick = useCallback(() => {
 		if (!rowHref) onRowClick?.(row.original);
 	}, [rowHref, onRowClick, row.original]);
+
+	const handleDoubleClick = useCallback(() => {
+		onRowDoubleClick?.(row.original);
+	}, [onRowDoubleClick, row.original]);
 
 	return (
 		<TableRow
@@ -48,6 +54,7 @@ const VirtualRowInner = <T,>({
 				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 			)}
 			onClick={handleClick}
+			onDoubleClick={onRowDoubleClick ? handleDoubleClick : undefined}
 		>
 			<TableRowCells
 				row={row}
@@ -85,6 +92,7 @@ export function TableBodyVirtualized() {
 		isLoading,
 		getRowHref,
 		onRowClick,
+		onRowDoubleClick,
 		rowClassName,
 		emptyStateChildren,
 		emptyStateText,
@@ -126,6 +134,13 @@ export function TableBodyVirtualized() {
 			onRowClick?.(original);
 		},
 		[onRowClick],
+	);
+
+	const memoizedOnRowDoubleClick = useCallback(
+		(original: unknown) => {
+			onRowDoubleClick?.(original);
+		},
+		[onRowDoubleClick],
 	);
 
 	// Compute visible column key on every render - table reference is stable so useMemo won't work
@@ -176,6 +191,7 @@ export function TableBodyVirtualized() {
 						enableSelection={enableSelection}
 						flexibleTableColumns={flexibleTableColumns}
 						onRowClick={memoizedOnRowClick}
+						onRowDoubleClick={memoizedOnRowDoubleClick}
 						visibleColumnKey={visibleColumnKey}
 					/>
 				);

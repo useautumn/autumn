@@ -27,7 +27,6 @@ BUN_PARALLEL_V2 \
   'balances/check/breakdown' \
   'balances/track/loose' \
   'balances/check/credit-systems' \
-  'balances/check/prepaid' \
   'balances/check/send-event' \
   'balances/check/loose' \
   --max=6

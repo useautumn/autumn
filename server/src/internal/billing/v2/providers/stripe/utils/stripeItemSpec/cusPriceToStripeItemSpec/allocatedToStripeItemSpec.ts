@@ -2,6 +2,7 @@ import {
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
 	InternalError,
+	roundUsageToNearestBillingUnit,
 	type StripeItemSpec,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -28,11 +29,20 @@ export const allocatedToStripeItemSpec = ({
 		});
 	}
 
-	const existingUsage = cusEntToInvoiceUsage({ cusEnt: cusEntWithCusProduct });
+	const existingUsage = cusEntToInvoiceUsage({
+		cusEnt: cusEntWithCusProduct,
+		subtractReplaceables: true,
+	});
+
+	// Round existing usage to the nearest billing unit
+	const roundedUsage = roundUsageToNearestBillingUnit({
+		usage: existingUsage,
+		billingUnits: config.billing_units ?? 1,
+	});
 
 	return {
 		stripePriceId: config.stripe_price_id,
-		quantity: existingUsage,
+		quantity: roundedUsage,
 		autumnPrice: price,
 		autumnProduct: product,
 		autumnCusEnt: cusEntWithCusProduct,
