@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { TransitionRulesSchema } from "@api/billing/common/transitionRules";
 import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0";
@@ -19,6 +20,8 @@ export const BillingParamsBaseV0Schema = z.object({
 	items: z.array(ProductItemSchema).optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),
+
+	custom_line_items: z.array(CustomLineItemSchema).optional(),
 });
 
 export type BillingParamsBaseV0 = z.infer<typeof BillingParamsBaseV0Schema>;
