@@ -33,6 +33,21 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"Additional parameters to pass into the creation of the Stripe checkout session.",
 	}),
+
+	carry_over_balances: z
+		.object({
+			enabled: z.boolean().meta({
+				description: "Whether to carry over balances from the previous plan.",
+			}),
+			feature_ids: z.array(z.string()).optional().meta({
+				description:
+					"The IDs of the features to carry over balances from. If left undefined, all features will be carried over.",
+			}),
+		})
+		.optional()
+		.meta({
+			description: "Whether to carry over balances from the previous plan.",
+		}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;
