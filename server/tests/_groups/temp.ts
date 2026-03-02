@@ -2,14 +2,19 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Entity prepaid test suite",
+	description: "Failed tests from billing V2 run",
 	tier: "domain",
 	paths: [
-		"tests/integration/billing/attach/scheduled-switch/scheduled-switch-prepaid-entities.test.ts",
-		"tests/integration/billing/attach/new-plan/prepaid/attach-prepaid-entities.test.ts",
-		"tests/integration/billing/attach/new-plan/prepaid/attach-prepaid-volume-entities.test.ts",
-		"tests/integration/billing/attach/immediate-switch/immediate-switch-entities-prepaid-volume.test.ts",
-		"tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity.test.ts",
-		"tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity-proration.test.ts",
+		"integration/billing/attach/checkout/stripe-checkout/stripe-checkout-multi-interval.test.ts",
+		"integration/billing/attach/checkout/stripe-checkout/stripe-checkout-one-off.test.ts",
+		"integration/billing/attach/checkout/stripe-checkout/stripe-checkout-prepaid.test.ts",
+		// "integration/billing/attach/errors/attach-custom-plan-errors.test.ts",
+		// "integration/billing/attach/errors/stripe-checkout-errors.test.ts",
+		// "integration/billing/attach/invoice/attach-invoice-draft-deferred.test.ts",
+		// "integration/billing/attach/new-plan/prepaid/attach-prepaid-addon.test.ts",
+		// "integration/billing/attach/new-plan/prepaid/attach-prepaid-volume-with-flat.test.ts",
+		// "integration/billing/multi-attach/customize/multi-attach-customize-addons.test.ts",
+		// "integration/billing/update-subscription/custom-plan/update-paid-tier-behavior.test.ts",
+		// "integration/billing/update-subscription/invoice-line-items/update-quantity-line-items.test.ts",
 	],
 };
