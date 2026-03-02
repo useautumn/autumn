@@ -10,7 +10,8 @@ When testing mid-cycle upgrades/downgrades, use the proration utilities to calcu
 import { 
   getBillingPeriod, 
   calculateProration, 
-  calculateProratedDiff 
+  calculateProratedDiff,
+  calculateCrossIntervalUpgrade,
 } from "@tests/integration/billing/utils/proration";
 ```
 
@@ -21,7 +22,6 @@ Calculate net charge for upgrade/downgrade. Works for base prices, prepaid, and 
 ```typescript
 const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-// Calculate prorated difference for base price upgrade
 const expectedCharge = calculateProratedDiff({
   customer: customerBefore,
   advancedTo,                // From initScenario
@@ -50,38 +50,86 @@ expect(preview.total).toBeCloseTo(expectedCharge, 0);
 ```typescript
 // Filter by product ID (when customer has multiple products)
 calculateProratedDiff({
-  customer,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
-  productId: "pro",
+  customer, advancedTo, oldAmount: 20, newAmount: 50, productId: "pro",
 });
 
-// Filter by billing interval (for dual subscriptions - monthly + annual)
+// Filter by billing interval (for dual subscriptions)
 calculateProratedDiff({
-  customer,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
-  interval: "month",
+  customer, advancedTo, oldAmount: 20, newAmount: 50, interval: "month",
 });
 
 // Entity-level product
 calculateProratedDiff({
-  customer,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
-  entityId: "ent-1",
+  customer, advancedTo, oldAmount: 20, newAmount: 50, entityId: "ent-1",
 });
 
 // Or using entityIndex (0-based → "ent-1")
 calculateProratedDiff({
-  customer,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
-  entityIndex: 0,
+  customer, advancedTo, oldAmount: 20, newAmount: 50, entityIndex: 0,
+});
+```
+
+## `calculateCrossIntervalUpgrade` (Monthly → Annual)
+
+Calculate total charge for cross-interval upgrades (e.g., monthly → annual). This is **async** — it fetches the billing anchor from Stripe.
+
+```typescript
+const expectedCharge = await calculateCrossIntervalUpgrade({
+  customerId,
+  advancedTo,                // From initScenario
+  oldAmount: 20,             // Current monthly price (credited for remaining period)
+  newAmount: 200,            // New annual price (prorated from now to anchor + 1 year)
+  oldInterval: "month",      // Default: "month"
+});
+
+expect(preview.total).toBeCloseTo(expectedCharge, 0);
+```
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `customerId` | `string` | Yes | Customer ID |
+| `advancedTo` | `number` | Yes | Current time from initScenario |
+| `oldAmount` | `number` | No | Current price (default: 0 = no credit) |
+| `newAmount` | `number` | Yes | New annual price |
+| `oldInterval` | `"month" \| "year"` | No | Default: "month" |
+
+**Logic:** `total = annualCharge - oldCredit` (Decimal.js, 2 decimal places)
+
+### Example — Monthly to Annual Upgrade
+
+```typescript
+test.concurrent(`${chalk.yellowBright("cross-interval: monthly to annual")}`, async () => {
+  const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+  const pro = products.pro({ items: [messagesItem] });          // $20/mo
+  const proAnnual = products.proAnnual({ items: [messagesItem] }); // $200/yr
+
+  const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
+    customerId: "cross-interval-test",
+    setup: [
+      s.customer({ paymentMethod: "success" }),
+      s.products({ list: [pro, proAnnual] }),
+    ],
+    actions: [
+      s.billing.attach({ productId: pro.id }),
+      s.advanceTestClock({ days: 15 }),
+    ],
+  });
+
+  const expectedCharge = await calculateCrossIntervalUpgrade({
+    customerId,
+    advancedTo,
+    oldAmount: 20,
+    newAmount: 200,
+    oldInterval: "month",
+  });
+
+  const preview = await autumnV1.billing.previewAttach({
+    customer_id: customerId,
+    product_id: proAnnual.id,
+  });
+  expect(preview.total).toBeCloseTo(expectedCharge, 0);
 });
 ```
 
@@ -96,15 +144,12 @@ calculateProratedDiff({
 
 ## Mixed Prorated + Non-Prorated (Consumable Arrear)
 
-Consumable/arrear charges are **NEVER prorated** - add them separately:
+Consumable/arrear charges are **NEVER prorated** — add them separately:
 
 ```typescript
 // Base price is prorated
 const proratedBase = calculateProratedDiff({
-  customer: customerBefore,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
+  customer: customerBefore, advancedTo, oldAmount: 20, newAmount: 50,
 });
 
 // Consumable arrear is NOT prorated - full amount
@@ -116,24 +161,15 @@ expect(preview.total).toBeCloseTo(expectedTotal, 0);
 
 ## `getBillingPeriod`
 
-Get the raw billing period from customer's subscription (for custom calculations):
+Get the raw billing period from customer's subscription:
 
 ```typescript
-import { getBillingPeriod } from "@tests/integration/billing/utils/proration";
-
 const period = getBillingPeriod({ customer });
 // Returns: { start: number, end: number } in milliseconds
 
 // With filters
-const monthlyPeriod = getBillingPeriod({
-  customer,
-  interval: "month",
-});
-
-const entityPeriod = getBillingPeriod({
-  customer,
-  entityIndex: 0,
-});
+const monthlyPeriod = getBillingPeriod({ customer, interval: "month" });
+const entityPeriod = getBillingPeriod({ customer, entityIndex: 0 });
 ```
 
 ## `calculateProration`
@@ -141,106 +177,28 @@ const entityPeriod = getBillingPeriod({
 Calculate prorated amount for a single price (not the difference):
 
 ```typescript
-import { calculateProration } from "@tests/integration/billing/utils/proration";
-
 const proratedCharge = calculateProration({
-  customer,
-  advancedTo,
-  amount: 50,  // Full price
+  customer, advancedTo, amount: 50,  // Full price
 });
 // Returns prorated amount for remaining period
 ```
 
-## Complete Example
-
-```typescript
-test.concurrent(`${chalk.yellowBright("mid-cycle upgrade with consumable arrear")}`, async () => {
-  const customerId = "mid-cycle-upgrade-arrear";
-
-  const proConsumable = items.consumableWords({ includedUsage: 200 });
-  const pro = products.pro({ id: "pro", items: [proConsumable] });
-
-  const premiumConsumable = items.consumableWords({ includedUsage: 1000 });
-  const premium = products.premium({ id: "premium", items: [premiumConsumable] });
-
-  const { autumnV1, advancedTo } = await initScenario({
-    customerId,
-    setup: [
-      s.customer({ paymentMethod: "success" }),
-      s.products({ list: [pro, premium] }),
-    ],
-    actions: [
-      s.billing.attach({ productId: pro.id }),
-      s.track({ featureId: TestFeature.Words, value: 300 }), // 100 overage
-      s.advanceTestClock({ days: 15 }),
-    ],
-  });
-
-  // Get customer to extract billing period
-  const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-  // Calculate prorated base price difference
-  const proratedBaseDiff = calculateProratedDiff({
-    customer: customerBefore,
-    advancedTo,
-    oldAmount: 20, // Pro base price
-    newAmount: 50, // Premium base price
-  });
-
-  // Consumable arrear is NOT prorated - full amount
-  const arrearOverage = 5; // 100 overage × $0.05
-
-  const expectedTotal = proratedBaseDiff + arrearOverage;
-
-  // Preview
-  const preview = await autumnV1.billing.previewAttach({
-    customer_id: customerId,
-    product_id: premium.id,
-  });
-  expect(preview.total).toBeCloseTo(expectedTotal, 0);
-
-  // Attach
-  await autumnV1.billing.attach({
-    customer_id: customerId,
-    product_id: premium.id,
-    redirect_mode: "if_required",
-  });
-
-  const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-  await expectCustomerProducts({
-    customer,
-    active: [premium.id],
-    notPresent: [pro.id],
-  });
-
-  await expectCustomerInvoiceCorrect({
-    customer,
-    count: 2,
-    latestTotal: preview.total,
-  });
-});
-```
-
 ## Why Use These Utilities?
 
-1. **Correct billing period**: Gets actual `current_period_start/end` from Stripe subscription (not estimated with `ms.days(30)`)
-2. **Precision**: Uses `Decimal.js` internally - no floating point errors
-3. **Auto-flooring**: Automatically floors `advancedTo` to match Stripe's frozen_time calculation
-4. **Multi-subscription support**: Handles monthly/annual dual subscriptions, entity products, etc.
+1. **Correct billing period**: Gets actual `current_period_start/end` from Stripe (not estimated with `ms.days(30)`)
+2. **Precision**: Uses `Decimal.js` internally — no floating point errors
+3. **Auto-flooring**: Automatically floors `advancedTo` to match Stripe's frozen_time
+4. **Multi-subscription support**: Handles monthly/annual dual subscriptions, entity products
 
 ## Anti-Pattern (DON'T DO THIS)
 
 ```typescript
-// ❌ BAD - estimating billing period manually
+// ❌ BAD — estimating billing period manually
 const periodStart = advancedTo - ms.days(15);
 const periodEnd = periodStart + ms.days(30); // Wrong! Months vary
 
-// ✅ GOOD - use the utility
+// ✅ GOOD — use the utility
 const expectedTotal = calculateProratedDiff({
-  customer: customerBefore,
-  advancedTo,
-  oldAmount: 20,
-  newAmount: 50,
+  customer: customerBefore, advancedTo, oldAmount: 20, newAmount: 50,
 });
 ```
