@@ -63,7 +63,10 @@ export const priceToScheduleItem = ({
 	return undefined;
 };
 
-// TO FIX
+/**
+ * @deprecated Use `findBillingLineItemByStripeLineItem` from `@autumn/shared` instead.
+ * This function has incomplete matching logic.
+ */
 export const findStripeItemForPrice = ({
 	price,
 	stripeItems,
@@ -114,6 +117,10 @@ export const findStripeItemForPrice = ({
 	}
 };
 
+/**
+ * @deprecated Use `findBillingLineItemByStripeLineItem` from `@autumn/shared` instead.
+ * This function has incomplete matching logic.
+ */
 export const findPriceInStripeItems = ({
 	prices,
 	subItem,

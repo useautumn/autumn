@@ -125,6 +125,7 @@ type BillingAttachAction = {
 	planSchedule?: PlanTiming;
 	timeout?: number;
 	items?: ProductItem[]; // Custom product items (creates is_custom product)
+	subscriptionId?: string;
 };
 
 type MultiAttachPlan = {
@@ -713,6 +714,7 @@ const deleteCustomer = (
  * @param planSchedule - Override plan timing: "immediate" or "end_of_cycle"
  * @param timeout - Optional timeout in milliseconds for the attach request
  * @param items - Custom product items (creates is_custom customer product)
+ * @param subscriptionId - Optional custom subscription ID for this attachment
  * @example s.billing.attach({ productId: "pro" }) // customer-level
  * @example s.billing.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
  * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
@@ -728,6 +730,7 @@ const billingAttach = ({
 	planSchedule,
 	timeout,
 	items,
+	subscriptionId,
 }: {
 	productId: string;
 	customerId?: string;
@@ -737,6 +740,7 @@ const billingAttach = ({
 	planSchedule?: PlanTiming;
 	timeout?: number;
 	items?: ProductItem[];
+	subscriptionId?: string;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
@@ -754,6 +758,7 @@ const billingAttach = ({
 				planSchedule,
 				timeout: timeout ?? defaultTimeout,
 				items,
+				subscriptionId,
 			},
 		],
 	});
@@ -795,6 +800,11 @@ const billingMultiAttach = ({
 		],
 	});
 };
+
+/**
+ * Alias for billing multi-attach to keep the short, top-level scenario-builder API consistent.
+ */
+const multiAttach = billingMultiAttach;
 
 // ═══════════════════════════════════════════════════════════════════
 // REFERRAL ACTIONS
@@ -890,6 +900,7 @@ export const s = {
 		attach: billingAttach,
 		multiAttach: billingMultiAttach,
 	},
+	multiAttach,
 	referral: {
 		createCode: createReferralCode,
 		redeem: redeemReferralCode,
@@ -1451,6 +1462,7 @@ export async function initScenario({
 					new_billing_subscription: action.newBillingSubscription,
 					plan_schedule: action.planSchedule,
 					items: action.items,
+					subscription_id: action.subscriptionId,
 				},
 				{ timeout: action.timeout },
 			);

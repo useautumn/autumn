@@ -24,11 +24,13 @@ export const cusPriceToStripeItemSpec = ({
 	cusPrice,
 	cusProduct,
 	billingContext,
+	options,
 }: {
 	ctx: AutumnContext;
 	cusPrice: FullCustomerPrice;
 	cusProduct: FullCusProduct;
 	billingContext?: BillingContext;
+	options?: { isDuplicateProductId?: boolean };
 }): StripeItemSpec | null => {
 	const price = cusPrice.price;
 
@@ -54,6 +56,7 @@ export const cusPriceToStripeItemSpec = ({
 			spec = prepaidToStripeItemSpec({
 				ctx,
 				cusEntWithCusProduct,
+				options,
 			});
 		}
 
@@ -78,6 +81,7 @@ export const cusPriceToStripeItemSpec = ({
 	spec.metadata = {
 		autumn_price_id: price.id,
 		autumn_customer_price_id: cusPrice.id,
+		...(spec.metadata ?? {}),
 	};
 
 	return spec;

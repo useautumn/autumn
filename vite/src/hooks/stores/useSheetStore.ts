@@ -17,6 +17,7 @@ export type SheetType =
 	| "subscription-cancel"
 	| "subscription-uncancel"
 	| "balance-edit"
+	| "invoice-detail"
 	| null;
 
 // Store state interface

@@ -33,6 +33,8 @@ export interface TableProps<T> {
 	getRowHref?: (row: T) => string;
 	/** For non-navigation actions like opening sheets/modals */
 	onRowClick?: (row: T) => void;
+	/** For double-click actions (e.g. opening external links) */
+	onRowDoubleClick?: (row: T) => void;
 	rowClassName?: string;
 	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;

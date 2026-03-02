@@ -1,5 +1,19 @@
 # Expectation Utilities
 
+## Table of Contents
+
+- [Feature Expectations](#feature-expectations)
+- [Invoice Expectations](#invoice-expectations)
+- [Invoice Line Items](#invoice-line-items)
+- [Product State Expectations](#product-state-expectations)
+- [Product Item Expectations](#product-item-expectations)
+- [Preview Expectations](#preview-expectations)
+- [Subscription Verification](#subscription-verification)
+- [Cache vs DB Verification](#cache-vs-db-verification)
+- [Rollover Expectations](#rollover-expectations)
+- [Error Testing](#error-testing)
+- [Time Utilities](#time-utilities)
+
 ## Imports
 
 ```typescript
@@ -9,8 +23,13 @@ import { expectCustomerProducts, expectProductActive, expectProductCanceling, ex
 import { expectProductTrialing, expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+import { expectInvoiceLineItemsCorrect, expectBasePriceLineItem, expectFeatureLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
+import { expectFeatureCachedAndDb } from "@tests/integration/billing/utils/expectFeatureCachedAndDb";
+import { expectProductItemCorrect, expectProductItemQuantity } from "@tests/integration/billing/utils/expectProductItemCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { expectProductAttached, expectScheduledApiSub } from "@tests/utils/expectUtils/expectProductAttached";
+import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
 ```
 
 ## Feature Expectations
@@ -19,9 +38,11 @@ import { expectProductAttached, expectScheduledApiSub } from "@tests/utils/expec
 
 Verify feature balance, usage, and limits.
 
+**IMPORTANT: Does NOT fetch from API.** You must pass a fetched `customer` object. Passing only `customerId` silently returns undefined features.
+
 ```typescript
 expectCustomerFeatureCorrect({
-  customer,                        // ApiCustomerV3 or ApiEntityV0
+  customer,                        // ApiCustomerV3 or ApiEntityV0 — MUST be fetched object
   featureId: TestFeature.Messages,
   includedUsage?: 100,             // Expected included_usage
   balance?: 100,                   // Expected balance
@@ -30,11 +51,11 @@ expectCustomerFeatureCorrect({
 });
 ```
 
-**Works with both customers and entities:**
+Works with both customers and entities:
 ```typescript
 const entity = await autumnV1.entities.get(customerId, entityId);
 expectCustomerFeatureCorrect({
-  customer: entity,  // Entities work too!
+  customer: entity,  // Entities work via `customer` param
   featureId: TestFeature.Messages,
   balance: 100,
 });
@@ -59,9 +80,9 @@ Verify invoice count and latest invoice details.
 
 ```typescript
 expectCustomerInvoiceCorrect({
-  customer,                     // ApiCustomerV3 (or customerId)
+  customer,                     // ApiCustomerV3
   count: 2,                     // Total invoice count
-  latestTotal?: 30,             // Most recent invoice total ($)
+  latestTotal?: 30,             // Most recent invoice total ($), ±$0.01 tolerance
   latestStatus?: "paid",        // "paid" | "draft" | "open" | "void"
   latestInvoiceProductId?: string, // Product ID on latest invoice
 });
@@ -78,120 +99,139 @@ expectCustomerInvoiceCorrect({
 | Remove Trial | +1 (charge invoice) |
 | Allocated track over limit | +1 per track |
 | Prepaid update | +1 (refund) + 1 (charge) = 2 |
+| Trial subscription created | 1 ($0 invoice) |
+
+## Invoice Line Items
+
+### `expectInvoiceLineItemsCorrect`
+
+Full line item verification. Polls DB up to 10s for line items to appear.
+
+```typescript
+await expectInvoiceLineItemsCorrect({
+  stripeInvoiceId: string,         // Stripe invoice ID
+  expectedTotal?: number,          // Expected total amount
+  expectedCount?: number,          // Expected number of line items
+  allCharges?: boolean,            // Assert all items are charges
+  allRefunds?: boolean,            // Assert all items are refunds
+  expectedLineItems?: ExpectedLineItem[],  // Per-item expectations
+  debug?: boolean,                 // Default: true — log details
+});
+```
+
+`ExpectedLineItem` fields:
+```typescript
+{
+  isBasePrice?: boolean,        // Filter: base price item
+  featureId?: string,           // Filter: feature ID
+  direction?: "charge" | "refund",
+  billingTiming?: "in_advance" | "in_arrear",
+  amount?: number,              // Per-unit amount
+  totalAmount?: number,         // Total = amount * quantity
+  count?: number,               // Exact count of matching items
+  minCount?: number,            // At least this many matching items
+  prorated?: boolean,
+  productId?: string,
+  stripeId?: string,
+  stripeSubscriptionItemId?: string,
+  stripeQuantity?: number,
+  totalQuantity?: number,
+  paidQuantity?: number,
+  discount?: {
+    amountAfterDiscounts?: number,
+    totalAmountAfterDiscounts?: number,
+    hasDiscounts?: boolean,
+    discountCount?: number,
+    discountAmountOff?: number,
+    couponIds?: string[],
+    stripeDiscountable?: boolean,
+  },
+}
+```
+
+Returns `DbInvoiceLineItem[]`.
+
+### `expectBasePriceLineItem`
+
+Shorthand for verifying a single base price line item.
+
+```typescript
+await expectBasePriceLineItem({
+  stripeInvoiceId: string,
+  amount?: number,                 // Expected amount
+  direction?: "charge" | "refund", // Default: "charge"
+  prorated?: boolean,
+  productId?: string,
+  debug?: boolean,
+});
+```
+
+Returns single `DbInvoiceLineItem`.
+
+### `expectFeatureLineItems`
+
+Shorthand for verifying feature-specific line items.
+
+```typescript
+await expectFeatureLineItems({
+  stripeInvoiceId: string,
+  featureId: string,
+  totalAmount?: number,
+  totalQuantity?: number,
+  direction?: "charge" | "refund",
+  billingTiming?: "in_advance" | "in_arrear",
+  minCount?: number,               // Default: 1
+  debug?: boolean,
+});
+```
+
+Returns matching `DbInvoiceLineItem[]`.
 
 ## Product State Expectations
 
-### Product States Are Mutually Exclusive
+### `expectCustomerProducts` (Batch — PREFERRED)
 
-**CRITICAL:** `active` and `canceling` are **mutually exclusive** states:
-- **`active`**: Product is active and NOT scheduled for cancellation
-- **`canceling`**: Product is scheduled for cancellation at end of billing cycle (has `canceled_at` set)
-
-A product CANNOT be both `active` and `canceling`. When a downgrade is scheduled:
-- The current product becomes `canceling` (NOT active)
-- The new product becomes `scheduled`
-
-### `expectCustomerProducts` (Batch Check - PREFERRED)
-
-Verify multiple product states in a single call. **Always use this when checking 2+ products.**
+Verify multiple product states in a single call. **Always use when checking 2+ products.**
 
 ```typescript
 await expectCustomerProducts({
   customer,                    // Or customerId
-  active: [pro.id, addon.id],  // Products that are active (NOT canceling)
-  canceling: [premium.id],     // Products scheduled for cancellation
-  scheduled: [free.id],        // Products waiting to become active
-  notPresent: [oldProduct.id], // Products that should not exist
+  active: [pro.id, addon.id],  // Active and NOT canceling
+  canceling: [premium.id],     // Scheduled for cancellation (status:active + canceled_at set)
+  scheduled: [free.id],        // Waiting to become active at cycle end
+  notPresent: [oldProduct.id], // Should not exist
 });
 ```
 
-All arrays are optional - only include the states you need to verify.
+**CRITICAL:** `active` and `canceling` are **mutually exclusive**. A downgrading product is `canceling`, NOT `active`.
 
-**Example - scheduled downgrade from Pro to Free with add-on:**
 ```typescript
-// ✅ CORRECT - canceling and active are separate
+// ✅ CORRECT
 await expectCustomerProducts({
   customer,
-  canceling: [pro.id],        // Pro is canceling (NOT active)
-  active: [recurringAddon.id], // Add-on remains active
-  scheduled: [free.id],        // Free is scheduled
-});
-
-// ❌ WRONG - Pro cannot be both active and canceling
-await expectCustomerProducts({
-  customer,
-  active: [pro.id, recurringAddon.id],  // WRONG: pro is canceling, not active
-  canceling: [pro.id],
+  canceling: [pro.id],         // Pro is canceling, NOT active
+  active: [recurringAddon.id],
   scheduled: [free.id],
 });
-```
 
-**Example - upgrade from pro to premium:**
-```typescript
-// ✅ GOOD - batch check
+// ❌ WRONG — pro cannot be both active and canceling
 await expectCustomerProducts({
   customer,
-  active: [premium.id],
-  notPresent: [pro.id, free.id],
+  active: [pro.id, recurringAddon.id],  // WRONG
+  canceling: [pro.id],
 });
+```
 
-// ❌ BAD - multiple individual calls (don't do this)
-await expectProductActive({ customer, productId: premium.id });
+### Individual Product State Checks
+
+```typescript
+await expectProductActive({ customer, productId: pro.id });
+await expectProductCanceling({ customer, productId: premium.id });   // Works with entities too
+await expectProductScheduled({ customer, productId: pro.id });
 await expectProductNotPresent({ customer, productId: pro.id });
-await expectProductNotPresent({ customer, productId: free.id });
 ```
 
-### `expectProductActive`
-
-Verify a single product is active. **For multiple products, prefer `expectCustomerProducts`.**
-
-```typescript
-await expectProductActive({
-  customer,
-  productId: pro.id,
-});
-```
-
-### `expectProductCanceling`
-
-Verify product is in canceling state (scheduled for removal at end of billing cycle). This is the state a product enters after a downgrade - it remains active until the billing cycle ends.
-
-**Important:** Canceling is NOT a status value. The product has `status: "active"` with `canceled_at` set.
-
-```typescript
-// Works with both customers and entities
-const entity = await autumnV1.entities.get(customerId, entityId);
-await expectProductCanceling({
-  customer: entity,  // Pass entity data here
-  productId: premium.id,
-});
-```
-
-### `expectProductScheduled`
-
-Verify product is scheduled (waiting to become active at end of billing cycle).
-
-```typescript
-await expectProductScheduled({
-  customer,
-  productId: pro.id,
-});
-```
-
-### `expectProductNotPresent`
-
-Verify product does not exist for customer/entity.
-
-```typescript
-await expectProductNotPresent({
-  customer,
-  productId: pro.id,
-});
-```
-
-### `expectProductTrialing`
-
-Verify product is in trial state.
+### `expectProductTrialing` / `expectProductNotTrialing`
 
 ```typescript
 import { ms } from "@autumn/shared";
@@ -201,17 +241,8 @@ await expectProductTrialing({
   productId: pro.id,
   trialEndsAt: advancedTo + ms.days(7),  // Expected trial end timestamp
 });
-```
 
-### `expectProductNotTrialing`
-
-Verify product is NOT in trial.
-
-```typescript
-await expectProductNotTrialing({
-  customer,
-  productId: pro.id,
-});
+await expectProductNotTrialing({ customer, productId: pro.id });
 ```
 
 ### `expectProductAttached`
@@ -225,14 +256,7 @@ expectProductAttached({
   customer,
   product: pro,                          // ProductV2 object
   status?: CusProductStatus.Active,      // Default: Active
-  entityId?: string,                     // For entity-level check
-});
-
-// For scheduled products (downgrades)
-expectProductAttached({
-  customer: entity,
-  product: free,
-  status: CusProductStatus.Scheduled,
+  entityId?: string,
 });
 ```
 
@@ -248,6 +272,33 @@ await expectScheduledApiSub({
 });
 ```
 
+## Product Item Expectations
+
+### `expectProductItemCorrect`
+
+Verify a product item's quantity and upcoming quantity.
+
+```typescript
+await expectProductItemCorrect({
+  customerId?: string,
+  customer?: ApiCustomerV3 | ApiEntityV0,
+  productId: string,
+  featureId: string,
+  quantity?: number,
+  upcomingQuantity?: number | "undefined",  // "undefined" asserts it's not set
+});
+```
+
+### `expectProductItemQuantity`
+
+Shorthand — same as `expectProductItemCorrect` with `upcomingQuantity: "undefined"`.
+
+```typescript
+await expectProductItemQuantity({
+  customer, productId: pro.id, featureId: TestFeature.Messages, quantity: 200,
+});
+```
+
 ## Preview Expectations
 
 ### `expectPreviewNextCycleCorrect`
@@ -258,32 +309,26 @@ Verify subscription preview next cycle info.
 // When next_cycle should exist
 expectPreviewNextCycleCorrect({
   preview,
-  startsAt: advancedTo + ms.days(14),  // When next cycle starts
-  total: 50,                            // Expected next cycle charge
+  startsAt: addMonths(advancedTo, 1).getTime(),  // Use addMonths, not ms.days(30)
+  total: 50,
 });
 
-// When next_cycle should NOT exist (e.g., trial removed)
+// When next_cycle should NOT exist
 expectPreviewNextCycleCorrect({
   preview,
   expectDefined: false,
 });
 ```
 
-## Subscription Verification (CRITICAL)
+## Subscription Verification
 
-**ALWAYS verify Stripe subscription state after EVERY `billing.attach()` call!**
-
-This ensures the Stripe subscription state matches Autumn's internal state.
+**ALWAYS verify Stripe subscription state after EVERY billing action!**
 
 ### `expectStripeSubscriptionCorrect` (PREFERRED for new tests)
 
-Verifies Stripe subscriptions match expected state derived from customer products.
-Handles inline entity-scoped prices, subscription schedules, and cancellation.
-Uses `buildStripePhasesUpdate` (production code) to compute expected state.
+Verifies Stripe subscriptions match expected state derived from customer products. Handles inline prices, schedules, cancellation.
 
 ```typescript
-import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
-
 await expectStripeSubscriptionCorrect({
   ctx,                          // TestContext from initScenario
   customerId,
@@ -291,68 +336,43 @@ await expectStripeSubscriptionCorrect({
     subCount?: number,          // Expected total subscription count
     subId?: string,             // Verify a specific subscription only
     status?: "active" | "trialing",
-    shouldBeCanceling?: boolean, // Override: expect canceling state
+    shouldBeCanceling?: boolean,
     rewards?: string[],         // Expected coupon/discount IDs
     debug?: boolean,            // Log detailed comparison info
   },
 });
 ```
 
-**Key features:**
+Key features:
 - Matches inline items by `autumn_customer_price_id` metadata
-- Validates `unit_amount_decimal` on inline prices — catches stale/wrong price amounts on Stripe subscription items
-- Validates schedule phases (multi_phase scenarios) including item-level comparison
-- Handles post-cycle schedule release (Stripe keeps schedule ID but status is "released")
+- Validates `unit_amount_decimal` on inline prices
+- Validates schedule phases (multi_phase scenarios)
 - Works with entity-scoped prepaid products
 
-```typescript
-// Basic usage — verify all subscriptions for a customer
-await expectStripeSubscriptionCorrect({ ctx, customerId });
+### `expectSubToBeCorrect` (Legacy)
 
-// With subscription count check
-await expectStripeSubscriptionCorrect({
-  ctx,
-  customerId,
-  options: { subCount: 1 },
-});
-
-// Debug mode for troubleshooting
-await expectStripeSubscriptionCorrect({
-  ctx,
-  customerId,
-  options: { debug: true },
-});
-```
-
-### `expectSubToBeCorrect` (Legacy — use for existing tests only)
-
-Deep verification of subscription state in database. **Use for paid products.**
+Deep verification of subscription state in database. **Use for existing tests only.**
 
 ```typescript
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
-
 await expectSubToBeCorrect({
   db: ctx.db,
   customerId,
   org: ctx.org,
   env: ctx.env,
-  entityId?: string,        // For entity-level subscription
-  subCount?: number,        // Expected subscription count
+  entityId?: string,
+  subCount?: number,
   flags: {
     checkNotTrialing?: true,
     checkTrialing?: true,
-    // Other flags as needed
   },
 });
 ```
 
 ### `expectNoStripeSubscription`
 
-Verify customer has no active Stripe subscriptions. **Use for free products OR after downgrading to free.**
+Verify customer has no active Stripe subscriptions. **Use for free products or after downgrading to free.**
 
 ```typescript
-import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
-
 await expectNoStripeSubscription({
   db: ctx.db,
   customerId,
@@ -366,91 +386,47 @@ await expectNoStripeSubscription({
 | Scenario | Utility |
 |----------|---------|
 | New test with paid product | `expectStripeSubscriptionCorrect` |
-| New test with entity-scoped inline prices | `expectStripeSubscriptionCorrect` |
-| Existing test (don't change unless updating) | `expectSubToBeCorrect` |
+| Entity-scoped inline prices | `expectStripeSubscriptionCorrect` |
+| Existing test (don't change) | `expectSubToBeCorrect` |
 | Free product / downgrade to free | `expectNoStripeSubscription` |
 | Scheduled downgrade (before cycle) | `expectStripeSubscriptionCorrect` (validates schedule phases) |
 
-## Complete Example
+## Cache vs DB Verification
+
+### `expectFeatureCachedAndDb`
+
+Fetches customer from cache AND DB (`skip_cache: "true"`), asserts feature balance + usage match on both.
 
 ```typescript
-test.concurrent(`${chalk.yellowBright("trial: full lifecycle")}`, async () => {
-  const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-  const priceItem = items.monthlyPrice({ price: 20 });
-  const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
+await expectFeatureCachedAndDb({
+  autumn: autumnV1,
+  customerId,
+  featureId: TestFeature.Messages,
+  balance: 90,
+  usage: 10,
+});
+```
 
-  const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
-    customerId: "trial-lifecycle",
-    setup: [
-      s.customer({ paymentMethod: "success" }),
-      s.products({ list: [pro] }),
-    ],
-    actions: [s.attach({ productId: pro.id })],
-  });
+## Invoice Amount Calculation
 
-  // Initial state: paid, not trialing
-  const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-  
-  await expectProductActive({ customer: customerBefore, productId: pro.id });
-  await expectProductNotTrialing({ customer: customerBefore, productId: pro.id });
-  
-  expectCustomerFeatureCorrect({
-    customer: customerBefore,
-    featureId: TestFeature.Messages,
-    includedUsage: 100,
-    balance: 100,
-    usage: 0,
-  });
+### `calculateExpectedInvoiceAmount`
 
-  expectCustomerInvoiceCorrect({
-    customer: customerBefore,
-    count: 1,
-    latestTotal: 20,
-  });
+Pure calculation from ProductItem[] — no DB/Stripe calls. Handles fixed prices, consumable overage, prepaid, tiered pricing, and proration.
 
-  // Add trial
-  await autumnV1.subscriptions.update({
-    customer_id: customerId,
-    product_id: pro.id,
-    free_trial: { length: 14, duration: FreeTrialDuration.Day, card_required: true },
-  });
-
-  const customerWithTrial = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-  await expectProductTrialing({
-    customer: customerWithTrial,
-    productId: pro.id,
-    trialEndsAt: advancedTo + ms.days(14),
-  });
-
-  // Invoice: initial + refund = 2
-  expectCustomerInvoiceCorrect({
-    customer: customerWithTrial,
-    count: 2,
-    latestTotal: -20,  // Refund
-  });
-
-  // Remove trial
-  await autumnV1.subscriptions.update({
-    customer_id: customerId,
-    product_id: pro.id,
-    free_trial: null,
-  });
-
-  const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-  await expectProductNotTrialing({ customer: customerAfter, productId: pro.id });
-  await expectProductActive({ customer: customerAfter, productId: pro.id });
-
-  // Invoice: initial + refund + charge = 3
-  expectCustomerInvoiceCorrect({
-    customer: customerAfter,
-    count: 3,
-    latestTotal: 20,
-  });
-
-  // Verify Stripe subscription matches expected state
-  await expectStripeSubscriptionCorrect({ ctx, customerId });
+```typescript
+const expected = calculateExpectedInvoiceAmount({
+  items: [priceItem, messagesItem],
+  usage?: [{ featureId: TestFeature.Messages, value: 150 }],
+  proration?: {
+    billingPeriod: { start: number; end: number },
+    now: number,
+    applyTo?: "fixed" | "all",
+  },
+  options?: {
+    includeFixed?: boolean,   // Default: true
+    includeUsage?: boolean,   // Default: true
+    onlyArrear?: boolean,     // Default: false
+  },
 });
 ```
 
@@ -458,23 +434,33 @@ test.concurrent(`${chalk.yellowBright("trial: full lifecycle")}`, async () => {
 
 ### `expectCustomerRolloverCorrect`
 
-Verify customer feature rollover state.
-
 ```typescript
 import { expectCustomerRolloverCorrect, expectNoRollovers } from "@tests/integration/billing/utils/rollover/expectCustomerRolloverCorrect";
 
-// Check rollover balances
 expectCustomerRolloverCorrect({
   customer,
   featureId: TestFeature.Messages,
-  expectedRollovers: [{ balance: 150 }],  // Array of expected rollovers
-  totalBalance: 550,                       // Optional: verify total balance
+  expectedRollovers: [{ balance: 150 }],
+  totalBalance: 550,
 });
 
-// Verify NO rollovers exist
 expectNoRollovers({
   customer,
   featureId: TestFeature.Messages,
+});
+```
+
+## Error Testing
+
+### `expectAutumnError`
+
+```typescript
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
+import { ErrCode } from "@autumn/shared";
+
+await expectAutumnError({
+  errCode: ErrCode.CustomerNotFound,
+  func: () => autumnV1.customers.get("invalid-id"),
 });
 ```
 
@@ -486,7 +472,4 @@ import { ms } from "@autumn/shared";
 ms.days(7)      // 7 days in milliseconds
 ms.hours(2)     // 2 hours in milliseconds
 ms.minutes(30)  // 30 minutes in milliseconds
-
-// Usage
-const trialEnd = advancedTo + ms.days(14);
 ```
