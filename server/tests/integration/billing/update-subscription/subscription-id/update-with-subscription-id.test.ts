@@ -89,12 +89,14 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: update quantity b
 		customer_id: customerId,
 		plans: [
 			{
+				plan_id: addon.id,
 				subscription_id: "addon-small",
 				feature_quantities: [
 					{ feature_id: TestFeature.Messages, quantity: 100 },
 				],
 			},
 			{
+				plan_id: addon.id,
 				subscription_id: "addon-large",
 				feature_quantities: [
 					{ feature_id: TestFeature.Messages, quantity: 200 },
