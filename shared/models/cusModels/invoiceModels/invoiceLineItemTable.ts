@@ -1,13 +1,12 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
-	index,
 	jsonb,
 	numeric,
 	pgTable,
 	text,
+	unique,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn, sqlNow } from "../../../db/utils.js";
 import type { InvoiceLineItemDiscount } from "./invoiceLineItemModels.js";
@@ -18,11 +17,12 @@ export const invoiceLineItems = pgTable(
 	{
 		id: text("id").primaryKey(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
-		invoice_id: text("invoice_id").notNull(),
+		invoice_id: text("invoice_id"), // Nullable for deferred/pending line items
 
 		// Stripe identifiers
-		stripe_id: text("stripe_id"), // Stripe invoice item/line ID
+		stripe_id: text("stripe_id"), // Stripe invoice line item ID (il_xxx)
 		stripe_invoice_id: text("stripe_invoice_id"), // Stripe invoice ID
+		stripe_invoice_item_id: text("stripe_invoice_item_id"), // Original Stripe invoice item ID (ii_xxx) for linking deferred items
 		stripe_subscription_item_id: text("stripe_subscription_item_id"), // Groups tiered line items
 		stripe_product_id: text("stripe_product_id"),
 		stripe_price_id: text("stripe_price_id"),
@@ -81,9 +81,7 @@ export const invoiceLineItems = pgTable(
 			name: "invoice_line_items_invoice_id_fkey",
 		}).onDelete("cascade"),
 		// Unique partial index on stripe_id for upsert support
-		index("invoice_line_items_stripe_id_unique")
-			.on(table.stripe_id)
-			.where(sql`stripe_id IS NOT NULL`),
+		unique("invoice_line_items_stripe_id_unique").on(table.stripe_id),
 	],
 );
 

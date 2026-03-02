@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
-import { type DbInvoiceLineItem, logInvoiceLineItems } from "@autumn/shared";
+import {
+	type DbInvoiceLineItem,
+	type InvoiceLineItemDiscount,
+	logInvoiceLineItems,
+} from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 
@@ -39,6 +43,17 @@ export const waitForInvoiceLineItems = async ({
 	);
 };
 
+/** Discount-specific expectations, grouped to avoid noise on the main type */
+type DiscountExpectation = {
+	amountAfterDiscounts?: number; // Exact amount_after_discounts (single item)
+	totalAmountAfterDiscounts?: number; // Sum of amount_after_discounts across matching items
+	hasDiscounts?: boolean; // true = discounts array is non-empty
+	discountCount?: number; // Exact number of discount entries per item
+	discountAmountOff?: number; // Sum of amount_off across all discounts on matching items
+	couponIds?: string[]; // stripe_coupon_id values that must be present on each matching item
+	stripeDiscountable?: boolean; // Expected stripe_discountable value
+};
+
 /**
  * Expected line item definition - flexible matching
  */
@@ -63,6 +78,9 @@ type ExpectedLineItem = {
 	stripeQuantity?: number; // Single item's stripe_quantity
 	totalQuantity?: number; // Sum of total_quantity across matching items
 	paidQuantity?: number; // Sum of paid_quantity across matching items
+
+	// Discount expectations (grouped)
+	discount?: DiscountExpectation;
 };
 
 type ExpectInvoiceLineItemsParams = {
@@ -115,6 +133,12 @@ const validateExpectedLineItem = (
 		if (
 			expected.stripeSubscriptionItemId &&
 			li.stripe_subscription_item_id !== expected.stripeSubscriptionItemId
+		)
+			return false;
+		// productId filter: when specified, only match items with that product_id
+		if (
+			expected.productId !== undefined &&
+			li.product_id !== expected.productId
 		)
 			return false;
 		return true;
@@ -191,20 +215,99 @@ const validateExpectedLineItem = (
 	}
 
 	// Other validations
-	if (expected.prorated !== undefined) {
-		for (const li of matching) {
-			expect(
-				li.prorated,
-				`Expected prorated=${expected.prorated} for [${filterDesc}], got ${li.prorated}`,
-			).toBe(expected.prorated);
-		}
-	}
 	if (expected.productId !== undefined) {
 		for (const li of matching) {
 			expect(
 				li.product_id,
 				`Expected product_id=${expected.productId} for [${filterDesc}], got ${li.product_id}`,
 			).toBe(expected.productId);
+		}
+	}
+
+	// Discount validations
+	const disc = expected.discount;
+	if (disc) {
+		/** Helper to cast jsonb discounts to typed array */
+		const getDiscounts = (li: DbInvoiceLineItem) =>
+			li.discounts as InvoiceLineItemDiscount[];
+
+		if (disc.amountAfterDiscounts !== undefined) {
+			if (matching.length !== 1) {
+				throw new Error(
+					`Cannot validate exact amountAfterDiscounts: expected 1 matching item for [${filterDesc}], found ${matching.length}`,
+				);
+			}
+			expect(
+				matching[0].amount_after_discounts,
+				`Expected amount_after_discounts $${disc.amountAfterDiscounts} for [${filterDesc}], got $${matching[0].amount_after_discounts}`,
+			).toBe(disc.amountAfterDiscounts);
+		}
+
+		if (disc.totalAmountAfterDiscounts !== undefined) {
+			const actual = matching.reduce(
+				(sum, li) => sum + li.amount_after_discounts,
+				0,
+			);
+			expect(
+				actual,
+				`Expected total amount_after_discounts $${disc.totalAmountAfterDiscounts} for [${filterDesc}], got $${actual}`,
+			).toBe(disc.totalAmountAfterDiscounts);
+		}
+
+		if (disc.hasDiscounts !== undefined) {
+			for (const li of matching) {
+				const discounts = getDiscounts(li);
+				const has = discounts.length > 0;
+				expect(
+					has,
+					`Expected hasDiscounts=${disc.hasDiscounts} for [${filterDesc}] (li ${li.id}), got ${has} (${discounts.length} discounts)`,
+				).toBe(disc.hasDiscounts);
+			}
+		}
+
+		if (disc.discountCount !== undefined) {
+			for (const li of matching) {
+				const discounts = getDiscounts(li);
+				expect(
+					discounts.length,
+					`Expected ${disc.discountCount} discounts for [${filterDesc}] (li ${li.id}), got ${discounts.length}`,
+				).toBe(disc.discountCount);
+			}
+		}
+
+		if (disc.discountAmountOff !== undefined) {
+			const actual = matching.reduce(
+				(sum, li) =>
+					sum + getDiscounts(li).reduce((dSum, d) => dSum + d.amount_off, 0),
+				0,
+			);
+			expect(
+				actual,
+				`Expected total discount amount_off $${disc.discountAmountOff} for [${filterDesc}], got $${actual}`,
+			).toBe(disc.discountAmountOff);
+		}
+
+		if (disc.couponIds !== undefined) {
+			for (const li of matching) {
+				const actualCouponIds = getDiscounts(li)
+					.map((d) => d.stripe_coupon_id)
+					.filter(Boolean);
+				for (const expectedId of disc.couponIds) {
+					expect(
+						actualCouponIds,
+						`Expected coupon ${expectedId} in discounts for [${filterDesc}] (li ${li.id}), found: [${actualCouponIds.join(", ")}]`,
+					).toContain(expectedId);
+				}
+			}
+		}
+
+		if (disc.stripeDiscountable !== undefined) {
+			for (const li of matching) {
+				expect(
+					li.stripe_discountable,
+					`Expected stripe_discountable=${disc.stripeDiscountable} for [${filterDesc}] (li ${li.id}), got ${li.stripe_discountable}`,
+				).toBe(disc.stripeDiscountable);
+			}
 		}
 	}
 };

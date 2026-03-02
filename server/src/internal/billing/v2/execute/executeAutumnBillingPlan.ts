@@ -15,11 +15,13 @@ export const executeAutumnBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
 	stripeInvoice,
+	stripeInvoiceItems,
 	autumnInvoice,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeInvoice?: Stripe.Invoice;
+	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
 }) => {
 	const { db } = ctx;
@@ -113,6 +115,21 @@ export const executeAutumnBillingPlan = async ({
 			env: ctx.env,
 			stripeInvoiceId: stripeInvoice.id,
 			autumnInvoiceId: autumnInvoice.id,
+			billingLineItems: autumnBillingPlan.lineItems,
+		});
+	}
+
+	// 9. Trigger workflow to store deferred line items (ProrateNextCycle pending items)
+	// These are invoice items created without an invoice — stored with invoice_id = null
+	if (
+		stripeInvoiceItems &&
+		stripeInvoiceItems.length > 0 &&
+		autumnBillingPlan.lineItems
+	) {
+		await workflows.triggerStoreDeferredInvoiceLineItems({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			deferredStripeInvoiceItems: stripeInvoiceItems,
 			billingLineItems: autumnBillingPlan.lineItems,
 		});
 	}

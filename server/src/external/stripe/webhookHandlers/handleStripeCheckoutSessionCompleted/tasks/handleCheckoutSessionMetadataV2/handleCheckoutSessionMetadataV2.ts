@@ -30,22 +30,21 @@ export const handleCheckoutSessionMetadataV2 = async ({
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
-	// 1. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
+	// 1. Sync Autumn metadata onto subscription items created by checkout
+	await syncSubscriptionItemMetadataFromCheckout({
+		ctx,
+		checkoutContext,
+	});
+
+	// 2. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
 	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData,
 	});
 
-	// 2. Modify Stripe subscription to include other interval prices / 0 quantity prices
+	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
 	await modifyStripeSubscriptionFromCheckout({
-		ctx,
-		checkoutContext,
-		deferredData: updatedDeferredData,
-	});
-
-	// 3. Sync Autumn metadata onto subscription items created by checkout
-	await syncSubscriptionItemMetadataFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData: updatedDeferredData,

@@ -6,13 +6,16 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectLatestInvoiceCorrect } from "@tests/integration/billing/utils/expectLatestInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
+import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -250,6 +253,345 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 				direction: "charge",
 				totalQuantity: 400,
 				paidQuantity: 400,
+			},
+		],
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: ProrateNextCycle increase - deferred proration on renewal invoice
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Pro ($20/mo) with prepaid messages (on_increase: ProrateNextCycle, 0 included, $10/100 units)
+ * - Attach with 100 messages (1 pack = $10)
+ * - Advance 15 days (mid-cycle)
+ * - Increase from 100 → 400 (+3 packs)
+ * - No immediate invoice (deferred to next cycle)
+ * - Advance to next billing cycle
+ *
+ * Expected Renewal Invoice Line Items:
+ * - Prorated refund for old quantity (1 pack, ~half-period) — direction=refund, prorated=true
+ * - Prorated charge for new quantity (4 packs, ~half-period) — direction=charge, prorated=true
+ * - Full renewal base price ($20) — direction=charge, prorated=false
+ * - Full renewal prepaid charge (4 packs × $10 = $40) — direction=charge, prorated=false
+ * - All linked to correct productId and featureId
+ */
+test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate next cycle increase - deferred proration on renewal")}`, async () => {
+	const customerId = "update-qty-li-prorate-next";
+	const billingUnits = 100;
+	const pricePerPack = 10;
+	const basePrice = 20;
+
+	const prepaidMessages = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits,
+		price: pricePerPack,
+		config: {
+			on_increase: OnIncrease.ProrateNextCycle,
+			on_decrease: OnDecrease.ProrateImmediately,
+		},
+	});
+
+	const pro = products.pro({
+		id: "pro-prorate-next",
+		items: [prepaidMessages],
+	});
+
+	const { autumnV1, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			// Attach with 100 messages (1 pack = $10)
+			s.billing.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+			}),
+		],
+	});
+
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = customerBefore.invoices?.length ?? 0;
+
+	// Preview should show $0 (deferred to next cycle)
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
+	});
+	expect(preview.total).toBe(0);
+
+	// Update quantity from 100 → 400
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
+	});
+
+	// Balance should be updated immediately
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer: afterUpdate,
+		featureId: TestFeature.Messages,
+		balance: 400,
+	});
+
+	// No new finalized invoice yet
+	const finalizedInvoices = afterUpdate.invoices?.filter(
+		(inv) => inv.status === "paid" || inv.status === "open",
+	);
+	expect(finalizedInvoices?.length).toBe(invoiceCountBefore);
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Should have a new invoice
+	await expectCustomerInvoiceCorrect({
+		customer: afterCycle,
+		count: invoiceCountBefore + 1,
+	});
+
+	const renewalInvoice = afterCycle.invoices?.[0];
+	expect(renewalInvoice?.stripe_id).toBeDefined();
+
+	// ═══════════════════════════════════════════════════════════════════════════════
+	// KEY TEST: Verify renewal invoice has deferred prorated + renewal line items
+	// ═══════════════════════════════════════════════════════════════════════════════
+
+	await expectInvoiceLineItemsCorrect({
+		stripeInvoiceId: renewalInvoice!.stripe_id,
+		expectedLineItems: [
+			// Base price renewal ($20, not prorated)
+			{
+				isBasePrice: true,
+				direction: "charge",
+				amount: basePrice,
+				productId: pro.id,
+			},
+			// Deferred prorated refund for old quantity (1 pack, prorated ~half-period)
+			{
+				featureId: TestFeature.Messages,
+				direction: "refund",
+				billingTiming: "in_advance",
+				prorated: true,
+				productId: pro.id,
+				totalAmount: -10,
+				minCount: 1,
+			},
+
+			// Full renewal charge for new quantity (4 packs × $10 = $40, not prorated)
+			{
+				featureId: TestFeature.Messages,
+				direction: "charge",
+				billingTiming: "in_advance",
+				totalAmount: 80,
+				productId: pro.id,
+				minCount: 2,
+			},
+		],
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: ProrateNextCycle increase with multiple features - deferred prorations on renewal
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Pro ($20/mo) with:
+ *   - Prepaid messages (on_increase: ProrateNextCycle, 0 included, $10/100 units)
+ *   - Prepaid words (on_increase: ProrateNextCycle, 0 included, $5/100 units)
+ * - Attach with 100 messages + 100 words
+ * - Advance 15 days (mid-cycle)
+ * - Increase messages 100→300, words 100→400
+ * - Advance to next billing cycle
+ *
+ * Expected Renewal Invoice Line Items:
+ * - Base price renewal ($20)
+ * - Messages: prorated refund + prorated charge (deferred) + full renewal (3 packs × $10 = $30)
+ * - Words: prorated refund + prorated charge (deferred) + full renewal (4 packs × $5 = $20)
+ * - All linked to correct productId and featureId
+ */
+test.concurrent(`${chalk.yellowBright("update-quantity-line-items 4: prorate next cycle multi-feature - deferred prorations on renewal")}`, async () => {
+	const customerId = "update-qty-li-prorate-next-multi";
+	const billingUnits = 100;
+	const messagesPricePerPack = 10;
+	const wordsPricePerPack = 5;
+	const basePrice = 20;
+
+	const prepaidMessages = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits,
+		price: messagesPricePerPack,
+		config: {
+			on_increase: OnIncrease.ProrateNextCycle,
+			on_decrease: OnDecrease.ProrateImmediately,
+		},
+	});
+
+	const prepaidWords = items.prepaid({
+		featureId: TestFeature.Words,
+		includedUsage: 0,
+		billingUnits,
+		price: wordsPricePerPack,
+		config: {
+			on_increase: OnIncrease.ProrateNextCycle,
+			on_decrease: OnDecrease.ProrateImmediately,
+		},
+	});
+
+	const pro = products.pro({
+		id: "pro-prorate-next-multi",
+		items: [prepaidMessages, prepaidWords],
+	});
+
+	const { autumnV1, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			// Attach with 100 messages + 100 words
+			s.billing.attach({
+				productId: pro.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 100 },
+					{ feature_id: TestFeature.Words, quantity: 100 },
+				],
+			}),
+			// Advance 15 days to mid-cycle
+			s.advanceTestClock({ days: 15 }),
+		],
+	});
+
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = customerBefore.invoices?.length ?? 0;
+
+	// Update both features
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 300 },
+			{ feature_id: TestFeature.Words, quantity: 400 },
+		],
+	});
+
+	// Balances should be updated immediately
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer: afterUpdate,
+		featureId: TestFeature.Messages,
+		balance: 300,
+	});
+	expectCustomerFeatureCorrect({
+		customer: afterUpdate,
+		featureId: TestFeature.Words,
+		balance: 400,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer: afterUpdate,
+		count: invoiceCountBefore,
+	});
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Should have a new invoice
+	await expectCustomerInvoiceCorrect({
+		customer: afterCycle,
+		count: invoiceCountBefore + 1,
+	});
+
+	const renewalInvoice = afterCycle.invoices?.[0];
+	expect(renewalInvoice?.stripe_id).toBeDefined();
+
+	// ═══════════════════════════════════════════════════════════════════════════════
+	// KEY TEST: Verify renewal invoice has deferred prorated + renewal line items for both features
+	// ═══════════════════════════════════════════════════════════════════════════════
+
+	await expectInvoiceLineItemsCorrect({
+		stripeInvoiceId: renewalInvoice!.stripe_id,
+		expectedLineItems: [
+			// Base price renewal ($20)
+			{
+				isBasePrice: true,
+				direction: "charge",
+				amount: basePrice,
+				prorated: false,
+				productId: pro.id,
+			},
+
+			// --- Messages ---
+			// Deferred prorated refund (old: 1 pack)
+			{
+				featureId: TestFeature.Messages,
+				direction: "refund",
+				prorated: true,
+				productId: pro.id,
+				minCount: 1,
+			},
+			// Deferred prorated charge (new: 3 packs)
+			{
+				featureId: TestFeature.Messages,
+				direction: "charge",
+				prorated: true,
+				productId: pro.id,
+				minCount: 1,
+			},
+			// Full renewal (3 packs × $10 = $30)
+			{
+				featureId: TestFeature.Messages,
+				direction: "charge",
+				prorated: false,
+				totalAmount: 30,
+				productId: pro.id,
+				minCount: 1,
+			},
+
+			// --- Words ---
+			// Deferred prorated refund (old: 1 pack)
+			{
+				featureId: TestFeature.Words,
+				direction: "refund",
+				prorated: true,
+				productId: pro.id,
+				minCount: 1,
+			},
+			// Deferred prorated charge (new: 4 packs)
+			{
+				featureId: TestFeature.Words,
+				direction: "charge",
+				prorated: true,
+				productId: pro.id,
+				minCount: 1,
+			},
+			// Full renewal (4 packs × $5 = $20)
+			{
+				featureId: TestFeature.Words,
+				direction: "charge",
+				prorated: false,
+				totalAmount: 20,
+				productId: pro.id,
+				minCount: 1,
 			},
 		],
 	});

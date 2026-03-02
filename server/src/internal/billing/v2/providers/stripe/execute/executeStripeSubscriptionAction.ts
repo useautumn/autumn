@@ -125,6 +125,7 @@ export const executeStripeSubscriptionAction = async ({
 			stripeSubscription,
 			deferred: true,
 			requiredAction,
+			autumnInvoice,
 		};
 	}
 

@@ -4,8 +4,10 @@ import {
 	type LineItemContext,
 	orgToCurrency,
 	priceToProrationConfig,
+	sumValues,
 	usagePriceToLineItem,
 } from "@autumn/shared";
+import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
 import type { AllocatedInvoiceContext } from "../allocatedInvoiceContext";
@@ -33,16 +35,19 @@ export const computeAllocatedInvoiceLineItems = ({
 		});
 	}
 
-	const { shouldApplyProration, skipLineItems } = priceToProrationConfig({
-		price: customerPrice.price,
-		isUpgrade: allocatedInvoiceIsUpgrade({
-			billingContext,
-		}),
-	});
+	const { shouldApplyProration, skipLineItems, chargeImmediately } =
+		priceToProrationConfig({
+			price: customerPrice.price,
+			isUpgrade: allocatedInvoiceIsUpgrade({
+				billingContext,
+			}),
+		});
 
-	if (skipLineItems) {
+	if (
+		skipLineItems ||
+		isStripeSubscriptionTrialing(billingContext.stripeSubscription)
+	)
 		return [];
-	}
 
 	const billingPeriod = getLineItemBillingPeriod({
 		billingContext: billingContext,
@@ -69,16 +74,28 @@ export const computeAllocatedInvoiceLineItems = ({
 		},
 		options: {
 			shouldProrateOverride: shouldApplyProration,
+			chargeImmediatelyOverride: chargeImmediately,
 		},
 	});
 
 	const newLineItem = usagePriceToLineItem({
-		cusEnt: billingContext.customerEntitlement,
+		cusEnt: billingContext.updatedCutomerEntitlement,
 		context: lineItemContext,
 		options: {
 			shouldProrateOverride: shouldApplyProration,
+			chargeImmediatelyOverride: chargeImmediately,
 		},
 	});
+
+	// Don't return line items if they sum to 0
+	if (
+		sumValues([
+			previousLIneItem?.amountAfterDiscounts ?? 0,
+			newLineItem?.amountAfterDiscounts ?? 0,
+		]) === 0
+	) {
+		return [];
+	}
 
 	return [previousLIneItem, newLineItem];
 };

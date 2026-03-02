@@ -15,7 +15,9 @@ import { FeatureService } from "@/internal/features/FeatureService";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface InvoiceFinalizedContext {
-	stripeInvoice: ExpandedStripeInvoice<["discounts.source.coupon"]>;
+	stripeInvoice: ExpandedStripeInvoice<
+		["discounts.source.coupon", "total_discount_amounts"]
+	>;
 	stripeSubscription: Stripe.Subscription;
 	stripeSubscriptionId: string;
 	fullCustomer: FullCustomer;
@@ -36,7 +38,7 @@ export const setupInvoiceFinalizedContext = async ({
 	const stripeInvoice = await getStripeInvoice({
 		stripeClient: stripeCli,
 		invoiceId: event.data.object.id!,
-		expand: ["discounts.source.coupon"],
+		expand: ["discounts.source.coupon", "total_discount_amounts"],
 	});
 
 	// 2. Get subscription ID - return null if not a subscription invoice

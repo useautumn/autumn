@@ -4,6 +4,7 @@ import type {
 	StripeBillingPlanResult,
 } from "@autumn/shared";
 import { StripeBillingStage } from "@autumn/shared";
+import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
@@ -62,11 +63,12 @@ export const executeStripeBillingPlan = async ({
 		if (invoiceResult.deferred) return invoiceResult;
 	}
 
+	let stripeInvoiceItems: Stripe.InvoiceItem[] | undefined;
 	if (
 		stripeInvoiceItemsAction?.createInvoiceItems &&
 		!resumeAfterSubscriptionAction
 	) {
-		await createStripeInvoiceItems({
+		stripeInvoiceItems = await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: stripeInvoiceItemsAction.createInvoiceItems,
 		});
@@ -123,6 +125,7 @@ export const executeStripeBillingPlan = async ({
 	return {
 		stripeSubscription: subscriptionResult?.stripeSubscription,
 		stripeInvoice,
+		stripeInvoiceItems,
 		requiredAction:
 			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
 		autumnInvoice,

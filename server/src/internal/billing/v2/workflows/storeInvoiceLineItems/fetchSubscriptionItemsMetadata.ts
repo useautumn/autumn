@@ -2,21 +2,28 @@ import type Stripe from "stripe";
 import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import { getStripeSubscriptionItem } from "@/external/stripe/subscriptions/subscriptionItems/operations/getStripeSubscriptionItem.js";
 
-/** Map of subscription_item_id -> metadata */
-export type SubscriptionItemMetadataMap = Map<string, Stripe.Metadata>;
+/** Info about a subscription item needed for line item matching and filtering */
+export type SubscriptionItemInfo = {
+	metadata: Stripe.Metadata;
+	/** Whether the price is metered (usage-based) */
+	isMetered: boolean;
+};
+
+/** Map of subscription_item_id -> info */
+export type SubscriptionItemInfoMap = Map<string, SubscriptionItemInfo>;
 
 /**
- * Fetches metadata for subscription items referenced by invoice line items.
- * Only fetches for line items that have a subscription_item parent (not invoice items).
+ * Fetches info for subscription items referenced by invoice line items.
+ * Returns metadata (for matching) and isMetered flag (for filtering $0 placeholders).
  */
-export const fetchSubscriptionItemsMetadata = async ({
+export const fetchSubscriptionItemsInfo = async ({
 	stripeCli,
 	stripeLineItems,
 }: {
 	stripeCli: Stripe;
 	stripeLineItems: ExpandedStripeInvoiceLineItem[];
-}): Promise<SubscriptionItemMetadataMap> => {
-	const metadataMap: SubscriptionItemMetadataMap = new Map();
+}): Promise<SubscriptionItemInfoMap> => {
+	const infoMap: SubscriptionItemInfoMap = new Map();
 
 	// Collect unique subscription item IDs
 	const subscriptionItemIds = new Set<string>();
@@ -29,7 +36,7 @@ export const fetchSubscriptionItemsMetadata = async ({
 	}
 
 	if (subscriptionItemIds.size === 0) {
-		return metadataMap;
+		return infoMap;
 	}
 
 	// Fetch subscription items in parallel
@@ -38,16 +45,24 @@ export const fetchSubscriptionItemsMetadata = async ({
 			stripeCli,
 			subscriptionItemId: id,
 		});
-		return subItem ? { id, metadata: subItem.metadata } : null;
+		if (!subItem) return null;
+
+		const price = subItem.price as Stripe.Price;
+		const isMetered = price.recurring?.usage_type === "metered";
+
+		return { id, metadata: subItem.metadata, isMetered };
 	});
 
 	const results = await Promise.all(fetchPromises);
 
 	for (const result of results) {
 		if (result) {
-			metadataMap.set(result.id, result.metadata);
+			infoMap.set(result.id, {
+				metadata: result.metadata,
+				isMetered: result.isMetered,
+			});
 		}
 	}
 
-	return metadataMap;
+	return infoMap;
 };

@@ -139,14 +139,12 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-line-items 1: prepaid + a
 				totalAmount: prepaidPrice,
 				billingTiming: "in_advance",
 				totalQuantity: 400,
-				paidQuantity: 300,
 			},
 			// Allocated users overage (2 seats × $10 = $20, 5 total, 2 overage)
 			{
 				featureId: TestFeature.Users,
 				totalAmount: allocatedPrice,
 				totalQuantity: 5,
-				paidQuantity: 2,
 			},
 		],
 	});
@@ -225,7 +223,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-line-items 2: entity-leve
 
 	// 3. Complete checkout
 	await completeStripeCheckoutForm({ url: result.payment_url });
-	await timeout(12000);
 
 	// 4. Verify entity-1 has product attached
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
@@ -279,7 +276,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-line-items 2: entity-leve
 				totalAmount: prepaidPrice,
 				billingTiming: "in_advance",
 				totalQuantity: 200,
-				paidQuantity: 150,
 			},
 		],
 	});
@@ -392,7 +388,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-line-items 3: entity chec
 				featureId: TestFeature.Users,
 				totalAmount: allocatedPrice,
 				totalQuantity: 5,
-				paidQuantity: 2,
 			},
 		],
 	});

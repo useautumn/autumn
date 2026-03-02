@@ -124,6 +124,9 @@ const mergeStripeAndBillingLineItems = ({
 	const primaryLineItem = billingLineItems[0];
 	const { context } = primaryLineItem;
 	const priceDetails = stripeLineItem.pricing?.price_details;
+	const stripeProration =
+		(stripeLineItem as ExpandedStripeInvoiceLineItem & { proration?: boolean })
+			.proration ?? primaryLineItem.prorated;
 
 	// Determine discount data source based on discountable flag
 	// When discountable === false, Autumn pre-calculates discounts and sends the post-discount
@@ -239,6 +242,8 @@ const mergeStripeAndBillingLineItems = ({
 		// Stripe fields from actual line item
 		stripe_id: stripeLineItem.id,
 		stripe_invoice_id: stripeInvoiceId,
+		stripe_invoice_item_id:
+			stripeLineItem.parent?.invoice_item_details?.invoice_item ?? null,
 		stripe_subscription_item_id: stripeSubscriptionItemId,
 		stripe_product_id: (priceDetails?.product as string) ?? null,
 		stripe_price_id: priceDetails?.price ?? null,
@@ -264,7 +269,7 @@ const mergeStripeAndBillingLineItems = ({
 		// All other context from Autumn LineItem (use primary)
 		direction: context.direction,
 		billing_timing: context.billingTiming,
-		prorated: primaryLineItem.prorated,
+		prorated: stripeProration,
 
 		price_id: context.price.id,
 		customer_product_ids: customerProductIds,
@@ -310,6 +315,9 @@ const createDbLineItemFromStripeOnly = ({
 		amount: stripeLineItem.amount - discountTotal,
 		currency: stripeLineItem.currency,
 	});
+	const stripeProration =
+		(stripeLineItem as ExpandedStripeInvoiceLineItem & { proration?: boolean })
+			.proration ?? false;
 
 	const stripeQuantity = stripeLineItem.quantity ?? null;
 
@@ -318,6 +326,8 @@ const createDbLineItemFromStripeOnly = ({
 		invoice_id: invoiceId,
 		stripe_id: stripeLineItem.id,
 		stripe_invoice_id: stripeInvoiceId,
+		stripe_invoice_item_id:
+			stripeLineItem.parent?.invoice_item_details?.invoice_item ?? null,
 		stripe_subscription_item_id: stripeSubscriptionItemId,
 		stripe_product_id: (priceDetails?.product as string) ?? null,
 		stripe_price_id: priceDetails?.price ?? null,
@@ -335,7 +345,7 @@ const createDbLineItemFromStripeOnly = ({
 		description_source: "stripe",
 		direction: stripeLineItem.amount >= 0 ? "charge" : "refund",
 		billing_timing: null,
-		prorated: false,
+		prorated: stripeProration,
 
 		// Extract from metadata if available
 		price_id: metadata?.autumn_price_id ?? null,

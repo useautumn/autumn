@@ -27,6 +27,9 @@ export enum JobName {
 	/** Stores invoice line items from Stripe to DB (async to allow extra API calls) */
 	StoreInvoiceLineItems = "store-invoice-line-items",
 
+	/** Stores deferred invoice line items (ProrateNextCycle pending items) before an invoice exists */
+	StoreDeferredInvoiceLineItems = "store-deferred-invoice-line-items",
+
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 }

@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
@@ -86,11 +87,12 @@ export function InvoiceDetailSheet({
 			for (const item of items) {
 				const groupKey = item.stripe_subscription_item_id ?? item.id;
 				const isBasePrice = !item.feature_id;
+				const chargedAmount = item.amount_after_discounts ?? item.amount;
 
 				const existing = groups.get(groupKey);
 				if (existing) {
 					existing.items.push(item);
-					existing.totalAmount += item.amount;
+					existing.totalAmount += chargedAmount;
 				} else {
 					groups.set(groupKey, {
 						groupKey,
@@ -102,7 +104,7 @@ export function InvoiceDetailSheet({
 								}),
 						isBasePrice,
 						items: [item],
-						totalAmount: item.amount,
+						totalAmount: chargedAmount,
 					});
 				}
 			}
@@ -133,6 +135,14 @@ export function InvoiceDetailSheet({
 			style: "currency",
 			currency: currency.toUpperCase(),
 		}).format(absAmount);
+	};
+
+	const formatSignedAmount = (amount: number, currency: string) => {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: currency.toUpperCase(),
+			signDisplay: "auto",
+		}).format(amount);
 	};
 
 	const formatPeriod = (startMs: number | null, endMs: number | null) => {
@@ -170,7 +180,7 @@ export function InvoiceDetailSheet({
 						<CustomerInvoiceStatus status={invoice.status ?? "paid"} />
 					</div>
 				}
-				description={`${formatDate(invoice.created_at)} • ${formatAmount(invoice.total, invoice.currency)}`}
+				description={`${formatDate(invoice.created_at)} • ${formatSignedAmount(invoice.total, invoice.currency)}`}
 			/>
 
 			<div className="flex-1 overflow-y-auto min-h-0">
@@ -224,7 +234,7 @@ export function InvoiceDetailSheet({
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium text-foreground">Total</span>
 						<span className="text-sm font-semibold text-foreground tabular-nums">
-							{formatAmount(invoice.total, invoice.currency)}
+							{formatSignedAmount(invoice.total, invoice.currency)}
 						</span>
 					</div>
 				</SheetSection>
@@ -303,6 +313,17 @@ function LineItemGroupRow({
 		0,
 	);
 
+	const getLineItemHoverTexts = (item: InvoiceLineItem) => [
+		{
+			key: "Line Item ID",
+			value: item.id,
+		},
+		{
+			key: "Stripe Line Item ID",
+			value: item.stripe_id ?? "N/A",
+		},
+	];
+
 	// For multi-item groups (tiered), show grouped display
 	if (!isSingleItem) {
 		return (
@@ -332,12 +353,13 @@ function LineItemGroupRow({
 					</span>
 				</div>
 
-				{/* Tier breakdown - indented and muted */}
+				{/* Tier breakdown - each row has own hover */}
 				<div className="mt-1 ml-3 flex flex-col gap-0.5">
 					{group.items.map((item) => (
 						<TierRow
 							key={item.id}
 							item={item}
+							hoverTexts={getLineItemHoverTexts(item)}
 							formatAmount={formatAmount}
 							currency={currency}
 							showDescriptions={showDescriptions}
@@ -350,80 +372,86 @@ function LineItemGroupRow({
 
 	// Single item display
 	const isRefund = firstItem.direction === "refund";
-
-	const totalDiscountAmount = hasDiscounts
-		? firstItem.discounts.reduce((sum, d) => sum + d.amount_off, 0)
-		: 0;
+	const paidAmount = firstItem.amount_after_discounts ?? firstItem.amount;
 
 	return (
-		<div className="flex flex-col py-1">
-			<div className="flex items-start justify-between gap-2">
-				<div className="flex flex-col min-w-0 flex-1 gap-0.5">
-					{showDescriptions ? (
-						<span className="text-xs text-t3">{firstItem.description}</span>
-					) : (
-						<div className="flex items-center gap-1.5">
-							<span className="text-sm text-t1">{group.label}</span>
-							{!group.isBasePrice && firstItem.total_quantity ? (
-								<Badge
-									variant="muted"
-									className="text-[10px] px-1.5 py-0 text-t3"
-								>
-									Qty: {firstItem.total_quantity}
-								</Badge>
-							) : null}
-						</div>
-					)}
-					{period && <span className="text-xs text-t4">{period}</span>}
-				</div>
-				<div className="flex flex-col items-end shrink-0">
-					{/* Show original amount with strikethrough if discounted */}
-					{hasDiscounts && totalDiscountAmount > 0 && (
-						<span className="text-xs tabular-nums text-t4 line-through">
-							{isRefund ? "-" : ""}
-							{formatAmount(
-								firstItem.amount + totalDiscountAmount,
-								firstItem.currency,
-							)}
-						</span>
-					)}
-					<span
-						className={cn(
-							"text-sm tabular-nums",
-							isRefund ? "text-amber-600" : "text-t1",
+		<AdminHover asChild texts={getLineItemHoverTexts(firstItem)}>
+			<div className="flex flex-col py-1">
+				<div className="flex items-start justify-between gap-2">
+					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
+						{showDescriptions ? (
+							<span className="text-xs text-t3">{firstItem.description}</span>
+						) : (
+							<div className="flex items-center gap-1.5">
+								<span className="text-sm text-t1">{group.label}</span>
+								{(!group.isBasePrice && firstItem.total_quantity) ||
+								(group.isBasePrice &&
+									firstItem.stripe_quantity &&
+									firstItem.stripe_quantity > 1) ? (
+									<Badge
+										variant="muted"
+										className="text-[10px] px-1.5 py-0 text-t3"
+									>
+										Qty:{" "}
+										{group.isBasePrice
+											? firstItem.stripe_quantity
+											: firstItem.total_quantity}
+									</Badge>
+								) : null}
+							</div>
 						)}
-					>
-						{isRefund ? "-" : ""}
-						{formatAmount(firstItem.amount, firstItem.currency)}
-					</span>
+						{period && <span className="text-xs text-t4">{period}</span>}
+					</div>
+					<div className="flex flex-col items-end shrink-0">
+						{/* Show original amount with strikethrough if discounted */}
+						{hasDiscounts && paidAmount !== firstItem.amount && (
+							<span className="text-xs tabular-nums text-t4 line-through">
+								{isRefund ? "-" : ""}
+								{formatAmount(firstItem.amount, firstItem.currency)}
+							</span>
+						)}
+						<span
+							className={cn(
+								"text-sm tabular-nums",
+								isRefund ? "text-amber-600" : "text-t1",
+							)}
+						>
+							{isRefund ? "-" : ""}
+							{formatAmount(paidAmount, firstItem.currency)}
+						</span>
+					</div>
 				</div>
-			</div>
 
-			{/* Discount details */}
-			{hasDiscounts && (
-				<div className="mt-1 flex flex-wrap gap-1.5">
-					{firstItem.discounts.map((discount) => (
-						<DiscountBadge
-							key={
-								discount.stripe_coupon_id ??
-								`${discount.amount_off}-${discount.percent_off}`
-							}
-							discount={discount}
-						/>
-					))}
-				</div>
-			)}
-		</div>
+				{/* Discount details */}
+				{hasDiscounts && (
+					<div className="mt-1 flex flex-wrap gap-1.5">
+						{firstItem.discounts.map((discount) => (
+							<DiscountBadge
+								key={
+									discount.stripe_coupon_id ??
+									`${discount.amount_off}-${discount.percent_off}`
+								}
+								discount={discount}
+								currency={firstItem.currency}
+								formatAmount={formatAmount}
+							/>
+						))}
+					</div>
+				)}
+			</div>
+		</AdminHover>
 	);
 }
 
 function TierRow({
 	item,
+	hoverTexts,
 	formatAmount,
 	currency,
 	showDescriptions,
 }: {
 	item: InvoiceLineItem;
+	hoverTexts: { key: string; value: string }[];
 	formatAmount: (amount: number, currency: string) => string;
 	currency: string;
 	showDescriptions: boolean;
@@ -432,36 +460,42 @@ function TierRow({
 	const quantityLabel = item.total_quantity ? `${item.total_quantity}` : "";
 
 	return (
-		<div className="flex items-center justify-between text-xs text-t3">
-			<span>
-				{showDescriptions ? item.description : `${quantityLabel} units`}
-			</span>
-			<span
-				className={cn("tabular-nums", isRefund ? "text-amber-500" : "text-t3")}
-			>
-				{isRefund ? "-" : ""}
-				{formatAmount(item.amount, currency)}
-			</span>
-		</div>
+		<AdminHover asChild texts={hoverTexts}>
+			<div className="flex items-center justify-between text-xs text-t3">
+				<span>
+					{showDescriptions ? item.description : `${quantityLabel} units`}
+				</span>
+				<span
+					className={cn(
+						"tabular-nums",
+						isRefund ? "text-amber-500" : "text-t3",
+					)}
+				>
+					{isRefund ? "-" : ""}
+					{formatAmount(item.amount_after_discounts ?? item.amount, currency)}
+				</span>
+			</div>
+		</AdminHover>
 	);
 }
 
 function DiscountBadge({
 	discount,
+	currency,
+	formatAmount,
 }: {
 	discount: {
 		amount_off: number;
-		percent_off?: number;
-		stripe_coupon_id?: string;
+		percent_off?: number | null;
+		stripe_coupon_id?: string | null;
 	};
+	currency: string;
+	formatAmount: (amount: number, currency: string) => string;
 }) {
-	let label = "";
-
-	if (discount.percent_off) {
-		label = `${discount.percent_off}% off`;
-	} else if (discount.amount_off) {
-		label = `$${discount.amount_off} off`;
-	}
+	// Show percent_off if defined, otherwise show formatted amount_off
+	const label = discount.percent_off
+		? `${discount.percent_off}% off`
+		: `${formatAmount(discount.amount_off, currency)} off`;
 
 	return (
 		<span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
