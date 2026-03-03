@@ -1,4 +1,8 @@
-import { type ProductItem, UsageModel } from "@autumn/shared";
+import {
+	type ProductItem,
+	type UpdateSubscriptionV0Params,
+	UsageModel,
+} from "@autumn/shared";
 import { useCallback } from "react";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
@@ -83,7 +87,7 @@ export function useUpdateSubscriptionRequestBody({
 		form.options.defaultValues?.prepaidOptions ?? {};
 	const initialVersion = form.options.defaultValues?.version;
 
-	const buildRequestBody = useCallback(() => {
+	const buildRequestBody = useCallback((): UpdateSubscriptionV0Params => {
 		const formValues = form.store.state.values;
 		const {
 			prepaidOptions,
@@ -96,11 +100,10 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 			cancelAction,
 			billingBehavior,
-			refundBehavior,
 		} = formValues;
 
-		const requestBody: Record<string, unknown> = {
-			customer_id: customerId,
+		const base = {
+			customer_id: customerId ?? "",
 			product_id: product?.id,
 			entity_id: entityId,
 			customer_product_id:
@@ -109,18 +112,14 @@ export function useUpdateSubscriptionRequestBody({
 
 		// For cancel actions, only include cancellation-related fields
 		if (cancelAction) {
-			requestBody.cancel_action = cancelAction;
-
-			if (cancelAction === "cancel_immediately") {
-				if (billingBehavior) {
-					requestBody.billing_behavior = billingBehavior;
-				}
-				if (refundBehavior) {
-					requestBody.refund_behavior = refundBehavior;
-				}
-			}
-
-			return requestBody;
+			return {
+				...base,
+				cancel_action: cancelAction,
+				billing_behavior:
+					cancelAction === "cancel_immediately"
+						? billingBehavior || undefined
+						: undefined,
+			};
 		}
 
 		const options = buildUpdateSubscriptionOptions({
@@ -130,10 +129,6 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 		});
 
-		if (options.length > 0) {
-			requestBody.options = options;
-		}
-
 		const freeTrial = getFreeTrial({
 			removeTrial,
 			trialLength,
@@ -141,19 +136,15 @@ export function useUpdateSubscriptionRequestBody({
 			trialEnabled,
 			trialCardRequired,
 		});
-		if (freeTrial !== undefined) {
-			requestBody.free_trial = freeTrial;
-		}
 
-		if (items && items.length > 0) {
-			requestBody.items = items;
-		}
-
-		if (version !== initialVersion) {
-			requestBody.version = version;
-		}
-
-		return requestBody;
+		return {
+			...base,
+			options: options.length > 0 ? options : undefined,
+			free_trial: freeTrial,
+			items: items && items.length > 0 ? items : undefined,
+			version: version !== initialVersion ? version : undefined,
+			billing_behavior: billingBehavior || undefined,
+		};
 	}, [
 		form.store,
 		customerId,
