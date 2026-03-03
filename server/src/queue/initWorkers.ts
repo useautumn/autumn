@@ -283,7 +283,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
  * cluster.fork() in workers.ts handles multi-process parallelism
  */
 export const initWorkers = async () => {
-	const { db } = initDrizzle({ maxConnections: 3 });
+	const { db } = initDrizzle({ maxConnections: 10 });
 
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
