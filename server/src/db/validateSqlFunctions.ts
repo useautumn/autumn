@@ -20,7 +20,7 @@ const discoverSqlFunctions = (): SqlFunction[] => {
 	const __filename = fileURLToPath(import.meta.url);
 	const deductRpcPath = join(
 		__filename,
-		"../../internal/balances/track/trackUtils/deductRpc",
+		"../../internal/balances/utils/sql",
 	);
 
 	const sqlFiles = readdirSync(deductRpcPath).filter((file) =>

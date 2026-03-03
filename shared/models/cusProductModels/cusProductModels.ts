@@ -59,7 +59,7 @@ export const CusProductSchema = z.object({
 			// subscription_schedule_id: z.string().optional().nullable(),
 			// last_invoice_id: z.string().optional().nullable(),
 		})
-		.optional(),
+		.nullish(),
 
 	quantity: z.number().default(1),
 	api_semver: z.enum(ApiVersion).nullable(),
@@ -67,6 +67,8 @@ export const CusProductSchema = z.object({
 	is_custom: z.boolean().default(false),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
+
+	external_id: z.string().nullable(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

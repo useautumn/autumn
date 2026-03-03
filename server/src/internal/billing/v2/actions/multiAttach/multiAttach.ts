@@ -37,7 +37,8 @@ export async function multiAttach({
 	});
 
 	// 2. Errors
-	handleMultiAttachErrors({
+	await handleMultiAttachErrors({
+		db: ctx.db,
 		billingContext,
 		redirectMode: params.redirect_mode,
 	});

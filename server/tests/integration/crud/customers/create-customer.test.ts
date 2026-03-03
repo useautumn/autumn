@@ -118,7 +118,7 @@ test.concurrent(`${chalk.yellowBright("create: null ID no email (error)")}`, asy
 test.concurrent(`${chalk.yellowBright("create: with send_email_receipts true")}`, async () => {
 	const customerId = "create-send-email-receipts-true";
 	const { autumnV1 } = await initScenario({
-		customerId,
+		// customerId,
 		setup: [s.deleteCustomer({ customerId })],
 		actions: [],
 	});

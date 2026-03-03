@@ -38,11 +38,13 @@ export const eventContextToArrearLineItems = ({
 	eventContext,
 	periodEndMs,
 	cusEntFilter,
+	stripeDiscountable = true,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: BaseWebhookEventContext;
 	periodEndMs?: number;
 	cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
+	stripeDiscountable?: boolean;
 }): {
 	lineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
@@ -65,7 +67,7 @@ export const eventContextToArrearLineItems = ({
 			customerProduct,
 			billingContext,
 			filters: { cusEntFilter },
-			options: { updateNextResetAt: true, discountable: true },
+			options: { updateNextResetAt: true, discountable: stripeDiscountable },
 		});
 		lineItems.push(...productLineItems);
 		updateCustomerEntitlements.push(...productUpdates);
