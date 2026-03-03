@@ -8,6 +8,7 @@ import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
@@ -60,6 +61,13 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+	});
+
+	// Queue customer.products.updated webhook (mirrors executeBillingPlan)
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		billingContext: updatedDeferredData.billingContext,
 	});
 
 	// Delete metadata after successful execution
