@@ -12,6 +12,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
@@ -23,6 +24,7 @@ export const useEnvChange = () => {
 	const handleEnvChange = (targetEnv: AppEnv, reset?: boolean) => {
 		// Clear all cached query data so it refetches for the new env
 		queryClient.clear();
+		clearOrgCache();
 
 		// Calculate the new path
 		const newPath = envToPath(targetEnv, location.pathname);

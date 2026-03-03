@@ -65,7 +65,8 @@ export const filterDeletedCouponDiscounts = async ({
 				if (
 					error instanceof Stripe.errors.StripeError &&
 					error.code?.includes("resource_missing")
-				) return false;
+				)
+					return false;
 				throw error;
 			}
 		}),
@@ -76,8 +77,8 @@ export const filterDeletedCouponDiscounts = async ({
 
 /**
  * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
- * Resolves param discounts via Stripe API and merges with existing subscription/customer discounts.
- * Deduplicates by coupon ID. Filters out discounts with deleted coupons.
+ * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
+ * Filters out discounts with deleted coupons.
  */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
@@ -109,13 +110,19 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Merge with existing discounts, deduplicating by coupon ID
+	// Deduplicate by coupon ID — skip param discounts already on the subscription
 	const existingCouponIds = new Set(
 		existingDiscounts.map((d) => d.source.coupon.id),
 	);
-	const newDiscounts = resolvedParamDiscounts.filter(
-		(d) => !existingCouponIds.has(d.source.coupon.id),
-	);
+	const newDiscounts = resolvedParamDiscounts.filter((d) => {
+		if (existingCouponIds.has(d.source.coupon.id)) {
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Skipping duplicate discount ${d.source.coupon.id} — already applied to subscription`,
+			);
+			return false;
+		}
+		return true;
+	});
 
 	const allDiscounts = [...existingDiscounts, ...newDiscounts];
 	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });

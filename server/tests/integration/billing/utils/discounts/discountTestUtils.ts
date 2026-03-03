@@ -12,8 +12,10 @@ import { CusService } from "@/internal/customers/CusService.js";
  */
 export const getStripeSubscription = async ({
 	customerId,
+	expand,
 }: {
 	customerId: string;
+	expand?: string[];
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
@@ -32,6 +34,7 @@ export const getStripeSubscription = async ({
 	const subscriptions = await stripeCli.subscriptions.list({
 		customer: stripeCustomerId,
 		status: "all",
+		expand,
 	});
 
 	if (subscriptions.data.length === 0) {
