@@ -72,8 +72,9 @@ export function EditPlanFeatureSheet({
 	};
 
 	const handleBeforeCommit = () => {
-		if (!showVolumePricingToggle) return;
-		const cleaned = cleanTiersForMode({ item, mode: volumePricingMode });
+		if (!isVolumeBased) return;
+		const mode = showVolumePricingToggle ? volumePricingMode : "per_unit";
+		const cleaned = cleanTiersForMode({ item, mode });
 		setItem(cleaned);
 	};
 
