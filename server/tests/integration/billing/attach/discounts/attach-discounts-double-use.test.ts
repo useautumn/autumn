@@ -75,6 +75,22 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 		discounts: [{ reward_id: coupon.id }],
 	});
 
+	// Record discount ID after cycle 1
+	const { subscription: subAfterCycle1 } = await getStripeSubscription({
+		customerId,
+		expand: ["data.discounts.source.coupon"],
+	});
+	const discountBefore = subAfterCycle1.discounts.find((d) => {
+		if (typeof d === "string") return false;
+		const c = d.source?.coupon;
+		return typeof c !== "string" && c?.id === coupon.id;
+	});
+	const discountIdBefore =
+		discountBefore && typeof discountBefore !== "string"
+			? discountBefore.id
+			: null;
+	expect(discountIdBefore).not.toBeNull();
+
 	// Advance to next invoice (start of cycle 2)
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -100,14 +116,20 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 		notPresent: [pro.id],
 	});
 
-	// Coupon must appear exactly once — not double-applied
-	const { subscription } = await getStripeSubscription({ customerId });
+	// Coupon must appear exactly once — not double-applied, and discount ID must be unchanged
+	const { subscription } = await getStripeSubscription({
+		customerId,
+		expand: ["data.discounts.source.coupon"],
+	});
 	const couponDiscounts = subscription.discounts.filter((d) => {
 		if (typeof d === "string") return false;
 		const c = d.source?.coupon;
 		return typeof c !== "string" && c?.id === coupon.id;
 	});
 	expect(couponDiscounts).toHaveLength(1);
+	const discountIdAfter =
+		typeof couponDiscounts[0] !== "string" ? couponDiscounts[0].id : null;
+	expect(discountIdAfter).toBe(discountIdBefore);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -162,6 +184,22 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 		discounts: [{ reward_id: coupon.id }],
 	});
 
+	// Record discount ID after cycle 1
+	const { subscription: subAfterCycle1 } = await getStripeSubscription({
+		customerId,
+		expand: ["data.discounts.source.coupon"],
+	});
+	const discountBefore = subAfterCycle1.discounts.find((d) => {
+		if (typeof d === "string") return false;
+		const c = d.source?.coupon;
+		return typeof c !== "string" && c?.id === coupon.id;
+	});
+	const discountIdBefore =
+		discountBefore && typeof discountBefore !== "string"
+			? discountBefore.id
+			: null;
+	expect(discountIdBefore).not.toBeNull();
+
 	// Advance to next invoice (start of cycle 2)
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -187,14 +225,20 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 		notPresent: [free.id],
 	});
 
-	// Coupon must appear exactly once on the pro subscription — not double-applied
-	const { subscription } = await getStripeSubscription({ customerId });
+	// Coupon must appear exactly once on the pro subscription — not double-applied, and discount ID must be unchanged
+	const { subscription } = await getStripeSubscription({
+		customerId,
+		expand: ["data.discounts.source.coupon"],
+	});
 	const couponDiscounts = subscription.discounts.filter((d) => {
 		if (typeof d === "string") return false;
 		const c = d.source?.coupon;
 		return typeof c !== "string" && c?.id === coupon.id;
 	});
 	expect(couponDiscounts).toHaveLength(1);
+	const discountIdAfter =
+		typeof couponDiscounts[0] !== "string" ? couponDiscounts[0].id : null;
+	expect(discountIdAfter).toBe(discountIdBefore);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
