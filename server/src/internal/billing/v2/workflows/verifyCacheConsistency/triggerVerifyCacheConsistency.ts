@@ -1,4 +1,4 @@
-import { type FullCusProduct, type FullCustomer } from "@autumn/shared";
+import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
