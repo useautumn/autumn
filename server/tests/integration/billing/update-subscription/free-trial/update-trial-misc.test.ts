@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, FreeTrialDuration, freeTrials, ms } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	FreeTrialDuration,
+	freeTrials,
+	ms,
+} from "@autumn/shared";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -36,7 +41,8 @@ test.concurrent(`${chalk.yellowBright("trial-misc: update subscription free_tria
 	});
 
 	// Verify product is trialing with 7-day trial
-	const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
 		customer: customerBefore,
 		productId: proFreeTrial.id,
@@ -89,7 +95,9 @@ test.concurrent(`${chalk.yellowBright("trial-misc: update subscription free_tria
 
 	// Should still be only 1 free trial (the original product's default trial)
 	// The custom 14-day trial should not create a new record linked to this product
-	const nonCustomFreeTrials = finalFreeTrials.filter((ft) => ft.is_custom === false);
+	const nonCustomFreeTrials = finalFreeTrials.filter(
+		(ft) => ft.is_custom === false,
+	);
 	expect(nonCustomFreeTrials.length).toBe(1);
 	expect(nonCustomFreeTrials[0].length).toBe(7); // Original 7-day trial unchanged
 

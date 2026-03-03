@@ -1,0 +1,51 @@
+DESCRIPTION >
+    Chunked backfill of customer_products from Postgres into customer_products.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        coalesce(internal_customer_id, '')                             AS internal_customer_id,
+        coalesce(internal_product_id, '')                              AS internal_product_id,
+        internal_entity_id,
+        created_at::Int64                                               AS created_at,
+        status,
+        ifNull(toString(processor), 'null')             AS processor,
+        toUInt8(coalesce(canceled, false))                             AS canceled,
+        if(canceled_at IS NULL, NULL, canceled_at::Int64)              AS canceled_at,
+        if(ended_at IS NULL, NULL, ended_at::Int64)                    AS ended_at,
+        if(starts_at IS NULL, NULL, starts_at::Int64)                  AS starts_at,
+        if(options IS NULL, '[]', toJSONString(arrayMap(x -> assumeNotNull(x), options))) AS options,
+        product_id,
+        free_trial_id,
+        if(trial_ends_at IS NULL, NULL, trial_ends_at::Int64)          AS trial_ends_at,
+        coalesce(collection_method, 'charge_automatically')            AS collection_method,
+        arrayMap(x -> assumeNotNull(x), coalesce(subscription_ids, [])) AS subscription_ids,
+        arrayMap(x -> assumeNotNull(x), coalesce(scheduled_ids, []))  AS scheduled_ids,
+        coalesce(quantity, 1)::Float64                                 AS quantity,
+        toUInt8(if(is_custom, 1, 0))                                   AS is_custom,
+        customer_id,
+        entity_id,
+        billing_version,
+        if(api_version IS NULL, NULL, api_version::Int64)              AS api_version,
+        api_semver,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'customer_products',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+      AND (quantity IS NULL OR quantity < 1e15)
+
+TYPE COPY
+TARGET_DATASOURCE customer_products

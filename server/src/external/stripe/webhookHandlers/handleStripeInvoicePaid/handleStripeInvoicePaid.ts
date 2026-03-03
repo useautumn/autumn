@@ -1,8 +1,8 @@
 import type Stripe from "stripe";
+import { upsertAutumnInvoice } from "@/external/stripe/webhookHandlers/common/upsertAutumnInvoice";
 import { convertToChargeAutomatically } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/convertToChargeAutomatically.js";
 import { queueCheckoutRewardTasks } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/queueCheckoutRewardTasks.js";
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt.js";
-import { upsertAutumnInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/upsertAutumnInvoice.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupStripeInvoicePaidContext } from "./setupStripeInvoicePaidContext.js";
 import { handleStripeInvoiceDiscounts } from "./tasks/handleStripeInvoiceDiscounts.js";
@@ -35,8 +35,13 @@ export const handleStripeInvoicePaid = async ({
 	// 2. Handle discount/coupon rollover
 	await handleStripeInvoiceDiscounts({ ctx, invoicePaidContext });
 
-	// 3. Upsert Autumn invoice
-	await upsertAutumnInvoice({ ctx, invoicePaidContext });
+	// 3. Upsert Autumn invoice (uses invoice from context - already expanded)
+	await upsertAutumnInvoice({
+		ctx,
+		stripeInvoice: invoicePaidContext.stripeInvoice,
+		stripeSubscription: invoicePaidContext.stripeSubscription,
+		customerProducts: invoicePaidContext.customerProducts,
+	});
 
 	if (invoicePaidContext.stripeSubscriptionId) {
 		await convertToChargeAutomatically({ ctx, invoicePaidContext });

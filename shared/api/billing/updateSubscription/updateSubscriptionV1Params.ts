@@ -4,6 +4,10 @@ import { CancelActionSchema } from "../common/cancelAction";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
+		plan_id: z.string().optional().meta({
+			description:
+				"The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.",
+		}),
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
 				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
@@ -11,7 +15,6 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 	});
 export const UpdateSubscriptionV1ParamsSchema =
 	ExtUpdateSubscriptionV1ParamsSchema.extend({
-		plan_id: z.string().optional(),
 		customer_product_id: z.string().optional().meta({
 			internal: true,
 		}),

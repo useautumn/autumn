@@ -1,0 +1,41 @@
+TOKEN sequin_cdc APPEND
+
+DESCRIPTION >
+    customer_products CDC events from Sequin (Postgres → Tinybird via WAL).
+    action = insert | update | delete | read (read = initial backfill row).
+
+SCHEMA >
+    `id`                       String              `json:$.id`,
+    `internal_customer_id`     String              `json:$.internal_customer_id`,
+    `internal_product_id`      String              `json:$.internal_product_id`,
+    `internal_entity_id`       Nullable(String)    `json:$.internal_entity_id`,
+    `created_at`               Nullable(Int64)     `json:$.created_at`,
+    `status`                   Nullable(String)    `json:$.status`,
+    `processor`                String              `json:$.processor`,
+    `canceled`                 UInt8               `json:$.canceled`,
+    `canceled_at`              Nullable(Int64)     `json:$.canceled_at`,
+    `ended_at`                 Nullable(Int64)     `json:$.ended_at`,
+    `starts_at`                Nullable(Int64)     `json:$.starts_at`,
+    `options`                  String              `json:$.options`,
+    `product_id`               Nullable(String)    `json:$.product_id`,
+    `free_trial_id`            Nullable(String)    `json:$.free_trial_id`,
+    `trial_ends_at`            Nullable(Int64)     `json:$.trial_ends_at`,
+    `collection_method`        String              `json:$.collection_method`,
+    `subscription_ids`         Array(String)       `json:$.subscription_ids[:]`,
+    `scheduled_ids`            Array(String)       `json:$.scheduled_ids[:]`,
+    `quantity`                 Float64             `json:$.quantity`,
+    `is_custom`                UInt8               `json:$.is_custom`,
+    `customer_id`              Nullable(String)    `json:$.customer_id`,
+    `entity_id`                Nullable(String)    `json:$.entity_id`,
+    `billing_version`          Nullable(String)    `json:$.billing_version`,
+    `api_version`              Nullable(Int64)     `json:$.api_version`,
+    `api_semver`               Nullable(String)    `json:$.api_semver`,
+    `__action`                 String              `json:$.__action`,
+    `__commit_timestamp`       DateTime64(6)       `json:$.__commit_timestamp`,
+    `__commit_lsn`             Int64               `json:$.__commit_lsn`,
+    `__idempotency_key`        String              `json:$.__idempotency_key`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "__commit_lsn"
+ENGINE_SORTING_KEY "id"
+ENGINE_PRIMARY_KEY "id"

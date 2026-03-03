@@ -3,7 +3,7 @@ import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -93,12 +93,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-flat: flat_amount o
 		latestTotal: expectedTotal,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // ─── Test 2: Mixed per-unit amount + flat_amount ─────────────────────────────
@@ -164,10 +159,5 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-flat: mixed per-uni
 		latestTotal: expectedTotal,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

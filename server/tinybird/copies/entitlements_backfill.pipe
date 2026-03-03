@@ -1,0 +1,42 @@
+DESCRIPTION >
+    Chunked backfill of entitlements from Postgres into entitlements.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        created_at::Int64                                               AS created_at,
+        coalesce(internal_feature_id, '')                              AS internal_feature_id,
+        internal_product_id,
+        if(coalesce(is_custom, false) = true, 1, 0)                   AS is_custom,
+        allowance_type,
+        if(allowance IS NULL, NULL, allowance::Float64)                AS allowance,
+        interval,
+        coalesce(interval_count, 1)::Float64                           AS interval_count,
+        if(coalesce(carry_from_previous, false) = true, 1, 0)         AS carry_from_previous,
+        entity_feature_id,
+        org_id,
+        feature_id,
+        if(usage_limit IS NULL, NULL, usage_limit::Float64)            AS usage_limit,
+        ifNull(toString(rollover), 'null')               AS rollover,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'entitlements',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+      AND (allowance IS NULL OR allowance < 1e15)
+      AND (usage_limit IS NULL OR usage_limit < 1e15)
+
+TYPE COPY
+TARGET_DATASOURCE entitlements

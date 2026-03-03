@@ -71,6 +71,7 @@ export const setupMultiAttachBillingContext = async ({
 				featureQuantities,
 				currentCustomerProduct,
 				scheduledCustomerProduct,
+				externalId: plan.subscription_id,
 			};
 		}),
 	);

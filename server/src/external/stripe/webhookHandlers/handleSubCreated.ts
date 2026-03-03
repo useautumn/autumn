@@ -1,15 +1,9 @@
-import {
-	BillingType,
-	type FullCusProduct,
-	type FullCustomerPrice,
-	type Price,
-} from "@autumn/shared";
+import type { FullCustomerPrice } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
@@ -147,66 +141,66 @@ export const handleSubCreated = async ({
 	}
 
 	// Get cus prods for sub
-	const cusProds = await CusProductService.getByStripeSubId({
-		db,
-		stripeSubId: subscription.id,
-		orgId: org.id,
-		env,
-	});
+	// const cusProds = await CusProductService.getByStripeSubId({
+	// 	db,
+	// 	stripeSubId: subscription.id,
+	// 	orgId: org.id,
+	// 	env,
+	// });
 
-	const handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
-		if (!cusProd.internal_entity_id) {
-			return;
-		}
+	// const handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
+	// 	if (!cusProd.internal_entity_id) {
+	// 		return;
+	// 	}
 
-		const arrearPrices = cusProd.customer_prices
-			.map((cp) => cp.price)
-			.filter(
-				(p: Price) =>
-					getBillingType(p.config as any) === BillingType.UsageInArrear,
-			);
+	// 	const arrearPrices = cusProd.customer_prices
+	// 		.map((cp) => cp.price)
+	// 		.filter(
+	// 			(p: Price) =>
+	// 				getBillingType(p.config as any) === BillingType.UsageInArrear,
+	// 		);
 
-		if (arrearPrices.length === 0) {
-			return;
-		}
+	// 	if (arrearPrices.length === 0) {
+	// 		return;
+	// 	}
 
-		const itemsToDelete = [];
-		for (const arrearPrice of arrearPrices) {
-			const subItem = subscription.items.data.find(
-				(i) => i.price.id === arrearPrice.config?.stripe_price_id,
-			);
+	// 	const itemsToDelete = [];
+	// 	for (const arrearPrice of arrearPrices) {
+	// 		const subItem = subscription.items.data.find(
+	// 			(i) => i.price.id === arrearPrice.config?.stripe_price_id,
+	// 		);
 
-			if (!subItem) {
-				continue;
-			}
+	// 		if (!subItem) {
+	// 			continue;
+	// 		}
 
-			itemsToDelete.push({
-				id: subItem.id,
-				deleted: true,
-			});
-		}
+	// 		itemsToDelete.push({
+	// 			id: subItem.id,
+	// 			deleted: true,
+	// 		});
+	// 	}
 
-		if (itemsToDelete.length > 0) {
-			try {
-				await stripeCli.subscriptions.update(subscription.id, {
-					items: itemsToDelete,
-				});
-				console.log(
-					`sub.created, cus product with entity: deleted ${itemsToDelete.length} items`,
-				);
-			} catch (error) {
-				logger.error(
-					`sub.created, cus product with entity: failed to delete items`,
-					error,
-				);
-			}
-		}
-	};
+	// 	if (itemsToDelete.length > 0) {
+	// 		try {
+	// 			await stripeCli.subscriptions.update(subscription.id, {
+	// 				items: itemsToDelete,
+	// 			});
+	// 			console.log(
+	// 				`sub.created, cus product with entity: deleted ${itemsToDelete.length} items`,
+	// 			);
+	// 		} catch (error) {
+	// 			logger.error(
+	// 				`sub.created, cus product with entity: failed to delete items`,
+	// 				error,
+	// 			);
+	// 		}
+	// 	}
+	// };
 
-	const batchUpdate = [];
-	for (const cusProd of cusProds) {
-		batchUpdate.push(handleInArrearWithEntity(cusProd));
-	}
+	// const batchUpdate = [];
+	// for (const cusProd of cusProds) {
+	// 	batchUpdate.push(handleInArrearWithEntity(cusProd));
+	// }
 
-	await Promise.all(batchUpdate);
+	// await Promise.all(batchUpdate);
 };

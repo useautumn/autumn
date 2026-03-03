@@ -33,6 +33,7 @@ export const initCustomerProduct = ({
 		collectionMethod,
 		isCustom,
 		apiSemver,
+		externalId,
 	} = initOptions ?? {};
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
@@ -104,6 +105,8 @@ export const initCustomerProduct = ({
 		api_semver: apiSemver ?? null,
 
 		billing_version: billingVersion,
+
+		external_id: externalId ?? null,
 	};
 };
 

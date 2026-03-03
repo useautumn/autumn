@@ -67,6 +67,7 @@ const create = ({
 	product: product ?? (products.createFull({ id: productId }) as FullProduct),
 	free_trial: null,
 	billing_version: BillingVersion.V2,
+	external_id: null,
 });
 
 // ═══════════════════════════════════════════════════════════════════

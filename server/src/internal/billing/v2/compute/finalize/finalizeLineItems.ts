@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
+	type CustomLineItem,
 	filterUnchangedPricesFromLineItems,
 	type LineItem,
 } from "@autumn/shared";
@@ -11,22 +12,31 @@ import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers
 
 /**
  * Finalizes line items for a billing plan by:
- * 1. Filtering line items based on trial state transitions
- * 2. Filtering out unchanged prices (refund + charge pairs that cancel out)
- * 3. Adding line items for sibling products affected by trial state changes
- * 4. Applying Stripe discounts to line items
+ * 1. If custom line items are provided, overrides computed line items entirely
+ * 2. Filtering line items based on trial state transitions
+ * 3. Filtering out unchanged prices (refund + charge pairs that cancel out)
+ * 4. Adding line items for sibling products affected by trial state changes
+ * 5. Applying Stripe discounts to line items
  */
 export const finalizeLineItems = ({
 	ctx,
 	lineItems,
 	billingContext,
 	autumnBillingPlan,
+	customLineItems,
 }: {
 	ctx: AutumnContext;
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	customLineItems?: CustomLineItem[];
 }): LineItem[] => {
+	// 0. If custom line items provided, override computed line items entirely
+	if (customLineItems?.length) {
+		autumnBillingPlan.customLineItems = customLineItems;
+		return [];
+	}
+
 	// 1. Filter line items based on trial state transitions
 	let finalizedLineItems = filterLineItemsForTrialTransition({
 		ctx,

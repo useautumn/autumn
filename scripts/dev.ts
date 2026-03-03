@@ -2,9 +2,17 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const VITE_PORT = 3000;
-const SERVER_PORT = 8080;
-const CHECKOUT_PORT = 3001;
+const worktreeIdx = process.argv.indexOf("--worktree");
+const worktreeNum =
+	worktreeIdx !== -1 && process.argv[worktreeIdx + 1]
+		? Number.parseInt(process.argv[worktreeIdx + 1], 10)
+		: 1;
+const portOffset = (worktreeNum - 1) * 100;
+
+const VITE_PORT = 3000 + portOffset;
+const SERVER_PORT = 8080 + portOffset;
+const CHECKOUT_PORT = 3001 + portOffset;
+const skipWorkers = worktreeNum > 1;
 
 /**
  * Read environment variable from .env file
@@ -71,7 +79,15 @@ async function startDev() {
 			}
 		}
 
-		console.log("Starting development servers...\n");
+		if (worktreeNum > 1) {
+			console.log(`Starting worktree ${worktreeNum} (no workers)...\n`);
+		} else {
+			console.log("Starting development servers...\n");
+		}
+
+		console.log(`  vite:     http://localhost:${VITE_PORT}`);
+		console.log(`  server:   http://localhost:${SERVER_PORT}`);
+		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
@@ -94,21 +110,40 @@ async function startDev() {
 					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
 				];
 			}
-		} else if (isWindows) {
-			const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun dev`;
-			const workersCmd = `cd server && bun workers:dev`;
-			const viteCmd = `cd vite && set VITE_PORT=${VITE_PORT} && bun dev`;
-			const checkoutCmd = `cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev`;
-			shellArgs = [
-				"cmd",
-				"/c",
-				`bunx concurrently -n server,workers,vite,checkout -c green,yellow,blue,magenta "${serverCmd}" "${workersCmd}" "${viteCmd}" "${checkoutCmd}"`,
-			];
 		} else {
+			const names = ["server"];
+			const colors = ["green"];
+			const cmds = [
+				isWindows
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+			];
+
+			if (!skipWorkers) {
+				names.push("workers");
+				colors.push("yellow");
+				cmds.push(
+					isWindows
+						? `"cd server && bun workers:dev"`
+						: `"cd server && bun workers:dev"`,
+				);
+			}
+
+			names.push("vite", "checkout");
+			colors.push("blue", "magenta");
+			cmds.push(
+				isWindows
+					? `"cd vite && set VITE_PORT=${VITE_PORT} && bun dev"`
+					: `"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
+				isWindows
+					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
+					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
+			);
+
 			shellArgs = [
-				"sh",
-				"-c",
-				`bunx concurrently -n server,workers,vite,checkout -c green,yellow,blue,magenta "cd server && SERVER_PORT=${SERVER_PORT} bun dev" "cd server && bun workers:dev" "cd vite && VITE_PORT=${VITE_PORT} bun dev" "cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
+				isWindows ? "cmd" : "sh",
+				isWindows ? "/c" : "-c",
+				`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.join(" ")}`,
 			];
 		}
 
@@ -119,6 +154,12 @@ async function startDev() {
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+				...(worktreeNum > 1 && {
+					CLIENT_URL: `http://localhost:${VITE_PORT}`,
+					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+					VITE_BACKEND_URL: `http://localhost:${SERVER_PORT}`,
+					VITE_FRONTEND_URL: `http://localhost:${VITE_PORT}`,
+				}),
 			},
 			stdout: "inherit",
 			stderr: "inherit",

@@ -1,5 +1,9 @@
 import { InternalError } from "@api/errors";
 import { ms } from "@utils/common";
+import {
+	isPayPerUsePrice,
+	isVolumePrice,
+} from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import type {
 	EntityBalance,
 	FullCustomerEntitlement,
@@ -100,4 +104,22 @@ export const customerEntitlementShouldBeBilled = ({
 	const TOLERANCE_MS = ms.days(1);
 
 	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
+};
+
+export const isVolumeBasedCusEnt = (cusEnt: FullCusEntWithFullCusProduct) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	return isVolumePrice(cusPrice.price);
+};
+
+export const isUsageBasedAllocatedCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => {
+	const isAllocated = isAllocatedCustomerEntitlement(cusEnt);
+
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	const isUsageBased = isPayPerUsePrice({ price: cusPrice.price });
+
+	return isAllocated && isUsageBased;
 };

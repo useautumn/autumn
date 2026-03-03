@@ -219,6 +219,19 @@ export const customerProductHasSubscription = (cusProduct?: FullCusProduct) => {
 	return notNullish(subId);
 };
 
+/** Returns true if multiple customer products share the given product ID. */
+export const customerProductsHaveDuplicateProductId = ({
+	customerProducts,
+	productId,
+}: {
+	customerProducts: FullCusProduct[];
+	productId: string;
+}): boolean => {
+	return (
+		customerProducts.filter((cp) => cp.product.id === productId).length > 1
+	);
+};
+
 export const isCustomerProductEntityScoped = (
 	customerProduct?: FullCusProduct,
 ) => {

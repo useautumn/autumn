@@ -28,8 +28,11 @@ export const buildStripeSubscriptionCreateAction = ({
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
 		customer: stripeCustomer.id,
 		items: subItemsUpdate.map((item) => ({
-			price: item.price,
+			...(item.price_data
+				? { price_data: item.price_data }
+				: { price: item.price }),
 			quantity: item.quantity,
+			...(item.metadata && { metadata: item.metadata }),
 		})),
 
 		billing_mode: { type: "flexible" },

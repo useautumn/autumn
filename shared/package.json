@@ -21,10 +21,11 @@
 		"db:studio": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit studio --config drizzle.config.ts"
 	},
 	"dependencies": {
+		"@autumn/ksuid": "workspace:*",
+		"@date-fns/utc": "catalog:",
 		"@orpc/contract": "catalog:",
 		"@orpc/openapi": "^1.13.4",
 		"@orpc/zod": "^1.13.4",
-		"@date-fns/utc": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",
 		"dotenv": "^16.5.0",

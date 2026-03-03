@@ -1,0 +1,68 @@
+DESCRIPTION >
+    Chunked backfill of customer_entitlements from Postgres into customer_entitlements.
+    Chunks by created_at (epoch ms). Cast numeric columns to match datasource schema.
+
+NODE raw
+SQL >
+    %
+    SELECT
+        id,
+        customer_product_id,
+        entitlement_id,
+        internal_customer_id,
+        internal_entity_id,
+        internal_feature_id,
+        unlimited,
+        balance,
+        created_at,
+        next_reset_at,
+        usage_allowed,
+        adjustment,
+        additional_balance,
+        entities,
+        expires_at,
+        cache_version,
+        customer_id,
+        feature_id
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'customer_entitlements',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+      AND balance < 1e15
+      AND additional_balance < 1e15
+
+NODE migrate
+SQL >
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        customer_product_id,
+        coalesce(entitlement_id, '')                                   AS entitlement_id,
+        coalesce(internal_customer_id, '')                             AS internal_customer_id,
+        internal_entity_id,
+        coalesce(internal_feature_id, '')                              AS internal_feature_id,
+        toUInt8(if(coalesce(unlimited, false), 1, 0))                   AS unlimited,
+        toFloat64OrZero(toString(coalesce(balance, toDecimal128(0, 19))))   AS balance,
+        created_at::Int64                                                   AS created_at,
+        if(next_reset_at IS NULL, NULL, next_reset_at::Int64)              AS next_reset_at,
+        toUInt8(if(coalesce(usage_allowed, false), 1, 0))                  AS usage_allowed,
+        toFloat64OrNull(toString(adjustment))                               AS adjustment,
+        toFloat64OrZero(toString(coalesce(additional_balance, toDecimal128(0, 19)))) AS additional_balance,
+        ifNull(toString(entities), '{}')                               AS entities,
+        if(expires_at IS NULL, NULL, expires_at::Int64)                AS expires_at,
+        coalesce(cache_version, 0)                                     AS cache_version,
+        customer_id,
+        feature_id,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM raw
+
+TYPE COPY
+TARGET_DATASOURCE customer_entitlements

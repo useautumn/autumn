@@ -9,14 +9,12 @@ import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscri
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
+import { stripeItemSpecToSubscriptionItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 /**
- * Convert stripe item specs to stripe subscription update params items.
- * For metered prices (quantity undefined), we don't include quantity as Stripe requires.
- * @param billingContext - The billing context
- * @param stripeItemSpecs - The stripe item specs
- * @returns The subscription item update params
+ * Diffs desired stripe item specs against current subscription items.
+ * Handles both stored-price and entity-scoped inline-price items.
  */
 const stripeItemSpecsToSubItemsUpdate = ({
 	billingContext,
@@ -29,48 +27,51 @@ const stripeItemSpecsToSubItemsUpdate = ({
 	const currentSubscriptionItems = stripeSubscription?.items.data ?? [];
 
 	const subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[] = [];
-	for (const stripeItemSpec of stripeItemSpecs) {
+
+	for (const spec of stripeItemSpecs) {
+		// Inline prices are always new items (no existing sub item to match)
+		if (spec.stripeInlinePrice) {
+			subItemsUpdate.push(stripeItemSpecToSubscriptionItem({ spec }));
+			continue;
+		}
+
+		// Stored price — check for existing subscription item
+		if (!spec.stripePriceId) continue;
+
 		const existingItem = findStripeSubscriptionItemByStripePriceId({
-			stripePriceId: stripeItemSpec.stripePriceId,
+			stripePriceId: spec.stripePriceId,
 			stripeSubscriptionItems: currentSubscriptionItems,
 		});
 
 		const shouldUpdateItem =
-			existingItem && existingItem.quantity !== stripeItemSpec.quantity;
+			existingItem && existingItem.quantity !== spec.quantity;
 		const shouldCreateItem = !existingItem;
 
 		if (shouldUpdateItem) {
-			// For metered prices, don't include quantity
-			if (stripeItemSpec.quantity === undefined) {
-				subItemsUpdate.push({ id: existingItem.id });
-			} else {
-				subItemsUpdate.push({
-					id: existingItem.id,
-					quantity: stripeItemSpec.quantity,
-				});
-			}
+			subItemsUpdate.push({
+				id: existingItem.id,
+				...(spec.quantity !== undefined && { quantity: spec.quantity }),
+				...(spec.metadata && { metadata: spec.metadata }),
+			});
 		}
+
 		if (shouldCreateItem) {
-			// For metered prices, don't include quantity
-			if (stripeItemSpec.quantity === undefined) {
-				subItemsUpdate.push({ price: stripeItemSpec.stripePriceId });
-			} else {
-				subItemsUpdate.push({
-					price: stripeItemSpec.stripePriceId,
-					quantity: stripeItemSpec.quantity,
-				});
-			}
+			subItemsUpdate.push({
+				price: spec.stripePriceId,
+				...(spec.quantity !== undefined && { quantity: spec.quantity }),
+				...(spec.metadata && { metadata: spec.metadata }),
+			});
 		}
 	}
 
+	// Remove subscription items that are no longer in the desired specs
 	for (const subItem of currentSubscriptionItems) {
-		const stripeItemSpec = findStripeItemSpecByStripePriceId({
+		const matchingSpec = findStripeItemSpecByStripePriceId({
 			stripePriceId: stripeSubscriptionItemToStripePriceId(subItem),
 			stripeItemSpecs,
 		});
 
-		const shouldRemoveItem = !stripeItemSpec;
-		if (shouldRemoveItem) {
+		if (!matchingSpec) {
 			subItemsUpdate.push({ id: subItem.id, deleted: true });
 		}
 	}
@@ -98,14 +99,14 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		customerProducts: relatedCustomerProducts,
 	});
 
-	// 3. Get recurring subscription item array (doesn't include one off items)
+	// 3. Get recurring subscription item array (doesn't include one-off items)
 	const recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 5. Diff it with the current subscription items
+	// 4. Diff against current subscription items
 	return stripeItemSpecsToSubItemsUpdate({
 		billingContext,
 		stripeItemSpecs: recurringStripeItemSpecs,

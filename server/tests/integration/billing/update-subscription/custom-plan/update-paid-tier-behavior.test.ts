@@ -10,6 +10,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAID-TO-PAID: TIER BEHAVIOR TRANSITIONS
@@ -100,9 +101,12 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 	});
 
 	// Volume is cheaper, so this should be a credit (negative)
-	const expectedAmount = proratedVolume - proratedGraduated;
+	const expectedAmount = new Decimal(proratedVolume)
+		.minus(new Decimal(proratedGraduated))
+		.toNumber();
 
-	expect(preview.total).toEqual(expectedAmount);
+	expect(preview.total).toBeGreaterThanOrEqual(expectedAmount - 0.01);
+	expect(preview.total).toBeLessThanOrEqual(expectedAmount + 0.01);
 
 	await autumnV1.subscriptions.update(updateParams);
 

@@ -1,5 +1,4 @@
-import type { BillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 
 export const autumnBillingPlanToFinalFullCustomer = ({
@@ -51,9 +50,25 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 
 		for (const update of updateCustomerEntitlements) {
 			const entitlement = entitlementById.get(update.customerEntitlement.id);
-			if (entitlement) {
-				entitlement.balance =
-					(entitlement.balance ?? 0) + (update.balanceChange ?? 0);
+			if (!entitlement) continue;
+
+			entitlement.balance =
+				(entitlement.balance ?? 0) + (update.balanceChange ?? 0);
+
+			if (update.insertReplaceables && update.insertReplaceables.length > 0) {
+				entitlement.replaceables = [
+					...(entitlement.replaceables ?? []),
+					...update.insertReplaceables.map((r) => ({
+						...r,
+						delete_next_cycle: r.delete_next_cycle ?? false,
+					})),
+				];
+			}
+
+			if (update.deletedReplaceables && update.deletedReplaceables.length > 0) {
+				entitlement.replaceables = entitlement.replaceables?.filter(
+					(r) => !update.deletedReplaceables?.map((dr) => dr.id).includes(r.id),
+				);
 			}
 		}
 	}

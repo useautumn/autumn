@@ -1,4 +1,8 @@
-import type { BillingContext, BillingPlan } from "@autumn/shared";
+import type {
+	BillingContext,
+	BillingPlan,
+	PreviewLineItem,
+} from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	orgToCurrency,
@@ -7,6 +11,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
+import { customLineItemToPreviewLineItem } from "./lineItems/customLineItemToPreviewLineItem";
 import { lineItemToPreviewLineItem } from "./lineItems/lineItemToPreviewLineItem";
 import { logBillingPreview } from "./logs/logBillingPreview";
 
@@ -22,26 +27,42 @@ export const billingPlanToPreviewResponse = ({
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
+	const { customLineItems } = autumnBillingPlan;
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 
 	const immediateLineItems = allLineItems.filter(
 		(line) => line.chargeImmediately,
 	);
 
-	const previewImmediateLineItems = immediateLineItems.map(
-		lineItemToPreviewLineItem,
-	);
+	let previewImmediateLineItems: PreviewLineItem[];
+	let rawTotal: number;
 
-	// Exclude deferred items from total (they'll be charged after trial ends)
-	const chargeableItems = previewImmediateLineItems.filter(
-		(line) => !line.deferred_for_trial,
-	);
+	if (customLineItems?.length) {
+		// Custom line items override the computed line items
+		previewImmediateLineItems = customLineItems.map(
+			customLineItemToPreviewLineItem,
+		);
+		rawTotal = new Decimal(
+			sumValues(customLineItems.map((item) => item.amount)),
+		)
+			.toDP(2)
+			.toNumber();
+	} else {
+		previewImmediateLineItems = immediateLineItems.map(
+			lineItemToPreviewLineItem,
+		);
 
-	const rawTotal = new Decimal(
-		sumValues(chargeableItems.map((line) => line.amount)),
-	)
-		.toDP(2)
-		.toNumber();
+		// Exclude deferred items from total (they'll be charged after trial ends)
+		const chargeableItems = previewImmediateLineItems.filter(
+			(line) => !line.deferred_for_trial,
+		);
+
+		rawTotal = new Decimal(
+			sumValues(chargeableItems.map((line) => line.amount)),
+		)
+			.toDP(2)
+			.toNumber();
+	}
 
 	const currency = orgToCurrency({ org: ctx.org });
 

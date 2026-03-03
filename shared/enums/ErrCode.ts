@@ -88,6 +88,7 @@ export const ErrCode = {
 
 	// Cus Product
 	CusProductNotFound: "cus_product_not_found",
+	DuplicateSubscriptionId: "duplicate_subscription_id",
 
 	// Entitlements
 	InvalidEntitlement: "invalid_entitlement",

@@ -78,6 +78,7 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			periodEndMs: stripeSubscription.ended_at
 				? secondsToMs(stripeSubscription.ended_at)
 				: undefined,
+			stripeDiscountable: false,
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 

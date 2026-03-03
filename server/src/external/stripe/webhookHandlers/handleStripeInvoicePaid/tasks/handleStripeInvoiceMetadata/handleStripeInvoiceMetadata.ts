@@ -28,7 +28,12 @@ export const handleStripeInvoiceMetadata = async ({
 
 	// Handle deferred billing plan (v2 flow)
 	if (metadata.type === MetadataType.DeferredInvoice) {
-		await executeDeferredBillingPlan({ ctx, metadata, stripeSubscription });
+		await executeDeferredBillingPlan({
+			ctx,
+			metadata,
+			stripeSubscription,
+			stripeInvoice,
+		});
 		return;
 	}
 

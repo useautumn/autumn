@@ -22,24 +22,7 @@ import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
-
-const ALLOWED_ORIGINS = [
-	"http://localhost:3000",
-	"http://localhost:3001",
-	"http://localhost:3002",
-	"http://localhost:3003",
-	"http://localhost:3004",
-	"http://localhost:3005",
-	"http://localhost:3006",
-	"http://localhost:3007",
-	"http://localhost:5173",
-	"http://localhost:5174",
-	"https://app.useautumn.com",
-	"https://staging.useautumn.com",
-	"https://dev.useautumn.com",
-	"https://api.staging.useautumn.com",
-	"https://localhost:8080",
-];
+import { isAllowedOrigin } from "./utils/corsOrigins.js";
 
 const ALLOWED_HEADERS = [
 	"app_env",
@@ -72,7 +55,7 @@ export const createHonoApp = () => {
 	app.use(
 		"*",
 		cors({
-			origin: ALLOWED_ORIGINS,
+			origin: isAllowedOrigin,
 			allowHeaders: ALLOWED_HEADERS,
 			allowMethods: ["POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"],
 			exposeHeaders: ["Content-Length"],

@@ -256,12 +256,19 @@ export class InvoiceService {
 
 	static async upsert({ db, invoice }: { db: DrizzleCli; invoice: Invoice }) {
 		const updateColumns = buildConflictUpdateColumns(invoices, ["id"]);
-		await db
+		const result = await db
 			.insert(invoices)
 			.values(invoice as any)
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: updateColumns,
-			});
+			})
+			.returning();
+
+		if (result.length === 0) {
+			return undefined;
+		}
+
+		return result[0] as Invoice;
 	}
 }

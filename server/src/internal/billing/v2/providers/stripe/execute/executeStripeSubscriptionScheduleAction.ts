@@ -18,6 +18,7 @@ const toCreatePhase = (
 	items: phase.items?.map((item) => ({
 		price: item.price,
 		quantity: item.quantity,
+		...(item.metadata && { metadata: item.metadata }),
 	})),
 	end_date: typeof phase.end_date === "number" ? phase.end_date : undefined,
 	discounts: phase.discounts as
@@ -29,13 +30,18 @@ const toCreatePhase = (
  * Builds phases for updating a schedule that was created from a subscription.
  * The first phase must use the schedule's actual current phase start_date AND items.
  * Stripe doesn't allow modifying items in an active phase, so we preserve them exactly.
+ *
+ * Stripe's `from_subscription` doesn't copy item-level metadata onto schedule phase items,
+ * so we re-apply metadata from the subscription items (which DO have it) by matching price ID.
  */
 const buildAnchoredPhases = ({
 	params,
 	existingSchedule,
+	stripeSubscription,
 }: {
 	params: { phases?: Stripe.SubscriptionScheduleUpdateParams.Phase[] };
 	existingSchedule: Stripe.SubscriptionSchedule;
+	stripeSubscription?: Stripe.Subscription;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	const inputPhases = params.phases ?? [];
 	if (inputPhases.length === 0) return [];
@@ -45,12 +51,39 @@ const buildAnchoredPhases = ({
 		throw new Error("Cannot update schedule: missing current phase start_date");
 	}
 
+	// Build a lookup of price ID → metadata from the subscription items
+	const subItemMetadataByPriceId = new Map<string, Record<string, string>>();
+	if (stripeSubscription) {
+		for (const subItem of stripeSubscription.items.data) {
+			if (subItem.metadata && Object.keys(subItem.metadata).length > 0) {
+				subItemMetadataByPriceId.set(subItem.price.id, subItem.metadata);
+			}
+		}
+	}
+
 	// Map existing items to update format (response type -> request type)
+	// Re-apply metadata from subscription items since Stripe's from_subscription strips it
 	const existingFirstPhaseItems: Stripe.SubscriptionScheduleUpdateParams.Phase["items"] =
-		existingSchedule.phases[0]?.items.map((item) => ({
-			price: typeof item.price === "string" ? item.price : item.price?.id,
-			quantity: item.quantity ?? undefined,
-		}));
+		existingSchedule.phases[0]?.items.map((item) => {
+			const priceId =
+				typeof item.price === "string" ? item.price : item.price?.id;
+
+			// Prefer metadata from the subscription item (reliable source)
+			const subMetadata = priceId
+				? subItemMetadataByPriceId.get(priceId)
+				: undefined;
+			const metadata =
+				subMetadata ??
+				(item.metadata && Object.keys(item.metadata).length > 0
+					? item.metadata
+					: undefined);
+
+			return {
+				price: priceId,
+				quantity: item.quantity ?? undefined,
+				...(metadata && { metadata }),
+			};
+		});
 
 	// First phase: preserve start_date AND items from existing schedule
 	// Stripe doesn't allow modifying items in an active/in-progress phase
@@ -74,16 +107,22 @@ const createScheduleFromSubscription = async ({
 	stripeCli,
 	subscriptionId,
 	params,
+	stripeSubscription,
 }: {
 	stripeCli: Stripe;
 	subscriptionId: string;
 	params: Stripe.SubscriptionScheduleUpdateParams;
+	stripeSubscription?: Stripe.Subscription;
 }): Promise<Stripe.SubscriptionSchedule> => {
 	const schedule = await stripeCli.subscriptionSchedules.create({
 		from_subscription: subscriptionId,
 	});
 
-	const phases = buildAnchoredPhases({ params, existingSchedule: schedule });
+	const phases = buildAnchoredPhases({
+		params,
+		existingSchedule: schedule,
+		stripeSubscription,
+	});
 
 	return await stripeCli.subscriptionSchedules.update(schedule.id, {
 		phases,
@@ -125,6 +164,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 					stripeCli,
 					subscriptionId: stripeSubscription.id,
 					params,
+					stripeSubscription,
 				});
 			}
 
@@ -162,6 +202,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 						? subscriptionId
 						: subscriptionId.id,
 				params,
+				stripeSubscription,
 			});
 
 			// Update existing customer products with the new schedule ID
