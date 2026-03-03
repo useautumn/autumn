@@ -33,6 +33,7 @@ import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 import { constructCoupon } from "@/utils/scriptUtils/createTestProducts";
 
 /**
@@ -369,4 +370,66 @@ test.concurrent(`${chalk.yellowBright("discount-edge-cases 3: promo code via che
 
 	// The discount end should be the same (not reset)
 	expect(discountEndAfter).toBe(discountEndBefore);
+});
+
+test.concurrent(`${chalk.yellowBright("discount-edge-cases 4: downgrade doesn't preserve discount if start_date > discount end date")}`, async () => {
+	const customerId = "sched-switch-discount-edge-4";
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [],
+	});
+
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 1,
+	});
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+		discounts: [
+			{
+				reward_id: coupon.id,
+			},
+		],
+	});
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required",
+	});
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfter,
+		canceling: [premium.id],
+		scheduled: [pro.id],
+	});
 });
