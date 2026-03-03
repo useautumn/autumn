@@ -18,9 +18,10 @@ import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
-import { temp } from "./temp";
+
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
+import { temp } from "./temp";
 import type { TestGroup, TestSuite } from "./types";
 
 export type { TestGroup, TestSuite, TestTier } from "./types";
@@ -46,6 +47,7 @@ const allGroups: TestGroup[] = [
 	webhooks,
 	advanced,
 	misc,
+	temp,
 ];
 
 export const getAllGroups = (): TestGroup[] => allGroups;
