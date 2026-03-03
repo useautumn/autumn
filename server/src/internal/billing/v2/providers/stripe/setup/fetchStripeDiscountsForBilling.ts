@@ -7,6 +7,7 @@ import type {
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
+import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
 
 /**
@@ -37,14 +38,7 @@ export const extractStripeDiscounts = async ({
 		return subscriptionDiscounts;
 	}
 
-	const customerDiscount = stripeCustomer.discount;
-	if (!customerDiscount) return [];
-
-	const coupon = customerDiscount.source?.coupon;
-	if (!coupon || typeof coupon === "string") return [];
-
-	// Customer discount already has source.coupon structure, return as-is
-	return [customerDiscount as StripeDiscountWithCoupon];
+	return await stripeCustomerToDiscounts({ ctx, stripeCustomer });
 };
 
 /**
@@ -117,21 +111,29 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Deduplicate by coupon ID — skip param discounts already on the subscription
-	const existingCouponIds = new Set(
-		existingDiscounts.map((d) => d.source.coupon.id),
-	);
-	const newDiscounts = resolvedParamDiscounts.filter((d) => {
-		if (existingCouponIds.has(d.source.coupon.id)) {
-			ctx.logger.warn(
-				`[fetchStripeDiscountsForBilling] Skipping duplicate discount ${d.source.coupon.id} — already applied to subscription`,
-			);
-			return false;
-		}
-		return true;
-	});
+	// Merge existing + param discounts, deduplicating by coupon ID.
+	// When there's a conflict, prefer the discount that has a Stripe discount ID
+	// (di_xxx) so stripeDiscountsToParams uses { discount: id } and preserves
+	// the original start/end dates rather than creating a fresh one.
+	const discountByCouponId = new Map<string, StripeDiscountWithCoupon>();
 
-	const allDiscounts = [...existingDiscounts, ...newDiscounts];
-	// return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
-	return allDiscounts;
+	for (const d of [...resolvedParamDiscounts, ...existingDiscounts]) {
+		const couponId = d.source.coupon.id;
+		const current = discountByCouponId.get(couponId);
+
+		if (!current) {
+			discountByCouponId.set(couponId, d);
+		} else if (d.id && !current.id) {
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Preferring existing discount ${d.id} over param for coupon ${couponId}`,
+			);
+			discountByCouponId.set(couponId, d);
+		} else if (!d.id && current.id) {
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Skipping duplicate param discount for coupon ${couponId} — already applied as ${current.id}`,
+			);
+		}
+	}
+
+	return [...discountByCouponId.values()];
 };
