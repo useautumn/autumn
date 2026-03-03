@@ -29,7 +29,13 @@ let totalMessagesProcessed = 0;
 let lastStatsTime = Date.now();
 
 // Process recycling — exit after processing this many messages to prevent memory leaks
-const MAX_MESSAGES_BEFORE_RECYCLE = 500_000;
+const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
+
+// Idle self-kill — exit if worker processes 0 messages for this many consecutive intervals
+const IDLE_SELF_KILL_THRESHOLD = 5; // ~5 min of 0 messages (5 * 60s)
+
+// Per-message processing timeout — must be under VisibilityTimeout (30s)
+const MESSAGE_TIMEOUT_MS = 25_000;
 
 // Stale connection detection
 let consecutiveEmptyPolls = 0;
@@ -42,6 +48,17 @@ let consecutiveZeroMessageIntervals = 0;
 const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 
 // ============ Helper Functions ============
+
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
+	Promise.race([
+		promise,
+		new Promise<never>((_, reject) =>
+			setTimeout(
+				() => reject(new Error(`Processing timed out after ${timeoutMs}ms`)),
+				timeoutMs,
+			),
+		),
+	]);
 
 const logPrefix = () => `[SQS Worker ${process.pid}]`;
 
@@ -67,6 +84,17 @@ const logStatsAndCheckZeroMessages = () => {
 
 	if (messagesProcessed === 0) {
 		consecutiveZeroMessageIntervals++;
+
+		if (
+			consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
+			totalMessagesProcessed > 0
+		) {
+			console.log(
+				`${logPrefix()} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
+			);
+			process.exit(0);
+		}
+
 		if (consecutiveZeroMessageIntervals >= ZERO_MESSAGE_ALERT_THRESHOLD) {
 			alertZeroMessages();
 			consecutiveZeroMessageIntervals = 0;
@@ -126,7 +154,13 @@ const handleSingleMessage = async ({
 		await deleteMigrationJobImmediately({ sqs, message, job });
 	}
 
-	await processMessage({ message, db });
+	const isMigration = job.name === JobName.Migration;
+	if (isMigration) {
+		await processMessage({ message, db });
+	} else {
+		await withTimeout(processMessage({ message, db }), MESSAGE_TIMEOUT_MS);
+	}
+
 	messagesProcessed++;
 	totalMessagesProcessed++;
 
@@ -230,8 +264,30 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 			if (messages.length > 0) {
 				consecutiveEmptyPolls = 0;
 
+				// Separate migration jobs — they're long-running and already deleted
+				// from the queue before processing, so fire-and-forget to avoid
+				// blocking the polling loop
+				const regularMessages: Message[] = [];
+				for (const message of messages) {
+					if (!message.Body) continue;
+					const job: SqsJob = JSON.parse(message.Body);
+					if (job.name === JobName.Migration) {
+						handleSingleMessage({ sqs, message, db }).catch((error) => {
+							console.error(
+								`${logPrefix()} Migration job failed:`,
+								error instanceof Error ? error.message : error,
+							);
+							Sentry.captureException(error);
+						});
+					} else {
+						regularMessages.push(message);
+					}
+				}
+
 				const results = await Promise.allSettled(
-					messages.map((message) => handleSingleMessage({ sqs, message, db })),
+					regularMessages.map((message) =>
+						handleSingleMessage({ sqs, message, db }),
+					),
 				);
 
 				const toDelete = results
