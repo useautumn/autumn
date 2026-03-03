@@ -19,14 +19,19 @@ import { subToDiscounts } from "../utils/discounts/subToDiscounts";
  * @see https://docs.stripe.com/changelog/clover/2025-09-30/add-discount-source-property
  * @see https://docs.stripe.com/api/discounts/object
  */
-export const extractStripeDiscounts = ({
+export const extractStripeDiscounts = async ({
+	ctx,
 	stripeSubscription,
 	stripeCustomer,
 }: {
+	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer: StripeCustomerWithDiscount;
-}): StripeDiscountWithCoupon[] => {
-	const subscriptionDiscounts = subToDiscounts({ sub: stripeSubscription });
+}): Promise<StripeDiscountWithCoupon[]> => {
+	const subscriptionDiscounts = await subToDiscounts({
+		ctx,
+		sub: stripeSubscription,
+	});
 
 	if (subscriptionDiscounts.length > 0) {
 		return subscriptionDiscounts;
@@ -91,7 +96,8 @@ export const fetchStripeDiscountsForBilling = async ({
 	stripeCustomer: StripeCustomerWithDiscount;
 	paramDiscounts?: AttachDiscount[];
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const existingDiscounts = extractStripeDiscounts({
+	const existingDiscounts = await extractStripeDiscounts({
+		ctx,
 		stripeSubscription,
 		stripeCustomer,
 	});
@@ -99,10 +105,11 @@ export const fetchStripeDiscountsForBilling = async ({
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	if (!paramDiscounts?.length) {
-		return filterDeletedCouponDiscounts({
-			stripeCli,
-			discounts: existingDiscounts,
-		});
+		return existingDiscounts;
+		// return filterDeletedCouponDiscounts({
+		// 	stripeCli,
+		// 	discounts: existingDiscounts,
+		// });
 	}
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({
@@ -125,5 +132,6 @@ export const fetchStripeDiscountsForBilling = async ({
 	});
 
 	const allDiscounts = [...existingDiscounts, ...newDiscounts];
-	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
+	// return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
+	return allDiscounts;
 };

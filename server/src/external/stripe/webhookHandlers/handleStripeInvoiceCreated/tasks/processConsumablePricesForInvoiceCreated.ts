@@ -71,7 +71,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 
 	const { lineItems, updateCustomerEntitlements } =
-		eventContextToArrearLineItems({
+		await eventContextToArrearLineItems({
 			ctx,
 			eventContext,
 			periodEndMs: invoicePeriodEndMs,
