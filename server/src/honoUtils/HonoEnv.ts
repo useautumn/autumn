@@ -40,6 +40,7 @@ export type RequestContext = {
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;
 		eventId?: string;
+		keepInternalFields?: boolean;
 	};
 };
 
