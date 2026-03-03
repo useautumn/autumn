@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { CusProductStatus } from "@autumn/shared";
+import { getClientOrigin } from "./corsOrigins.js";
 
 const BREAK_API_VERSION = 0.2;
 
@@ -20,13 +21,28 @@ export const ADMIN_USER_IDs = [
 	"K7NDwSwohMCV9BXJ3Yb5MxgeXhWcwj0L", // charlie sandbox
 ];
 
-export const dashboardOrigins = [
+const DEFAULT_DASHBOARD_ORIGINS = [
 	"http://localhost:3000",
 	"https://app.useautumn.com",
 	"https://staging.useautumn.com",
 	"https://dev.useautumn.com",
-	process.env.CLIENT_URL!,
 ];
+
+export const getDashboardOrigins = (): string[] => {
+	const clientOrigin = getClientOrigin();
+	const origins = [...DEFAULT_DASHBOARD_ORIGINS];
+	if (clientOrigin) {
+		origins.push(clientOrigin);
+	}
+
+	return [...new Set(origins)];
+};
+
+export const isDashboardOrigin = ({ origin }: { origin?: string }) => {
+	if (!origin) return false;
+
+	return getDashboardOrigins().includes(origin);
+};
 
 export const WEBHOOK_EVENTS = [
 	"checkout.session.completed",
