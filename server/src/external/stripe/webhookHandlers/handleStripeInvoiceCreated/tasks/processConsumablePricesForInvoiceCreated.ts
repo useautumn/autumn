@@ -84,7 +84,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		});
 
 	if (lineItems.length > 0) {
-		await createStripeInvoiceItems({
+		const invoiceItems = await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,
