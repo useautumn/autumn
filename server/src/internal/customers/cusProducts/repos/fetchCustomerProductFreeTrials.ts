@@ -35,7 +35,7 @@ export const fetchCustomerProductFreeTrials = async ({
 		.where(
 			and(
 				or(
-					eq(customers.id, fullCus.id ?? ""),
+					eq(customers.internal_id, fullCus.internal_id),
 					fullCus.fingerprint
 						? eq(customers.fingerprint, fullCus.fingerprint)
 						: undefined,
