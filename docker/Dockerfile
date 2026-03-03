@@ -13,6 +13,7 @@ COPY scripts/package.json ./scripts/package.json
 COPY apps/checkout/package.json ./apps/checkout/package.json
 COPY packages/autumn-js/package.json ./packages/autumn-js/package.json
 COPY packages/openapi/package.json ./packages/openapi/package.json
+COPY packages/ksuid/package.json ./packages/ksuid/package.json
 COPY packages/sdk/package.json ./packages/sdk/package.json
 COPY apps/sdk-test/package.json ./apps/sdk-test/package.json
 COPY apps/docs/package.json ./apps/docs/package.json
