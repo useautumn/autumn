@@ -85,7 +85,7 @@ export const updateTier = ({
 	item: ProductItem;
 	setItem: (item: ProductItem) => void;
 	index: number;
-	field: "to" | "amount";
+	field: "to" | "amount" | "flat_amount";
 	value: string;
 }) => {
 	if (!item.tiers) return;
@@ -116,7 +116,7 @@ export const updateTier = ({
 				newTiers[index + 1].to = numValue;
 			}
 		}
-	} else if (field === "amount") {
+	} else if (field === "amount" || field === "flat_amount") {
 		// Handle empty string or numeric values
 		let numValue: number;
 		if (value === "") {
@@ -125,7 +125,29 @@ export const updateTier = ({
 			const parsed = parseFloat(value);
 			numValue = Number.isNaN(parsed) ? 0 : parsed;
 		}
-		newTiers[index] = { ...newTiers[index], amount: numValue };
+		newTiers[index] = { ...newTiers[index], [field]: numValue };
 	}
 	setItem({ ...item, tiers: newTiers });
+};
+
+export type VolumePricingMode = "flat" | "per_unit";
+
+/** Cleans tier data based on the active pricing mode before committing. */
+export const cleanTiersForMode = ({
+	item,
+	mode,
+}: {
+	item: ProductItem;
+	mode: VolumePricingMode;
+}): ProductItem => {
+	if (!item.tiers) return item;
+
+	const cleanedTiers = item.tiers.map((tier) => {
+		if (mode === "flat") {
+			return { ...tier, amount: 0 };
+		}
+		return { ...tier, flat_amount: null };
+	});
+
+	return { ...item, tiers: cleanedTiers };
 };
