@@ -13,6 +13,7 @@ import { check } from "./domains/balances/check";
 import { track } from "./domains/balances/track";
 import { updateBalance } from "./domains/balances/updateBalance";
 import { billing } from "./domains/billing/billing";
+import { billingDiscounts } from "./domains/billing/billingDiscounts";
 import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
@@ -39,6 +40,7 @@ const allGroups: TestGroup[] = [
 	track,
 	updateBalance,
 	billing,
+	billingDiscounts,
 	billingV1,
 	billingV2,
 	billingV2Misc,
