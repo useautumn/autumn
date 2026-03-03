@@ -27,6 +27,7 @@ const isFifoQueue = QUEUE_URL.endsWith(".fifo");
 let messagesProcessed = 0;
 let totalMessagesProcessed = 0;
 let lastStatsTime = Date.now();
+let activeMigrationJobs = 0;
 
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
@@ -87,7 +88,8 @@ const logStatsAndCheckZeroMessages = () => {
 
 		if (
 			consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
-			totalMessagesProcessed > 0
+			totalMessagesProcessed > 0 &&
+			activeMigrationJobs === 0
 		) {
 			console.log(
 				`${logPrefix()} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
@@ -272,13 +274,16 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
 					if (job.name === JobName.Migration) {
-						handleSingleMessage({ sqs, message, db }).catch((error) => {
-							console.error(
-								`${logPrefix()} Migration job failed:`,
-								error instanceof Error ? error.message : error,
-							);
-							Sentry.captureException(error);
-						});
+						activeMigrationJobs++;
+						handleSingleMessage({ sqs, message, db })
+							.catch((error) => {
+								console.error(
+									`${logPrefix()} Migration job failed:`,
+									error instanceof Error ? error.message : error,
+								);
+								Sentry.captureException(error);
+							})
+							.finally(() => activeMigrationJobs--);
 					} else {
 						regularMessages.push(message);
 					}
