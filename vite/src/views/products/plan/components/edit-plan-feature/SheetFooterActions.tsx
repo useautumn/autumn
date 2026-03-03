@@ -4,7 +4,13 @@ import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorCo
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-export function SheetFooterActions({ hasChanges }: { hasChanges: boolean }) {
+export function SheetFooterActions({
+	hasChanges,
+	onBeforeCommit,
+}: {
+	hasChanges: boolean;
+	onBeforeCommit?: () => void;
+}) {
 	const { setItem, handleUpdateProductItem } = useProductItemContext();
 	const { initialItem } = useSheet();
 
@@ -15,6 +21,7 @@ export function SheetFooterActions({ hasChanges }: { hasChanges: boolean }) {
 	};
 
 	const handleUpdateItem = async () => {
+		onBeforeCommit?.();
 		await handleUpdateProductItem();
 	};
 
