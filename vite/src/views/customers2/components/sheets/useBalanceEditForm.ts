@@ -40,7 +40,7 @@ export function useBalanceEditForm({
 
 	const grantedAndPurchasedBalance = grantedBalance + prepaidAllowance;
 
-	return useAppForm({
+	const form = useAppForm({
 		defaultValues: {
 			mode: "set",
 			balance: balance ?? null,
@@ -61,6 +61,8 @@ export function useBalanceEditForm({
 			onChange: BalanceEditFormSchema,
 		},
 	});
+
+	return Object.assign(form, { prepaidAllowance });
 }
 
 export type BalanceEditFormInstance = ReturnType<typeof useBalanceEditForm>;
