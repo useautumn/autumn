@@ -24,7 +24,7 @@ export const PriceTierSchema = z
 			description: "The price of the product item for this tier.",
 			example: 10,
 		}),
-		flat_amount: z.number().nullish().meta({
+		flat_amount: z.number().optional().meta({
 			description:
 				"A flat fee charged for this tier, in addition to the per-unit amount.",
 		}),
