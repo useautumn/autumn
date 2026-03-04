@@ -71,7 +71,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 
 	const { lineItems, updateCustomerEntitlements } =
-		eventContextToArrearLineItems({
+		await eventContextToArrearLineItems({
 			ctx,
 			eventContext,
 			periodEndMs: invoicePeriodEndMs,
@@ -84,7 +84,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		});
 
 	if (lineItems.length > 0) {
-		await createStripeInvoiceItems({
+		const invoiceItems = await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,

@@ -2,14 +2,16 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Entity prepaid test suite",
+	description: "Failed tests from billing V2 run",
 	tier: "domain",
 	paths: [
-		"tests/integration/billing/attach/scheduled-switch/scheduled-switch-prepaid-entities.test.ts",
-		"tests/integration/billing/attach/new-plan/prepaid/attach-prepaid-entities.test.ts",
-		"tests/integration/billing/attach/new-plan/prepaid/attach-prepaid-volume-entities.test.ts",
-		"tests/integration/billing/attach/immediate-switch/immediate-switch-entities-prepaid-volume.test.ts",
-		"tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity.test.ts",
-		"tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity-proration.test.ts",
+		"integration/billing/multi-attach/customize/multi-attach-customize-addons.test.ts",
+		"integration/billing/update-subscription/custom-plan/update-paid-tier-behavior.test.ts",
+		"integration/billing/update-subscription/invoice-line-items/update-quantity-line-items.test.ts",
+		"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice-discounts.test.ts",
+		"integration/billing/stripe-webhooks/invoice-created/invoice-created-consumable-discounts.test.ts",
+		"integration/crud/customers/create-customer.test.ts",
+		"integration/crud/customers/update-customer.test.ts",
+		"integration/crud/customers/cross-version-list-customers.test.ts",
 	],
 };

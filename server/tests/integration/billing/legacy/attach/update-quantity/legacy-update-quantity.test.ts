@@ -29,6 +29,7 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Quantity upgrade mid-cycle with prorate immediately
@@ -107,7 +108,10 @@ test.concurrent(`${chalk.yellowBright("attach: quantity upgrade mid-cycle with p
 		throw new Error("Billing units must be greater than zero");
 
 	const pricePerUnit = prepaidItem.price;
-	const fullUpgradeAmount = (upgradeQuantity / billingUnits) * pricePerUnit;
+	const fullUpgradeAmount = new Decimal(upgradeQuantity)
+		.div(billingUnits)
+		.mul(pricePerUnit)
+		.toNumber();
 	const frozenTimeMs = Math.floor(advancedTo / 1000) * 1000;
 	const expectedLatestTotal = await calculateProratedCharge({
 		customerId,
