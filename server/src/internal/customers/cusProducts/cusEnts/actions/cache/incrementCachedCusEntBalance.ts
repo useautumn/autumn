@@ -1,7 +1,7 @@
 import type { RepoContext } from "@/db/repoContext.js";
 import { redis } from "@/external/redis/initRedis.js";
+import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
 type IncrementCachedCusEntBalanceResult = {
 	ok: boolean;
@@ -34,14 +34,14 @@ export const incrementCachedCusEntBalance = async ({
 		});
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.incrementCusEntBalance(
+			return await redis.adjustCustomerEntitlementBalance(
 				cacheKey,
 				JSON.stringify({ cus_ent_id: cusEntId, delta }),
 			);
 		});
 
 		if (result === null) {
-			logger.error(
+			logger.warn(
 				`[incrementCachedCusEntBalance] Redis write failed for cusEnt ${cusEntId}`,
 			);
 			return null;
@@ -55,7 +55,7 @@ export const incrementCachedCusEntBalance = async ({
 		};
 
 		if (!parsed.ok) {
-			logger.error(
+			logger.warn(
 				`[incrementCachedCusEntBalance] Lua script error for cusEnt ${cusEntId}: ${parsed.error}`,
 			);
 		}

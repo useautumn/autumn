@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV5,
 	BillingInterval,
 	type CustomerBillingControls,
+	PurchaseLimitInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -46,6 +47,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: update customer with b
 		],
 	});
 
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
+
 	// Update customer with billing_controls
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: autoTopupConfig,
@@ -88,6 +91,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: disable auto_topup")}`
 			}),
 		],
 	});
+
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
 
 	// Set enabled config first
 	await autumnV2_1.customers.update(customerId, {
@@ -138,6 +143,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: remove auto_topup with
 		],
 	});
 
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
 	// Set config
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: autoTopupConfig,
@@ -189,7 +195,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: with max_purchases rat
 					threshold: 20,
 					quantity: 100,
 					purchase_limit: {
-						interval: BillingInterval.Month,
+						interval: PurchaseLimitInterval.Month,
+						interval_count: 1,
 						limit: 5,
 					},
 				},

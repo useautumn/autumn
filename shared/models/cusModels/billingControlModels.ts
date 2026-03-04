@@ -1,8 +1,9 @@
 import { z } from "zod/v4";
-import { BillingInterval } from "../productModels/intervals/billingInterval.js";
+import { PurchaseLimitIntervalEnum } from "./billingControls/purchaseLimitInterval.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
-	interval: z.enum(BillingInterval),
+	interval: PurchaseLimitIntervalEnum,
+	interval_count: z.number().min(1).default(1),
 	limit: z.number().min(1),
 });
 
@@ -23,5 +24,9 @@ export type AutoTopupPurchaseLimit = z.infer<
 >;
 export type AutoTopup = z.infer<typeof AutoTopupSchema>;
 export type CustomerBillingControls = z.infer<
+	typeof CustomerBillingControlsSchema
+>;
+
+export type CustomerBillingControlsInput = z.input<
 	typeof CustomerBillingControlsSchema
 >;

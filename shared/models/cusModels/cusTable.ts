@@ -36,7 +36,7 @@ export const customers = pgTable(
 			.$type<ExternalProcessors>()
 			.default({} as ExternalProcessors),
 		send_email_receipts: boolean("send_email_receipts").default(false),
-		auto_topup: jsonb().$type<AutoTopup[]>(),
+		auto_topups: jsonb().$type<AutoTopup[]>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),

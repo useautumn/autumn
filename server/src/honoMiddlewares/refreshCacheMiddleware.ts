@@ -7,14 +7,14 @@ import { matchRoute } from "./middlewareUtils.js";
  * Route patterns that trigger customer cache deletion
  */
 const cusPrefixedUrls = [
-	{
-		method: "POST",
-		url: "/customers/:customer_id",
-	},
-	{
-		method: "PATCH",
-		url: "/customers/:customer_id",
-	},
+	// {
+	// 	method: "POST",
+	// 	url: "/customers/:customer_id",
+	// },
+	// {
+	// 	method: "PATCH",
+	// 	url: "/customers/:customer_id",
+	// },
 	{
 		method: "DELETE",
 		url: "/customers/:customer_id",
@@ -85,6 +85,12 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		url: "/balances.create",
 		source: "createBalance",
 	},
+
+	// // Update customer
+	// {
+	// 	method: "POST",
+	// 	url: "/customers.update",
+	// },
 ];
 
 /**

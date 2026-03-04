@@ -47,6 +47,7 @@ export const computeCustomPlan = async ({
 	});
 
 	return {
+		customerId: fullCustomer?.id ?? "",
 		insertCustomerProducts: [newFullCustomerProduct],
 		updateCustomerProduct: {
 			customerProduct,

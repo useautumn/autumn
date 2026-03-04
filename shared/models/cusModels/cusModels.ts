@@ -18,7 +18,7 @@ export const CustomerSchema = z.object({
 	processors: ExternalProcessorsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).nullish().default({}),
 	send_email_receipts: z.boolean().default(false),
-	auto_topup: z.array(AutoTopupSchema).nullish(),
+	auto_topups: z.array(AutoTopupSchema).nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;

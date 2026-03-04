@@ -45,6 +45,7 @@ export const computeUpdateSubscriptionPlan = async ({
 			break;
 		case UpdateSubscriptionIntent.None:
 			plan = {
+				customerId: billingContext.fullCustomer?.id ?? "",
 				insertCustomerProducts: [],
 				updateCustomerProduct: {
 					customerProduct: billingContext.customerProduct,

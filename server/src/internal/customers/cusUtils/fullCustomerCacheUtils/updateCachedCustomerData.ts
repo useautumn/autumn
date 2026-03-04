@@ -1,7 +1,8 @@
 import type { Customer } from "@autumn/shared";
-import type { RepoContext } from "@/db/repoContext.js";
 import { redis } from "@/external/redis/initRedis.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
 type UpdateCustomerDataResult = {
@@ -19,7 +20,7 @@ type CustomerDataUpdates = Pick<
 	| "send_email_receipts"
 	| "processor"
 	| "processors"
-	| "auto_topup"
+	| "auto_topups"
 >;
 
 /**
@@ -29,24 +30,35 @@ type CustomerDataUpdates = Pick<
 export const updateCachedCustomerData = async ({
 	ctx,
 	customerId,
+	newCustomerId,
 	updates,
 }: {
-	ctx: RepoContext;
+	ctx: AutumnContext;
 	customerId: string;
+	newCustomerId?: string;
 	updates: CustomerDataUpdates;
 }): Promise<UpdateCustomerDataResult | null> => {
 	try {
 		const { org, env, logger } = ctx;
-
-		if (Object.keys(updates).length === 0) {
-			return { success: true, updatedFields: [] };
-		}
 
 		const cacheKey = buildFullCustomerCacheKey({
 			orgId: org.id,
 			env,
 			customerId,
 		});
+
+		if (newCustomerId && newCustomerId !== customerId) {
+			await deleteCachedFullCustomer({
+				ctx,
+				customerId,
+				source: "updateCachedCustomerData (ID changed)",
+			});
+			return { success: true, updatedFields: ["id"] };
+		}
+
+		if (Object.keys(updates).length === 0) {
+			return { success: true, updatedFields: [] };
+		}
 
 		const paramsJson = JSON.stringify({ updates });
 
