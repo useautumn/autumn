@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { notNullish } from "@server/utils/genUtils.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
@@ -214,5 +214,31 @@ export class FeatureService {
 		await db
 			.delete(features)
 			.where(and(eq(features.org_id, orgId), eq(features.env, env)));
+	}
+
+	/** Deletes features in batches to avoid locking all rows at once. */
+	static async safeDeleteByOrgId({
+		db,
+		orgId,
+		env,
+		batchSize = 250,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		batchSize?: number;
+	}) {
+		while (true) {
+			const batch = await db
+				.select({ internal_id: features.internal_id })
+				.from(features)
+				.where(and(eq(features.org_id, orgId), eq(features.env, env)))
+				.limit(batchSize);
+
+			if (batch.length === 0) break;
+
+			const ids = batch.map((r) => r.internal_id);
+			await db.delete(features).where(inArray(features.internal_id, ids));
+		}
 	}
 }
