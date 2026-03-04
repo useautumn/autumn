@@ -16,18 +16,20 @@ export enum TierBehavior {
 export const UsageTierSchema = z
 	.object({
 		to: z.number().or(z.literal(Infinite)),
-		amount: z.number().optional().default(0),
+		amount: z.number().optional(),
 		flat_amount: z.number().optional(),
 	})
 	.refine(
-		(z) => {
-			return z.amount !== undefined || z.flat_amount !== undefined;
-		},
+		(val) => val.amount !== undefined || val.flat_amount !== undefined,
 		{
 			message: "Either amount or flat_amount, or both must be defined",
 			path: ["amount", "flat_amount"],
 		},
-	);
+	)
+	.transform((val) => ({
+		...val,
+		amount: val.amount ?? 0,
+	}));
 
 export type UsageTier = z.infer<typeof UsageTierSchema>;
 
