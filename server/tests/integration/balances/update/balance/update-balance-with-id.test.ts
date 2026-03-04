@@ -172,6 +172,7 @@ test.concurrent(`${chalk.yellowBright("update-balance-id-3: update included_gran
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
+		current_balance: 100,
 		included_grant: 150,
 		balance_id: "balance-a",
 	});
@@ -183,8 +184,8 @@ test.concurrent(`${chalk.yellowBright("update-balance-id-3: update included_gran
 
 	// balance-a: granted=150, balance-b: granted=200 → total granted=350
 	expect(check.balance?.granted_balance).toBe(350);
-	expect(check.balance?.current_balance).toBe(350);
-	expect(check.balance?.usage).toBe(0);
+	expect(check.balance?.current_balance).toBe(300);
+	expect(check.balance?.usage).toBe(50);
 
 	const balanceA = check.balance?.breakdown?.find((b) => b.id === "balance-a");
 	const balanceB = check.balance?.breakdown?.find((b) => b.id === "balance-b");
