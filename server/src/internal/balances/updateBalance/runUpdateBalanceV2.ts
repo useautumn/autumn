@@ -1,10 +1,10 @@
 import {
 	FeatureNotFoundError,
+	type FullCustomer,
 	notNullish,
 	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { runRedisUpdateBalanceV2 } from "./runRedisUpdateBalanceV2.js";
@@ -21,9 +21,11 @@ import { runRedisUpdateBalanceV2 } from "./runRedisUpdateBalanceV2.js";
 export const runUpdateBalanceV2 = async ({
 	ctx,
 	params,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	params: UpdateBalanceParamsV0;
+	fullCustomer: FullCustomer;
 }) => {
 	const { features } = ctx;
 	const { feature_id: featureId, add_to_balance: addToBalance } = params;
@@ -38,13 +40,6 @@ export const runUpdateBalanceV2 = async ({
 
 	const customerEntitlementFilters = buildCustomerEntitlementFilters({
 		params,
-	});
-
-	// 1. Get cached full customer
-	const fullCustomer = await getOrCreateCachedFullCustomer({
-		ctx,
-		params,
-		source: "runUpdateBalanceV2",
 	});
 
 	// 2. Build featureDeductions

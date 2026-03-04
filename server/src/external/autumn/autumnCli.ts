@@ -24,6 +24,7 @@ import {
 	type CreateRewardProgram,
 	type CustomerBillingControlsInput,
 	CustomerExpand,
+	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
 	type LegacyVersion,
@@ -842,6 +843,10 @@ export class AutumnInt {
 		},
 		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
+		delete: async (params: DeleteBalanceParamsV0) => {
+			const data = await this.post(`/balances.delete`, params);
 			return data;
 		},
 	};

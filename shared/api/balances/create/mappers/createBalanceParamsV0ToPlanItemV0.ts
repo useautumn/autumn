@@ -20,7 +20,7 @@ export const createBalanceParamsV0ToPlanItemV0 = ({
 
 	return {
 		feature_id: params.feature_id,
-		granted_balance: params.included ?? params.granted_balance ?? 0,
+		granted_balance: params.included_grant ?? params.granted_balance ?? 0,
 		unlimited: params.unlimited ?? false,
 		reset: params.reset
 			? {
