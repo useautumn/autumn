@@ -11,7 +11,6 @@ import {
 	ProrationBehavior,
 	SuccessCode,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
@@ -61,7 +60,6 @@ export const handleLegacyUpgradeFlow = async ({
 	}
 
 	let sub = curSub;
-	let latestInvoice: Stripe.Invoice | undefined;
 
 	const itemSet = await getStripeSubItems2({
 		attachParams,
@@ -150,7 +148,7 @@ export const handleLegacyUpgradeFlow = async ({
 		if (res?.latestInvoice) {
 			logger.info(`UPGRADE FLOW: inserting invoice ${res.latestInvoice.id}`);
 			await insertInvoiceFromAttach({
-				db,
+				ctx,
 				attachParams,
 				stripeInvoice: res.latestInvoice,
 				logger,
@@ -210,7 +208,6 @@ export const handleLegacyUpgradeFlow = async ({
 
 		attachParams.replaceables = res.replaceables || [];
 		sub = res.updatedSub;
-		latestInvoice = res.latestInvoice || undefined;
 	}
 
 	if (

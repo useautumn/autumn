@@ -6,27 +6,29 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { Logger } from "../../external/logtail/logtailUtils.js";
 import type { AttachParams } from "../customers/cusProducts/AttachParams.js";
+import { upsertInvoiceInCache } from "./actions/cache/upsertInvoiceInCache.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
 
 // Purpose of this function is to insert an invoice from attach params when sub is updated -> Correct product ID is set...
 export const insertInvoiceFromAttach = async ({
-	db,
+	ctx,
 	attachParams,
 	invoiceId,
 	stripeInvoice,
 	logger,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	invoiceId?: string;
 	stripeInvoice?: Stripe.Invoice;
 	logger: Logger;
 }) => {
+	const { db } = ctx;
 	try {
 		if (!stripeInvoice) {
 			stripeInvoice = await getStripeExpandedInvoice({
@@ -60,7 +62,7 @@ export const insertInvoiceFromAttach = async ({
 		);
 
 		if (invoice) {
-			await InvoiceService.update({
+			const invoice = await InvoiceService.update({
 				db,
 				query: {
 					stripeId: stripeInvoice.id!,
@@ -70,8 +72,17 @@ export const insertInvoiceFromAttach = async ({
 					internal_product_ids: internalProductIds,
 				},
 			});
+
+			const customerId = attachParams.customer.id ?? "";
+			if (invoice) {
+				await upsertInvoiceInCache({
+					ctx,
+					customerId,
+					invoice,
+				});
+			}
 		} else {
-			await InvoiceService.createInvoiceFromStripe({
+			const invoice = await InvoiceService.createInvoiceFromStripe({
 				db,
 				stripeInvoice,
 				internalCustomerId: attachParams.customer.internal_id,
@@ -81,6 +92,15 @@ export const insertInvoiceFromAttach = async ({
 				internalProductIds,
 				items: autumnInvoiceItems,
 			});
+
+			const customerId = attachParams.customer.id ?? "";
+			if (invoice) {
+				await upsertInvoiceInCache({
+					ctx,
+					customerId,
+					invoice,
+				});
+			}
 		}
 		return stripeInvoice;
 	} catch (error) {

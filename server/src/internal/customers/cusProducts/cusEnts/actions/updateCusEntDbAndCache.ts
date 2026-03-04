@@ -19,7 +19,12 @@ export const updateCusEntDbAndCache = async ({
 	cusEntId: string;
 	updates: Partial<InsertCustomerEntitlement>;
 }) => {
-	await CusEntService.update({ ctx, id: cusEntId, updates });
+	await CusEntService.update({
+		ctx,
+		id: cusEntId,
+		updates,
+		incrementCacheVersion: false,
+	});
 
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: ctx.org.id,

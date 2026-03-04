@@ -227,10 +227,12 @@ export class CusEntService {
 		ctx,
 		id,
 		updates,
+		incrementCacheVersion = true,
 	}: {
 		ctx: RepoContext;
 		id: string;
 		updates: Partial<InsertCustomerEntitlement>;
+		incrementCacheVersion?: boolean;
 	}) {
 		const { db } = ctx;
 
@@ -238,7 +240,9 @@ export class CusEntService {
 			.update(customerEntitlements)
 			.set({
 				...updates,
-				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+				cache_version: incrementCacheVersion
+					? sql`${customerEntitlements.cache_version} + 1`
+					: undefined,
 			})
 			.where(eq(customerEntitlements.id, id))
 			.returning();

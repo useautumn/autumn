@@ -20,6 +20,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { updateCachedCustomerData } from "./fullCustomerCacheUtils/updateCachedCustomerData.js";
 
 export const updateCustomerDetails = async ({
 	ctx,
@@ -66,6 +67,12 @@ export const updateCustomerDetails = async ({
 		});
 
 		fullCustomer = { ...fullCustomer, ...updates };
+
+		await updateCachedCustomerData({
+			ctx,
+			customerId: idOrInternalId,
+			updates,
+		});
 
 		return true;
 	}
