@@ -7,6 +7,7 @@ import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 export const CustomerEntitlementFiltersSchema = z.object({
 	cusEntIds: z.array(z.string()).optional(),
 	interval: z.enum(EntInterval).optional(),
+	balanceId: z.string().optional(),
 });
 
 export const EntityBalanceSchema = z.object({
@@ -46,6 +47,8 @@ export const CustomerEntitlementSchema = z.object({
 
 	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
+
+	external_id: z.string().nullable(),
 });
 
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({

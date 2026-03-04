@@ -27,6 +27,40 @@ import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
+	static async get({
+		ctx,
+		externalId,
+		internalCustomerId,
+	}: {
+		ctx: RepoContext;
+		externalId: string;
+		internalCustomerId?: string;
+	}) {
+		const { db, org, env } = ctx;
+		const rows = await db
+			.select()
+			.from(customerEntitlements)
+			.innerJoin(
+				customers,
+				eq(customerEntitlements.internal_customer_id, customers.internal_id),
+			)
+			.where(
+				and(
+					eq(customerEntitlements.external_id, externalId),
+					internalCustomerId
+						? eq(customerEntitlements.internal_customer_id, internalCustomerId)
+						: undefined,
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+				),
+			)
+			.limit(1);
+
+		const cusEnt = rows[0]?.customer_entitlements;
+
+		return cusEnt as CustomerEntitlement | undefined;
+	}
+
 	static async upsert({
 		db,
 		data,
@@ -89,14 +123,23 @@ export class CusEntService {
 		data,
 	}: {
 		ctx: RepoContext;
-		data: InsertCustomerEntitlement[] | FullCustomerEntitlement[];
+		data:
+			| InsertCustomerEntitlement[]
+			| FullCustomerEntitlement[]
+			| CustomerEntitlement[];
 	}) {
 		const { db } = ctx;
 		if (Array.isArray(data) && data.length === 0) {
 			return;
 		}
 
-		await db.insert(customerEntitlements).values(data as any); // DRIZZLE TYPE REFACTOR
+		const insertData = data.map((item) => ({
+			...item,
+			balance: item.balance ?? 0,
+			cache_version: 0,
+		})) satisfies InsertCustomerEntitlement[];
+
+		await db.insert(customerEntitlements).values(insertData);
 	}
 
 	static async getActiveResetPassed({
