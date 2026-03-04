@@ -47,6 +47,9 @@ export const customerEntitlements = pgTable(
 		// Optional...
 		customer_id: text("customer_id"),
 		feature_id: text("feature_id"),
+
+		// External ID for API consumers to reference this balance
+		external_id: text("external_id"),
 	},
 	(table) => [
 		foreignKey({

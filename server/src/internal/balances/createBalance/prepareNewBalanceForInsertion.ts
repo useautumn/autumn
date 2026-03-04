@@ -68,6 +68,11 @@ export const prepareNewBalanceForInsertion = async ({
 		expires_at: params.expires_at ?? null,
 	});
 
+	// Set external_id if balance_id provided
+	if (params.balance_id) {
+		newCustomerEntitlement.external_id = params.balance_id;
+	}
+
 	// If entity is provided, assign balance to entity instead of customer-level
 	if (entity) {
 		newCustomerEntitlement.internal_entity_id = entity.internal_id;

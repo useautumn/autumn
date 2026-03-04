@@ -16,7 +16,7 @@ export const getBooleanApiBalance = ({
 }): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
-	const id = cusEnts[0].id;
+	const id = cusEnts[0].external_id ?? cusEnts[0].id;
 
 	return {
 		object: "balance",
@@ -63,7 +63,7 @@ export const getUnlimitedApiBalance = ({
 }): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
-	const id = cusEnts[0].id;
+	const id = cusEnts[0].external_id ?? cusEnts[0].id;
 	const entityId = undefined; // Unlimited features don't have entity context
 
 	return {

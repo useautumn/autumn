@@ -98,5 +98,12 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
+	if (notNullish(customerEntitlementFilters?.externalId)) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) =>
+				cusEnt.external_id === customerEntitlementFilters.externalId,
+		);
+	}
+
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };
