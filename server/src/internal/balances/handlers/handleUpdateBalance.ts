@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	findFeatureById,
 	notNullish,
 	nullish,
 	RecaseError,
@@ -10,10 +11,9 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
 import { runUpdateUsage } from "@/internal/balances/updateBalance/runUpdateUsage";
 import { updateGrantedBalance } from "@/internal/balances/updateBalance/updateGrantedBalance";
+import { updateNextResetAt } from "@/internal/balances/updateBalance/updateNextResetAt";
 import { buildCustomerEntitlementFilters } from "@/internal/balances/utils/buildCustomerEntitlementFilters";
-import { CusService } from "@/internal/customers/CusService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsV0Schema.extend({}),
@@ -22,16 +22,33 @@ export const handleUpdateBalance = createRoute({
 		const params = c.req.valid("json");
 		const ctx = c.get("ctx");
 
+		if (params.feature_id) {
+			findFeatureById({
+				features: ctx.features,
+				featureId: params.feature_id,
+				errorOnNotFound: true,
+			});
+		}
+
+		let fullCustomer = await getOrSetCachedFullCustomer({
+			ctx,
+			customerId: params.customer_id,
+			entityId: params.entity_id,
+			source: "handleUpdateBalance",
+		});
+
 		const targetBalance = params.remaining ?? params.current_balance;
 		if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
-			await runUpdateBalanceV2({ ctx, params });
+			const result = await runUpdateBalanceV2({ ctx, params, fullCustomer });
+			fullCustomer = result?.fullCus ?? fullCustomer;
 		}
 
 		if (notNullish(params.usage)) {
-			await runUpdateUsage({ ctx, params });
+			const result = await runUpdateUsage({ ctx, params, fullCustomer });
+			fullCustomer = result?.fullCus ?? fullCustomer;
 		}
 
-		if (notNullish(params.granted_balance)) {
+		if (notNullish(params.included_grant)) {
 			if (nullish(params.current_balance)) {
 				throw new RecaseError({
 					message: "current_balance is required when updating granted balance",
@@ -41,42 +58,33 @@ export const handleUpdateBalance = createRoute({
 			}
 
 			ctx.logger.info(
-				`updating granted balance for feature ${params.feature_id} to ${params.granted_balance}`,
+				`updating granted balance for feature ${params.feature_id} to ${params.included_grant}`,
 			);
 
 			const customerEntitlementFilters = buildCustomerEntitlementFilters({
 				params,
 			});
 
-			const fullCus = await CusService.getFull({
-				ctx,
-				idOrInternalId: params.customer_id,
-				entityId: params.entity_id,
-				withEntities: true,
-			});
-
 			await updateGrantedBalance({
 				ctx,
-				fullCus,
+				fullCustomer,
 				featureId: params.feature_id,
-				targetGrantedBalance: params.granted_balance,
+				targetGrantedBalance: params.included_grant,
 				customerEntitlementFilters,
 			});
 		}
 
-		if (notNullish(params.next_reset_at) && params.customer_entitlement_id) {
-			await CusEntService.update({
-				ctx,
-				id: params.customer_entitlement_id,
-				updates: {
-					next_reset_at: params.next_reset_at,
-				},
+		if (notNullish(params.next_reset_at)) {
+			const customerEntitlementFilters = buildCustomerEntitlementFilters({
+				params,
 			});
 
-			await deleteCachedApiCustomer({
+			await updateNextResetAt({
 				ctx,
-				customerId: params.customer_id,
-				source: `handleUpdateBalance, updating next_reset_at`,
+				fullCustomer,
+				featureId: params.feature_id,
+				nextResetAt: params.next_reset_at,
+				customerEntitlementFilters,
 			});
 		}
 

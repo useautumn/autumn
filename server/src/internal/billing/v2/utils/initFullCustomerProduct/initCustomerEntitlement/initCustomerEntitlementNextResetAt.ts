@@ -2,7 +2,7 @@ import {
 	EntInterval,
 	type EntitlementWithFeature,
 	getCycleEnd,
-	type InitFullCustomerProductContext,
+	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
 	isLifetimeEntitlement,
@@ -14,7 +14,7 @@ export const initCustomerEntitlementNextResetAt = ({
 	initOptions,
 	entitlement,
 }: {
-	initContext: InitFullCustomerProductContext;
+	initContext: InitCustomerEntitlementContext;
 	initOptions?: InitFullCustomerProductOptions;
 	entitlement: EntitlementWithFeature;
 }) => {

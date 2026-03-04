@@ -35,7 +35,7 @@ test.concurrent(`${chalk.yellowBright("update-usage-adj1: adjustment considered 
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
-		granted_balance: 150,
+		included_grant: 150,
 		current_balance: 150,
 	});
 
@@ -106,7 +106,7 @@ test.concurrent(`${chalk.yellowBright("update-usage-adj2: per-entity adjustment 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		entity_id: entities[0].id,
-		granted_balance: 160,
+		included_grant: 160,
 		current_balance: 160,
 	});
 

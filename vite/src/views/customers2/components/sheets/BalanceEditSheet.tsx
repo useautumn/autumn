@@ -10,6 +10,7 @@ import {
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
+
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -240,6 +241,9 @@ function EntitlementInfoRows({
 
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
+			{selectedCusEnt.external_id && (
+				<InfoRow label="ID" value={selectedCusEnt.external_id} />
+			)}
 			{entity && <InfoRow label="Entity" value={entity.name || entity.id} />}
 			<InfoRow label="Plan" value={cusProduct?.product.name || "N/A"} />
 			<InfoRow
@@ -516,6 +520,7 @@ function SubmitButton({
 							customer_id: customer.id || customer.internal_id,
 							feature_id: featureId,
 							current_balance: parseFloat(String(values.balance)),
+							included_grant: grantedBalanceInput ?? undefined,
 							granted_balance: grantedBalanceInput ?? undefined,
 							customer_entitlement_id: selectedCusEnt.id,
 							entity_id: entityId ?? undefined,

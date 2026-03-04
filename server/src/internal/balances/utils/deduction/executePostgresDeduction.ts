@@ -194,15 +194,17 @@ export const executePostgresDeduction = async ({
 				);
 			});
 
-			triggerAutoTopUp({
-				ctx,
-				newFullCus: fullCustomer,
-				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
-				);
-			});
+			if (resolvedOptions.triggerAutoTopUp) {
+				triggerAutoTopUp({
+					ctx,
+					newFullCus: fullCustomer,
+					feature: deduction.feature,
+				}).catch((error) => {
+					ctx.logger.error(
+						`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
+					);
+				});
+			}
 		}
 
 		// Atomically update the Redis cache with the deduction results.
