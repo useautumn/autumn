@@ -227,18 +227,28 @@ export function useHasItemChanges() {
 				item1: itemDraft.session.draftItem,
 				item2: itemDraft.session.initialItem,
 				features,
+				logDifferences: true,
 			});
-
+			console.log("[useHasItemChanges] using itemDraft.session | same:", same);
+			console.log("[useHasItemChanges] draftItem.tiers:", JSON.stringify(itemDraft.session.draftItem.tiers));
+			console.log("[useHasItemChanges] initialItem.tiers:", JSON.stringify(itemDraft.session.initialItem.tiers));
 			return !same;
 		}
 
-		if (!item || !initialItem) return false;
+		if (!item || !initialItem) {
+			console.log("[useHasItemChanges] no item or initialItem, returning false");
+			return false;
+		}
 
 		const { same } = itemsAreSame({
 			item1: item,
 			item2: initialItem,
 			features,
+			logDifferences: true,
 		});
+		console.log("[useHasItemChanges] using store | same:", same);
+		console.log("[useHasItemChanges] item.tiers:", JSON.stringify(item.tiers));
+		console.log("[useHasItemChanges] initialItem.tiers:", JSON.stringify(initialItem.tiers));
 
 		return !same;
 	}, [itemDraft.session, item, initialItem, features]);
