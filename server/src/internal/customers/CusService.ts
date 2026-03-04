@@ -18,6 +18,7 @@ import {
 	eq,
 	getTableColumns,
 	ilike,
+	inArray,
 	or,
 	sql,
 	type Table,
@@ -430,6 +431,36 @@ export class CusService {
 			.returning();
 
 		return results;
+	}
+
+	/** Deletes customers in batches to avoid locking all rows at once. */
+	static async safeDeleteByOrgId({
+		db,
+		orgId,
+		env,
+		batchSize = 250,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		batchSize?: number;
+	}) {
+		if (env === AppEnv.Live)
+			throw new Error("Cannot delete all customers under org in live mode");
+
+		while (true) {
+			const batch = await db
+				.select({ internal_id: customers.internal_id })
+				.from(customers)
+				.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+				.limit(batchSize);
+
+			if (batch.length === 0) break;
+
+			const ids = batch.map((r) => r.internal_id);
+
+			await db.delete(customers).where(inArray(customers.internal_id, ids));
+		}
 	}
 
 	static async getByVercelId({

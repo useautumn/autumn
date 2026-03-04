@@ -14,7 +14,7 @@ export const handleNukeOrganisationConfiguration = createRoute({
 			return c.json({ error: "Cannot clear non-sandbox orgs" }, 400);
 		}
 
-		await CusService.deleteByOrgId({
+		await CusService.safeDeleteByOrgId({
 			db,
 			orgId: org.id,
 			env: AppEnv.Sandbox,
