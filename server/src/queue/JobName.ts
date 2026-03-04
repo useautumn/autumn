@@ -24,6 +24,7 @@ export enum JobName {
 
 	BatchResetCusEnts = "batch-reset-cus-ents",
 
+	AutoTopUp = "auto-top-up",
 	/** Stores invoice line items from Stripe to DB (async to allow extra API calls) */
 	StoreInvoiceLineItems = "store-invoice-line-items",
 

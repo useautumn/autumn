@@ -15,7 +15,8 @@
         metadata?: object | null,
         send_email_receipts?: boolean | null,
         processor?: object | null,
-        processors?: object | null
+        processors?: object | null,
+        auto_topups?: array | null
       }
     }
 
@@ -89,6 +90,15 @@ end
 if updates.processors ~= nil and updates.processors ~= cjson.null then
   redis.call('JSON.SET', cache_key, '$.processors', cjson.encode(updates.processors))
   table.insert(updated_fields, 'processors')
+end
+
+if updates.auto_topups ~= nil then
+  if updates.auto_topups == cjson.null then
+    redis.call('JSON.SET', cache_key, '$.auto_topups', 'null')
+  else
+    redis.call('JSON.SET', cache_key, '$.auto_topups', cjson.encode(updates.auto_topups))
+  end
+  table.insert(updated_fields, 'auto_topups')
 end
 
 return cjson.encode({ success = true, updated_fields = updated_fields })

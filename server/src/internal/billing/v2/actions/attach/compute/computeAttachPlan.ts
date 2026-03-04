@@ -57,6 +57,7 @@ export const computeAttachPlan = ({
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
 	let plan: AutumnBillingPlan = {
+		customerId: attachBillingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [newCustomerProduct],
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,

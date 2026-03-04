@@ -60,9 +60,11 @@ export const insertInvoiceFromAttach = async ({
 		);
 
 		if (invoice) {
-			await InvoiceService.updateByStripeId({
+			await InvoiceService.update({
 				db,
-				stripeId: stripeInvoice.id!,
+				query: {
+					stripeId: stripeInvoice.id!,
+				},
 				updates: {
 					product_ids: productIds,
 					internal_product_ids: internalProductIds,

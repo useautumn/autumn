@@ -49,6 +49,12 @@ export interface Payloads {
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
 	[JobName.BatchResetCusEnts]: BatchResetCusEntsPayload;
+	[JobName.AutoTopUp]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		featureId: string;
+	};
 	[JobName.VerifyCacheConsistency]: {
 		customerId: string;
 		orgId: string;

@@ -61,6 +61,7 @@ export const getApiCustomerBase = async ({
 		purchases: apiPurchases,
 		balances: apiBalances,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
+		billing_controls: { auto_topups: fullCus.auto_topups ?? undefined },
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)
