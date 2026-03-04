@@ -43,7 +43,7 @@ export function EditPlanFeatureSheet({
 	const [volumePricingMode, setVolumePricingMode] = useState<VolumePricingMode>(
 		() => {
 			const hasFlatAmount = item?.tiers?.some(
-				(t) => t.flat_amount != null && t.flat_amount > 0,
+				(t) => t.flat_amount != null,
 			);
 			return hasFlatAmount ? "flat" : "per_unit";
 		},
