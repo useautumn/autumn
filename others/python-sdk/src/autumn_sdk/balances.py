@@ -15,12 +15,13 @@ class Balances(BaseSDK):
         customer_id: str,
         feature_id: str,
         entity_id: Optional[str] = None,
-        included: Optional[float] = None,
+        included_grant: Optional[float] = None,
         unlimited: Optional[bool] = None,
         reset: Optional[
             Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
+        balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -31,10 +32,11 @@ class Balances(BaseSDK):
         :param customer_id: The ID of the customer.
         :param feature_id: The ID of the feature.
         :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
-        :param included: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
-        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included'.
+        :param included_grant: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
+        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+        :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -54,10 +56,11 @@ class Balances(BaseSDK):
             customer_id=customer_id,
             feature_id=feature_id,
             entity_id=entity_id,
-            included=included,
+            included_grant=included_grant,
             unlimited=unlimited,
             reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
             expires_at=expires_at,
+            balance_id=balance_id,
         )
 
         req = self._build_request(
@@ -125,12 +128,13 @@ class Balances(BaseSDK):
         customer_id: str,
         feature_id: str,
         entity_id: Optional[str] = None,
-        included: Optional[float] = None,
+        included_grant: Optional[float] = None,
         unlimited: Optional[bool] = None,
         reset: Optional[
             Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
+        balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -141,10 +145,11 @@ class Balances(BaseSDK):
         :param customer_id: The ID of the customer.
         :param feature_id: The ID of the feature.
         :param entity_id: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
-        :param included: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
-        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included'.
+        :param included_grant: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
+        :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+        :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -164,10 +169,11 @@ class Balances(BaseSDK):
             customer_id=customer_id,
             feature_id=feature_id,
             entity_id=entity_id,
-            included=included,
+            included_grant=included_grant,
             unlimited=unlimited,
             reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
             expires_at=expires_at,
+            balance_id=balance_id,
         )
 
         req = self._build_request_async(
@@ -239,6 +245,9 @@ class Balances(BaseSDK):
         add_to_balance: Optional[float] = None,
         usage: Optional[float] = None,
         interval: Optional[models.UpdateBalanceInterval] = None,
+        included_grant: Optional[float] = None,
+        balance_id: Optional[str] = None,
+        next_reset_at: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -253,6 +262,9 @@ class Balances(BaseSDK):
         :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
         :param usage: The usage amount to update. Cannot be combined with remaining or add_to_balance.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+        :param included_grant: Set the granted balance to this exact value.
+        :param balance_id: Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
+        :param next_reset_at: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -276,6 +288,9 @@ class Balances(BaseSDK):
             add_to_balance=add_to_balance,
             usage=usage,
             interval=interval,
+            included_grant=included_grant,
+            balance_id=balance_id,
+            next_reset_at=next_reset_at,
         )
 
         req = self._build_request(
@@ -347,6 +362,9 @@ class Balances(BaseSDK):
         add_to_balance: Optional[float] = None,
         usage: Optional[float] = None,
         interval: Optional[models.UpdateBalanceInterval] = None,
+        included_grant: Optional[float] = None,
+        balance_id: Optional[str] = None,
+        next_reset_at: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -361,6 +379,9 @@ class Balances(BaseSDK):
         :param add_to_balance: Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.
         :param usage: The usage amount to update. Cannot be combined with remaining or add_to_balance.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+        :param included_grant: Set the granted balance to this exact value.
+        :param balance_id: Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
+        :param next_reset_at: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -384,6 +405,9 @@ class Balances(BaseSDK):
             add_to_balance=add_to_balance,
             usage=usage,
             interval=interval,
+            included_grant=included_grant,
+            balance_id=balance_id,
+            next_reset_at=next_reset_at,
         )
 
         req = self._build_request_async(
@@ -432,6 +456,210 @@ class Balances(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.UpdateBalanceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def delete(
+        self,
+        *,
+        customer_id: str,
+        entity_id: Optional[str] = None,
+        feature_id: Optional[str] = None,
+        balance_id: Optional[str] = None,
+        interval: Optional[models.DeleteBalanceInterval] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.DeleteBalanceResponse:
+        r"""Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+
+        :param customer_id: The ID of the customer.
+        :param entity_id: The ID of the entity.
+        :param feature_id: The ID of the feature.
+        :param balance_id: The ID of the balance to delete.
+        :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.DeleteBalanceParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_id=feature_id,
+            balance_id=balance_id,
+            interval=interval,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/balances.delete",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.DeleteBalanceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.DeleteBalanceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="deleteBalance",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.DeleteBalanceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def delete_async(
+        self,
+        *,
+        customer_id: str,
+        entity_id: Optional[str] = None,
+        feature_id: Optional[str] = None,
+        balance_id: Optional[str] = None,
+        interval: Optional[models.DeleteBalanceInterval] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.DeleteBalanceResponse:
+        r"""Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+
+        :param customer_id: The ID of the customer.
+        :param entity_id: The ID of the entity.
+        :param feature_id: The ID of the feature.
+        :param balance_id: The ID of the balance to delete.
+        :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.DeleteBalanceParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_id=feature_id,
+            balance_id=balance_id,
+            interval=interval,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/balances.delete",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.DeleteBalanceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.DeleteBalanceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="deleteBalance",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            error_status_codes=["4XX", "5XX"],
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.DeleteBalanceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

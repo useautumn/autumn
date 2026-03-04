@@ -610,6 +610,21 @@ class SetupPaymentAttachDiscount(BaseModel):
         return m
 
 
+class SetupPaymentCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class SetupPaymentCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
 class SetupPaymentParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -625,12 +640,16 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
     proration_behavior: NotRequired[SetupPaymentProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[SetupPaymentAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+    custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -655,6 +674,9 @@ class SetupPaymentParams(BaseModel):
     proration_behavior: Optional[SetupPaymentProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
+
     discounts: Optional[List[SetupPaymentAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
@@ -663,6 +685,9 @@ class SetupPaymentParams(BaseModel):
 
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+
+    custom_line_items: Optional[List[SetupPaymentCustomLineItem]] = None
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -674,9 +699,11 @@ class SetupPaymentParams(BaseModel):
                 "version",
                 "customize",
                 "proration_behavior",
+                "subscription_id",
                 "discounts",
                 "success_url",
                 "checkout_session_params",
+                "custom_line_items",
             ]
         )
         serialized = handler(self)

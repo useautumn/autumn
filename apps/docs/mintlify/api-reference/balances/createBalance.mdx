@@ -21,12 +21,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   The ID of the entity for entity-scoped balances (e.g., per-seat limits).
 </DynamicParamField>
 
-<DynamicParamField body="included" type="number">
+<DynamicParamField body="included_grant" type="number">
   The initial balance amount to grant. For metered features, this is the number of units the customer can use.
 </DynamicParamField>
 
 <DynamicParamField body="unlimited" type="boolean">
-  If true, the balance has unlimited usage. Cannot be combined with 'included'.
+  If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
 </DynamicParamField>
 
 <DynamicParamField body="reset" type="object">
@@ -45,6 +45,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicParamField body="expires_at" type="number">
   Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+</DynamicParamField>
+
+<DynamicParamField body="balance_id" type="string">
+  A unique identifier for this balance. Use this to target the balance in future update / delete calls.
 </DynamicParamField>
 
 

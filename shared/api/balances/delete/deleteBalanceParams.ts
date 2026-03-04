@@ -18,10 +18,6 @@ export const DeleteBalanceParamsV0Schema = z.object({
 		description:
 			"Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.",
 	}),
-
-	customer_entitlement_id: z.string().optional().meta({
-		internal: true,
-	}),
 });
 
 export type DeleteBalanceParamsV0 = z.infer<typeof DeleteBalanceParamsV0Schema>;

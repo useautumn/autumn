@@ -1,11 +1,11 @@
 import {
 	type AutoTopup,
-	BillingInterval,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
-	type FullCustomerEntitlement,
+	type FullCusEntWithFullCusProduct,
 	nullish,
+	PurchaseLimitInterval,
 } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
 import {
@@ -18,7 +18,7 @@ export function useBalanceEditForm({
 	entityId,
 	existingAutoTopUp,
 }: {
-	selectedCusEnt: FullCustomerEntitlement;
+	selectedCusEnt: FullCusEntWithFullCusProduct;
 	entityId: string | null;
 	existingAutoTopUp: AutoTopup | null;
 }) {
@@ -53,7 +53,8 @@ export function useBalanceEditForm({
 				quantity: existingAutoTopUp?.quantity ?? null,
 				maxPurchasesEnabled: !!existingAutoTopUp?.purchase_limit,
 				interval:
-					existingAutoTopUp?.purchase_limit?.interval ?? BillingInterval.Month,
+					existingAutoTopUp?.purchase_limit?.interval ??
+					PurchaseLimitInterval.Month,
 				maxPurchases: existingAutoTopUp?.purchase_limit?.limit ?? null,
 			},
 		} as BalanceEditForm,

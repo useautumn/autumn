@@ -43,10 +43,32 @@ actions:
               const result = await autumn.balances.create({
                 customerId: "cus_123",
                 featureId: "api_calls",
-                included: 1000,
                 reset: {
                   interval: "month",
                 },
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/balances.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.balances.delete({
+                customerId: "cus_123",
+                featureId: "api_calls",
               });
 
               console.log(result);

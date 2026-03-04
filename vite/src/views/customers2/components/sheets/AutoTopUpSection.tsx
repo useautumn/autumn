@@ -1,4 +1,4 @@
-import { BillingInterval } from "@autumn/shared";
+import { PurchaseLimitInterval } from "@autumn/shared";
 import {
 	Select,
 	SelectContent,
@@ -9,11 +9,10 @@ import {
 import type { BalanceEditFormInstance } from "./useBalanceEditForm";
 
 const RATE_LIMIT_INTERVALS = [
-	{ value: BillingInterval.Week, label: "Week" },
-	{ value: BillingInterval.Month, label: "Month" },
-	{ value: BillingInterval.Quarter, label: "Quarter" },
-	{ value: BillingInterval.SemiAnnual, label: "Semi-Annual" },
-	{ value: BillingInterval.Year, label: "Year" },
+	{ value: PurchaseLimitInterval.Hour, label: "Hour" },
+	{ value: PurchaseLimitInterval.Day, label: "Day" },
+	{ value: PurchaseLimitInterval.Week, label: "Week" },
+	{ value: PurchaseLimitInterval.Month, label: "Month" },
 ];
 
 export function AutoTopUpSection({ form }: { form: BalanceEditFormInstance }) {
@@ -82,7 +81,7 @@ export function AutoTopUpSection({ form }: { form: BalanceEditFormInstance }) {
 														<Select
 															value={field.state.value}
 															onValueChange={(v) =>
-																field.handleChange(v as BillingInterval)
+																field.handleChange(v as PurchaseLimitInterval)
 															}
 														>
 															<SelectTrigger className="w-full">
