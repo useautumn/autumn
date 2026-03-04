@@ -7,7 +7,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	getStartingBalance,
-	type InitFullCustomerProductContext,
+	type InitCustomerEntitlementContext,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
@@ -18,7 +18,7 @@ export const initCustomerEntitlementBalance = ({
 	entitlement,
 }: {
 	initContext:
-		| InitFullCustomerProductContext
+		| InitCustomerEntitlementContext
 		| {
 				fullCustomer: FullCustomer;
 				fullProduct: FullProduct;
@@ -39,7 +39,7 @@ export const initCustomerEntitlementBalance = ({
 
 	const price = entToPrice({
 		ent: entitlement,
-		prices: initContext.fullProduct.prices,
+		prices: initContext.fullProduct?.prices ?? [],
 	});
 
 	const options = entToOptions({

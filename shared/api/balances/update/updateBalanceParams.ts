@@ -3,6 +3,9 @@ import { z } from "zod/v4";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
 export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
+	feature_id: z.string().meta({
+		description: "The ID of the feature.",
+	}),
 	remaining: z.number().optional().meta({
 		description:
 			"Set the remaining balance to this exact value. Cannot be combined with add_to_balance.",
@@ -21,6 +24,15 @@ export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
 		description:
 			"Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.",
 	}),
+
+	included_grant: z.number().optional().meta({
+		description: "Set the granted balance to this exact value.",
+	}),
+
+	balance_id: z.string().optional().meta({
+		description:
+			"Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.",
+	}),
 });
 
 export const UpdateBalanceParamsV0Schema =
@@ -29,7 +41,7 @@ export const UpdateBalanceParamsV0Schema =
 			internal: true,
 		}),
 
-		granted_balance: z.number().optional().meta({ internal: true }),
+		// granted_balance: z.number().optional().meta({ internal: true }),
 
 		customer_entitlement_id: z.string().optional().meta({ internal: true }),
 		next_reset_at: z.number().optional().meta({ internal: true }),

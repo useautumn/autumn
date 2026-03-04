@@ -38,5 +38,7 @@ export const prepareDeductionOptions = ({
 		alterGrantedBalance: options.alterGrantedBalance ?? false,
 		customerEntitlementFilters: options.customerEntitlementFilters,
 		paidAllocated: isPaidAllocated,
+
+		triggerAutoTopUp: options.triggerAutoTopUp ?? false,
 	};
 };

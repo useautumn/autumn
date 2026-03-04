@@ -203,15 +203,17 @@ export const executeRedisDeduction = async ({
 			);
 		});
 
-		triggerAutoTopUp({
-			ctx,
-			newFullCus: fullCustomer,
-			feature: deduction.feature,
-		}).catch((error) => {
-			ctx.logger.error(
-				`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
-			);
-		});
+		if (options.triggerAutoTopUp) {
+			triggerAutoTopUp({
+				ctx,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
+				);
+			});
+		}
 	}
 
 	return {

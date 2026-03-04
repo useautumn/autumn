@@ -106,7 +106,7 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: bal.current_balance,
-		granted_balance: grantedBalanceInput,
+		included_grant: grantedBalanceInput,
 	});
 
 	// Expected: granted_balance = 120 (100 original + 20 increase)
