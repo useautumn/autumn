@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 import { core } from "./core";
 import { coreAttach } from "./core/coreAttach";
 import { coreBalances } from "./core/coreBalances";
+import { coreBilling } from "./core/coreBilling";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreMigrations } from "./core/coreMigrations";
 import { coreStripe } from "./core/coreStripe";
@@ -19,7 +20,6 @@ import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
-
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
 import { temp } from "./temp";
@@ -29,6 +29,7 @@ export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
 	core,
+	coreBilling,
 	coreAttach,
 	coreBalances,
 	coreLegacy,
