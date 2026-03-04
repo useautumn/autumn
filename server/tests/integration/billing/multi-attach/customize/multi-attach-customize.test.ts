@@ -24,6 +24,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { expectStripeSubscriptionCorrect } from "../../utils/expectStripeSubCorrect";
 
 // ═══════════════════════════════════════════════════════════════════
 // Test 1: Different custom prices per plan
@@ -213,10 +214,5 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		latestTotal: 40 + 120,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

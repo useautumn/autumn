@@ -7,6 +7,7 @@ import type {
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
+import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
 
 /**
@@ -19,27 +20,25 @@ import { subToDiscounts } from "../utils/discounts/subToDiscounts";
  * @see https://docs.stripe.com/changelog/clover/2025-09-30/add-discount-source-property
  * @see https://docs.stripe.com/api/discounts/object
  */
-export const extractStripeDiscounts = ({
+export const extractStripeDiscounts = async ({
+	ctx,
 	stripeSubscription,
 	stripeCustomer,
 }: {
+	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer: StripeCustomerWithDiscount;
-}): StripeDiscountWithCoupon[] => {
-	const subscriptionDiscounts = subToDiscounts({ sub: stripeSubscription });
+}): Promise<StripeDiscountWithCoupon[]> => {
+	const subscriptionDiscounts = await subToDiscounts({
+		ctx,
+		sub: stripeSubscription,
+	});
 
 	if (subscriptionDiscounts.length > 0) {
 		return subscriptionDiscounts;
 	}
 
-	const customerDiscount = stripeCustomer.discount;
-	if (!customerDiscount) return [];
-
-	const coupon = customerDiscount.source?.coupon;
-	if (!coupon || typeof coupon === "string") return [];
-
-	// Customer discount already has source.coupon structure, return as-is
-	return [customerDiscount as StripeDiscountWithCoupon];
+	return await stripeCustomerToDiscounts({ ctx, stripeCustomer });
 };
 
 /**
@@ -65,7 +64,8 @@ export const filterDeletedCouponDiscounts = async ({
 				if (
 					error instanceof Stripe.errors.StripeError &&
 					error.code?.includes("resource_missing")
-				) return false;
+				)
+					return false;
 				throw error;
 			}
 		}),
@@ -76,8 +76,8 @@ export const filterDeletedCouponDiscounts = async ({
 
 /**
  * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
- * Resolves param discounts via Stripe API and merges with existing subscription/customer discounts.
- * Deduplicates by coupon ID. Filters out discounts with deleted coupons.
+ * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
+ * Filters out discounts with deleted coupons.
  */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
@@ -90,7 +90,8 @@ export const fetchStripeDiscountsForBilling = async ({
 	stripeCustomer: StripeCustomerWithDiscount;
 	paramDiscounts?: AttachDiscount[];
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const existingDiscounts = extractStripeDiscounts({
+	const existingDiscounts = await extractStripeDiscounts({
+		ctx,
 		stripeSubscription,
 		stripeCustomer,
 	});
@@ -98,10 +99,11 @@ export const fetchStripeDiscountsForBilling = async ({
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	if (!paramDiscounts?.length) {
-		return filterDeletedCouponDiscounts({
-			stripeCli,
-			discounts: existingDiscounts,
-		});
+		return existingDiscounts;
+		// return filterDeletedCouponDiscounts({
+		// 	stripeCli,
+		// 	discounts: existingDiscounts,
+		// });
 	}
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({
@@ -109,14 +111,29 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Merge with existing discounts, deduplicating by coupon ID
-	const existingCouponIds = new Set(
-		existingDiscounts.map((d) => d.source.coupon.id),
-	);
-	const newDiscounts = resolvedParamDiscounts.filter(
-		(d) => !existingCouponIds.has(d.source.coupon.id),
-	);
+	// Merge existing + param discounts, deduplicating by coupon ID.
+	// When there's a conflict, prefer the discount that has a Stripe discount ID
+	// (di_xxx) so stripeDiscountsToParams uses { discount: id } and preserves
+	// the original start/end dates rather than creating a fresh one.
+	const discountByCouponId = new Map<string, StripeDiscountWithCoupon>();
 
-	const allDiscounts = [...existingDiscounts, ...newDiscounts];
-	return filterDeletedCouponDiscounts({ stripeCli, discounts: allDiscounts });
+	for (const d of [...resolvedParamDiscounts, ...existingDiscounts]) {
+		const couponId = d.source.coupon.id;
+		const current = discountByCouponId.get(couponId);
+
+		if (!current) {
+			discountByCouponId.set(couponId, d);
+		} else if (d.id && !current.id) {
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Preferring existing discount ${d.id} over param for coupon ${couponId}`,
+			);
+			discountByCouponId.set(couponId, d);
+		} else if (!d.id && current.id) {
+			ctx.logger.warn(
+				`[fetchStripeDiscountsForBilling] Skipping duplicate param discount for coupon ${couponId} — already applied as ${current.id}`,
+			);
+		}
+	}
+
+	return [...discountByCouponId.values()];
 };

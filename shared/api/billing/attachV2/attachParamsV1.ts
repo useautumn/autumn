@@ -1,6 +1,7 @@
 import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase/billingParamsBaseV1";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
+import { CustomLineItemSchema } from "../common/customLineItem";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -32,6 +33,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
 		description:
 			"Additional parameters to pass into the creation of the Stripe checkout session.",
+	}),
+
+	custom_line_items: z.array(CustomLineItemSchema).optional().meta({
+		description:
+			"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
 	}),
 });
 

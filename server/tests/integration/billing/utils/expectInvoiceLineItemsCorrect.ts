@@ -71,7 +71,7 @@ type ExpectedLineItem = {
 	totalAmount?: number; // Sum of all matching items
 	count?: number; // Exact number of matching items
 	minCount?: number; // At least this many
-	prorated?: boolean;
+	prorated?: boolean; // Accepted but not used as a filter — kept for backward compat
 	productId?: string;
 
 	// Quantity expectations

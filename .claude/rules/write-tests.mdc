@@ -166,3 +166,37 @@ const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 ### 21. NEVER Run Tests Without Asking
 
 Always ask the user for permission before running any test command. The user likely has a dev server running and needs to coordinate. Present the exact command you plan to run and wait for approval.
+
+### 22. Use the Correct Param Types Per API Client Version
+
+Each client version (`autumnV1`, `autumnV2`, `autumnV2_1`) expects different input/output types. Always pass the right types as generics and for local variables.
+
+| Client | API version | Attach input | Attach output | Update subscription input |
+|--------|------------|--------------|---------------|--------------------------|
+| `autumnV1` | V1 (`/attach`, `/billing.attach`) | `AttachParamsV0Input` | `ApiCustomerV3` | `UpdateSubscriptionV0Params` |
+| `autumnV2` | V2 (`/billing.attach`) | `AttachParamsV1Input` | `ApiCustomer` | `UpdateSubscriptionV1Params` |
+
+Key differences between `AttachParamsV0Input` and `AttachParamsV1Input`:
+- V0 (`autumnV1`): uses `product_id` + `options: [{ feature_id, quantity }]`
+- V1 (`autumnV2`): uses `plan_id` + `feature_quantities: [{ feature_id, quantity }]`
+
+```typescript
+// ✅ CORRECT — autumnV1 uses AttachParamsV0Input
+const params: AttachParamsV0Input = {
+  customer_id: customerId,
+  product_id: pro.id,           // NOT plan_id
+  options: [{ feature_id: "messages", quantity: 200 }],  // NOT feature_quantities
+};
+await autumnV1.billing.attach<AttachParamsV0Input>(params);
+
+// ✅ CORRECT — autumnV2 uses AttachParamsV1Input
+const params: AttachParamsV1Input = {
+  customer_id: customerId,
+  plan_id: pro.id,              // NOT product_id
+  feature_quantities: [{ feature_id: "messages", quantity: 200 }],  // NOT options
+};
+await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+// ❌ WRONG — mixing V1 param names with autumnV1 client
+await autumnV1.billing.attach({ customer_id, plan_id: pro.id, feature_quantities: [...] });
+```

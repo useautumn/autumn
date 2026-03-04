@@ -83,6 +83,8 @@ function getIndividualEntValues({
 		cusEnts: [ent],
 		sumAcrossEntities: nullish(entityId),
 	});
+	void grantedBalance;
+	void prepaidAllowance;
 
 	const quantity = ent.customer_product?.quantity || 1;
 	const allowance =
@@ -100,10 +102,12 @@ function ParentUsageCell({
 	ent,
 	fullCustomer,
 	entityId,
+	customerEntitlements,
 }: {
 	ent: FullCusEntWithFullCusProduct;
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
 	const {
 		allowance,
@@ -116,6 +120,7 @@ function ParentUsageCell({
 		fullCustomer,
 		featureId: ent.entitlement.feature.id,
 		entityId,
+		customerEntitlements,
 	});
 
 	if (ent.unlimited) {
@@ -165,16 +170,19 @@ function UsageCell({
 	row,
 	fullCustomer,
 	entityId,
+	customerEntitlements,
 }: {
 	row: Row<CustomerBalanceRowData>;
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
 	if (row.depth > 0) {
 		return <SubRowUsageCell ent={row.original} entityId={entityId} />;
 	}
 	return (
 		<ParentUsageCell
+			customerEntitlements={customerEntitlements}
 			ent={row.original}
 			fullCustomer={fullCustomer}
 			entityId={entityId}
@@ -235,15 +243,18 @@ function ParentBarCell({
 	ent,
 	fullCustomer,
 	entityId,
+	customerEntitlements,
 }: {
 	ent: FullCusEntWithFullCusProduct;
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
 	const { allowance, balance, quantity } = useFeatureUsageBalance({
 		fullCustomer,
 		featureId: ent.entitlement.feature.id,
 		entityId,
+		customerEntitlements,
 	});
 
 	return (
@@ -282,16 +293,19 @@ function BarCell({
 	row,
 	fullCustomer,
 	entityId,
+	customerEntitlements,
 }: {
 	row: Row<CustomerBalanceRowData>;
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
 	if (row.depth > 0) {
 		return <SubRowBarCell ent={row.original} entityId={entityId} />;
 	}
 	return (
 		<ParentBarCell
+			customerEntitlements={customerEntitlements}
 			ent={row.original}
 			fullCustomer={fullCustomer}
 			entityId={entityId}
@@ -369,7 +383,14 @@ export const CustomerBalanceTableColumns = ({
 		header: "Usage",
 		accessorKey: "usage",
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
-			<UsageCell row={row} fullCustomer={fullCustomer} entityId={entityId} />
+			<UsageCell
+				row={row}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={
+					row.original.subRows?.length ? row.original.subRows : [row.original]
+				}
+			/>
 		),
 	},
 	{
@@ -377,7 +398,14 @@ export const CustomerBalanceTableColumns = ({
 		size: 220,
 		accessorKey: "bar",
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
-			<BarCell row={row} fullCustomer={fullCustomer} entityId={entityId} />
+			<BarCell
+				row={row}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={
+					row.original.subRows?.length ? row.original.subRows : [row.original]
+				}
+			/>
 		),
 	},
 ];

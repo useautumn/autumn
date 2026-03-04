@@ -24,8 +24,8 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 if (cluster.isPrimary) {
 	await initInfisical();
 
-	const { initHatchetWorker } = await import("./queue/initWorkers.js");
-	await initHatchetWorker();
+	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
+	// await initHatchetWorker();
 
 	// Check if queue is configured before starting workers
 	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {

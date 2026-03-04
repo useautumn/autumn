@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { ApiVersion } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -49,7 +50,9 @@ export const expectCustomerInvoiceCorrect = async ({
 
 	if (latestTotal !== undefined) {
 		const actualTotal = invoice.total;
-		const diff = Math.abs(actualTotal - latestTotal);
+		const diff = Math.abs(
+			new Decimal(actualTotal).minus(latestTotal).toDecimalPlaces(2).toNumber(),
+		);
 		const tolerance = 0.01;
 
 		if (diff > tolerance) {

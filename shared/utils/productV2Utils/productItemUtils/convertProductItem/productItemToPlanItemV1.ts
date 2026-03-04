@@ -71,6 +71,7 @@ const itemToPlanFeaturePrice = ({
 					tiers: item.tiers.map((tier) => ({
 						to: tier.to,
 						amount: tier.amount,
+						flat_amount: tier.flat_amount,
 					})),
 					included: includedUsage,
 				})
