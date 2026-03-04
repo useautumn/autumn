@@ -155,30 +155,6 @@ export const CreateApiKeyDialog = ({
 								{copied ? <Check size={15} /> : <Copy size={15} />}
 							</button>
 						</motion.div>
-						<motion.div
-							key="api-key-env"
-							initial={{ opacity: 0, y: -10 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{
-								type: "spring",
-								bounce: 0.15,
-								duration: 0.3,
-								delay: 0.05,
-							}}
-							className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center mt-2"
-						>
-							<p className="text-sm font-mono">AUTUMN_SECRET_KEY="{apiKey}"</p>
-							<button
-								type="button"
-								className="text-t2 hover:text-t2/80 cursor-pointer"
-								onClick={() => {
-									setCopiedEnv(true);
-									navigator.clipboard.writeText(`AUTUMN_SECRET_KEY="${apiKey}"`);
-								}}
-							>
-								{copiedEnv ? <Check size={15} /> : <Copy size={15} />}
-							</button>
-						</motion.div>
 					) : (
 						<motion.div
 							key="name-input"

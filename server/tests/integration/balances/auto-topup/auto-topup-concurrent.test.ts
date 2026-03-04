@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, CustomerBillingControls } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -34,7 +35,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 		billingUnits: 100,
 		price: 10,
 	});
-	const oneOffProd = products.oneOffAddOn({
+	const oneOffProd = products.base({
 		id: "topup-c1",
 		items: [oneOffItem],
 	});
@@ -81,6 +82,16 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 			feature_id: TestFeature.Messages,
 			value: 20,
 		}),
+		autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 20,
+		}),
+		autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 20,
+		}),
 	]);
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
@@ -88,16 +99,24 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 	// Expected: 100 - 60 + 100 = 140 (exactly ONE top-up of 100)
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const balance = after.balances[TestFeature.Messages].remaining;
-	const expectedBalance = new Decimal(100).sub(60).add(100).toNumber();
+	const expectedBalance = new Decimal(100).sub(100).add(100).toNumber();
 
 	expect(balance).toBe(expectedBalance);
+
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: 10,
+		latestStatus: "paid",
+		latestInvoiceProductId: oneOffProd.id,
+	});
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small tracks — at most one top-up")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
 		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
+		billingUnits: 1,
+		price: 0.1,
 	});
 	const oneOffProd = products.oneOffAddOn({
 		id: "topup-c2",
@@ -113,10 +132,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 		actions: [
 			s.attach({
 				productId: oneOffProd.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+				options: [{ feature_id: TestFeature.Messages, quantity: 20 }],
 			}),
 		],
 	});
+
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
 
 	// Configure threshold=20, quantity=100
 	await autumnV2_1.customers.update(customerId, {
@@ -134,7 +155,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 			autumnV2_1.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				value: 18,
+				value: 2,
 			}),
 		),
 	);
@@ -145,8 +166,23 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 	const balance = after.balances[TestFeature.Messages].remaining;
 
 	// Expected: 100 - 90 + 100 = 110 (exactly one top-up)
-	const expectedBalance = new Decimal(100).sub(90).add(100).toNumber();
+	const expectedBalance = new Decimal(20).sub(10).add(100).toNumber();
 	expect(balance).toBe(expectedBalance);
+
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: 10,
+		latestStatus: "paid",
+		latestInvoiceProductId: oneOffProd.id,
+	});
+
+	// Check DB balance
+	const afterDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	const balanceDb = afterDb.balances[TestFeature.Messages].remaining;
+	expect(balanceDb).toBe(expectedBalance);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup concurrent: sequential drain → top-up → drain → top-up")}`, async () => {

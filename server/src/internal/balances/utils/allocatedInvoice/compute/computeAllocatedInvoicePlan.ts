@@ -72,6 +72,7 @@ export const computeAllocatedInvoicePlan = ({
 	});
 
 	return {
+		customerId: billingContext.fullCustomer?.id ?? "",
 		updateCustomerEntitlements: [updateCustomerEntitlementPlan],
 		lineItems,
 		insertCustomerProducts: [],

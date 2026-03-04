@@ -5,9 +5,9 @@ import { actions } from "../models/analyticsModels/actionTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
+import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
 // Customer Relations
 import { customersRelations } from "../models/cusModels/cusRelations.js";
-
 // Customer Tables
 import { customers } from "../models/cusModels/cusTable.js";
 import { entitiesRelations } from "../models/cusModels/entityModels/entityRelations.js";
@@ -99,6 +99,7 @@ export {
 	invoices,
 	invoiceLineItems,
 	customers,
+	autoTopupLimitStates as autoTopupLimits,
 	entities,
 	apiKeys,
 	metadata,

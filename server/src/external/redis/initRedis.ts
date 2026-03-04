@@ -14,16 +14,17 @@ import {
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 import {
+	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
-	INCREMENT_CUS_ENT_BALANCE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
-	UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
 // if (!process.env.CACHE_URL) {
@@ -205,14 +206,19 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
-	redisInstance.defineCommand("incrementCusEntBalance", {
+	redisInstance.defineCommand("upsertInvoiceInCustomer", {
 		numberOfKeys: 1,
-		lua: INCREMENT_CUS_ENT_BALANCE_SCRIPT,
+		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 	});
 
-	redisInstance.defineCommand("updateCusProductOptions", {
+	redisInstance.defineCommand("adjustCustomerEntitlementBalance", {
 		numberOfKeys: 1,
-		lua: UPDATE_CUS_PRODUCT_OPTIONS_SCRIPT,
+		lua: ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCustomerProduct", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -397,11 +403,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
-		incrementCusEntBalance(
-			cacheKey: string,
-			paramsJson: string,
-		): Promise<string>;
-		updateCusProductOptions(
+		adjustCustomerEntitlementBalance(
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
@@ -409,6 +411,14 @@ declare module "ioredis" {
 		appendEntityToCustomer(
 			cacheKey: string,
 			entityJson: string,
+		): Promise<string>;
+		upsertInvoiceInCustomer(
+			cacheKey: string,
+			invoiceJson: string,
+		): Promise<string>;
+		updateCustomerProduct(
+			cacheKey: string,
+			paramsJson: string,
 		): Promise<string>;
 	}
 }

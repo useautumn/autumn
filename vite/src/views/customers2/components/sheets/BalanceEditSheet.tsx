@@ -81,14 +81,14 @@ export function BalanceEditSheet() {
 	const hasOneOffPrepaidPrice = cusPrice
 		? isOneOffPrice(cusPrice.price) && isPrepaidPrice(cusPrice.price)
 		: false;
-	const hasExistingAutoTopUp = customer?.auto_topup?.some(
+	const hasExistingAutoTopUp = customer?.auto_topups?.some(
 		(c: AutoTopup) => c.feature_id === featureId,
 	);
 	const isEligibleForAutoTopUp =
 		hasOneOffPrepaidPrice || !!hasExistingAutoTopUp;
 
 	const existingAutoTopUp =
-		customer?.auto_topup?.find((c: AutoTopup) => c.feature_id === featureId) ??
+		customer?.auto_topups?.find((c: AutoTopup) => c.feature_id === featureId) ??
 		null;
 
 	return (
@@ -549,7 +549,7 @@ function SubmitButton({
 						}),
 				};
 
-				const otherConfigs = (customer.auto_topup ?? []).filter(
+				const otherConfigs = (customer.auto_topups ?? []).filter(
 					(c: AutoTopup) => c.feature_id !== featureId,
 				);
 

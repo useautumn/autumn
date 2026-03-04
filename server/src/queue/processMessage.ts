@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
@@ -20,6 +21,7 @@ import { detectBaseVariant } from "@/internal/products/productUtils/detectProduc
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
+import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
@@ -59,7 +61,9 @@ export const processMessage = async ({
 
 	workerLogger.info(`Processing message: ${job.name}`);
 
-	try {
+	let workerCtx: AutumnContext | undefined;
+
+	const executeJob = async () => {
 		if (job.name === JobName.DetectBaseVariant) {
 			await detectBaseVariant({
 				db,
@@ -84,6 +88,7 @@ export const processMessage = async ({
 			payload: job.data,
 			logger: workerLogger,
 		});
+		workerCtx = ctx;
 
 		if (ctx) {
 			setSentryTags({
@@ -239,6 +244,10 @@ export const processMessage = async ({
 			});
 			return;
 		}
+	};
+
+	try {
+		await executeJob();
 	} catch (error) {
 		Sentry.captureException(error);
 		if (error instanceof Error) {
@@ -249,6 +258,20 @@ export const processMessage = async ({
 					stack: error.stack,
 				},
 			});
+		}
+	} finally {
+		if (workerCtx && Object.keys(workerCtx.extraLogs).length > 0) {
+			const maskedLogs = maskExtraLogs(workerCtx.extraLogs);
+			workerLogger.info(`[${job.name}] Finished`, {
+				extras: maskedLogs,
+				done: true,
+			});
+
+			if (process.env.NODE_ENV === "development") {
+				workerLogger.debug(
+					`FINISHED PROCESSING JOB ${job.name}, EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`,
+				);
+			}
 		}
 	}
 };

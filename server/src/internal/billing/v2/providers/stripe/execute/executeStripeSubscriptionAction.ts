@@ -16,8 +16,8 @@ import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/ut
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
-import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
 export const executeStripeSubscriptionAction = async ({
@@ -94,11 +94,11 @@ export const executeStripeSubscriptionAction = async ({
 	let autumnInvoice: Invoice | undefined;
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		autumnInvoice = await upsertInvoiceFromBilling({
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
 	}
 
