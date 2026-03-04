@@ -1,10 +1,11 @@
-import type { AttachBillingContext } from "@autumn/shared";
+import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
 	CusProductStatus,
 	deduplicateArray,
 	type FullCusProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyCarryOverUsageFeatureIds } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 /**
@@ -16,9 +17,11 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 export const computeAttachNewCustomerProduct = ({
 	ctx,
 	attachBillingContext,
+	params = {} as AttachParamsV1,
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
+	params?: AttachParamsV1;
 }): FullCusProduct => {
 	const {
 		attachProduct,
@@ -41,6 +44,7 @@ export const computeAttachNewCustomerProduct = ({
 	const currentCustomerEntitlements =
 		currentCustomerProduct?.customer_entitlements ?? [];
 
+	// LEGACY: carry_from_previous flag on entitlements
 	const featuresToCarryUsagesFor = deduplicateArray(
 		currentCustomerEntitlements
 			.filter((ce) => {
@@ -49,6 +53,13 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
+	// carry_over_usages param override — replaces legacy list with consumable feature ids if necessary
+	const consumableFeatureIdsToCarry = applyCarryOverUsageFeatureIds({
+		params,
+		currentCustomerEntitlements,
+		featuresToCarryUsagesFor,
+	});
+
 	// Determine if this is a scheduled product (downgrade)
 	const isScheduled = planTiming === "end_of_cycle";
 
@@ -56,7 +67,7 @@ export const computeAttachNewCustomerProduct = ({
 		!isScheduled && currentCustomerProduct
 			? {
 					fromCustomerProduct: currentCustomerProduct,
-					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
+					consumableFeatureIdsToCarry,
 				}
 			: undefined;
 

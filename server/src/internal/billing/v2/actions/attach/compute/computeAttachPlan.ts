@@ -40,6 +40,7 @@ export const computeAttachPlan = ({
 	const newCustomerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
+		params,
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
