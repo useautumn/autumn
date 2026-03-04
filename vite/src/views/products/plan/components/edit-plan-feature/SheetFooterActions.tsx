@@ -21,7 +21,7 @@ export function SheetFooterActions({
 	};
 
 	const handleUpdateItem = async () => {
-		onBeforeCommit?.();
+		await onBeforeCommit?.();
 		await handleUpdateProductItem();
 	};
 
