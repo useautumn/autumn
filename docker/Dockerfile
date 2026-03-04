@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.2
+FROM oven/bun:1.3.10
 WORKDIR /app
 
 # Copy root package files
