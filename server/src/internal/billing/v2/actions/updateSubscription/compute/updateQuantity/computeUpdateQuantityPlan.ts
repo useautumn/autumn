@@ -30,6 +30,7 @@ export const computeUpdateQuantityPlan = ({
 	);
 
 	return {
+		customerId: updateSubscriptionContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		customPrices: [],
 		customEntitlements: [],

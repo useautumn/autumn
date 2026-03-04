@@ -26,8 +26,7 @@ const processAllocatedPrice = async ({
 	eventContext: InvoiceCreatedContext;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }) => {
-	const { db } = ctx;
-	const { stripeInvoice, fullCustomer } = eventContext;
+	const { stripeInvoice } = eventContext;
 
 	const customerProduct = customerEntitlement.customer_product;
 	const customerEntitlements = customerProduct?.customer_entitlements ?? [];

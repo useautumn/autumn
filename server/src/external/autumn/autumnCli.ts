@@ -22,6 +22,7 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CustomerBillingControlsInput,
 	CustomerExpand,
 	EntityExpand,
 	ErrCode,
@@ -509,6 +510,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsInput;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);

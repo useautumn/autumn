@@ -10,7 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
-import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
 export const executeStripeInvoiceAction = async ({
@@ -68,11 +68,17 @@ export const executeStripeInvoiceAction = async ({
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
-		autumnInvoice = await upsertInvoiceFromBilling({
+		// autumnInvoice = await upsertInvoiceFromBilling({
+		// 	ctx,
+		// 	stripeInvoice: invoice,
+		// 	fullProducts: billingContext.fullProducts,
+		// 	fullCustomer: billingContext.fullCustomer,
+		// });
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
 
 		return {
@@ -85,12 +91,18 @@ export const executeStripeInvoiceAction = async ({
 
 	if (invoice) {
 		logger.debug("[executeStripeInvoiceAction] Upserting invoice from billing");
-		autumnInvoice = await upsertInvoiceFromBilling({
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
+		// autumnInvoice = await upsertInvoiceFromBilling({
+		// 	ctx,
+		// 	stripeInvoice: invoice,
+		// 	fullProducts: billingContext.fullProducts,
+		// 	fullCustomer: billingContext.fullCustomer,
+		// });
 	}
 
 	logger.debug(

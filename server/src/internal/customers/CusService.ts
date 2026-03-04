@@ -28,7 +28,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
-import { updateCachedCustomerData } from "./cusUtils/fullCustomerCacheUtils/updateCachedCustomerData.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
 // const tracer = trace.getTracer("express");
@@ -370,12 +369,6 @@ export class CusService {
 
 			if (results && results.length > 0) {
 				const customer = results[0] as Customer;
-
-				await updateCachedCustomerData({
-					ctx,
-					customerId: idOrInternalId,
-					updates: update,
-				});
 
 				return customer;
 			} else {

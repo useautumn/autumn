@@ -1,8 +1,5 @@
 import { Decimal } from "decimal.js";
-import type {
-	ApiBalanceBreakdownV1,
-	ApiBalanceV1,
-} from "../../apiBalanceV1";
+import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
 import {
 	apiBalanceBreakdownV1ToOverage,
 	apiBalanceV1ToOverage,
