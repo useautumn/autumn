@@ -1,5 +1,6 @@
 import {
 	type AutoTopup,
+	computeGrantedBalanceInput,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
@@ -502,11 +503,13 @@ function SubmitButton({
 			// Queue balance update
 			if (hasBalanceChanges({ form })) {
 				if (values.mode === "set") {
-					const prepaidAllowance =
-						(form.options.defaultValues?.grantedAndPurchasedBalance ?? 0) -
-						(form.options.defaultValues?.balance ?? 0);
-					const grantedBalanceInput =
-						(values.grantedAndPurchasedBalance ?? 0) - prepaidAllowance;
+					const grantedBalanceInput = computeGrantedBalanceInput({
+						newGPB: values.grantedAndPurchasedBalance ?? 0,
+						defaultGPB:
+							form.options.defaultValues?.grantedAndPurchasedBalance ?? 0,
+						defaultBalance: form.options.defaultValues?.balance ?? 0,
+						prepaidAllowance: form.prepaidAllowance,
+					});
 
 					promises.push(
 						axiosInstance.post("/v1/balances/update", {
