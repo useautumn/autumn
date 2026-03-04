@@ -20,12 +20,12 @@ export const handleNukeOrganisationConfiguration = createRoute({
 			env: AppEnv.Sandbox,
 		});
 
-		await ProductService.deleteByOrgId({
+		await ProductService.safeDeleteByOrgId({
 			db,
 			orgId: org.id,
 			env: AppEnv.Sandbox,
 		});
-		await FeatureService.deleteByOrgId({
+		await FeatureService.safeDeleteByOrgId({
 			db,
 			orgId: org.id,
 			env: AppEnv.Sandbox,
