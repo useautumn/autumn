@@ -49,6 +49,7 @@ export * from "./models/checkModels/checkPreviewModels";
 // 8. Customer Models
 export * from "./models/cusModels/billingControlModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
+export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models
 export * from "./models/processorModels/processorModels";

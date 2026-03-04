@@ -1,4 +1,4 @@
-import { BillingInterval } from "@autumn/shared";
+import { PurchaseLimitInterval } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const BalanceEditFormSchema = z
@@ -13,7 +13,7 @@ export const BalanceEditFormSchema = z
 			threshold: z.number().min(0).nullable(),
 			quantity: z.number().min(1).nullable(),
 			maxPurchasesEnabled: z.boolean(),
-			interval: z.enum(BillingInterval),
+			interval: z.enum(PurchaseLimitInterval),
 			maxPurchases: z.number().min(1).nullable(),
 		}),
 	})
@@ -25,6 +25,7 @@ export const BalanceEditFormSchema = z
 				code: "custom",
 				message: "Please enter a valid balance",
 				path: ["balance"],
+				input: balance,
 			});
 		}
 
@@ -33,6 +34,7 @@ export const BalanceEditFormSchema = z
 				code: "custom",
 				message: "Please enter a valid amount",
 				path: ["addValue"],
+				input: addValue,
 			});
 		}
 
@@ -42,6 +44,7 @@ export const BalanceEditFormSchema = z
 					code: "custom",
 					message: "Threshold must be 0 or above",
 					path: ["autoTopUp", "threshold"],
+					input: autoTopUp.threshold,
 				});
 			}
 			if (autoTopUp.quantity === null || autoTopUp.quantity < 1) {
@@ -49,6 +52,7 @@ export const BalanceEditFormSchema = z
 					code: "custom",
 					message: "Quantity must be 1 or above",
 					path: ["autoTopUp", "quantity"],
+					input: autoTopUp.quantity,
 				});
 			}
 			if (autoTopUp.maxPurchasesEnabled) {
@@ -57,6 +61,7 @@ export const BalanceEditFormSchema = z
 						code: "custom",
 						message: "Max purchases must be 1 or above",
 						path: ["autoTopUp", "maxPurchases"],
+						input: autoTopUp.maxPurchases,
 					});
 				}
 			}

@@ -26,53 +26,15 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
- *
- * Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
- *
- * @example
- * ```typescript
- * // Attach a plan to a customer
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan" });
- * ```
- *
- * @example
- * ```typescript
- * // Attach with a free trial
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", freeTrial: {"durationLength":14,"durationType":"day"} });
- * ```
- *
- * @example
- * ```typescript
- * // Attach with custom pricing
- * const response = await client.billing.attach({ customerId: "cus_123", planId: "pro_plan", customize: {"price":{"amount":4900,"interval":"month"}} });
- * ```
- *
- * @param customerId - The ID of the customer to attach the plan to.
- * @param entityId - The ID of the entity to attach the plan to. (optional)
- * @param planId - The ID of the plan.
- * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
- * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
- * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
- * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
- * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
- * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
- * @param successUrl - URL to redirect to after successful checkout. (optional)
- * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
- * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
- * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
- * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
- *
- * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
+ * Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
  */
-export function billingAttach(
+export function balancesDelete(
   client: AutumnCore,
-  request: models.AttachParams,
+  request: models.DeleteBalanceParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.AttachResponse,
+    models.DeleteBalanceResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -92,12 +54,12 @@ export function billingAttach(
 
 async function $do(
   client: AutumnCore,
-  request: models.AttachParams,
+  request: models.DeleteBalanceParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.AttachResponse,
+      models.DeleteBalanceResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -112,7 +74,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.AttachParams$outboundSchema, value),
+    (value) => z.parse(models.DeleteBalanceParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -121,7 +83,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.attach")();
+  const path = pathToFunc("/v1/balances.delete")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -140,7 +102,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "attach",
+    operationID: "deleteBalance",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -179,7 +141,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.AttachResponse,
+    models.DeleteBalanceResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -189,7 +151,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.AttachResponse$inboundSchema),
+    M.json(200, models.DeleteBalanceResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

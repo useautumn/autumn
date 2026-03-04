@@ -658,6 +658,21 @@ AttachPlanSchedule = Literal[
 r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
 
+class AttachCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class AttachCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
 class AttachParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -675,6 +690,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[AttachProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[AttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
@@ -685,6 +702,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+    custom_line_items: NotRequired[List[AttachCustomLineItemTypedDict]]
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
 
 class AttachParams(BaseModel):
@@ -712,6 +731,9 @@ class AttachParams(BaseModel):
     proration_behavior: Optional[AttachProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
+
     discounts: Optional[List[AttachAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
@@ -727,6 +749,9 @@ class AttachParams(BaseModel):
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
+    custom_line_items: Optional[List[AttachCustomLineItem]] = None
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -737,11 +762,13 @@ class AttachParams(BaseModel):
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
+                "subscription_id",
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
                 "plan_schedule",
                 "checkout_session_params",
+                "custom_line_items",
             ]
         )
         serialized = handler(self)

@@ -26,6 +26,134 @@ CustomerEnv = Union[
 r"""The environment this customer was created in."""
 
 
+CustomerInterval = Union[
+    Literal[
+        "hour",
+        "day",
+        "week",
+        "month",
+    ],
+    UnrecognizedStr,
+]
+r"""The time interval for the purchase limit window."""
+
+
+class CustomerPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CustomerInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class CustomerPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CustomerInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CustomerAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[CustomerPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+
+class CustomerAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[CustomerPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CustomerBillingControlsTypedDict(TypedDict):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: NotRequired[List[CustomerAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+
+
+class CustomerBillingControls(BaseModel):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: Optional[List[CustomerAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["auto_topups"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 Status = Union[
     Literal[
         "active",
@@ -37,6 +165,8 @@ r"""Current status of the subscription."""
 
 
 class SubscriptionTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
     plan_id: str
     r"""The unique identifier of the subscribed plan."""
     auto_enable: bool
@@ -65,6 +195,9 @@ class SubscriptionTypedDict(TypedDict):
 
 
 class Subscription(BaseModel):
+    id: str
+    r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
+
     plan_id: str
     r"""The unique identifier of the subscribed plan."""
 
@@ -578,6 +711,8 @@ class CustomerTypedDict(TypedDict):
     r"""The metadata for the customer."""
     send_email_receipts: bool
     r"""Whether to send email receipts to the customer."""
+    billing_controls: CustomerBillingControlsTypedDict
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
     subscriptions: List[SubscriptionTypedDict]
     r"""Active and scheduled recurring plans that this customer has attached."""
     purchases: List[PurchaseTypedDict]
@@ -619,6 +754,9 @@ class Customer(BaseModel):
 
     send_email_receipts: bool
     r"""Whether to send email receipts to the customer."""
+
+    billing_controls: CustomerBillingControls
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     subscriptions: List[Subscription]
     r"""Active and scheduled recurring plans that this customer has attached."""

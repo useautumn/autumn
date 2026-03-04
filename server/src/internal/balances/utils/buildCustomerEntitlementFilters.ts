@@ -10,7 +10,12 @@ export const buildCustomerEntitlementFilters = ({
 }: {
 	params: UpdateBalanceParamsV0 | DeleteBalanceParamsV0;
 }): CustomerEntitlementFilters | undefined => {
-	const { customer_entitlement_id: cusEntId, interval, balance_id } = params;
+	const { interval, balance_id } = params;
+
+	const cusEntId =
+		"customer_entitlement_id" in params
+			? params.customer_entitlement_id
+			: undefined;
 
 	const customerEntitlementFilters: CustomerEntitlementFilters | undefined =
 		cusEntId || interval || balance_id

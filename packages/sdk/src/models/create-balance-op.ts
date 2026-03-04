@@ -63,9 +63,9 @@ export type CreateBalanceParams = {
   /**
    * The initial balance amount to grant. For metered features, this is the number of units the customer can use.
    */
-  included?: number | undefined;
+  includedGrant?: number | undefined;
   /**
-   * If true, the balance has unlimited usage. Cannot be combined with 'included'.
+   * If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
    */
   unlimited?: boolean | undefined;
   /**
@@ -76,6 +76,10 @@ export type CreateBalanceParams = {
    * Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
    */
   expiresAt?: number | undefined;
+  /**
+   * A unique identifier for this balance. Use this to target the balance in future update / delete calls.
+   */
+  balanceId?: string | undefined;
 };
 
 /**
@@ -125,10 +129,11 @@ export type CreateBalanceParams$Outbound = {
   customer_id: string;
   feature_id: string;
   entity_id?: string | undefined;
-  included?: number | undefined;
+  included_grant?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: CreateBalanceReset$Outbound | undefined;
   expires_at?: number | undefined;
+  balance_id?: string | undefined;
 };
 
 /** @internal */
@@ -140,17 +145,20 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
     customerId: z.string(),
     featureId: z.string(),
     entityId: z.optional(z.string()),
-    included: z.optional(z.number()),
+    includedGrant: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => CreateBalanceReset$outboundSchema)),
     expiresAt: z.optional(z.number()),
+    balanceId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       featureId: "feature_id",
       entityId: "entity_id",
+      includedGrant: "included_grant",
       expiresAt: "expires_at",
+      balanceId: "balance_id",
     });
   }),
 );

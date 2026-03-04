@@ -178,6 +178,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       The version of the plan to attach.
     </DynamicParamField>
 
+    <DynamicParamField body="subscription_id" type="string">
+      A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
@@ -280,6 +284,52 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicParamField body="send_email_receipts" type="boolean">
       Whether to send email receipts to this customer
+    </DynamicParamField>
+
+    <DynamicParamField body="billing_controls" type="object">
+      Billing controls for the customer (auto top-ups, etc.)
+      <Expandable title="properties">
+        <DynamicParamField body="auto_topups" type="object[]">
+          List of auto top-up configurations per feature.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature (credit balance) to auto top-up.
+            </DynamicParamField>
+
+            <DynamicParamField body="enabled" type="boolean">
+              Whether auto top-up is enabled.
+            </DynamicParamField>
+
+            <DynamicParamField body="threshold" type="number" required>
+              When the balance drops below this threshold, an auto top-up will be purchased.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number" required>
+              Amount of credits to add per auto top-up.
+            </DynamicParamField>
+
+            <DynamicParamField body="purchase_limit" type="object">
+              Optional rate limit to cap how often auto top-ups occur.
+              <Expandable title="properties">
+                <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
+                  The time interval for the purchase limit window.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals in the purchase limit window.
+                </DynamicParamField>
+
+                <DynamicParamField body="limit" type="number" required>
+                  Maximum number of auto top-ups allowed within the interval.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
     </DynamicParamField>
 
   </Expandable>
