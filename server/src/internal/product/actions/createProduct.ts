@@ -7,8 +7,6 @@ import type {
 } from "@autumn/shared";
 import { ProductAlreadyExistsError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
 	handleNewFreeTrial,
@@ -17,7 +15,12 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { constructProduct, initProductInStripe } from "@/internal/products/productUtils.js";
+import {
+	constructProduct,
+	initProductInStripe,
+} from "@/internal/products/productUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 export const createProduct = async ({
