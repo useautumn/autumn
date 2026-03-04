@@ -19,11 +19,11 @@ export const PriceTierSchema = z.object({
 		description: "The maximum amount of usage for this tier.",
 		example: 100,
 	}),
-	amount: z.number().meta({
+	amount: z.number().optional().default(0).meta({
 		description: "The price of the product item for this tier.",
 		example: 10,
 	}),
-	flat_amount: z.number().nullish().meta({
+	flat_amount: z.number().optional().meta({
 		description:
 			"A flat fee charged for this tier, in addition to the per-unit amount.",
 	}),
