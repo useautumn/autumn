@@ -459,7 +459,13 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db.delete(customers).where(inArray(customers.internal_id, ids));
+			await db.delete(customers).where(
+				and(
+					inArray(customers.internal_id, ids),
+					eq(customers.org_id, orgId),
+					eq(customers.env, env),
+				),
+			);
 		}
 	}
 
