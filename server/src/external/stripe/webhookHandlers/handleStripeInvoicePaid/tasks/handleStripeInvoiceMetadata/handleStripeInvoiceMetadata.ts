@@ -4,6 +4,7 @@ import { handleInvoiceCheckoutPaid } from "@/external/stripe/webhookHandlers/han
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
 import type { StripeInvoicePaidContext } from "../../setupStripeInvoicePaidContext.js";
 
@@ -34,6 +35,7 @@ export const handleStripeInvoiceMetadata = async ({
 			stripeSubscription,
 			stripeInvoice,
 		});
+
 		return;
 	}
 
@@ -50,11 +52,21 @@ export const handleStripeInvoiceMetadata = async ({
 			stripeInvoice,
 			metadata,
 		});
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: data.customer.id ?? "",
+			source: "handleStripeInvoiceMetadata",
+		});
 		return;
 	}
 
 	await handleInvoiceCheckoutPaid({
 		ctx,
 		metadata,
+	});
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId: data.customer.id ?? "",
+		source: "handleStripeInvoiceMetadata",
 	});
 };

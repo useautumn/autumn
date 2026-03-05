@@ -64,6 +64,7 @@ export const evaluateStripeBillingPlan = async ({
 	const { lineItems } = autumnBillingPlan;
 
 	const createManualInvoice = shouldCreateManualStripeInvoice({
+		ctx,
 		billingContext,
 		autumnBillingPlan,
 		stripeSubscriptionAction,

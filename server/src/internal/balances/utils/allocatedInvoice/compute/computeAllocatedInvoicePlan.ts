@@ -4,6 +4,7 @@ import type {
 	UpdateCustomerEntitlement,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import type { AllocatedInvoiceContext } from "../allocatedInvoiceContext";
 import { computeAllocatedInvoiceLineItems } from "./computeAllocatedInvoiceLineItems";
 import { computeUpdateCustomerEntitlementPlan } from "./computeUpdateCustomerEntitlementPlan";
@@ -66,10 +67,18 @@ export const computeAllocatedInvoicePlan = ({
 	});
 
 	// 3. Compute line items using the post-replaceable entitlement
-	const lineItems = computeAllocatedInvoiceLineItems({
+	let lineItems = computeAllocatedInvoiceLineItems({
 		ctx,
 		billingContext,
 	});
+
+	// 4. Apply Stripe discounts if present
+	if (billingContext.stripeDiscounts?.length) {
+		lineItems = applyStripeDiscountsToLineItems({
+			lineItems,
+			discounts: billingContext.stripeDiscounts,
+		});
+	}
 
 	return {
 		customerId: billingContext.fullCustomer?.id ?? "",

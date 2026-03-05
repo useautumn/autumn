@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -56,4 +57,10 @@ export const executeDeferredBillingPlan = async ({
 	});
 
 	await MetadataService.delete({ db, id: metadata.id });
+
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId: billingContext.fullCustomer.id ?? "",
+		source: "executeInvoiceDeferredBillingPlan",
+	});
 };

@@ -1,8 +1,9 @@
-import type { BillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan, BillingContext, FullCusProduct } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { willStripeSubscriptionInvoiceEndOfCycle } from "./willStripeSubscriptionInvoiceEndOfCycle";
 
 export const buildStripeSubscriptionCreateAction = ({
 	ctx,
@@ -10,12 +11,14 @@ export const buildStripeSubscriptionCreateAction = ({
 	subItemsUpdate,
 	addInvoiceItems,
 	subscriptionCancelAt,
+	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	addInvoiceItems: Stripe.SubscriptionCreateParams.AddInvoiceItem[];
 	subscriptionCancelAt?: number;
+	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const { stripeCustomer, paymentMethod, trialContext, stripeDiscounts } =
 		billingContext;
@@ -24,6 +27,12 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const freeTrialNoCardRequired = trialContext?.cardRequired === false;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
+
+	const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+	});
 
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
 		customer: stripeCustomer.id,
@@ -43,7 +52,9 @@ export const buildStripeSubscriptionCreateAction = ({
 			? "default_incomplete"
 			: "error_if_incomplete",
 
-		add_invoice_items: addInvoiceItems,
+		add_invoice_items: willCreateInvoiceEndOfCycle
+			? undefined
+			: addInvoiceItems,
 
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
 
