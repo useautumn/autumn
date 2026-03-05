@@ -1,4 +1,8 @@
-import type { FullCusProduct } from "@autumn/shared";
+import {
+	customerProductEligibleForDefaultProduct,
+	enrichFullCustomerWithEntity,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { scheduleDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils/scheduleDefaultProduct";
@@ -31,12 +35,19 @@ export const scheduleDefaultProducts = async ({
 
 	// Schedule default for each canceled non-entity product group
 	for (const canceledProduct of canceledCustomerProducts) {
-		if (canceledProduct.internal_entity_id) continue;
+		const eligibleForDefaultProduct = customerProductEligibleForDefaultProduct({
+			ctx,
+			customerProduct: canceledProduct,
+		});
+		if (!eligibleForDefaultProduct) continue;
 
 		await scheduleDefaultProduct({
 			ctx,
 			productGroup: canceledProduct.product.group,
-			fullCustomer,
+			fullCustomer: enrichFullCustomerWithEntity({
+				fullCustomer,
+				internalEntityId: canceledProduct.internal_entity_id ?? null,
+			}),
 			scheduleAtMs,
 			defaultProducts,
 		});

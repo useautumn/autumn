@@ -29,6 +29,10 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// - 'prorate_immediately' (default): Invoice line items are charged immediately
 	// - 'next_cycle_only': Do NOT create any charges due to the attach
 	billing_behavior: BillingBehaviorSchema.optional(),
+
+	// For importing an existing subscription...?
+	processor_subscription_id: z.string().optional(),
+	no_billing_changes: z.boolean().optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
