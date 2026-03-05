@@ -49,6 +49,7 @@ export const updateBillingPlanFromCheckout = async ({
 			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
 		});
+
 		updatedAutumnPlan.upsertInvoice = invoice;
 		ctx.logger.debug(
 			`[checkout.completed] Added upsertInvoice: ${invoice.stripe_id}`,

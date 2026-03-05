@@ -1,22 +1,37 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
+	type FullCusProduct,
 	type StripeSubscriptionAction,
 	sumValues,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
+import { willStripeSubscriptionInvoiceEndOfCycle } from "../subscriptions/willStripeSubscriptionInvoiceEndOfCycle";
 
 export const shouldCreateManualStripeInvoice = ({
+	ctx,
 	billingContext,
 	autumnBillingPlan,
 	stripeSubscriptionAction,
 }: {
+	ctx: AutumnContext;
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionAction?: StripeSubscriptionAction;
 }): boolean => {
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
-	if (isCreateAction) return false;
+	if (isCreateAction) {
+		const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle(
+			{
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+			},
+		);
+
+		return willCreateInvoiceEndOfCycle;
+	}
 
 	// Custom line items always need a manual invoice
 	const customLineItems = autumnBillingPlan.customLineItems;
