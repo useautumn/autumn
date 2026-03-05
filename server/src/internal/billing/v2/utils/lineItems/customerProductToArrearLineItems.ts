@@ -95,7 +95,7 @@ export const customerProductToArrearLineItems = ({
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
 			currency:
-				billingContext.stripeCustomer.currency ??
+				billingContext.stripeCustomer?.currency ??
 				orgToCurrency({ org: ctx.org }),
 			customerProduct,
 			customerPrice: cusPrice,

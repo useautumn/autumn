@@ -63,7 +63,7 @@ export const createInvoiceForBilling = async ({
 
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
-		stripeCusId: billingContext.stripeCustomer.id,
+		stripeCusId: billingContext.stripeCustomer?.id ?? "none",
 		stripeSubId: options.skipSubscriptionLink
 			? undefined
 			: billingContext.stripeSubscription?.id,

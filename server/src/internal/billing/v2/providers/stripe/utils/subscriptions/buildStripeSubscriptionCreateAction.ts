@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan, BillingContext, FullCusProduct } from "@autumn/shared";
+import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -35,7 +35,7 @@ export const buildStripeSubscriptionCreateAction = ({
 	});
 
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
-		customer: stripeCustomer.id,
+		customer: stripeCustomer?.id ?? "none",
 		items: subItemsUpdate.map((item) => ({
 			...(item.price_data
 				? { price_data: item.price_data }
