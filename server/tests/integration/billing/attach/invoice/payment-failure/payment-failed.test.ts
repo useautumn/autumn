@@ -8,6 +8,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { expectCustomerProductCorrect } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -88,6 +89,12 @@ test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () =
 	expect(result.payment_url).toBeDefined();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProductCorrect({
+		customer,
+		productId: pro.id,
+		state: "active",
+	});
 
 	// Should still have pro's balance (upgrade not applied)
 	expectCustomerFeatureCorrect({

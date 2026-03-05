@@ -79,7 +79,7 @@ export const usagePriceToLineItem = ({
 		...context,
 		price: cusPrice.price,
 		feature: cusEnt.entitlement.feature,
-		discountable: options.discountable ?? false,
+		discountable: options.discountable,
 		customerProduct: cusEnt.customer_product ?? undefined,
 		customerEntitlement: cusEnt,
 	};
