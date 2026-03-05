@@ -54,6 +54,8 @@ export const createWorkerContext = async ({
 		org,
 		env,
 		features,
+		customerId,
+
 		db,
 		logger: workerLogger,
 

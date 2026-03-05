@@ -53,6 +53,10 @@ export const GetEntityStatus = {
 export type GetEntityStatus = OpenEnum<typeof GetEntityStatus>;
 
 export type GetEntitySubscription = {
+  /**
+   * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+   */
+  id: string;
   plan?: Plan | undefined;
   /**
    * The unique identifier of the subscribed plan.
@@ -238,6 +242,7 @@ export const GetEntitySubscription$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     plan: types.optional(Plan$inboundSchema),
     plan_id: types.string(),
     auto_enable: types.boolean(),

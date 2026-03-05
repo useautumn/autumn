@@ -2,6 +2,7 @@
 
 // Balance utils barrel
 export * from "./balanceUtils";
+export * from "./balanceUtils/computeGrantedBalanceInput";
 export * from "./balanceUtils/cusEntsToBalance";
 export * from "./balanceUtils/cusEntsToCurrentBalance";
 export * from "./balanceUtils/cusEntsToPrepaidInvoiceOverage";

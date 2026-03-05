@@ -1,12 +1,9 @@
 import {
 	ErrCode,
 	type InvoiceDiscount,
-	type InvoiceStatus,
 	notNullish,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { InvoiceService } from "@server/internal/invoices/InvoiceService.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import type Stripe from "stripe";
 
@@ -126,42 +123,6 @@ export const payForInvoice = async ({
 			};
 		}
 	}
-};
-
-export const updateInvoiceIfExists = async ({
-	db,
-	invoice,
-}: {
-	db: DrizzleCli;
-	invoice: Stripe.Invoice;
-}) => {
-	// TODO: Can optimize this function...
-	const existingInvoice = await InvoiceService.getByStripeId({
-		db,
-		stripeId: invoice.id!,
-	});
-
-	if (existingInvoice) {
-		await InvoiceService.updateByStripeId({
-			db,
-			stripeId: invoice.id!,
-			updates: {
-				status: invoice.status as InvoiceStatus,
-				hosted_invoice_url: invoice.hosted_invoice_url,
-				total: stripeToAtmnAmount({
-					amount: invoice.total,
-					currency: invoice.currency,
-				}),
-				discounts: getInvoiceDiscounts({
-					expandedInvoice: invoice,
-				}),
-			},
-		});
-
-		return true;
-	}
-
-	return false;
 };
 
 export const getInvoiceDiscounts = ({

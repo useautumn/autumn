@@ -87,6 +87,7 @@ export const computeMultiAttachPlan = ({
 	const allCustomEnts = productContexts.flatMap((pc) => pc.customEnts);
 
 	const plan: AutumnBillingPlan = {
+		customerId: multiAttachBillingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: newCustomerProducts,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,

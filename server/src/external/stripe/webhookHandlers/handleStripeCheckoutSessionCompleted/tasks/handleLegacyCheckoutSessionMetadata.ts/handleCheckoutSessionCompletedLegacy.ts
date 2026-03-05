@@ -167,7 +167,7 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 	for (const invoiceId of invoiceIds) {
 		batchInsertInvoice.push(
 			insertInvoiceFromAttach({
-				db,
+				ctx,
 				attachParams,
 				invoiceId,
 				logger,

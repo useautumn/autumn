@@ -9,8 +9,133 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
 )
 from pydantic import model_serializer
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Literal, Optional
 from typing_extensions import NotRequired, TypedDict
+
+
+CustomerDataInterval = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class CustomerDataPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CustomerDataInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class CustomerDataPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CustomerDataInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CustomerDataAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[CustomerDataPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+
+class CustomerDataAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[CustomerDataPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CustomerDataBillingControlsTypedDict(TypedDict):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: NotRequired[List[CustomerDataAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+
+
+class CustomerDataBillingControls(BaseModel):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: Optional[List[CustomerDataAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["auto_topups"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class CustomerDataTypedDict(TypedDict):
@@ -32,6 +157,8 @@ class CustomerDataTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    billing_controls: NotRequired[CustomerDataBillingControlsTypedDict]
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
 
 
 class CustomerData(BaseModel):
@@ -61,6 +188,9 @@ class CustomerData(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    billing_controls: Optional[CustomerDataBillingControls] = None
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -73,6 +203,7 @@ class CustomerData(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
+                "billing_controls",
             ]
         )
         nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
