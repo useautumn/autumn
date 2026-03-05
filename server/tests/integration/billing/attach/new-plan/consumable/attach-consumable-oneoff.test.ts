@@ -59,8 +59,9 @@ test.concurrent(`${chalk.yellowBright("consumable-oneoff 1: attach one off base 
 		withPause: true,
 	});
 
+	const customerAfterAdvance = await autumnV1.customers.get(customerId);
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customer: customerAfterAdvance,
 		count: 2,
 		latestTotal: 50, // only charged for overage (not base price)
 	});
