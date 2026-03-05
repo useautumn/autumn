@@ -257,6 +257,12 @@ export class InvoiceService {
 					hosted_invoice_url: invoice.hosted_invoice_url,
 					discounts: invoice.discounts,
 					total: invoice.total,
+					product_ids: invoice.product_ids?.length
+						? invoice.product_ids
+						: undefined,
+					internal_product_ids: invoice.internal_product_ids?.length
+						? invoice.internal_product_ids
+						: undefined,
 				},
 			})
 			.returning();
