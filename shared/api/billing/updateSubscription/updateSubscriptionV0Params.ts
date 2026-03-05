@@ -1,3 +1,4 @@
+import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
@@ -22,6 +23,16 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'prorate_immediately' (default): Invoice line items are charged immediately
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
+
+		processor_subscription_id: z.string().nullable().optional(),
+		no_billing_changes: z.boolean().optional(),
+		status: z
+			.enum([
+				CusProductStatus.Active,
+				CusProductStatus.PastDue,
+				CusProductStatus.Expired,
+			])
+			.optional(),
 	});
 
 export const UpdateSubscriptionV0ParamsSchema =

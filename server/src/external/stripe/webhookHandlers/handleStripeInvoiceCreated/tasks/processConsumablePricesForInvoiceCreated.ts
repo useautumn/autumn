@@ -83,8 +83,9 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				}),
 		});
 
-	if (lineItems.length > 0) {
-		const invoiceItems = await createStripeInvoiceItems({
+	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	if (lineItems.length > 0 && !skipOverageSubmission) {
+		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,

@@ -34,6 +34,7 @@ type FeatureOption = {
 type EntityConfig = {
 	count: number;
 	featureId: string;
+	defaultGroup?: string;
 };
 
 type GeneratedEntity = {
@@ -314,16 +315,20 @@ const products = ({
  * Entities are auto-generated with ids "ent-1", "ent-2", etc.
  * @param count - Number of entities to create
  * @param featureId - Feature ID for all entities (e.g., TestFeature.Users)
+ * @param defaultGroup - Optional default_group passed via customer_data.internal_options
  * @example s.entities({ count: 2, featureId: TestFeature.Users })
+ * @example s.entities({ count: 1, featureId: TestFeature.Users, defaultGroup: "my-customer" })
  */
 const entities = ({
 	count,
 	featureId,
+	defaultGroup,
 }: {
 	count: number;
 	featureId: string;
+	defaultGroup?: string;
 }): ConfigFn => {
-	return (config) => ({ ...config, entityConfig: { count, featureId } });
+	return (config) => ({ ...config, entityConfig: { count, featureId, defaultGroup } });
 };
 
 /**
@@ -1234,10 +1239,18 @@ export async function initScenario({
 				"Cannot create entities: customerId is required when using s.entities()",
 			);
 		}
+		const defaultGroup = config.entityConfig?.defaultGroup;
 		const entityDefs = generatedEntities.map((e) => ({
 			id: e.id,
 			name: e.name,
 			feature_id: e.featureId,
+			...(defaultGroup && {
+				customer_data: {
+					internal_options: {
+						default_group: defaultGroup,
+					},
+				},
+			}),
 		}));
 		await autumnV1.entities.create(customerId, entityDefs);
 	}

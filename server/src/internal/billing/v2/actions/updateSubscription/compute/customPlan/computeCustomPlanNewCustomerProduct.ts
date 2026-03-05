@@ -2,6 +2,7 @@ import type {
 	FullCusProduct,
 	FullProduct,
 	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCancelFields } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelFields";
@@ -9,11 +10,13 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 
 export const computeCustomPlanNewCustomerProduct = ({
 	ctx,
+	params,
 	updateSubscriptionContext,
 	fullProduct,
 	currentCustomerProduct,
 }: {
 	ctx: AutumnContext;
+	params: UpdateSubscriptionV1Params;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	fullProduct: FullProduct;
 	currentCustomerProduct: FullCusProduct;
@@ -78,6 +81,12 @@ export const computeCustomPlanNewCustomerProduct = ({
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
+
+			...(params.processor_subscription_id
+				? { subscriptionId: params.processor_subscription_id }
+				: {}),
+
+			...(params.status ? { status: params.status } : {}),
 		},
 	});
 

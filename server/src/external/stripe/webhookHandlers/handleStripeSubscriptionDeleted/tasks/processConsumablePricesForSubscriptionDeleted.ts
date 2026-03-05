@@ -82,7 +82,8 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 
-	if (lineItems.length > 0) {
+	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	if (lineItems.length > 0 && !skipOverageSubmission) {
 		// 2. Create, finalize, and pay a single invoice with all line items
 		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
 
