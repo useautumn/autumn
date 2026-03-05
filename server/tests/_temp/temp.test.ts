@@ -1,10 +1,65 @@
 import { test } from "bun:test";
-import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { initScenario } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+
+const testStripeCustomerWithGBP = async ({
+	ctx,
+	autumn,
+}: {
+	ctx: AutumnContext;
+	autumn: AutumnInt;
+}) => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	// 1. Create Stripe customer
+	const stripeCus = await stripeCli.customers.create({
+		email: "test-gbp@example.com",
+		name: "GBP Test Customer",
+	});
+
+	const paymentMethod = await stripeCli.paymentMethods.create({
+		type: "card",
+		card: {
+			token: "tok_visa",
+		},
+	});
+
+	await stripeCli.paymentMethods.attach(paymentMethod.id, {
+		customer: stripeCus.id,
+	});
+
+	const subscription = await stripeCli.subscriptions.create({
+		customer: stripeCus.id,
+		items: [
+			{
+				price_data: {
+					currency: "gbp",
+					unit_amount: 1000,
+					recurring: {
+						interval: "month",
+						interval_count: 1,
+					},
+					product: "prod_U5XwDFBQB4TQJ7",
+				},
+				quantity: 1,
+			},
+		],
+		default_payment_method: paymentMethod.id,
+	});
+
+	console.log("Subscription created", subscription);
+
+	// 2. Create Autumn customer with stripe_id
+	const autumnCus = await autumn.customers.create({
+		id: "gbp-test-customer",
+		name: "GBP Test Customer",
+		email: "test-gbp@example.com",
+		stripe_id: stripeCus.id,
+	});
+	console.log("Created:", { stripeCus: stripeCus.id, autumnCus });
+};
 
 /**
  * Scenario:
@@ -21,54 +76,14 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 3: upgrade carries over discount when coupon is deleted")}`, async () => {
 	const customerId = "temp";
 
-	const pro = products.pro({
-		id: "pro",
-		items: [items.monthlyMessages({ includedUsage: 500 })],
-	});
-
-	const premium = products.premium({
-		id: "premium",
-		items: [items.monthlyMessages({ includedUsage: 1000 })],
-	});
-
 	const { autumnV1, testClockId, ctx } = await initScenario({
-		customerId,
+		// customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
+			// s.customer({ paymentMethod: "success" }),
+			// s.products({ list: [pro, premium] }),
 		],
 		actions: [],
 	});
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-
-	const coupon = await createPercentCoupon({
-		stripeCli,
-		percentOff: 20,
-		duration: "repeating",
-		durationInMonths: 1,
-	});
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-		discounts: [
-			{
-				reward_id: coupon.id,
-			},
-		],
-	});
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-		redirect_mode: "if_required",
-	});
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
+	await testStripeCustomerWithGBP({ ctx, autumn: autumnV1 });
 });
