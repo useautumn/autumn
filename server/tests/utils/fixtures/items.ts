@@ -384,7 +384,7 @@ const volumePrepaidMessages = ({
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number; flat_amount?: number | null }[];
+	tiers?: { to: number | "inf"; amount: number; flat_amount?: number }[];
 	config?: ProductItemConfig;
 } = {}): LimitedItem =>
 	constructPrepaidItem({
@@ -392,7 +392,7 @@ const volumePrepaidMessages = ({
 		tiers: tiers as {
 			to: number;
 			amount: number;
-			flat_amount?: number | null;
+			flat_amount?: number;
 		}[],
 		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
