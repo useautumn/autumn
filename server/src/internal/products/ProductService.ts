@@ -534,6 +534,32 @@ export class ProductService {
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
 	}
 
+	/** Deletes products in batches to avoid locking all rows at once. */
+	static async safeDeleteByOrgId({
+		db,
+		orgId,
+		env,
+		batchSize = 250,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		batchSize?: number;
+	}) {
+		while (true) {
+			const batch = await db
+				.select({ internal_id: products.internal_id })
+				.from(products)
+				.where(and(eq(products.org_id, orgId), eq(products.env, env)))
+				.limit(batchSize);
+
+			if (batch.length === 0) break;
+
+			const ids = batch.map((r) => r.internal_id);
+			await db.delete(products).where(inArray(products.internal_id, ids));
+		}
+	}
+
 	static async getDeletionText({
 		db,
 		productId,
