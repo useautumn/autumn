@@ -4,6 +4,9 @@ export const GetPlanParamsV0Schema = z.object({
 	plan_id: z.string().nonempty().meta({
 		description: "The ID of the plan to retrieve.",
 	}),
+	variant_id: z.string().optional().meta({
+		description: "If provided, retrieves the specified variant of the plan.",
+	}),
 	version: z.number().optional().meta({
 		description:
 			"The version of the plan to get. Defaults to the latest version.",

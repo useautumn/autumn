@@ -65,6 +65,12 @@ export const UpdatePlanParamsV2Schema = z
 		description: z.string().optional().meta({
 			internal: true,
 		}),
+
+		variant_id: z.string().optional().meta({
+			description:
+				"If provided, updates the specified variant instead of the base plan.",
+			internal: true,
+		}),
 	});
 
 export const UpdatePlanQuerySchema = z.object({

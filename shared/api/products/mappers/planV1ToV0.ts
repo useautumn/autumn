@@ -20,6 +20,7 @@ export function planV1ToV0({
 	return {
 		...plan,
 		default: plan.auto_enable,
+		base_variant_id: null,
 		features: plan.items.map((item) => planItemV1ToV0({ ctx, item })),
 	};
 }

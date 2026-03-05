@@ -30,7 +30,7 @@ export const ApiPlanV0Schema = z.object({
 	created_at: z.number(),
 	env: z.enum(AppEnv),
 	archived: z.boolean(),
-	base_variant_id: z.string().nullable(),
+	base_variant_id: z.string().nullable().optional(),
 
 	customer_eligibility: z
 		.object({

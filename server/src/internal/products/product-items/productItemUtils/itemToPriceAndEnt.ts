@@ -452,5 +452,23 @@ export const itemToPriceAndEnt = ({
 		}
 	}
 
+	// Write variant fields through to the ent/price rows being persisted
+	if (newEnt) {
+		newEnt.base_entitlement_id = item.base_entitlement_id ?? null;
+		newEnt.variant_action = item.variant_action ?? null;
+	}
+	if (updatedEnt) {
+		updatedEnt.base_entitlement_id = item.base_entitlement_id ?? null;
+		updatedEnt.variant_action = item.variant_action ?? null;
+	}
+	if (newPrice) {
+		newPrice.base_price_id = item.base_price_id ?? null;
+		newPrice.variant_action = item.variant_action ?? null;
+	}
+	if (updatedPrice) {
+		updatedPrice.base_price_id = item.base_price_id ?? null;
+		updatedPrice.variant_action = item.variant_action ?? null;
+	}
+
 	return { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt };
 };
