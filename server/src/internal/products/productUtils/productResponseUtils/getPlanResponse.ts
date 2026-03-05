@@ -178,7 +178,7 @@ export const getPlanResponse = async ({
 		created_at: product.created_at,
 		env: product.env,
 		archived: product.archived,
-		base_variant_id: product.base_variant_id,
+		base_variant_id: product.internal_parent_product_id ?? null,
 
 		// Customer context (optional)
 		customer_eligibility: fullCus
