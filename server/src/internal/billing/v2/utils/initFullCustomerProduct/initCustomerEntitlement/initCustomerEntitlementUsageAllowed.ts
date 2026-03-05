@@ -1,7 +1,7 @@
 import {
 	type EntitlementWithFeature,
 	entToPrice,
-	type InitFullCustomerProductContext,
+	type InitCustomerEntitlementContext,
 	isPayPerUsePrice,
 } from "@autumn/shared";
 
@@ -9,12 +9,12 @@ export const initCustomerEntitlementUsageAllowed = ({
 	initContext,
 	entitlement,
 }: {
-	initContext: InitFullCustomerProductContext;
+	initContext: InitCustomerEntitlementContext;
 	entitlement: EntitlementWithFeature;
 }) => {
 	const price = entToPrice({
 		ent: entitlement,
-		prices: initContext.fullProduct.prices,
+		prices: initContext.fullProduct?.prices ?? [],
 	});
 
 	if (!price) return false;

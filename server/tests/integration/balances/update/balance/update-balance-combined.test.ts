@@ -39,7 +39,7 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 50,
-		granted_balance: 100,
+		included_grant: 100,
 	});
 
 	const customer1 = await autumnV2.customers.get<ApiCustomer>(customerId);
@@ -55,7 +55,7 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 80,
-		granted_balance: 150,
+		included_grant: 150,
 	});
 
 	const customer2 = await autumnV2.customers.get<ApiCustomer>(customerId);
@@ -71,7 +71,7 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 100,
-		granted_balance: 100,
+		included_grant: 100,
 	});
 
 	const customer3 = await autumnV2.customers.get<ApiCustomer>(customerId);
@@ -229,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 80,
-		granted_balance: 150,
+		included_grant: 150,
 		next_reset_at: newResetAt1,
 		customer_entitlement_id: cusEntId,
 	});
@@ -256,7 +256,7 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 200,
-		granted_balance: 200,
+		included_grant: 200,
 		next_reset_at: newResetAt2,
 		customer_entitlement_id: cusEntId,
 	});

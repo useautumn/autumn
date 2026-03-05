@@ -5,6 +5,28 @@ export const getOrCreateCustomerGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.number(),
+	limit: z.number(),
+});
+
+export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchase_limit: z
+		.union([getOrCreateCustomerPurchaseLimitOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
+	auto_topups: z
+		.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+});
+
 export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	customer_id: z.string().nullable(),
 	name: z.union([z.string(), z.undefined()]).optional().nullable(),
@@ -18,10 +40,39 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	create_in_stripe: z.union([z.boolean(), z.undefined()]).optional(),
 	auto_enable_plan_id: z.union([z.string(), z.undefined()]).optional(),
 	send_email_receipts: z.union([z.boolean(), z.undefined()]).optional(),
+	billing_controls: z
+		.union([getOrCreateCustomerBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
+const closedEnumSchema = z.any();
+
 const customerExpandSchema = z.any();
+
+export const getOrCreateCustomerIntervalSchema = closedEnumSchema;
+
+export const getOrCreateCustomerPurchaseLimitSchema = z.object({
+	interval: getOrCreateCustomerIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.number(),
+});
+
+export const getOrCreateCustomerAutoTopupSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([getOrCreateCustomerPurchaseLimitSchema, z.undefined()])
+		.optional(),
+});
+
+export const getOrCreateCustomerBillingControlsSchema = z.object({
+	autoTopups: z
+		.union([z.array(getOrCreateCustomerAutoTopupSchema), z.undefined()])
+		.optional(),
+});
 
 export const getOrCreateCustomerParamsSchema = z.object({
 	customerId: z.string().nullable(),
@@ -36,5 +87,8 @@ export const getOrCreateCustomerParamsSchema = z.object({
 	createInStripe: z.union([z.boolean(), z.undefined()]).optional(),
 	autoEnablePlanId: z.union([z.string(), z.undefined()]).optional(),
 	sendEmailReceipts: z.union([z.boolean(), z.undefined()]).optional(),
+	billingControls: z
+		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
+		.optional(),
 	expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional(),
 });

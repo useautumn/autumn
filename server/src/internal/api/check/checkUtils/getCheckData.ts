@@ -9,6 +9,7 @@ import {
 	InternalError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
@@ -100,6 +101,15 @@ export const getCheckData = async ({
 		features: ctx.features,
 		featureId: featureToUseMin.id,
 		errorOnNotFound: true,
+	});
+
+	// Trigger auto top-up
+	triggerAutoTopUp({
+		ctx,
+		newFullCus: fullCustomer,
+		feature: featureToUse,
+	}).catch((error) => {
+		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
 	});
 
 	const apiBalance = apiEntity.balances?.[featureToUse.id];

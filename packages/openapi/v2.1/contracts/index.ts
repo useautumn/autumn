@@ -2,6 +2,7 @@ import { oc } from "@orpc/contract";
 import {
 	balancesCheckContract,
 	balancesCreateContract,
+	balancesDeleteContract,
 	balancesTrackContract,
 	balancesUpdateContract,
 } from "./balancesContract.js";
@@ -83,6 +84,7 @@ export const v2_1ContractRouter = oc.router({
 	// Balances
 	balancesCreate: balancesCreateContract,
 	balancesUpdate: balancesUpdateContract,
+	balancesDelete: balancesDeleteContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
 

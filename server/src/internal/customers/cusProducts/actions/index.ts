@@ -7,6 +7,7 @@ import {
 	getExpiredCustomerProductsCache,
 	setExpiredCustomerProductsCache,
 } from "./expiredCache";
+import { updateCustomerProductDbAndCache } from "./updateDbAndCache";
 
 export const customerProductActions = {
 	/** Expires a customer product and activates default if no other active in group */
@@ -20,6 +21,9 @@ export const customerProductActions = {
 
 	/** Deletes any scheduled main customer product in the same group */
 	deleteScheduled: deleteScheduledCustomerProduct,
+
+	/** Updates a customer product in both Postgres and the Redis FullCustomer cache */
+	updateDbAndCache: updateCustomerProductDbAndCache,
 
 	/** Cache operations for expired customer products (used by subscription.deleted → invoice.created) */
 	expiredCache: {

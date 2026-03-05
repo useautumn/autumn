@@ -56,6 +56,7 @@ export const activateFreeDefaultProduct = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
+			customerId: fullCustomer?.id ?? "",
 			insertCustomerProducts: [newCustomerProduct],
 		},
 	});

@@ -30,6 +30,11 @@ export const attachAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const attachCustomLineItemSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+});
+
 export const attachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -126,6 +131,11 @@ export const attachAttachDiscountOutboundSchema = z.object({
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const attachCustomLineItemOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+});
+
 export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -139,6 +149,7 @@ export const attachParamsOutboundSchema = z.object({
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
+	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
@@ -147,6 +158,9 @@ export const attachParamsOutboundSchema = z.object({
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional(),
+	custom_line_items: z
+		.union([z.array(attachCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -247,6 +261,7 @@ export const attachParamsSchema = z.object({
 	prorationBehavior: z
 		.union([attachProrationBehaviorSchema, z.undefined()])
 		.optional(),
+	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountSchema), z.undefined()])
 		.optional(),
@@ -255,6 +270,9 @@ export const attachParamsSchema = z.object({
 	planSchedule: z.union([attachPlanScheduleSchema, z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional(),
+	customLineItems: z
+		.union([z.array(attachCustomLineItemSchema), z.undefined()])
 		.optional(),
 });
 

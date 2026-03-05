@@ -98,5 +98,13 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
+	if (notNullish(customerEntitlementFilters?.balanceId)) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) =>
+				(cusEnt.external_id ?? cusEnt.id) ===
+				customerEntitlementFilters.balanceId,
+		);
+	}
+
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };

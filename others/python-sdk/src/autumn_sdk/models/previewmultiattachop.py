@@ -527,6 +527,8 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
 
 
 class PreviewMultiAttachPlan(BaseModel):
@@ -542,9 +544,14 @@ class PreviewMultiAttachPlan(BaseModel):
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customize", "feature_quantities", "version"])
+        optional_fields = set(
+            ["customize", "feature_quantities", "version", "subscription_id"]
+        )
         serialized = handler(self)
         m = {}
 

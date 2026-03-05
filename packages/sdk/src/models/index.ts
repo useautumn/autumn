@@ -17,6 +17,7 @@ export * from "./create-referral-code-op.js";
 export * from "./customer-data.js";
 export * from "./customer-expand.js";
 export * from "./customer.js";
+export * from "./delete-balance-op.js";
 export * from "./delete-customer-op.js";
 export * from "./delete-entity-op.js";
 export * from "./delete-feature-op.js";

@@ -70,6 +70,71 @@ export const ListCustomersEnv = {
 export type ListCustomersEnv = OpenEnum<typeof ListCustomersEnv>;
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const ListCustomersInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type ListCustomersInterval = OpenEnum<typeof ListCustomersInterval>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type ListCustomersPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: ListCustomersInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type ListCustomersAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: ListCustomersPurchaseLimit | undefined;
+};
+
+/**
+ * Billing controls for the customer (auto top-ups, etc.)
+ */
+export type ListCustomersBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<ListCustomersAutoTopup> | undefined;
+};
+
+/**
  * Current status of the subscription.
  */
 export const ListCustomersStatus = {
@@ -82,6 +147,10 @@ export const ListCustomersStatus = {
 export type ListCustomersStatus = OpenEnum<typeof ListCustomersStatus>;
 
 export type ListCustomersSubscription = {
+  /**
+   * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+   */
+  id: string;
   plan?: Plan | undefined;
   /**
    * The unique identifier of the subscribed plan.
@@ -190,6 +259,10 @@ export type ListCustomersList = {
    * Whether to send email receipts to the customer.
    */
   sendEmailReceipts: boolean;
+  /**
+   * Billing controls for the customer (auto top-ups, etc.)
+   */
+  billingControls: ListCustomersBillingControls;
   /**
    * Active and scheduled recurring plans that this customer has attached.
    */
@@ -301,6 +374,98 @@ export const ListCustomersEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListCustomersEnv);
 
 /** @internal */
+export const ListCustomersInterval$inboundSchema: z.ZodMiniType<
+  ListCustomersInterval,
+  unknown
+> = openEnums.inboundSchema(ListCustomersInterval);
+
+/** @internal */
+export const ListCustomersPurchaseLimit$inboundSchema: z.ZodMiniType<
+  ListCustomersPurchaseLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: ListCustomersInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listCustomersPurchaseLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersPurchaseLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersPurchaseLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersAutoTopup$inboundSchema: z.ZodMiniType<
+  ListCustomersAutoTopup,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => ListCustomersPurchaseLimit$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+    });
+  }),
+);
+
+export function listCustomersAutoTopupFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersAutoTopup, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersAutoTopup$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersAutoTopup' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
+  ListCustomersBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => ListCustomersAutoTopup$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+    });
+  }),
+);
+
+export function listCustomersBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersStatus$inboundSchema: z.ZodMiniType<
   ListCustomersStatus,
   unknown
@@ -312,6 +477,7 @@ export const ListCustomersSubscription$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     plan: types.optional(Plan$inboundSchema),
     plan_id: types.string(),
     auto_enable: types.boolean(),
@@ -398,6 +564,7 @@ export const ListCustomersList$inboundSchema: z.ZodMiniType<
     env: ListCustomersEnv$inboundSchema,
     metadata: z.record(z.string(), z.any()),
     send_email_receipts: types.boolean(),
+    billing_controls: z.lazy(() => ListCustomersBillingControls$inboundSchema),
     subscriptions: z.array(
       z.lazy(() => ListCustomersSubscription$inboundSchema),
     ),
@@ -409,6 +576,7 @@ export const ListCustomersList$inboundSchema: z.ZodMiniType<
       "created_at": "createdAt",
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
+      "billing_controls": "billingControls",
     });
   }),
 );

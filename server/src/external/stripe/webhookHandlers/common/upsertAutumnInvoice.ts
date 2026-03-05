@@ -1,8 +1,8 @@
 import {
 	cp,
+	cusProductToProduct,
 	deduplicateArray,
 	type FullCusProduct,
-	type FullCustomerPrice,
 	type Invoice,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -11,8 +11,7 @@ import {
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { InvoiceService } from "@/internal/invoices/InvoiceService";
-import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
+import { invoiceActions } from "@/internal/invoices/actions";
 
 /**
  * Upserts an Autumn invoice record from a Stripe invoice webhook.
@@ -41,8 +40,8 @@ export const upsertAutumnInvoice = async ({
 	stripeSubscription?: Stripe.Subscription;
 	customerProducts?: FullCusProduct[];
 	options?: { skipNonCycleInvoices?: boolean };
-}): Promise<Invoice | null> => {
-	const { db, org, logger, stripeCli, fullCustomer } = ctx;
+}): Promise<Invoice | undefined> => {
+	const { logger, stripeCli, fullCustomer } = ctx;
 
 	// 1. Skip non-cycle invoices if requested (invoice.created uses this)
 	if (
@@ -52,44 +51,23 @@ export const upsertAutumnInvoice = async ({
 		logger.info(
 			`[upsertAutumnInvoice] Skipping non-cycle invoice (billing_reason: ${stripeInvoice.billing_reason})`,
 		);
-		return null;
-	}
-
-	// 2. Try to update existing invoice first (works even without subscription)
-	const updated = await InvoiceService.updateFromStripeInvoice({
-		db,
-		stripeInvoice,
-	});
-
-	if (updated) {
-		logger.info(`[upsertAutumnInvoice] Updated invoice ${stripeInvoice.id}`);
-		return updated;
-	}
-
-	// 3. For creation, we need subscription context and customer products
-	if (
-		!stripeSubscription ||
-		!customerProducts ||
-		customerProducts.length === 0
-	) {
-		logger.debug(
-			`[upsertAutumnInvoice] No subscription/customerProducts, skipping creation for ${stripeInvoice.id}`,
-		);
-		return null;
+		return undefined;
 	}
 
 	if (!fullCustomer) {
 		logger.warn(
 			`[upsertAutumnInvoice] No fullCustomer, cannot create invoice ${stripeInvoice.id}`,
 		);
-		return null;
+		return undefined;
 	}
 
 	// 4. Get nowMs (test-clock aware)
-	const nowMs = await stripeSubscriptionToNowMs({
-		stripeSubscription,
-		stripeCli,
-	});
+	const nowMs = stripeSubscription
+		? await stripeSubscriptionToNowMs({
+				stripeSubscription,
+				stripeCli,
+			})
+		: Date.now();
 
 	// 5. Merge scheduled-but-started customer products
 	const scheduleId = stripeSubscriptionToScheduleId({ stripeSubscription });
@@ -99,7 +77,7 @@ export const upsertAutumnInvoice = async ({
 	).filter((customerProduct) => {
 		const { valid: hasStarted } = cp(customerProduct)
 			.onStripeSubscription({
-				stripeSubscriptionId: stripeSubscription.id,
+				stripeSubscriptionId: stripeSubscription?.id ?? "",
 			})
 			.or.onStripeSchedule({
 				stripeSubscriptionScheduleId: scheduleId ?? undefined,
@@ -111,17 +89,9 @@ export const upsertAutumnInvoice = async ({
 	});
 
 	const allCustomerProducts = [
-		...customerProducts,
+		...(customerProducts ?? []),
 		...startedScheduledCustomerProducts,
 	];
-
-	// 6. Compute product IDs and entity ID
-	const productIds = deduplicateArray(
-		allCustomerProducts.map((cp) => cp.product.id),
-	);
-	const internalProductIds = deduplicateArray(
-		allCustomerProducts.map((cp) => cp.internal_product_id),
-	);
 
 	const internalEntityIds = deduplicateArray(
 		allCustomerProducts.map((cp) => cp.internal_entity_id),
@@ -129,32 +99,16 @@ export const upsertAutumnInvoice = async ({
 	const internalEntityId =
 		internalEntityIds.length === 1 ? internalEntityIds[0] : null;
 
-	// 7. Compute invoice items from prices
-	const prices = allCustomerProducts.flatMap((cp) =>
-		cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
-	);
-
-	const invoiceItems = await getInvoiceItems({
-		stripeInvoice,
-		prices,
-		logger,
-	});
-
 	// 8. Create new invoice
-	const newInvoice = await InvoiceService.createInvoiceFromStripe({
-		db,
+	const autumnInvoice = await invoiceActions.upsertFromStripe({
+		ctx,
 		stripeInvoice,
-		internalCustomerId: fullCustomer.internal_id,
-		internalEntityId,
-		org,
-		productIds,
-		internalProductIds,
-		items: invoiceItems,
+		fullCustomer,
+		fullProducts: allCustomerProducts.map((cp) =>
+			cusProductToProduct({ cusProduct: cp }),
+		),
+		internalEntityId: internalEntityId ?? undefined,
 	});
 
-	if (newInvoice) {
-		logger.info(`[upsertAutumnInvoice] Created invoice ${stripeInvoice.id}`);
-	}
-
-	return newInvoice ?? null;
+	return autumnInvoice;
 };
