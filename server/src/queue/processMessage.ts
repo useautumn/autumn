@@ -17,7 +17,6 @@ import { runClearCreditSystemCacheTask } from "@/internal/features/featureAction
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
-import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
@@ -64,15 +63,6 @@ export const processMessage = async ({
 	let workerCtx: AutumnContext | undefined;
 
 	const executeJob = async () => {
-		if (job.name === JobName.DetectBaseVariant) {
-			await detectBaseVariant({
-				db,
-				curProduct: job.data.curProduct,
-				logger: workerLogger as Logger,
-			});
-			return;
-		}
-
 		if (job.name === JobName.ClearCreditSystemCustomerCache) {
 			await runClearCreditSystemCacheTask({
 				db,

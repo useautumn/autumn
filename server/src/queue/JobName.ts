@@ -8,7 +8,6 @@ export enum JobName {
 	TriggerCheckoutReward = "trigger-checkout-reward",
 	GrantCheckoutReward = "grant-checkout-reward",
 	GenerateFeatureDisplay = "generate-feature-display",
-	DetectBaseVariant = "detect-base-variant",
 
 	HandleProductsUpdated = "handle-products-updated",
 	/** Sends customer.products.updated webhook (v2 lean payload) */
