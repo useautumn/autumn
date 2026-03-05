@@ -1,4 +1,8 @@
-import { type Customer, ProcessorType } from "@autumn/shared";
+import {
+	type Customer,
+	orgDisableStripeWrites,
+	ProcessorType,
+} from "@autumn/shared";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
 import {
 	type ExpandedStripeCustomer,
@@ -19,7 +23,7 @@ export const getOrCreateStripeCustomer = async ({
 	options?: {
 		updateDb?: boolean;
 	};
-}): Promise<ExpandedStripeCustomer> => {
+}): Promise<ExpandedStripeCustomer | undefined> => {
 	const { logger } = ctx;
 
 	const currentStripeCustomer = await getExpandedStripeCustomer({
@@ -28,6 +32,9 @@ export const getOrCreateStripeCustomer = async ({
 	});
 
 	if (currentStripeCustomer) return currentStripeCustomer;
+
+	console.log("ORG DISABLE STRIPE WRITES", orgDisableStripeWrites({ ctx }));
+	if (orgDisableStripeWrites({ ctx })) return undefined;
 
 	logger.info(`Creating new stripe customer for ${customer.id}`);
 
