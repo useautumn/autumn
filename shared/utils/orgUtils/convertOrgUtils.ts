@@ -1,4 +1,4 @@
-import { AppEnv } from "../../index.js";
+import { AppEnv, type SharedContext } from "../../index.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
 
@@ -25,4 +25,12 @@ export const orgToReturnUrl = ({
 	} else {
 		return org.stripe_config?.success_url || "https://useautumn.com";
 	}
+};
+
+export const orgDefaultAppliesToEntities = ({
+	ctx,
+}: {
+	ctx: SharedContext;
+}) => {
+	return ctx.org.config.default_applies_to_entities;
 };
