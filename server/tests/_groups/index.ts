@@ -50,7 +50,6 @@ const allGroups: TestGroup[] = [
 	webhooks,
 	advanced,
 	misc,
-	temp,
 ];
 
 export const getAllGroups = (): TestGroup[] => allGroups;

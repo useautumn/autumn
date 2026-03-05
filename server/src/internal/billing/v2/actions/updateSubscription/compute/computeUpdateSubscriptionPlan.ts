@@ -14,6 +14,7 @@ import {
 import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
+import { computeFieldUpdates } from "./computeFieldUpdates";
 
 /**
  * Compute the subscription update plan
@@ -40,6 +41,7 @@ export const computeUpdateSubscriptionPlan = async ({
 		case UpdateSubscriptionIntent.UpdatePlan:
 			plan = await computeCustomPlan({
 				ctx,
+				params,
 				updateSubscriptionContext: billingContext,
 			});
 			break;
@@ -59,6 +61,17 @@ export const computeUpdateSubscriptionPlan = async ({
 				updateCustomerEntitlements: undefined,
 			};
 			break;
+	}
+
+	const fieldUpdates = computeFieldUpdates({ params });
+	if (Object.keys(fieldUpdates).length > 0) {
+		plan.updateCustomerProduct = {
+			customerProduct: billingContext.customerProduct,
+			updates: {
+				...plan.updateCustomerProduct?.updates,
+				...fieldUpdates,
+			},
+		};
 	}
 
 	// Apply cancel plan if cancelAction is set in context
