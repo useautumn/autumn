@@ -92,6 +92,9 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			stripeInvoiceAction: {
 				addLineParams: { lines: invoiceLines },
 			},
+			options: {
+				skipSubscriptionLink: true,
+			},
 		});
 
 		await upsertInvoiceFromBilling({

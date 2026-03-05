@@ -16,5 +16,6 @@ export const billingDiscounts: TestGroup = {
 		"billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice-discounts.test.ts",
 		"billing/legacy/attach/upgrade/legacy-upgrade-discount.test.ts",
 		"unit/billing/stripe/discounts",
+		"balances/track/allocated-invoice/allocated-invoice-discount.test.ts",
 	],
 };

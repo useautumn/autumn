@@ -19,6 +19,7 @@ import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,
@@ -111,12 +112,18 @@ export const executeStripeSubscriptionAction = async ({
 			stripeSubscription,
 		};
 
+		const deferredInvoiceMode = isDeferredInvoiceMode({
+			billingContext,
+		});
+
 		await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
 			billingContext: deferredBillingContext,
 			stripeInvoice: latestStripeInvoice,
-			expiresAt: Date.now() + ms.days(30),
+			expiresAt: deferredInvoiceMode
+				? Date.now() + ms.days(10)
+				: Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.SubscriptionAction,
 		});
 
