@@ -388,9 +388,23 @@ export class ProductService {
 					with: {
 						feature: true,
 					},
-					where: eq(entitlements.is_custom, false),
+					where: and(
+						eq(entitlements.is_custom, false),
+						or(
+							isNull(entitlements.variant_action),
+							ne(entitlements.variant_action, "removed"),
+						),
+					),
 				},
-				prices: { where: eq(prices.is_custom, false) },
+				prices: {
+					where: and(
+						eq(prices.is_custom, false),
+						or(
+							isNull(prices.variant_action),
+							ne(prices.variant_action, "removed"),
+						),
+					),
+				},
 				free_trials: { where: eq(freeTrials.is_custom, false) },
 			},
 		})) as FullProduct;
