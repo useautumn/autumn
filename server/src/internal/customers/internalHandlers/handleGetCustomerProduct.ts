@@ -51,7 +51,7 @@ export const handleGetCustomerProduct = createRoute({
 			cusProducts,
 			productId: product_id,
 			internalEntityId: entity?.internal_id,
-			version: version ? parseInt(version) : undefined,
+			version: version ? Number.parseFloat(version) : undefined,
 			cusProductId: customer_product_id,
 			inStatuses: ACTIVE_STATUSES,
 		});
@@ -64,9 +64,9 @@ export const handleGetCustomerProduct = createRoute({
 					env,
 					idOrInternalId: product_id,
 					version:
-						version && Number.isInteger(parseInt(version))
-							? parseInt(version)
-							: undefined,
+					version && !Number.isNaN(Number.parseFloat(version))
+						? Number.parseFloat(version)
+						: undefined,
 				});
 
 		const productV2 = mapToProductV2({ product: product!, features });
