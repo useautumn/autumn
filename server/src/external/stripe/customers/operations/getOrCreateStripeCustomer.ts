@@ -33,7 +33,6 @@ export const getOrCreateStripeCustomer = async ({
 
 	if (currentStripeCustomer) return currentStripeCustomer;
 
-	console.log("ORG DISABLE STRIPE WRITES", orgDisableStripeWrites({ ctx }));
 	if (orgDisableStripeWrites({ ctx })) return undefined;
 
 	logger.info(`Creating new stripe customer for ${customer.id}`);
