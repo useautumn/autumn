@@ -87,7 +87,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
 	// Wait for webhook to process
-	await timeout(8000);
+	await timeout(12000);
 
 	// Verify pro is gone and free is active
 	const customerAfterCancel =
@@ -189,7 +189,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
 	// Wait for webhook to process
-	await timeout(8000);
+	await timeout(12000);
 
 	// Verify pro is gone and free is active
 	const customerAfterCancel =
@@ -284,7 +284,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
 	// Wait for webhook to process
-	await timeout(8000);
+	await timeout(12000);
 
 	// Verify premium and pro are gone, free is active
 	const customerAfterCancel =

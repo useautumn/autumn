@@ -29,6 +29,10 @@ export const evaluateStripeBillingPlan = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	checkoutMode?: CheckoutMode;
 }): Promise<StripeBillingPlan> => {
+	if (billingContext.skipBillingChanges) {
+		return {};
+	}
+
 	await initStripeResourcesForBillingPlan({
 		ctx,
 		autumnBillingPlan,

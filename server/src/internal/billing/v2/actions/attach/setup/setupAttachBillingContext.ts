@@ -116,8 +116,8 @@ export const setupAttachBillingContext = async ({
 		product: attachProduct,
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
-		paramDiscounts: params.discounts,
-		newBillingSubscription: shouldForceNewSubscription || undefined,
+		params,
+		// paramDiscounts: params.discounts,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -229,5 +229,9 @@ export const setupAttachBillingContext = async ({
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 
 		externalId: params.subscription_id,
+
+		skipBillingChanges:
+			params.no_billing_changes ??
+			params.processor_subscription_id !== undefined,
 	};
 };

@@ -39,6 +39,13 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
 	}),
+
+	processor_subscription_id: z.string().optional().meta({
+		internal: true,
+	}),
+	no_billing_changes: z.boolean().optional().meta({
+		internal: true,
+	}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;

@@ -21,8 +21,8 @@ const main = async () => {
 		logger,
 	};
 	await Promise.all([
+		runProductCron({ ctx }),
 		runResetCron({ ctx }),
-		runProductCron(),
 		runInvoiceCron({ ctx }),
 		runOneOffCleanup({ ctx }),
 	]);

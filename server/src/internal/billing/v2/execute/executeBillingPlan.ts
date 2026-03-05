@@ -2,6 +2,7 @@ import type {
 	BillingContext,
 	BillingPlan,
 	BillingResult,
+	StripeBillingPlanResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -18,11 +19,14 @@ export const executeBillingPlan = async ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }): Promise<BillingResult> => {
-	const stripeBillingResult = await executeStripeBillingPlan({
-		ctx,
-		billingPlan,
-		billingContext,
-	});
+	const stripeBillingResult: StripeBillingPlanResult =
+		billingContext.skipBillingChanges
+			? {}
+			: await executeStripeBillingPlan({
+					ctx,
+					billingPlan,
+					billingContext,
+				});
 
 	if (stripeBillingResult.deferred) {
 		// Store line items even when deferred — invoice already exists in DB

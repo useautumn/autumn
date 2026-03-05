@@ -17,6 +17,13 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
+const FIELDS_WITH_BILLING_CHANGES = [
+	"feature_quantities",
+	"version",
+	"customize",
+	"cancel_action",
+] as const satisfies (keyof UpdateSubscriptionV1Params)[];
+
 /**
  * Fetch the context for updating a subscription
  * @param ctx - The context
@@ -109,6 +116,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 	const cancelAction = setupCancelAction({ params });
 
+	const billingRelatedFields = Object.keys(params).filter((key) =>
+		FIELDS_WITH_BILLING_CHANGES.includes(
+			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
+		),
+	);
+
 	return {
 		fullCustomer,
 		fullProducts: [fullProduct],
@@ -136,5 +149,10 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingVersion: contextOverride.billingVersion
 			? contextOverride.billingVersion
 			: (customerProduct.billing_version ?? BillingVersion.V2),
+
+		skipBillingChanges:
+			params.no_billing_changes === true ||
+			params.processor_subscription_id !== undefined ||
+			billingRelatedFields.length === 0,
 	};
 };

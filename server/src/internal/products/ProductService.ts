@@ -28,7 +28,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
-import { getLatestProducts } from "./productUtils";
+import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 
 const parseFreeTrials = ({
@@ -131,12 +131,14 @@ export class ProductService {
 		env,
 		group,
 		inIds,
+		onlyFree = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
 		group?: string;
 		inIds?: string[];
+		onlyFree?: boolean;
 	}) {
 		const prods = (await db.query.products.findMany({
 			where: and(
@@ -166,6 +168,12 @@ export class ProductService {
 		parseFreeTrials({ products: prods });
 
 		const latestProducts = getLatestProducts(prods);
+
+		if (onlyFree) {
+			return latestProducts.filter((p) =>
+				isFreeProduct(p.prices),
+			) as FullProduct[];
+		}
 
 		return latestProducts as FullProduct[];
 	}

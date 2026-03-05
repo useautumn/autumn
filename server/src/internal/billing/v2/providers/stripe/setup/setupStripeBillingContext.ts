@@ -1,9 +1,11 @@
 import type {
-	AttachDiscount,
+	AttachParamsV1,
 	BillingContextOverride,
 	FullCusProduct,
 	FullCustomer,
+	MultiAttachParamsV0,
 	Product,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
@@ -17,20 +19,31 @@ export const setupStripeBillingContext = async ({
 	product,
 	targetCustomerProduct,
 	contextOverride = {},
-	paramDiscounts,
-	newBillingSubscription,
+	// paramDiscounts,
+	params,
+	// newBillingSubscription,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	product?: Product;
 	targetCustomerProduct?: FullCusProduct;
 	contextOverride?: BillingContextOverride;
-	paramDiscounts?: AttachDiscount[];
-	newBillingSubscription?: boolean;
+	// paramDiscounts?: AttachDiscount[];
+	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
+	// newBillingSubscription?: boolean;
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
 	if (stripeBillingContext) return stripeBillingContext;
+
+	const {
+		stripeCus: stripeCustomer,
+		paymentMethod,
+		testClockFrozenTime,
+	} = await fetchStripeCustomerForBilling({
+		ctx,
+		fullCus: fullCustomer,
+	});
 
 	// If no target customer product, skip subscription/schedule fetching
 	const stripeSubscription = await fetchStripeSubscriptionForBilling({
@@ -38,7 +51,7 @@ export const setupStripeBillingContext = async ({
 		fullCus: fullCustomer,
 		product,
 		targetCusProductId: targetCustomerProduct?.id,
-		newBillingSubscription,
+		params,
 	});
 
 	const stripeSubscriptionSchedule = targetCustomerProduct
@@ -54,20 +67,12 @@ export const setupStripeBillingContext = async ({
 			})
 		: undefined;
 
-	const {
-		stripeCus: stripeCustomer,
-		paymentMethod,
-		testClockFrozenTime,
-	} = await fetchStripeCustomerForBilling({
-		ctx,
-		fullCus: fullCustomer,
-	});
-
 	const stripeDiscounts = await fetchStripeDiscountsForBilling({
 		ctx,
 		stripeSubscription,
 		stripeCustomer,
-		paramDiscounts,
+		paramDiscounts:
+			params && "discounts" in params ? params.discounts : undefined,
 	});
 
 	return {
