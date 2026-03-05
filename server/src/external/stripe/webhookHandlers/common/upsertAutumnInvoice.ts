@@ -39,7 +39,10 @@ export const upsertAutumnInvoice = async ({
 	stripeInvoice: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
 	customerProducts?: FullCusProduct[];
-	options?: { skipNonCycleInvoices?: boolean };
+	options?: {
+		skipNonCycleInvoices?: boolean;
+		// skipSubscriptionCreateInvoice?: boolean;
+	};
 }): Promise<Invoice | undefined> => {
 	const { logger, stripeCli, fullCustomer } = ctx;
 

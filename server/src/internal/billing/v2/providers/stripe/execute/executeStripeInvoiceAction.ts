@@ -3,7 +3,6 @@ import type {
 	BillingPlan,
 	Invoice,
 	StripeBillingPlanResult,
-	StripeInvoiceMetadata,
 } from "@autumn/shared";
 import { ms, StripeBillingStage } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -24,7 +23,6 @@ export const executeStripeInvoiceAction = async ({
 }): Promise<StripeBillingPlanResult> => {
 	const { logger } = ctx;
 
-	let invoiceMetadata: StripeInvoiceMetadata | undefined;
 	let autumnInvoice: Invoice | undefined;
 
 	const { invoiceAction: stripeInvoiceAction } = billingPlan.stripe;
@@ -39,7 +37,6 @@ export const executeStripeInvoiceAction = async ({
 		ctx,
 		billingContext,
 		stripeInvoiceAction,
-		invoiceMetadata,
 	});
 
 	// Insert metadata into DB
@@ -64,7 +61,7 @@ export const executeStripeInvoiceAction = async ({
 			stripeInvoice: invoice,
 			expiresAt: deferredInvoiceMode
 				? Date.now() + ms.days(10)
-				: Date.now() + ms.days(30),
+				: Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 

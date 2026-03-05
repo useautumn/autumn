@@ -1,7 +1,7 @@
 import type {
 	BillingContext,
+	StripeDiscountWithCoupon,
 	StripeInvoiceAction,
-	StripeInvoiceMetadata,
 } from "@autumn/shared";
 import {
 	type PayInvoiceResult,
@@ -12,19 +12,35 @@ import {
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@server/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import type { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+
+const stripeDiscountsToInvoiceParams = ({
+	stripeDiscounts,
+}: {
+	stripeDiscounts: StripeDiscountWithCoupon[];
+}): Stripe.InvoiceCreateParams["discounts"] => {
+	return stripeDiscounts.map((discount) => {
+		if (discount.id) return { discount: discount.id };
+		if (discount.promotionCodeId)
+			return { promotion_code: discount.promotionCodeId };
+		return { coupon: discount.source.coupon.id };
+	});
+};
 
 export const createInvoiceForBilling = async ({
 	ctx,
 	billingContext,
 	stripeInvoiceAction,
-	invoiceMetadata,
+	options = {},
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	stripeInvoiceAction: StripeInvoiceAction;
-	invoiceMetadata?: StripeInvoiceMetadata;
+	options?: {
+		skipSubscriptionLink?: boolean;
+	};
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const { addLineParams } = stripeInvoiceAction;
@@ -40,11 +56,22 @@ export const createInvoiceForBilling = async ({
 		? "send_invoice"
 		: "charge_automatically";
 
+	const invoiceMetadata: Stripe.InvoiceCreateParams["metadata"] = {
+		autumn_billing_update: "true",
+		autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
+	};
+
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer.id,
-		metadata: invoiceMetadata,
+		stripeSubId: options.skipSubscriptionLink
+			? undefined
+			: billingContext.stripeSubscription?.id,
 		collectionMethod,
+		metadata: invoiceMetadata,
+		discounts: stripeDiscountsToInvoiceParams({
+			stripeDiscounts: billingContext.stripeDiscounts ?? [],
+		}),
 	});
 
 	const invoiceWithLines = await addStripeInvoiceLines({
