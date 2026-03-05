@@ -34,3 +34,7 @@ export const orgDefaultAppliesToEntities = ({
 }) => {
 	return ctx.org.config.default_applies_to_entities;
 };
+
+export const orgDisableStripeWrites = ({ ctx }: { ctx: SharedContext }) => {
+	return ctx.org.config.disable_stripe_writes;
+};
