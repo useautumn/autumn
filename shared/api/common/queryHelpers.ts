@@ -96,3 +96,35 @@ export function queryInteger(options?: {
 		return val;
 	}, schema);
 }
+
+/** Like queryInteger, but accepts decimal numbers (e.g. "1.0", "1.1"). Use for version query params that may be decimal for variants. */
+export function queryNumber(options?: {
+	min?: number;
+	max?: number;
+	error?: string;
+}) {
+	let schema: z.ZodNumber = z.number();
+
+	if (options?.min !== undefined) {
+		schema = schema.min(options.min, {
+			message: options?.error || `must be at least ${options.min}`,
+		});
+	}
+
+	if (options?.max !== undefined) {
+		schema = schema.max(options.max, {
+			message: options?.error || `must be at most ${options.max}`,
+		});
+	}
+
+	return z.preprocess((val) => {
+		if (typeof val === "number") {
+			return val;
+		}
+		if (typeof val === "string") {
+			const parsed = Number.parseFloat(val);
+			return Number.isNaN(parsed) ? val : parsed;
+		}
+		return val;
+	}, schema);
+}
