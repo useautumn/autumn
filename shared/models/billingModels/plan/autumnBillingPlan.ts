@@ -54,6 +54,8 @@ export const AutumnBillingPlanSchema = z.object({
 				ended_at: z.number().nullish(),
 
 				scheduled_ids: z.array(z.string()).optional(),
+
+				subscription_ids: z.array(z.string()).optional(),
 			}),
 		})
 		.optional(),
