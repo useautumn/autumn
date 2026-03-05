@@ -27,7 +27,8 @@ const create = ({
 	org_id: "org_test",
 	created_at: Date.now(),
 	processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
-	base_variant_id: null,
+	internal_parent_product_id: null,
+	variant_id: null,
 	archived: false,
 });
 
@@ -62,7 +63,8 @@ const createFull = ({
 		org_id: "org_test",
 		created_at: Date.now(),
 		processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
-		base_variant_id: null,
+		internal_parent_product_id: null,
+		variant_id: null,
 		archived: false,
 		prices,
 		entitlements,
