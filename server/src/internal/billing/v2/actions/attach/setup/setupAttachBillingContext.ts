@@ -117,7 +117,7 @@ export const setupAttachBillingContext = async ({
 		targetCustomerProduct: currentCustomerProduct,
 		contextOverride,
 		params,
-		// paramDiscounts: params.discounts,
+		newBillingSubscription: shouldForceNewSubscription,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -231,7 +231,7 @@ export const setupAttachBillingContext = async ({
 		externalId: params.subscription_id,
 
 		skipBillingChanges:
-			params.no_billing_changes ??
+			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined,
 	};
 };

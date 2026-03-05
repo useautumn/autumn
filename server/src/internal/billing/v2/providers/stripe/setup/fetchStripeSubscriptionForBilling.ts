@@ -22,20 +22,16 @@ export const fetchStripeSubscriptionForBilling = async ({
 	product,
 	targetCusProductId,
 	params,
-	// newBillingSubscription,
+	newBillingSubscription,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	product?: Product;
 	targetCusProductId?: string;
-	// newBillingSubscription?: boolean;
+	newBillingSubscription?: boolean;
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
 }): Promise<StripeSubscriptionWithDiscounts | undefined> => {
-	if (
-		params &&
-		"new_billing_subscription" in params &&
-		params.new_billing_subscription
-	) {
+	if (newBillingSubscription) {
 		return undefined;
 	}
 
