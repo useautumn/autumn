@@ -9,7 +9,6 @@ import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
-import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { createWorkerContext } from "../createWorkerContext.js";
@@ -45,15 +44,6 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 			});
 
 			try {
-				if (job.name === JobName.DetectBaseVariant) {
-					await detectBaseVariant({
-						db,
-						curProduct: job.data.curProduct,
-						logger: workerLogger as Logger,
-					});
-					return;
-				}
-
 				if (job.name === JobName.GenerateFeatureDisplay) {
 					if (!ctx) {
 						workerLogger.error(
