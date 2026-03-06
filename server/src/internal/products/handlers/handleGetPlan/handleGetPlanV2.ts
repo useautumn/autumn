@@ -7,8 +7,18 @@ export const handleGetPlanV2 = createRoute({
 	body: GetPlanParamsV0Schema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {
-		const { plan_id, variant_id, version } = c.req.valid("json");
+		const { plan_id, variant_id, version, minor_version, semver } =
+			c.req.valid("json");
 		const ctx = c.get("ctx");
+
+		// Parse semver string (e.g. "2.10") into integer parts if provided
+		let resolvedVersion = version;
+		let resolvedMinorVersion = minor_version;
+		if (semver) {
+			const [maj, min] = semver.split(".").map(Number);
+			resolvedVersion = maj;
+			resolvedMinorVersion = min;
+		}
 
 		const fullProduct = variant_id
 			? await ProductService.getVariant({
@@ -17,14 +27,15 @@ export const handleGetPlanV2 = createRoute({
 					variantId: variant_id,
 					orgId: ctx.org.id,
 					env: ctx.env,
-					version,
+					version: resolvedVersion,
+					minorVersion: resolvedMinorVersion,
 				})
 			: await ProductService.getFull({
 					db: ctx.db,
 					idOrInternalId: plan_id,
 					orgId: ctx.org.id,
 					env: ctx.env,
-					version,
+					version: resolvedVersion,
 				});
 
 		const latestPlan = await getPlanResponse({

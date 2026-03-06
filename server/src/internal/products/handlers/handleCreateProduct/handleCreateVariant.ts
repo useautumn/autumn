@@ -57,6 +57,7 @@ export const handleCreateVariant = createRoute({
 			is_add_on: parent.is_add_on,
 			is_default: parent.is_default,
 			version: parent.version,
+			minor_version: 1,
 			group: parent.group,
 			env,
 			internal_id: generateId("prod"),
