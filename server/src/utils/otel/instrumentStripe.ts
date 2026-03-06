@@ -8,12 +8,19 @@ import {
 import type Stripe from "stripe";
 import { otelConfig } from "./otelConfig.js";
 
-type AnyFn = (...args: unknown[]) => unknown;
-
 const TRACER_NAME = "autumn.stripe";
+const SPAN_NAME = "stripe.api";
 const INSTRUMENTED = new WeakSet<object>();
 
-/** Ends a span safely — never throws. */
+type StripeHttpClient = NonNullable<Stripe.StripeConfig["httpClient"]>;
+
+type StripeApiLike = {
+	httpClient?: StripeHttpClient;
+	stripeAccount?: string;
+};
+
+type MakeRequestArgs = Parameters<StripeHttpClient["makeRequest"]>;
+
 const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
 	try {
 		if (error) {
@@ -28,132 +35,82 @@ const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
 		}
 		span.end();
 	} catch {
-		// OTel internals failed — swallow so we never mask application results
+		// Fail-open: never let tracing affect Stripe client behavior
 	}
 };
 
-/**
- * Wraps a Stripe client in a Proxy that creates OTel spans for every
- * `stripeCli.{resource}.{method}()` call. Zero changes at callsites.
- *
- * Fail-open: every OTel interaction is wrapped in try/catch. If anything
- * in the tracing layer fails, the original Stripe method runs unmodified
- * and returns its result as if instrumentation didn't exist.
- *
- * Memory-safe: proxies hold no request-scoped state.
- */
+const getStripeHttpClient = ({ client }: { client: Stripe }) => {
+	try {
+		return (client as unknown as { _api?: StripeApiLike })._api?.httpClient;
+	} catch {
+		return undefined;
+	}
+};
+
+const getStripeAccount = ({ client }: { client: Stripe }) => {
+	try {
+		return (client as unknown as { _api?: StripeApiLike })._api?.stripeAccount;
+	} catch {
+		return undefined;
+	}
+};
+
 export const instrumentStripe = ({ client }: { client: Stripe }): Stripe => {
 	if (!otelConfig.stripe) return client;
-	if (INSTRUMENTED.has(client)) return client;
-	INSTRUMENTED.add(client);
+
+	const httpClient = getStripeHttpClient({ client });
+	if (!httpClient || INSTRUMENTED.has(httpClient)) return client;
+	INSTRUMENTED.add(httpClient);
 
 	const tracer = trace.getTracer(TRACER_NAME);
+	const stripeAccount = getStripeAccount({ client });
+	const originalMakeRequest = httpClient.makeRequest.bind(httpClient);
 
-	// Try to read the connected account ID for span attributes.
-	// This is an internal Stripe SDK property — safe to fail silently.
-	let stripeAccount: string | undefined;
-	try {
-		stripeAccount = (
-			client as unknown as Record<string, Record<string, unknown>>
-		)._api?.stripeAccount as string | undefined;
-	} catch {
-		// ignore
-	}
+	httpClient.makeRequest = async function patchedMakeRequest(
+		...args: MakeRequestArgs
+	) {
+		const [host, , path, method] = args;
 
-	return new Proxy(client, {
-		get(target, prop, receiver) {
-			const value = Reflect.get(target, prop, receiver);
-
-			// Only intercept string-keyed object properties (resource namespaces).
-			// Symbols, primitives, functions on the top-level client pass through.
-			if (
-				typeof prop !== "string" ||
-				value === null ||
-				typeof value !== "object"
-			) {
-				return value;
-			}
-
-			// Return a Proxy for the resource namespace (e.g. .customers, .subscriptions)
-			return new Proxy(value as Record<string, unknown>, {
-				get(resourceTarget, methodProp, resourceReceiver) {
-					const methodValue = Reflect.get(
-						resourceTarget,
-						methodProp,
-						resourceReceiver,
-					);
-
-					// Only wrap functions (e.g. .create, .update, .list, .retrieve, .del)
-					if (typeof methodValue !== "function") {
-						return methodValue;
-					}
-
-					// Return a wrapper that creates a span around the original call
-					return function wrappedStripeMethod(
-						this: unknown,
-						...args: unknown[]
-					) {
-						// Try to create a span + set context. If ANY of this
-						// fails, fall back to calling the original directly.
-						let span: Span | undefined;
-						let runInContext: (<T>(fn: () => T) => T) | undefined;
-
-						try {
-							span = tracer.startSpan(`stripe.${prop}.${String(methodProp)}`, {
-								kind: SpanKind.CLIENT,
-							});
-							span.setAttribute("stripe.resource", prop);
-							span.setAttribute("stripe.method", String(methodProp));
-							if (stripeAccount) {
-								span.setAttribute("stripe.account", stripeAccount);
-							}
-
-							const activeContext = trace.setSpan(context.active(), span);
-							runInContext = <T>(fn: () => T): T =>
-								context.with(activeContext, fn);
-						} catch {
-							// Fail-open: span/context setup failed, call original unmodified
-							return (methodValue as AnyFn).apply(resourceTarget, args);
-						}
-
-						// Call the original method — inside the OTel context
-						// if setup succeeded, otherwise unreachable (caught above).
-						const callOriginal = () =>
-							(methodValue as AnyFn).apply(resourceTarget, args);
-
-						try {
-							const result = runInContext(callOriginal);
-
-							// Async path (all Stripe API methods return Promises)
-							if (
-								result &&
-								typeof (result as Promise<unknown>).then === "function"
-							) {
-								return (result as Promise<unknown>).then(
-									(val) => {
-										finalizeSpan({ span: span! });
-										return val;
-									},
-									(err) => {
-										finalizeSpan({
-											span: span!,
-											error: err,
-										});
-										throw err;
-									},
-								);
-							}
-
-							// Sync path (e.g. webhooks.constructEvent)
-							finalizeSpan({ span: span! });
-							return result;
-						} catch (err) {
-							finalizeSpan({ span: span!, error: err });
-							throw err;
-						}
-					};
+		let span: Span;
+		try {
+			span = tracer.startSpan(SPAN_NAME, {
+				kind: SpanKind.CLIENT,
+				attributes: {
+					"http.request.method": method,
+					"server.address": host,
+					"url.path": path,
+					"stripe.method": method,
+					"stripe.path": path,
+					...(stripeAccount ? { "stripe.account": stripeAccount } : {}),
 				},
 			});
-		},
-	});
+		} catch {
+			return originalMakeRequest(...args);
+		}
+
+		const activeContext = trace.setSpan(context.active(), span);
+
+		try {
+			const response = await context.with(activeContext, () =>
+				originalMakeRequest(...args),
+			);
+
+			try {
+				span.setAttribute(
+					"http.response.status_code",
+					response.getStatusCode(),
+				);
+			} catch {
+				// Ignore response inspection failures and still return the original response
+			}
+
+			finalizeSpan({ span });
+			return response;
+		} catch (error) {
+			finalizeSpan({ span, error });
+			throw error;
+		}
+	};
+
+	return client;
 };
