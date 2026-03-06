@@ -75,14 +75,13 @@ export const instrumentStripe = ({ client }: { client: Stripe }): Stripe => {
 		try {
 			span = tracer.startSpan(SPAN_NAME, {
 				kind: SpanKind.CLIENT,
-				attributes: {
-					"http.request.method": method,
-					"server.address": host,
-					"url.path": path,
-					"stripe.method": method,
-					"stripe.path": path,
-					...(stripeAccount ? { "stripe.account": stripeAccount } : {}),
-				},
+					attributes: {
+						"http.request.method": method,
+						"server.address": host,
+						"url.path": path,
+						"stripe.path": path,
+						...(stripeAccount ? { "stripe.account": stripeAccount } : {}),
+					},
 			});
 		} catch {
 			return originalMakeRequest(...args);
