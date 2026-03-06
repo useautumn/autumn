@@ -1,7 +1,6 @@
 import {
 	AppEnv,
 	ErrCode,
-	InternalError,
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
@@ -63,7 +62,7 @@ export const createStripeCli = ({
 		return initMasterStripe({ accountId, legacyVersion, env });
 	}
 
-	throw new InternalError({
-		message: `No stripe account linked to organization ${org.id}`,
+	throw new RecaseError({
+		message: `There is no Stripe account linked to this organization. Please connect it here: https://app.useautumn.com${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
 	});
 };
