@@ -10,6 +10,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/useautumn/autumn)
 
 [Autumn](https://useautumn.com) is an open-source layer between Stripe and your application, allowing you to create any pricing model and embed it with a couple lines of code. On Autumn you can build:
+
 - Subscriptions
 - Credit systems & top ups
 - Usage-based models & overages
@@ -26,6 +27,7 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 
 1. Make sure you have `bun` installed
 2. Install the project dependencies
+
 ```bash
 bun install
 ```
@@ -34,7 +36,10 @@ bun install
 bun setup
 ```
 
+> ℹ️ If you are using the local Postgres db or container run `bun db:init` from your host machine to create the db.
+
 4. Generate the relevant tables in your postgres DB
+
 ```bash
 bun db:generate && bun db:migrate
 ```
@@ -51,11 +56,15 @@ For mac/linux:
 docker compose -f docker-compose.unix.yml up
 ```
 
-That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`. 
+That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`.
 
 > ⚠️ To log in, enter an email at the sign in page, and an OTP should appear in your console / terminal. Normally, we use Resend to email an OTP or Google OAuth -- these can be set up by providing your credentials in `server/.env`
 
-> ℹ️ Our set up script initializes the required env vars and (optionally) a Supabase instance. If you'd like to use your own Postgres instance, you can do so -- just paste the connection string in the `DATABASE_URL` env variable at `server/.env`
+> ℹ️ Our setup script initializes the required env vars and can still provision a Supabase instance. If you want to use the local Postgres service in Docker Compose instead, the containers default to `postgresql://myuser:mypassword@postgres:5432/autumn`. For host-side commands like `bun db:init` or `bun db:migrate`, use `postgresql://myuser:mypassword@localhost:5432/autumn`.
+
+> ℹ️ If you want Docker Compose to keep using Supabase or another remote database, set `DOCKER_DATABASE_URL` before running compose.
+
+> ℹ️ If you are using the local Postgres container, start Docker Compose first, then run `bun db:init` from your host machine.
 
 ## Troubleshooting
 
@@ -78,8 +87,8 @@ More than payments: it's building permission management, metering, usage limits 
 
 Growing companies iterate on pricing often: raising prices, experimenting with credits or charging for a new feature. DB migrations, rebuilding in-app flows, internal dashboards for custom pricing and grandfathering users on old pricing is a nightmare.
 
-
 ## How it works
+
 First, create your products and plans on the dashboard. We support **any** pricing model. Some popular ones we've seen include:
 
 1. **Usage & Overage** ⚡: set real-time usage limits and choose when they reset. Charge users if they go over.
@@ -103,7 +112,8 @@ const { attach } = useAutumn();
 </button>
 ```
 
-2. `/check`: Check whether a customer has access to a product, feature or remaining usage.
+1. `/check`: Check whether a customer has access to a product, feature or remaining usage.
+
 ```ts
 const { check } = useAutumn();
 

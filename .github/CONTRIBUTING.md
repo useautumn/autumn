@@ -73,6 +73,13 @@ docker compose -f docker-compose.dev.yml up # (if on windows)
 docker compose -f docker-compose.unix.yml up # (if on mac / linux)
 ```
 
+#### Step 4: Apply Migrations
+```bash
+bun db:migrate
+```
+
+If you are using the local Postgres container, start Docker Compose first, then run `bun db:init && bun db:migrate` from your host machine.
+
 ### Manual Setup
 
 Use this approach if you prefer to configure your own database or tunneling solution (e.g., ngrok, cloudflared) instead of our default localtunnel setup.
@@ -85,7 +92,7 @@ Use this approach if you prefer to configure your own database or tunneling solu
 ## Database Management
 Autumn uses Postgres as it's database solution, and Drizzle ORM to manage our queries / migrations. 
 
-Our cloud offering uses Supabase to host Postgres, but you can use any hosting solution you'd like. At the moment, our docker compose does not spin up a database for you, so you'll have to do this yourself (we help you set up Supabase super easily in our set up script).
+Our cloud offering uses Supabase to host Postgres, and local development now also supports a Postgres service in Docker Compose (we also help you set up Supabase super easily in our set up script).
 
 #### Creating Database Tables
 Make sure you have the `DATABASE_URL` env variable set up in `server/.env` before you run any of the following commands.
@@ -94,6 +101,15 @@ If you're setting up an Autumn DB for the first time, use the following command 
 ```bash
 bun run db:push
 ```
+
+If you only need database creation (no migrations), run:
+```bash
+bun run db:init
+```
+
+If you want to use the local Postgres service from Docker Compose, use `postgresql://myuser:mypassword@localhost:5432/autumn` for host-side commands. The Docker containers themselves use `postgresql://myuser:mypassword@postgres:5432/autumn`.
+
+If you want Docker Compose to use Supabase or another remote database instead of the local Postgres container, set `DOCKER_DATABASE_URL` before running compose.
 
 #### Handling Migrations
 When you need to create version-controlled migrations (e.g., for new releases):
