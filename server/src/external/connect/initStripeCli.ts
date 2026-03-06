@@ -5,7 +5,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { decryptData } from "@server/utils/encryptUtils.js";
-import { instrumentStripe } from "@server/utils/otel/instrumentStripe.js";
 import "dotenv/config";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import Stripe from "stripe";
@@ -38,13 +37,11 @@ export const initMasterStripe = (params?: {
 	// 	return new Stripe(secretKey);
 	// }
 
-	return instrumentStripe({
-		client: new Stripe(secretKey, {
-			stripeAccount: params?.accountId,
-			apiVersion: params?.legacyVersion
-				? ("2025-02-24.acacia" as any)
-				: undefined,
-		}),
+	return new Stripe(secretKey, {
+		stripeAccount: params?.accountId,
+		apiVersion: params?.legacyVersion
+			? ("2025-02-24.acacia" as any)
+			: undefined,
 	});
 };
 
@@ -85,11 +82,9 @@ export const initPlatformStripe = ({
 		});
 	}
 
-	return instrumentStripe({
-		client: new Stripe(decrypted, {
-			stripeAccount: accountId || undefined,
-			apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
-		}),
+	return new Stripe(decrypted, {
+		stripeAccount: accountId || undefined,
+		apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
 	});
 };
 

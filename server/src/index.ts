@@ -13,5 +13,4 @@ if (cluster.isPrimary) {
 }
 
 // Now dynamically import and run the main app
-await import("./instrumentation.js");
 await import("./init.js");
