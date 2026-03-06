@@ -1,6 +1,5 @@
 // Sentry + OpenTelemetry must be imported before any application code
 await import("./sentry.js");
-await import("./instrumentation.js");
 
 import cluster from "node:cluster";
 import http from "node:http";
