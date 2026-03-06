@@ -93,7 +93,7 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 			send_event: true,
 		})) as unknown as CheckResponseV2;
 
-		const creditCost = getCreditCost({
+		const creditCost = await getCreditCost({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature!,
 			amount: 10,
@@ -156,7 +156,7 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 			allowed: true,
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
-			required_balance: getCreditCost({
+			required_balance: await getCreditCost({
 				featureId: TestFeature.Action1,
 				creditSystem: creditFeature!,
 				amount: 10,
@@ -167,7 +167,7 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 
 	test("should check with track and deduct from credits", async () => {
 		const value = 2.5;
-		const creditCost = getCreditCost({
+		const creditCost = await getCreditCost({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature!,
 			amount: value,

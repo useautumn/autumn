@@ -87,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system2: track metered featu
 	expect(customerBefore.features[TestFeature.Credits].balance).toBe(200);
 
 	const action1Value = 50.25;
-	const expectedAction1CreditCost = getCreditCost({
+	const expectedAction1CreditCost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: action1Value,
@@ -107,7 +107,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system2: track metered featu
 	});
 
 	const action2Value = 33.67;
-	const expectedAction2CreditCost = getCreditCost({
+	const expectedAction2CreditCost = await getCreditCost({
 		featureId: TestFeature.Action2,
 		creditSystem: creditFeature!,
 		amount: action2Value,
@@ -206,7 +206,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 	const deduct2 = 80;
 	const remainingAction1 = 100 - deduct1;
 	const overflowAmount = deduct2 - remainingAction1;
-	const creditCostForOverflow = getCreditCost({
+	const creditCostForOverflow = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: overflowAmount,
@@ -239,7 +239,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 
 	const creditsBefore = customer2.features[TestFeature.Credits].balance;
 	const deduct3 = 50.75;
-	const creditCost3 = getCreditCost({
+	const creditCost3 = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: deduct3,
@@ -360,13 +360,13 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 	const overflowAction1 = deduct2 - remainingAction1;
 	const overflowAction3 = deduct2 - remainingAction3;
 
-	const creditCostAction1 = getCreditCost({
+	const creditCostAction1 = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: overflowAction1,
 	});
 
-	const creditCostAction3 = getCreditCost({
+	const creditCostAction3 = await getCreditCost({
 		featureId: TestFeature.Action3,
 		creditSystem: credit2Feature!,
 		amount: overflowAction3,
@@ -405,13 +405,13 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 
 	const deduct3 = 40.25;
 
-	const creditCostAction1Deduct3 = getCreditCost({
+	const creditCostAction1Deduct3 = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: deduct3,
 	});
 
-	const creditCostAction3Deduct3 = getCreditCost({
+	const creditCostAction3Deduct3 = await getCreditCost({
 		featureId: TestFeature.Action3,
 		creditSystem: credit2Feature!,
 		amount: deduct3,
@@ -540,7 +540,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction orde
 	const deduct2 = 80;
 	const remainingAction1 = 100 - deduct1;
 	const overflowAmount = deduct2 - remainingAction1;
-	const creditCostForOverflow = getCreditCost({
+	const creditCostForOverflow = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: overflowAmount,
@@ -578,7 +578,7 @@ test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction orde
 
 	const creditsBefore = customer2.features[TestFeature.Credits].balance;
 	const deduct3 = 50.75;
-	const creditCost3 = getCreditCost({
+	const creditCost3 = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: deduct3,

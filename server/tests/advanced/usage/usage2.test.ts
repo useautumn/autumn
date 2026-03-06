@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 				.toNumber();
 			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
 
-			const creditsUsed = getCreditCost({
+			const creditsUsed = await getCreditCost({
 				creditSystem: creditsFeature,
 				featureId: featureId,
 				amount: randomVal,
