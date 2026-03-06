@@ -18,5 +18,14 @@ export const CreditSystemConfigSchema = z.object({
 	usage_type: z.nativeEnum(FeatureUsageType),
 });
 
+export const ModelMarkups = z.record(
+	z.string(), // Represents the model name
+	z.object({
+		markup: z.number(), // percentage markup, e.g. 0.2 for 20%
+		// Made this an object in case we want to add more model-specific config in the future
+	}),
+)
+
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
+export type ModelMarkups = z.infer<typeof ModelMarkups>;
