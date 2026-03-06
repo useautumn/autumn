@@ -29,6 +29,18 @@ const stripeDiscountsToInvoiceParams = ({
 	});
 };
 
+const getInvoiceEligibleStripeDiscounts = ({
+	stripeDiscounts,
+}: {
+	stripeDiscounts: StripeDiscountWithCoupon[];
+}) => {
+	return stripeDiscounts.filter((discount) => {
+		if (discount.id) return true;
+
+		return discount.source.coupon.duration !== "repeating";
+	});
+};
+
 export const createInvoiceForBilling = async ({
 	ctx,
 	billingContext,
@@ -61,6 +73,10 @@ export const createInvoiceForBilling = async ({
 		autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
 	};
 
+	const invoiceEligibleStripeDiscounts = getInvoiceEligibleStripeDiscounts({
+		stripeDiscounts: billingContext.stripeDiscounts ?? [],
+	});
+
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer?.id ?? "none",
@@ -70,7 +86,7 @@ export const createInvoiceForBilling = async ({
 		collectionMethod,
 		metadata: invoiceMetadata,
 		discounts: stripeDiscountsToInvoiceParams({
-			stripeDiscounts: billingContext.stripeDiscounts ?? [],
+			stripeDiscounts: invoiceEligibleStripeDiscounts,
 		}),
 	});
 
