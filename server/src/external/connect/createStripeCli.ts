@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { isStripeConnected } from "@server/internal/orgs/orgUtils.js";
 import { decryptData } from "@server/utils/encryptUtils.js";
+import { instrumentStripe } from "@server/utils/otel/instrumentStripe.js";
 import Stripe from "stripe";
 import { orgToAccountId, shouldUseMaster } from "./connectUtils.js";
 import { initMasterStripe, initPlatformStripe } from "./initStripeCli.js";
@@ -38,8 +39,10 @@ export const createStripeCli = ({
 		}
 
 		const decrypted = decryptData(encrypted);
-		return new Stripe(decrypted, {
-			apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+		return instrumentStripe({
+			client: new Stripe(decrypted, {
+				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+			}),
 		});
 	}
 
