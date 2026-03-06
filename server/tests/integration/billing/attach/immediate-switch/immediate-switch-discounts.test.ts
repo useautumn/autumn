@@ -397,13 +397,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade car
 /**
  * Scenario:
  * - Customer has pro ($20/mo)
- * - Pass a 1-month repeating 20% off coupon during the upgrade attach call
+ * - Apply a 1-month repeating 20% off coupon to the subscription
  * - Upgrade immediately to premium ($50/mo)
  *
  * Expected:
  * - Upgrade succeeds
  * - Preview + invoice reflect the discounted upgrade charge
- * - The coupon is attached to the upgraded subscription with a non-null end date
+ * - Existing discount instance is preserved on the upgraded subscription
  */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 5: upgrade works with 1-month recurring coupon")}`, async () => {
 	const customerId = "imm-switch-discount-one-month-upgrade";
