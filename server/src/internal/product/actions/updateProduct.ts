@@ -90,9 +90,14 @@ export const updateProduct = async ({
 			? ((updates.free_trial as FreeTrial | undefined) ?? undefined)
 			: (curProductV2.free_trial ?? undefined);
 
+	// Filter out undefined values from updates so they don't overwrite existing fields
+	const definedUpdates = Object.fromEntries(
+		Object.entries(updates).filter(([, v]) => v !== undefined),
+	);
+
 	const newProductV2: ProductV2 = {
 		...curProductV2,
-		...updates,
+		...definedUpdates,
 		group: updates.group || curProductV2.group || "",
 		items: updates.items || [],
 		free_trial: newFreeTrial,
@@ -207,6 +212,19 @@ export const updateProduct = async ({
 			env,
 		},
 	});
+
+	// Propagate changes to any variants (Case C/D: base updated in-place)
+	if (!fullProduct.internal_parent_product_id) {
+		await addTaskToQueue({
+			jobName: JobName.PropagateVariants,
+			payload: {
+				baseProductInternalId: fullProduct.internal_id,
+				orgId: org.id,
+				env,
+				baseWasVersioned: false,
+			},
+		});
+	}
 
 	const productResponse = await getProductResponse({
 		product: newFullProduct,

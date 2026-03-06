@@ -143,5 +143,18 @@ export const handleVersionProductV2 = async ({
 		},
 	});
 
+	if (!latestProduct.internal_parent_product_id) {
+		await addTaskToQueue({
+			jobName: JobName.PropagateVariants,
+			payload: {
+				baseProductInternalId: latestProduct.internal_id,
+				newBaseProductInternalId: newProduct.internal_id,
+				orgId: org.id,
+				env,
+				baseWasVersioned: true,
+			},
+		});
+	}
+
 	return newProduct;
 };
