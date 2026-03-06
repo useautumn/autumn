@@ -160,6 +160,7 @@ export const getPlanResponse = async ({
 		description: product.description || null,
 		group: product.group || null,
 		version: product.version,
+		minor_version: product.minor_version ?? 0,
 
 		// Boolean flags
 		add_on: product.is_add_on,
@@ -179,6 +180,9 @@ export const getPlanResponse = async ({
 		env: product.env,
 		archived: product.archived,
 		variant_id: product.variant_id ?? null,
+		semver: product.variant_id
+			? `${product.version}.${product.minor_version ?? 0}`
+			: undefined,
 
 		// Customer context (optional)
 		customer_eligibility: fullCus
