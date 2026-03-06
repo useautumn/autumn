@@ -1,145 +1,110 @@
-import type { CreateFeature, CreditSchemaItem, Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
-import { PlusIcon } from "@phosphor-icons/react";
-import { X } from "lucide-react";
-import { toast } from "sonner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { FeatureSelectDropdown } from "@/views/products/features/credit-systems/components/FeatureSelectDropdown";
+import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
+import { useOpenRouterModels } from "@/hooks/queries/useOpenRouterModels";
+import type { CreateFeature } from "@autumn/shared";
+import { useMemo } from "react";
+import { AiCreditSchema } from "./AiCreditSchema";
+import { ClassicCreditSchema } from "./ClassicCreditSchema";
+
+type CreditSchemaMode = "classic" | "ai";
+
+function getFlagshipModels(models: OpenRouterModel[]): OpenRouterModel[] {
+	const flagshipModels: OpenRouterModel[] = [];
+	const interestedCompanies = ["anthropic", "openai", "google"];
+	for (const company of interestedCompanies) {
+		const companyModels = models
+			.filter((model) => model.id.startsWith(company))
+			.sort(
+				(a, b) =>
+					new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+			)
+			.slice(0, 3);
+		flagshipModels.push(...companyModels);
+	}
+	return flagshipModels;
+}
 
 interface CreditSystemSchemaProps {
 	creditSystem: CreateFeature;
 	setCreditSystem: (creditSystem: CreateFeature) => void;
+	disableModeSwitch?: boolean;
 }
 
 export function CreditSystemSchema({
 	creditSystem,
 	setCreditSystem,
+	disableModeSwitch = false,
 }: CreditSystemSchemaProps) {
-	const { features } = useFeaturesQuery();
+	const { models } = useOpenRouterModels();
 
-	const schema = creditSystem.config?.schema || [];
+	const mode: CreditSchemaMode =
+		creditSystem.model_markups != null ? "ai" : "classic";
 
-	const handleSchemaChange = (
-		index: number,
-		key: keyof CreditSchemaItem,
-		value: string | number,
-	) => {
-		const newSchema = [...schema];
-		newSchema[index] = { ...newSchema[index], [key]: value };
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
-	};
-
-	const addSchemaItem = () => {
-		const newSchema = [
-			...schema,
-			{
-				metered_feature_id: "",
-				feature_amount: 1,
-				credit_amount: 0,
-			},
-		];
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
-	};
-
-	const removeSchemaItem = (index: number) => {
-		if (schema.length === 1) {
-			toast.error("There must be at least one feature in the credit system");
-			return;
+	const handleModeChange = (newMode: string) => {
+		if (newMode === "ai") {
+			const flagshipModels = getFlagshipModels(models);
+			const modelMarkups = Object.fromEntries(
+				flagshipModels.map((model) => [model.id, { markup: 0 }]),
+			);
+			setCreditSystem({
+				...creditSystem,
+				config: { ...creditSystem.config, schema: [] },
+				model_markups: flagshipModels.length > 0 ? modelMarkups : {},
+			});
+		} else {
+			setCreditSystem({
+				...creditSystem,
+				config: {
+					...creditSystem.config,
+					schema: [
+						{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+					],
+				},
+				model_markups: null,
+			});
 		}
-		const newSchema = [...schema];
-		newSchema.splice(index, 1);
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
 	};
 
-	const allMeteredFeatures = features.filter(
-		(feature: Feature) => feature.type === FeatureType.Metered,
+	const modeOptions = useMemo(
+		() => [
+			{ value: "classic", label: "Classic" },
+			{ value: "ai", label: "AI" },
+		],
+		[],
 	);
 
 	return (
 		<SheetSection
 			title="Credit Schema"
 			withSeparator={false}
-			description="When you track usage for these features, the value will be multiplied by the credit cost, then deducted from the balance"
+			description={
+				mode === "ai"
+					? "Select AI models and set a markup on top of their base pricing"
+					: "When you track usage for these features, the value will be multiplied by the credit cost, then deducted from the balance"
+			}
 		>
-			<div className="flex flex-col gap-0">
-				<div className="grid grid-cols-2 gap-2">
-					<FormLabel>Metered Feature</FormLabel>
-					<FormLabel>Credit Cost</FormLabel>
-				</div>
+			<div className="flex flex-col gap-3">
+				{!disableModeSwitch && (
+					<GroupedTabButton
+						value={mode}
+						onValueChange={handleModeChange}
+						options={modeOptions}
+						className="w-fit"
+					/>
+				)}
 
-				<div className="flex flex-col gap-2">
-					{schema.map((item: CreditSchemaItem, index: number) => {
-						const availableFeatures = allMeteredFeatures.filter(
-							(feature: Feature) =>
-								!schema.some(
-									(schemaItem: CreditSchemaItem) =>
-										feature.id !== item.metered_feature_id &&
-										schemaItem.metered_feature_id === feature.id,
-								),
-						);
-
-						return (
-							<div key={index} className="grid grid-cols-2 gap-2">
-								<FeatureSelectDropdown
-									value={item.metered_feature_id}
-									onValueChange={(featureId) =>
-										handleSchemaChange(index, "metered_feature_id", featureId)
-									}
-									availableFeatures={availableFeatures}
-									allFeatures={allMeteredFeatures}
-								/>
-
-								<div className="flex gap-1">
-									<Input
-										type="number"
-										lang="en"
-										value={item.credit_amount || ""}
-										onChange={(e) =>
-											handleSchemaChange(index, "credit_amount", e.target.value)
-										}
-										onBlur={(e) =>
-											handleSchemaChange(
-												index,
-												"credit_amount",
-												Number(e.target.value) || 0,
-											)
-										}
-										placeholder="eg. 10"
-									/>
-									<IconButton
-										variant="skeleton"
-										iconOrientation="center"
-										icon={<X />}
-										onClick={() => removeSchemaItem(index)}
-									/>
-								</div>
-							</div>
-						);
-					})}
-				</div>
-
-				<IconButton
-					variant="muted"
-					onClick={addSchemaItem}
-					disabled={schema.length >= allMeteredFeatures.length}
-					className="w-fit mt-4"
-					icon={<PlusIcon />}
-				>
-					Add
-				</IconButton>
+				{mode === "classic" ? (
+					<ClassicCreditSchema
+						creditSystem={creditSystem}
+						setCreditSystem={setCreditSystem}
+					/>
+				) : (
+					<AiCreditSchema
+						creditSystem={creditSystem}
+						setCreditSystem={setCreditSystem}
+					/>
+				)}
 			</div>
 		</SheetSection>
 	);

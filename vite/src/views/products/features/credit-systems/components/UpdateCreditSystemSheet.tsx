@@ -59,6 +59,7 @@ function UpdateCreditSystemSheet({
 				type: selectedCreditSystem.type,
 				config: selectedCreditSystem.config,
 				event_names: selectedCreditSystem.event_names,
+				model_markups: selectedCreditSystem.model_markups,
 			});
 		}
 	}, [open, selectedCreditSystem]);
@@ -74,6 +75,8 @@ function UpdateCreditSystemSheet({
 
 		setLoading(true);
 		try {
+			const isAiCreditSystem = creditSystem.model_markups != null;
+
 			await FeatureService.updateFeature(
 				axiosInstance,
 				selectedCreditSystem.id,
@@ -81,12 +84,13 @@ function UpdateCreditSystemSheet({
 					id: creditSystem.id,
 					name: creditSystem.name,
 					type: creditSystem.type,
-					credit_schema: creditSystem.config?.schema?.map(
-						(x: CreditSchemaItem) => ({
-							metered_feature_id: x.metered_feature_id,
-							credit_cost: Number(x.credit_amount),
-						}),
-					),
+					model_markups: creditSystem.model_markups ?? undefined,
+					credit_schema: isAiCreditSystem
+						? undefined
+						: creditSystem.config?.schema?.map((x: CreditSchemaItem) => ({
+								metered_feature_id: x.metered_feature_id,
+								credit_cost: x.credit_amount != null ? Number(x.credit_amount) : 0,
+							})),
 					event_names: creditSystem.event_names,
 					display: undefined,
 				},
@@ -95,7 +99,6 @@ function UpdateCreditSystemSheet({
 			await refetch();
 			toast.success("Credit system updated successfully");
 
-			// Call onSuccess with old and new IDs
 			if (onSuccess) {
 				onSuccess(
 					selectedCreditSystem.id,
@@ -118,9 +121,19 @@ function UpdateCreditSystemSheet({
 		setOpen(false);
 	};
 
+	const isAiCreditSystem = creditSystem.model_markups != null;
+
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent
+				className="flex flex-col overflow-hidden"
+				style={{
+					maxWidth: isAiCreditSystem
+						? "min(calc(100vw - 2rem), 56rem)"
+						: "28rem",
+					transition: "max-width 300ms ease-in-out",
+				}}
+			>
 				<SheetHeader
 					title="Update Credit System"
 					description="Modify how this credit system is configured"
@@ -134,6 +147,7 @@ function UpdateCreditSystemSheet({
 					<CreditSystemSchema
 						creditSystem={creditSystem}
 						setCreditSystem={setCreditSystem}
+						disableModeSwitch
 					/>
 				</div>
 

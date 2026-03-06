@@ -1,7 +1,3 @@
-import { type Feature, FeatureUsageType } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
@@ -13,6 +9,15 @@ import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
+import type { AxiosError } from "axios";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
@@ -53,14 +58,23 @@ function UpdateFeatureSheet({
 
 		setLoading(true);
 		try {
+			const isAiCreditSystem = feature.model_markups != null;
+
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
 				id: feature.id || undefined,
 				name: feature.name || undefined,
 				type: feature.type,
 				consumable: feature.config?.usage_type === FeatureUsageType.Single,
+				model_markups: feature.model_markups ?? undefined,
 				event_names: feature.event_names,
 				display: undefined,
+				credit_schema: isAiCreditSystem
+					? undefined
+					: feature.config?.schema?.map((item: CreditSchemaItem) => ({
+							metered_feature_id: item.metered_feature_id,
+							credit_cost: item.credit_amount,
+						})),
 			});
 
 			await refetch();
@@ -86,9 +100,21 @@ function UpdateFeatureSheet({
 		setOpen(false);
 	};
 
+	const isAiCreditSystem =
+		feature.type === FeatureType.CreditSystem &&
+		feature.model_markups != null;
+
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent
+				className="flex flex-col overflow-hidden"
+				style={{
+					maxWidth: isAiCreditSystem
+						? "min(calc(100vw - 2rem), 56rem)"
+						: "28rem",
+					transition: "max-width 300ms ease-in-out",
+				}}
+			>
 				<SheetHeader
 					title="Update Feature"
 					description="Modify how this feature is used in your app"

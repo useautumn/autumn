@@ -70,6 +70,8 @@ function CreateFeatureSheet({
 			setLoading(false);
 		} else {
 			try {
+				const isAiCreditSystem = feature.model_markups != null;
+
 				const { data: createdFeature } = await FeatureService.createFeature(
 					axiosInstance,
 					{
@@ -77,12 +79,13 @@ function CreateFeatureSheet({
 						id: feature.id,
 						type: feature.type,
 						consumable: feature.config?.usage_type === FeatureUsageType.Single,
-						credit_schema: feature.config?.schema?.map(
-							(x: CreditSchemaItem) => ({
-								metered_feature_id: x.metered_feature_id,
-								credit_cost: x.credit_amount,
-							}),
-						),
+						model_markups: feature.model_markups ?? undefined,
+						credit_schema: isAiCreditSystem
+							? undefined
+							: feature.config?.schema?.map((x: CreditSchemaItem) => ({
+									metered_feature_id: x.metered_feature_id,
+									credit_cost: x.credit_amount,
+								})),
 						event_names: feature.event_names,
 					},
 				);
@@ -117,6 +120,10 @@ function CreateFeatureSheet({
 		}
 	}, [open, reset, setFeature]);
 
+	const isAiCreditSystem =
+		feature.type === FeatureType.CreditSystem &&
+		feature.model_markups != null;
+
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			{/* {!isControlled && (
@@ -126,7 +133,15 @@ function CreateFeatureSheet({
 					</Button>
 				</SheetTrigger>
 			)} */}
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent
+				className="flex flex-col overflow-hidden"
+				style={{
+					maxWidth: isAiCreditSystem
+						? "min(calc(100vw - 2rem), 56rem)"
+						: "28rem",
+					transition: "max-width 300ms ease-in-out",
+				}}
+			>
 				<SheetHeader
 					title="Create a feature"
 					description="Create a feature to control based on a customer's plan."

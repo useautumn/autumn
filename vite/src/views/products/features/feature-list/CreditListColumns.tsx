@@ -43,13 +43,18 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 		accessorKey: "features",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const creditSystem = row.original;
+			const modelMarkupKeys = creditSystem.model_markups
+				? Object.keys(creditSystem.model_markups)
+				: null;
 			const featureIds =
-				creditSystem.config?.schema
-					?.map(
-						(schema: { metered_feature_id: string }) =>
-							schema.metered_feature_id,
-					)
-					.join(", ") || "—";
+				modelMarkupKeys && modelMarkupKeys.length > 0
+					? modelMarkupKeys.join(", ")
+					: creditSystem.config?.schema
+							?.map(
+								(schema: { metered_feature_id: string }) =>
+									schema.metered_feature_id,
+							)
+							.join(", ") || "—";
 			return (
 				<div className="text-t2 truncate font-mono text-xs">{featureIds}</div>
 			);
