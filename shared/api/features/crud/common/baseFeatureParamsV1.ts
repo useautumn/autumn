@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ModelMarkups } from "../../../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../../../models/featureModels/featureEnums";
 import { idRegex } from "../../../../utils/utils";
 
@@ -43,8 +44,13 @@ export const BaseFeatureV1ParamsSchema = z.object({
 		.optional()
 		.meta({
 			description:
-				"A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.",
+				"A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
 		}),
+
+	model_markups: ModelMarkups.optional().meta({
+		description:
+			"Per-model markup percentages for AI credit systems. Maps model IDs to their markup configuration.",
+	}),
 
 	event_names: z.array(z.string()).optional(),
 });

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ModelMarkups } from "../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../models/featureModels/featureEnums";
 
 export const ApiFeatureV1Schema = z.object({
@@ -41,6 +42,11 @@ export const ApiFeatureV1Schema = z.object({
 			description:
 				"For credit_system features: maps metered features to their credit costs.",
 		}),
+
+	model_markups: ModelMarkups.optional().meta({
+		description:
+			"Per-model markup percentages for AI credit systems.",
+	}),
 
 	display: z
 		.object({

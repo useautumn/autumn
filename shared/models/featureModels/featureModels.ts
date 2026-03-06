@@ -33,6 +33,7 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	config: true,
 	display: true,
 	event_names: true,
+	model_markups: true,
 });
 
 export const MinFeatureSchema = z.object({

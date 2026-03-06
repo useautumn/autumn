@@ -11,7 +11,6 @@ export const CreditSystemConfigSchema = z.object({
 	schema: z.array(
 		z.object({
 			metered_feature_id: z.string(),
-			// feature_amount: z.number(),
 			credit_amount: z.number(),
 		}),
 	),
