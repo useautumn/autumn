@@ -83,7 +83,7 @@ export class ProductService {
 				prices: { where: eq(prices.is_custom, false) },
 				free_trials: { where: eq(freeTrials.is_custom, false) },
 			},
-			orderBy: [desc(products.version)],
+			orderBy: [desc(products.version), desc(products.minor_version)],
 		})) as FullProduct[];
 
 		parseFreeTrials({ products: fullProducts });
@@ -212,7 +212,7 @@ export class ProductService {
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
 			),
-			orderBy: [desc(products.version)],
+			orderBy: [desc(products.version), desc(products.minor_version)],
 		});
 	}
 
@@ -282,13 +282,18 @@ export class ProductService {
 		archived?: boolean;
 	}): Promise<FullProduct[]> {
 		// Optimization: Use a subquery to only fetch the latest version of each product
+		// Groups by (id, variant_id) to correctly handle variants with independent minor_version counters.
 		const latestVersionsSubquery =
 			!returnAll && !version
 				? db
 						.select({
 							id: products.id,
+							variantId: products.variant_id,
 							maxVersion: sql<number>`MAX(${products.version})`.as(
 								"max_version",
+							),
+							maxMinorVersion: sql<number>`MAX(${products.minor_version})`.as(
+								"max_minor_version",
 							),
 						})
 						.from(products)
@@ -299,7 +304,7 @@ export class ProductService {
 								inIds ? inArray(products.id, inIds) : undefined,
 							),
 						)
-						.groupBy(products.id)
+						.groupBy(products.id, products.variant_id)
 						.as("latest_versions")
 				: undefined;
 
@@ -317,7 +322,12 @@ export class ProductService {
 								.where(
 									and(
 										eq(latestVersionsSubquery.id, products.id),
+										sql`${latestVersionsSubquery.variantId} IS NOT DISTINCT FROM ${products.variant_id}`,
 										eq(latestVersionsSubquery.maxVersion, products.version),
+										eq(
+											latestVersionsSubquery.maxMinorVersion,
+											products.minor_version,
+										),
 									),
 								),
 						)
@@ -391,7 +401,7 @@ export class ProductService {
 				isNull(products.variant_id),
 				version ? eq(products.version, version) : undefined,
 			),
-			orderBy: [desc(products.version)],
+			orderBy: [desc(products.version), desc(products.minor_version)],
 			with: {
 				entitlements: {
 					with: {
@@ -435,6 +445,7 @@ export class ProductService {
 		orgId,
 		env,
 		version,
+		minorVersion,
 	}: {
 		db: DrizzleCli;
 		planId: string;
@@ -442,6 +453,7 @@ export class ProductService {
 		orgId: string;
 		env: AppEnv;
 		version?: number;
+		minorVersion?: number;
 	}) {
 		const data = (await db.query.products.findFirst({
 			where: and(
@@ -450,8 +462,11 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
+				minorVersion !== undefined
+					? eq(products.minor_version, minorVersion)
+					: undefined,
 			),
-			orderBy: [desc(products.version)],
+			orderBy: [desc(products.version), desc(products.minor_version)],
 			with: {
 				entitlements: {
 					with: { feature: true },
@@ -501,6 +516,7 @@ export class ProductService {
 		const data = await db.query.products.findMany({
 			columns: {
 				version: true,
+				minor_version: true,
 			},
 			limit: 1,
 			where: and(
@@ -508,7 +524,7 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 			),
-			orderBy: [desc(products.version)],
+			orderBy: [desc(products.version), desc(products.minor_version)],
 		});
 
 		if (data.length === 0) {
