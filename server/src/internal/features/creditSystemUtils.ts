@@ -76,36 +76,39 @@ export const featureToCreditSystem = ({
 	return amount;
 };
 
+const isAiCreditSystem = (creditSystem: Feature) =>
+	creditSystem.model_markups != null &&
+	Object.keys(creditSystem.model_markups).length > 0;
+
 const getModelCreditCost = async ({
-	featureId,
+	modelName,
 	creditSystem,
 	input,
 	output,
 }: {
-	featureId: string;
+	modelName: string;
 	creditSystem: Feature;
 	input: number;
 	output: number;
 }) => {
 	const models = await getOpenrouterPricing();
 	const markups = creditSystem.model_markups || {};
-	const { markup } = markups[featureId] || { markup: 0 };
+	const { markup } = markups[modelName] || { markup: 0 };
 	const model = models.find(
-		// (m) => [m.id, m.canonical_slug, normaliseAiModelName(m.id)].includes(normalisedAiModelName(featureId))
-		(m) => normaliseAiModelName(m.id) === normaliseAiModelName(featureId),
+		(m) => normaliseAiModelName(m.id) === normaliseAiModelName(modelName),
 	);
 	if (!model) {
 		throw new RecaseError({
-			message: `Model ${featureId} not found in OpenRouter pricing data`,
+			message: `Model ${modelName} not found in OpenRouter pricing data`,
 			code: ErrCode.FeatureNotFound,
 			data: {
-				featureId,
-				normalisedFeatureId: normaliseAiModelName(featureId), // Send this for debugging
-			}
-		})
+				modelName,
+				normalisedModelName: normaliseAiModelName(modelName),
+			},
+		});
 	}
-	const actualInputCost = new Decimal(model.pricing.prompt)
-	const actualOutputCost = new Decimal(model.pricing.completion)
+	const actualInputCost = new Decimal(model.pricing.prompt);
+	const actualOutputCost = new Decimal(model.pricing.completion);
 	const totalCost = actualInputCost.mul(input).add(actualOutputCost.mul(output));
 	const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
 	return markedUpCost.toNumber();
@@ -115,28 +118,30 @@ export const getCreditCost = async ({
 	featureId,
 	creditSystem,
 	amount = 1,
-	tokens
+	tokens,
+	modelName,
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	amount?: number;
+	modelName?: string;
 	tokens?: {
 		input: number;
 		output: number;
-	}
+	};
 }) => {
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return amount;
 	}
-	if (creditSystem.model_markups) {
-		if(!tokens) {
+	if (isAiCreditSystem(creditSystem)) {
+		if (!tokens || !modelName) {
 			throw new RecaseError({
-				message: "Tokens must be provided for AI credit systems",
+				message: "modelName and tokens must be provided for AI credit systems",
 				code: ErrCode.InvalidRequest,
-			})
+			});
 		}
 		const modelPricing = await getModelCreditCost({
-			featureId,
+			modelName,
 			creditSystem,
 			...tokens,
 		});
