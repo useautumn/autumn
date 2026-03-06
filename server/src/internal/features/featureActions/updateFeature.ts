@@ -186,18 +186,18 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear for credit system if schema changed
-	if (
-		feature.type === FeatureType.CreditSystem &&
-		updates.config?.schema &&
-		updatedFeature
-	) {
+	// Queue cache clear for credit system if schema or model markups changed
+	if (feature.type === FeatureType.CreditSystem && updatedFeature) {
 		const schemaChanged = hasCreditSchemaChanged({
 			oldSchema: feature.config?.schema,
-			newSchema: updates.config.schema,
+			newSchema: updates.config?.schema,
 		});
 
-		if (schemaChanged) {
+		const markupsChanged =
+			JSON.stringify(updates.model_markups ?? null) !==
+			JSON.stringify(feature.model_markups ?? null);
+
+		if (schemaChanged || markupsChanged) {
 			await addTaskToQueue({
 				jobName: JobName.ClearCreditSystemCustomerCache,
 				payload: {
