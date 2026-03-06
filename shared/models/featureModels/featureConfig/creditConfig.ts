@@ -20,7 +20,7 @@ export const CreditSystemConfigSchema = z.object({
 export const ModelMarkups = z.record(
 	z.string(), // Represents the model name
 	z.object({
-		markup: z.number(), // percentage markup, e.g. 0.2 for 20%
+		markup: z.number(), // percentage markup, e.g. 2 for 2%
 		// Made this an object in case we want to add more model-specific config in the future
 	}),
 )
