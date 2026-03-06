@@ -147,10 +147,14 @@ export const updateFeature = async ({
 	}
 
 	// Validate config based on feature type
+	const isAiCreditSystem =
+		updates.model_markups != null &&
+		Object.keys(updates.model_markups).length > 0;
+
 	const newConfig =
 		updates.config !== undefined
 			? feature.type === FeatureType.CreditSystem
-				? validateCreditSystem(updates.config)
+				? validateCreditSystem(updates.config, { isAiCreditSystem })
 				: feature.type === FeatureType.Metered
 					? validateMeteredConfig(updates.config)
 					: updates.config
@@ -169,6 +173,7 @@ export const updateFeature = async ({
 			archived: updates.archived,
 			event_names: updates.event_names,
 			config: newConfig,
+			model_markups: updates.model_markups,
 		},
 	});
 

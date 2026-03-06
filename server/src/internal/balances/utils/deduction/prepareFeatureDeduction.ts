@@ -23,7 +23,7 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
  * Prepares all the inputs needed to execute a deduction for a single feature.
  * Shared by both Redis (Lua) and Postgres (SQL) deduction paths.
  */
-export const prepareFeatureDeduction = ({
+export const prepareFeatureDeduction = async ({
 	ctx,
 	fullCustomer,
 	deduction,
@@ -33,7 +33,7 @@ export const prepareFeatureDeduction = ({
 	fullCustomer: FullCustomer;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
-}): PreparedFeatureDeduction => {
+}): Promise<PreparedFeatureDeduction> => {
 	const { org } = ctx;
 	const { feature, targetBalance } = deduction;
 
@@ -73,44 +73,50 @@ export const prepareFeatureDeduction = ({
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
-		cusEnts.map((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
+		await Promise.all(
+			cusEnts.map(async (ce) => {
+				const creditCost = await getCreditCost({
+					featureId: feature.id,
+					creditSystem: ce.entitlement.feature,
+				});
 
-			const maxOverage = getMaxOverage({ cusEnt: ce });
+				const maxOverage = getMaxOverage({ cusEnt: ce });
 
-			const isFreeAllocated =
-				isFreeCustomerEntitlement(ce) && isAllocatedCustomerEntitlement(ce);
+				const isFreeAllocated =
+					isFreeCustomerEntitlement(ce) && isAllocatedCustomerEntitlement(ce);
 
-			const resetBalance = cusEntToStartingBalance({ cusEnt: ce });
+				const resetBalance = cusEntToStartingBalance({ cusEnt: ce });
 
-			const isFreeAllocatedUsageAllowed =
-				isFreeAllocated && overageBehaviour !== "reject";
+				const isFreeAllocatedUsageAllowed =
+					isFreeAllocated && overageBehaviour !== "reject";
 
-			return {
-				customer_entitlement_id: ce.id,
-				credit_cost: creditCost,
-				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
-				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
-				max_balance: resetBalance,
-			};
-		});
+				return {
+					customer_entitlement_id: ce.id,
+					credit_cost: creditCost,
+					entity_feature_id: ce.entitlement.entity_feature_id ?? null,
+					usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+					min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
+					max_balance: resetBalance,
+				};
+			}),
+		);
 
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
-	const sortedRollovers = cusEnts
-		.flatMap((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
-			return (ce.rollovers || []).map((r) => ({
-				...r,
-				credit_cost: creditCost,
-			}));
-		})
+	const sortedRollovers = (
+		await Promise.all(
+			cusEnts.map(async (ce) => {
+				const creditCost = await getCreditCost({
+					featureId: feature.id,
+					creditSystem: ce.entitlement.feature,
+				});
+				return (ce.rollovers || []).map((r) => ({
+					...r,
+					credit_cost: creditCost,
+				}));
+			}),
+		)
+	)
+		.flat()
 		.sort((a, b) => {
 			if (a.expires_at && b.expires_at) return a.expires_at - b.expires_at;
 			if (a.expires_at && !b.expires_at) return -1;

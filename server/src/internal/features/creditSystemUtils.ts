@@ -1,9 +1,15 @@
 import {
 	type CreditSchemaItem,
+	ErrCode,
 	type Feature,
 	FeatureType,
+	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	getOpenrouterPricing,
+	normaliseAiModelName,
+} from "@/internal/features/utils/getOpenrouterPricing";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -70,24 +76,77 @@ export const featureToCreditSystem = ({
 	return amount;
 };
 
-export const getCreditCost = ({
+const getModelCreditCost = async ({
+	featureId,
+	creditSystem,
+	input,
+	output,
+}: {
+	featureId: string;
+	creditSystem: Feature;
+	input: number;
+	output: number;
+}) => {
+	const models = await getOpenrouterPricing();
+	const markups = creditSystem.model_markups || {};
+	const { markup } = markups[featureId] || { markup: 0 };
+	const model = models.find(
+		// (m) => [m.id, m.canonical_slug, normaliseAiModelName(m.id)].includes(normalisedAiModelName(featureId))
+		(m) => normaliseAiModelName(m.id) === normaliseAiModelName(featureId),
+	);
+	if (!model) {
+		throw new RecaseError({
+			message: `Model ${featureId} not found in OpenRouter pricing data`,
+			code: ErrCode.FeatureNotFound,
+			data: {
+				featureId,
+				normalisedFeatureId: normaliseAiModelName(featureId), // Send this for debugging
+			}
+		})
+	}
+	const actualInputCost = new Decimal(model.pricing.prompt)
+	const actualOutputCost = new Decimal(model.pricing.completion)
+	const totalCost = actualInputCost.mul(input).add(actualOutputCost.mul(output));
+	const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
+	return markedUpCost.toNumber();
+};
+
+export const getCreditCost = async ({
 	featureId,
 	creditSystem,
 	amount = 1,
+	tokens
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	amount?: number;
+	tokens?: {
+		input: number;
+		output: number;
+	}
 }) => {
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return amount;
 	}
+	if (creditSystem.model_markups) {
+		if(!tokens) {
+			throw new RecaseError({
+				message: "Tokens must be provided for AI credit systems",
+				code: ErrCode.InvalidRequest,
+			})
+		}
+		const modelPricing = await getModelCreditCost({
+			featureId,
+			creditSystem,
+			...tokens,
+		});
+		return modelPricing;
+	}
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
-
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
 			return new Decimal(schemaItem.credit_amount)
-				.div(schemaItem.feature_amount ?? 1)
+			.div(schemaItem.feature_amount ?? 1)
 				.mul(amount)
 				.toNumber();
 		}

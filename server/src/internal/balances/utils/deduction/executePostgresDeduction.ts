@@ -89,7 +89,7 @@ export const executePostgresDeduction = async ({
 				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
-			} = prepareFeatureDeduction({
+			} = await prepareFeatureDeduction({
 				ctx,
 				fullCustomer,
 				deduction,
