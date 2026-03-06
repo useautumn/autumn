@@ -68,6 +68,15 @@ export interface Payloads {
 		lockId: string;
 		hashedKey: string;
 	};
+	[JobName.PropagateVariants]: {
+		baseProductInternalId: string;
+		/** Only set when base was versioned (Cases A+B). Absent/undefined for in-place update (Cases C+D). */
+		newBaseProductInternalId?: string;
+		orgId: string;
+		env: AppEnv;
+		/** True when the base product was versioned (new row created). False when updated in-place. */
+		baseWasVersioned: boolean;
+	};
 	[key: string]: unknown;
 }
 
