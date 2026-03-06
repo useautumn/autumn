@@ -20,9 +20,10 @@ if (process.env.AXIOM_TOKEN) {
 		},
 	});
 
+	// No auto-instrumentations — Bun doesn't support require-in-the-middle.
+	// Stripe, Drizzle, and Redis are instrumented via manual patchers in utils/otel/.
 	sdk = new NodeSDK({
 		traceExporter,
-		instrumentations: [],
 	});
 
 	console.log("Starting OpenTelemetry");
