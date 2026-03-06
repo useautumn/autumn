@@ -1,7 +1,5 @@
-export const SHOULD_INSTRUMENT = true;
-
 export const otelConfig = {
-	redis: true,
-	stripe: true,
+	redis: false,
+	stripe: false,
 	drizzle: true,
 };
