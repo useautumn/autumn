@@ -389,3 +389,99 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade car
 	});
 	expect(subAfter.discounts?.length).toBeGreaterThanOrEqual(1);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Upgrade applies 1-month recurring coupon to immediate switch invoice
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has pro ($20/mo)
+ * - Apply a 1-month repeating 20% off coupon to the subscription
+ * - Upgrade immediately to premium ($50/mo)
+ *
+ * Expected:
+ * - Upgrade succeeds
+ * - Preview + invoice reflect the discounted upgrade charge
+ * - Existing discount instance is preserved on the upgraded subscription
+ */
+test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 5: upgrade works with 1-month recurring coupon")}`, async () => {
+	const customerId = "imm-switch-discount-one-month-upgrade";
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const { stripeCli } = await getStripeSubscription({ customerId });
+
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 1,
+	});
+
+	const upgradeParams = {
+		customer_id: customerId,
+		product_id: premium.id,
+		discounts: [
+			{
+				reward_id: coupon.id,
+			},
+		],
+		redirect_mode: "if_required" as const,
+	};
+
+	const preview = await autumnV1.billing.previewAttach(upgradeParams);
+	const expectedTotal = new Decimal(50).times(0.8).sub(20).toNumber();
+	expect(preview.total).toEqual(expectedTotal);
+
+	await autumnV1.billing.attach(upgradeParams);
+
+	const customerAfter = await autumnV1.customers.get(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer: customerAfter,
+		count: 2,
+		latestTotal: expectedTotal,
+	});
+
+	const { subscription: upgradedSub } = await getStripeSubscription({
+		customerId,
+	});
+	const upgradedSubWithDiscount = await stripeCli.subscriptions.retrieve(
+		upgradedSub.id,
+		{
+			expand: ["discounts.source.coupon"],
+		},
+	);
+	expect(upgradedSubWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
+
+	const discountAfter = upgradedSubWithDiscount.discounts?.find((discount) => {
+		if (typeof discount === "string") return false;
+
+		const discountCoupon = discount.source?.coupon;
+		return (
+			typeof discountCoupon !== "string" && discountCoupon?.id === coupon.id
+		);
+	});
+
+	expect(discountAfter).toBeDefined();
+	expect(
+		typeof discountAfter !== "string" ? discountAfter?.end : null,
+	).not.toBeNull();
+});
