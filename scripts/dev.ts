@@ -14,6 +14,9 @@ const SERVER_PORT = 8080 + portOffset;
 const CHECKOUT_PORT = 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
 
+/**
+ * Read environment variable from .env file
+ */
 function getEnvVariable(filePath: string, key: string): string | null {
 	if (!existsSync(filePath)) {
 		return null;
@@ -41,6 +44,7 @@ async function startDev() {
 		if (serverOnly) {
 			console.log("Starting server and workers only (--server-only)...\n");
 		} else {
+			// Check if using remote backend (api.useautumn.com)
 			const viteEnvPath = join(projectRoot, "vite", ".env");
 			const backendUrl =
 				process.env.VITE_BACKEND_URL ||
@@ -51,15 +55,18 @@ async function startDev() {
 				console.log("\n Using remote backend (*.useautumn.com)");
 				console.log("Skipping port cleanup...\n");
 			} else {
+				// Port cleanup disabled (detection is unreliable)
 				console.log("Skipping port cleanup...\n");
 			}
 
+			// Clear Vite cache to prevent dep optimization issues
 			const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
 			if (existsSync(viteCachePath)) {
 				console.log("Clearing Vite cache...\n");
 				rmSync(viteCachePath, { recursive: true, force: true });
 			}
 
+			// Clear checkout Vite cache
 			const checkoutCachePath = join(
 				projectRoot,
 				"apps/checkout",
@@ -82,72 +89,62 @@ async function startDev() {
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}\n`);
 
+		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
 		let shellArgs: string[];
 		if (serverOnly) {
+			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
+				const workersCmd = `cd server && bun workers`;
 				shellArgs = [
-					"bunx",
-					"concurrently",
-					"-n",
-					"server,workers",
-					"-c",
-					"green,yellow",
-					"bun --cwd server dev",
-					"bun --cwd server workers:dev",
+					"cmd",
+					"/c",
+					`bunx concurrently -n server,workers -c green,yellow "${serverCmd}" "${workersCmd}"`,
 				];
 			} else {
 				shellArgs = [
 					"sh",
 					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && bun dev" "cd server && bun workers:dev"`,
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
 				];
 			}
 		} else {
-			const names = ["server", "vite", "checkout"];
-			const colors = ["green", "blue", "magenta"];
-			const cmds = isWindows
-				? [
-						"bun --cwd server dev",
-						"bun --cwd vite dev",
-						"bun --cwd apps/checkout dev",
-					]
-				: [
-						"cd server && bun dev",
-						"cd vite && bun dev",
-						"cd apps/checkout && bun dev",
-					];
+			const names = ["server"];
+			const colors = ["green"];
+			const cmds = [
+				isWindows
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+			];
 
 			if (!skipWorkers) {
-				names.splice(1, 0, "workers");
-				colors.splice(1, 0, "yellow");
-				cmds.splice(
-					1,
-					0,
+				names.push("workers");
+				colors.push("yellow");
+				cmds.push(
 					isWindows
-						? "bun --cwd server workers:dev"
-						: "cd server && bun workers:dev",
+						? `"cd server && bun workers:dev"`
+						: `"cd server && bun workers:dev"`,
 				);
 			}
 
-			if (isWindows) {
-				shellArgs = [
-					"bunx",
-					"concurrently",
-					"-n",
-					names.join(","),
-					"-c",
-					colors.join(","),
-					...cmds,
-				];
-			} else {
-				shellArgs = [
-					"sh",
-					"-c",
-					`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.map((c) => `"${c}"`).join(" ")}`,
-				];
-			}
+			names.push("vite", "checkout");
+			colors.push("blue", "magenta");
+			cmds.push(
+				isWindows
+					? `"cd vite && set VITE_PORT=${VITE_PORT} && bun dev"`
+					: `"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
+				isWindows
+					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
+					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
+			);
+
+			shellArgs = [
+				isWindows ? "cmd" : "sh",
+				isWindows ? "/c" : "-c",
+				`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.join(" ")}`,
+			];
 		}
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
@@ -178,6 +175,7 @@ async function startDev() {
 			},
 		});
 
+		// Handle termination signals
 		process.on("SIGINT", () => {
 			console.log("\n\n🛑 Shutting down development servers...");
 			concurrentlyProc.kill("SIGINT");
@@ -188,6 +186,7 @@ async function startDev() {
 			concurrentlyProc.kill("SIGTERM");
 		});
 
+		// Wait for the process to exit
 		await concurrentlyProc.exited;
 	} catch (error) {
 		console.error("Error starting development servers:", error);
