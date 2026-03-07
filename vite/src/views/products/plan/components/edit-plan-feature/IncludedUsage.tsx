@@ -81,9 +81,9 @@ export function IncludedUsage() {
 										if (value === "") {
 											setItem({ ...item, included_usage: null });
 										} else {
-											const numValue = value;
+											const numValue = Number(value);
 											if (!Number.isNaN(numValue)) {
-												setItem({ ...item, included_usage: Number(numValue) });
+												setItem({ ...item, included_usage: numValue });
 											}
 										}
 									}}
@@ -102,9 +102,9 @@ export function IncludedUsage() {
 									if (value === "") {
 										setItem({ ...item, included_usage: null });
 									} else {
-										const numValue = value;
+										const numValue = Number(value);
 										if (!Number.isNaN(numValue)) {
-											setItem({ ...item, included_usage: Number(numValue) });
+											setItem({ ...item, included_usage: numValue });
 										}
 									}
 								}}
