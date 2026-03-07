@@ -55,8 +55,8 @@ export const normaliseAiModelName = (modelName: string): string => {
 		.toLowerCase()
 		.replace(/\./g, "-") // claude-opus-4.6 → claude-opus-4-6
 		.replace(/-\d{8}$/, "") // strip trailing dates like -20251001
-		.replace(/^[a-z]+\//, ""); // strip provider prefix: anthropic/claude → claude
-};
+		.replace(/^[^/]+\//, ""); // strip provider prefix: meta-llama/llama → llama
+	};
 
 export const getOpenrouterPricing = async () => {
 	const [cached, redundantCached] = [
