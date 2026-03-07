@@ -96,67 +96,55 @@ async function startDev() {
 		if (serverOnly) {
 			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
+				const workersCmd = `cd server && bun workers`;
 				shellArgs = [
-					"bunx",
-					"concurrently",
-					"-n",
-					"server,workers",
-					"-c",
-					"green,yellow",
-					"bun --cwd server dev",
-					"bun --cwd server workers:dev",
+					"cmd",
+					"/c",
+					`bunx concurrently -n server,workers -c green,yellow "${serverCmd}" "${workersCmd}"`,
 				];
 			} else {
 				shellArgs = [
 					"sh",
 					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && bun dev" "cd server && bun workers:dev"`,
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
 				];
 			}
 		} else {
-			const names = ["server", "vite", "checkout"];
-			const colors = ["green", "blue", "magenta"];
-			const cmds = isWindows
-				? [
-						"bun --cwd server dev",
-						"bun --cwd vite dev",
-						"bun --cwd apps/checkout dev",
-					]
-				: [
-						"cd server && bun dev",
-						"cd vite && bun dev",
-						"cd apps/checkout && bun dev",
-					];
+			const names = ["server"];
+			const colors = ["green"];
+			const cmds = [
+				isWindows
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+			];
 
 			if (!skipWorkers) {
-				names.splice(1, 0, "workers");
-				colors.splice(1, 0, "yellow");
-				cmds.splice(
-					1,
-					0,
+				names.push("workers");
+				colors.push("yellow");
+				cmds.push(
 					isWindows
-						? "bun --cwd server workers:dev"
-						: "cd server && bun workers:dev",
+						? `"cd server && bun workers:dev"`
+						: `"cd server && bun workers:dev"`,
 				);
 			}
 
-			if (isWindows) {
-				shellArgs = [
-					"bunx",
-					"concurrently",
-					"-n",
-					names.join(","),
-					"-c",
-					colors.join(","),
-					...cmds,
-				];
-			} else {
-				shellArgs = [
-					"sh",
-					"-c",
-					`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.map((c) => `"${c}"`).join(" ")}`,
-				];
-			}
+			names.push("vite", "checkout");
+			colors.push("blue", "magenta");
+			cmds.push(
+				isWindows
+					? `"cd vite && set VITE_PORT=${VITE_PORT} && bun dev"`
+					: `"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
+				isWindows
+					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
+					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
+			);
+
+			shellArgs = [
+				isWindows ? "cmd" : "sh",
+				isWindows ? "/c" : "-c",
+				`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.join(" ")}`,
+			];
 		}
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
