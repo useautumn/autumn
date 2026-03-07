@@ -102,7 +102,7 @@ export function ClassicCreditSchema({
 								<Input
 									type="number"
 									lang="en"
-									value={item.credit_amount || ""}
+									value={item.credit_amount ?? ""}
 									onChange={(e) =>
 										handleSchemaChange(index, "credit_amount", e.target.value)
 									}
