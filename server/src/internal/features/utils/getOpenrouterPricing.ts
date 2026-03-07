@@ -56,16 +56,27 @@ export const normaliseAiModelName = (modelName: string): string => {
 		.replace(/\./g, "-") // claude-opus-4.6 → claude-opus-4-6
 		.replace(/-\d{8}$/, "") // strip trailing dates like -20251001
 		.replace(/^[a-z]+\//, ""); // strip provider prefix: anthropic/claude → claude
-}
+};
 
 export const getOpenrouterPricing = async () => {
-	const cached =
-		await CacheManager.getJson<OpenRouterModel[]>(OPENROUTER_CACHE_KEY);
+	const [cached, redundantCached] = [
+		await CacheManager.getJson<OpenRouterModel[]>(OPENROUTER_CACHE_KEY),
+		await CacheManager.getJson<OpenRouterModel[]>(
+			`${OPENROUTER_CACHE_KEY}_redundant`,
+		),
+	];
 	if (cached) {
 		return cached;
 	}
 	const response = await fetch("https://openrouter.ai/api/v1/models");
 	const { data: models }: { data: OpenRouterModel[] } = await response.json();
-	await CacheManager.setJson(OPENROUTER_CACHE_KEY, models, 60 * 60 * 3); // Cache for 3 hour
+	await Promise.all([
+		CacheManager.setJson(OPENROUTER_CACHE_KEY, models, 60 * 60 * 3), // Cache for 3 hours
+		CacheManager.setJson(
+			`${OPENROUTER_CACHE_KEY}_redundant`,
+			redundantCached || models,
+			60 * 60 * 72,
+		), // Cache redundant copy for 24 hours
+	]);
 	return models;
 };
