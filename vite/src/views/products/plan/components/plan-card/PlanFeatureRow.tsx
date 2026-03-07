@@ -68,9 +68,20 @@ export const PlanFeatureRow = ({
 
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
-	const displayText = hasFeatureName
-		? display.primary_text
-		: "Name your feature";
+	const isAiCreditSystem = feature?.model_markups != null;
+
+	const getAiCreditDisplayText = () => {
+		const budget = item.included_usage;
+		const featureName = feature?.name || "budget";
+		if (!budget || budget === 0) return `$0.00 of ${featureName}`;
+		return `$${Number(budget).toFixed(2)} of ${featureName}`;
+	};
+
+	const displayText = isAiCreditSystem
+		? getAiCreditDisplayText()
+		: hasFeatureName
+			? display.primary_text
+			: "Name your feature";
 
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;

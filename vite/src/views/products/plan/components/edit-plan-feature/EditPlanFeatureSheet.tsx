@@ -76,6 +76,7 @@ export function EditPlanFeatureSheet({
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
+	const isAiCreditSystem = feature?.model_markups != null;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -107,9 +108,11 @@ export function EditPlanFeatureSheet({
 
 				{feature?.type !== FeatureType.Boolean && (
 					<>
-						<SheetSection title="Feature Type">
-							<BillingType />
-						</SheetSection>
+						{!isAiCreditSystem && (
+							<SheetSection title="Feature Type">
+								<BillingType />
+							</SheetSection>
+						)}
 
 						<SheetSection
 							title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
@@ -117,7 +120,7 @@ export function EditPlanFeatureSheet({
 							<IncludedUsage />
 						</SheetSection>
 
-						{isFeaturePrice && (
+						{isFeaturePrice && !isAiCreditSystem && (
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (
