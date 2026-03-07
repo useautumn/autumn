@@ -14,6 +14,9 @@ const SERVER_PORT = 8080 + portOffset;
 const CHECKOUT_PORT = 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
 
+/**
+ * Read environment variable from .env file
+ */
 function getEnvVariable(filePath: string, key: string): string | null {
 	if (!existsSync(filePath)) {
 		return null;
@@ -41,6 +44,7 @@ async function startDev() {
 		if (serverOnly) {
 			console.log("Starting server and workers only (--server-only)...\n");
 		} else {
+			// Check if using remote backend (api.useautumn.com)
 			const viteEnvPath = join(projectRoot, "vite", ".env");
 			const backendUrl =
 				process.env.VITE_BACKEND_URL ||
@@ -51,15 +55,18 @@ async function startDev() {
 				console.log("\n Using remote backend (*.useautumn.com)");
 				console.log("Skipping port cleanup...\n");
 			} else {
+				// Port cleanup disabled (detection is unreliable)
 				console.log("Skipping port cleanup...\n");
 			}
 
+			// Clear Vite cache to prevent dep optimization issues
 			const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
 			if (existsSync(viteCachePath)) {
 				console.log("Clearing Vite cache...\n");
 				rmSync(viteCachePath, { recursive: true, force: true });
 			}
 
+			// Clear checkout Vite cache
 			const checkoutCachePath = join(
 				projectRoot,
 				"apps/checkout",
@@ -82,10 +89,12 @@ async function startDev() {
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}\n`);
 
+		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
 		let shellArgs: string[];
 		if (serverOnly) {
+			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
 				shellArgs = [
 					"bunx",
@@ -178,6 +187,7 @@ async function startDev() {
 			},
 		});
 
+		// Handle termination signals
 		process.on("SIGINT", () => {
 			console.log("\n\n🛑 Shutting down development servers...");
 			concurrentlyProc.kill("SIGINT");
@@ -188,6 +198,7 @@ async function startDev() {
 			concurrentlyProc.kill("SIGTERM");
 		});
 
+		// Wait for the process to exit
 		await concurrentlyProc.exited;
 	} catch (error) {
 		console.error("Error starting development servers:", error);
