@@ -15,9 +15,7 @@ const validateFeature = (data: any) => {
 	if (featureType === FeatureType.Metered) {
 		config = validateMeteredConfig(config);
 	} else if (featureType === FeatureType.CreditSystem) {
-		const isAiCreditSystem =
-			data.model_markups != null &&
-			Object.keys(data.model_markups).length > 0;
+		const isAiCreditSystem = data.model_markups != null;
 		config = validateCreditSystem(config, { isAiCreditSystem });
 	}
 
@@ -57,6 +55,7 @@ export const createFeature = async ({
 		env: ctx.env,
 		...parsedFeature,
 		model_markups: data.model_markups ?? null,
+		is_ai_credit_system: data.model_markups != null,
 	};
 
 	const insertedData = await FeatureService.insert({

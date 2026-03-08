@@ -56,7 +56,7 @@ export const normaliseAiModelName = (modelName: string): string => {
 		.replace(/\./g, "-") // claude-opus-4.6 → claude-opus-4-6
 		.replace(/-\d{8}$/, "") // strip trailing dates like -20251001
 		.replace(/^[^/]+\//, ""); // strip provider prefix: meta-llama/llama → llama
-	};
+};
 
 export const getOpenrouterPricing = async () => {
 	const [cached, redundantCached] = [
@@ -70,13 +70,23 @@ export const getOpenrouterPricing = async () => {
 	}
 	const response = await fetch("https://openrouter.ai/api/v1/models");
 	const { data: models }: { data: OpenRouterModel[] } = await response.json();
+	if (!response.ok && redundantCached) {
+		// If the request failed but we have a redundant cache, use it
+		return redundantCached;
+	} else if (!response.ok) {
+		// If the request failed and we don't have a redundant cache, throw an error
+		throw new Error(
+			"Failed to fetch OpenRouter pricing and no cache available",
+		);
+	}
+
 	await Promise.all([
 		CacheManager.setJson(OPENROUTER_CACHE_KEY, models, 60 * 60 * 3), // Cache for 3 hours
 		CacheManager.setJson(
 			`${OPENROUTER_CACHE_KEY}_redundant`,
 			redundantCached || models,
 			60 * 60 * 72,
-		), // Cache redundant copy for 24 hours
+		), // Cache redundant copy for 3 days
 	]);
 	return models;
 };

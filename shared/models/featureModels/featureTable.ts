@@ -34,6 +34,7 @@ export const features = pgTable(
 		archived: boolean("archived").notNull().default(false),
 		event_names: text("event_names").array().default([]),
 		model_markups: jsonb().$type<ModelMarkups>().default(sql`null`),
+		is_ai_credit_system: boolean("is_ai_credit_system").notNull().default(false),
 	},
 	(table) => [
 		foreignKey({

@@ -23,7 +23,8 @@ export const FeatureSchema = z.object({
 		.nullish(),
 	archived: z.boolean(),
 	event_names: z.array(z.string()).default([]),
-	model_markups: ModelMarkups.nullish()
+	model_markups: ModelMarkups.nullish(),
+	is_ai_credit_system: z.boolean().default(false),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({
@@ -34,6 +35,7 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	display: true,
 	event_names: true,
 	model_markups: true,
+	is_ai_credit_system: true,
 });
 
 export const MinFeatureSchema = z.object({

@@ -36,8 +36,10 @@ const constructFeature = ({
 		display,
 		archived: false,
 		event_names: [],
+		model_markups: null,
+		is_ai_credit_system: false,
 	};
-
+	// This function isn't used anywhere, maybe delete it?
 	return newFeature;
 };
 
@@ -64,6 +66,8 @@ export const constructBooleanFeature = ({
 		config: null,
 		archived: false,
 		event_names: [],
+		model_markups: null,
+		is_ai_credit_system: false,
 	};
 
 	return newFeature;
@@ -109,6 +113,8 @@ export const constructMeteredFeature = ({
 		},
 		archived: false,
 		event_names: eventNames,
+		model_markups: null,
+		is_ai_credit_system: false,
 	};
 
 	return newFeature;
@@ -151,6 +157,8 @@ export const constructCreditSystem = ({
 		config,
 		archived: false,
 		event_names: [],
+		model_markups: null,
+		is_ai_credit_system: false,
 	};
 
 	return newFeature;

@@ -23,7 +23,7 @@ export const ModelMarkups = z.record(
 		markup: z.number(), // percentage markup, e.g. 2 for 2%
 		// Made this an object in case we want to add more model-specific config in the future
 	}),
-)
+).nullish()
 
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;

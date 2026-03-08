@@ -147,9 +147,7 @@ export const updateFeature = async ({
 	}
 
 	// Validate config based on feature type
-	const isAiCreditSystem =
-		updates.model_markups != null &&
-		Object.keys(updates.model_markups).length > 0;
+	const isAiCreditSystem = updates.model_markups != null;
 
 	const newConfig =
 		updates.config !== undefined
@@ -174,6 +172,9 @@ export const updateFeature = async ({
 			event_names: updates.event_names,
 			config: newConfig,
 			model_markups: updates.model_markups,
+			is_ai_credit_system: notNullish(updates.model_markups)
+				? isAiCreditSystem
+				: feature.is_ai_credit_system,
 		},
 	});
 
