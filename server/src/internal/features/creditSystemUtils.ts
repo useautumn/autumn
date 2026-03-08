@@ -21,7 +21,8 @@ const creditSystemContainsFeature = ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return false;
 	}
-	const schema: CreditSchemaItem[] = creditSystem.config.schema;
+	const schema: CreditSchemaItem[] | undefined = creditSystem.config?.schema;
+	if (!schema) return false;
 
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === meteredFeatureId) {
@@ -75,11 +76,6 @@ export const featureToCreditSystem = ({
 
 	return amount;
 };
-
-const isAiCreditSystem = (creditSystem: Feature) =>
-	creditSystem.model_markups != null &&
-	Object.keys(creditSystem.model_markups).length > 0;
-
 const getModelCreditCost = async ({
 	modelName,
 	creditSystem,
@@ -133,7 +129,7 @@ export const getCreditCost = async ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return amount;
 	}
-	if (isAiCreditSystem(creditSystem)) {
+	if (creditSystem.is_ai_credit_system) {
 		if (!tokens || !modelName) {
 			throw new RecaseError({
 				message: "modelName and tokens must be provided for AI credit systems",
