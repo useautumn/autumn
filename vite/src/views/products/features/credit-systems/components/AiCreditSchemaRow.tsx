@@ -1,7 +1,7 @@
+import { X } from "lucide-react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
 import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
-import { X } from "lucide-react";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 
 interface AiCreditSchemaRowProps {

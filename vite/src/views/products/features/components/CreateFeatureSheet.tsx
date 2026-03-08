@@ -70,7 +70,7 @@ function CreateFeatureSheet({
 			setLoading(false);
 		} else {
 			try {
-				const isAiCreditSystem = feature.model_markups != null;
+				const isAiCreditSystem = feature.is_ai_credit_system ?? false;
 
 				const { data: createdFeature } = await FeatureService.createFeature(
 					axiosInstance,
@@ -122,7 +122,7 @@ function CreateFeatureSheet({
 
 	const isAiCreditSystem =
 		feature.type === FeatureType.CreditSystem &&
-		feature.model_markups != null;
+		(feature.is_ai_credit_system ?? false);
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>

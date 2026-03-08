@@ -31,7 +31,7 @@ export function IncludedUsage() {
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const feature = features.find((f) => f.id === item.feature_id);
-	const isAiCreditSystem = feature?.model_markups != null;
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	// Helper function to get the display value for the input
 	const getInputValue = () => {
@@ -52,7 +52,9 @@ export function IncludedUsage() {
 						{isAiCreditSystem ? (
 							<>
 								USD budget{" "}
-								{!isFeaturePrice ? "allocated to this plan" : "granted before billing"}
+								{!isFeaturePrice
+									? "allocated to this plan"
+									: "granted before billing"}
 							</>
 						) : (
 							<>
@@ -60,7 +62,9 @@ export function IncludedUsage() {
 								<span className="font-medium text-t1">
 									{getFeatureName({ feature, plural: true })}{" "}
 								</span>
-								{!isFeaturePrice ? " that can be used" : " granted before billing"}
+								{!isFeaturePrice
+									? " that can be used"
+									: " granted before billing"}
 							</>
 						)}
 					</div>
@@ -68,9 +72,7 @@ export function IncludedUsage() {
 						{isAiCreditSystem ? (
 							// Couldn't find a disabled property but data-disabled is accounted for in CSS
 							<InputGroup data-disabled={includedUsage === Infinite}>
-								<InputGroupAddon>
 									<InputGroupText>$</InputGroupText>
-								</InputGroupAddon>
 								<InputGroupInput
 									key={`included-usage-${item.feature_id || item.price_id || "default"}`}
 									placeholder="eg. 10.00"

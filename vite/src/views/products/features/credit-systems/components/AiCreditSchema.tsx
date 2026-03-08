@@ -92,9 +92,7 @@ export function AiCreditSchema({
 					onChange={(e) =>
 						handleDefaultMarkupChange(Number(e.target.value) || 0)
 					}
-					onBlur={(e) =>
-						handleDefaultMarkupChange(Number(e.target.value) || 0)
-					}
+					onBlur={(e) => handleDefaultMarkupChange(Number(e.target.value) || 0)}
 					placeholder="0"
 					className="w-24"
 				/>

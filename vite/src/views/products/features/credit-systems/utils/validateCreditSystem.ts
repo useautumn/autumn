@@ -7,13 +7,10 @@ export const validateCreditSystem = (
 		return "Please fill in all fields";
 	}
 
-	const isAiCreditSystem = creditSystem.model_markups != null;
+	const isAiCreditSystem = creditSystem.is_ai_credit_system ?? false;
 
 	if (isAiCreditSystem) {
-		if (Object.keys(creditSystem.model_markups!).length === 0) {
-			return "Add at least one model";
-		}
-		for (const [modelId] of Object.entries(creditSystem.model_markups!)) {
+		for (const [modelId] of Object.entries(creditSystem.model_markups)) {
 			if (!modelId) return "Select a model for each row";
 		}
 		return null;

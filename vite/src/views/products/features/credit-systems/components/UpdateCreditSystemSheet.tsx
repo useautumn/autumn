@@ -45,6 +45,7 @@ function UpdateCreditSystemSheet({
 			],
 		},
 		event_names: [],
+		is_ai_credit_system: false,
 	});
 
 	const axiosInstance = useAxiosInstance();
@@ -60,6 +61,7 @@ function UpdateCreditSystemSheet({
 				config: selectedCreditSystem.config,
 				event_names: selectedCreditSystem.event_names,
 				model_markups: selectedCreditSystem.model_markups,
+				is_ai_credit_system: selectedCreditSystem.is_ai_credit_system,
 			});
 		}
 	}, [open, selectedCreditSystem]);

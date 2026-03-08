@@ -1,3 +1,12 @@
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
+import type { AxiosError } from "axios";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
@@ -9,15 +18,6 @@ import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import {
-	type CreditSchemaItem,
-	type Feature,
-	FeatureType,
-	FeatureUsageType,
-} from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
@@ -58,7 +58,7 @@ function UpdateFeatureSheet({
 
 		setLoading(true);
 		try {
-			const isAiCreditSystem = feature.model_markups != null;
+			const isAiCreditSystem = feature.is_ai_credit_system ?? false;
 
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
@@ -100,9 +100,7 @@ function UpdateFeatureSheet({
 		setOpen(false);
 	};
 
-	const isAiCreditSystem =
-		feature.type === FeatureType.CreditSystem &&
-		feature.model_markups != null;
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>

@@ -68,7 +68,7 @@ export const PlanFeatureRow = ({
 
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
-	const isAiCreditSystem = feature?.model_markups != null;
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	const getAiCreditDisplayText = () => {
 		const budget = item.included_usage;

@@ -1,8 +1,8 @@
+import type { CreateFeature } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
-import type { CreateFeature } from "@autumn/shared";
 
 interface CreditSystemDetailsProps {
 	creditSystem: CreateFeature;

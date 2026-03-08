@@ -85,10 +85,7 @@ export function ClassicCreditSchema({
 					);
 
 					return (
-						<div
-							key={index}
-							className="grid grid-cols-1 lg:grid-cols-2 gap-2"
-						>
+						<div key={index} className="grid grid-cols-1 lg:grid-cols-2 gap-2">
 							<FeatureSelectDropdown
 								value={item.metered_feature_id}
 								onValueChange={(featureId) =>

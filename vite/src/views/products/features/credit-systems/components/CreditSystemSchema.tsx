@@ -1,9 +1,9 @@
+import type { CreateFeature } from "@autumn/shared";
+import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
 import { useOpenRouterModels } from "@/hooks/queries/useOpenRouterModels";
-import type { CreateFeature } from "@autumn/shared";
-import { useMemo } from "react";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
@@ -39,7 +39,7 @@ export function CreditSystemSchema({
 	const { models } = useOpenRouterModels();
 
 	const mode: CreditSchemaMode =
-		creditSystem.model_markups != null ? "ai" : "classic";
+		(creditSystem.is_ai_credit_system ?? false) ? "ai" : "classic";
 
 	const handleModeChange = (newMode: string) => {
 		if (newMode === "ai") {
@@ -51,6 +51,7 @@ export function CreditSystemSchema({
 				...creditSystem,
 				config: { ...creditSystem.config, schema: [] },
 				model_markups: flagshipModels.length > 0 ? modelMarkups : {},
+				is_ai_credit_system: true,
 			});
 		} else {
 			setCreditSystem({
@@ -62,6 +63,7 @@ export function CreditSystemSchema({
 					],
 				},
 				model_markups: null,
+				is_ai_credit_system: false,
 			});
 		}
 	};

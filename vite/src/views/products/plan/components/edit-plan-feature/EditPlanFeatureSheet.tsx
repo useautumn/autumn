@@ -76,7 +76,7 @@ export function EditPlanFeatureSheet({
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
-	const isAiCreditSystem = feature?.model_markups != null;
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
