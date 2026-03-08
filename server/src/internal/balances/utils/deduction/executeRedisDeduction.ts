@@ -13,14 +13,13 @@ import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
+import type { MutationLogItem } from "../types/mutationLogItem.js";
 import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
-import type {
-	LuaDeductionResult,
-	RolloverUpdate,
-} from "../types/redisDeductionResult.js";
+import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
+import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
@@ -44,6 +43,7 @@ export const executeRedisDeduction = async ({
 	fullCus: FullCustomer | undefined;
 	updates: Record<string, DeductionUpdate>;
 	rolloverUpdates: Record<string, RolloverUpdate>;
+	mutationLogs: MutationLogItem[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullCus = structuredClone(fullCustomer);
@@ -70,6 +70,7 @@ export const executeRedisDeduction = async ({
 
 	let allUpdates: Record<string, DeductionUpdate> = {};
 	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
+	let allMutationLogs: MutationLogItem[] = [];
 
 	// Build cache key
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
@@ -80,13 +81,20 @@ export const executeRedisDeduction = async ({
 	});
 
 	for (const deduction of deductions) {
-		const { feature, deduction: toDeduct, targetBalance } = deduction;
+		const {
+			feature,
+			deduction: toDeduct,
+			targetBalance,
+			unwindValue,
+			lockReceiptKey,
+		} = deduction;
 
 		const {
 			customerEntitlementDeductions,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
+			lock: preparedLock,
 		} = prepareFeatureDeduction({
 			ctx,
 			fullCustomer,
@@ -109,7 +117,11 @@ export const executeRedisDeduction = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
-			reserve: deduction.reserve ?? null,
+			lock: preparedLock ?? null,
+
+			// For unwinding when finalizing a lock
+			unwind_value: unwindValue ?? null,
+			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
 		const result = await tryRedisWrite(() =>
@@ -138,7 +150,7 @@ export const executeRedisDeduction = async ({
 			});
 		}
 
-		const { updates, rollover_updates } = resultJson;
+		const { updates, rollover_updates, mutation_logs } = resultJson;
 		logDeductionUpdates({
 			ctx,
 			fullCustomer,
@@ -148,6 +160,7 @@ export const executeRedisDeduction = async ({
 
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
+		allMutationLogs = [...allMutationLogs, ...mutation_logs];
 
 		// Handle paid allocated entitlements and update fullCus in memory
 		try {
@@ -222,5 +235,6 @@ export const executeRedisDeduction = async ({
 		fullCus: fullCustomer,
 		updates: allUpdates,
 		rolloverUpdates: allRolloverUpdates,
+		mutationLogs: allMutationLogs,
 	};
 };

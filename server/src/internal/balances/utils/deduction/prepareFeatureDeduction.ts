@@ -10,6 +10,7 @@ import {
 	orgToInStatuses,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type {
@@ -35,7 +36,8 @@ export const prepareFeatureDeduction = ({
 	options?: DeductionOptions;
 }): PreparedFeatureDeduction => {
 	const { org } = ctx;
-	const { feature, targetBalance } = deduction;
+	const { env } = ctx;
+	const { feature, lock, targetBalance } = deduction;
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
@@ -118,6 +120,19 @@ export const prepareFeatureDeduction = ({
 			return 0;
 		});
 
+	const preparedLock = lock
+		? {
+				...lock,
+				hashed_key: lock.hashed_key ?? Bun.hash(lock.key!).toString(),
+				redis_receipt_key: buildLockReceiptKey({
+					orgId: org.id,
+					env,
+					lockKey: lock.hashed_key ?? Bun.hash(lock.key!).toString(),
+				}),
+				created_at: Date.now(),
+			}
+		: undefined;
+
 	return {
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
@@ -126,5 +141,6 @@ export const prepareFeatureDeduction = ({
 			credit_cost: r.credit_cost,
 		})),
 		unlimitedFeatureIds,
+		lock: preparedLock,
 	};
 };

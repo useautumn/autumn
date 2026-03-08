@@ -1,6 +1,6 @@
 -- ============================================================================
 -- RESERVATION STATE HELPERS
--- Helpers for guarding and transitioning reservation receipt state
+-- Helpers for guarding and transitioning lock receipt state
 -- ============================================================================
 
 local RESERVATION_STATUS_PENDING = 'pending'
@@ -13,7 +13,7 @@ local RESERVATION_STATUS_EXPIRED = 'expired'
 -- Defaults to pending if status is absent to ease early migrations.
 -- ============================================================================
 local function get_reservation_status(receipt)
-  if not receipt or receipt.status == nil or receipt.status == cjson.null then
+  if is_nil(receipt) or is_nil(receipt.status) then
     return RESERVATION_STATUS_PENDING
   end
 
@@ -57,7 +57,7 @@ end
 -- Returns nil when valid, or an error code string when invalid.
 -- ============================================================================
 local function require_pending_receipt(receipt)
-  if not receipt then
+  if is_nil(receipt) then
     return 'RESERVATION_NOT_FOUND'
   end
 

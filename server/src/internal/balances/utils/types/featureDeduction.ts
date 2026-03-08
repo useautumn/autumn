@@ -1,7 +1,10 @@
-import type { Feature, ReserveParams } from "@autumn/shared";
+import type { Feature, LockParams } from "@autumn/shared";
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
 	targetBalance?: number;
-	reserve?: ReserveParams;
+	lock?: LockParams;
+
+	lockReceiptKey?: string;
+	unwindValue?: number;
 };

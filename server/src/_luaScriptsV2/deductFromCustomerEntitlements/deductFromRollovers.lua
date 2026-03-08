@@ -104,6 +104,10 @@ local function deduct_from_rollovers(params)
             context = context,
             path = entity_path,
             deduct_amount = to_change,
+            rollover_id = rollover_id,
+            entity_id = target_entity_id,
+            credit_cost = credit_cost,
+            value_delta = to_change / credit_cost,
           })
           
           update_in_memory_rollover({
@@ -146,6 +150,10 @@ local function deduct_from_rollovers(params)
               context = context,
               path = entity_path,
               deduct_amount = to_change,
+              rollover_id = rollover_id,
+              entity_id = entity_key,
+              credit_cost = credit_cost,
+              value_delta = to_change / credit_cost,
             })
             
             update_in_memory_rollover({
@@ -176,6 +184,10 @@ local function deduct_from_rollovers(params)
             context = context,
             path = base_path,
             deduct_amount = to_change,
+            rollover_id = rollover_id,
+            entity_id = nil,
+            credit_cost = credit_cost,
+            value_delta = to_change / credit_cost,
           })
           
           update_in_memory_rollover({

@@ -8,7 +8,7 @@ import {
 	type CheckResponseV3,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { parseCheckParamsForReserve } from "@/internal/balances/utils/reserve/parseCheckParamsForReserve.js";
+import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -27,7 +27,7 @@ export const handleCheck = createRoute({
 		let body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		body = parseCheckParamsForReserve({
+		body = parseCheckParamsForLock({
 			params: body,
 		});
 
@@ -60,7 +60,7 @@ export const handleCheck = createRoute({
 		});
 
 		let response: CheckResponseV3;
-		if (send_event) {
+		if (send_event || body.lock?.enabled) {
 			response = await runCheckWithTrack({
 				ctx,
 				body,
@@ -99,7 +99,7 @@ export const handleCheck = createRoute({
 		return c.json({
 			...transformedResponse,
 			preview,
-			reserve_key: body.reserve?.key ?? undefined,
+			lock_key: body.lock?.key ?? undefined,
 		});
 	},
 });

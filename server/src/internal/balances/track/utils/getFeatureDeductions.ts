@@ -1,7 +1,7 @@
 import {
 	FeatureNotFoundError,
+	type LockParams,
 	RecaseError,
-	type ReserveParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -11,12 +11,12 @@ const DEFAULT_VALUE = 1;
 export const getTrackFeatureDeductions = ({
 	ctx,
 	featureId,
-	reserve,
+	lock,
 	value,
 }: {
 	ctx: AutumnContext;
 	featureId: string;
-	reserve?: ReserveParams;
+	lock?: LockParams;
 	value?: number;
 }) => {
 	const featureDeductions: FeatureDeduction[] = [];
@@ -35,7 +35,7 @@ export const getTrackFeatureDeductions = ({
 	featureDeductions.push({
 		feature: mainFeature,
 		deduction: mainFeatureDeduction,
-		reserve,
+		lock,
 	});
 
 	return featureDeductions;

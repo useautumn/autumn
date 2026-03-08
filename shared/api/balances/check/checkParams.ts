@@ -3,7 +3,7 @@ import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
-import { ReserveParamsSchema } from "../common/reserveParams";
+import { LockParamsSchema } from "../common/lockParams";
 import { CheckExpand } from "./enums/CheckExpand";
 
 export const CheckQuerySchema = z.object({
@@ -28,7 +28,7 @@ export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 			"If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.",
 	}),
 
-	reserve: ReserveParamsSchema.optional(),
+	lock: LockParamsSchema.optional(),
 
 	with_preview: z.boolean().optional().meta({
 		description:

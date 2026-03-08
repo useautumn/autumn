@@ -21,6 +21,7 @@ import {
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
+	UNWIND_AND_DEDUCT_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
@@ -169,6 +170,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("deductFromCustomerEntitlements", {
 		numberOfKeys: 1,
 		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("unwindAndDeduct", {
+		numberOfKeys: 0,
+		lua: UNWIND_AND_DEDUCT_SCRIPT,
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {
@@ -374,6 +380,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		unwindAndDeduct(paramsJson: string): Promise<string>;
 		deleteFullCustomerCache(
 			testGuardKey: string,
 			guardKey: string,
