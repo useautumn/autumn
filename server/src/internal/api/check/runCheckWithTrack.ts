@@ -42,7 +42,7 @@ export const runCheckWithTrack = async ({
 	const featureDeductions = getTrackFeatureDeductions({
 		ctx,
 		featureId: body.feature_id,
-		reserve: body.reserve,
+		lock: body.lock,
 		value: requiredBalance,
 	});
 
@@ -54,7 +54,7 @@ export const runCheckWithTrack = async ({
 		properties: body.properties,
 		skip_event: body.skip_event,
 		overage_behavior: "reject",
-		reserve: body.reserve,
+		lock: body.lock,
 	};
 
 	let allowed = true;
@@ -95,7 +95,7 @@ export const runCheckWithTrack = async ({
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
-		reserve_key: body.reserve?.key,
+		lock_key: body.lock?.key,
 	});
 
 	return checkResponse;

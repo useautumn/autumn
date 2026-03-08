@@ -13,6 +13,7 @@ import type { EventInfo } from "../../events/initEvent.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
@@ -43,6 +44,7 @@ export const executePostgresDeduction = async ({
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	updates: Record<string, DeductionUpdate>;
+	mutationLogs: MutationLogItem[];
 }> => {
 	const { db, org, env } = ctx;
 
@@ -234,5 +236,6 @@ export const executePostgresDeduction = async ({
 		oldFullCus,
 		fullCus: fullCustomer,
 		updates: allUpdates,
+		mutationLogs: [],
 	};
 };
