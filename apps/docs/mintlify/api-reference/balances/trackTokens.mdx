@@ -1,0 +1,160 @@
+---
+title: "Track Token Usage"
+openapi: "openapi POST /v1/balances.trackTokens"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+<Note>
+  Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using OpenRouter pricing and your configured markup, then deducts from the customer's credit balance.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Track AI token usage
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  model: "claude-opus-4-6",
+  inputTokens: 1000,
+  outputTokens: 500
+});
+```
+
+```typescript Track with explicit feature
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  model: "claude-haiku-4-5",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+```typescript Track with properties
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  model: "gpt-4o",
+  inputTokens: 500,
+  outputTokens: 200,
+  properties: {
+    conversation_id: "conv_abc123",
+    prompt_type: "summarization"
+  }
+});
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer.
+</DynamicParamField>
+
+<DynamicParamField body="model" type="string" required>
+  The AI model name (e.g., `claude-opus-4-6`, `gpt-4o`). Must match a model in the OpenRouter pricing data.
+</DynamicParamField>
+
+<DynamicParamField body="input_tokens" type="number" required>
+  Number of input tokens consumed.
+</DynamicParamField>
+
+<DynamicParamField body="output_tokens" type="number" required>
+  Number of output tokens consumed.
+</DynamicParamField>
+
+<DynamicParamField body="feature_id" type="string">
+  The ID of the AI credit system feature. If omitted, automatically detects the organization's AI credit system feature.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  The ID of the entity for entity-scoped balances.
+</DynamicParamField>
+
+<DynamicParamField body="properties" type="object">
+  Additional properties to attach to this usage event. The `model`, `input_tokens`, and `output_tokens` values are automatically included.
+</DynamicParamField>
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer whose token usage was tracked.
+</DynamicResponseField>
+
+<DynamicResponseField name="value" type="number">
+  The dollar cost that was deducted from the customer's AI credit balance.
+</DynamicResponseField>
+
+<DynamicResponseField name="balance" type="object | null">
+  The updated balance for the AI credit system feature.
+  <Expandable title="properties">
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this balance is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total balance granted (included + prepaid).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Remaining balance available for use.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Total usage consumed in the current period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unlimited" type="boolean">
+      Whether this feature has unlimited usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="boolean">
+      Whether usage beyond the granted balance is allowed.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="next_reset_at" type="number | null">
+      Timestamp when the balance will reset, or null for no reset.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "value": 0.06,
+  "balance": {
+    "feature_id": "ai_credits",
+    "granted": 10.00,
+    "remaining": 9.94,
+    "usage": 0.06,
+    "unlimited": false,
+    "overage_allowed": false,
+    "next_reset_at": 1773851121437,
+    "breakdown": [
+      {
+        "id": "cus_ent_abc123",
+        "plan_id": "pro_plan",
+        "included_grant": 10.00,
+        "prepaid_grant": 0,
+        "remaining": 9.94,
+        "usage": 0.06,
+        "unlimited": false,
+        "reset": {
+          "interval": "month",
+          "resets_at": 1773851121437
+        },
+        "price": null,
+        "expires_at": null
+      }
+    ]
+  }
+}
+```
+</ResponseExample>
