@@ -3,4 +3,9 @@ export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
 	targetBalance?: number;
+	tokenUsage?: {
+		modelName: string;
+		inputTokens: number;
+		outputTokens: number;
+	};
 };

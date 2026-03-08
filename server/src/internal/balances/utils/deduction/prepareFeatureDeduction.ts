@@ -78,6 +78,13 @@ export const prepareFeatureDeduction = async ({
 				const creditCost = await getCreditCost({
 					featureId: feature.id,
 					creditSystem: ce.entitlement.feature,
+					modelName: deduction.tokenUsage?.modelName,
+					tokens: deduction.tokenUsage
+						? {
+								input: deduction.tokenUsage.inputTokens,
+								output: deduction.tokenUsage.outputTokens,
+							}
+						: undefined,
 				});
 
 				const maxOverage = getMaxOverage({ cusEnt: ce });
@@ -108,6 +115,13 @@ export const prepareFeatureDeduction = async ({
 				const creditCost = await getCreditCost({
 					featureId: feature.id,
 					creditSystem: ce.entitlement.feature,
+					modelName: deduction.tokenUsage?.modelName,
+					tokens: deduction.tokenUsage
+						? {
+								input: deduction.tokenUsage.inputTokens,
+								output: deduction.tokenUsage.outputTokens,
+							}
+						: undefined,
 				});
 				return (ce.rollovers || []).map((r) => ({
 					...r,

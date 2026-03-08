@@ -5,6 +5,7 @@ import { handleCreateBalance } from "./handlers/handleCreateBalance.js";
 import { handleDeleteBalance } from "./handlers/handleDeleteBalance.js";
 import { handleListBalances } from "./handlers/handleListBalances.js";
 import { handleTrack } from "./handlers/handleTrack.js";
+import { handleTrackTokens } from "./handlers/handleTrackTokens.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
 import { handleSetUsage } from "./setUsage/handleSetUsage.js";
 
@@ -18,6 +19,7 @@ balancesRouter.post("/balances/update", ...handleUpdateBalance);
 // Track
 balancesRouter.post("/events", ...handleTrack);
 balancesRouter.post("/track", ...handleTrack);
+balancesRouter.post("/trackTokens", ...handleTrackTokens);
 
 // Check
 balancesRouter.post("/entitled", ...handleCheck);
@@ -31,4 +33,5 @@ balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
+balancesRpcRouter.post("/balances.trackTokens", ...handleTrackTokens);
 balancesRpcRouter.post("/balances.check", ...handleCheck);

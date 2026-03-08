@@ -144,6 +144,7 @@
 						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
+							"api-reference/balances/trackTokens",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
 							"api-reference/balances/deleteBalance"
