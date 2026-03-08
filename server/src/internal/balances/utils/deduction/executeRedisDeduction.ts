@@ -109,6 +109,7 @@ export const executeRedisDeduction = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
+			reserve: deduction.reserve ?? null,
 		};
 
 		const result = await tryRedisWrite(() =>

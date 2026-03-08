@@ -4,6 +4,7 @@ import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
 import { CheckExpand } from "../check/enums/CheckExpand";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
+import { ReserveParamsSchema } from "../common/reserveParams";
 
 export const TrackQuerySchema = z.object({
 	expand: queryStringArray(z.enum([CheckExpand.BalanceFeature])).optional(),
@@ -50,6 +51,8 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 	skip_event: z.boolean().optional().meta({
 		internal: true,
 	}),
+
+	reserve: ReserveParamsSchema.optional(),
 }).refine(
 	(data) => {
 		if (data.feature_id && data.event_name) {

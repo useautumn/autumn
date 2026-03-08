@@ -8,6 +8,7 @@ import {
 	type CheckResponseV3,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { parseCheckParamsForReserve } from "@/internal/balances/utils/reserve/parseCheckParamsForReserve.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -23,8 +24,12 @@ export const handleCheck = createRoute({
 	resource: AffectedResource.Check,
 	body: CheckParamsSchema,
 	handler: async (c) => {
-		const body = c.req.valid("json");
+		let body = c.req.valid("json");
 		const ctx = c.get("ctx");
+
+		body = parseCheckParamsForReserve({
+			params: body,
+		});
 
 		const {
 			customer_id,
@@ -94,6 +99,7 @@ export const handleCheck = createRoute({
 		return c.json({
 			...transformedResponse,
 			preview,
+			reserve_key: body.reserve?.key ?? undefined,
 		});
 	},
 });
