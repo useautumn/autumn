@@ -150,7 +150,6 @@ export const getCachedFullCustomer = async ({
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
-		if (!fullCustomer.entity) return undefined; // might need to create?
 	} else {
 		fullCustomer.entity = undefined;
 	}
