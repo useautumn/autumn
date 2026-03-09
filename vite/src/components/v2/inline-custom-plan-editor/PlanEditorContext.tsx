@@ -238,15 +238,7 @@ export function useHasItemChanges() {
 			return false;
 		}
 
-		const { same } = itemsAreSame({
-			item1: item,
-			item2: initialItem,
-			features,
-			logDifferences: true,
-		});
-		console.log("[useHasItemChanges] using store | same:", same);
-		console.log("[useHasItemChanges] item.tiers:", JSON.stringify(item.tiers));
-		console.log("[useHasItemChanges] initialItem.tiers:", JSON.stringify(initialItem.tiers));
+		
 
 		return !same;
 	}, [itemDraft.session, item, initialItem, features]);
