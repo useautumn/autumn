@@ -1,14 +1,8 @@
 ---
-title: "Using React hooks"
-description: "Implement your React + Node.js app's payments and pricing model"
+title: "Setup and payments"
+description: "Implement your app's payments and pricing model"
 ---
 import CreatePlans from '/snippets/create-plans.mdx';
-
-Autumn's client-side [hooks](/react/hooks/useCustomer) allow you to handle billing directly from your frontend.
-
-<Info>
-  Client libraries are supported for React and Node.js apps. Please use our [Server-side SDK](/documentation/getting-started/setup/sdk) for other frameworks and languages.
-</Info>
 
 In this example we'll create the pricing for a premium AI chatbot. We're going to have:
 
@@ -28,7 +22,7 @@ Create a plan for each pricing tier that your app offers. In our example we'll c
 <Step>
 ### Installation
 
-[Create an Autumn Secret key](https://app.useautumn.com/sandbox/dev?tab=api_keys), and paste it in your `.env` variables. Then, install the Autumn SDK.
+[Create an Autumn Secret key](https://app.useautumn.com/sandbox/dev?tab=api_keys), and paste it in your `.env` variables. Then, install the Autumn SDK. If you're using the CLI, this will be done for you.
 
 ```bash .env
 AUTUMN_SECRET_KEY=am_sk_test_42424242...
@@ -52,6 +46,10 @@ pnpm add autumn-js
 yarn add autumn-js
 ```
 
+```bash pip
+pip install autumn-sdk
+```
+
 </CodeGroup>
 
 <Note>
@@ -60,7 +58,14 @@ yarn add autumn-js
 </Note>
 
 </Step>
+</Steps>
 
+{/* REACT DOCS */}
+<View title="React" icon="react">
+
+Autumn's client-side [hooks](/react/hooks/useCustomer) allow you to handle billing directly from your frontend.
+
+<Steps>
 <Step>
 ### Add Endpoints Server-side
 
@@ -148,9 +153,14 @@ return new Response(JSON.stringify(result.response), {
 
 </CodeGroup>
 
+<Check>
+Autumn's customer ID is the same as your internal user or org ID generated from your auth provider. No need to store any extra IDs.
+</Check>
+
 </Step>
 
 <Step>
+
 ### Add Provider Client-side
 
 Client side, wrap your application with the `<AutumnProvider>` component.
@@ -173,15 +183,6 @@ export default function RootLayout({ children }: {
   );
 }
 ```
-
-The provider accepts the following props:
-
-| Prop | Description |
-|------|-------------|
-| `backendUrl` | Base URL for the backend server (e.g., `https://api.example.com`). Defaults to current origin. |
-| `pathPrefix` | Path prefix for the Autumn routes. Defaults to `/api/autumn`, or `/api/auth/autumn` if `useBetterAuth` is true. |
-| `useBetterAuth` | Use better-auth integration. Sets `pathPrefix` to `/api/auth/autumn` and `includeCredentials` to true by default. |
-| `includeCredentials` | Include credentials (cookies) in cross-origin requests. Defaults to true if `useBetterAuth` is true. |
 
 </Step>
 
@@ -253,6 +254,7 @@ You will see your user under the [customers](https://app.useautumn.com/customers
 </Step>
 
 <Step>
+
 ### Stripe Payment Flow
 
 Call `attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. The customer is redirected to an Autumn checkout page where they can review prorations and plan changes before confirming. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
@@ -272,8 +274,8 @@ export default function PurchaseButton() {
       onClick={async () => {
         await attach({
           planId: "pro",
+          redirectMode: "always",
         });
-        // Hook automatically redirects to Autumn checkout
       }}
     >
       Select Pro Plan
@@ -287,16 +289,153 @@ This will handle any plan changes scenario (upgrades, downgrades, one-time topup
 Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
 
 <Note>
-  **Default behavior:** For new subscriptions, the hook redirects to **Stripe Checkout**. For plan changes (upgrades/downgrades), it redirects to **Autumn Checkout** where customers can review prorations before confirming.
+The **`redirectMode: "always"`** flag will always return a payment URL. 
 
-  **Build your own UI:** If you want to handle the checkout for plan changes yourself:
-  1. Call [previewAttach](/api-reference/billing/previewAttach) to get line items and pricing details
-  2. Call `attach` with `redirectMode: "if_required"` — this charges the customer automatically if they have a payment method on file
+New purchases redirect to Stripe Checkout to enter payment details, and subsequent charges redirect to an Autumn hosted, one-click confirmation page.
+
+You can build your own billing confirmation flows by using the `previewAttach` function.
 </Note>
 
 </Step>
 </Steps>
 
+</View>
+
+{/* SERVER SDK DOCS */}
+<View title="Server SDK" icon="server">
+
+<Steps>
+<Step>
+### Create an Autumn customer
+
+When the customer signs up, create an Autumn customer for them. Autumn will automatically enable the <Badge color="green">Free</Badge> plan, since you marked it with the `auto-enable` flag.
+
+<CodeGroup dropdown>
+
+```typescript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+	secretKey: 'am_sk_42424242',
+});
+
+const customer = await autumn.customers.getOrCreate({
+	customerId: "user_or_org_id_from_auth",
+	name: "John Doe",
+	email: "john@example.com",
+});
+```
+
+```python
+import asyncio
+from autumn_sdk import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.get_or_create(
+        customer_id="user_or_org_id_from_auth",
+        name="John Doe",
+        email="john@example.com",
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request POST \
+  --url https://api.useautumn.com/v1/customers \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "customer_id": "user_or_org_id_from_auth",
+  "name": "John Doe",
+  "email": "john@example.com"
+}'
+```
+
+</CodeGroup>
+
+<Check>
+Autumn's customer ID is the same as your internal user or org ID generated from your auth provider. No need to store any extra IDs.
+</Check>
+
+In the Autumn dashboard, you will see your user under the [customers](https://app.useautumn.com/customers) page.
+
+</Step>
+
+<Step>
+### Stripe Payment Flow
+
+Call `billing.attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. Redirect the customer to the returned `paymentUrl` to complete payment or confirm the plan change.
+
+<CodeGroup dropdown>
+
+```typescript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ 
+  secretKey: 'am_sk_42424242' 
+});
+
+const response = await autumn.billing.attach({
+  customerId: "user_or_org_id_from_auth",
+  planId: "pro",
+  redirectMode: "always",
+});
+
+// Redirect customer to complete payment or confirm plan change
+redirect(response.paymentUrl);
+```
+
+```python
+import asyncio
+from autumn_sdk import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+  response = await autumn.billing.attach(
+      customer_id='user_or_org_id_from_auth',
+      plan_id='pro',
+      redirect_mode='always',
+  )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+-H 'Authorization: Bearer am_sk_42424242' \
+-H 'Content-Type: application/json' \
+-d '{
+  "customer_id": "user_or_org_id_from_auth",
+  "plan_id": "pro",
+  "redirect_mode": "always"
+}'
+```
+
+</CodeGroup>
+
+<Note>
+Use Stripe's test card `4242 4242 4242 4242` to make a purchase in sandbox. You can enter any Expiry and CVV.
+</Note>
+
+This can be used for any plan changes scenario (upgrades, downgrades, one-time topups, renewals, etc).
+
+Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
+
+<Note>
+  **`redirectMode: "always"`** (shown above) always returns a `paymentUrl`, redirecting the customer to review and confirm the plan change — whether it's a new subscription, upgrade, or downgrade.
+
+  **Build your own UI:** If you want to handle checkout yourself:
+  1. Call [previewAttach](/api-reference/billing/previewAttach) to get line items and pricing details
+  2. Call `attach` with `redirectMode: "if_required"` — this only returns a `paymentUrl` when a payment action is needed (e.g., no card on file), otherwise charges automatically
+</Note>
+
+</Step>
+</Steps>
+</View>
 
 **Next: Track and limit usage**
 
@@ -308,4 +447,3 @@ Now that the plan is enabled and you've handled payments, you can now make sure 
  >
 Enforce usage limits and feature permissions using Autumn's `check` and `track` functions
  </Card>
-

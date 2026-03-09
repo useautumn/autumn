@@ -168,7 +168,7 @@ export function CustomerListTable({
 							icon={<ArrowSquareOutIcon size={16} />}
 							onClick={() => {
 								window.open(
-									"https://docs.useautumn.com/documentation/getting-started/setup/react",
+									"https://docs.useautumn.com/documentation/getting-started/setup",
 									"_blank",
 								);
 							}}
