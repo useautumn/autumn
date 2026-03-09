@@ -50,14 +50,7 @@
 					{
 						"group": "Getting Started",
 						"pages": [
-							{
-								"group": "Setup and payments",
-								"pages": [
-									"documentation/getting-started/setup/react",
-									"documentation/getting-started/setup/sdk",
-									"documentation/getting-started/setup/convex"
-								]
-							},
+							"documentation/getting-started/setup",
 							"documentation/getting-started/gating",
 							"documentation/getting-started/display-billing"
 						]
@@ -103,6 +96,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
 						]
@@ -113,8 +107,11 @@
 				"tab": "Examples",
 				"icon": "graduation-cap",
 				"pages": [
-					"examples/credits",
+					"examples/monetary-credits",
 					"examples/prepaid",
+					"examples/per-seat",
+					"examples/pay-as-you-go-overages",
+					"examples/entity-balances",
 					"examples/trial-card-required",
 					"examples/trial-card-not-required"
 				]
