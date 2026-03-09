@@ -11,6 +11,7 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
+import { saveLockReceipt } from "../../utils/lock/saveLockReceipt.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
@@ -76,21 +77,30 @@ export const executePostgresDeduction = async ({
 		deductions,
 	});
 
-	const executeDeduction = async (): Promise<
-		Record<string, DeductionUpdate>
-	> => {
+	const executeDeduction = async (): Promise<{
+		updates: Record<string, DeductionUpdate>;
+		mutationLogs: MutationLogItem[];
+	}> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
+		let allMutationLogs: MutationLogItem[] = [];
 
 		// Need to deduct from customer entitlement...
 		for (const deduction of deductions) {
-			const { feature, deduction: toDeduct, targetBalance } = deduction;
+			const {
+				feature,
+				deduction: toDeduct,
+				targetBalance,
+				lockReceipt,
+				unwindValue,
+			} = deduction;
 
 			const {
 				customerEntitlementDeductions,
 				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
+				lock: preparedLock,
 			} = prepareFeatureDeduction({
 				ctx,
 				fullCustomer,
@@ -108,6 +118,8 @@ export const executePostgresDeduction = async ({
 					sorted_entitlements: customerEntitlementDeductions,
 					amount_to_deduct: toDeduct ?? null,
 					target_balance: targetBalance ?? null,
+					lock_receipt: lockReceipt ?? null,
+					unwind_value: unwindValue ?? null,
 					target_entity_id: entityId || null,
 					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
@@ -124,6 +136,7 @@ export const executePostgresDeduction = async ({
 				updates: Record<string, DeductionUpdate>;
 				remaining: number;
 				rollover_updates: RolloverOverwrite[];
+				mutation_logs: MutationLogItem[];
 			};
 
 			if (!resultJson) {
@@ -132,7 +145,7 @@ export const executePostgresDeduction = async ({
 				});
 			}
 
-			const { updates, rollover_updates } = resultJson;
+			const { updates, rollover_updates, mutation_logs } = resultJson;
 			logDeductionUpdates({
 				ctx,
 				fullCustomer,
@@ -140,6 +153,7 @@ export const executePostgresDeduction = async ({
 				source: "executePostgresDeduction",
 			});
 			allUpdates = { ...allUpdates, ...updates };
+			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
 			if (rollover_updates?.length > 0) {
 				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
 			}
@@ -169,6 +183,16 @@ export const executePostgresDeduction = async ({
 						fullCus: fullCustomer,
 						cusEntId,
 						update,
+					});
+				}
+
+				if (preparedLock?.enabled) {
+					await saveLockReceipt({
+						lock: preparedLock,
+						customerId: fullCustomer.id || customerId,
+						featureId: feature.id,
+						entityId,
+						items: mutation_logs ?? [],
 					});
 				}
 			} catch (error) {
@@ -220,10 +244,13 @@ export const executePostgresDeduction = async ({
 			rolloverOverwrites: allRolloverOverwrites,
 		});
 
-		return allUpdates;
+		return {
+			updates: allUpdates,
+			mutationLogs: allMutationLogs,
+		};
 	};
 
-	const allUpdates = resolvedOptions.paidAllocated
+	const deductionResult = resolvedOptions.paidAllocated
 		? await withLock({
 				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
 				ttlMs: 60000,
@@ -235,7 +262,7 @@ export const executePostgresDeduction = async ({
 	return {
 		oldFullCus,
 		fullCus: fullCustomer,
-		updates: allUpdates,
-		mutationLogs: [],
+		updates: deductionResult.updates,
+		mutationLogs: deductionResult.mutationLogs,
 	};
 };

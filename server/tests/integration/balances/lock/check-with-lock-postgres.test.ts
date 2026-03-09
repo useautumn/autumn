@@ -1,4 +1,5 @@
 import { test } from "bun:test";
+import type { ApiCustomerV5 } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -42,14 +43,19 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-postgres: /check with loc
 		skip_cache: true,
 	});
 
-	// // Release lock
-	// await autumnV2.balances.finalize({
-	// 	finalize_action: "confirm",
-	// 	overwrite_value: 4,
-	// 	lock_key: lockKey,
-	// });
+	// Release lock
+	await autumnV2.balances.finalize(
+		{
+			finalize_action: "confirm",
+			overwrite_value: 12,
+			lock_key: lockKey,
+		},
+		{
+			skipCache: true,
+		},
+	);
 
-	// const customer = await autumnV2.customers.get<ApiCustomerV5>(customerId);
+	const customer = await autumnV2.customers.get<ApiCustomerV5>(customerId);
 
-	// console.log("Message balance:", customer.balances[TestFeature.Messages]);
+	console.log("Message balance:", customer.balances[TestFeature.Messages]);
 });
