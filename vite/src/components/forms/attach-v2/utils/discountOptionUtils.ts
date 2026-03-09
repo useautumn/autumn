@@ -48,6 +48,21 @@ export const stripeCouponToOption = (
 	source: "stripe",
 });
 
+const filterStripeCouponsByProduct = ({
+	stripeCoupons,
+	productId,
+}: {
+	stripeCoupons: Stripe.Coupon[];
+	productId: string | undefined;
+}) => {
+	if (!productId) return stripeCoupons;
+
+	return stripeCoupons.filter((coupon) => {
+		const productIds = coupon.applies_to?.products;
+		return !productIds?.length || productIds.includes(productId);
+	});
+};
+
 /** Builds a merged, deduplicated list of discount options from Autumn rewards and Stripe coupons */
 export const buildDiscountOptions = ({
 	rewards,
@@ -60,19 +75,18 @@ export const buildDiscountOptions = ({
 	stripeCoupons: Stripe.Coupon[];
 	productId: string | undefined;
 }): DiscountOption[] => {
-	// Build Autumn reward options (filtered by type and product)
-	const discountRewards = filterDiscountRewards(rewards);
-	const productFilteredRewards = filterRewardsByProduct({
-		rewards: discountRewards,
+	const autumnOptions = filterRewardsByProduct({
+		rewards: filterDiscountRewards(rewards),
 		rewardPrograms,
 		productId,
-	});
-	const autumnOptions = productFilteredRewards.map(rewardToOption);
+	}).map(rewardToOption);
 
-	// Build Stripe coupon options, deduplicating against ALL Autumn rewards (not just filtered ones)
-	const autumnRewardIds = new Set(rewards.map((r) => r.id));
-	const stripeOnlyOptions = stripeCoupons
-		.filter((coupon) => !autumnRewardIds.has(coupon.id))
+	const autumnOptionIds = new Set(autumnOptions.map((option) => option.id));
+	const stripeOnlyOptions = filterStripeCouponsByProduct({
+		stripeCoupons,
+		productId,
+	})
+		.filter((coupon) => !autumnOptionIds.has(coupon.id))
 		.map(stripeCouponToOption);
 
 	return [...autumnOptions, ...stripeOnlyOptions];
