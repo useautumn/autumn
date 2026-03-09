@@ -94,7 +94,7 @@ export const setupMultiAttachBillingContext = async ({
 		targetCustomerProduct: undefined,
 		params,
 		// paramDiscounts: params.discounts,
-		// newBillingSubscription: params.new_billing_subscription || undefined,
+		newBillingSubscription: params.new_billing_subscription || undefined,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({
