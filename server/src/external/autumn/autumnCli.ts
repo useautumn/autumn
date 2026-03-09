@@ -850,8 +850,20 @@ export class AutumnInt {
 			const data = await this.post(`/balances.delete`, params);
 			return data;
 		},
-		finalize: async (params: FinalizeLockParamsV0) => {
-			const data = await this.post(`/balances.finalize`, params);
+		finalize: async (
+			params: FinalizeLockParamsV0,
+			{
+				skipCache = false,
+				headers,
+			}: {
+				skipCache?: boolean;
+				headers?: Record<string, string>;
+			} = {},
+		) => {
+			const data = await this.post(`/balances.finalize`, params, {
+				...(skipCache ? { "x-skip-cache": "true" } : {}),
+				...headers,
+			});
 			return data;
 		},
 	};

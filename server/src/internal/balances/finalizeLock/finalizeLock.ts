@@ -1,6 +1,11 @@
-import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
+import {
+	type FinalizeLockParamsV0,
+	findFeatureById,
+	tryCatch,
+} from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction.js";
 import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { calculateUnwindValue } from "@/internal/balances/utils/lock/unwindLockUtils.js";
@@ -8,6 +13,7 @@ import { deductionUpdatesToModifiedIds } from "@/internal/balances/utils/sync/de
 import { globalSyncBatchingManagerV2 } from "@/internal/balances/utils/sync/SyncBatchingManagerV2.js";
 import type { DeductionUpdate } from "@/internal/balances/utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
+import { RedisDeductionError } from "@/internal/balances/utils/types/redisDeductionError.js";
 import type { RolloverUpdate } from "@/internal/balances/utils/types/rolloverUpdate.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
@@ -74,21 +80,51 @@ export const finalizeLock = async ({
 	const deduction: FeatureDeduction = {
 		feature,
 		deduction: additionalValue,
+		lockReceipt: receipt,
 
 		// For unwinding when finalizing a lock
 		unwindValue,
 		lockReceiptKey,
 	};
 
-	const { updates, rolloverUpdates } = await executeRedisDeduction({
-		ctx,
-		fullCustomer,
-		entityId: receipt.entity_id ?? undefined,
-		deductions: [deduction],
-		deductionOptions: {
-			triggerAutoTopUp: true,
-		},
-	});
+	const deductionOptions = {
+		triggerAutoTopUp: true,
+	};
+
+	const { data: redisResult, error } = await tryCatch(
+		executeRedisDeduction({
+			ctx,
+			fullCustomer,
+			entityId: receipt.entity_id ?? undefined,
+			deductions: [deduction],
+			deductionOptions,
+		}),
+	);
+
+	if (error) {
+		if (error instanceof RedisDeductionError && error.shouldFallback()) {
+			ctx.logger.warn(
+				`Falling back to Postgres for finalize lock: ${error.code}`,
+			);
+
+			await executePostgresDeduction({
+				ctx,
+				fullCustomer,
+				customerId: receipt.customer_id,
+				entityId: receipt.entity_id ?? undefined,
+				deductions: [deduction],
+				options: deductionOptions,
+			});
+
+			return {
+				success: true,
+			};
+		}
+
+		throw error;
+	}
+
+	const { updates, rolloverUpdates } = redisResult;
 
 	queueSyncItem({
 		ctx,
