@@ -1,5 +1,7 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { ErrCode, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -195,11 +197,58 @@ test.concurrent(`${chalk.yellowBright("error: one-off to paid recurring transiti
 	});
 });
 
+// 5. Free product can update to a free one-off product
+test.concurrent(`${chalk.yellowBright("free update: free to free one-off stays allowed")}`, async () => {
+	const free = products.base({
+		id: "free-to-oneoff-free",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const oneOffFreeMessagesItem = constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		price: 0,
+		billingUnits: 100,
+		includedUsage: 200,
+		isOneOff: true,
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "free-to-oneoff-free",
+		setup: [s.customer({}), s.products({ list: [free] })],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: free.id,
+		items: [oneOffFreeMessagesItem],
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+	});
+
+	expect(preview.total).toBe(0);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: free.id,
+		items: [oneOffFreeMessagesItem],
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+	});
+
+	const customer = await autumnV1.customers.get(customerId);
+	await expectProductActive({ customer, productId: free.id });
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 200,
+		balance: 200,
+		usage: 0,
+	});
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // INVOICE MODE ERRORS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// 5. Cannot use invoice mode when there's no billing change
+// 6. Cannot use invoice mode when there's no billing change
 test.concurrent(`${chalk.yellowBright("error: invoice mode with no billing change")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });

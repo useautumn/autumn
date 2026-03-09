@@ -12,12 +12,23 @@ export function backendToDisplayQuantity({
 	backendOptions,
 	prepaidItems,
 }: {
-	backendOptions: { feature_id: string; quantity: number }[];
-	prepaidItems: { feature_id?: string | null; billing_units?: number | null }[];
+	backendOptions: {
+		feature_id: string;
+		quantity: number;
+		internal_feature_id?: string | null;
+	}[];
+	prepaidItems: {
+		feature_id?: string | null;
+		billing_units?: number | null;
+		feature?: { internal_id?: string | null } | null;
+	}[];
 }): Record<string, number> {
 	const backendLookup = backendOptions.reduce(
 		(acc, option) => {
 			acc[option.feature_id] = option.quantity;
+			if (option.internal_feature_id) {
+				acc[option.internal_feature_id] = option.quantity;
+			}
 			return acc;
 		},
 		{} as Record<string, number>,
@@ -25,10 +36,16 @@ export function backendToDisplayQuantity({
 
 	return prepaidItems.reduce(
 		(acc, item) => {
-			if (!item.feature_id) return acc;
+			const featureId = item.feature_id;
+			const internalFeatureId = item.feature?.internal_id;
+			const optionKey = featureId ?? internalFeatureId;
+			if (!optionKey) return acc;
 
-			const backendQuantity = backendLookup[item.feature_id] ?? 0;
-			acc[item.feature_id] = getPrepaidDisplayQuantity({
+			const backendQuantity =
+				(featureId ? backendLookup[featureId] : undefined) ??
+				(internalFeatureId ? backendLookup[internalFeatureId] : undefined) ??
+				0;
+			acc[optionKey] = getPrepaidDisplayQuantity({
 				quantity: backendQuantity,
 				billingUnits: item.billing_units,
 			});

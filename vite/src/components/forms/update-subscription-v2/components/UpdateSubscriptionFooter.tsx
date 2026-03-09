@@ -15,6 +15,7 @@ export function UpdateSubscriptionFooter() {
 	const {
 		isPending,
 		hasChanges,
+		isVersionLoading,
 		previewQuery,
 		handleConfirm,
 		handleInvoiceUpdate,
@@ -22,7 +23,7 @@ export function UpdateSubscriptionFooter() {
 
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
-	const isReady = hasChanges && !isLoading && !hasError;
+	const isReady = hasChanges && !isLoading && !hasError && !isVersionLoading;
 
 	const [showFooter, setShowFooter] = useState(false);
 
@@ -46,7 +47,11 @@ export function UpdateSubscriptionFooter() {
 			>
 				<Popover>
 					<PopoverTrigger asChild>
-						<Button variant="secondary" className="w-full" disabled={isPending}>
+						<Button
+							variant="secondary"
+							className="w-full"
+							disabled={isPending || isVersionLoading}
+						>
 							Send an Invoice
 						</Button>
 					</PopoverTrigger>
@@ -86,6 +91,7 @@ export function UpdateSubscriptionFooter() {
 					className="w-full"
 					onClick={handleConfirm}
 					isLoading={isPending}
+					disabled={isVersionLoading}
 				>
 					Confirm Update
 				</Button>

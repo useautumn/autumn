@@ -1,6 +1,13 @@
-import { cusProductToPrices, ErrCode, RecaseError } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
+import {
+	cusProductToPrices,
+	ErrCode,
+	isFreeProduct,
+	RecaseError,
+} from "@autumn/shared";
 import { isOneOff } from "@/internal/products/productUtils";
 
 export const handleProductTypeTransitionErrors = ({
@@ -22,10 +29,14 @@ export const handleProductTypeTransitionErrors = ({
 	});
 	const newPrices = cusProductToPrices({ cusProduct: newCustomerProduct });
 
+	const currentIsFree = isFreeProduct({ prices: currentPrices });
+	const newIsFree = isFreeProduct({ prices: newPrices });
 	const currentIsOneOff = isOneOff(currentPrices);
 	const newIsOneOff = isOneOff(newPrices);
+	const currentIsPaidRecurring = !currentIsFree && !currentIsOneOff;
+	const newIsPaidRecurring = !newIsFree && !newIsOneOff;
 
-	if (!currentIsOneOff && newIsOneOff) {
+	if (currentIsPaidRecurring && newIsOneOff) {
 		throw new RecaseError({
 			message:
 				"Cannot update a subscription from a recurring product to a one-off product",
@@ -34,7 +45,7 @@ export const handleProductTypeTransitionErrors = ({
 		});
 	}
 
-	if (currentIsOneOff && !newIsOneOff) {
+	if (currentIsOneOff && newIsPaidRecurring) {
 		throw new RecaseError({
 			message:
 				"Cannot update a subscription from a one-off product to a recurring product",

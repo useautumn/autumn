@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	AppEnv,
 	getPrepaidDisplayQuantity,
 	type ProductV2,
 	UsageModel,
@@ -17,7 +18,7 @@ function makeProduct({ items }: { items: ProductV2["items"] }): ProductV2 {
 		is_default: false,
 		version: 1,
 		group: null,
-		env: "sandbox" as any,
+		env: AppEnv.Sandbox,
 		items,
 		created_at: Date.now(),
 	};
@@ -85,6 +86,27 @@ describe("backendToDisplayQuantity", () => {
 		});
 
 		expect(result).toEqual({});
+	});
+
+	test("should match backend options by internal_feature_id", () => {
+		const result = backendToDisplayQuantity({
+			backendOptions: [
+				{
+					feature_id: "messages",
+					internal_feature_id: "feat_internal_messages",
+					quantity: 3,
+				},
+			],
+			prepaidItems: [
+				{
+					feature_id: "messages",
+					feature: { internal_id: "feat_internal_messages" },
+					billing_units: 1000,
+				},
+			],
+		});
+
+		expect(result).toEqual({ messages: 3000 });
 	});
 });
 
