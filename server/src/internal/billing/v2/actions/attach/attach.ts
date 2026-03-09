@@ -28,12 +28,14 @@ export async function attach({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+
 	contextOverride,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+
 	contextOverride?: BillingContextOverride;
 }): Promise<AttachResult> {
 	// 1. Setup

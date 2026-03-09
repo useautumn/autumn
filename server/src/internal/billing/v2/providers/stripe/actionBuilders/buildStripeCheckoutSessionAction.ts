@@ -69,7 +69,7 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 7. Build params (only variable params - static params added in execute)
 	const params: Stripe.Checkout.SessionCreateParams = {
-		customer: stripeCustomer.id,
+		customer: stripeCustomer?.id ?? "none",
 		mode,
 		line_items: lineItems,
 		subscription_data: subscriptionData,
