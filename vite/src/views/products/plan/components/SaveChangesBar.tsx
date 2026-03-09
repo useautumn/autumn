@@ -55,15 +55,15 @@ export const SaveChangesBar = ({
 	});
 
 	const handleSaveClicked = async () => {
-		if (
-			product.planType === "paid" &&
-			product.basePriceType !== "usage" &&
-			!basePrice?.price
-		) {
-			toast.error("Please add a plan price greater than 0, or remove it.");
-			setSaving(false);
-			return;
-		}
+		// if (
+		// 	product.planType === "paid" &&
+		// 	product.basePriceType !== "usage" &&
+		// 	!basePrice?.price
+		// ) {
+		// 	toast.error("Please add a plan price greater than 0, or remove it.");
+		// 	setSaving(false);
+		// 	return;
+		// }
 
 		if (!isOnboarding && isLoading) {
 			toast.error("Plan counts are loading");
