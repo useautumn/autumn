@@ -72,8 +72,7 @@ export function EditPlanFeatureSheet({
 	};
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		console.log("[VolumeModeChange] switching to mode:", mode);
-		console.log("[VolumeModeChange] item.tiers BEFORE:", JSON.stringify(item?.tiers));
+		
 		setVolumePricingMode(mode);
 		if (!item?.tiers) {
 			console.log("[VolumeModeChange] no tiers, returning early");
