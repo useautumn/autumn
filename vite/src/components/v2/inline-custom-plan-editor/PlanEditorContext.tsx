@@ -229,9 +229,7 @@ export function useHasItemChanges() {
 				features,
 				logDifferences: true,
 			});
-			console.log("[useHasItemChanges] using itemDraft.session | same:", same);
-			console.log("[useHasItemChanges] draftItem.tiers:", JSON.stringify(itemDraft.session.draftItem.tiers));
-			console.log("[useHasItemChanges] initialItem.tiers:", JSON.stringify(itemDraft.session.initialItem.tiers));
+			
 			return !same;
 		}
 
