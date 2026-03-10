@@ -89,6 +89,7 @@ type WorkflowRunner = "sqs" | "hatchet" | "eventbridge";
 /** Required options for EventBridge scheduled workflows */
 export type EventBridgeScheduleOptions = {
 	scheduleAt: Date;
+	scheduleName: string;
 };
 
 type WorkflowConfig<TPayload> = {
@@ -156,6 +157,7 @@ type TriggerOptions = {
 	delayMs?: number;
 	metadata?: Record<string, string>;
 	scheduleAt?: Date;
+	scheduleName?: string;
 };
 
 // ============ Generic Trigger Function (internal) ============
@@ -179,18 +181,16 @@ const triggerWorkflow = async <T extends WorkflowName>({
 			metadata: options?.metadata,
 		});
 	} else if (config.runner === "eventbridge") {
-		if (!options?.scheduleAt) {
+		if (!options?.scheduleAt || !options?.scheduleName) {
 			throw new Error(
-				`scheduleAt is required for eventbridge workflow: ${name}`,
+				`scheduleAt and scheduleName are required for eventbridge workflow: ${name}`,
 			);
 		}
 		const sqsMessageBody = JSON.stringify({
 			name: config.jobName,
 			data: payload,
 		});
-		// Schedule name derived from hashed_key for deterministic lookup on cancel
-		const schedulePayload = payload as ExpireLockReceiptPayload;
-		const scheduleName = `lock-${schedulePayload.hashedKey}`;
+		const scheduleName = options.scheduleName;
 		await createSchedule({
 			scheduleName,
 			scheduleAt: options.scheduleAt,
@@ -264,6 +264,7 @@ export const workflows = {
 			payload,
 			options: {
 				scheduleAt: scheduleOptions.scheduleAt,
+				scheduleName: scheduleOptions.scheduleName,
 			},
 		}),
 };

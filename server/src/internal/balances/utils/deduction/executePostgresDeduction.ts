@@ -18,6 +18,7 @@ import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
+import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import {
 	type RolloverOverwrite,
 	syncCustomerEntitlementUpdatesToCache,
@@ -165,6 +166,20 @@ export const executePostgresDeduction = async ({
 			}
 
 			try {
+				applyRolloverUpdatesToFullCustomer({
+					fullCus: fullCustomer,
+					rolloverUpdates: Object.fromEntries(
+						(rollover_updates ?? []).map((rollover) => [
+							rollover.id,
+							{
+								balance: rollover.balance,
+								usage: rollover.usage,
+								entities: rollover.entities,
+							},
+						]),
+					),
+				});
+
 				for (const cusEntId of Object.keys(updates)) {
 					const update = updates[cusEntId];
 					const cusEnt = customerEntitlements.find((ce) => ce.id === cusEntId);
@@ -177,13 +192,6 @@ export const executePostgresDeduction = async ({
 						oldFullCustomer: oldFullCus,
 						update,
 					});
-
-					// await handlePaidAllocatedCusEnt({
-					// 	ctx,
-					// 	cusEnt,
-					// 	fullCus: fullCustomer,
-					// 	updates,
-					// });
 
 					applyDeductionUpdateToFullCustomer({
 						fullCus: fullCustomer,
@@ -242,6 +250,7 @@ export const executePostgresDeduction = async ({
 		// Atomically update the Redis cache with the deduction results.
 		// Uses the old fullCustomer's next_reset_at as an optimistic guard
 		// to prevent stale writes if a concurrent reset occurred.
+
 		await syncCustomerEntitlementUpdatesToCache({
 			ctx,
 			customerId,

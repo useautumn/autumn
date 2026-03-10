@@ -16,6 +16,7 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { runTrackV2 } from "@server/internal/balances/track/runTrackV2";
 import { getTrackFeatureDeductions } from "@server/internal/balances/track/utils/getFeatureDeductions.js";
 import { featureToCreditSystem } from "@server/internal/features/creditSystemUtils.js";
+import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
 import { workflows } from "@/queue/workflows.js";
 import type { CheckData } from "./checkTypes/CheckData.js";
 
@@ -104,6 +105,11 @@ export const runCheckWithTrack = async ({
 
 	// Schedule lock expiration if it exists
 	if (body.lock?.expires_at && allowed) {
+		const scheduleName = buildLockScheduleName({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			hashedKey: body.lock.hashed_key,
+		});
 		await workflows.triggerExpireLockReceipt(
 			{
 				orgId: ctx.org.id,
@@ -114,6 +120,7 @@ export const runCheckWithTrack = async ({
 			},
 			{
 				scheduleAt: new Date(body.lock.expires_at),
+				scheduleName,
 			},
 		);
 	}
