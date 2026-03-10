@@ -76,7 +76,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-1: lock across two rollo
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Verify state after setup: r[0]=100, r[1]=100, main=100. Total=300.
 	const afterSetup = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -93,7 +93,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-1: lock across two rollo
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 250,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	const afterCheck = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -109,7 +109,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-1: lock across two rollo
 	// Unwind r[1]=20 → r[1]=20. r[0] stays 0.
 	// Final: r[0]=0, r[1]=20, main=100. Total=120.
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 80,
 	});
@@ -174,7 +174,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-3: lock within rollover,
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Verify state after setup: r[0]=100, main=100. Total=200.
 	const afterSetup = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -191,7 +191,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-3: lock within rollover,
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 30,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	const afterCheck = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -207,7 +207,7 @@ test.concurrent(`${chalk.yellowBright("lock-rollover RO-3: lock within rollover,
 	// Re-deduct 150: r[0]=100→0, main=100→50.
 	// Final: r[0]=0, main=50. Total=50.
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 150,
 	});

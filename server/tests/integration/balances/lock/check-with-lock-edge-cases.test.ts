@@ -95,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-3: lock on free, upgrade to 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// check lock=40: deducts all 40 from monthly(free)=50→10.
 	// Receipt: [monthly(free):40]
@@ -103,7 +103,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-3: lock on free, upgrade to 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 40,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	const afterCheck = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -140,7 +140,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-3: lock on free, upgrade to 
 	// LIFO: monthly(free) not found → skip, remaining_signed_unwind_value=-10.
 	// effective_additional = 0 + (-10) = -10 → refund 10 onto monthly(pro)=60→70.
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 30,
 	});
@@ -196,7 +196,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-1: lock crosses monthly→li
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Check lock=60: exhausts monthly(free)=50, then deducts 10 from lifetime.
 	// Receipt: [monthly(free):50, lifetime:10]
@@ -204,7 +204,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-1: lock crosses monthly→li
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 60,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	// Verify state after check: total=90 (lifetime=90, monthly=0)
@@ -235,7 +235,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-1: lock crosses monthly→li
 	// LIFO: restore 3 to lifetime (last bucket touched). lifetime=90→93.
 	// monthly(pro) not in receipt → stays at 80.
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 57,
 	});
@@ -291,7 +291,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-2: lock crosses monthly→li
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Check lock=60: exhausts monthly(free)=50, deducts 10 from lifetime.
 	// Receipt: [monthly(free):50, lifetime:10]
@@ -299,7 +299,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-2: lock crosses monthly→li
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 60,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	// Verify state after check: total=90
@@ -329,7 +329,7 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-2: lock crosses monthly→li
 	// Continue deducting from lifetime (last bucket in receipt). lifetime=90→87.
 	// monthly(pro) not in receipt → stays at 80.
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 63,
 	});

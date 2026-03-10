@@ -116,7 +116,7 @@ export const runCheckWithTrack = async ({
 					orgId: ctx.org.id,
 					env: ctx.env,
 					customerId: body.customer_id,
-					lockKey: body.lock.key,
+					lockId: body.lock.lock_id,
 					hashedKey: body.lock.hashed_key,
 				},
 				{
@@ -135,7 +135,7 @@ export const runCheckWithTrack = async ({
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
-		// lock_key: body.lock?.key,
+		// lock_id: body.lock?.lock_id,
 	});
 
 	return checkResponse;

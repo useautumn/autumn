@@ -34,7 +34,7 @@ export const buildFinalizeLockContext = async ({
 }): Promise<FinalizeLockContext> => {
 	const { receipt, lockReceiptKey } = await fetchLockReceipt({
 		ctx,
-		lockKey: params.lock_key,
+		lockId: params.lock_id,
 	});
 
 	const fullCustomer = await getOrSetCachedFullCustomer({

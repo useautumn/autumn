@@ -2,8 +2,8 @@ import { z } from "zod/v4";
 
 export const LockParamsSchema = z
 	.object({
+		lock_id: z.string().max(256),
 		enabled: z.literal(true),
-		key: z.string().max(256),
 		hashed_key: z.string().optional().meta({
 			internal: true,
 		}),
@@ -14,7 +14,7 @@ export const LockParamsSchema = z
 	});
 
 export const ParsedLockParamsSchema = LockParamsSchema.extend({
-	key: z.string().max(256),
+	lock_id: z.string().max(256),
 	hashed_key: z.string(),
 });
 

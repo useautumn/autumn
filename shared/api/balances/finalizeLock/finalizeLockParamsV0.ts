@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 export const FinalizeLockParamsV0Schema = z
 	.object({
-		lock_key: z.string(),
+		lock_id: z.string(),
 		action: z.enum(["confirm", "release"]),
 		override_value: z.number().optional(),
 	})
