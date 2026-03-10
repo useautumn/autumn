@@ -12,8 +12,8 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
-from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
+from typing import Any, List, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypedDict
 
 
 class GetPlanGlobalsTypedDict(TypedDict):
@@ -320,51 +320,6 @@ class GetPlanReset(BaseModel):
         return m
 
 
-GetPlanToTypedDict = TypeAliasType("GetPlanToTypedDict", Union[float, str])
-
-
-GetPlanTo = TypeAliasType("GetPlanTo", Union[float, str])
-
-
-class GetPlanTierTypedDict(TypedDict):
-    to: GetPlanToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
-
-
-class GetPlanTier(BaseModel):
-    to: GetPlanTo
-
-    amount: float
-
-    flat_amount: OptionalNullable[float] = UNSET
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
 GetPlanTierBehavior = Union[
     Literal[
         "graduated",
@@ -409,7 +364,7 @@ class GetPlanItemPriceTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
-    tiers: NotRequired[List[GetPlanTierTypedDict]]
+    tiers: NotRequired[List[Nullable[Any]]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[GetPlanTierBehavior]
     interval_count: NotRequired[float]
@@ -432,7 +387,7 @@ class GetPlanItemPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
-    tiers: Optional[List[GetPlanTier]] = None
+    tiers: Optional[List[Nullable[Any]]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[GetPlanTierBehavior] = None

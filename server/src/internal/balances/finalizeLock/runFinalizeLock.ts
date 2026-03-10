@@ -29,7 +29,7 @@ export const runFinalizeLock = async ({
 		await cancelLockExpiry({
 			orgId: ctx.org.id,
 			env: ctx.env,
-			hashedKey: Bun.hash(params.lock_key).toString(),
+			hashedKey: Bun.hash(params.lock_id).toString(),
 		});
 	} catch (error) {
 		ctx.logger.error(`Failed to cancel lock expiry: ${error}`);

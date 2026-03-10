@@ -9,7 +9,8 @@
 		"moduleResolution": "bundler",
 		"module": "Preserve",
 
-
+		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
+    "types": ["bun", "node"],
 		// "declaration": true,
 		"jsx": "react-jsx",
 		"rootDir": ".",

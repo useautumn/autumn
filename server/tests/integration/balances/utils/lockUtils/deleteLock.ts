@@ -4,12 +4,12 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 
 export const deleteLock = async ({
 	ctx,
-	lockKey,
+	lockId,
 }: {
 	ctx: TestContext;
-	lockKey: string;
+	lockId: string;
 }) => {
-	const hashedKey = Bun.hash(lockKey).toString();
+	const hashedKey = Bun.hash(lockId).toString();
 	const redisReceiptKey = buildLockReceiptKey({
 		orgId: ctx.org.id,
 		env: ctx.env,

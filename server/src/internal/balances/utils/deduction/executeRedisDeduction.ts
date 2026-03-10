@@ -3,7 +3,7 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { redis } from "@/external/redis/initRedis.js";
+import { currentRegion, redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
@@ -127,7 +127,12 @@ export const executeRedisDeduction = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
-			lock: preparedLock ?? null,
+			lock: preparedLock
+				? {
+						...preparedLock,
+						region: currentRegion,
+					}
+				: null,
 
 			// For unwinding when finalizing a lock
 			unwind_value: unwindValue ?? null,

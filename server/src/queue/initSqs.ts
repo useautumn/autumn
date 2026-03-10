@@ -1,23 +1,8 @@
 import { SQSClient } from "@aws-sdk/client-sqs";
-
-const DEFAULT_AWS_REGION = "us-west-2";
-
-/**
- * Extracts the AWS region from a given SQS queue URL.
- * Returns undefined if the URL is empty or invalid.
- */
-export function extractRegionFromQueueUrl({
-	queueUrl,
-}: {
-	queueUrl: string | undefined;
-}): string | undefined {
-	if (!queueUrl) return undefined;
-	// SQS URL format: https://sqs.<region>.amazonaws.com/<account>/<queueName>
-	const match = queueUrl.match(
-		/^https:\/\/sqs\.([a-z0-9-]+)\.amazonaws\.com\//,
-	);
-	return match ? match[1] : undefined;
-}
+import {
+	DEFAULT_AWS_REGION,
+	extractRegionFromQueueUrl,
+} from "@/external/aws/awsRegionUtils.js";
 
 // ============ FIFO Queue (primary) ============
 
