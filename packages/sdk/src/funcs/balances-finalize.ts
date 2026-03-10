@@ -26,46 +26,15 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Checks whether a customer currently has enough balance to use a feature.
- *
- * Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
- *
- * @example
- * ```typescript
- * // Check access for a feature
- * const response = await client.check({ customerId: "cus_123", featureId: "messages" });
- * ```
- *
- * @example
- * ```typescript
- * // Check and consume 3 units in one call
- * const response = await client.check({
- *
- *   customerId: "cus_123",
- *   featureId: "messages",
- *   requiredBalance: 3,
- *   sendEvent: true,
- * });
- * ```
- *
- * @param customerId - The ID of the customer.
- * @param featureId - The ID of the feature.
- * @param entityId - The ID of the entity for entity-scoped balances (e.g., per-seat limits). (optional)
- * @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
- * @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
- * @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
- * @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
- * @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
- *
- * @returns Whether access is allowed, plus the current balance for that feature.
+ * Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
  */
-export function check(
+export function balancesFinalize(
   client: AutumnCore,
-  request: models.CheckParams,
+  request: models.FinalizeBalanceParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CheckResponse,
+    models.FinalizeLockResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -85,12 +54,12 @@ export function check(
 
 async function $do(
   client: AutumnCore,
-  request: models.CheckParams,
+  request: models.FinalizeBalanceParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CheckResponse,
+      models.FinalizeLockResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -105,7 +74,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CheckParams$outboundSchema, value),
+    (value) => z.parse(models.FinalizeBalanceParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -114,7 +83,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/balances.check")();
+  const path = pathToFunc("/v1/balances.finalize")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -133,7 +102,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "check",
+    operationID: "finalizeLock",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -172,7 +141,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CheckResponse,
+    models.FinalizeLockResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -182,7 +151,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.CheckResponse$inboundSchema),
+    M.json(200, models.FinalizeLockResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

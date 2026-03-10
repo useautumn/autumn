@@ -3,6 +3,7 @@ import {
 	balancesCheckContract,
 	balancesCreateContract,
 	balancesDeleteContract,
+	balancesFinalizeContract,
 	balancesTrackContract,
 	balancesUpdateContract,
 } from "./balancesContract.js";
@@ -85,6 +86,7 @@ export const v2_1ContractRouter = oc.router({
 	balancesCreate: balancesCreateContract,
 	balancesUpdate: balancesUpdateContract,
 	balancesDelete: balancesDeleteContract,
+	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
 

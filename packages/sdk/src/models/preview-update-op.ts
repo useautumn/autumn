@@ -108,8 +108,8 @@ export type PreviewUpdateTo = number | string;
 
 export type PreviewUpdateTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewUpdateTierBehavior = {
@@ -631,8 +631,8 @@ export function previewUpdateToToJSON(
 /** @internal */
 export type PreviewUpdateTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -642,8 +642,8 @@ export const PreviewUpdateTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

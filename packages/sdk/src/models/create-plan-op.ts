@@ -87,12 +87,12 @@ export type CreatePlanResetRequest = {
   intervalCount?: number | undefined;
 };
 
-export type CreatePlanToRequest = number | string;
+export type CreatePlanTo = number | string;
 
-export type CreatePlanTierRequest = {
+export type CreatePlanTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const CreatePlanTierBehaviorRequest = {
@@ -146,7 +146,7 @@ export type CreatePlanItemPriceRequest = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<CreatePlanTierRequest> | undefined;
+  tiers?: Array<CreatePlanTier> | undefined;
   tierBehavior?: CreatePlanTierBehaviorRequest | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -501,14 +501,6 @@ export type CreatePlanResetResponse = {
   intervalCount?: number | undefined;
 };
 
-export type CreatePlanToResponse = number | string;
-
-export type CreatePlanTierResponse = {
-  to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
-};
-
 export const CreatePlanTierBehaviorResponse = {
   Graduated: "graduated",
   Volume: "volume",
@@ -557,7 +549,7 @@ export type CreatePlanItemPriceResponse = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<CreatePlanTierResponse> | undefined;
+  tiers?: Array<any | null> | undefined;
   tierBehavior?: CreatePlanTierBehaviorResponse | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
@@ -873,38 +865,34 @@ export function createPlanResetRequestToJSON(
 }
 
 /** @internal */
-export type CreatePlanToRequest$Outbound = number | string;
+export type CreatePlanTo$Outbound = number | string;
 
 /** @internal */
-export const CreatePlanToRequest$outboundSchema: z.ZodMiniType<
-  CreatePlanToRequest$Outbound,
-  CreatePlanToRequest
+export const CreatePlanTo$outboundSchema: z.ZodMiniType<
+  CreatePlanTo$Outbound,
+  CreatePlanTo
 > = smartUnion([z.number(), z.string()]);
 
-export function createPlanToRequestToJSON(
-  createPlanToRequest: CreatePlanToRequest,
-): string {
-  return JSON.stringify(
-    CreatePlanToRequest$outboundSchema.parse(createPlanToRequest),
-  );
+export function createPlanToToJSON(createPlanTo: CreatePlanTo): string {
+  return JSON.stringify(CreatePlanTo$outboundSchema.parse(createPlanTo));
 }
 
 /** @internal */
-export type CreatePlanTierRequest$Outbound = {
+export type CreatePlanTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const CreatePlanTierRequest$outboundSchema: z.ZodMiniType<
-  CreatePlanTierRequest$Outbound,
-  CreatePlanTierRequest
+export const CreatePlanTier$outboundSchema: z.ZodMiniType<
+  CreatePlanTier$Outbound,
+  CreatePlanTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -913,12 +901,8 @@ export const CreatePlanTierRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createPlanTierRequestToJSON(
-  createPlanTierRequest: CreatePlanTierRequest,
-): string {
-  return JSON.stringify(
-    CreatePlanTierRequest$outboundSchema.parse(createPlanTierRequest),
-  );
+export function createPlanTierToJSON(createPlanTier: CreatePlanTier): string {
+  return JSON.stringify(CreatePlanTier$outboundSchema.parse(createPlanTier));
 }
 
 /** @internal */
@@ -939,7 +923,7 @@ export const CreatePlanBillingMethodRequest$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreatePlanItemPriceRequest$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<CreatePlanTierRequest$Outbound> | undefined;
+  tiers?: Array<CreatePlanTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -955,9 +939,7 @@ export const CreatePlanItemPriceRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => CreatePlanTierRequest$outboundSchema)),
-    ),
+    tiers: z.optional(z.array(z.lazy(() => CreatePlanTier$outboundSchema))),
     tierBehavior: z.optional(CreatePlanTierBehaviorRequest$outboundSchema),
     interval: CreatePlanItemPriceIntervalRequest$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1374,49 +1356,6 @@ export function createPlanResetResponseFromJSON(
 }
 
 /** @internal */
-export const CreatePlanToResponse$inboundSchema: z.ZodMiniType<
-  CreatePlanToResponse,
-  unknown
-> = smartUnion([types.number(), types.string()]);
-
-export function createPlanToResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreatePlanToResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreatePlanToResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanToResponse' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreatePlanTierResponse$inboundSchema: z.ZodMiniType<
-  CreatePlanTierResponse,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-    flat_amount: z.optional(z.nullable(types.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-    });
-  }),
-);
-
-export function createPlanTierResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreatePlanTierResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreatePlanTierResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanTierResponse' from JSON`,
-  );
-}
-
-/** @internal */
 export const CreatePlanTierBehaviorResponse$inboundSchema: z.ZodMiniType<
   CreatePlanTierBehaviorResponse,
   unknown
@@ -1441,9 +1380,7 @@ export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    tiers: types.optional(
-      z.array(z.lazy(() => CreatePlanTierResponse$inboundSchema)),
-    ),
+    tiers: types.optional(z.array(types.nullable(z.any()))),
     tier_behavior: types.optional(CreatePlanTierBehaviorResponse$inboundSchema),
     interval: CreatePlanPriceItemIntervalResponse$inboundSchema,
     interval_count: types.optional(types.number()),

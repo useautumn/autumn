@@ -10,7 +10,7 @@ from autumn_sdk.types import (
     UnrecognizedStr,
 )
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 from typing_extensions import NotRequired, TypeAliasType, TypedDict
 
 
@@ -218,51 +218,6 @@ class BalanceReset(BaseModel):
         return m
 
 
-BalanceToTypedDict = TypeAliasType("BalanceToTypedDict", Union[float, str])
-
-
-BalanceTo = TypeAliasType("BalanceTo", Union[float, str])
-
-
-class BalanceTierTypedDict(TypedDict):
-    to: BalanceToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
-
-
-class BalanceTier(BaseModel):
-    to: BalanceTo
-
-    amount: float
-
-    flat_amount: OptionalNullable[float] = UNSET
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
 BalanceTierBehavior = Union[
     Literal[
         "graduated",
@@ -292,7 +247,7 @@ class BalancePriceTypedDict(TypedDict):
     r"""Maximum quantity that can be purchased, or null for unlimited."""
     amount: NotRequired[float]
     r"""The per-unit price amount."""
-    tiers: NotRequired[List[BalanceTierTypedDict]]
+    tiers: NotRequired[List[Nullable[Any]]]
     r"""Tiered pricing configuration if applicable."""
     tier_behavior: NotRequired[BalanceTierBehavior]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier)."""
@@ -311,7 +266,7 @@ class BalancePrice(BaseModel):
     amount: Optional[float] = None
     r"""The per-unit price amount."""
 
-    tiers: Optional[List[BalanceTier]] = None
+    tiers: Optional[List[Nullable[Any]]] = None
     r"""Tiered pricing configuration if applicable."""
 
     tier_behavior: Optional[BalanceTierBehavior] = None

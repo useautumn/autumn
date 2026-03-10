@@ -177,6 +177,7 @@ const response = await client.check({
 @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
 @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
 @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
+@param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 @returns Whether access is allowed, plus the current balance for that feature.
@@ -210,6 +211,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 * [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 * [update](docs/sdks/balances/README.md#update) - Update a customer balance.
 * [delete](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+* [finalize](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 
 ### [Billing](docs/sdks/billing/README.md)
 
@@ -609,6 +611,7 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 
 - [`balancesCreate`](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 - [`balancesDelete`](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+- [`balancesFinalize`](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 - [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
 - [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
@@ -818,6 +821,7 @@ const response = await client.check({
 @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
 @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
 @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
+@param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 @returns Whether access is allowed, plus the current balance for that feature.

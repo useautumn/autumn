@@ -108,8 +108,8 @@ export type PreviewAttachTo = number | string;
 
 export type PreviewAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewAttachTierBehavior = {
@@ -675,8 +675,8 @@ export function previewAttachToToJSON(
 /** @internal */
 export type PreviewAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -686,8 +686,8 @@ export const PreviewAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

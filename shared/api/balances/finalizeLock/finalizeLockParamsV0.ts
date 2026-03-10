@@ -2,9 +2,17 @@ import { z } from "zod/v4";
 
 export const FinalizeLockParamsV0Schema = z
 	.object({
-		lock_id: z.string(),
-		action: z.enum(["confirm", "release"]),
-		override_value: z.number().optional(),
+		lock_id: z.string().meta({
+			description: "The lock ID that was passed into the previous check call.",
+		}),
+		action: z.enum(["confirm", "release"]).meta({
+			description:
+				"Use 'confirm' to commit the deduction, or 'release' to return the held balance.",
+		}),
+		override_value: z.number().optional().meta({
+			description:
+				"Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.",
+		}),
 	})
 	.refine(
 		(data) => !(data.action === "release" && data.override_value !== undefined),
