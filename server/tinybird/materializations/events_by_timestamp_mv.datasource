@@ -17,4 +17,4 @@ SCHEMA >
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
-ENGINE_SORTING_KEY "org_id, env, timestamp, customer_id, event_name"
+ENGINE_SORTING_KEY "org_id, env, timestamp, id, customer_id, event_name"
