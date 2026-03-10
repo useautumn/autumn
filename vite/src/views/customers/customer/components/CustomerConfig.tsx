@@ -1,6 +1,7 @@
 import type { CreateCustomer } from "@autumn/shared";
 import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 export const CustomerConfig = ({
 	customer,
@@ -10,6 +11,7 @@ export const CustomerConfig = ({
 	setCustomer: (customer: CreateCustomer) => void;
 	isUpdate?: boolean;
 }) => {
+	const { isAdmin } = useAdmin();
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<div className="flex gap-2 w-full">
@@ -44,6 +46,18 @@ export const CustomerConfig = ({
 					}
 				/>
 			</div>
+			{isAdmin && (
+				<div>
+					<FieldLabel>Stripe Customer ID</FieldLabel>
+					<Input
+						value={customer.stripe_id || ""}
+						placeholder="cus_..."
+						onChange={(e) =>
+							setCustomer({ ...customer, stripe_id: e.target.value })
+						}
+					/>
+				</div>
+			)}
 		</div>
 	);
 };

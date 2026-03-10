@@ -16,16 +16,19 @@ import { Input } from "@/components/v2/inputs/Input";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 export function CustomerListCreateButton() {
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const { isAdmin } = useAdmin();
 	const [open, setOpen] = useState(false);
 	const [fields, setFields] = useState<{ [key: string]: string }>({
 		name: "",
 		id: "",
 		email: "",
 		fingerprint: "",
+		stripe_id: "",
 	});
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +45,7 @@ export function CustomerListCreateButton() {
 				name: fields.name || null,
 				email: fields.email ? fields.email.trim() : null,
 				fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
+				stripe_id: fields.stripe_id ? fields.stripe_id : undefined,
 			});
 
 			const customer = data.customer || data;
@@ -133,6 +137,18 @@ export function CustomerListCreateButton() {
 						onChange={(e) => setFields({ ...fields, email: e.target.value })}
 					/>
 				</div>
+				{isAdmin && (
+					<div>
+						<FieldLabel>Stripe Customer ID</FieldLabel>
+						<Input
+							value={fields.stripe_id}
+							placeholder="cus_..."
+							onChange={(e) =>
+								setFields({ ...fields, stripe_id: e.target.value })
+							}
+						/>
+					</div>
+				)}
 				<DialogFooter>
 					<Button
 						onClick={handleCreate}
