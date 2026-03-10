@@ -229,16 +229,23 @@ export function useHasItemChanges() {
 				features,
 				logDifferences: true,
 			});
-			
+
 			return !same;
 		}
 
 		if (!item || !initialItem) {
-			console.log("[useHasItemChanges] no item or initialItem, returning false");
+			console.log(
+				"[useHasItemChanges] no item or initialItem, returning false",
+			);
 			return false;
 		}
 
-		
+		const { same } = itemsAreSame({
+			item1: item,
+			item2: initialItem,
+			features,
+			logDifferences: true,
+		});
 
 		return !same;
 	}, [itemDraft.session, item, initialItem, features]);
