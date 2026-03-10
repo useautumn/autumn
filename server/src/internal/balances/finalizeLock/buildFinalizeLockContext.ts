@@ -21,6 +21,7 @@ export type FinalizeLockContext = {
 	finalValue: number;
 	unwindValue: number;
 	additionalValue: number;
+	properties?: Record<string, unknown>;
 	deduction: FeatureDeduction;
 	deductionOptions: { triggerAutoTopUp: boolean };
 };
@@ -68,6 +69,7 @@ export const buildFinalizeLockContext = async ({
 		finalValue,
 		unwindValue,
 		additionalValue,
+		properties: params.properties,
 		deduction: {
 			feature,
 			deduction: additionalValue,

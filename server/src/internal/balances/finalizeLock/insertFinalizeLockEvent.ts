@@ -12,12 +12,14 @@ export const insertFinalizeLockEvent = ({
 	ctx: AutumnContext;
 	finalizeLockContext: FinalizeLockContext;
 }) => {
-	const { receipt, fullCustomer, finalValue, lockValue } = finalizeLockContext;
+	const { receipt, fullCustomer, finalValue, lockValue, properties } =
+		finalizeLockContext;
 	const event = initEvent({
 		ctx,
 		eventInfo: {
 			event_name: receipt.feature_id,
 			value: new Decimal(finalValue).sub(lockValue).toNumber(),
+			properties,
 		},
 		internalCustomerId: fullCustomer.internal_id,
 		internalEntityId: fullCustomer.entity?.internal_id,

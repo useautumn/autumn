@@ -28,6 +28,7 @@ const makeFreeProd = () => {
 test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial keep, remaining=10")}`, async () => {
 	const freeProd = makeFreeProd();
 	const customerId = "lock-refund-1";
+	const finalizeProperties = { source: "refund-rf-1" };
 
 	const { autumnV2_1, ctx } = await initScenario({
 		customerId,
@@ -48,6 +49,7 @@ test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial
 		lock_id: customerId,
 		action: "confirm",
 		override_value: 5,
+		properties: finalizeProperties,
 	});
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -59,7 +61,7 @@ test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial
 
 	await expectCustomerEventsCorrect({
 		customerId,
-		events: [{ value: -3 }, { value: 8 }],
+		events: [{ value: -3, properties: finalizeProperties }, { value: 8 }],
 	});
 
 	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
