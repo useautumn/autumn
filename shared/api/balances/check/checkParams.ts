@@ -28,7 +28,10 @@ export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 			"If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.",
 	}),
 
-	lock: LockParamsSchema.optional(),
+	lock: LockParamsSchema.optional().meta({
+		description:
+			"Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.",
+	}),
 
 	with_preview: z.boolean().optional().meta({
 		description:
