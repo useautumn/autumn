@@ -1,9 +1,5 @@
 import { FeatureType, TierBehavior } from "@autumn/shared";
-import {
-	DropSimpleIcon,
-	PencilSimpleIcon,
-	RulerIcon,
-} from "@phosphor-icons/react";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
@@ -11,13 +7,6 @@ import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -25,10 +14,15 @@ import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import {
+	cleanTiersForMode,
+	type VolumePricingMode,
+} from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
 import { IncludedUsage } from "./IncludedUsage";
 import { PricedFeatureSettings } from "./PricedFeatureSettings";
+import { PriceSectionTitle } from "./PriceSectionTitle";
 import { PriceTiers } from "./PriceTiers";
 import { SheetFooterActions } from "./SheetFooterActions";
 import { UsageReset } from "./UsageReset";
@@ -44,6 +38,75 @@ export function EditPlanFeatureSheet({
 	const { setInitialItem } = useSheet();
 	const hasItemChanges = useHasItemChanges();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
+
+	// Infer initial mode from tier data: if any tier has flat_amount > 0, default to flat
+	const [volumePricingMode, setVolumePricingMode] = useState<VolumePricingMode>(
+		() => {
+			const hasFlatAmount = item?.tiers?.some((t) => t.flat_amount != null);
+			return hasFlatAmount ? "flat" : "per_unit";
+		},
+	);
+
+	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
+	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
+	const showVolumePricingToggle = isVolumeBased && isMultiTier;
+
+	const handleTierBehaviorChange = (val: string) => {
+		const newBehavior = val as TierBehavior;
+		const newItem = { ...item, tier_behavior: newBehavior };
+
+		// When switching away from volume-based, reset mode and clear flat_amount
+		if (newBehavior !== TierBehavior.VolumeBased) {
+			setVolumePricingMode("per_unit");
+			if (newItem.tiers) {
+				newItem.tiers = newItem.tiers.map((tier) => ({
+					...tier,
+					flat_amount: null,
+				}));
+			}
+		}
+
+		setItem(newItem);
+	};
+
+	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
+		setVolumePricingMode(mode);
+		if (!item?.tiers) {
+			console.log("[VolumeModeChange] no tiers, returning early");
+			return;
+		}
+
+		// Migrate tier amounts so the diff is detectable and the UI reflects the new mode
+		const migratedTiers = item.tiers.map((tier) => {
+			if (mode === "flat") {
+				// Copy per-unit amount into flat_amount, zero out amount
+				return {
+					...tier,
+					flat_amount: tier.flat_amount ?? tier.amount,
+					amount: 0,
+				};
+			}
+			// Copy flat_amount into amount, clear flat_amount
+			return {
+				...tier,
+				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
+				flat_amount: null,
+			};
+		});
+
+		console.log(
+			"[VolumeModeChange] migratedTiers AFTER:",
+			JSON.stringify(migratedTiers),
+		);
+		setItem({ ...item, tiers: migratedTiers });
+	};
+
+	const handleBeforeCommit = () => {
+		if (!isVolumeBased) return;
+		const mode = showVolumePricingToggle ? volumePricingMode : "per_unit";
+		const cleaned = cleanTiersForMode({ item, mode });
+		setItem(cleaned);
+	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
 		if (oldId !== newId && product.items) {
@@ -62,20 +125,21 @@ export function EditPlanFeatureSheet({
 		}
 	};
 
-	const emptyPriceItem =
-		item?.usage_model &&
-		item.tiers?.length === 1 &&
-		item.tiers[0].amount === 0 &&
-		!item.included_usage;
-
-	const hasChanges = hasItemChanges && !emptyPriceItem;
-
 	if (!item) {
 		return null;
 	}
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
+
+	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
+	const isZeroPriceItem =
+		isFeaturePrice &&
+		item.tiers?.length === 1 &&
+		item.tiers[0].amount === 0 &&
+		!item.included_usage;
+
+	const hasChanges = hasItemChanges || isZeroPriceItem;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -121,53 +185,15 @@ export function EditPlanFeatureSheet({
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (
-										<div className="flex items-center justify-between w-full">
-											<span>Price</span>
-											<Select
-												value={item.tier_behavior ?? TierBehavior.Graduated}
-												onValueChange={(val) =>
-													setItem({
-														...item,
-														tier_behavior: val as TierBehavior,
-													})
-												}
-											>
-												<SelectTrigger className="w-40 h-6 text-xs" size="sm">
-													<SelectValue>
-														{item.tier_behavior === TierBehavior.VolumeBased ? (
-															<span className="flex items-center gap-2">
-																<DropSimpleIcon
-																	className="size-3.5"
-																	weight="regular"
-																/>
-																Volume-based
-															</span>
-														) : (
-															<span className="flex items-center gap-2">
-																<RulerIcon
-																	className="size-3.5"
-																	weight="regular"
-																/>
-																Graduated
-															</span>
-														)}
-													</SelectValue>
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value={TierBehavior.Graduated}>
-														<RulerIcon className="size-4" weight="regular" />
-														Graduated
-													</SelectItem>
-													<SelectItem value={TierBehavior.VolumeBased}>
-														<DropSimpleIcon
-															className="size-4"
-															weight="regular"
-														/>
-														Volume-based
-													</SelectItem>
-												</SelectContent>
-											</Select>
-										</div>
+										<PriceSectionTitle
+											tierBehavior={
+												item.tier_behavior ?? TierBehavior.Graduated
+											}
+											volumePricingMode={volumePricingMode}
+											showVolumePricingToggle={showVolumePricingToggle}
+											onTierBehaviorChange={handleTierBehaviorChange}
+											onVolumePricingModeChange={handleVolumePricingModeChange}
+										/>
 									) : (
 										"Price"
 									)
@@ -175,7 +201,11 @@ export function EditPlanFeatureSheet({
 								className="space-y-3"
 							>
 								<div>
-									<PriceTiers />
+									<PriceTiers
+										volumePricingMode={
+											showVolumePricingToggle ? volumePricingMode : undefined
+										}
+									/>
 									<UsageReset showBillingLabel={true} />
 								</div>
 								<PricedFeatureSettings />
@@ -198,7 +228,10 @@ export function EditPlanFeatureSheet({
 			</div>
 
 			{/* Footer stays at bottom */}
-			<SheetFooterActions hasChanges={hasChanges} />
+			<SheetFooterActions
+				hasChanges={hasChanges}
+				onBeforeCommit={handleBeforeCommit}
+			/>
 
 			{/* Edit Feature Sheet */}
 			{feature?.type === FeatureType.CreditSystem ? (

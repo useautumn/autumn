@@ -20,7 +20,7 @@ export const logAutoTopupContext = ({
 		extras: {
 			autoTopupContext: {
 				customer: `${fullCustomer.id} (${fullCustomer.internal_id})`,
-				stripeCustomer: stripeCustomer.id,
+				stripeCustomer: stripeCustomer?.id ?? "none",
 
 				feature: `${feature.id} (${feature.internal_id})`,
 				customerEntitlement: `${customerEntitlement.id} | balance: ${customerEntitlement.balance}`,

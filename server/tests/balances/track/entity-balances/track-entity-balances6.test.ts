@@ -92,7 +92,7 @@ describe(`${chalk.yellowBright(`${testCase}: per-entity overage billing`)}`, () 
 			userMessages.included_usage * firstEntities.length,
 		);
 
-		await timeout(4000);
+		await timeout(5000);
 	});
 
 	const user1Usage = 125000;

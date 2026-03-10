@@ -6,8 +6,10 @@ import {
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
+	type ParsedCheckParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -23,8 +25,12 @@ export const handleCheck = createRoute({
 	resource: AffectedResource.Check,
 	body: CheckParamsSchema,
 	handler: async (c) => {
-		const body = c.req.valid("json");
+		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
+
+		const body: ParsedCheckParams = parseCheckParamsForLock({
+			params: rawBody,
+		});
 
 		const {
 			customer_id,
@@ -55,7 +61,7 @@ export const handleCheck = createRoute({
 		});
 
 		let response: CheckResponseV3;
-		if (send_event) {
+		if (send_event || body.lock?.enabled) {
 			response = await runCheckWithTrack({
 				ctx,
 				body,
@@ -94,6 +100,7 @@ export const handleCheck = createRoute({
 		return c.json({
 			...transformedResponse,
 			preview,
+			lock_key: body.lock?.key ?? undefined,
 		});
 	},
 });

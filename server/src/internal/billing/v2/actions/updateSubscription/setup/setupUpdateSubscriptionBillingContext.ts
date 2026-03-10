@@ -1,6 +1,7 @@
 import {
 	BillingVersion,
 	hasCustomItems,
+	orgDisableStripeWrites,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -174,6 +175,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			: (customerProduct.billing_version ?? BillingVersion.V2),
 
 		skipBillingChanges:
+			orgDisableStripeWrites({ ctx }) ||
 			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined ||
 			billingRelatedFields.length === 0,

@@ -63,7 +63,7 @@ export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 		c.set("ctx", {
 			...ctx,
 			expand,
-			skipCache: skipCacheValue,
+			skipCache: ctx.skipCache || skipCacheValue,
 		});
 
 		await next();

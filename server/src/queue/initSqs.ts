@@ -6,7 +6,7 @@ const DEFAULT_AWS_REGION = "us-west-2";
  * Extracts the AWS region from a given SQS queue URL.
  * Returns undefined if the URL is empty or invalid.
  */
-function extractRegionFromQueueUrl({
+export function extractRegionFromQueueUrl({
 	queueUrl,
 }: {
 	queueUrl: string | undefined;
@@ -18,6 +18,8 @@ function extractRegionFromQueueUrl({
 	);
 	return match ? match[1] : undefined;
 }
+
+// ============ FIFO Queue (primary) ============
 
 const getSqsClientConfig = () => ({
 	region:
@@ -45,5 +47,4 @@ export const recreateSqsClient = (): SQSClient => {
 /** Get the current SQS client (use this instead of direct sqs export for refreshable access) */
 export const getSqsClient = (): SQSClient => sqsClient;
 
-// SQS Queue URL - you'll need to create this queue in AWS console or via terraform
 export const QUEUE_URL = process.env.SQS_QUEUE_URL || "";
