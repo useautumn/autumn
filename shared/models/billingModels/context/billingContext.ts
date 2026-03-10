@@ -49,7 +49,7 @@ export interface BillingContext {
 	resetCycleAnchorMs: number | "now";
 
 	// Stripe context
-	stripeCustomer: Stripe.Customer;
+	stripeCustomer?: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];

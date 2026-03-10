@@ -6,11 +6,12 @@ import { useCustomersQueryStates } from "./useCustomersQueryStates";
 
 export const useCusSearchQuery = () => {
 	const { queryStates } = useCustomersQueryStates();
+	const trimmedSearch = queryStates.q.trim();
 
 	const axiosInstance = useAxiosInstance();
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
-			search: queryStates.q || "",
+			search: trimmedSearch,
 			filters: {
 				status: queryStates.status,
 				version: queryStates.version,
@@ -42,7 +43,7 @@ export const useCusSearchQuery = () => {
 			queryStates.status,
 			queryStates.version,
 			queryStates.none,
-			queryStates.q,
+			trimmedSearch,
 		],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
@@ -78,10 +79,11 @@ export const useCusSearchQueryV2 = ({
 	page?: number;
 	page_size: number;
 }) => {
+	const trimmedSearch = search.trim();
 	const axiosInstance = useAxiosInstance();
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
-			search: search || "",
+			search: trimmedSearch,
 			filters: {
 				status: filters.status,
 				version: filters.version,
@@ -113,7 +115,7 @@ export const useCusSearchQueryV2 = ({
 			filters?.status,
 			filters?.version,
 			filters?.none,
-			search,
+			trimmedSearch,
 		],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,

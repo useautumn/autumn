@@ -22,7 +22,7 @@ export function CustomerListSearchBar() {
 	);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const q = e.target.value;
+		const q = e.target.value.trim();
 		debouncedSearch(q);
 	};
 
@@ -34,7 +34,7 @@ export function CustomerListSearchBar() {
 			/>
 			<Input
 				onChange={handleChange}
-				className="!pl-8 text-sm w-sm"
+				className="pl-8! text-sm w-sm"
 				placeholder={`Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`}
 				defaultValue={queryStates.q}
 			/>

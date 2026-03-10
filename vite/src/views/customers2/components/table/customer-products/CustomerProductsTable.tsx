@@ -167,7 +167,7 @@ export function CustomerProductsTable() {
 						className="px-1! ml-2"
 						onClick={() =>
 							window.open(
-								"https://docs.useautumn.com/documentation/getting-started/setup/react",
+								"https://docs.useautumn.com/documentation/getting-started/setup",
 								"_blank",
 							)
 						}

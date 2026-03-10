@@ -27,7 +27,7 @@ export const extractStripeDiscounts = async ({
 }: {
 	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
-	stripeCustomer: StripeCustomerWithDiscount;
+	stripeCustomer?: StripeCustomerWithDiscount;
 }): Promise<StripeDiscountWithCoupon[]> => {
 	const subscriptionDiscounts = await subToDiscounts({
 		ctx,
@@ -87,7 +87,7 @@ export const fetchStripeDiscountsForBilling = async ({
 }: {
 	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
-	stripeCustomer: StripeCustomerWithDiscount;
+	stripeCustomer?: StripeCustomerWithDiscount;
 	paramDiscounts?: AttachDiscount[];
 }): Promise<StripeDiscountWithCoupon[]> => {
 	const existingDiscounts = await extractStripeDiscounts({

@@ -26,6 +26,10 @@ export const getStripeCusData = async ({
 		customer,
 	});
 
+	if (!stripeCus) {
+		return { stripeCus: undefined, paymentMethod: undefined, now: undefined };
+	}
+
 	const testClock = stripeCus.test_clock as Stripe.TestHelpers.TestClock | null;
 
 	// let now = testClock ? testClock.frozen_time * 1000 : Date.now();

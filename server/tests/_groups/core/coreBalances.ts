@@ -23,6 +23,12 @@ export const coreBalances: TestGroup = {
 		"balances/track/paid-allocated",
 		"integration/balances/track/track-misc.test.ts",
 
+		// ── Lock ──
+		"integration/balances/lock/basic",
+		"integration/balances/lock/postgres",
+		"integration/balances/lock/check-with-lock-credit-system.test.ts",
+		"integration/balances/lock/check-with-lock-edge-cases.test.ts",
+
 		// ── Update ──
 		"integration/balances/update/balance/update-balance-basic.test.ts",
 

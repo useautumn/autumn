@@ -17,6 +17,7 @@ import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
@@ -221,6 +222,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	});
 
+	redisInstance.defineCommand("claimLockReceipt", {
+		numberOfKeys: 1,
+		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
+	});
+
 	redisInstance.on("error", (error) => {
 		console.error(`[Redis] Connection error:`, error.message);
 	});
@@ -420,6 +426,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
 

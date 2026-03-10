@@ -18,9 +18,9 @@ export const stripeCustomerToDiscounts = async ({
 	stripeCustomer,
 }: {
 	ctx: AutumnContext;
-	stripeCustomer: StripeCustomerWithDiscount;
+	stripeCustomer?: StripeCustomerWithDiscount;
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const customerDiscount = stripeCustomer.discount;
+	const customerDiscount = stripeCustomer?.discount;
 	if (!customerDiscount) return [];
 
 	const coupon = customerDiscount.source?.coupon;
