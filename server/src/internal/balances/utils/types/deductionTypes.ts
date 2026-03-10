@@ -43,7 +43,7 @@ export type PreparedFeatureDeduction = {
 	unlimitedFeatureIds: string[];
 	lock?: {
 		enabled: true;
-		key?: string;
+		lock_id?: string;
 		hashed_key?: string;
 		expires_at?: number;
 		redis_receipt_key: string;

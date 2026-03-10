@@ -27,7 +27,7 @@ export const buildExpireLockPayload = ({
 		customerId,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		lockKey: customerId,
+		lockId: customerId,
 		hashedKey: buildLockReceiptKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -62,7 +62,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 1: /check with loc
 
 	await deleteLock({
 		ctx,
-		lockKey: customerId,
+		lockId: customerId,
 	});
 
 	await autumnV2_1.check({
@@ -71,7 +71,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 1: /check with loc
 		required_balance: 8,
 		lock: {
 			enabled: true,
-			key: customerId,
+			lock_id: customerId,
 			expires_at: addSeconds(new Date(), 5).getTime(),
 		},
 	});
@@ -104,7 +104,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 2: expires at undo
 
 	await deleteLock({
 		ctx,
-		lockKey: customerId,
+		lockId: customerId,
 	});
 
 	await autumnV2_1.check({
@@ -113,7 +113,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 2: expires at undo
 		required_balance: 8,
 		lock: {
 			enabled: true,
-			key: customerId,
+			lock_id: customerId,
 		},
 	});
 
@@ -167,7 +167,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-3: expires_at > 1 day f
 				required_balance: 5,
 				lock: {
 					enabled: true,
-					key: customerId,
+					lock_id: customerId,
 					expires_at: twoDaysFromNow,
 				},
 			});
@@ -189,7 +189,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	const beforeCheck = Math.floor(Date.now() / 1000);
 
@@ -197,7 +197,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	const lockReceiptKey = buildLockReceiptKey({
@@ -229,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	const expiresAt = Date.now() + 2 * 60 * 60 * 1000;
 
@@ -237,7 +237,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 5,
-		lock: { enabled: true, key: customerId, expires_at: expiresAt },
+		lock: { enabled: true, lock_id: customerId, expires_at: expiresAt },
 	});
 
 	const lockReceiptKey = buildLockReceiptKey({

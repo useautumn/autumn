@@ -15,7 +15,7 @@ export const expireLock = async ({
 		await runFinalizeLock({
 			ctx,
 			params: {
-				lock_key: payload.lockKey,
+				lock_id: payload.lockId,
 				action: "release",
 				override_value: 0,
 			},

@@ -62,7 +62,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-2: entity-level lock=30 co
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Lock at entity level (ent-1)
 	await autumnV2_1.check({
@@ -70,11 +70,11 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-2: entity-level lock=30 co
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		required_balance: 30,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 10,
 	});
@@ -138,18 +138,18 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-3: entity-level lock=30 co
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		required_balance: 30,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 80,
 	});
@@ -219,18 +219,18 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-4: entity-level lock=40 re
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		required_balance: 40,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "release",
 	});
 
@@ -309,18 +309,18 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-5: entity-level across loc
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Customer-level lock (no entity_id)
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 14,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 8,
 	});
@@ -391,17 +391,17 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-6: customer-level lock=120
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 120,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 		override_value: 160,
 	});
@@ -474,7 +474,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-7: ent-1 lock held while c
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Lock ent-1 (deducts 30 from ent-1 bucket)
 	await autumnV2_1.check({
@@ -482,7 +482,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-7: ent-1 lock held while c
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		required_balance: 30,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 	});
 
 	// While lock is held, fire an independent customer-level track
@@ -494,7 +494,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-7: ent-1 lock held while c
 
 	// Confirm with no override_value → early exit (finalValue === lockValue=30)
 	await autumnV2_1.balances.finalize({
-		lock_key: lockKey,
+		lock_id: lockKey,
 		action: "confirm",
 	});
 
@@ -532,7 +532,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-7: ent-1 lock held while c
 	});
 
 	// Receipt must be cleaned up after early-exit confirm
-	await expectLockReceiptDeleted({ ctx, lockKey });
+	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -562,8 +562,8 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-8: two concurrent entity l
 	});
 
 	await Promise.all([
-		deleteLock({ ctx, lockKey: lockKeyA }),
-		deleteLock({ ctx, lockKey: lockKeyB }),
+		deleteLock({ ctx, lockId: lockKeyA }),
+		deleteLock({ ctx, lockId: lockKeyB }),
 	]);
 
 	// Fire both locks concurrently
@@ -573,26 +573,26 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-8: two concurrent entity l
 			entity_id: entities[0].id,
 			feature_id: TestFeature.Messages,
 			required_balance: 30,
-			lock: { enabled: true, key: lockKeyA },
+			lock: { enabled: true, lock_id: lockKeyA },
 		}),
 		autumnV2_1.check({
 			customer_id: customerId,
 			entity_id: entities[1].id,
 			feature_id: TestFeature.Messages,
 			required_balance: 20,
-			lock: { enabled: true, key: lockKeyB },
+			lock: { enabled: true, lock_id: lockKeyB },
 		}),
 	]);
 
 	// Confirm both concurrently with different override values
 	await Promise.all([
 		autumnV2_1.balances.finalize({
-			lock_key: lockKeyA,
+			lock_id: lockKeyA,
 			action: "confirm",
 			override_value: 15,
 		}),
 		autumnV2_1.balances.finalize({
-			lock_key: lockKeyB,
+			lock_id: lockKeyB,
 			action: "confirm",
 			override_value: 25,
 		}),

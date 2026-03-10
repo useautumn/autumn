@@ -11,7 +11,7 @@ export const saveLockReceipt = async ({
 	items,
 }: {
 	lock: {
-		key?: string;
+		lock_id?: string;
 		hashed_key?: string;
 		expires_at?: number;
 		redis_receipt_key: string;
@@ -27,7 +27,7 @@ export const saveLockReceipt = async ({
 	const existing = await redis.call("EXISTS", lock.redis_receipt_key);
 	if (existing === 1) {
 		throw new RecaseError({
-			message: `A lock with this key already exists`,
+			message: "A lock with this ID already exists",
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
 		});
@@ -40,7 +40,7 @@ export const saveLockReceipt = async ({
 				lock.redis_receipt_key,
 				"$",
 				JSON.stringify({
-					lock_key: lock.key ?? null,
+					lock_id: lock.lock_id ?? null,
 					hashed_key: lock.hashed_key ?? null,
 					status: "pending",
 					region: currentRegion,
@@ -60,6 +60,6 @@ export const saveLockReceipt = async ({
 	}
 
 	throw new InternalError({
-		message: `Failed to save lock receipt for key: ${lock.key ?? lock.hashed_key}`,
+		message: `Failed to save lock receipt for ID: ${lock.lock_id ?? lock.hashed_key}`,
 	});
 };

@@ -35,17 +35,17 @@ test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 5,
 	});
@@ -87,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("refund RF-2: lock=8 confirm=-3 — credit
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.track({
 		customer_id: customerId,
@@ -99,11 +99,11 @@ test.concurrent(`${chalk.yellowBright("refund RF-2: lock=8 confirm=-3 — credit
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: -3,
 	});
@@ -136,7 +136,7 @@ test.concurrent(`${chalk.yellowBright("refund RF-3: lock=-5 confirm=-3 — negat
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.track({
 		customer_id: customerId,
@@ -148,11 +148,11 @@ test.concurrent(`${chalk.yellowBright("refund RF-3: lock=-5 confirm=-3 — negat
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: -5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: -3,
 	});
@@ -194,7 +194,7 @@ test.concurrent(`${chalk.yellowBright("refund RF-4: lock=-5 confirm=3 — cross-
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.track({
 		customer_id: customerId,
@@ -206,11 +206,11 @@ test.concurrent(`${chalk.yellowBright("refund RF-4: lock=-5 confirm=3 — cross-
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: -5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 3,
 	});

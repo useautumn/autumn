@@ -53,17 +53,17 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-1: lock=8 confirm override
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.check({
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 0,
   });
@@ -109,7 +109,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-2: cross-boundary lock=8 c
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -121,11 +121,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-2: cross-boundary lock=8 c
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 12,
   });
@@ -196,7 +196,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-3: cross-boundary lock=8 c
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -208,11 +208,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-3: cross-boundary lock=8 c
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 3,
   });
@@ -271,17 +271,17 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-4: lock within action1, co
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.check({
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 10,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 115,
   });
@@ -345,17 +345,17 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-5: decimal lock=27.89 conf
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.check({
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 27.89,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 12.45,
   });
@@ -400,7 +400,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-6: action3→credits2 cros
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -412,11 +412,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-6: action3→credits2 cros
     customer_id: customerId,
     feature_id: TestFeature.Action3,
     required_balance: 10,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 3,
   });
@@ -459,7 +459,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-7: action3→credits2 cros
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -471,11 +471,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-7: action3→credits2 cros
     customer_id: customerId,
     feature_id: TestFeature.Action3,
     required_balance: 10,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "release",
   });
 
@@ -529,7 +529,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-8: cross-boundary release 
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -541,11 +541,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-8: cross-boundary release 
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "release",
   });
 
@@ -604,7 +604,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-9: cross-boundary lock=8 c
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -616,11 +616,11 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-9: cross-boundary lock=8 c
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 20,
   });
@@ -698,7 +698,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-10: confirm no override_va
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.track({
     customer_id: customerId,
@@ -710,12 +710,12 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-10: confirm no override_va
     customer_id: customerId,
     feature_id: TestFeature.Action1,
     required_balance: 8,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   // No override_value → finalValue === lockValue (8) → early exit
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
   });
 
@@ -747,7 +747,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-10: confirm no override_va
   });
 
   // Receipt must be deleted after finalize
-  await expectLockReceiptDeleted({ ctx, lockKey: customerId });
+  await expectLockReceiptDeleted({ ctx, lockId: customerId });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -772,17 +772,17 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-11: direct credits lock=30
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.check({
     customer_id: customerId,
     feature_id: TestFeature.Credits,
     required_balance: 30,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 20,
   });
@@ -833,17 +833,17 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-12: direct credits lock=30
     actions: [s.attach({ productId: freeProd.id })],
   });
 
-  await deleteLock({ ctx, lockKey: customerId });
+  await deleteLock({ ctx, lockId: customerId });
 
   await autumnV2_1.check({
     customer_id: customerId,
     feature_id: TestFeature.Credits,
     required_balance: 30,
-    lock: { enabled: true, key: customerId },
+    lock: { enabled: true, lock_id: customerId },
   });
 
   await autumnV2_1.balances.finalize({
-    lock_key: customerId,
+    lock_id: customerId,
     action: "confirm",
     override_value: 45,
   });

@@ -37,7 +37,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-1: lock not su
 				customer_id: customerId,
 				feature_id: TestFeature.Users,
 				required_balance: 1,
-				lock: { enabled: true, key: customerId },
+				lock: { enabled: true, lock_id: customerId },
 			});
 		},
 	});
@@ -61,14 +61,14 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	// First check — should succeed and create the lock receipt
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	// Second check with same lock key — should fail with LockAlreadyExists
@@ -79,7 +79,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				required_balance: 5,
-				lock: { enabled: true, key: customerId },
+				lock: { enabled: true, lock_id: customerId },
 			});
 		},
 	});
@@ -103,14 +103,14 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate l
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	// First check via Postgres — should succeed
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 		skip_cache: true,
 	});
 
@@ -122,7 +122,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate l
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				required_balance: 5,
-				lock: { enabled: true, key: customerId },
+				lock: { enabled: true, lock_id: customerId },
 				skip_cache: true,
 			});
 		},

@@ -36,17 +36,17 @@ test.concurrent(`${chalk.yellowBright("release RL-1: lock=8 release — full res
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "release",
 	});
 
@@ -88,7 +88,7 @@ test.concurrent(`${chalk.yellowBright("release RL-2: track=5 lock=8 release — 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.track({
 		customer_id: customerId,
@@ -100,11 +100,11 @@ test.concurrent(`${chalk.yellowBright("release RL-2: track=5 lock=8 release — 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "release",
 	});
 
@@ -143,17 +143,17 @@ test.concurrent(`${chalk.yellowBright("release RL-3: lock=8 cross-bucket release
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "release",
 	});
 
