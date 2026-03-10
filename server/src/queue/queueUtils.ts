@@ -133,7 +133,9 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			? Math.min(Math.floor(delayMs / 1000), 900)
 			: undefined;
 
-		const messageDeduplicationId = messageId ?? generateId("dedup");
+		const messageDeduplicationId = Bun.hash(
+			messageId ?? generateId("dedup"),
+		).toString();
 
 		const command = new SendMessageCommand({
 			QueueUrl: sqsQueueUrl!,
