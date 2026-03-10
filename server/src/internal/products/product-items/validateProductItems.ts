@@ -55,13 +55,13 @@ const validateProductItem = ({
 	}
 
 	// 2. If amount is set, it must be greater than 0
-	if (notNullish(item.price) && item.price <= 0) {
-		throw new RecaseError({
-			message: `Price must be greater than 0`,
-			code: ErrCode.InvalidProductItem,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	// if (notNullish(item.price) && item.price <= 0) {
+	// 	throw new RecaseError({
+	// 		message: `Price must be greater than 0`,
+	// 		code: ErrCode.InvalidProductItem,
+	// 		statusCode: StatusCodes.BAD_REQUEST,
+	// 	});
+	// }
 
 	// 4. One off prices / fixed prices can have at most 2 decimal places
 	// (isFeaturePriceItem(item) && !item.interval && isOneOff) ||
@@ -129,13 +129,13 @@ const validateProductItem = ({
 		}
 	}
 
-	if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
-		throw new RecaseError({
-			message: `Price must be 0 or greater`,
-			code: ErrCode.InvalidInputs,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	// if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
+	// 	throw new RecaseError({
+	// 		message: `Price must be 0 or greater`,
+	// 		code: ErrCode.InvalidInputs,
+	// 		statusCode: StatusCodes.BAD_REQUEST,
+	// 	});
+	// }
 
 	if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
 		throw new RecaseError({
@@ -146,17 +146,17 @@ const validateProductItem = ({
 	}
 
 	if (isFeaturePriceItem(item) && item.tiers) {
-		if (
-			item.tiers.some(
-				(x) => x.amount < 0 || (x.amount === 0 && (x.flat_amount ?? 0) <= 0),
-			)
-		) {
-			throw new RecaseError({
-				message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
+		// if (
+		// 	item.tiers.some(
+		// 		(x) => x.amount < 0 || (x.amount === 0 && (x.flat_amount ?? 0) <= 0),
+		// 	)
+		// ) {
+		// 	throw new RecaseError({
+		// 		message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
+		// 		code: ErrCode.InvalidInputs,
+		// 		statusCode: StatusCodes.BAD_REQUEST,
+		// 	});
+		// }
 
 		if (item.included_usage === Infinite) {
 			throw new RecaseError({
