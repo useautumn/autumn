@@ -336,6 +336,10 @@ export type PreviewMultiAttachPlan = {
    * The version of the plan to attach.
    */
   version?: number | undefined;
+  /**
+   * A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
+   */
+  subscriptionId?: string | undefined;
 };
 
 /**
@@ -925,6 +929,7 @@ export type PreviewMultiAttachPlan$Outbound = {
     | Array<PreviewMultiAttachFeatureQuantity$Outbound>
     | undefined;
   version?: number | undefined;
+  subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -941,11 +946,13 @@ export const PreviewMultiAttachPlan$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => PreviewMultiAttachFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
+    subscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
       planId: "plan_id",
       featureQuantities: "feature_quantities",
+      subscriptionId: "subscription_id",
     });
   }),
 );

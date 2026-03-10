@@ -396,7 +396,7 @@ export const createFullCusProduct = async ({
 		const options = getEntOptions(optionsList, entitlement);
 		const relatedPrice = getEntRelatedPrice(entitlement, prices);
 
-		const cusEnt: any = initCusEntitlement({
+		const cusEnt = initCusEntitlement({
 			entitlement,
 			customer,
 			cusProductId: cusProdId,

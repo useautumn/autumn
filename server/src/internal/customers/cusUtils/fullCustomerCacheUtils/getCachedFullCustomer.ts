@@ -1,9 +1,16 @@
-import type { FullCustomer } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	type FullCustomer,
+	FullCustomerSchema,
+	type Invoice,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
@@ -81,6 +88,32 @@ const roundFullCustomerBalances = (
 	return fullCustomer;
 };
 
+/** Deduplicates invoices by ID and sorts by created_at DESC, id DESC (matching getFullCusQuery). */
+const deduplicateFullCustomerInvoices = (
+	fullCustomer: FullCustomer,
+): Invoice[] => {
+	const idToInvoice = new Map<string, Invoice>();
+	for (const invoice of fullCustomer.invoices ?? []) {
+		idToInvoice.set(invoice.id, invoice);
+	}
+
+	return Array.from(idToInvoice.values()).sort((a, b) => {
+		if (b.created_at !== a.created_at) return b.created_at - a.created_at;
+		return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+	});
+};
+
+/** Strips expired customer products from the full customer. */
+const filterExpiredCustomerProducts = (
+	fullCustomer: FullCustomer,
+): FullCusProduct[] => {
+	return (
+		fullCustomer.customer_products?.filter((cusProduct) => {
+			return cusProduct.status !== CusProductStatus.Expired;
+		}) ?? []
+	);
+};
+
 /**
  * Get FullCustomer from Redis cache. Lazily resets stale entitlements.
  * @returns FullCustomer if found, null if not in cache
@@ -110,11 +143,13 @@ export const getCachedFullCustomer = async ({
 
 	if (!cached) return undefined;
 
-	const fullCustomer = JSON.parse(cached) as FullCustomer;
+	const fullCustomer = normalizeFromSchema<FullCustomer>({
+		schema: FullCustomerSchema,
+		data: JSON.parse(cached),
+	});
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
-		if (!fullCustomer.entity) return undefined; // might need to create?
 	} else {
 		fullCustomer.entity = undefined;
 	}
@@ -127,6 +162,10 @@ export const getCachedFullCustomer = async ({
 	if (!fullCustomer.send_email_receipts) {
 		fullCustomer.send_email_receipts = false;
 	}
+
+	fullCustomer.invoices = deduplicateFullCustomerInvoices(fullCustomer);
+
+	fullCustomer.customer_products = filterExpiredCustomerProducts(fullCustomer);
 
 	// Lazy reset stale entitlements (DB + in-memory + cache via Lua)
 	await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });

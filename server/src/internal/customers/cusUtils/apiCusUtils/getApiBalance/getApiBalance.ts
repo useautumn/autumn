@@ -95,7 +95,7 @@ const getApiBalanceBreakdownItem = ({
 	return {
 		object: "balance_breakdown",
 
-		id: customerEntitlement.id,
+		id: customerEntitlement.external_id ?? customerEntitlement.id,
 		plan_id: planId,
 
 		included_grant: includedGrant,

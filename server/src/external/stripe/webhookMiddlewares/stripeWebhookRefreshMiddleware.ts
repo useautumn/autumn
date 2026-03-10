@@ -1,6 +1,9 @@
 import type { Context, Next } from "hono";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
+import type {
+	StripeWebhookContext,
+	StripeWebhookHonoEnv,
+} from "./stripeWebhookContext.js";
 
 const updateProductEvents = ["customer.subscription.updated"];
 
@@ -17,6 +20,31 @@ const updateInvoiceEvents = [
 	"invoice.finalized",
 ];
 
+export const shouldSkipWebhookRefresh = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}): boolean => {
+	const { stripeEvent } = ctx;
+	if (!stripeEvent) return false;
+
+	// Skip cache refresh for manual invoices — these are always Autumn-initiated
+	// (e.g. auto top-up, allocated invoices). The originating code path manages
+	// the cache directly, so a webhook-driven nuke would discard fresh data.
+	switch (stripeEvent.type) {
+		case "invoice.created":
+		case "invoice.finalized":
+		case "invoice.updated":
+		case "invoice.paid": {
+			const eventData = stripeEvent.data.object;
+			if (eventData?.billing_reason === "manual") return true;
+			return false;
+		}
+		default:
+			return false;
+	}
+};
+
 /**
  * Middleware that refreshes customer cache after webhook handlers complete
  * Runs after the main handler (post-processing)
@@ -30,7 +58,7 @@ export const stripeWebhookRefreshMiddleware = async (
 
 	// Post-processing: refresh cache
 	const ctx = c.get("ctx");
-	const { logger, org, env, stripeEvent } = ctx;
+	const { logger, stripeEvent } = ctx;
 
 	if (!stripeEvent) return;
 
@@ -38,6 +66,8 @@ export const stripeWebhookRefreshMiddleware = async (
 	const data = stripeEvent.data;
 
 	try {
+		if (shouldSkipWebhookRefresh({ ctx })) return;
+
 		if (
 			coreEvents.includes(eventType) ||
 			updateProductEvents.includes(eventType) ||

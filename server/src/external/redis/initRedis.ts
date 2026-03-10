@@ -14,6 +14,7 @@ import {
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 import {
+	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
@@ -22,6 +23,8 @@ import {
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
 // if (!process.env.CACHE_URL) {
@@ -201,6 +204,21 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("appendEntityToCustomer", {
 		numberOfKeys: 1,
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("upsertInvoiceInCustomer", {
+		numberOfKeys: 1,
+		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("adjustCustomerEntitlementBalance", {
+		numberOfKeys: 1,
+		lua: ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCustomerProduct", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -385,10 +403,22 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		adjustCustomerEntitlementBalance(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
 		appendEntityToCustomer(
 			cacheKey: string,
 			entityJson: string,
+		): Promise<string>;
+		upsertInvoiceInCustomer(
+			cacheKey: string,
+			invoiceJson: string,
+		): Promise<string>;
+		updateCustomerProduct(
+			cacheKey: string,
+			paramsJson: string,
 		): Promise<string>;
 	}
 }

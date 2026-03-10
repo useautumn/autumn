@@ -88,4 +88,6 @@ export const runRedisUpdateBalanceV2 = async ({
 			ctx,
 		});
 	}
+
+	return result;
 };

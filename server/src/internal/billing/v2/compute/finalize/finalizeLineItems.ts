@@ -62,6 +62,9 @@ export const finalizeLineItems = ({
 		finalizedLineItems = applyStripeDiscountsToLineItems({
 			lineItems: finalizedLineItems,
 			discounts: billingContext.stripeDiscounts,
+			options: {
+				disableDiscountableForRecurringDiscounts: true,
+			},
 		});
 	}
 

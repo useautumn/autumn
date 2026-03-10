@@ -48,6 +48,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicResponseField name="subscriptions" type="object[]">
   <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+    </DynamicResponseField>
+
     <DynamicResponseField name="plan" type="object">
       The full plan object if expanded.
       <Expandable title="properties">

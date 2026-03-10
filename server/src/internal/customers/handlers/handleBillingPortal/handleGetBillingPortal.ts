@@ -1,6 +1,7 @@
 import {
 	ErrCode,
 	GetBillingPortalQuerySchema,
+	InternalError,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -44,6 +45,12 @@ export const handleGetBillingPortal = createRoute({
 			ctx,
 			customer,
 		});
+
+		if (!stripeCustomer) {
+			throw new InternalError({
+				message: `Failed to get billing portal session for customer ${customer.id}, no stripe customer found`,
+			});
+		}
 
 		const stripeCusId = stripeCustomer.id;
 

@@ -49,8 +49,7 @@ test.concurrent(`${chalk.yellowBright("update-usage-conc1: update usage concurre
 	const balance = customer.balances[TestFeature.Messages];
 
 	expect(balance.granted_balance).toBe(100);
-	expect([0, 50, 100, 150]).toContain(balance.usage);
-	expect([0, 50, 100, 150]).toContain(balance.current_balance);
+	expect([50, 49, 48, 47]).toContain(balance.current_balance);
 	expect(balance.usage + balance.current_balance).toBe(100);
 
 	// Verify DB sync
@@ -58,10 +57,7 @@ test.concurrent(`${chalk.yellowBright("update-usage-conc1: update usage concurre
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
-	expect([0, 50, 100, 150]).toContain(
-		customerDb.balances[TestFeature.Messages].usage,
-	);
-	expect([0, 50, 100, 150]).toContain(
+	expect([50, 49, 48, 47]).toContain(
 		customerDb.balances[TestFeature.Messages].current_balance,
 	);
 });

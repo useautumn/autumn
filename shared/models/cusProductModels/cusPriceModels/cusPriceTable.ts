@@ -38,5 +38,6 @@ export const customerPrices = pgTable(
 			name: "customer_prices_price_id_fkey",
 		}),
 		index("idx_customer_prices_product_id").on(table.customer_product_id),
+		index("idx_customer_prices_price_id").on(table.price_id),
 	],
 );

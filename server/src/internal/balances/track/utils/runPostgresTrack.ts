@@ -39,6 +39,7 @@ export const runPostgresTrack = async ({
 			deductions: featureDeductions,
 			options: {
 				overageBehaviour: body.overage_behavior || "cap",
+				triggerAutoTopUp: true,
 			},
 		}),
 	);

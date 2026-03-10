@@ -22,7 +22,9 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CustomerBillingControlsInput,
 	CustomerExpand,
+	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
 	type LegacyVersion,
@@ -509,6 +511,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsInput;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
@@ -840,6 +843,10 @@ export class AutumnInt {
 		},
 		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
+		delete: async (params: DeleteBalanceParamsV0) => {
+			const data = await this.post(`/balances.delete`, params);
 			return data;
 		},
 	};

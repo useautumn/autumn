@@ -9,7 +9,7 @@ import {
 	FreeTrialSchema,
 	FullCusProductSchema,
 	FullCustomerEntitlementSchema,
-	InvoiceSchema,
+	type InsertInvoice,
 	PriceSchema,
 	ReplaceableSchema,
 	SubscriptionSchema,
@@ -39,6 +39,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 });
 
 export const AutumnBillingPlanSchema = z.object({
+	customerId: z.string(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: z
@@ -53,6 +54,8 @@ export const AutumnBillingPlanSchema = z.object({
 				ended_at: z.number().nullish(),
 
 				scheduled_ids: z.array(z.string()).optional(),
+
+				subscription_ids: z.array(z.string()).optional(),
 			}),
 		})
 		.optional(),
@@ -79,7 +82,7 @@ export const AutumnBillingPlanSchema = z.object({
 
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
-	upsertInvoice: InvoiceSchema.optional(),
+	upsertInvoice: z.custom<InsertInvoice>().optional(),
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

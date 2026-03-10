@@ -408,9 +408,9 @@ export type PreviewUpdateParams = {
    */
   entityId?: string | undefined;
   /**
-   * The ID of the plan.
+   * The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
    */
-  planId: string;
+  planId?: string | undefined;
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
@@ -431,6 +431,10 @@ export type PreviewUpdateParams = {
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewUpdateProrationBehavior | undefined;
+  /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -961,12 +965,13 @@ export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 export type PreviewUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
-  plan_id: string;
+  plan_id?: string | undefined;
   feature_quantities?: Array<PreviewUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   customize?: PreviewUpdateCustomize$Outbound | undefined;
   invoice_mode?: PreviewUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   cancel_action?: string | undefined;
 };
 
@@ -978,7 +983,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
-    planId: z.string(),
+    planId: z.optional(z.string()),
     featureQuantities: z.optional(
       z.array(z.lazy(() => PreviewUpdateFeatureQuantity$outboundSchema)),
     ),
@@ -990,6 +995,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       PreviewUpdateProrationBehavior$outboundSchema,
     ),
+    subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
   }),
   z.transform((v) => {
@@ -1000,6 +1006,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
     });
   }),
