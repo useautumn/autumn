@@ -1,9 +1,14 @@
 import { SchedulerClient } from "@aws-sdk/client-scheduler";
-
-const DEFAULT_AWS_REGION = "us-west-2";
+import {
+	DEFAULT_AWS_REGION,
+	extractRegionFromQueueUrl,
+} from "@/external/aws/awsRegionUtils.js";
 
 const getSchedulerClientConfig = () => ({
-	region: process.env.AWS_REGION || DEFAULT_AWS_REGION,
+	region:
+		extractRegionFromQueueUrl({
+			queueUrl: process.env.SQS_QUEUE_URL,
+		}) || DEFAULT_AWS_REGION,
 	credentials: {
 		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
 		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",

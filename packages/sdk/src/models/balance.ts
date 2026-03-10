@@ -121,14 +121,6 @@ export type BalanceReset = {
   resetsAt: number | null;
 };
 
-export type BalanceTo = number | string;
-
-export type BalanceTier = {
-  to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
-};
-
 /**
  * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
  */
@@ -161,7 +153,7 @@ export type BalancePrice = {
   /**
    * Tiered pricing configuration if applicable.
    */
-  tiers?: Array<BalanceTier> | undefined;
+  tiers?: Array<any | null> | undefined;
   /**
    * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
    */
@@ -413,45 +405,6 @@ export function balanceResetFromJSON(
 }
 
 /** @internal */
-export const BalanceTo$inboundSchema: z.ZodMiniType<BalanceTo, unknown> =
-  smartUnion([types.number(), types.string()]);
-
-export function balanceToFromJSON(
-  jsonString: string,
-): SafeParseResult<BalanceTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => BalanceTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BalanceTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const BalanceTier$inboundSchema: z.ZodMiniType<BalanceTier, unknown> = z
-  .pipe(
-    z.object({
-      to: smartUnion([types.number(), types.string()]),
-      amount: types.number(),
-      flat_amount: z.optional(z.nullable(types.number())),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "flat_amount": "flatAmount",
-      });
-    }),
-  );
-
-export function balanceTierFromJSON(
-  jsonString: string,
-): SafeParseResult<BalanceTier, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => BalanceTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BalanceTier' from JSON`,
-  );
-}
-
-/** @internal */
 export const BalanceTierBehavior$inboundSchema: z.ZodMiniType<
   BalanceTierBehavior,
   unknown
@@ -468,7 +421,7 @@ export const BalancePrice$inboundSchema: z.ZodMiniType<BalancePrice, unknown> =
   z.pipe(
     z.object({
       amount: types.optional(types.number()),
-      tiers: types.optional(z.array(z.lazy(() => BalanceTier$inboundSchema))),
+      tiers: types.optional(z.array(types.nullable(z.any()))),
       tier_behavior: types.optional(BalanceTierBehavior$inboundSchema),
       billing_units: types.number(),
       billing_method: BalanceBillingMethod$inboundSchema,

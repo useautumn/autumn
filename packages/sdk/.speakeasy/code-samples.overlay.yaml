@@ -75,6 +75,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/balances.finalize"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.balances.finalize({
+                lockId: "lock_abc123",
+                action: "confirm",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/balances.track"]["post"]
     update:
       x-codeSamples:

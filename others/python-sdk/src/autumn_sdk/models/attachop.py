@@ -192,38 +192,29 @@ AttachTo = TypeAliasType("AttachTo", Union[float, str])
 
 class AttachTierTypedDict(TypedDict):
     to: AttachToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
 class AttachTier(BaseModel):
     to: AttachTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m

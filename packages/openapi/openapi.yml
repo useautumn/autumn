@@ -778,21 +778,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                           included amount. Either 'tiers' or 'amount' is
                           required.
@@ -1131,21 +1119,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration if applicable.
                       tier_behavior:
                         enum:
@@ -2480,12 +2456,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -2823,21 +2796,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -3305,21 +3266,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -3766,21 +3715,9 @@ paths:
                                       tiers:
                                         type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                           included amount. Either 'tiers' or
                                           'amount' is required.
@@ -4164,12 +4101,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -4493,21 +4427,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -5800,12 +5722,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -6243,12 +6162,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -6770,12 +6686,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -7208,12 +7121,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -7747,12 +7657,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -8196,12 +8103,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -8642,12 +8546,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -9085,6 +8986,60 @@ paths:
       x-speakeasy-name-override: delete
       parameters:
         - *a1
+  /v1/balances.finalize:
+    post:
+      operationId: finalizeLock
+      description: Finalize a previously locked balance. Use 'confirm' to commit the
+        deduction, or 'release' to return the held balance.
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lock_id:
+                  type: string
+                  description: The lock ID that was passed into the previous check call.
+                action:
+                  enum:
+                    - confirm
+                    - release
+                  description: Use 'confirm' to commit the deduction, or 'release' to return the
+                    held balance.
+                override_value:
+                  type: number
+                  description: Override the original lock value with a different deduction amount.
+                    Only valid when action is 'confirm'.
+              required:
+                - lock_id
+                - action
+              title: FinalizeBalanceParams
+              examples:
+                - lock_id: lock_abc123
+                  action: confirm
+                - lock_id: lock_abc123
+                  action: confirm
+                  override_value: 3
+                - lock_id: lock_abc123
+                  action: release
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+      x-speakeasy-name-override: finalize
+      parameters:
+        - *a1
   /v1/balances.check:
     post:
       operationId: check
@@ -9142,6 +9097,9 @@ paths:
         checking access. The required_balance value is used as the usage amount.
         Combines check + track in one call. (optional)
 
+        @param lock - Reserve units of a feature upfront by passing a lock_id,
+        then call balances.finalize to confirm or release the hold. (optional)
+
         @param withPreview - If true, includes upgrade/upsell information in the
         response when access is denied. Useful for displaying paywalls.
         (optional)
@@ -9182,6 +9140,26 @@ paths:
                   description: If true, atomically records a usage event while checking access.
                     The required_balance value is used as the usage amount.
                     Combines check + track in one call.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later
+                        via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and
+                        releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
+                  description: Reserve units of a feature upfront by passing a lock_id, then call
+                    balances.finalize to confirm or release the hold.
                 with_preview:
                   type: boolean
                   description: If true, includes upgrade/upsell information in the response when
@@ -9355,25 +9333,9 @@ paths:
                                     anyOf:
                                       - type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                              description: The maximum amount of usage for this tier.
-                                            amount:
-                                              type: number
-                                              description: The price of the product item for this tier.
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                              description: A flat fee charged for this tier, in addition to the per-unit
-                                                amount.
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                       - type: "null"
                                     description: Tiered pricing for the product item. Not applicable for fixed price
                                       items.
@@ -9711,6 +9673,24 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later
+                        via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and
+                        releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
               required:
                 - customer_id
               title: TrackParams

@@ -100,7 +100,7 @@ export const handleCheck = createRoute({
 		return c.json({
 			...transformedResponse,
 			preview,
-			lock_key: body.lock?.key ?? undefined,
+			// lock_id: body.lock?.lock_id ?? undefined,
 		});
 	},
 });
