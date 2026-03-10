@@ -77,6 +77,12 @@ export const executePostgresDeduction = async ({
 		deductions,
 	});
 
+	if (resolvedOptions.paidAllocated && deductions.some((d) => d.lock)) {
+		throw new InternalError({
+			message: "Locks are not supported for paid allocated features",
+		});
+	}
+
 	const executeDeduction = async (): Promise<{
 		updates: Record<string, DeductionUpdate>;
 		mutationLogs: MutationLogItem[];

@@ -2,7 +2,7 @@ DROP FUNCTION IF EXISTS unwind_from_lock_receipt(jsonb);
 
 CREATE FUNCTION unwind_from_lock_receipt(params jsonb)
 RETURNS TABLE (
-  remaining_unwind_value numeric,
+  signed_remaining_unwind_value numeric,
   updates jsonb,
   modified_rollover_ids text[],
   mutation_logs jsonb
@@ -13,6 +13,11 @@ DECLARE
   lock_receipt jsonb := params->'lock_receipt';
   receipt_items jsonb := COALESCE(lock_receipt->'items', '[]'::jsonb);
   requested_unwind_value numeric := COALESCE((params->>'unwind_value')::numeric, 0);
+  -- Live entitlement IDs: only these may be unwound; anything else is skipped and compensated
+  live_cus_ent_ids text[] := CASE
+    WHEN params->'cus_ent_ids' IS NULL OR jsonb_typeof(params->'cus_ent_ids') != 'array' THEN NULL
+    ELSE ARRAY(SELECT jsonb_array_elements_text(params->'cus_ent_ids'))
+  END;
 
   item_index integer;
   item jsonb;
@@ -37,7 +42,13 @@ DECLARE
   updated_adjustment numeric;
   updated_entities jsonb;
 
+  rows_affected integer;
+
   remaining_value numeric := requested_unwind_value;
+  skipped_unwind numeric := 0;
+  lock_value_sum numeric := 0;
+  lock_sign integer := 1;
+
   updates_json jsonb := '{}'::jsonb;
   mutation_logs_json jsonb := '[]'::jsonb;
   modified_rollover_ids_array text[] := ARRAY[]::text[];
@@ -50,6 +61,15 @@ BEGIN
   IF jsonb_typeof(receipt_items) != 'array' OR jsonb_array_length(receipt_items) = 0 THEN
     RAISE EXCEPTION 'LOCK_RECEIPT_ITEMS_MISSING';
   END IF;
+
+  -- Compute lock_sign from the sum of value_deltas across all receipt items.
+  -- unwind_value is always a positive magnitude; lock_sign tells us the direction
+  -- of the original deduction so we can correctly sign any skipped compensation.
+  SELECT COALESCE(SUM((item_el->>'value_delta')::numeric), 0)
+  INTO lock_value_sum
+  FROM jsonb_array_elements(receipt_items) item_el;
+
+  lock_sign := CASE WHEN lock_value_sum >= 0 THEN 1 ELSE -1 END;
 
   FOR item_index IN REVERSE jsonb_array_length(receipt_items) - 1..0
   LOOP
@@ -98,6 +118,18 @@ BEGIN
         RAISE EXCEPTION 'LOCK_CUSTOMER_ENTITLEMENT_ID_MISSING';
       END IF;
 
+      -- If a live entitlement set was provided, skip any receipt item whose ID is
+      -- not in it (e.g. the entitlement belonged to a product that was upgraded
+      -- mid-flight and the row still exists in the DB but is no longer active).
+      IF live_cus_ent_ids IS NOT NULL AND NOT (customer_entitlement_id = ANY(live_cus_ent_ids)) THEN
+        skipped_unwind := skipped_unwind + unwind_iteration_value;
+        remaining_value := remaining_value - unwind_iteration_value;
+        CONTINUE;
+      END IF;
+
+      -- Reset before the UPDATE so we can detect 0-row matches
+      updated_balance := NULL;
+
       IF entity_id IS NULL THEN
         UPDATE customer_entitlements ce
         SET
@@ -130,6 +162,15 @@ BEGIN
           COALESCE(ce.adjustment, 0),
           COALESCE(ce.entities, '{}'::jsonb)
         INTO updated_balance, updated_additional_balance, updated_adjustment, updated_entities;
+      END IF;
+
+      -- Entitlement no longer exists (e.g. product upgraded mid-flight).
+      -- Skip this item and accumulate the skipped magnitude so the caller
+      -- can compensate against current live entitlements.
+      IF updated_balance IS NULL THEN
+        skipped_unwind := skipped_unwind + unwind_iteration_value;
+        remaining_value := remaining_value - unwind_iteration_value;
+        CONTINUE;
       END IF;
 
       updates_json := jsonb_set(
@@ -172,6 +213,15 @@ BEGIN
         WHERE r.id = rollover_id;
       END IF;
 
+      GET DIAGNOSTICS rows_affected = ROW_COUNT;
+
+      -- Rollover no longer exists (e.g. expired mid-flight). Skip and accumulate.
+      IF rows_affected = 0 THEN
+        skipped_unwind := skipped_unwind + unwind_iteration_value;
+        remaining_value := remaining_value - unwind_iteration_value;
+        CONTINUE;
+      END IF;
+
       modified_rollover_ids_array := array_append(modified_rollover_ids_array, rollover_id);
     ELSE
       RAISE EXCEPTION 'INVALID_LOCK_ITEM_TARGET_TYPE|targetType:%', item_target_type;
@@ -194,13 +244,14 @@ BEGIN
     remaining_value := remaining_value - unwind_iteration_value;
   END LOOP;
 
-  IF remaining_value > 0 THEN
-    RAISE EXCEPTION 'LOCK_UNWIND_INCOMPLETE|remaining:%', remaining_value;
-  END IF;
-
+  -- signed_remaining_unwind_value: the signed compensation for any items that were
+  -- skipped because the target entitlement/rollover no longer exists.
+  -- A positive lock (deduction) that couldn't be restored → negative value (refund against current entitlements).
+  -- A negative lock (credit) that couldn't be taken back → positive value (deduction against current entitlements).
+  -- Callers add this directly to amount_to_deduct.
   RETURN QUERY
   SELECT
-    remaining_value,
+    (-lock_sign * skipped_unwind)::numeric,
     updates_json,
     modified_rollover_ids_array,
     mutation_logs_json;

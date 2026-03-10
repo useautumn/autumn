@@ -3,7 +3,7 @@ import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
-import { LockParamsSchema } from "../common/lockParams";
+import { LockParamsSchema, ParsedLockParamsSchema } from "../common/lockParams";
 import { CheckExpand } from "./enums/CheckExpand";
 
 export const CheckQuerySchema = z.object({
@@ -73,6 +73,10 @@ export const CheckParamsSchema = ExtCheckParamsSchema.extend({
 	},
 );
 
-export type CheckParams = z.infer<typeof CheckParamsSchema>;
+export const ParsedCheckParamsSchema = CheckParamsSchema.extend({
+	lock: ParsedLockParamsSchema.optional(),
+});
 
+export type CheckParams = z.infer<typeof CheckParamsSchema>;
+export type ParsedCheckParams = z.infer<typeof ParsedCheckParamsSchema>;
 export type CheckQuery = z.infer<typeof CheckQuerySchema>;

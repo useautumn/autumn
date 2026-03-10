@@ -45,8 +45,9 @@ export type PreparedFeatureDeduction = {
 		enabled: true;
 		key?: string;
 		hashed_key?: string;
-		expires_at?: string;
+		expires_at?: number;
 		redis_receipt_key: string;
 		created_at: number;
+		ttl_at: number;
 	};
 };

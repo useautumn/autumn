@@ -97,22 +97,20 @@ ${LOCK_STATE_UTILS}
 ${LOCK_UNWIND_UTILS}
 ${mainScript}`;
 
-const unwindAndDeductMainScript = readFileSync(
-	join(LOCK_DIR, "unwindAndDeduct.lua"),
+const claimLockReceiptMainScript = readFileSync(
+	join(LOCK_DIR, "claimLockReceipt.lua"),
 	"utf-8",
 );
 
-export const UNWIND_AND_DEDUCT_SCRIPT = `${LUA_UTILS}
-${READ_BALANCES}
-${CONTEXT_UTILS}
-${GET_TOTAL_BALANCE}
-${DEDUCT_FROM_ROLLOVERS}
-${DEDUCT_FROM_MAIN_BALANCE}
-${RUN_DEDUCTION_ON_CONTEXT}
+/**
+ * Atomically claims a lock receipt by transitioning status: pending → processing.
+ * KEYS[1]: lock_receipt_key
+ * Returns nil on success, or an error code string if not claimable.
+ */
+export const CLAIM_LOCK_RECEIPT_SCRIPT = `${LUA_UTILS}
 ${LOCK_RECEIPT_UTILS}
 ${LOCK_STATE_UTILS}
-${LOCK_UNWIND_UTILS}
-${unwindAndDeductMainScript}`;
+${claimLockReceiptMainScript}`;
 
 // ============================================================================
 // DELETE FULL CUSTOMER CACHE SCRIPTS

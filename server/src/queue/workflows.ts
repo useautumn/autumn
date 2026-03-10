@@ -1,5 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { logger } from "better-auth";
+import { createSchedule } from "@/external/aws/eventbridge/eventBridgeUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 import { addTaskToQueue, runHatchetWorkflow } from "./queueUtils.js";
 
@@ -72,9 +74,22 @@ export type StoreDeferredInvoiceLineItemsPayload = {
 	billingLineItems: unknown[];
 };
 
+export type ExpireLockReceiptPayload = {
+	orgId: string;
+	env: AppEnv;
+	customerId: string;
+	lockKey: string;
+	hashedKey: string;
+};
+
 // ============ Workflow Registry ============
 
-type WorkflowRunner = "sqs" | "hatchet";
+type WorkflowRunner = "sqs" | "hatchet" | "eventbridge";
+
+/** Required options for EventBridge scheduled workflows */
+export type EventBridgeScheduleOptions = {
+	scheduleAt: Date;
+};
 
 type WorkflowConfig<TPayload> = {
 	jobName: JobName;
@@ -122,6 +137,11 @@ const workflowRegistry = {
 		jobName: JobName.StoreDeferredInvoiceLineItems,
 		runner: "sqs",
 	} as WorkflowConfig<StoreDeferredInvoiceLineItemsPayload>,
+
+	expireLockReceipt: {
+		jobName: JobName.ExpireLockReceipt,
+		runner: "eventbridge",
+	} as WorkflowConfig<ExpireLockReceiptPayload>,
 } as const;
 
 // ============ Type Utilities ============
@@ -135,6 +155,7 @@ type PayloadFor<T extends WorkflowName> =
 type TriggerOptions = {
 	delayMs?: number;
 	metadata?: Record<string, string>;
+	scheduleAt?: Date;
 };
 
 // ============ Generic Trigger Function (internal) ============
@@ -156,6 +177,25 @@ const triggerWorkflow = async <T extends WorkflowName>({
 			payload: payload as VerifyCacheConsistencyPayload,
 			delayMs: options?.delayMs,
 			metadata: options?.metadata,
+		});
+	} else if (config.runner === "eventbridge") {
+		if (!options?.scheduleAt) {
+			throw new Error(
+				`scheduleAt is required for eventbridge workflow: ${name}`,
+			);
+		}
+		const sqsMessageBody = JSON.stringify({
+			name: config.jobName,
+			data: payload,
+		});
+		// Schedule name derived from hashed_key for deterministic lookup on cancel
+		const schedulePayload = payload as ExpireLockReceiptPayload;
+		const scheduleName = `lock-${schedulePayload.hashedKey}`;
+		await createSchedule({
+			scheduleName,
+			scheduleAt: options.scheduleAt,
+			sqsMessageBody,
+			messageGroupId: generateId("mg"),
 		});
 	} else {
 		try {
@@ -213,5 +253,17 @@ export const workflows = {
 			name: "storeDeferredInvoiceLineItems",
 			payload,
 			options,
+		}),
+
+	triggerExpireLockReceipt: (
+		payload: ExpireLockReceiptPayload,
+		scheduleOptions: EventBridgeScheduleOptions,
+	) =>
+		triggerWorkflow({
+			name: "expireLockReceipt",
+			payload,
+			options: {
+				scheduleAt: scheduleOptions.scheduleAt,
+			},
 		}),
 };

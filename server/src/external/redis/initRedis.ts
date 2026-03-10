@@ -17,11 +17,11 @@ import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
-	UNWIND_AND_DEDUCT_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
@@ -172,11 +172,6 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	});
 
-	redisInstance.defineCommand("unwindAndDeduct", {
-		numberOfKeys: 0,
-		lua: UNWIND_AND_DEDUCT_SCRIPT,
-	});
-
 	redisInstance.defineCommand("deleteFullCustomerCache", {
 		numberOfKeys: 3,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
@@ -225,6 +220,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("updateCustomerProduct", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	});
+
+	redisInstance.defineCommand("claimLockReceipt", {
+		numberOfKeys: 1,
+		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -380,7 +380,6 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
-		unwindAndDeduct(paramsJson: string): Promise<string>;
 		deleteFullCustomerCache(
 			testGuardKey: string,
 			guardKey: string,
@@ -427,6 +426,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
 

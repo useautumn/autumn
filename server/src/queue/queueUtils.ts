@@ -1,6 +1,8 @@
 import type { AppEnv, EventInsert, Price } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { Queue as BullMqQueue } from "bullmq";
 import { isHatchetEnabled } from "@/external/hatchet/initHatchet.js";
 import {
 	type VerifyCacheInput,
@@ -61,14 +63,21 @@ export interface Payloads {
 		env: string;
 		source: string;
 	};
+	[JobName.ExpireLockReceipt]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		lockKey: string;
+		hashedKey: string;
+	};
 	[key: string]: unknown;
 }
 
 // Lazy load queue implementations based on environment
 let queueImplementation: "sqs" | "bullmq" | null = null;
-let sqsClient: any = null;
+let sqsClient: SQSClient | null = null;
 let sqsQueueUrl: string | null = null;
-let bullmqQueue: any = null;
+let bullmqQueue: BullMqQueue | null = null;
 
 const initializeQueue = async () => {
 	if (queueImplementation) return;
@@ -97,13 +106,13 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	jobName,
 	payload,
 	messageGroupId,
-	messageDeduplicationId,
+	generateDeduplicationId,
 	delayMs,
 }: {
 	jobName: T;
 	payload: Payloads[T];
 	messageGroupId?: string;
-	messageDeduplicationId?: string;
+	generateDeduplicationId?: boolean;
 	delayMs?: number;
 }) => {
 	await initializeQueue();
@@ -111,7 +120,10 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	if (queueImplementation === "sqs") {
 		// SQS implementation
 		const isFifoQueue = sqsQueueUrl?.endsWith(".fifo");
+		const messageId =
+			generateDeduplicationId === false ? undefined : generateId("job");
 		const message = {
+			...(messageId && { id: messageId }),
 			name: jobName as string,
 			data: payload,
 		};
@@ -125,18 +137,16 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			QueueUrl: sqsQueueUrl!,
 			MessageBody: JSON.stringify(message),
 			...(delaySeconds && { DelaySeconds: delaySeconds }),
-			// FIFO queues require MessageGroupId and MessageDeduplicationId
+			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
-				// Use provided deduplication ID or generate random (fallback)
-				MessageDeduplicationId: messageDeduplicationId || generateId("dedup"),
 			}),
 		});
 
-		await sqsClient.send(command);
+		await sqsClient!.send(command);
 	} else {
 		// BullMQ implementation (ignores messageGroupId)
-		await bullmqQueue.add(jobName as string, payload, {
+		await bullmqQueue!.add(jobName as string, payload, {
 			delay: delayMs,
 		});
 	}

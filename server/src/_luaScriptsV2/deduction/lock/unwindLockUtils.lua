@@ -162,11 +162,14 @@ local function unwind_lock_item_iteration(params)
       normalize_lock_item_id(item.customer_entitlement_id)
     local ent_data = context.customer_entitlements[customer_entitlement_id]
     if not ent_data then
+      -- Entitlement no longer exists (e.g. product upgraded mid-flight).
+      -- Skip this item and leave remaining_unwind_value unchanged so the
+      -- caller can compensate against current live entitlements.
       return {
         applied = false,
         unwind_iteration_value = 0,
         remaining_unwind_value = remaining_unwind_value,
-        error = 'LOCK_CUSTOMER_ENTITLEMENT_NOT_FOUND',
+        error = nil,
       }
     end
 
@@ -205,11 +208,13 @@ local function unwind_lock_item_iteration(params)
     local rollover_id = normalize_lock_item_id(item.rollover_id)
     local rollover_data = context.rollovers[rollover_id]
     if not rollover_data then
+      -- Rollover no longer exists (e.g. expired or removed mid-flight).
+      -- Skip this item and leave remaining_unwind_value unchanged.
       return {
         applied = false,
         unwind_iteration_value = 0,
         remaining_unwind_value = remaining_unwind_value,
-        error = 'LOCK_ROLLOVER_NOT_FOUND',
+        error = nil,
       }
     end
 
@@ -295,6 +300,16 @@ local function unwind_lock_items(params)
       remaining_unwind_value = remaining_unwind_value,
     })
 
+    context.logger.log(
+      "[unwind_lock_items] index=%d cus_ent_id=%s applied=%s unwound=%s remaining=%s error=%s",
+      index,
+      tostring(item.customer_entitlement_id or item.rollover_id or "?"),
+      tostring(result.applied),
+      tostring(result.unwind_iteration_value),
+      tostring(result.remaining_unwind_value),
+      tostring(result.error or "nil")
+    )
+
     if not is_nil(result.error) then
       return {
         applied = #iterations > 0,
@@ -371,13 +386,26 @@ local function unwind_lock_on_context(params)
 
   local receipt = load_lock_receipt(lock_receipt_key)
 
-  local pending_error = require_pending_receipt(receipt)
+  local pending_error = require_processing_receipt(receipt)
   if not is_nil(pending_error) then
+    context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
     empty_result.error = pending_error
     return empty_result
   end
 
   local items = receipt.items or cjson.decode('[]')
+  context.logger.log("[unwind_lock] unwinding %d items, unwind_value=%s", #items, tostring(unwind_value))
+
+  -- Compute lock_sign from the sum of value_deltas across all receipt items.
+  -- unwind_value is always a positive magnitude; the caller needs lock_sign to
+  -- know the direction of the original deduction so it can compensate for any
+  -- items that were skipped (entitlement/rollover no longer exists).
+  local lock_value_sum = 0
+  for _, item in ipairs(items) do
+    lock_value_sum = lock_value_sum + safe_number(item.value_delta)
+  end
+  local lock_sign = lock_value_sum >= 0 and 1 or -1
+
   local unwind_items_result = unwind_lock_items({
     context = context,
     items = items,
@@ -385,18 +413,45 @@ local function unwind_lock_on_context(params)
   })
 
   if not is_nil(unwind_items_result.error) then
+    context.logger.log("[unwind_lock] unwind error: %s", unwind_items_result.error)
     empty_result.error = unwind_items_result.error
     return empty_result
+  end
+
+  local skipped_unwind = unwind_items_result.remaining_unwind_value
+  -- remaining_signed_unwind_value: the signed amount that could not be unwound
+  -- because the target entitlement/rollover no longer exists.
+  -- Callers can add this directly to additional_value to compensate:
+  --   effective_additional = additional_value + remaining_signed_unwind_value
+  -- A positive lock (deduction) that couldn't be restored → negative signed value
+  -- (a refund against current entitlements).
+  -- A negative lock (credit) that couldn't be taken back → positive signed value
+  -- (a deduction against current entitlements).
+  local remaining_signed_unwind_value = -lock_sign * skipped_unwind
+
+  if skipped_unwind > 0 then
+    context.logger.log(
+      "[unwind_lock] skipped_unwind=%s, lock_sign=%d, remaining_signed_unwind_value=%s",
+      tostring(skipped_unwind), lock_sign, tostring(remaining_signed_unwind_value)
+    )
   end
 
   local modified_ids = collect_unwind_modified_ids({
     iterations = unwind_items_result.iterations,
   })
 
+  context.logger.log(
+    "[unwind_lock] done: applied=%s, remaining=%s, cus_ents=%d, rollovers=%d",
+    tostring(unwind_items_result.applied),
+    tostring(unwind_items_result.remaining_unwind_value),
+    #modified_ids.modified_customer_entitlement_ids,
+    #modified_ids.modified_rollover_ids
+  )
+
   return {
     error = cjson.null,
     unwind_value = unwind_value,
-    remaining_unwind_value = unwind_items_result.remaining_unwind_value,
+    remaining_signed_unwind_value = remaining_signed_unwind_value,
     modified_customer_entitlement_ids = modified_ids.modified_customer_entitlement_ids,
     modified_rollover_ids = modified_ids.modified_rollover_ids,
     mutation_logs = context.mutation_logs,
