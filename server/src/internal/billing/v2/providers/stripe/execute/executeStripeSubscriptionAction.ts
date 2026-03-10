@@ -103,6 +103,18 @@ export const executeStripeSubscriptionAction = async ({
 		});
 	}
 
+	addStripeSubscriptionIdToBillingPlan({
+		autumnBillingPlan: billingPlan.autumn,
+		stripeSubscriptionId: stripeSubscription.id,
+	});
+
+	// Add subscription to DB
+	logger.debug(`[execSubAction] Upserting subscription from billing`);
+	await upsertSubscriptionFromBilling({
+		ctx,
+		stripeSubscription,
+	});
+
 	if (deferBillingPlan) {
 		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
 
@@ -135,18 +147,6 @@ export const executeStripeSubscriptionAction = async ({
 			autumnInvoice,
 		};
 	}
-
-	addStripeSubscriptionIdToBillingPlan({
-		autumnBillingPlan: billingPlan.autumn,
-		stripeSubscriptionId: stripeSubscription.id,
-	});
-
-	// Add subscription to DB
-	logger.debug(`[execSubAction] Upserting subscription from billing`);
-	await upsertSubscriptionFromBilling({
-		ctx,
-		stripeSubscription,
-	});
 
 	// If the stripe subscription is canceled, remove the subscription from the billing plan
 	if (isStripeSubscriptionCanceled(stripeSubscription)) {
