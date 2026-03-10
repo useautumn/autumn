@@ -24,12 +24,16 @@ export const runFinalizeLock = async ({
 		receiptRegion: receipt.region,
 	});
 
-	// Cancel any pending EventBridge expiry schedule for this lock
-	await cancelLockExpiry({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		hashedKey: Bun.hash(params.lock_key).toString(),
-	});
+	try {
+		// Cancel any pending EventBridge expiry schedule for this lock
+		await cancelLockExpiry({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			hashedKey: Bun.hash(params.lock_key).toString(),
+		});
+	} catch (error) {
+		ctx.logger.error(`Failed to cancel lock expiry: ${error}`);
+	}
 
 	// No-op deduction: finalValue == lockValue means nothing changed, just delete the receipt
 	if (new Decimal(finalValue).equals(lockValue)) {

@@ -105,24 +105,28 @@ export const runCheckWithTrack = async ({
 
 	// Schedule lock expiration if it exists
 	if (body.lock?.expires_at && allowed) {
-		const scheduleName = buildLockScheduleName({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			hashedKey: body.lock.hashed_key,
-		});
-		await workflows.triggerExpireLockReceipt(
-			{
+		try {
+			const scheduleName = buildLockScheduleName({
 				orgId: ctx.org.id,
 				env: ctx.env,
-				customerId: body.customer_id,
-				lockKey: body.lock.key,
 				hashedKey: body.lock.hashed_key,
-			},
-			{
-				scheduleAt: new Date(body.lock.expires_at),
-				scheduleName,
-			},
-		);
+			});
+			await workflows.triggerExpireLockReceipt(
+				{
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId: body.customer_id,
+					lockKey: body.lock.key,
+					hashedKey: body.lock.hashed_key,
+				},
+				{
+					scheduleAt: new Date(body.lock.expires_at),
+					scheduleName,
+				},
+			);
+		} catch (error) {
+			ctx.logger.error(`Failed to schedule lock expiration: ${error}`);
+		}
 	}
 
 	const checkResponse = CheckResponseV3Schema.parse({
