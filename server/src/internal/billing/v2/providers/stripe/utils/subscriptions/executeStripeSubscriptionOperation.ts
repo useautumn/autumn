@@ -33,7 +33,7 @@ export const executeStripeSubscriptionOperation = async ({
 	// resolved a payment method from the customer's attached PMs, pass it
 	// explicitly so Stripe knows which PM to charge.
 	const customerHasDefaultPm =
-		billingContext.stripeCustomer.invoice_settings?.default_payment_method;
+		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
 
 	const fallbackPaymentMethodParams =
 		paymentMethod && !customerHasDefaultPm
@@ -64,9 +64,7 @@ export const executeStripeSubscriptionOperation = async ({
 				{
 					...subscriptionAction.params,
 					...invoiceModeParams,
-					...(subscriptionHasDefaultPm
-						? {}
-						: fallbackPaymentMethodParams),
+					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},

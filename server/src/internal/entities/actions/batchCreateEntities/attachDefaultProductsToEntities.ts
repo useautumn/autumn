@@ -26,6 +26,7 @@ export const attachDefaultProductsToEntities = async ({
 	const defaultProducts = await setupDefaultProductsContext({
 		ctx,
 		customerData,
+		scope: "entity",
 	});
 
 	const freeDefaultProducts = defaultProducts.fullProducts.filter((product) =>
