@@ -32,7 +32,10 @@ export const isFreeProduct = ({ prices }: { prices: Price[] }) => {
 		if ("usage_tiers" in price.config) {
 			const tiers = price.config.usage_tiers;
 			if (nullish(tiers) || tiers.length === 0) continue;
-			totalPrice += tiers.reduce((acc, tier) => acc + tier.amount, 0);
+			totalPrice += tiers.reduce(
+				(acc, tier) => acc + tier.amount + (tier.flat_amount ?? 0),
+				0,
+			);
 		} else {
 			totalPrice += price.config.amount;
 		}

@@ -9,6 +9,7 @@ import {
 export const ExtAttachPreviewResponseSchema = ExtBillingPreviewResponseSchema;
 
 export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
+	object: z.literal("attach_preview").meta({ internal: true }),
 	incoming: z.array(CheckoutChangeSchema),
 	outgoing: z.array(CheckoutChangeSchema),
 	redirect_type: CheckoutModeSchema,

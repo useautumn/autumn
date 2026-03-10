@@ -25,12 +25,12 @@ export const createStripePrepaidPriceV2 = async ({
 }) => {
 	const { org, db, env } = ctx;
 
-	// 1. If no entitlement, re-use current stripe price
 	const entitlement = priceToEnt({
 		price,
 		entitlements: product.entitlements,
 	});
 
+	// No allowance → V2 price is identical to V1. Reuse the same Stripe price.
 	if (!entitlement?.allowance) {
 		price.config = {
 			...(price.config as UsagePriceConfig),

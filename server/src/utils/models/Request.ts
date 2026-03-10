@@ -5,7 +5,6 @@ import type {
 	Feature,
 	Organization,
 } from "@autumn/shared";
-import type { ClickHouseClient } from "@clickhouse/client";
 import type {
 	Request as ExpressRequest,
 	Response as ExpressResponse,
@@ -21,8 +20,6 @@ export interface ExtendedRequest extends ExpressRequest {
 	db: DrizzleCli;
 	logtail: Logger;
 	logger: Logger;
-	clickhouseClient: ClickHouseClient;
-
 	id?: string;
 	userId?: string;
 	isPublic?: boolean;
@@ -33,15 +30,6 @@ export interface ExtendedRequest extends ExpressRequest {
 	timestamp?: number;
 	expand: string[];
 	skipCache: boolean;
-}
-
-interface ActionRequest {
-	id: string;
-	authType: AuthType;
-	method: string;
-	path: string;
-	body: any;
-	timestamp: number;
 }
 
 export interface ExtendedResponse extends ExpressResponse {}

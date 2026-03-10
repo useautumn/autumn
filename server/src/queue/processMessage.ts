@@ -3,11 +3,15 @@ import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
+import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
+import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -17,6 +21,7 @@ import { detectBaseVariant } from "@/internal/products/productUtils/detectProduc
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
+import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
@@ -56,7 +61,9 @@ export const processMessage = async ({
 
 	workerLogger.info(`Processing message: ${job.name}`);
 
-	try {
+	let workerCtx: AutumnContext | undefined;
+
+	const executeJob = async () => {
 		if (job.name === JobName.DetectBaseVariant) {
 			await detectBaseVariant({
 				db,
@@ -81,6 +88,7 @@ export const processMessage = async ({
 			payload: job.data,
 			logger: workerLogger,
 		});
+		workerCtx = ctx;
 
 		if (ctx) {
 			setSentryTags({
@@ -198,6 +206,48 @@ export const processMessage = async ({
 			});
 			return;
 		}
+
+		if (job.name === JobName.AutoTopUp) {
+			if (!ctx) {
+				workerLogger.error("No context found for auto top-up job");
+				return;
+			}
+			await autoTopup({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StoreInvoiceLineItems) {
+			if (!ctx) {
+				workerLogger.error("No context found for store invoice line items job");
+				return;
+			}
+			await storeInvoiceLineItems({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StoreDeferredInvoiceLineItems) {
+			if (!ctx) {
+				workerLogger.error(
+					"No context found for store deferred invoice line items job",
+				);
+				return;
+			}
+			await storeDeferredInvoiceLineItems({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+	};
+
+	try {
+		await executeJob();
 	} catch (error) {
 		Sentry.captureException(error);
 		if (error instanceof Error) {
@@ -208,6 +258,20 @@ export const processMessage = async ({
 					stack: error.stack,
 				},
 			});
+		}
+	} finally {
+		if (workerCtx && Object.keys(workerCtx.extraLogs).length > 0) {
+			const maskedLogs = maskExtraLogs(workerCtx.extraLogs);
+			workerLogger.info(`[${job.name}] Finished`, {
+				extras: maskedLogs,
+				done: true,
+			});
+
+			if (process.env.NODE_ENV === "development") {
+				workerLogger.debug(
+					`FINISHED PROCESSING JOB ${job.name}, EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`,
+				);
+			}
 		}
 	}
 };

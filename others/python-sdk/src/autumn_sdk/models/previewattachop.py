@@ -11,7 +11,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -192,12 +192,46 @@ PreviewAttachTo = TypeAliasType("PreviewAttachTo", Union[float, str])
 class PreviewAttachTierTypedDict(TypedDict):
     to: PreviewAttachToTypedDict
     amount: float
+    flat_amount: NotRequired[Nullable[float]]
 
 
 class PreviewAttachTier(BaseModel):
     to: PreviewAttachTo
 
     amount: float
+
+    flat_amount: OptionalNullable[float] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        nullable_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
 
 
 PreviewAttachItemPriceInterval = Literal[
@@ -228,7 +262,8 @@ class PreviewAttachPriceTypedDict(TypedDict):
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     tiers: NotRequired[List[PreviewAttachTierTypedDict]]
-    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[PreviewAttachTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -250,7 +285,9 @@ class PreviewAttachPrice(BaseModel):
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     tiers: Optional[List[PreviewAttachTier]] = None
-    r"""Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required."""
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[PreviewAttachTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -264,7 +301,14 @@ class PreviewAttachPrice(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["amount", "tiers", "interval_count", "billing_units", "max_purchase"]
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -613,6 +657,21 @@ PreviewAttachPlanSchedule = Literal[
 r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
 
+class PreviewAttachCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class PreviewAttachCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
 class PreviewAttachParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -630,6 +689,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[PreviewAttachProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[PreviewAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
@@ -638,6 +699,10 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
     plan_schedule: NotRequired[PreviewAttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
+    checkout_session_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+    custom_line_items: NotRequired[List[PreviewAttachCustomLineItemTypedDict]]
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -665,6 +730,9 @@ class PreviewAttachParams(BaseModel):
     proration_behavior: Optional[PreviewAttachProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
+
     discounts: Optional[List[PreviewAttachAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
@@ -677,6 +745,12 @@ class PreviewAttachParams(BaseModel):
     plan_schedule: Optional[PreviewAttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
+    checkout_session_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+
+    custom_line_items: Optional[List[PreviewAttachCustomLineItem]] = None
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -687,10 +761,13 @@ class PreviewAttachParams(BaseModel):
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
+                "subscription_id",
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
                 "plan_schedule",
+                "checkout_session_params",
+                "custom_line_items",
             ]
         )
         serialized = handler(self)

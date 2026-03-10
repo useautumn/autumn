@@ -52,11 +52,6 @@ export const initNextResetAt = ({
 		freeTrial ?? null,
 	);
 
-	// console.log(
-	// 	"Trial end timestamp: ",
-	// 	formatUnixToDateTime(trialEndTimestamp! * 1000),
-	// );
-
 	if (freeTrial && shouldApplyTrial && trialEndTimestamp) {
 		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
 	}

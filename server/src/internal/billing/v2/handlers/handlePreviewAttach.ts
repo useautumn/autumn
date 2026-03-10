@@ -61,6 +61,7 @@ export const handlePreviewAttach = createRoute({
 		return c.json(
 			{
 				...previewResponse,
+				object: "attach_preview" as const,
 				incoming,
 				outgoing,
 				redirect_type: (billingContext as AttachBillingContext).checkoutMode,

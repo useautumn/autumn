@@ -1,7 +1,7 @@
 ---
 title: Welcome to Autumn
 sidebarTitle: Introduction 
-description: "The open source, drop-in system of record for AI monetization."
+description: "The open source, drop-in system of record for AI and SaaS monetization."
 ---
 
 ## What is Autumn?
@@ -29,7 +29,7 @@ flowchart TD
 
     A -- "Autumn hooks (optional)" --> B
     B -- "Plan changes, access checks, usage tracking" --> C
-    C -- "Customer state" --> E
+    C -- "Customer state, credit ledger" --> E
     C -- "Subscriptions" --> F
     F -- "Webhooks" --> C
     D -- "Configure Pricing" --> C
@@ -43,11 +43,11 @@ flowchart TD
 
 ## Why use Autumn?
 
-AI made pricing and billing significantly harder for developers to build and maintain. For reference, OpenAI wrote a [blog post](https://openai.com/index/beyond-rate-limits/) about their in-house system. Here are some of the things you will need:
+AI-style monetization is harder for developers to build and maintain. For reference, OpenAI wrote a [blog post](https://openai.com/index/beyond-rate-limits/) about their in-house system. Over time, you will end up building:
 
 | Feature               | Requirements                                                                                          |
 |-----------------------|--------------------------------------------------------------------------------------------------|
-| Subscription logic    | Checkouts, prorated upgrades, scheduled downgrades, add-ons, trials. 10+ webhook cases to handle.  |
+| Subscription logic    | Checkouts, prorated upgrades, scheduled downgrades, add-ons, trials. 10+ webhook cases.  |
 | Credit system         | Real-time enforcement, periodic vs one-time grants, rollovers, expiration, concurrency control |
 | Controls and observability        | Auto top ups, spend caps, per-seat allowances, usage analytics, event logs  |
 | Versioning and grandfathering     | Various price IDs, migration scripts, backwards compatibility                |

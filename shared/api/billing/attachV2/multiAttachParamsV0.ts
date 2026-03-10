@@ -38,6 +38,10 @@ export const MultiAttachPlanSchema = z.object({
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),
+	subscription_id: z.string().optional().meta({
+		description:
+			"A unique ID to identify this subscription. Useful when attaching the same plan multiple times.",
+	}),
 });
 
 export const MultiAttachParamsV0Schema = z.object({

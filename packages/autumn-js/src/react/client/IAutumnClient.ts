@@ -1,6 +1,7 @@
 import type {
 	AggregateEventsResponse,
-	BillingAttachResponse,
+	AttachResponse,
+	MultiAttachResponse,
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
@@ -8,8 +9,10 @@ import type {
 	ListPlansResponse,
 	OpenCustomerPortalResponse,
 	PreviewAttachResponse,
+	PreviewMultiAttachResponse,
 	PreviewUpdateResponse,
 	RedeemReferralCodeResponse,
+	SetupPaymentResponse,
 } from "@useautumn/sdk";
 import type {
 	AggregateEventsParams,
@@ -17,10 +20,13 @@ import type {
 	CreateReferralCodeParams,
 	GetOrCreateCustomerClientParams,
 	ListEventsParams,
+	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
+	PreviewMultiAttachParams,
 	PreviewUpdateSubscriptionParams,
 	RedeemReferralCodeParams,
+	SetupPaymentParams,
 	UpdateSubscriptionParams,
 } from "../../types";
 
@@ -29,7 +35,7 @@ export interface IAutumnClient {
 	getOrCreateCustomer: (
 		params?: GetOrCreateCustomerClientParams,
 	) => Promise<Customer | null>;
-	attach: (params: AttachParams) => Promise<BillingAttachResponse>;
+	attach: (params: AttachParams) => Promise<AttachResponse>;
 	previewAttach: (
 		params: PreviewAttachParams,
 	) => Promise<PreviewAttachResponse>;
@@ -39,6 +45,13 @@ export interface IAutumnClient {
 	previewUpdateSubscription: (
 		params: PreviewUpdateSubscriptionParams,
 	) => Promise<PreviewUpdateResponse>;
+	multiAttach: (
+		params: MultiAttachParams,
+	) => Promise<MultiAttachResponse>;
+	previewMultiAttach: (
+		params: PreviewMultiAttachParams,
+	) => Promise<PreviewMultiAttachResponse>;
+	setupPayment: (params: SetupPaymentParams) => Promise<SetupPaymentResponse>;
 	openCustomerPortal: (
 		params: OpenCustomerPortalParams,
 	) => Promise<OpenCustomerPortalResponse>;

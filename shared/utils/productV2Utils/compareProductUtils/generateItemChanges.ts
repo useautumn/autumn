@@ -68,16 +68,25 @@ function formatTierPricing({
 }): string {
 	if (tiers.length === 0) return "Tiered";
 
-	const firstPricedTier = tiers.find((tier) => tier.amount > 0);
+	const firstPricedTier = tiers.find(
+		(tier) => tier.amount > 0 || (tier.flat_amount ?? 0) > 0,
+	);
 	if (!firstPricedTier) {
 		const lastTier = tiers[tiers.length - 1];
 		if (lastTier.to === "inf") return "Unlimited free";
 		return `${lastTier.to} free`;
 	}
 
-	return billingUnits > 1
-		? `$${firstPricedTier.amount} per ${billingUnits}`
-		: `$${firstPricedTier.amount} per unit`;
+	const perUnit =
+		billingUnits > 1
+			? `$${firstPricedTier.amount} per ${billingUnits}`
+			: `$${firstPricedTier.amount} per unit`;
+
+	if (firstPricedTier.flat_amount && firstPricedTier.flat_amount > 0) {
+		return `${perUnit} + $${firstPricedTier.flat_amount} flat`;
+	}
+
+	return perUnit;
 }
 
 /** Generates edit items for product item additions, removals, and modifications */

@@ -16,7 +16,11 @@ const tiersMatch = (oldTiers: UsageTier[], newTiers: UsageTier[]): boolean => {
 
 	return oldTiers.every((oldTier, index) => {
 		const newTier = newTiers[index];
-		return oldTier.to === newTier.to && oldTier.amount === newTier.amount;
+		return (
+			oldTier.to === newTier.to &&
+			oldTier.amount === newTier.amount &&
+			(oldTier.flat_amount ?? 0) === (newTier.flat_amount ?? 0)
+		);
 	});
 };
 

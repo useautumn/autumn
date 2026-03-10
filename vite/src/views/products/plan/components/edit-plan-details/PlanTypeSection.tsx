@@ -147,25 +147,6 @@ export const PlanTypeSection = ({
 										},
 									],
 								});
-								// handleUpdateBasePrice({
-								// 	amount: "",
-								// 	interval:
-								// 		ProductItemInterval.Month as unknown as BillingInterval,
-								// 	intervalCount: 1,
-								// });
-								// console.log("hey");
-
-								// console.log(product);
-								// await setProduct({
-								// 	...product,
-								// 	items: [
-								// 		...product.items,
-								// 		{
-								// 			price: 10,
-								// 			interval: ProductItemInterval.Month,
-								// 		},
-								// 	],
-								// });
 							}}
 							icon={<CoinsIcon size={16} color="currentColor" />}
 						/>

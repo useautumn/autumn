@@ -2,9 +2,10 @@ import type { Feature } from "@models/featureModels/featureModels";
 import { Infinite } from "@models/productModels/productEnums";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
-import type {
-	UsagePriceConfig,
-	UsageTier,
+import {
+	TierBehavior,
+	type UsagePriceConfig,
+	type UsageTier,
 } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums";
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
@@ -102,4 +103,10 @@ export const priceOnFeature = ({
 		price.config.internal_feature_id === feature.internal_id ||
 		price.config.feature_id === feature.id
 	);
+};
+
+export const isVolumePrice = (
+	price: Price,
+): price is Price & { config: UsagePriceConfig } => {
+	return price.tier_behavior === TierBehavior.VolumeBased;
 };

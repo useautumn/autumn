@@ -171,12 +171,12 @@ test.concurrent(`${chalk.yellowBright("error: zero price checkout (allocated, no
 	const customerId = "stripe-checkout-error-zero-allocated";
 
 	// Allocated messages: $10/unit, no included usage
-	const allocatedMessagesItem = items.allocatedMessages({ includedUsage: 0 });
+	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 0 });
 
 	// Base product (no base price) with allocated messages
 	const base = products.base({
 		id: "zero-allocated",
-		items: [allocatedMessagesItem],
+		items: [allocatedUsersItem],
 	});
 
 	const { autumnV1 } = await initScenario({

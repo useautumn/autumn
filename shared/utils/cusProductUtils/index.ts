@@ -2,9 +2,10 @@ import { customerProductToFeaturesToCarryUsagesFor } from "@utils/cusProductUtil
 
 export * from "./classifyCustomerProduct/classifyCustomerProduct";
 export * from "./classifyCustomerProduct/cpBuilder";
+export * from "./convertCusProduct";
 export * from "./convertCusProduct/cusProductToConvertedFeatureOptions";
 export * from "./convertCusProduct/cusProductToFeatureOptions";
-export * from "./convertCusProduct";
+export * from "./convertCusProduct/customerProductsToStripeSubscriptionIds";
 export * from "./cusProductConstants";
 export * from "./cusProductUtils";
 export * from "./featureOptionUtils/findFeatureOptions";

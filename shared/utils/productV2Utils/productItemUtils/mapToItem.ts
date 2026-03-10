@@ -80,6 +80,7 @@ export const toFeaturePriceItem = ({
 		return {
 			amount: tier.amount,
 			to: tier.to === -1 ? TierInfinite : tier.to,
+			flat_amount: tier.flat_amount,
 		};
 	});
 
@@ -105,6 +106,7 @@ export const toFeaturePriceItem = ({
 		price: null,
 		tiers,
 		billing_units: config.billing_units,
+		tier_behavior: price.tier_behavior ?? null,
 
 		entity_feature_id: ent.entity_feature_id,
 		reset_usage_when_enabled: !ent.carry_from_previous,

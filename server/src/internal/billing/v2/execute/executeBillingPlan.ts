@@ -2,11 +2,13 @@ import type {
 	BillingContext,
 	BillingPlan,
 	BillingResult,
+	StripeBillingPlanResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
+import { workflows } from "@/queue/workflows";
 
 export const executeBillingPlan = async ({
 	ctx,
@@ -17,20 +19,41 @@ export const executeBillingPlan = async ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }): Promise<BillingResult> => {
-	const stripeBillingResult = await executeStripeBillingPlan({
-		ctx,
-		billingPlan,
-		billingContext,
-	});
+	const stripeBillingResult: StripeBillingPlanResult =
+		billingContext.skipBillingChanges
+			? {}
+			: await executeStripeBillingPlan({
+					ctx,
+					billingPlan,
+					billingContext,
+				});
 
-	if (stripeBillingResult.deferred)
+	if (stripeBillingResult.deferred) {
+		// Store line items even when deferred — invoice already exists in DB
+		if (
+			stripeBillingResult.autumnInvoice &&
+			stripeBillingResult.stripeInvoice
+		) {
+			await workflows.triggerStoreInvoiceLineItems({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				stripeInvoiceId: stripeBillingResult.stripeInvoice.id,
+				autumnInvoiceId: stripeBillingResult.autumnInvoice.id,
+				billingLineItems: billingPlan.autumn.lineItems,
+			});
+		}
+
 		return {
 			stripe: stripeBillingResult,
 		};
+	}
 
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
+		stripeInvoice: stripeBillingResult.stripeInvoice,
+		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
+		autumnInvoice: stripeBillingResult.autumnInvoice,
 	});
 
 	// Queue webhooks after Autumn billing plan is executed

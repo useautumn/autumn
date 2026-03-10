@@ -29,9 +29,21 @@ export const executeStripeSubscriptionOperation = async ({
 			? "default_incomplete"
 			: "allow_incomplete";
 
+	// If customer's invoice_settings.default_payment_method is null but we
+	// resolved a payment method from the customer's attached PMs, pass it
+	// explicitly so Stripe knows which PM to charge.
+	const customerHasDefaultPm =
+		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
+
+	const fallbackPaymentMethodParams =
+		paymentMethod && !customerHasDefaultPm
+			? { default_payment_method: paymentMethod.id }
+			: {};
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
+
 			if (
 				stripeSubscription &&
 				stripeSubscription.billing_mode.type !== "flexible"
@@ -44,11 +56,15 @@ export const executeStripeSubscriptionOperation = async ({
 				);
 			}
 
+			const subscriptionHasDefaultPm =
+				stripeSubscription?.default_payment_method;
+
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
 				{
 					...subscriptionAction.params,
 					...invoiceModeParams,
+					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
@@ -58,6 +74,7 @@ export const executeStripeSubscriptionOperation = async ({
 			return await stripeClient.subscriptions.create({
 				...subscriptionAction.params,
 				...invoiceModeParams,
+				...fallbackPaymentMethodParams,
 
 				billing_mode: { type: "flexible" },
 

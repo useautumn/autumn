@@ -51,14 +51,14 @@ export type CheckParams = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const Scenario = {
+export const CheckScenario = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type Scenario = OpenEnum<typeof Scenario>;
+export type CheckScenario = OpenEnum<typeof CheckScenario>;
 
 /**
  * The environment of the product
@@ -115,7 +115,17 @@ export type Tiers = {
    * The price of the product item for this tier.
    */
   amount: number;
+  /**
+   * A flat fee charged for this tier, in addition to the per-unit amount.
+   */
+  flatAmount?: number | null | undefined;
 };
+
+export const CheckTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type CheckTierBehavior = OpenEnum<typeof CheckTierBehavior>;
 
 export const UsageModel = {
   Prepaid: "prepaid",
@@ -199,6 +209,10 @@ export type CheckItem = {
    * Tiered pricing for the product item. Not applicable for fixed price items.
    */
   tiers?: Array<Tiers> | null | undefined;
+  /**
+   * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
+   */
+  tierBehavior?: CheckTierBehavior | null | undefined;
   /**
    * Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
    */
@@ -374,7 +388,7 @@ export type Preview = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: Scenario;
+  scenario: CheckScenario;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -469,8 +483,10 @@ export function checkParamsToJSON(checkParams: CheckParams): string {
 }
 
 /** @internal */
-export const Scenario$inboundSchema: z.ZodMiniType<Scenario, unknown> =
-  openEnums.inboundSchema(Scenario);
+export const CheckScenario$inboundSchema: z.ZodMiniType<
+  CheckScenario,
+  unknown
+> = openEnums.inboundSchema(CheckScenario);
 
 /** @internal */
 export const CheckEnv$inboundSchema: z.ZodMiniType<CheckEnv, unknown> =
@@ -521,10 +537,18 @@ export function checkToFromJSON(
 }
 
 /** @internal */
-export const Tiers$inboundSchema: z.ZodMiniType<Tiers, unknown> = z.object({
-  to: smartUnion([types.number(), types.string()]),
-  amount: types.number(),
-});
+export const Tiers$inboundSchema: z.ZodMiniType<Tiers, unknown> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
 
 export function tiersFromJSON(
   jsonString: string,
@@ -535,6 +559,12 @@ export function tiersFromJSON(
     `Failed to parse 'Tiers' from JSON`,
   );
 }
+
+/** @internal */
+export const CheckTierBehavior$inboundSchema: z.ZodMiniType<
+  CheckTierBehavior,
+  unknown
+> = openEnums.inboundSchema(CheckTierBehavior);
 
 /** @internal */
 export const UsageModel$inboundSchema: z.ZodMiniType<UsageModel, unknown> =
@@ -642,6 +672,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
       tiers: z.optional(z.nullable(z.array(z.lazy(() => Tiers$inboundSchema)))),
+      tier_behavior: z.optional(z.nullable(CheckTierBehavior$inboundSchema)),
       usage_model: z.optional(z.nullable(UsageModel$inboundSchema)),
       billing_units: z.optional(z.nullable(types.number())),
       reset_usage_when_enabled: z.optional(z.nullable(types.boolean())),
@@ -657,6 +688,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
         "feature_type": "featureType",
         "included_usage": "includedUsage",
         "interval_count": "intervalCount",
+        "tier_behavior": "tierBehavior",
         "usage_model": "usageModel",
         "billing_units": "billingUnits",
         "reset_usage_when_enabled": "resetUsageWhenEnabled",
@@ -793,7 +825,7 @@ export function productFromJSON(
 /** @internal */
 export const Preview$inboundSchema: z.ZodMiniType<Preview, unknown> = z.pipe(
   z.object({
-    scenario: Scenario$inboundSchema,
+    scenario: CheckScenario$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),

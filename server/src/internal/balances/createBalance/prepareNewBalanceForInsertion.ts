@@ -1,14 +1,15 @@
 import {
 	apiPlanItem,
 	type CreateBalanceParamsV0,
+	type CustomerEntitlement,
 	createBalanceParamsV0ToPlanItemV0,
+	type Entitlement,
 	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { initCusEntitlement } from "@/internal/customers/add-product/initCusEnt";
-import { initNextResetAt } from "@/internal/customers/cusProducts/insertCusProduct/initCusEnt/initNextResetAt";
+import { initCustomerEntitlement } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlement";
 import { toFeature } from "@/internal/products/product-items/productItemUtils/itemToPriceAndEnt";
 
 export const prepareNewBalanceForInsertion = async ({
@@ -21,7 +22,10 @@ export const prepareNewBalanceForInsertion = async ({
 	feature: Feature;
 	fullCustomer: FullCustomer;
 	params: CreateBalanceParamsV0;
-}) => {
+}): Promise<{
+	newEntitlement: Entitlement;
+	newCustomerEntitlement: CustomerEntitlement;
+}> => {
 	const planItem = createBalanceParamsV0ToPlanItemV0({
 		ctx,
 		params,
@@ -50,22 +54,16 @@ export const prepareNewBalanceForInsertion = async ({
 		feature,
 	});
 
-	const newCustomerEntitlement = initCusEntitlement({
+	const newCustomerEntitlement = initCustomerEntitlement({
+		initContext: {
+			fullCustomer,
+			featureQuantities: [],
+			resetCycleAnchor: Date.now(),
+			freeTrial: null,
+			now: Date.now(),
+		},
 		entitlement: newEntitlementWithFeature,
-		customer: fullCustomer,
 		cusProductId: null,
-		freeTrial: null,
-		nextResetAt:
-			initNextResetAt({
-				entitlement: newEntitlementWithFeature,
-				now: Date.now(),
-			}) ?? Date.now(),
-		entities: entity ? [entity] : [],
-		carryExistingUsages: false,
-		replaceables: [],
-		now: Date.now(),
-		productOptions: undefined,
-		expires_at: params.expires_at ?? null,
 	});
 
 	// If entity is provided, assign balance to entity instead of customer-level
@@ -78,6 +76,10 @@ export const prepareNewBalanceForInsertion = async ({
 		newCustomerEntitlement.expires_at = params.expires_at ?? null;
 		// Clear next_reset_at since expiring entitlements don't reset
 		newCustomerEntitlement.next_reset_at = null;
+	}
+
+	if (params.balance_id) {
+		newCustomerEntitlement.external_id = params.balance_id;
 	}
 
 	return {

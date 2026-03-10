@@ -11,11 +11,11 @@ type CreateInvoiceParams = {
 	stripeCusId: string;
 	stripeSubId?: string;
 	currency?: string;
-	discounts?: { coupon: string }[];
+	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
 	daysUntilDue?: number;
 	description?: string;
-	metadata?: Stripe.MetadataParam;
+	metadata?: Stripe.InvoiceCreateParams["metadata"];
 };
 
 export const createStripeInvoice = async ({
@@ -27,6 +27,7 @@ export const createStripeInvoice = async ({
 	daysUntilDue,
 	description,
 	metadata,
+	discounts,
 }: CreateInvoiceParams): Promise<Stripe.Invoice> => {
 	const invoice = await stripeCli.invoices.create({
 		customer: stripeCusId,
@@ -38,6 +39,7 @@ export const createStripeInvoice = async ({
 		collection_method: collectionMethod,
 		days_until_due:
 			collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
+		...(discounts ? { discounts } : {}),
 	});
 
 	return invoice;
@@ -99,9 +101,14 @@ type CreateStripeInvoiceItemsParams = {
 export const createStripeInvoiceItems = async ({
 	ctx,
 	invoiceItems,
-}: CreateStripeInvoiceItemsParams): Promise<void> => {
+}: CreateStripeInvoiceItemsParams): Promise<Stripe.InvoiceItem[]> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+	const invoiceItemsCreated: Stripe.InvoiceItem[] = [];
 	for (const item of invoiceItems) {
-		await stripeCli.invoiceItems.create(item);
+		const invoiceItem = await stripeCli.invoiceItems.create(item);
+		invoiceItemsCreated.push(invoiceItem);
 	}
+
+	return invoiceItemsCreated;
 };

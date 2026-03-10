@@ -1,6 +1,7 @@
 import {
 	boolean,
 	foreignKey,
+	index,
 	numeric,
 	pgTable,
 	text,
@@ -48,6 +49,10 @@ export const entities = pgTable(
 			table.env,
 			table.internal_customer_id,
 			table.id,
+		),
+		index("idx_entities_internal_customer_id").using(
+			"hash",
+			table.internal_customer_id,
 		),
 	],
 );

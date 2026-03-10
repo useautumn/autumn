@@ -62,8 +62,16 @@ class UpdateBalanceParamsTypedDict(TypedDict):
     r"""Set the remaining balance to this exact value. Cannot be combined with add_to_balance."""
     add_to_balance: NotRequired[float]
     r"""Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance."""
+    usage: NotRequired[float]
+    r"""The usage amount to update. Cannot be combined with remaining or add_to_balance."""
     interval: NotRequired[UpdateBalanceInterval]
     r"""Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals."""
+    included_grant: NotRequired[float]
+    r"""Set the granted balance to this exact value."""
+    balance_id: NotRequired[str]
+    r"""Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature."""
+    next_reset_at: NotRequired[float]
+    r"""The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time."""
 
 
 class UpdateBalanceParams(BaseModel):
@@ -82,12 +90,35 @@ class UpdateBalanceParams(BaseModel):
     add_to_balance: Optional[float] = None
     r"""Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance."""
 
+    usage: Optional[float] = None
+    r"""The usage amount to update. Cannot be combined with remaining or add_to_balance."""
+
     interval: Optional[UpdateBalanceInterval] = None
     r"""Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals."""
 
+    included_grant: Optional[float] = None
+    r"""Set the granted balance to this exact value."""
+
+    balance_id: Optional[str] = None
+    r"""Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature."""
+
+    next_reset_at: Optional[float] = None
+    r"""The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "remaining", "add_to_balance", "interval"])
+        optional_fields = set(
+            [
+                "entity_id",
+                "remaining",
+                "add_to_balance",
+                "usage",
+                "interval",
+                "included_grant",
+                "balance_id",
+                "next_reset_at",
+            ]
+        )
         serialized = handler(self)
         m = {}
 

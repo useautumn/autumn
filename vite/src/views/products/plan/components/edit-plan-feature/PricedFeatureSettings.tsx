@@ -3,6 +3,7 @@ import {
 	itemToBillingInterval,
 	nullish,
 	ProductItemInterval,
+	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -16,6 +17,9 @@ export function PricedFeatureSettings() {
 	if (!item) return null;
 
 	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
+	const isVolumeBased =
+		item.tier_behavior === TierBehavior.VolumeBased &&
+		(item.tiers?.length ?? 0) > 1;
 
 	const handleUsageModelChange = (value: string) => {
 		const usageModel = value as UsageModel;
@@ -30,7 +34,7 @@ export function PricedFeatureSettings() {
 	};
 
 	return (
-		<div className="mt-3">
+		<div>
 			<FormLabel>Billing Method</FormLabel>
 			<RadioGroup
 				value={item.usage_model}
@@ -42,7 +46,11 @@ export function PricedFeatureSettings() {
 					label="Usage-based"
 					description={"Bill for how much the customer uses"}
 					disabledReason={
-						isOneOff ? "Usage based prices must have an interval." : undefined
+						isVolumeBased
+							? "Volume-based pricing requires prepaid billing."
+							: isOneOff
+								? "Usage based prices must have an interval."
+								: undefined
 					}
 				/>
 				<AreaRadioGroupItem

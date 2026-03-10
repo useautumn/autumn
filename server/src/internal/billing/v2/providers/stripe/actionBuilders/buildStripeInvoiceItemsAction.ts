@@ -1,6 +1,8 @@
-import type { LineItem } from "@autumn/shared";
-import type { BillingContext } from "@autumn/shared";
-import type { StripeInvoiceItemsAction } from "@autumn/shared";
+import type {
+	BillingContext,
+	LineItem,
+	StripeInvoiceItemsAction,
+} from "@autumn/shared";
 import { lineItemsToCreateInvoiceItemsParams } from "../utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 
 /**
@@ -16,7 +18,7 @@ export const buildStripeInvoiceItemsAction = ({
 	billingContext: BillingContext;
 }): StripeInvoiceItemsAction | undefined => {
 	const deferredLineItems = lineItems.filter(
-		(line) => line.chargeImmediately === false,
+		(line) => line.chargeImmediately === false && line.amount !== 0,
 	);
 
 	if (deferredLineItems.length === 0) {
@@ -27,7 +29,7 @@ export const buildStripeInvoiceItemsAction = ({
 	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
 
 	const createInvoiceItems = lineItemsToCreateInvoiceItemsParams({
-		stripeCustomerId,
+		stripeCustomerId: stripeCustomerId ?? "none",
 		stripeSubscriptionId,
 		lineItems: deferredLineItems,
 	});

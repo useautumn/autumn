@@ -16,10 +16,12 @@ import { Decimal } from "decimal.js";
 export const priceToLineAmount = ({
 	price,
 	overage,
+	allowance = 0,
 	multiplier = 1,
 }: {
 	price: Price;
 	overage?: number;
+	allowance?: number;
 	multiplier?: number;
 }): number => {
 	// Fixed prices: flat amount × multiplier
@@ -38,6 +40,7 @@ export const priceToLineAmount = ({
 	return tiersToLineAmount({
 		price,
 		overage,
+		allowance,
 		billingUnits: price.config.billing_units ?? 1,
 	});
 };

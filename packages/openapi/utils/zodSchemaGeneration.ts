@@ -15,7 +15,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		sdkFile: "get-or-create-customer-op.ts",
 		outputFile: "getOrCreateCustomerSchemas.ts",
 	},
-	{ sdkFile: "billing-attach-op.ts", outputFile: "billingAttachSchemas.ts" },
+	{ sdkFile: "attach-op.ts", outputFile: "attachSchemas.ts" },
 	{
 		sdkFile: "open-customer-portal-op.ts",
 		outputFile: "openCustomerPortalSchemas.ts",

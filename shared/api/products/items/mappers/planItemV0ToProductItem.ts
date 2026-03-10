@@ -145,7 +145,9 @@ export const planItemV0ToProductItem = ({
 		tiers: planItem.price?.tiers?.map((tier) => ({
 			amount: tier.amount,
 			to: tier.to,
+			flat_amount: tier.flat_amount,
 		})),
+		tier_behavior: planItem.price?.tier_behavior,
 
 		usage_model: planItem.price?.usage_model,
 		billing_units: planItem.price?.billing_units,

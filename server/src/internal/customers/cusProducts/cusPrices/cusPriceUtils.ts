@@ -72,7 +72,10 @@ export const getCusPriceUsage = ({
 	const roundedQuantity =
 		Math.ceil(new Decimal(usage).div(billingUnits).toNumber()) * billingUnits;
 
-	const amount = getPriceForOverage(cusPrice.price, -totalNegativeBalance);
+	const amount = getPriceForOverage({
+		price: cusPrice.price,
+		overage: -totalNegativeBalance,
+	});
 
 	let description = getFeatureInvoiceDescription({
 		feature: cusEnt.entitlement.feature,

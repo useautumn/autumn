@@ -1,55 +1,57 @@
-import { Decimal } from "decimal.js";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { volumeTiersToLineAmount } from "@utils/billingUtils/invoicingUtils/lineItemUtils/volumeTiersToLineAmount";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
-import { Infinite } from "../../../../models/productModels/productEnums";
 import { nullish } from "../../../utils";
-import { roundUsageToNearestBillingUnit } from "../../usageUtils/roundUsageToNearestBillingUnit";
+import { graduatedTiersToLineAmount } from "./graduatedTiersToLineAmount";
 
+/**
+ * Translates usage into a dollar amount using the price's tier behaviour.
+ *
+ * - **Graduated**: `overage` should be net of allowance. Each tier band is
+ *   charged at its own rate. `allowance` param is unused.
+ * - **Volume**: `overage` should be total usage (purchased + allowance).
+ *   `allowance` is passed through to prepend a free $0 tier and shift
+ *   boundaries. If total exceeds the free tier, the ENTIRE quantity
+ *   (including included) is charged at the matching tier's rate.
+ *
+ * Callers (e.g. `usagePriceToLineItem`) are responsible for adjusting
+ * `overage` before calling — volume adds allowance to overage, graduated
+ * does not.
+ */
 export const tiersToLineAmount = ({
 	price,
 	overage,
+	allowance = 0,
 	billingUnits = 1,
 }: {
 	price: Price;
 	overage: number;
+	allowance?: number;
 	billingUnits?: number;
 }): number => {
-	const isNegative = overage < 0;
-	const absoluteOverage = Math.abs(overage);
-
-	const roundedOverage = roundUsageToNearestBillingUnit({
-		usage: absoluteOverage,
-		billingUnits,
-	});
-
-	let amount = new Decimal(0);
-	let remaining = new Decimal(roundedOverage);
-	let lastTierTo = 0;
 	const tiers = price.config.usage_tiers;
+	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
 
 	if (nullish(tiers)) {
 		throw new Error(
-			`[tiersToLineAmount] usage_tiers required for usage-based prices`,
+			"[tiersToLineAmount] usage_tiers required for usage-based or prepaid prices",
 		);
 	}
 
-	for (const tier of tiers) {
-		if (remaining.lte(0)) break;
-
-		const isFinalTier = tier.to === Infinite || tier.to === -1;
-
-		const tierSize = isFinalTier
-			? remaining
-			: Decimal.min(remaining, new Decimal(tier.to).minus(lastTierTo));
-
-		const rate = new Decimal(tier.amount).div(billingUnits);
-		amount = amount.plus(rate.mul(tierSize));
-		remaining = remaining.minus(tierSize);
-
-		if (tier.to !== Infinite && tier.to !== -1) {
-			lastTierTo = tier.to;
-		}
+	if (isVolume) {
+		return volumeTiersToLineAmount({
+			tiers,
+			usage: overage,
+			billingUnits,
+			allowNegative: true,
+			allowance,
+		});
 	}
 
-	const finalAmount = amount.toDecimalPlaces(10).toNumber();
-	return isNegative ? -finalAmount : finalAmount;
+	return graduatedTiersToLineAmount({
+		tiers,
+		usage: overage,
+		billingUnits,
+		allowNegative: true,
+	});
 };

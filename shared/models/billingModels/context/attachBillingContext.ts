@@ -31,6 +31,9 @@ export interface AttachBillingContext extends BillingContext {
 
 	// Checkout
 	checkoutMode: CheckoutMode;
+
+	// User-provided subscription ID for targeting
+	externalId?: string;
 }
 
 // export interface AttachBillingContextOverride {

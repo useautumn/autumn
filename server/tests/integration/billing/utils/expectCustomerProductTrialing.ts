@@ -1,18 +1,39 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	ApiEntityV0,
+	ApiEntityV2,
+} from "@autumn/shared";
 import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
+import {
+	expectSubscriptionTrialing,
+	expectSubscriptionNotTrialing,
+	expectSubscriptionPeriodAlignedWithTrialEnd,
+} from "./expect-customer-products/expectSubscriptionTrialing";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
-
 const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+type CustomerOrEntity =
+	| ApiCustomerV3
+	| ApiEntityV0
+	| ApiCustomerV5
+	| ApiEntityV2;
+type V5CustomerOrEntity = ApiCustomerV5 | ApiEntityV2;
+
+/** Type guard for V5/V2 customer/entity. */
+const isV5Customer = (
+	customer: CustomerOrEntity,
+): customer is V5CustomerOrEntity => "subscriptions" in customer;
 
 /**
  * Verify a customer product is currently trialing with the expected trial end time.
- * Uses `status === "trialing"` and `current_period_end` to determine trial state.
+ * Uses `status === "trialing"` and `current_period_end` for V3, `trial_ends_at` for V5.
  */
 export const expectProductTrialing = async ({
 	customerId,
@@ -22,15 +43,24 @@ export const expectProductTrialing = async ({
 	toleranceMs = TEN_MINUTES_MS,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-	/** Expected trial end timestamp (10 min tolerance) */
 	trialEndsAt?: number;
 	toleranceMs?: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
+
+	// Route to V5
+	if (isV5Customer(customer)) {
+		return expectSubscriptionTrialing({
+			customer,
+			productId,
+			trialEndsAt: expectedTrialEndsAt,
+			toleranceMs,
+		});
+	}
 
 	const products = customer.products ?? [];
 	const product = products.find((p: { id?: string }) => p.id === productId);
@@ -66,8 +96,7 @@ export const expectProductTrialing = async ({
 
 /**
  * Verify a customer product is NOT trialing.
- * If nowMs is provided, checks if product is actually trialing based on test clock time
- * (status may be "trialing" but if nowMs >= current_period_end, trial has ended).
+ * If nowMs is provided, checks if product is actually trialing based on test clock time.
  */
 export const expectProductNotTrialing = async ({
 	customerId,
@@ -76,14 +105,18 @@ export const expectProductNotTrialing = async ({
 	nowMs,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
-	/** Current time in ms (e.g., advancedTo from test clock). If provided, checks if trial is actually active. */
 	nowMs?: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
+
+	// Route to V5
+	if (isV5Customer(customer)) {
+		return expectSubscriptionNotTrialing({ customer, productId });
+	}
 
 	const products = customer.products ?? [];
 	const product = products.find((p: { id?: string }) => p.id === productId);
@@ -118,9 +151,7 @@ export const expectProductNotTrialing = async ({
 	).not.toBe("trialing");
 };
 
-/**
- * Verify a feature's next_reset_at aligns with trial end time.
- */
+/** Verify a feature's next_reset_at aligns with trial end time. */
 export const expectFeatureResetAlignedWithTrialEnd = async ({
 	customerId,
 	customer: providedCustomer,
@@ -169,13 +200,22 @@ export const expectPeriodEndsAlignedWithTrialEnd = async ({
 	trialEndsAt,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
 	trialEndsAt: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
+
+	// Route to V5
+	if (isV5Customer(customer)) {
+		return expectSubscriptionPeriodAlignedWithTrialEnd({
+			customer,
+			productId,
+			trialEndsAt,
+		});
+	}
 
 	const products = customer.products ?? [];
 	const product = products.find((p: { id?: string }) => p.id === productId);
@@ -197,9 +237,7 @@ export const expectPeriodEndsAlignedWithTrialEnd = async ({
 	).toBe(true);
 };
 
-/**
- * Helper to calculate expected trial end time in milliseconds.
- */
+/** Helper to calculate expected trial end time in milliseconds. */
 export const calculateTrialEndMs = ({
 	trialDays,
 }: {
@@ -208,21 +246,27 @@ export const calculateTrialEndMs = ({
 	return Date.now() + trialDays * ONE_DAY_MS;
 };
 
-/**
- * Get the trial end time (current_period_end) from a trialing product.
- */
+/** Get the trial end time from a trialing product. */
 export const getTrialEndsAt = async ({
 	customerId,
 	customer: providedCustomer,
 	productId,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+	customer?: CustomerOrEntity;
 	productId: string;
 }): Promise<number | null> => {
 	const customer = providedCustomer
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
+
+	// Route to V5
+	if (isV5Customer(customer)) {
+		const sub = customer.subscriptions.find(
+			(s) => s.plan_id === productId,
+		);
+		return sub?.trial_ends_at ?? null;
+	}
 
 	const products = customer.products ?? [];
 	const product = products.find((p: { id?: string }) => p.id === productId);

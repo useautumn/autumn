@@ -2,6 +2,10 @@ import { ApiPlanV1Schema } from "@api/products/apiPlanV1";
 import { z } from "zod/v4";
 
 export const ApiSubscriptionV1Schema = z.object({
+	id: z.string().meta({
+		description:
+			"The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.",
+	}),
 	plan: ApiPlanV1Schema.optional().meta({
 		description: "The full plan object if expanded.",
 	}),

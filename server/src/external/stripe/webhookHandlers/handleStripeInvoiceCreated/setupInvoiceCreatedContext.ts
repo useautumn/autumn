@@ -27,7 +27,9 @@ import { customerProductActions } from "@/internal/customers/cusProducts/actions
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface InvoiceCreatedContext {
-	stripeInvoice: ExpandedStripeInvoice<["discounts.source.coupon"]>;
+	stripeInvoice: ExpandedStripeInvoice<
+		["discounts.source.coupon", "total_discount_amounts"]
+	>;
 	stripeSubscription: ExpandedStripeSubscription;
 	stripeCustomer: ExpandedStripeCustomer;
 	stripeSubscriptionId: string;
@@ -53,7 +55,7 @@ export const setupInvoiceCreatedContext = async ({
 	const stripeInvoice = await getStripeInvoice({
 		stripeClient: stripeCli,
 		invoiceId: event.data.object.id!,
-		expand: ["discounts.source.coupon"],
+		expand: ["discounts.source.coupon", "total_discount_amounts"],
 	});
 
 	// 2. Get subscription ID - return null if not a subscription invoice

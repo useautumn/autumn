@@ -1,7 +1,10 @@
 import type { ApiBalanceBreakdownPrice } from "@api/customers/cusFeatures/apiBalanceV1.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import {
+	TierBehavior,
+	type UsagePriceConfig,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { cusEntsToMaxPurchase } from "@utils/cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice.js";
 import { customerPriceToBillingUnits } from "@utils/cusPriceUtils/convertCustomerPrice/customerPriceToBillingUnits.js";
@@ -10,6 +13,7 @@ import {
 	isPrepaidPrice,
 	isUsagePrice,
 } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
+import { addIncludedToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils.js";
 
 export const customerEntitlementToBalancePrice = ({
 	customerEntitlement,
@@ -33,6 +37,10 @@ export const customerEntitlementToBalancePrice = ({
 	// If usage price with multiple tiers, use tiers array
 	let amount: number | undefined;
 	let tiers: UsagePriceConfig["usage_tiers"] | undefined;
+	let tier_behavior: TierBehavior | undefined;
+
+	// Get the entitlement's allowance (included usage) to add to tier `to` values
+	const allowance = customerEntitlement.entitlement.allowance ?? 0;
 
 	if (isFixedPrice(price)) {
 		amount = price.config.amount;
@@ -41,13 +49,17 @@ export const customerEntitlementToBalancePrice = ({
 		if (usageTiers.length === 1) {
 			amount = usageTiers[0].amount;
 		} else {
-			tiers = usageTiers;
+			// Internal: tier `to` does NOT include included usage.
+			// User-facing: tier `to` INCLUDES included usage.
+			tiers = addIncludedToTiers({ tiers: usageTiers, included: allowance });
+			tier_behavior = price.tier_behavior ?? TierBehavior.Graduated;
 		}
 	}
 
 	return {
 		amount,
 		tiers,
+		tier_behavior,
 		billing_units: billingUnits,
 		billing_method: billingMethod,
 		max_purchase: maxPurchase,

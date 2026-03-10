@@ -1,4 +1,5 @@
 import { cusEntsToAllowance } from "@utils/cusEntUtils";
+import { cusEntToPrepaidInvoiceOverage } from "@utils/cusEntUtils/balanceUtils/cusEntsToPrepaidInvoiceOverage";
 import { Decimal } from "decimal.js";
 import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
@@ -48,20 +49,22 @@ export const usagePriceToLineItem = ({
 	const price = cusPrice.price;
 
 	// 1. Get overage
+	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
 	let overage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		overage = cusEntsToPrepaidQuantity({
-			cusEnts: [cusEnt],
-			sumAcrossEntities: false,
-		});
+		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
 	} else {
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
 
+	// Volume pricing: the total quantity (purchased + allowance) determines
+	// which tier applies, and the ENTIRE total is charged at that tier's rate.
+	// So we add allowance back to overage before pricing.
+	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
+
 	// 2. Get usage
 	let usage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 		const prepaidQuantity = cusEntsToPrepaidQuantity({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
@@ -76,7 +79,9 @@ export const usagePriceToLineItem = ({
 		...context,
 		price: cusPrice.price,
 		feature: cusEnt.entitlement.feature,
-		discountable: options.discountable ?? false,
+		discountable: options.discountable,
+		customerProduct: cusEnt.customer_product ?? undefined,
+		customerEntitlement: cusEnt,
 	};
 
 	// 3. Generate description
@@ -90,6 +95,7 @@ export const usagePriceToLineItem = ({
 	const amount = priceToLineAmount({
 		price,
 		overage,
+		allowance: allowance,
 	});
 
 	// 5. Get stripe price / product IDs

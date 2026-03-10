@@ -16,6 +16,9 @@ export const ROUTE_NAMES = {
 	listPlans: "listPlans",
 	listEvents: "listEvents",
 	aggregateEvents: "aggregateEvents",
+	multiAttach: "multiAttach",
+	previewMultiAttach: "previewMultiAttach",
+	setupPayment: "setupPayment",
 } as const;
 
 /** Union of all route names */

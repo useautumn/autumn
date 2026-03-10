@@ -109,7 +109,16 @@ export type PreviewUpdateTo = number | string;
 export type PreviewUpdateTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const PreviewUpdateTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PreviewUpdateTierBehavior = ClosedEnum<
+  typeof PreviewUpdateTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -152,9 +161,10 @@ export type PreviewUpdatePrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewUpdateTier> | undefined;
+  tierBehavior?: PreviewUpdateTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -398,9 +408,9 @@ export type PreviewUpdateParams = {
    */
   entityId?: string | undefined;
   /**
-   * The ID of the plan.
+   * The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
    */
-  planId: string;
+  planId?: string | undefined;
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
@@ -421,6 +431,10 @@ export type PreviewUpdateParams = {
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewUpdateProrationBehavior | undefined;
+  /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -618,16 +632,25 @@ export function previewUpdateToToJSON(
 export type PreviewUpdateTier$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const PreviewUpdateTier$outboundSchema: z.ZodMiniType<
   PreviewUpdateTier$Outbound,
   PreviewUpdateTier
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function previewUpdateTierToJSON(
   previewUpdateTier: PreviewUpdateTier,
@@ -636,6 +659,11 @@ export function previewUpdateTierToJSON(
     PreviewUpdateTier$outboundSchema.parse(previewUpdateTier),
   );
 }
+
+/** @internal */
+export const PreviewUpdateTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateTierBehavior
+> = z.enum(PreviewUpdateTierBehavior);
 
 /** @internal */
 export const PreviewUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -651,6 +679,7 @@ export const PreviewUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
 export type PreviewUpdatePrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewUpdateTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -666,6 +695,7 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.optional(z.number()),
     tiers: z.optional(z.array(z.lazy(() => PreviewUpdateTier$outboundSchema))),
+    tierBehavior: z.optional(PreviewUpdateTierBehavior$outboundSchema),
     interval: PreviewUpdateItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -674,6 +704,7 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
@@ -934,12 +965,13 @@ export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 export type PreviewUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
-  plan_id: string;
+  plan_id?: string | undefined;
   feature_quantities?: Array<PreviewUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   customize?: PreviewUpdateCustomize$Outbound | undefined;
   invoice_mode?: PreviewUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   cancel_action?: string | undefined;
 };
 
@@ -951,7 +983,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
-    planId: z.string(),
+    planId: z.optional(z.string()),
     featureQuantities: z.optional(
       z.array(z.lazy(() => PreviewUpdateFeatureQuantity$outboundSchema)),
     ),
@@ -963,6 +995,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       PreviewUpdateProrationBehavior$outboundSchema,
     ),
+    subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
   }),
   z.transform((v) => {
@@ -973,6 +1006,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
     });
   }),

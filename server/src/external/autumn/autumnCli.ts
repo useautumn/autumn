@@ -22,7 +22,9 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CustomerBillingControlsInput,
 	CustomerExpand,
+	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
 	type LegacyVersion,
@@ -100,9 +102,9 @@ export class AutumnInt {
 		}
 	}
 
-	async get(path: string) {
+	async get(path: string, headers?: Record<string, string>) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
-			headers: this.headers,
+			headers: { ...this.headers, ...headers },
 		});
 
 		if (response.status !== 200) {
@@ -381,9 +383,20 @@ export class AutumnInt {
 	}
 
 	customers = {
-		list: async (params?: { limit?: number; offset?: number }) => {
+		list: async (params?: {
+			limit?: number;
+			offset?: number;
+			keepInternalFields?: boolean;
+		}) => {
+			const { keepInternalFields, ...listParams } = params || {};
+			const headers: Record<string, string> = {};
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
 			const data = await this.get(
-				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
+				`/customers?${new URLSearchParams(listParams as Record<string, string>).toString()}`,
+				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 			return data;
 		},
@@ -394,8 +407,19 @@ export class AutumnInt {
 			search?: string;
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
+			keepInternalFields?: boolean;
 		}) => {
-			const data = await this.post(`/customers/list`, params || {});
+			const { keepInternalFields, ...listParams } = params || {};
+			const headers: Record<string, string> = {};
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
+			const data = await this.post(
+				`/customers/list`,
+				listParams,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
 			return data;
 		},
 
@@ -487,6 +511,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsInput;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
@@ -818,6 +843,10 @@ export class AutumnInt {
 		},
 		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
+		delete: async (params: DeleteBalanceParamsV0) => {
+			const data = await this.post(`/balances.delete`, params);
 			return data;
 		},
 	};

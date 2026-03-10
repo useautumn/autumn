@@ -163,7 +163,14 @@ export type PlanTo = number | string;
 export type PlanTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const PlanTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PlanTierBehavior = OpenEnum<typeof PlanTierBehavior>;
 
 /**
  * Billing interval for this price. For consumable features, should match reset.interval.
@@ -199,9 +206,10 @@ export type PlanItemPrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+   * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
   tiers?: Array<PlanTier> | undefined;
+  tierBehavior?: PlanTierBehavior | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
    */
@@ -346,6 +354,36 @@ export const PlanEnv = {
  */
 export type PlanEnv = OpenEnum<typeof PlanEnv>;
 
+/**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export const Scenario = {
+  Scheduled: "scheduled",
+  Active: "active",
+  New: "new",
+  Renew: "renew",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  Cancel: "cancel",
+  Expired: "expired",
+  PastDue: "past_due",
+} as const;
+/**
+ * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ */
+export type Scenario = OpenEnum<typeof Scenario>;
+
+export type CustomerEligibility = {
+  /**
+   * Whether a free trial is available for this customer.
+   */
+  trialAvailable?: boolean | undefined;
+  /**
+   * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+   */
+  scenario: Scenario;
+};
+
 export type Plan = {
   /**
    * Unique identifier for the plan.
@@ -403,6 +441,7 @@ export type Plan = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  customerEligibility?: CustomerEligibility | undefined;
 };
 
 /** @internal */
@@ -593,11 +632,18 @@ export function planToFromJSON(
 }
 
 /** @internal */
-export const PlanTier$inboundSchema: z.ZodMiniType<PlanTier, unknown> = z
-  .object({
+export const PlanTier$inboundSchema: z.ZodMiniType<PlanTier, unknown> = z.pipe(
+  z.object({
     to: smartUnion([types.number(), types.string()]),
     amount: types.number(),
-  });
+    flat_amount: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
 
 export function planTierFromJSON(
   jsonString: string,
@@ -608,6 +654,12 @@ export function planTierFromJSON(
     `Failed to parse 'PlanTier' from JSON`,
   );
 }
+
+/** @internal */
+export const PlanTierBehavior$inboundSchema: z.ZodMiniType<
+  PlanTierBehavior,
+  unknown
+> = openEnums.inboundSchema(PlanTierBehavior);
 
 /** @internal */
 export const PlanPriceItemInterval$inboundSchema: z.ZodMiniType<
@@ -629,6 +681,7 @@ export const PlanItemPrice$inboundSchema: z.ZodMiniType<
   z.object({
     amount: types.optional(types.number()),
     tiers: types.optional(z.array(z.lazy(() => PlanTier$inboundSchema))),
+    tier_behavior: types.optional(PlanTierBehavior$inboundSchema),
     interval: PlanPriceItemInterval$inboundSchema,
     interval_count: types.optional(types.number()),
     billing_units: types.number(),
@@ -637,6 +690,7 @@ export const PlanItemPrice$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
       "billing_method": "billingMethod",
@@ -781,6 +835,36 @@ export const PlanEnv$inboundSchema: z.ZodMiniType<PlanEnv, unknown> = openEnums
   .inboundSchema(PlanEnv);
 
 /** @internal */
+export const Scenario$inboundSchema: z.ZodMiniType<Scenario, unknown> =
+  openEnums.inboundSchema(Scenario);
+
+/** @internal */
+export const CustomerEligibility$inboundSchema: z.ZodMiniType<
+  CustomerEligibility,
+  unknown
+> = z.pipe(
+  z.object({
+    trial_available: types.optional(types.boolean()),
+    scenario: Scenario$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "trial_available": "trialAvailable",
+    });
+  }),
+);
+
+export function customerEligibilityFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerEligibility, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerEligibility$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerEligibility' from JSON`,
+  );
+}
+
+/** @internal */
 export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
   z.object({
     id: types.string(),
@@ -797,6 +881,9 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
     env: PlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    customer_eligibility: types.optional(z.lazy(() =>
+      CustomerEligibility$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -805,6 +892,7 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
       "free_trial": "freeTrial",
       "created_at": "createdAt",
       "base_variant_id": "baseVariantId",
+      "customer_eligibility": "customerEligibility",
     });
   }),
 );

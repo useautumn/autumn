@@ -11,8 +11,6 @@ export const handleExternalListEvents = createRoute({
 			c.req.valid("json"),
 		);
 
-		console.log("Validated params", validatedParams);
-
 		const featureIds = validatedParams.feature_id
 			? Array.isArray(validatedParams.feature_id)
 				? validatedParams.feature_id

@@ -28,7 +28,8 @@ export const ExtPreviewLineItemSchema = z.object({
 	}),
 });
 
-const PreviewLineItemSchema = ExtPreviewLineItemSchema.extend({
+export const PreviewLineItemSchema = ExtPreviewLineItemSchema.extend({
+	object: z.literal("billing_preview_line_item").meta({ internal: true }),
 	plan_id: z.string().meta({ internal: true }),
 	total_quantity: z.number().meta({ internal: true }),
 	paid_quantity: z.number().meta({ internal: true }),
@@ -77,6 +78,7 @@ export const ExtBillingPreviewResponseSchema = z.object({
 
 export const BillingPreviewResponseSchema =
 	ExtBillingPreviewResponseSchema.extend({
+		object: z.literal("billing_preview").meta({ internal: true }),
 		line_items: z.array(PreviewLineItemSchema),
 		period_start: z.number().optional().meta({ internal: true }),
 		period_end: z.number().optional().meta({ internal: true }),

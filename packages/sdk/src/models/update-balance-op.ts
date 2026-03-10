@@ -55,9 +55,25 @@ export type UpdateBalanceParams = {
    */
   addToBalance?: number | undefined;
   /**
+   * The usage amount to update. Cannot be combined with remaining or add_to_balance.
+   */
+  usage?: number | undefined;
+  /**
    * Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
    */
   interval?: UpdateBalanceInterval | undefined;
+  /**
+   * Set the granted balance to this exact value.
+   */
+  includedGrant?: number | undefined;
+  /**
+   * Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
+   */
+  balanceId?: string | undefined;
+  /**
+   * The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
+   */
+  nextResetAt?: number | undefined;
 };
 
 /**
@@ -79,7 +95,11 @@ export type UpdateBalanceParams$Outbound = {
   entity_id?: string | undefined;
   remaining?: number | undefined;
   add_to_balance?: number | undefined;
+  usage?: number | undefined;
   interval?: string | undefined;
+  included_grant?: number | undefined;
+  balance_id?: string | undefined;
+  next_reset_at?: number | undefined;
 };
 
 /** @internal */
@@ -93,7 +113,11 @@ export const UpdateBalanceParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     remaining: z.optional(z.number()),
     addToBalance: z.optional(z.number()),
+    usage: z.optional(z.number()),
     interval: z.optional(UpdateBalanceInterval$outboundSchema),
+    includedGrant: z.optional(z.number()),
+    balanceId: z.optional(z.string()),
+    nextResetAt: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -101,6 +125,9 @@ export const UpdateBalanceParams$outboundSchema: z.ZodMiniType<
       featureId: "feature_id",
       entityId: "entity_id",
       addToBalance: "add_to_balance",
+      includedGrant: "included_grant",
+      balanceId: "balance_id",
+      nextResetAt: "next_reset_at",
     });
   }),
 );

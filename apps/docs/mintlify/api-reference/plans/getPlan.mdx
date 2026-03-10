@@ -188,14 +188,18 @@ const plan = await autumn.plans.get({
         </DynamicResponseField>
 
         <DynamicResponseField name="tiers" type="object[]">
-          Tiered pricing configuration. Each tier's 'up_to' does NOT include the included amount. Either 'tiers' or 'amount' is required.
+          Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
           <Expandable title="properties">
             <DynamicResponseField name="to" type="number" />
 
             <DynamicResponseField name="amount" type="number" />
 
+            <DynamicResponseField name="flat_amount" type="number | null" />
+
           </Expandable>
         </DynamicResponseField>
+
+        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
 
         <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
           Billing interval for this price. For consumable features, should match reset.interval.
@@ -287,6 +291,19 @@ const plan = await autumn.plans.get({
 
 <DynamicResponseField name="base_variant_id" type="string | null">
   If this is a variant, the ID of the base plan it was created from.
+</DynamicResponseField>
+
+<DynamicResponseField name="customer_eligibility" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="trial_available" type="boolean">
+      Whether a free trial is available for this customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="scenario" type="'scheduled' | 'active' | 'new' | 'renew' | 'upgrade' | 'downgrade' | 'cancel' | 'expired' | 'past_due'">
+      The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 

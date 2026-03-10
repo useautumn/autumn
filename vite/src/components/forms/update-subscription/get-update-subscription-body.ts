@@ -108,5 +108,6 @@ export const getUpdateSubscriptionBody = ({
 
 		success_url: successUrl,
 		version: version ? Number(version) : undefined,
+		billing_behavior: billingBehavior || undefined,
 	};
 };

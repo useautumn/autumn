@@ -21,6 +21,12 @@ class Customers(BaseSDK):
         create_in_stripe: Optional[bool] = None,
         auto_enable_plan_id: Optional[str] = None,
         send_email_receipts: Optional[bool] = None,
+        billing_controls: Optional[
+            Union[
+                models.GetOrCreateCustomerBillingControls,
+                models.GetOrCreateCustomerBillingControlsTypedDict,
+            ]
+        ] = None,
         expand: Optional[List[models.CustomerExpand]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -40,6 +46,7 @@ class Customers(BaseSDK):
         :param create_in_stripe: Whether to create the customer in Stripe
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param expand: Customer expand options
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -66,6 +73,9 @@ class Customers(BaseSDK):
             create_in_stripe=create_in_stripe,
             auto_enable_plan_id=auto_enable_plan_id,
             send_email_receipts=send_email_receipts,
+            billing_controls=utils.get_pydantic_model(
+                billing_controls, Optional[models.GetOrCreateCustomerBillingControls]
+            ),
             expand=expand,
         )
 
@@ -140,6 +150,12 @@ class Customers(BaseSDK):
         create_in_stripe: Optional[bool] = None,
         auto_enable_plan_id: Optional[str] = None,
         send_email_receipts: Optional[bool] = None,
+        billing_controls: Optional[
+            Union[
+                models.GetOrCreateCustomerBillingControls,
+                models.GetOrCreateCustomerBillingControlsTypedDict,
+            ]
+        ] = None,
         expand: Optional[List[models.CustomerExpand]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -159,6 +175,7 @@ class Customers(BaseSDK):
         :param create_in_stripe: Whether to create the customer in Stripe
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param expand: Customer expand options
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -185,6 +202,9 @@ class Customers(BaseSDK):
             create_in_stripe=create_in_stripe,
             auto_enable_plan_id=auto_enable_plan_id,
             send_email_receipts=send_email_receipts,
+            billing_controls=utils.get_pydantic_model(
+                billing_controls, Optional[models.GetOrCreateCustomerBillingControls]
+            ),
             expand=expand,
         )
 
@@ -441,6 +461,12 @@ class Customers(BaseSDK):
         metadata: OptionalNullable[Dict[str, Any]] = UNSET,
         stripe_id: OptionalNullable[str] = UNSET,
         send_email_receipts: Optional[bool] = None,
+        billing_controls: Optional[
+            Union[
+                models.UpdateCustomerBillingControlsRequest,
+                models.UpdateCustomerBillingControlsRequestTypedDict,
+            ]
+        ] = None,
         new_customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -456,6 +482,7 @@ class Customers(BaseSDK):
         :param metadata: Additional metadata for the customer
         :param stripe_id: Stripe customer ID if you already have one
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param new_customer_id: Your unique identifier for the customer
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -480,6 +507,9 @@ class Customers(BaseSDK):
             metadata=metadata,
             stripe_id=stripe_id,
             send_email_receipts=send_email_receipts,
+            billing_controls=utils.get_pydantic_model(
+                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+            ),
             new_customer_id=new_customer_id,
         )
 
@@ -552,6 +582,12 @@ class Customers(BaseSDK):
         metadata: OptionalNullable[Dict[str, Any]] = UNSET,
         stripe_id: OptionalNullable[str] = UNSET,
         send_email_receipts: Optional[bool] = None,
+        billing_controls: Optional[
+            Union[
+                models.UpdateCustomerBillingControlsRequest,
+                models.UpdateCustomerBillingControlsRequestTypedDict,
+            ]
+        ] = None,
         new_customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -567,6 +603,7 @@ class Customers(BaseSDK):
         :param metadata: Additional metadata for the customer
         :param stripe_id: Stripe customer ID if you already have one
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param new_customer_id: Your unique identifier for the customer
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -591,6 +628,9 @@ class Customers(BaseSDK):
             metadata=metadata,
             stripe_id=stripe_id,
             send_email_receipts=send_email_receipts,
+            billing_controls=utils.get_pydantic_model(
+                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+            ),
             new_customer_id=new_customer_id,
         )
 

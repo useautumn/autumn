@@ -5,10 +5,13 @@ export type {
 	ClientCreateReferralCodeParams as CreateReferralCodeParams,
 	ClientGetOrCreateCustomerParams as GetOrCreateCustomerClientParams,
 	ClientListEventsParams as ListEventsParams,
+	ClientMultiAttachParams as MultiAttachParams,
 	ClientOpenCustomerPortalParams as OpenCustomerPortalParams,
 	ClientPreviewAttachParams as PreviewAttachParams,
+	ClientPreviewMultiAttachParams as PreviewMultiAttachParams,
 	ClientPreviewUpdateSubscriptionParams as PreviewUpdateSubscriptionParams,
 	ClientRedeemReferralCodeParams as RedeemReferralCodeParams,
+	ClientSetupPaymentParams as SetupPaymentParams,
 	ClientUpdateSubscriptionParams as UpdateSubscriptionParams,
 	ProtectedFields,
 } from "./params";
