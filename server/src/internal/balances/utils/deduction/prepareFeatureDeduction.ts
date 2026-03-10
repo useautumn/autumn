@@ -126,11 +126,11 @@ export const prepareFeatureDeduction = ({
 	const preparedLock = lock
 		? {
 				...lock,
-				hashed_key: lock.hashed_key ?? Bun.hash(lock.key!).toString(),
+				hashed_key: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
 				redis_receipt_key: buildLockReceiptKey({
 					orgId: org.id,
 					env,
-					lockKey: lock.hashed_key ?? Bun.hash(lock.key!).toString(),
+					lockKey: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
 				}),
 				created_at: Date.now(),
 				// TTL: expires_at + 1 hour (in seconds), or now + 1 day

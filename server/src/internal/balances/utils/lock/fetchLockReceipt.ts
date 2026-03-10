@@ -6,6 +6,7 @@ import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildLockReceiptKey } from "./buildLockReceiptKey.js";
 
 export type LockReceipt = {
+	lock_id?: string | null;
 	customer_id: string;
 	feature_id: string;
 	entity_id?: string | null;
@@ -15,12 +16,12 @@ export type LockReceipt = {
 
 export const fetchLockReceipt = async ({
 	ctx,
-	lockKey,
+	lockId,
 }: {
 	ctx: AutumnContext;
-	lockKey: string;
+	lockId: string;
 }) => {
-	const hashedKey = Bun.hash(lockKey).toString();
+	const hashedKey = Bun.hash(lockId).toString();
 	const lockReceiptKey = buildLockReceiptKey({
 		orgId: ctx.org.id,
 		env: ctx.env,
@@ -33,7 +34,7 @@ export const fetchLockReceipt = async ({
 
 	if (!rawReceipt) {
 		throw new RecaseError({
-			message: `Lock not found for key: ${lockKey}`,
+			message: `Lock not found for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
@@ -41,21 +42,21 @@ export const fetchLockReceipt = async ({
 	const receipt = (JSON.parse(rawReceipt) as LockReceipt[])[0];
 	if (!receipt?.customer_id) {
 		throw new RecaseError({
-			message: `Lock receipt is missing customer_id for key: ${lockKey}`,
+			message: `Lock receipt is missing customer_id for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
 
 	if (!receipt.feature_id) {
 		throw new RecaseError({
-			message: `Lock receipt is missing feature_id for key: ${lockKey}`,
+			message: `Lock receipt is missing feature_id for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
 
 	if (!receipt.items) {
 		throw new RecaseError({
-			message: `Lock receipt is missing items for key: ${lockKey}`,
+			message: `Lock receipt is missing items for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}

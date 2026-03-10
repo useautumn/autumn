@@ -45,7 +45,7 @@ export const handleRedisTrackError = async ({
 	// Handle duplicate lock key
 	if (error.code === RedisDeductionErrorCode.LockAlreadyExists) {
 		throw new RecaseError({
-			message: "A lock with this key already exists",
+			message: "A lock with this ID already exists",
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
 		});

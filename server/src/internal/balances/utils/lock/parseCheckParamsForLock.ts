@@ -22,9 +22,9 @@ export const parseCheckParamsForLock = ({
 		};
 	}
 
-	if (lock.key && lock.key.length > 256) {
+	if (lock.lock_id && lock.lock_id.length > 256) {
 		throw new RecaseError({
-			message: "Lock key cannot exceed 256 characters",
+			message: "Lock ID cannot exceed 256 characters",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -41,12 +41,12 @@ export const parseCheckParamsForLock = ({
 		});
 	}
 
-	const lockKey = lock.key ?? generateKsuid({ prefix: "lck" });
-	const hashedKey = Bun.hash(lockKey).toString();
+	const lockId = lock.lock_id ?? generateKsuid({ prefix: "lck" });
+	const hashedKey = Bun.hash(lockId).toString();
 
 	const finalLock: ParsedLockParams = {
 		enabled: true,
-		key: lockKey,
+		lock_id: lockId,
 		hashed_key: hashedKey,
 		expires_at: lock.expires_at ?? undefined,
 	};

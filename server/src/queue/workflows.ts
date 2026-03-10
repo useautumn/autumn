@@ -78,7 +78,7 @@ export type ExpireLockReceiptPayload = {
 	orgId: string;
 	env: AppEnv;
 	customerId: string;
-	lockKey: string;
+	lockId: string;
 	hashedKey: string;
 };
 

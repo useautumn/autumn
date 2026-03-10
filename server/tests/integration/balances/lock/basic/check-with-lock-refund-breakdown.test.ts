@@ -36,17 +36,17 @@ test.concurrent(`${chalk.yellowBright("refund BD-1: lock=8 confirm=5 — unwind 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 5,
 	});
@@ -79,17 +79,17 @@ test.concurrent(`${chalk.yellowBright("refund BD-2: lock=8 confirm=0 — full re
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 0,
 	});
@@ -122,17 +122,17 @@ test.concurrent(`${chalk.yellowBright("refund BD-3: lock=5 confirm=3 — unwind 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 5,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 3,
 	});
@@ -149,7 +149,7 @@ test.concurrent(`${chalk.yellowBright("refund BD-3: lock=5 confirm=3 — unwind 
 		},
 	});
 
-	await expectLockReceiptDeleted({ ctx, lockKey: customerId });
+	await expectLockReceiptDeleted({ ctx, lockId: customerId });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,17 +168,17 @@ test.concurrent(`${chalk.yellowBright("refund BD-4: lock=8 confirm=8 — no unwi
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 8,
 	});

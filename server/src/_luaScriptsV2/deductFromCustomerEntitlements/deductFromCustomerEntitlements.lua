@@ -219,7 +219,7 @@ then
   save_lock_receipt_from_updates({
     lock_receipt_key = lock.redis_receipt_key,
     receipt = {
-      lock_key = lock.key or cjson.null,
+      lock_id = lock.lock_id or cjson.null,
       hashed_key = lock.hashed_key or cjson.null,
       status = 'pending',
       region = lock.region or cjson.null,
