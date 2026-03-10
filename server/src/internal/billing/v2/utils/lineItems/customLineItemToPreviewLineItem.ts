@@ -6,13 +6,14 @@ export const customLineItemToPreviewLineItem = (
 ): PreviewLineItem => {
 	return {
 		object: "billing_preview_line_item" as const,
-		title: item.description,
+		display_name: item.description,
 		description: item.description,
-		amount: item.amount,
+		subtotal: item.amount,
+		total: item.amount,
 		discounts: [],
-		is_base: false,
-		total_quantity: 1,
-		paid_quantity: 1,
 		plan_id: "",
+		feature_id: null,
+		custom: true,
+		quantity: 1,
 	};
 };

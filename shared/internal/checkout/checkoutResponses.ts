@@ -1,8 +1,11 @@
-import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1";
-import { ApiPlanV1Schema } from "@api/products/apiPlanV1";
-import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels";
 import { z } from "zod/v4";
-import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse";
+import { AttachPreviewResponseSchema } from "../../api/billing/common/attachPreviewResponse";
+import { BillingResponseSchema } from "../../api/billing/common/billingResponse";
+import { PreviewUpdateSubscriptionResponseSchema } from "../../api/billing/updateSubscription/previewUpdateSubscriptionResponse";
+import {
+	CheckoutAction,
+	CheckoutStatus,
+} from "../../models/checkouts/checkoutTable";
 
 /**
  * Org branding for checkout display
@@ -29,58 +32,37 @@ export const CheckoutEntitySchema = z.object({
 	name: z.string().nullable(),
 });
 
-// /**
-//  * Subscription with required plan (always expanded for checkout)
-//  */
-// export const CheckoutSubscriptionSchema = ApiSubscriptionSchema.extend({
-// 	plan: ApiPlanV0Schema,
-// });
-
-/**
- * A change in the checkout (product being added, canceled, or expiring)
- */
-export const CheckoutChangeSchema = z.object({
-	plan: ApiPlanV1Schema,
-	feature_quantities: z.array(
-		FeatureOptionsSchema.pick({
-			feature_id: true,
-			quantity: true,
-		}),
-	),
-	balances: z.record(z.string(), ApiBalanceV1Schema),
-	period_start: z.number().optional(),
-	period_end: z.number().optional(),
-});
-
 /**
  * GET /checkouts/:checkout_id response
  */
 export const GetCheckoutResponseSchema = z.object({
 	env: z.string(),
-	preview: BillingPreviewResponseSchema,
+	action: z.nativeEnum(CheckoutAction),
+	status: z.nativeEnum(CheckoutStatus),
+	response: BillingResponseSchema.nullable(),
+	preview: z.union([
+		AttachPreviewResponseSchema,
+		PreviewUpdateSubscriptionResponseSchema,
+	]),
 	org: CheckoutOrgSchema,
 	customer: CheckoutCustomerSchema,
 	entity: CheckoutEntitySchema.nullable(),
-	incoming: z.array(CheckoutChangeSchema),
-	outgoing: z.array(CheckoutChangeSchema),
 });
 
 /**
  * POST /checkouts/:checkout_id/confirm response
  */
-export const ConfirmCheckoutResponseSchema = z.object({
+export const ConfirmCheckoutResponseSchema = BillingResponseSchema.extend({
 	success: z.boolean(),
 	checkout_id: z.string(),
-	customer_id: z.string(),
 	product_id: z.string(),
 	invoice_id: z.string().nullable(),
+	success_url: z.string().url(),
 });
 
 export type CheckoutOrg = z.infer<typeof CheckoutOrgSchema>;
 export type CheckoutCustomer = z.infer<typeof CheckoutCustomerSchema>;
 export type CheckoutEntity = z.infer<typeof CheckoutEntitySchema>;
-// export type CheckoutSubscription = z.infer<typeof CheckoutSubscriptionSchema>;
-export type CheckoutChange = z.infer<typeof CheckoutChangeSchema>;
 export type GetCheckoutResponse = z.infer<typeof GetCheckoutResponseSchema>;
 export type ConfirmCheckoutResponse = z.infer<
 	typeof ConfirmCheckoutResponseSchema

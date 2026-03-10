@@ -15,6 +15,8 @@ import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setup
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
+import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
 const FIELDS_WITH_BILLING_CHANGES = [
@@ -122,7 +124,28 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		),
 	);
 
+	let checkoutMode = setupAttachCheckoutMode({
+		paymentMethod,
+		redirectMode: params.redirect_mode,
+		attachProduct: fullProduct,
+		stripeSubscription,
+		trialContext,
+		invoiceMode,
+	});
+
+	checkoutMode =
+		params.redirect_mode === "always" && Boolean(checkoutMode)
+			? checkoutMode
+			: null; // For update subscription, always use autumn_checkout for now
+
+	const intent = setupUpdateSubscriptionIntent({
+		params,
+		checkoutMode,
+		customerProduct,
+	});
+
 	return {
+		intent,
 		fullCustomer,
 		fullProducts: [fullProduct],
 		customerProduct,
@@ -154,5 +177,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined ||
 			billingRelatedFields.length === 0,
+
+		checkoutMode,
 	};
 };

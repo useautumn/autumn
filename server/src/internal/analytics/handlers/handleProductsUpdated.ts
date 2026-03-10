@@ -145,9 +145,6 @@ export const handleProductsUpdated = async ({
 	const { apiCustomer, legacyData: cusLegacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus,
-		expandParams: {
-			plan: true,
-		},
 	});
 
 	const versionedCustomer = applyResponseVersionChanges<

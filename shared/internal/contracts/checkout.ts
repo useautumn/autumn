@@ -1,10 +1,10 @@
-import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels";
 import { oc } from "@orpc/contract";
 import { z } from "zod/v4";
 import {
 	ConfirmCheckoutResponseSchema,
 	GetCheckoutResponseSchema,
 } from "../checkout/checkoutResponses";
+import { ConfirmCheckoutParamsSchema } from "../checkout/confirmCheckoutParams";
 
 export const getCheckoutContract = oc
 	.route({
@@ -22,15 +22,9 @@ export const previewCheckoutContract = oc
 		tags: ["internal"],
 	})
 	.input(
-		z.object({
-			checkout_id: z.string(),
-			options: z.array(
-				FeatureOptionsSchema.pick({
-					feature_id: true,
-					quantity: true,
-				}),
-			),
-		}),
+		z
+			.object({ checkout_id: z.string() })
+			.extend(ConfirmCheckoutParamsSchema.shape),
 	)
 	.output(GetCheckoutResponseSchema);
 
@@ -40,7 +34,11 @@ export const confirmCheckoutContract = oc
 		path: "/checkouts/{checkout_id}/confirm",
 		tags: ["internal"],
 	})
-	.input(z.object({ checkout_id: z.string() }))
+	.input(
+		z
+			.object({ checkout_id: z.string() })
+			.extend(ConfirmCheckoutParamsSchema.shape),
+	)
 	.output(ConfirmCheckoutResponseSchema);
 
 export const checkoutContract = {

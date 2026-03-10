@@ -41,11 +41,13 @@ export const setupAttachCheckoutMode = ({
 		return null;
 	}
 
-	const getStripeCheckoutOrDirectBilling = () => {
-		// If invoice mode
+	if (invoiceMode) {
+		return null;
+	}
 
+	const getStripeCheckoutOrDirectBilling = () => {
 		// A. if no payment method
-		if (hasPaymentMethod || invoiceMode) return null;
+		if (hasPaymentMethod) return null;
 
 		if (productIsOneOff) return "stripe_checkout";
 

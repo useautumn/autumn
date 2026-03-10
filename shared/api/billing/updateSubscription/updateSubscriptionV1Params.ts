@@ -42,6 +42,7 @@ const UPDATE_FIELDS = [
 	"processor_subscription_id",
 	"no_billing_changes",
 	"status",
+	"redirect_mode",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];

@@ -3,9 +3,11 @@ import {
 	type AttachParamsV1,
 	type BillingPlan,
 	type Checkout,
-	CheckoutAction,
+	type CheckoutAction,
 	CheckoutStatus,
 	checkoutToUrl,
+	type UpdateSubscriptionBillingContext,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setCheckoutCache } from "@/internal/checkouts/actions/cache";
@@ -25,12 +27,14 @@ const ATTACH_PARAMS_VERSION = 1;
  */
 export async function billingPlanToAutumnCheckout({
 	ctx,
+	action,
 	params,
 	billingContext,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV1;
-	billingContext: AttachBillingContext;
+	action: CheckoutAction;
+	params: AttachParamsV1 | UpdateSubscriptionV1Params;
+	billingContext: AttachBillingContext | UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<{ checkout: Checkout; checkoutUrl: string }> {
 	const checkoutId = generateId("co");
@@ -45,10 +49,12 @@ export async function billingPlanToAutumnCheckout({
 		env: ctx.env,
 		internal_customer_id: fullCustomer.internal_id,
 		customer_id: fullCustomer.id ?? fullCustomer.internal_id,
-		action: CheckoutAction.Attach,
+		action,
 		params,
 		params_version: ATTACH_PARAMS_VERSION,
 		status: CheckoutStatus.Pending,
+		response: null,
+		stripe_invoice_id: null,
 		created_at: now,
 		expires_at: expiresAt,
 		completed_at: null,
@@ -66,7 +72,10 @@ export async function billingPlanToAutumnCheckout({
 		data: checkout,
 	});
 
-	const checkoutUrl = checkoutToUrl({ checkoutId });
+	const checkoutUrl = checkoutToUrl({
+		action,
+		checkoutId,
+	});
 
 	return { checkout, checkoutUrl };
 }

@@ -22,7 +22,10 @@ export function PlanSection() {
 				skeleton={<PlanSelectionCardSkeleton />}
 			>
 				{incoming?.map((change) => (
-					<PlanSelectionCard key={change.plan.id} change={change} />
+					<PlanSelectionCard
+						key={change.plan?.id ?? change.plan_id}
+						change={change}
+					/>
 				))}
 			</CrossfadeContainer>
 		</motion.div>

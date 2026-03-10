@@ -6,6 +6,7 @@ import { ProductItemSchema } from "@models/productV2Models/productItemModels/pro
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
 import { EntityDataSchema } from "../../../common/entityData";
+import { RedirectModeSchema } from "../redirectMode";
 
 export const BillingParamsBaseV0Schema = z.object({
 	customer_id: z.string(),
@@ -23,6 +24,9 @@ export const BillingParamsBaseV0Schema = z.object({
 	subscription_id: z.string().optional(),
 
 	custom_line_items: z.array(CustomLineItemSchema).optional(),
+
+	// Checkout behavior
+	redirect_mode: RedirectModeSchema.default("if_required"),
 });
 
 export type BillingParamsBaseV0 = z.infer<typeof BillingParamsBaseV0Schema>;

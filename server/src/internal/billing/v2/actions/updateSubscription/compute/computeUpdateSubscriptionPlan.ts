@@ -1,16 +1,13 @@
-import type {
-	AutumnBillingPlan,
-	UpdateSubscriptionBillingContext,
-	UpdateSubscriptionV1Params,
+import {
+	type AutumnBillingPlan,
+	type UpdateSubscriptionBillingContext,
+	UpdateSubscriptionIntent,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelPlan";
 
-import {
-	computeUpdateSubscriptionIntent,
-	UpdateSubscriptionIntent,
-} from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionIntent";
 import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
@@ -28,7 +25,7 @@ export const computeUpdateSubscriptionPlan = async ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
-	const intent = computeUpdateSubscriptionIntent(params);
+	const { intent } = billingContext;
 
 	let plan: AutumnBillingPlan;
 	switch (intent) {
@@ -46,6 +43,7 @@ export const computeUpdateSubscriptionPlan = async ({
 			});
 			break;
 		case UpdateSubscriptionIntent.None:
+		case UpdateSubscriptionIntent.CancelAction:
 			plan = {
 				customerId: billingContext.fullCustomer?.id ?? "",
 				insertCustomerProducts: [],

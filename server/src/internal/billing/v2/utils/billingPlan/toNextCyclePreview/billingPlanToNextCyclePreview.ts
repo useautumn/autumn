@@ -1,21 +1,17 @@
-import type {
-	BillingContext,
-	BillingPlan,
-	FullCusProduct,
-} from "@autumn/shared";
 import {
+	type BillingContext,
+	type BillingPlan,
 	type BillingPreviewResponse,
 	cp,
 	cusProductsToPrices,
+	type FullCusProduct,
 	getCycleEnd,
 	getSmallestInterval,
 	hasCustomerProductEnded,
-	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
-import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
-import { lineItemToPreviewLineItem } from "../lineItems/lineItemToPreviewLineItem";
+import { billingPlanToNextCycleLineItems } from "./billingPlanToNextCycleLineItems";
 
 export type NextCyclePreviewDebug = {
 	allCustomerProducts: FullCusProduct[];
@@ -130,28 +126,21 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	const autumnLineItems = filteredCustomerProducts.flatMap((customerProduct) =>
-		customerProductToLineItems({
+	const { previewLineItems, previewUsageLineItems, subtotal, total } =
+		billingPlanToNextCycleLineItems({
 			ctx,
-			customerProduct: customerProduct,
-			billingContext: {
-				...billingContext,
-				currentEpochMs: nextCycleStart,
-			},
-			direction: "charge",
-		}),
-	);
-
-	const previewLineItems = autumnLineItems.map(lineItemToPreviewLineItem);
-	const total = sumValues(
-		autumnLineItems.map((line) => line.amountAfterDiscounts),
-	);
+			customerProducts: filteredCustomerProducts,
+			billingContext,
+			nextCycleStart,
+		});
 
 	return {
 		nextCycle: {
 			starts_at: nextCycleStart,
+			subtotal,
 			total,
 			line_items: previewLineItems,
+			usage_line_items: previewUsageLineItems,
 		},
 		debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
 	};

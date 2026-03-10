@@ -1,9 +1,8 @@
-import type {
-	BillingPlan,
-	BillingResult,
-	UpdateSubscriptionBillingContext,
-	UpdateSubscriptionBillingContextOverride,
-	UpdateSubscriptionV1Params,
+import {
+	CheckoutAction,
+	type UpdateSubscriptionBillingContext,
+	type UpdateSubscriptionBillingContextOverride,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
@@ -15,22 +14,26 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import {
+	type CreateAutumnCheckoutResult,
+	createAutumnCheckout,
+} from "../../common/createAutumnCheckout";
 
 export async function updateSubscription({
 	ctx,
 	params,
 	preview = false,
 	contextOverride,
+	options = {},
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 	preview?: boolean;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
-}): Promise<{
-	billingContext: UpdateSubscriptionBillingContext;
-	billingPlan: BillingPlan;
-	billingResult: BillingResult | null;
-}> {
+	options?: {
+		skipAutumnCheckout?: boolean;
+	};
+}): Promise<CreateAutumnCheckoutResult<UpdateSubscriptionBillingContext>> {
 	ctx.logger.info(
 		`=============== RUNNING UPDATE SUBSCRIPTION FOR ${params.customer_id} ===============`,
 	);
@@ -77,8 +80,24 @@ export async function updateSubscription({
 		return {
 			billingContext,
 			billingPlan,
-			billingResult: null,
+			billingResult: undefined,
 		};
+	}
+
+	if (
+		billingContext.checkoutMode === "autumn_checkout" &&
+		!options.skipAutumnCheckout
+	) {
+		const autumnCheckoutResult =
+			await createAutumnCheckout<UpdateSubscriptionBillingContext>({
+			ctx,
+			action: CheckoutAction.UpdateSubscription,
+			params,
+			billingContext,
+			billingPlan,
+		});
+
+		return autumnCheckoutResult;
 	}
 
 	// 5. Execute billing plan

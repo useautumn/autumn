@@ -1,18 +1,25 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { CheckoutContent } from "@/components/checkout/CheckoutContent";
-import { CheckoutErrorState } from "@/components/checkout/states/CheckoutErrorState";
 import { CheckoutProvider } from "@/contexts/CheckoutContext";
+import type { CheckoutRouteMode } from "@/utils/checkoutRouteMode";
 
-export function CheckoutPage() {
+export function CheckoutPage({ routeMode }: { routeMode: CheckoutRouteMode }) {
 	const { checkoutId: checkoutIdParam } = useParams<{ checkoutId: string }>();
 	const checkoutId = checkoutIdParam ?? "";
 
+	useEffect(() => {
+		if (!checkoutId) {
+			window.location.href = "https://useautumn.com";
+		}
+	}, [checkoutId]);
+
 	if (!checkoutId) {
-		return <CheckoutErrorState message="Missing checkout ID" />;
+		return null;
 	}
 
 	return (
-		<CheckoutProvider checkoutId={checkoutId}>
+		<CheckoutProvider checkoutId={checkoutId} routeMode={routeMode}>
 			<CheckoutContent />
 		</CheckoutProvider>
 	);

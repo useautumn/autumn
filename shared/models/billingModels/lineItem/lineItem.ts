@@ -31,9 +31,6 @@ export const LineItemSchema = z
 		// Optional - for testing
 		chargeImmediately: z.boolean().default(true),
 
-		// Trial deferral - item will be charged after trial ends
-		deferredForTrial: z.boolean().optional(),
-
 		// Whether this line item was prorated (mid-cycle change)
 		prorated: z.boolean().default(false),
 	})

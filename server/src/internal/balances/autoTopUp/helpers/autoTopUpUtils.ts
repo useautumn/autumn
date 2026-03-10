@@ -1,9 +1,10 @@
-import {
-	type Feature,
-	type FeatureOptions,
-	type FullCusEntWithFullCusProduct,
+import type {
+	Feature,
+	FeatureOptions,
+	FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
 
 /** Build the Redis lock key for auto top-up. Shares the attach lock so auto-topup and attach can't run concurrently. */
 export const buildAutoTopUpLockKey = ({
@@ -15,7 +16,11 @@ export const buildAutoTopUpLockKey = ({
 	env: string;
 	customerId: string;
 }) => {
-	return `lock:attach:${orgId}:${env}:${customerId}`;
+	return buildBillingLockKey({
+		orgId,
+		env,
+		customerId,
+	});
 };
 
 /** Compute updated options array with the top-up packs added. */

@@ -1,16 +1,6 @@
-import {
-	type AttachParamsV1,
-	type Checkout,
-	CheckoutAction,
-	ErrCode,
-	type GetCheckoutResponse,
-	RecaseError,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { billingActions } from "@/internal/billing/v2/actions/index.js";
-import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
-import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse.js";
+import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
 
 /**
  * GET /checkouts/:checkout_id
@@ -22,50 +12,18 @@ export const handleGetCheckout = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const checkout = c.get("checkout") as Checkout;
-
-		if (checkout.action !== CheckoutAction.Attach) {
-			throw new RecaseError({
-				message: "Only attach checkouts are supported",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const params = checkout.params as AttachParamsV1;
-
-		// Re-run attach in preview mode to get current billing plan
-		const { billingContext, billingPlan } = await billingActions.attach({
+		const { billingContext, preview } = await previewCheckoutAction({
 			ctx,
-			params,
-			preview: true,
+			checkout,
+			params: checkout.params,
 		});
-
-		if (!billingPlan) {
-			throw new RecaseError({
-				message: "Failed to compute billing plan",
-				code: ErrCode.InternalError,
-				statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-
 		const { fullCustomer } = billingContext;
-
-		// Build preview with line items, total, currency, next_cycle
-		const preview = billingPlanToPreviewResponse({
-			ctx,
-			billingContext,
-			billingPlan,
-		});
-
-		// Build changes array
-		const { incoming, outgoing } = await billingPlanToChanges({
-			ctx,
-			billingContext,
-			billingPlan,
-		});
 
 		const response: GetCheckoutResponse = {
 			env: checkout.env,
+			action: checkout.action,
+			status: checkout.status,
+			response: checkout.response ?? null,
 			preview,
 			org: {
 				name: ctx.org.name,
@@ -82,8 +40,6 @@ export const handleGetCheckout = createRoute({
 						name: fullCustomer.entity.name || null,
 					}
 				: null,
-			incoming,
-			outgoing,
 		};
 
 		return c.json(response);

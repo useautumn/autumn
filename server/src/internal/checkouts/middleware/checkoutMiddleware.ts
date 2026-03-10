@@ -1,15 +1,22 @@
 import {
 	type AppEnv,
 	type Checkout,
+	CheckoutCompletedError,
+	CheckoutExpiredError,
+	CheckoutStatus,
+	CheckoutUnavailableError,
 	ErrCode,
+	InternalError,
 	RecaseError,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { StatusCodes } from "http-status-codes";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
+import { checkoutActions } from "@/internal/checkouts/actions";
 import { OrgService } from "@/internal/orgs/OrgService";
-import { getCheckoutCache } from "../actions/cache";
+import { deleteCheckoutCache } from "../actions/cache";
+import { checkoutRepo } from "../repos/checkoutRepo";
 
 /**
  * Rate limiter: 10 requests per minute per checkout ID.
@@ -37,6 +44,7 @@ declare module "hono" {
  */
 export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const checkoutId = c.req.param("checkout_id");
+	const ctx = c.get("ctx");
 
 	if (!checkoutId) {
 		throw new RecaseError({
@@ -46,26 +54,65 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	const checkout = await getCheckoutCache({ checkoutId });
+	const markCheckoutExpired = async ({ checkout }: { checkout: Checkout }) => {
+		await deleteCheckoutCache({ checkoutId: checkout.id });
+
+		if (checkout.status !== CheckoutStatus.Expired) {
+			await checkoutRepo.update({
+				db: ctx.db,
+				id: checkout.id,
+				updates: {
+					status: CheckoutStatus.Expired,
+				},
+			});
+		}
+	};
+
+	const validateCheckoutAvailability = async ({
+		checkout,
+	}: {
+		checkout: Checkout;
+	}) => {
+		if (checkout.status === CheckoutStatus.Completed) {
+			await deleteCheckoutCache({ checkoutId: checkout.id });
+			throw new CheckoutCompletedError();
+		}
+
+		if (
+			checkout.status === CheckoutStatus.Expired ||
+			checkout.expires_at < Date.now()
+		) {
+			await markCheckoutExpired({ checkout });
+			throw new CheckoutExpiredError();
+		}
+
+		return checkout;
+	};
+
+	const checkout = await checkoutActions.getFromCacheOrDb({
+		checkoutId,
+		db: ctx.db,
+	});
 
 	if (!checkout) {
-		throw new RecaseError({
-			message: "Checkout expired or not found",
-		});
+		throw new CheckoutUnavailableError();
 	}
 
-	const ctx = c.get("ctx");
-	const env = checkout.env as AppEnv;
+	const validCheckout = await validateCheckoutAvailability({ checkout });
+
+	const env = validCheckout.env as AppEnv;
 
 	const orgWithFeatures = await OrgService.getWithFeatures({
 		db: ctx.db,
-		orgId: checkout.org_id,
+		orgId: validCheckout.org_id,
 		env,
 	});
 
 	if (!orgWithFeatures) {
-		throw new RecaseError({
-			message: "Organization not found",
+		throw new InternalError({
+			message: `Organization ${validCheckout.org_id} not found`,
+			code: ErrCode.InternalError,
+			statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 		});
 	}
 
@@ -76,11 +123,11 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env,
 		features: orgWithFeatures.features,
 		isPublic: true,
-		customerId: checkout.customer_id,
+		customerId: validCheckout.customer_id,
 	});
 
 	// Attach checkout to context for handlers
-	c.set("checkout", checkout);
+	c.set("checkout", validCheckout);
 
 	await next();
 };

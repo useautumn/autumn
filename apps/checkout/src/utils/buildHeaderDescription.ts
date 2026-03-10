@@ -1,9 +1,10 @@
 import type {
 	ApiFreeTrialV2,
+	AttachPreviewResponse,
+	BillingPreviewChange,
 	BillingPreviewResponse,
-	CheckoutChange,
 	CheckoutEntity,
-	LineItemDiscount,
+	PreviewUpdateSubscriptionResponse,
 } from "@autumn/shared";
 import { format } from "date-fns";
 import { formatAmount } from "./formatUtils";
@@ -19,14 +20,17 @@ function buildDiscountPhrase({
 	lineItems: BillingPreviewResponse["line_items"];
 	currency: string;
 }): string {
+	type PreviewLineItemDiscount =
+		BillingPreviewResponse["line_items"][number]["discounts"][number];
+
 	// Collect all discounts from line items
 	const allDiscounts = lineItems.flatMap((item) => item.discounts);
 	if (allDiscounts.length === 0) return "";
 
-	// Deduplicate by couponName (or stripeCouponId as fallback)
-	const uniqueDiscounts = new Map<string, LineItemDiscount>();
+	// Deduplicate by reward_name (or reward_id as fallback)
+	const uniqueDiscounts = new Map<string, PreviewLineItemDiscount>();
 	for (const discount of allDiscounts) {
-		const key = discount.couponName || discount.stripeCouponId || "unknown";
+		const key = discount.reward_name || discount.reward_id || "unknown";
 		if (!uniqueDiscounts.has(key)) {
 			uniqueDiscounts.set(key, discount);
 		}
@@ -36,12 +40,12 @@ function buildDiscountPhrase({
 	if (discountList.length === 0) return "";
 
 	// Format each discount
-	const formatDiscount = (d: LineItemDiscount): string => {
-		const name = d.couponName || d.stripeCouponId || "Discount";
-		if (d.percentOff) {
-			return `${name} applied for ${d.percentOff}% off`;
+	const formatDiscount = (d: PreviewLineItemDiscount): string => {
+		const name = d.reward_name || d.reward_id || "Discount";
+		if (d.percent_off) {
+			return `${name} applied for ${d.percent_off}% off`;
 		}
-		return `${name} applied for ${formatAmount(d.amountOff, currency)} off`;
+		return `${name} applied for ${formatAmount(d.amount_off, currency)} off`;
 	};
 
 	if (discountList.length === 1) {
@@ -98,6 +102,21 @@ function formatTrialDuration(freeTrial: ApiFreeTrialV2): string {
 	return `${duration_length}-${duration_type}`;
 }
 
+function formatNextCycleAmount({
+	nextCycle,
+	currency,
+}: {
+	nextCycle?: BillingPreviewResponse["next_cycle"];
+	currency: string;
+}): string {
+	if (!nextCycle) return formatAmount(0, currency);
+
+	const amount = formatAmount(nextCycle.total, currency);
+	const hasUsage = (nextCycle.usage_line_items?.length ?? 0) > 0;
+
+	return hasUsage ? `${amount} + usage` : amount;
+}
+
 /**
  * Builds the header description for the checkout page.
  * Returns a natural sentence describing the checkout action, amount, and timing.
@@ -110,9 +129,9 @@ export function buildHeaderDescription({
 	freeTrial,
 	hasActiveTrial,
 }: {
-	preview?: BillingPreviewResponse;
-	incoming?: CheckoutChange[];
-	outgoing?: CheckoutChange[];
+	preview?: AttachPreviewResponse | PreviewUpdateSubscriptionResponse;
+	incoming?: BillingPreviewChange[];
+	outgoing?: BillingPreviewChange[];
 	entity?: CheckoutEntity;
 	freeTrial?: ApiFreeTrialV2 | null;
 	hasActiveTrial?: boolean;
@@ -121,10 +140,11 @@ export function buildHeaderDescription({
 
 	const { total, currency, line_items, next_cycle } = preview;
 	const change = incoming?.[0];
-	const scenario = change?.plan.customer_eligibility?.scenario;
-	const outgoingPlanName = outgoing?.[0]?.plan.name;
-	const incomingPlanName = change?.plan.name;
-	const isRecurring = !!change?.plan.price?.interval;
+	const scenario = change?.plan?.customer_eligibility?.scenario;
+	const outgoingPlanName =
+		outgoing?.[0]?.plan?.name || outgoing?.[0]?.plan_id;
+	const incomingPlanName = change?.plan?.name || change?.plan_id;
+	const isRecurring = !!change?.plan?.price?.interval;
 	const entityName = entity?.name || entity?.id;
 
 	// Determine if this is a scheduled change (no immediate charges, changes next cycle)
@@ -132,7 +152,10 @@ export function buildHeaderDescription({
 		line_items.length === 0 && total === 0 && next_cycle;
 
 	// Build discount phrase
-	const discountPhrase = buildDiscountPhrase({ lineItems: line_items, currency });
+	const discountPhrase = buildDiscountPhrase({
+		lineItems: line_items,
+		currency,
+	});
 
 	// Build the action phrase
 	let action = buildActionPhrase({
@@ -148,23 +171,28 @@ export function buildHeaderDescription({
 	}
 
 	// Build trial phrase if applicable
-	const trialDuration = hasActiveTrial
-		? formatTrialDuration(freeTrial)
-		: null;
+	const trialDuration =
+		hasActiveTrial && freeTrial ? formatTrialDuration(freeTrial) : null;
 
 	// Handle credit from excess refund (unused time on previous plan exceeds new charge)
-	const credit = preview.credit;
+	const credit = preview.total < 0 ? Math.abs(preview.total) : 0;
 	if (credit) {
-		const creditAmount = formatAmount(credit.amount, currency);
+		const creditAmount = formatAmount(credit, currency);
 		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit applied to your next invoice.`;
 
 		if (hasActiveTrial && next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
-			const nextAmount = formatAmount(next_cycle.total, currency);
+			const nextAmount = formatNextCycleAmount({
+				nextCycle: next_cycle,
+				currency,
+			});
 			sentence += ` Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 		} else if (next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
-			const nextAmount = formatAmount(next_cycle.total, currency);
+			const nextAmount = formatNextCycleAmount({
+				nextCycle: next_cycle,
+				currency,
+			});
 			sentence += ` Your next charge of ${nextAmount} is on ${nextDate}.`;
 		}
 
@@ -174,7 +202,10 @@ export function buildHeaderDescription({
 	// Handle free trial (no immediate payment, trial starts)
 	if (hasActiveTrial && next_cycle) {
 		const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
-		const nextAmount = formatAmount(next_cycle.total, currency);
+		const nextAmount = formatNextCycleAmount({
+			nextCycle: next_cycle,
+			currency,
+		});
 		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 	}
 
