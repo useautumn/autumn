@@ -1,5 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
-import type { RolloverUpdate } from "../types/redisDeductionResult.js";
+import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 
 /**
  * Apply rollover updates to the in-memory FullCustomer object.
