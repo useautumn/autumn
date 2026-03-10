@@ -9,6 +9,7 @@ export type LockReceipt = {
 	customer_id: string;
 	feature_id: string;
 	entity_id?: string | null;
+	region?: string | null;
 	items: MutationLogItem[];
 };
 

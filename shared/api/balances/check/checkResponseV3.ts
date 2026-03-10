@@ -27,10 +27,10 @@ export const CheckResponseV3Schema = z.object({
 			"The customer's balance for this feature. Null if the customer has no balance for this feature.",
 	}),
 
-	lock_key: z.string().optional().meta({
-		description:
-			"The lock key associated with this check when lock mode is enabled.",
-	}),
+	// lock_key: z.string().optional().meta({
+	// 	description:
+	// 		"The lock key associated with this check when lock mode is enabled.",
+	// }),
 
 	preview: CheckFeaturePreviewSchema.optional().meta({
 		description:

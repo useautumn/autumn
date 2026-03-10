@@ -49,11 +49,18 @@ end
 --   lock_receipt_key: string
 --   receipt: table (base receipt metadata to persist)
 --   mutation_logs: table | nil
+--   ttl_at: number | nil (Unix seconds for EXPIREAT)
 -- ============================================================================
 local function save_lock_receipt_from_updates(params)
   local receipt = params.receipt or {}
   local mutation_logs = params.mutation_logs or {}
   receipt.items = #mutation_logs > 0 and mutation_logs or cjson.decode('[]')
 
-  return store_lock_receipt(params.lock_receipt_key, receipt)
+  store_lock_receipt(params.lock_receipt_key, receipt)
+
+  if not is_nil(params.ttl_at) then
+    redis.call('EXPIREAT', params.lock_receipt_key, params.ttl_at)
+  end
+
+  return receipt
 end

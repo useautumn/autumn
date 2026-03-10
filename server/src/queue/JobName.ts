@@ -33,4 +33,7 @@ export enum JobName {
 
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
+
+	// EventBridge scheduled jobs
+	ExpireLockReceipt = "expire-lock-receipt",
 }

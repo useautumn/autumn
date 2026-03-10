@@ -67,15 +67,17 @@ local lock_receipt_key = params.lock_receipt_key
 local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
 
 -- Check if customer exists (just check the key exists)
+local empty_logs = cjson.decode('[]')
+
 local key_exists = redis.call('EXISTS', cache_key)
 if key_exists == 0 then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, remaining = 0 })
+  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
 -- Get FullCustomer structure (for finding entitlement indices only)
 local full_customer_json = redis.call('JSON.GET', cache_key, '.')
 if not full_customer_json then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, remaining = 0 })
+  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
 local full_customer = cjson.decode(full_customer_json)
@@ -84,6 +86,8 @@ if not full_customer.customer_products then
   return cjson.encode({ 
     error = 'NO_CUSTOMER_PRODUCTS', 
     updates = {}, 
+    rollover_updates = {},
+    mutation_logs = empty_logs,
     remaining = 0
   })
 end
@@ -101,6 +105,8 @@ local context = init_context({
   full_customer = full_customer,
 })
 
+local unwind_modified_cus_ent_ids = {}
+
 if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
   local unwind_result = unwind_lock_on_context({
     context = context,
@@ -117,6 +123,16 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
       remaining = 0,
       logs = context.logs,
     })
+  end
+
+  -- Track which entitlements the unwind touched so the caller can sync them.
+  unwind_modified_cus_ent_ids = unwind_result.modified_customer_entitlement_ids or {}
+
+  -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
+  -- so the forward pass compensates against current live entitlements.
+  local skipped = unwind_result.remaining_signed_unwind_value or 0
+  if skipped ~= 0 then
+    amount_to_deduct = safe_number(amount_to_deduct or 0) + skipped
   end
 end
 
@@ -143,10 +159,27 @@ local updates = deduction_result.updates
 local rollover_updates = deduction_result.rollover_updates
 local remaining_amount = deduction_result.remaining_amount
 
+-- Inject unwind-only touched entitlements into updates so TypeScript can
+-- sync their new balances. The forward deduction may not have touched them.
+for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
+  if is_nil(updates[cus_ent_id]) then
+    local ent_data = context.customer_entitlements[cus_ent_id]
+    if ent_data then
+      updates[cus_ent_id] = {
+        balance = ent_data.balance or 0,
+        additional_balance = 0,
+        adjustment = ent_data.adjustment or 0,
+        entities = ent_data.entities or {},
+        deducted = 0,
+      }
+    end
+  end
+end
+
 logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
 logger.log("  is_refund: %s", tostring(remaining_amount < 0 or false))
 local mutation_logs = context.mutation_logs
-if #mutation_logs == 0 then
+if type(mutation_logs) ~= 'table' or #mutation_logs == 0 then
   mutation_logs = cjson.decode('[]')
 end
 -- Throw error and don't apply updates if we're in reject mode and there's still remaining amount
@@ -179,6 +212,7 @@ then
       created_at = lock.created_at or cjson.null,
     },
     mutation_logs = mutation_logs,
+    ttl_at = lock.ttl_at or cjson.null,
   })
 end
 

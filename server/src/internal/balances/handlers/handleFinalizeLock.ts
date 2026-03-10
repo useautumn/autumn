@@ -1,6 +1,6 @@
 import { FinalizeLockParamsV0Schema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { finalizeLock } from "../finalizeLock/finalizeLock";
+import { runFinalizeLock } from "../finalizeLock/runFinalizeLock.js";
 
 export const handleFinalizeLock = createRoute({
 	body: FinalizeLockParamsV0Schema,
@@ -9,7 +9,7 @@ export const handleFinalizeLock = createRoute({
 		const params = c.req.valid("json");
 
 		return c.json(
-			await finalizeLock({
+			await runFinalizeLock({
 				ctx,
 				params,
 			}),

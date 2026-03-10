@@ -2,6 +2,7 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
+import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
@@ -32,12 +33,14 @@ export const executeRedisDeduction = async ({
 	deductions,
 	fullCustomer,
 	deductionOptions = {},
+	redisInstance,
 }: {
 	ctx: AutumnContext;
 	entityId?: string;
 	deductions: FeatureDeduction[];
 	fullCustomer: FullCustomer;
 	deductionOptions?: DeductionOptions;
+	redisInstance?: Redis;
 }): Promise<{
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
@@ -57,6 +60,13 @@ export const executeRedisDeduction = async ({
 	if (options.paidAllocated) {
 		throw new RedisDeductionError({
 			message: `Paid allocated deductions are not supported for Redis`,
+			code: RedisDeductionErrorCode.PaidAllocated,
+		});
+	}
+
+	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+		throw new RedisDeductionError({
+			message: "Locks are not supported for paid allocated features",
 			code: RedisDeductionErrorCode.PaidAllocated,
 		});
 	}
@@ -124,8 +134,14 @@ export const executeRedisDeduction = async ({
 			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
-		const result = await tryRedisWrite(() =>
-			redis.deductFromCustomerEntitlements(cacheKey, JSON.stringify(luaParams)),
+		const targetRedis = redisInstance ?? redis;
+		const result = await tryRedisWrite(
+			() =>
+				targetRedis.deductFromCustomerEntitlements(
+					cacheKey,
+					JSON.stringify(luaParams),
+				),
+			redisInstance,
 		);
 
 		if (!result) {
@@ -150,7 +166,10 @@ export const executeRedisDeduction = async ({
 			});
 		}
 
-		const { updates, rollover_updates, mutation_logs } = resultJson;
+		const { updates, rollover_updates } = resultJson;
+		const mutation_logs = Array.isArray(resultJson.mutation_logs)
+			? resultJson.mutation_logs
+			: [];
 		logDeductionUpdates({
 			ctx,
 			fullCustomer,

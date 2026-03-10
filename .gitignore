@@ -124,3 +124,5 @@ server/autumn.config.ts
 # Speakeasy
 others/python-sdk/docs
 packages/sdk/docs
+
+TAKEHOME.md

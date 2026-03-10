@@ -69,7 +69,7 @@ DECLARE
   step_mutation_logs jsonb := '[]'::jsonb;
   unwind_updates_json jsonb := '{}'::jsonb;
   unwind_modified_rollover_ids text[] := ARRAY[]::text[];
-  unwind_remaining_value numeric := 0;
+  signed_remaining_unwind_value numeric := 0;
   -- Tracking
   updates_json jsonb := '{}'::jsonb;
   rollover_updates_json jsonb := '[]'::jsonb;
@@ -128,14 +128,21 @@ BEGIN
   -- ============================================================================
   IF lock_receipt IS NOT NULL AND COALESCE(unwind_value, 0) > 0 THEN
     SELECT *
-    INTO unwind_remaining_value, unwind_updates_json, unwind_modified_rollover_ids, step_mutation_logs
+    INTO signed_remaining_unwind_value, unwind_updates_json, unwind_modified_rollover_ids, step_mutation_logs
     FROM unwind_from_lock_receipt(jsonb_build_object(
       'lock_receipt', lock_receipt,
-      'unwind_value', unwind_value
+      'unwind_value', unwind_value,
+      'cus_ent_ids', to_jsonb(cus_ent_ids)
     ));
 
     updates_json := updates_json || COALESCE(unwind_updates_json, '{}'::jsonb);
     mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
+
+    -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
+    -- so the forward pass compensates against current live entitlements.
+    IF signed_remaining_unwind_value <> 0 THEN
+      amount_to_deduct := COALESCE(amount_to_deduct, 0) + signed_remaining_unwind_value;
+    END IF;
   END IF;
 
   -- ============================================================================

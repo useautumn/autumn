@@ -10,5 +10,5 @@ export const deductionUpdatesToModifiedIds = ({
 }: {
 	updates: Record<string, DeductionUpdate>;
 }): string[] => {
-	return Object.keys(updates).filter((id) => updates[id].deducted !== 0);
+	return Object.keys(updates);
 };

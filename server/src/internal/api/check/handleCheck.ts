@@ -6,6 +6,7 @@ import {
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
+	type ParsedCheckParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
@@ -24,11 +25,11 @@ export const handleCheck = createRoute({
 	resource: AffectedResource.Check,
 	body: CheckParamsSchema,
 	handler: async (c) => {
-		let body = c.req.valid("json");
+		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		body = parseCheckParamsForLock({
-			params: body,
+		const body: ParsedCheckParams = parseCheckParamsForLock({
+			params: rawBody,
 		});
 
 		const {
