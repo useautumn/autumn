@@ -5,6 +5,10 @@ export const FinalizeLockParamsV0Schema = z
 		lock_id: z.string(),
 		action: z.enum(["confirm", "release"]),
 		override_value: z.number().optional(),
+		properties: z.record(z.string(), z.any()).optional().meta({
+			description:
+				"Additional properties to attach to this finalize lock event.",
+		}),
 	})
 	.refine(
 		(data) => !(data.action === "release" && data.override_value !== undefined),
