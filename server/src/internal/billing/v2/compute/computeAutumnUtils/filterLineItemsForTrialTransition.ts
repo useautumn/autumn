@@ -11,7 +11,7 @@ import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingCont
  * - Excludes in_arrear positive items (no arrear charges for trial usage)
  *
  * Starting trial (!isTrialing → willBeTrialing):
- * - Marks in_advance positive items as deferred (charged after trial ends)
+ * - Excludes in_advance positive recurring items from the immediate charge set
  */
 export const filterLineItemsForTrialTransition = ({
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
@@ -45,7 +45,7 @@ export const filterLineItemsForTrialTransition = ({
 		}
 
 		// Starting trial (!isTrialing → willBeTrialing):
-		// Filter out in_advance positive items (no charge for upcoming trial period)
+		// Filter out in_advance positive recurring items (no charge for the trial period)
 		if (willBeTrialing) {
 			if (billingTiming === "in_advance" && isPositive && isRecurringPrice)
 				return false;

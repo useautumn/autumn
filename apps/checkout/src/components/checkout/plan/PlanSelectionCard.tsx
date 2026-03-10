@@ -1,14 +1,16 @@
-import type { ApiPlanItemV1, CheckoutChange } from "@autumn/shared";
-import { CheckIcon, Wallet, WalletIcon } from "@phosphor-icons/react";
+import {
+	type ApiPlanItemV1,
+	type BillingPreviewChange,
+} from "@autumn/shared";
+import { CheckIcon, WalletIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import {
-	FAST_TRANSITION,
 	LAYOUT_TRANSITION,
 	listContainerVariants,
 	listItemVariants,
 } from "@/lib/animations";
-import { formatAmount } from "@/utils/formatUtils";
+import { PlanItemTierDetails } from "./PlanItemTierDetails";
 import { QuantityInput } from "../shared/QuantityInput";
 
 function categorizeFeatures(features: ApiPlanItemV1[]): {
@@ -36,43 +38,19 @@ function categorizeFeatures(features: ApiPlanItemV1[]): {
 	return { prepaid, payPerUse, included };
 }
 
-function formatInterval(interval: string): string {
-	switch (interval) {
-		case "month":
-			return "mo";
-		case "year":
-			return "yr";
-		case "week":
-			return "wk";
-		case "day":
-			return "day";
-		default:
-			return interval;
-	}
-}
-
-function getFeatureName(feature: ApiPlanItemV1): string {
-	return feature.feature?.name || feature.feature_id;
-}
-
-function getFeatureUnitDisplay(
-	feature: ApiPlanItemV1,
-	plural: boolean,
-): string {
-	const display = feature.feature?.display;
-	if (display) {
-		return plural ? display.plural : display.singular;
-	}
-	return plural ? "units" : "unit";
+function getFeatureName(planItem: ApiPlanItemV1): string {
+	return planItem.feature?.name || planItem.feature_id;
 }
 
 interface PlanSelectionCardProps {
-	change: CheckoutChange;
+	change: BillingPreviewChange;
 }
 
 export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 	const { currency, quantities, handleQuantityChange } = useCheckoutContext();
 	const { plan, feature_quantities } = change;
+	if (!plan) return null;
+
 	const { prepaid, payPerUse, included } = categorizeFeatures(plan.items);
 	const hasPricedFeatures = prepaid.length > 0 || payPerUse.length > 0;
 	const hasIncludedFeatures = included.length > 0;
@@ -99,30 +77,26 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 				>
 					{/* Prepaid features - show quantity selector */}
 					<AnimatePresence>
-						{prepaid.map((feature, index) => {
-							const price = feature.price;
+						{prepaid.map((planItem, index) => {
+							const price = planItem.price;
 							if (!price) return null;
+							const isTiered = (price.tiers?.length ?? 0) > 1;
 
 							const quantityInfo = feature_quantities.find(
-								(fq) => fq.feature_id === feature.feature_id,
+								(fq) => fq.feature_id === planItem.feature_id,
 							);
 							const currentQuantity =
-								quantities[feature.feature_id] ?? quantityInfo?.quantity ?? 0;
-
+								quantities[planItem.feature_id] ?? quantityInfo?.quantity ?? 0;
 							const billingUnits = price.billing_units || 1;
-							const unitPrice = price.amount || 0;
-							const units = currentQuantity / billingUnits;
-							const totalPrice = units * unitPrice;
-							const intervalLabel = formatInterval(price.interval || "month");
 
 							return (
 								<motion.div
-									key={feature.feature_id}
+									key={planItem.feature_id}
 									variants={listItemVariants}
-									layout
-									transition={{ layout: LAYOUT_TRANSITION }}
+									layout={!isTiered}
+									transition={isTiered ? undefined : { layout: LAYOUT_TRANSITION }}
 								>
-									<div className="flex items-center justify-between gap-4 py-0.5">
+									<div className="flex items-start justify-between gap-4 py-0.5">
 										<div className="flex gap-2">
 											<motion.div
 												className="shrink-0 pt-1"
@@ -139,31 +113,21 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 											</motion.div>
 											<div className="flex flex-col gap-0.5 min-w-0">
 												<span className="text-sm text-muted-foreground truncate">
-													{getFeatureName(feature)}
+													{getFeatureName(planItem)}
 												</span>
-												<span className="text-xs text-muted-foreground/60 truncate">
-													{formatAmount(unitPrice, currency)} per{" "}
-													{billingUnits === 1
-														? getFeatureUnitDisplay(feature, false)
-														: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
-												</span>
+												<PlanItemTierDetails
+													planItem={planItem}
+													currency={currency}
+													selectedQuantity={currentQuantity}
+												/>
 											</div>
 										</div>
-										<div className="flex items-center gap-3 shrink-0">
-											<motion.span
-												key={totalPrice}
-												className="text-sm text-muted-foreground tabular-nums"
-												initial={{ opacity: 0.5 }}
-												animate={{ opacity: 1 }}
-												transition={FAST_TRANSITION}
-											>
-												{formatAmount(totalPrice, currency)}/{intervalLabel}
-											</motion.span>
+										<div className="flex items-start gap-3 shrink-0 pt-0.5">
 											<QuantityInput
 												value={currentQuantity}
 												onChange={(value) =>
 													handleQuantityChange(
-														feature.feature_id,
+														planItem.feature_id,
 														value,
 														billingUnits,
 													)
@@ -188,31 +152,23 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 						{payPerUse.map((feature, index) => {
 							const price = feature.price;
 							if (!price) return null;
-
-							const billingUnits = price.billing_units || 1;
-
-							// Handle tiered pricing
-							let priceDisplay: string;
-							if (price.tiers && price.tiers.length > 0) {
-								const firstTier = price.tiers[0];
-								const tierPrice =
-									firstTier?.unit_price ?? firstTier?.flat_price ?? 0;
-								priceDisplay = `From ${formatAmount(tierPrice, currency)}`;
-							} else {
-								priceDisplay = formatAmount(price.amount || 0, currency);
-							}
+							const isTiered = (price.tiers?.length ?? 0) > 1;
 
 							return (
 								<motion.div
 									key={feature.feature_id}
 									variants={listItemVariants}
-									layout
-									transition={{ layout: LAYOUT_TRANSITION }}
+									layout={!isTiered}
+									transition={isTiered ? undefined : { layout: LAYOUT_TRANSITION }}
 								>
-									<div className="flex items-center justify-between gap-4 py-0.5">
-										<div className="flex items-center gap-2 min-w-0">
+									<div
+										className={`flex justify-between gap-4 py-0.5 ${isTiered ? "items-start" : "items-center"}`}
+									>
+										<div
+											className={`flex gap-2 min-w-0 ${isTiered ? "" : "items-center"}`}
+										>
 											<motion.div
-												className="shrink-0"
+												className={`shrink-0 ${isTiered ? "pt-0.5" : ""}`}
 												initial={{ scale: 0, opacity: 0 }}
 												animate={{ scale: 1, opacity: 1 }}
 												transition={{
@@ -224,16 +180,31 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 											>
 												<CheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
 											</motion.div>
-											<span className="text-sm text-muted-foreground truncate">
-												{getFeatureName(feature)}
-											</span>
+											{isTiered ? (
+												<div className="flex flex-col gap-0.5 min-w-0">
+													<span className="text-sm text-muted-foreground truncate">
+														{getFeatureName(feature)}
+													</span>
+													<PlanItemTierDetails
+														planItem={feature}
+														currency={currency}
+													/>
+												</div>
+											) : (
+												<span className="text-sm text-muted-foreground truncate">
+													{getFeatureName(feature)}
+												</span>
+											)}
 										</div>
-										<span className="text-sm text-muted-foreground shrink-0">
-											{priceDisplay} per{" "}
-											{billingUnits === 1
-												? getFeatureUnitDisplay(feature, false)
-												: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
-										</span>
+										{!isTiered && (
+											<div className="shrink-0">
+												<PlanItemTierDetails
+													planItem={feature}
+													currency={currency}
+													align="right"
+												/>
+											</div>
+										)}
 									</div>
 								</motion.div>
 							);

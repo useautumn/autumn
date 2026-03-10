@@ -11,11 +11,9 @@ import { getApiSubscription } from "./getApiSubscription.js";
 export const getApiSubscriptions = async ({
 	ctx,
 	fullCus,
-	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	expandParams?: { plan?: boolean };
 }) => {
 	const apiSubs: ApiSubscriptionV1[] = [];
 	const apiPurchasesAsSubscriptions: ApiSubscriptionV1[] = [];
@@ -28,7 +26,6 @@ export const getApiSubscriptions = async ({
 			cusProduct,
 			ctx,
 			fullCus,
-			expandParams,
 		});
 
 		if (isCustomerProductOneOff(cusProduct)) {

@@ -9,6 +9,8 @@ import {
 	BillingPreviewResponseSchema,
 	type PreviewLineItem,
 	PreviewLineItemSchema,
+	type PreviewUpdateSubscriptionResponse,
+	PreviewUpdateSubscriptionResponseSchema,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 
@@ -62,30 +64,19 @@ const filterConfigs = [
 	}),
 	createFilterConfig<PreviewLineItem>({
 		schema: PreviewLineItemSchema,
-		omitFields: [
-			"effective_period",
-			"deferred_for_trial",
-			"is_base",
-			"object",
-			"total_quantity",
-			"paid_quantity",
-			"title",
-		],
+		omitFields: ["custom", "object", "quantity"],
 	}),
 	createFilterConfig<BillingPreviewResponse>({
 		schema: BillingPreviewResponseSchema,
-		omitFields: ["period_start", "period_end", "object"],
+		omitFields: ["object"],
 	}),
 	createFilterConfig<AttachPreviewResponse>({
 		schema: AttachPreviewResponseSchema,
-		omitFields: [
-			"redirect_type",
-			"incoming",
-			"outgoing",
-			"object",
-			"period_start",
-			"period_end",
-		],
+		omitFields: ["object"],
+	}),
+	createFilterConfig<PreviewUpdateSubscriptionResponse>({
+		schema: PreviewUpdateSubscriptionResponseSchema,
+		omitFields: ["object"],
 	}),
 ];
 

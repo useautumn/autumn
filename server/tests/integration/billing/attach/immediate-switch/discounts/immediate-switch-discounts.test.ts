@@ -14,13 +14,13 @@ import {
 	deleteCoupon,
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { expectCustomerInvoiceCorrect } from "../../utils/expectCustomerInvoiceCorrect";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Upgrade pro → premium preserves discount identity and duration

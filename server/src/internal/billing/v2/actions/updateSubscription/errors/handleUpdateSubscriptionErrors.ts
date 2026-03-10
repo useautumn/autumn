@@ -16,8 +16,8 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
-
 import { handleUncancelErrors } from "./handleUncancelErrors";
+import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -76,6 +76,9 @@ export const handleUpdateSubscriptionErrors = async ({
 		billingPlan,
 		params,
 	});
+
+	// 10. Update checkout errors
+	handleUpdateCheckoutErrors({ billingContext });
 
 	// 11. Stripe billing plan errors (validate Stripe resources)
 	handleStripeBillingPlanErrors({ billingContext });

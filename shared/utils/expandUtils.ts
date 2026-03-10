@@ -28,6 +28,7 @@ export const filterExpand = ({
 	return expand.filter((e) => !filter.includes(e));
 };
 
+/** @deprecated Use expandPathIncludes for path-aware expand matching. */
 export const expandIncludes = ({
 	expand,
 	includes,
@@ -36,6 +37,41 @@ export const expandIncludes = ({
 	includes: string[];
 }) => {
 	return includes.some((i) => expand.includes(i));
+};
+
+/** Returns true when an expand path matches exactly or requests a deeper child path. */
+export const expandPathIncludes = ({
+	expand,
+	includes,
+}: {
+	expand: string[];
+	includes: string[];
+}) => {
+	return includes.some((include) =>
+		expand.some(
+			(entry) => entry === include || entry.startsWith(`${include}.`),
+		),
+	);
+};
+
+/** Returns a new context whose expand paths are scoped to the given subtree. */
+export const scopeExpandForCtx = <T extends { expand: string[] }>({
+	ctx,
+	prefix,
+}: {
+	ctx: T;
+	prefix: string;
+}): T => {
+	return {
+		...ctx,
+		expand: ctx.expand.flatMap((entry) => {
+			if (entry === prefix) return [""];
+			if (entry.startsWith(`${prefix}.`)) {
+				return [entry.slice(prefix.length + 1)];
+			}
+			return [];
+		}),
+	};
 };
 
 export const filterPlanAndFeatureExpand = <

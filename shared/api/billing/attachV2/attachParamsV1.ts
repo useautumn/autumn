@@ -2,7 +2,6 @@ import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { CustomLineItemSchema } from "../common/customLineItem";
-import { RedirectModeSchema } from "../common/redirectMode";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
@@ -13,12 +12,6 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 
 	success_url: z.string().optional().meta({
 		description: "URL to redirect to after successful checkout.",
-	}),
-
-	redirect_mode: RedirectModeSchema.default("if_required").meta({
-		internal: true,
-		description:
-			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
 	}),
 
 	new_billing_subscription: z.boolean().optional().meta({

@@ -1,4 +1,4 @@
-import type { PreviewLineItem } from "@autumn/shared";
+import { type PreviewLineItem } from "@autumn/shared";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { PlanGroupSection } from "@/components/checkout/plan/PlanGroupSection";
@@ -14,8 +14,15 @@ interface PlanGroup {
 }
 
 export function OrderSummary() {
-	const { preview, incoming = [], outgoing = [], freeTrial, hasActiveTrial, total, currency } =
-		useCheckoutContext();
+	const {
+		preview,
+		incoming = [],
+		outgoing = [],
+		freeTrial,
+		hasActiveTrial,
+		total,
+		currency,
+	} = useCheckoutContext();
 
 	if (!preview) return null;
 
@@ -46,10 +53,15 @@ export function OrderSummary() {
 	const planNameMap = useMemo(() => {
 		const map = new Map<string, string>();
 		for (const change of [...outgoing, ...incoming]) {
-			map.set(change.plan.id, change.plan.name || change.plan.id);
+			map.set(
+				change.plan_id,
+				change.plan?.name || change.plan_id,
+			);
 		}
 		return map;
 	}, [incoming, outgoing]);
+
+	
 
 	// Group line items by plan_id
 	const planGroups = useMemo((): PlanGroup[] => {
@@ -64,26 +76,26 @@ export function OrderSummary() {
 		}
 
 		// Convert to array, with outgoing plans first (credits), then incoming plans
-		const outgoingIds = new Set(outgoing.map((c) => c.plan.id));
-		const incomingIds = new Set(incoming.map((c) => c.plan.id));
+		const outgoingIds = new Set<string>(outgoing.map((c) => c.plan_id));
+		const incomingIds = new Set<string>(incoming.map((c) => c.plan_id));
 		const groups: PlanGroup[] = [];
 
 		// Add outgoing plan groups first (including those with no line items like free plans)
 		for (const change of outgoing) {
-			const planId = change.plan.id;
+			const planId = change.plan_id;
 			const items = groupMap.get(planId) || [];
 			groups.push({
 				planId,
 				planName: planNameMap.get(planId) || planId,
 				items,
 				type: "outgoing",
-				cancelledAt: change.period_end,
+				cancelledAt: change.expires_at ?? undefined,
 			});
 		}
 
 		// Add incoming plan groups (including those with no line items)
 		for (const change of incoming) {
-			const planId = change.plan.id;
+			const planId = change.plan_id;
 			const items = groupMap.get(planId) || [];
 			groups.push({
 				planId,
@@ -127,7 +139,11 @@ export function OrderSummary() {
 							cancelledAt={group.cancelledAt}
 							hasActiveTrial={isIncomingTrial}
 							freeTrial={group.type === "incoming" ? freeTrial : undefined}
-							nextCycleItems={isIncomingTrial ? nextCycleItemsByPlan.get(group.planId) : undefined}
+							nextCycleItems={
+								isIncomingTrial
+									? nextCycleItemsByPlan.get(group.planId)
+									: undefined
+							}
 						/>
 					);
 				})}

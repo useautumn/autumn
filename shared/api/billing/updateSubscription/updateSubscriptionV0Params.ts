@@ -93,28 +93,3 @@ export type ExtUpdateSubscriptionV0Params = z.infer<
 export type UpdateSubscriptionV0Params = z.infer<
 	typeof UpdateSubscriptionV0ParamsSchema
 >;
-
-// Schedules (epoch milliseconds)
-// plan_custom_start_date: z.number().optional(),
-// billing_cycle_anchor: z.number().optional(),
-
-// keep_existing_plan: true, //disable_plan_switch
-// prorate_billing: true,
-// invoice_only: true,
-
-// carry_over_balance: true,
-// reset_usage: true,
-
-// billing_custom_start_date: "2025-11-04",
-// billing_custom_end_date: "2025-12-04",
-// billing_cycle_anchor: "2025-11-04",
-// billing_due_date: "2025-11-04",
-
-// new_billing_subscription: true, //fka combine_subscriptions, separate_billing_subscriptions
-// require_payment_method: true, //fka force_checkout
-// reset_balances: true
-
-// plan_schedule: "immediate", // or "next_cycle", "custom_date"
-// plan_custom_start_date: "2025-11-04",
-// plan_custom_end_date: "2025-12-04",
-// billing_schedule: "immediate", // or "next_cycle", "custom_date"

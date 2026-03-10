@@ -19,7 +19,7 @@ import { previewToCheckoutRes } from "./previewToCheckoutRes";
 import { checkoutToAttachContext } from "./utils/checkoutToAttachContext";
 import { getCheckoutOptions } from "./utils/getCheckoutOptions";
 
-export const handleCheckoutV2 = createRoute({
+export const handleLegacyApiCheckout = createRoute({
 	versionedBody: {
 		latest: CheckoutParamsV0Schema,
 		[ApiVersion.V1_Beta]: CheckoutParamsV0Schema,

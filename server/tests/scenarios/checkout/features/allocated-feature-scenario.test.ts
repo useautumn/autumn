@@ -1,4 +1,5 @@
 import { test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -30,6 +31,7 @@ test(`${chalk.yellowBright("attach: allocated - per-seat feature")}`, async () =
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [],
 	});

@@ -1,21 +1,12 @@
-import type {
-	BillingContext,
-	BillingPlan,
-	PreviewLineItem,
-} from "@autumn/shared";
-import {
-	type BillingPreviewResponse,
-	orgToCurrency,
-	sumValues,
-} from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import type { BillingContext, BillingPlan } from "@autumn/shared";
+import { type BillingPreviewResponse, orgToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
-import { customLineItemToPreviewLineItem } from "./lineItems/customLineItemToPreviewLineItem";
-import { lineItemToPreviewLineItem } from "./lineItems/lineItemToPreviewLineItem";
+import { billingPlanToChanges } from "./billingPlan/billingPlanToChanges";
+import { billingPlanToImmediatePreview } from "./billingPlan/toImmediatePreview/billingPlanToImmediatePreview";
+import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
 import { logBillingPreview } from "./logs/logBillingPreview";
 
-export const billingPlanToPreviewResponse = ({
+export const billingPlanToPreviewResponse = async ({
 	ctx,
 	billingContext,
 	billingPlan,
@@ -23,46 +14,14 @@ export const billingPlanToPreviewResponse = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-}): BillingPreviewResponse => {
+}): Promise<BillingPreviewResponse> => {
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
-	const { customLineItems } = autumnBillingPlan;
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 
-	const immediateLineItems = allLineItems.filter(
-		(line) => line.chargeImmediately,
-	);
-
-	let previewImmediateLineItems: PreviewLineItem[];
-	let rawTotal: number;
-
-	if (customLineItems?.length) {
-		// Custom line items override the computed line items
-		previewImmediateLineItems = customLineItems.map(
-			customLineItemToPreviewLineItem,
-		);
-		rawTotal = new Decimal(
-			sumValues(customLineItems.map((item) => item.amount)),
-		)
-			.toDP(2)
-			.toNumber();
-	} else {
-		previewImmediateLineItems = immediateLineItems.map(
-			lineItemToPreviewLineItem,
-		);
-
-		// Exclude deferred items from total (they'll be charged after trial ends)
-		const chargeableItems = previewImmediateLineItems.filter(
-			(line) => !line.deferred_for_trial,
-		);
-
-		rawTotal = new Decimal(
-			sumValues(chargeableItems.map((line) => line.amount)),
-		)
-			.toDP(2)
-			.toNumber();
-	}
+	const { immediateLineItems, previewLineItems, subtotal, total } =
+		billingPlanToImmediatePreview({ billingPlan });
 
 	const currency = orgToCurrency({ org: ctx.org });
 
@@ -72,11 +31,6 @@ export const billingPlanToPreviewResponse = ({
 		billingContext,
 		billingPlan,
 	});
-
-	// When total is negative (refund credit exceeds new charges), clamp to 0
-	// and emit a credit object. Reduce the next cycle total by the credit amount
-	// to reflect what Stripe actually does (apply customer balance to next invoice).
-	const total = rawTotal;
 
 	logBillingPreview({
 		ctx,
@@ -88,22 +42,22 @@ export const billingPlanToPreviewResponse = ({
 		nextCycle,
 	});
 
-	// Extract billing period from first line item with a billing period
-	const firstLineWithPeriod = immediateLineItems.find(
-		(line) => line.context.billingPeriod,
-	);
-	const periodStart = firstLineWithPeriod?.context.billingPeriod?.start;
-	const periodEnd = firstLineWithPeriod?.context.billingPeriod?.end;
+	const { incoming, outgoing } = await billingPlanToChanges({
+		ctx,
+		billingContext,
+		billingPlan,
+	});
 
 	return {
 		object: "billing_preview" as const,
 		customer_id: fullCustomer.id || "",
-		line_items: previewImmediateLineItems,
+		line_items: previewLineItems,
+		subtotal,
 		total,
 		currency,
 		// credit,
-		period_start: periodStart,
-		period_end: periodEnd,
 		next_cycle: nextCycle,
+		incoming,
+		outgoing,
 	} satisfies BillingPreviewResponse;
 };

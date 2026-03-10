@@ -1,13 +1,12 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	BillingContextOverride,
-	BillingPlan,
-	BillingResult,
+import {
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type BillingContextOverride,
+	CheckoutAction,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
-import { createAutumnCheckout } from "@/internal/billing/v2/actions/attach/createAutumnCheckout";
+
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
@@ -16,12 +15,10 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
-
-export interface AttachResult {
-	billingContext: AttachBillingContext;
-	billingPlan?: BillingPlan;
-	billingResult?: BillingResult;
-}
+import {
+	type CreateAutumnCheckoutResult,
+	createAutumnCheckout,
+} from "../../common/createAutumnCheckout";
 
 export async function attach({
 	ctx,
@@ -35,7 +32,7 @@ export async function attach({
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 	contextOverride?: BillingContextOverride;
-}): Promise<AttachResult> {
+}): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
@@ -88,8 +85,9 @@ export async function attach({
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
 	) {
-		const checkoutResult = await createAutumnCheckout({
+		const checkoutResult = await createAutumnCheckout<AttachBillingContext>({
 			ctx,
+			action: CheckoutAction.Attach,
 			params,
 			billingContext,
 			billingPlan,
