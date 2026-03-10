@@ -89,7 +89,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-1: lock crosses monthl
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Check lock=60: exhausts monthly(free)=50, then deducts 10 from lifetime.
 	// Receipt: [monthly(free):50, lifetime:10]
@@ -97,7 +97,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-1: lock crosses monthl
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 60,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 		skip_cache: true,
 	});
 
@@ -130,7 +130,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-1: lock crosses monthl
 	// monthly(pro) not in receipt → stays at 80.
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: lockKey,
+			lock_id: lockKey,
 			action: "confirm",
 			override_value: 57,
 		},
@@ -200,7 +200,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-2: lock crosses monthl
 		],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// Check lock=60: exhausts monthly(free)=50, deducts 10 from lifetime.
 	// Receipt: [monthly(free):50, lifetime:10]
@@ -208,7 +208,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-2: lock crosses monthl
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 60,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 		skip_cache: true,
 	});
 
@@ -240,7 +240,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-2: lock crosses monthl
 	// monthly(pro) not in receipt → stays at 80.
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: lockKey,
+			lock_id: lockKey,
 			action: "confirm",
 			override_value: 63,
 		},
@@ -315,7 +315,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-3: lock on free, upgra
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey });
+	await deleteLock({ ctx, lockId: lockKey });
 
 	// check lock=40: deducts all 40 from monthly(free)=50→10.
 	// Receipt: [monthly(free):40]
@@ -323,7 +323,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-3: lock on free, upgra
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 40,
-		lock: { enabled: true, key: lockKey },
+		lock: { enabled: true, lock_id: lockKey },
 		skip_cache: true,
 	});
 
@@ -364,7 +364,7 @@ test.concurrent(`${chalk.yellowBright("lock-pg-edge PG-EC-3: lock on free, upgra
 	// effective_additional = 0 + (-10) = -10 → refund 10 onto monthly(pro)=60→70.
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: lockKey,
+			lock_id: lockKey,
 			action: "confirm",
 			override_value: 30,
 		},

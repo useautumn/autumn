@@ -67,7 +67,7 @@ export interface Payloads {
 		orgId: string;
 		env: AppEnv;
 		customerId: string;
-		lockKey: string;
+		lockId: string;
 		hashedKey: string;
 	};
 	[key: string]: unknown;

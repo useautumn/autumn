@@ -15,18 +15,18 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 export const buildExpireLockPayload = ({
 	ctx,
 	customerId,
-	lockKey,
+	lockId,
 }: {
 	ctx: TestContext;
 	customerId: string;
-	lockKey?: string;
+	lockId?: string;
 }) => {
-	const key = lockKey ?? customerId;
+	const key = lockId ?? customerId;
 	return {
 		customerId,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		lockKey: key,
+		lockId: key,
 		hashedKey: buildLockReceiptKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -69,13 +69,13 @@ test.concurrent(`${chalk.yellowBright("race RC-1: double expiry concurrent — b
 		value: 3,
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	const payload = buildExpireLockPayload({ ctx, customerId });
@@ -112,18 +112,18 @@ test.concurrent(`${chalk.yellowBright("race RC-2: confirm then expire — expiry
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	// Confirm keeping 4 usage (release 4 back)
 	await autumnV2_1.balances.finalize({
-		lock_key: customerId,
+		lock_id: customerId,
 		action: "confirm",
 		override_value: 4,
 	});
@@ -164,13 +164,13 @@ test.concurrent(`${chalk.yellowBright("race RC-3: expire then confirm — confir
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	// Expire first — full release
@@ -183,7 +183,7 @@ test.concurrent(`${chalk.yellowBright("race RC-3: expire then confirm — confir
 	await expectAutumnError({
 		func: () =>
 			autumnV2_1.balances.finalize({
-				lock_key: customerId,
+				lock_id: customerId,
 				action: "confirm",
 				override_value: 4,
 			}),
@@ -215,24 +215,24 @@ test.concurrent(`${chalk.yellowBright("race RC-4: confirm twice — idempotent, 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	// Confirm twice concurrently — one should win and the other should be a graceful no-op
 	const results = await Promise.allSettled([
 		autumnV2_1.balances.finalize({
-			lock_key: customerId,
+			lock_id: customerId,
 			action: "confirm",
 			override_value: 4,
 		}),
 		autumnV2_1.balances.finalize({
-			lock_key: customerId,
+			lock_id: customerId,
 			action: "confirm",
 			override_value: 4,
 		}),
@@ -267,17 +267,17 @@ test.concurrent(`${chalk.yellowBright("race RC-5: receipt evicted — expireLock
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 	});
 
 	// Simulate Redis eviction by deleting the receipt
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	try {
 		await expireLock({

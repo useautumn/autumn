@@ -38,19 +38,19 @@ test.concurrent(`${chalk.yellowBright("postgres PG-1: skip_cache check + normal 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 		skip_cache: true,
 	});
 
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: customerId,
+			lock_id: customerId,
 			action: "confirm",
 			override_value: 5,
 		},
@@ -100,19 +100,19 @@ test.concurrent(`${chalk.yellowBright("postgres PG-2: normal check + skip_cache 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 		skip_cache: true,
 	});
 
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: customerId,
+			lock_id: customerId,
 			action: "confirm",
 			override_value: 11,
 		},
@@ -164,19 +164,19 @@ test.concurrent(`${chalk.yellowBright("postgres PG-3: skip_cache check + skip_ca
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	await deleteLock({ ctx, lockKey: customerId });
+	await deleteLock({ ctx, lockId: customerId });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		required_balance: 8,
-		lock: { enabled: true, key: customerId },
+		lock: { enabled: true, lock_id: customerId },
 		skip_cache: true,
 	});
 
 	await autumnV2_1.balances.finalize(
 		{
-			lock_key: customerId,
+			lock_id: customerId,
 			action: "confirm",
 			override_value: 3,
 		},

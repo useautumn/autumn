@@ -69,7 +69,7 @@ test(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// ── Generate all (lock_value, override_value, lock_key) triples up front ──
+		// ── Generate all (lock_value, override_value, lock_id) triples up front ──
 
 		type Pair = {
 			lockKey: string;
@@ -91,7 +91,7 @@ test(
 		});
 
 		// Clean up any stale lock receipts from previous runs
-		await Promise.all(pairs.map(({ lockKey }) => deleteLock({ ctx, lockKey })));
+		await Promise.all(pairs.map(({ lockKey }) => deleteLock({ ctx, lockId: lockKey })));
 
 		// ── Fire all (check + finalize) pairs concurrently ──
 		// Each pair is sequential within itself (check must complete before its own
@@ -105,11 +105,11 @@ test(
 					customer_id: customerId,
 					feature_id: TestFeature.Action1,
 					required_balance: lockValue.toNumber(),
-					lock: { enabled: true, key: lockKey },
+					lock: { enabled: true, lock_id: lockKey },
 				});
 
 				await autumnV2_1.balances.finalize({
-					lock_key: lockKey,
+					lock_id: lockKey,
 					action: "confirm",
 					override_value: overrideValue.toNumber(),
 				});
