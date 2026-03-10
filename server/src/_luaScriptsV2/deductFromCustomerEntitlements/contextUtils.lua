@@ -5,16 +5,16 @@
 
 --[[
   init_context(params)
-  
+
   Initializes context object with current balances for all customer_entitlements
   and builds a rollover index for fast lookups.
   Reads from Redis once upfront to avoid multiple reads during passes.
-  
+
   params:
     cache_key: string
     customer_entitlement_ids: array of customer_entitlement IDs
     full_customer: decoded FullCustomer object
-    
+
   Returns: context table with:
     customer_entitlements: { [cus_ent_id]: { base_path, balance, adjustment, entities } }
     rollovers: { [rollover_id]: { base_path, cus_ent_id, balance, usage, entities } }
@@ -25,7 +25,7 @@
 ]]
 local function init_context(params)
   local logs = {}
-  
+
   local context = {
     customer_entitlements = {},
     rollovers = {},
@@ -38,14 +38,14 @@ local function init_context(params)
       end
     },
   }
-  
+
   for _, ent_id in ipairs(params.customer_entitlement_ids or {}) do
     local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(params.full_customer, ent_id)
-    
+
     if cus_ent then
       local base_path
-      local is_loose = (cp_idx == nil)  -- Loose entitlement if no customer_product index
-      
+      local is_loose = (cp_idx == nil) -- Loose entitlement if no customer_product index
+
       if is_loose then
         -- Loose entitlement: path is $.extra_customer_entitlements[idx]
         local ece_idx_0 = ce_idx - 1
@@ -56,11 +56,11 @@ local function init_context(params)
         local ce_idx_0 = ce_idx - 1
         base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
       end
-      
+
       local entitlement = cus_ent.entitlement
       local has_entity_scope = not is_nil(entitlement)
-        and not is_nil(entitlement.entity_feature_id)
-      
+          and not is_nil(entitlement.entity_feature_id)
+
       local ent_data = {
         base_path = base_path,
         has_entity_scope = has_entity_scope,
@@ -68,17 +68,17 @@ local function init_context(params)
         unlimited = cus_ent.unlimited,
         is_loose = is_loose,
       }
-      
+
       if has_entity_scope then
-        ent_data.balance = 0  -- Not used for entity-scoped
+        ent_data.balance = 0 -- Not used for entity-scoped
         ent_data.entities = read_current_entities(params.cache_key, base_path)
       else
         ent_data.balance = read_current_balance(params.cache_key, base_path)
         ent_data.entities = nil
       end
-      
+
       context.customer_entitlements[ent_id] = ent_data
-      
+
       -- Build rollover index for this customer_entitlement
       local cus_ent_rollovers = cus_ent.rollovers
       if cus_ent_rollovers and type(cus_ent_rollovers) == 'table' then
@@ -86,10 +86,10 @@ local function init_context(params)
           if rollover and rollover.id then
             local r_idx_0 = r_idx - 1
             local rollover_path = base_path .. '.rollovers[' .. r_idx_0 .. ']'
-            
+
             -- Read fresh rollover data from Redis
             local rollover_data = read_rollover_data(params.cache_key, rollover_path)
-            
+
             if rollover_data then
               context.rollovers[rollover.id] = {
                 base_path = rollover_path,
@@ -104,7 +104,7 @@ local function init_context(params)
       end
     end
   end
-  
+
   return context
 end
 
@@ -276,6 +276,7 @@ local function queue_rollover_update(params)
     path = params.path,
     rollover_id = params.rollover_id,
     entity_id = params.entity_id,
+    credit_cost = params.credit_cost,
     balance_delta = -deduct_amount,
     usage_delta = deduct_amount,
     value_delta = params.value_delta or 0,
@@ -298,7 +299,7 @@ end
 
 --[[
   apply_pending_writes(cache_key, context)
-  
+
   Applies all queued writes to Redis.
   Called only after validation passes.
 ]]
