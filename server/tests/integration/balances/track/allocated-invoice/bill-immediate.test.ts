@@ -76,13 +76,13 @@ test(`${chalk.yellowBright("bill-imm1: track within included usage creates no in
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	await autumnV2.track({
+	const untrackRes: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
 		value: -1,
 	});
 
-	expect(trackRes.balance).toMatchObject({
+	expect(untrackRes.balance).toMatchObject({
 		granted_balance: 1,
 		purchased_balance: 0,
 		current_balance: 1,

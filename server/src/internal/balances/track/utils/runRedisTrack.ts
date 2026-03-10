@@ -14,7 +14,7 @@ import { deductionUpdatesToModifiedIds } from "../../utils/sync/deductionUpdates
 import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManagerV2.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
-import type { RolloverUpdate } from "../../utils/types/redisDeductionResult.js";
+import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
 const queueSyncItem = ({
