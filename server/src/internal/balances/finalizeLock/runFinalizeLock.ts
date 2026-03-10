@@ -25,7 +25,11 @@ export const runFinalizeLock = async ({
 	});
 
 	// Cancel any pending EventBridge expiry schedule for this lock
-	await cancelLockExpiry({ hashedKey: Bun.hash(params.lock_key).toString() });
+	await cancelLockExpiry({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		hashedKey: Bun.hash(params.lock_key).toString(),
+	});
 
 	// No-op deduction: finalValue == lockValue means nothing changed, just delete the receipt
 	if (new Decimal(finalValue).equals(lockValue)) {
