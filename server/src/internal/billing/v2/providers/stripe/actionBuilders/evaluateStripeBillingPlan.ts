@@ -29,6 +29,10 @@ export const evaluateStripeBillingPlan = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	checkoutMode?: CheckoutMode;
 }): Promise<StripeBillingPlan> => {
+	if (billingContext.skipBillingChanges) {
+		return {};
+	}
+
 	await initStripeResourcesForBillingPlan({
 		ctx,
 		autumnBillingPlan,
@@ -64,6 +68,7 @@ export const evaluateStripeBillingPlan = async ({
 	const { lineItems } = autumnBillingPlan;
 
 	const createManualInvoice = shouldCreateManualStripeInvoice({
+		ctx,
 		billingContext,
 		autumnBillingPlan,
 		stripeSubscriptionAction,

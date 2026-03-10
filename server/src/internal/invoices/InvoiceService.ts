@@ -10,7 +10,6 @@ import {
 	type Organization,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
-import { buildConflictUpdateColumns } from "@server/db/dbUtils.js";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
@@ -119,6 +118,7 @@ export class InvoiceService {
 		return invoice as Invoice;
 	}
 
+	/** @deprecated */
 	static async createInvoiceFromStripe({
 		db,
 		stripeInvoice,
@@ -212,56 +212,58 @@ export class InvoiceService {
 		return newInvoice;
 	}
 
-	static async updateByStripeId({
+	static async update({
 		db,
-		stripeId,
+		query,
 		updates,
 	}: {
 		db: DrizzleCli;
-		stripeId: string;
+		query: {
+			id?: string;
+			stripeId?: string;
+		};
 		updates: Partial<InsertInvoice>;
 	}) {
 		const results = await db
 			.update(invoices)
 			.set(updates)
-			.where(eq(invoices.stripe_id, stripeId))
+			.where(
+				and(
+					query.id ? eq(invoices.id, query.id) : undefined,
+					query.stripeId ? eq(invoices.stripe_id, query.stripeId) : undefined,
+				),
+			)
 			.returning();
 
-		if (results.length === 0) {
-			return null;
-		}
+		if (results.length === 0) return null;
 
 		return results[0] as Invoice;
 	}
 
-	static async updateFromStripeInvoice({
+	static async upsert({
 		db,
-		stripeInvoice,
+		invoice,
 	}: {
 		db: DrizzleCli;
-		stripeInvoice: Stripe.Invoice;
+		invoice: InsertInvoice;
 	}) {
-		return await InvoiceService.updateByStripeId({
-			db,
-			stripeId: stripeInvoice.id!,
-			updates: {
-				status: stripeInvoice.status as InvoiceStatus,
-				hosted_invoice_url: stripeInvoice.hosted_invoice_url,
-				discounts: getInvoiceDiscounts({
-					expandedInvoice: stripeInvoice,
-				}),
-			},
-		});
-	}
-
-	static async upsert({ db, invoice }: { db: DrizzleCli; invoice: Invoice }) {
-		const updateColumns = buildConflictUpdateColumns(invoices, ["id"]);
 		const result = await db
 			.insert(invoices)
-			.values(invoice as any)
+			.values(invoice)
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
-				set: updateColumns,
+				set: {
+					status: invoice.status,
+					hosted_invoice_url: invoice.hosted_invoice_url,
+					discounts: invoice.discounts,
+					total: invoice.total,
+					product_ids: invoice.product_ids?.length
+						? invoice.product_ids
+						: undefined,
+					internal_product_ids: invoice.internal_product_ids?.length
+						? invoice.internal_product_ids
+						: undefined,
+				},
 			})
 			.returning();
 

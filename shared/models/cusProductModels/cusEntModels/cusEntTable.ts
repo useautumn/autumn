@@ -47,6 +47,8 @@ export const customerEntitlements = pgTable(
 		// Optional...
 		customer_id: text("customer_id"),
 		feature_id: text("feature_id"),
+
+		external_id: text("external_id"),
 	},
 	(table) => [
 		foreignKey({
@@ -74,10 +76,15 @@ export const customerEntitlements = pgTable(
 			.onUpdate("cascade")
 			.onDelete("cascade"),
 		index("idx_customer_entitlements_product_id").on(table.customer_product_id),
+		index("idx_customer_entitlements_internal_customer_id").on(
+			table.internal_customer_id,
+		),
+		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
 	],
 );
 
 collatePgColumn(customerEntitlements.id, "C");
+collatePgColumn(customerEntitlements.internal_customer_id, "C");
 
 export type InsertCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;

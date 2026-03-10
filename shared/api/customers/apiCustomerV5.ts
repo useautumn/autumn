@@ -17,6 +17,9 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 	env: "sandbox",
 	metadata: {},
 	sendEmailReceipts: false,
+	billingControls: {
+		autoTopups: [],
+	},
 	subscriptions: [
 		{
 			planId: "pro_plan",

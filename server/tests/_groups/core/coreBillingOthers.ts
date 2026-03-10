@@ -13,5 +13,11 @@ export const coreBillingOthers: TestGroup = {
 
 		// Setup payment
 		"billing/setup-payment",
+
+		// Customers
+		"crud/customers",
+
+		// Autumn webhooks
+		"autumn-webhooks",
 	],
 };

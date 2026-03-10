@@ -3,14 +3,13 @@ import type {
 	BillingPlan,
 	Invoice,
 	StripeBillingPlanResult,
-	StripeInvoiceMetadata,
 } from "@autumn/shared";
 import { ms, StripeBillingStage } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
-import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
 export const executeStripeInvoiceAction = async ({
@@ -24,7 +23,6 @@ export const executeStripeInvoiceAction = async ({
 }): Promise<StripeBillingPlanResult> => {
 	const { logger } = ctx;
 
-	let invoiceMetadata: StripeInvoiceMetadata | undefined;
 	let autumnInvoice: Invoice | undefined;
 
 	const { invoiceAction: stripeInvoiceAction } = billingPlan.stripe;
@@ -39,7 +37,6 @@ export const executeStripeInvoiceAction = async ({
 		ctx,
 		billingContext,
 		stripeInvoiceAction,
-		invoiceMetadata,
 	});
 
 	// Insert metadata into DB
@@ -64,15 +61,21 @@ export const executeStripeInvoiceAction = async ({
 			stripeInvoice: invoice,
 			expiresAt: deferredInvoiceMode
 				? Date.now() + ms.days(10)
-				: Date.now() + ms.days(30),
+				: Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
-		autumnInvoice = await upsertInvoiceFromBilling({
+		// autumnInvoice = await upsertInvoiceFromBilling({
+		// 	ctx,
+		// 	stripeInvoice: invoice,
+		// 	fullProducts: billingContext.fullProducts,
+		// 	fullCustomer: billingContext.fullCustomer,
+		// });
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
 
 		return {
@@ -85,12 +88,18 @@ export const executeStripeInvoiceAction = async ({
 
 	if (invoice) {
 		logger.debug("[executeStripeInvoiceAction] Upserting invoice from billing");
-		autumnInvoice = await upsertInvoiceFromBilling({
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
+		// autumnInvoice = await upsertInvoiceFromBilling({
+		// 	ctx,
+		// 	stripeInvoice: invoice,
+		// 	fullProducts: billingContext.fullProducts,
+		// 	fullCustomer: billingContext.fullCustomer,
+		// });
 	}
 
 	logger.debug(

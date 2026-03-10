@@ -46,6 +46,12 @@ export type BatchResetCusEntsPayload = {
 	}[];
 };
 
+export type AutoTopUpPayload = {
+	orgId: string;
+	env: AppEnv;
+	customerId: string;
+	featureId: string;
+};
 export type StoreInvoiceLineItemsPayload = {
 	orgId: string;
 	env: AppEnv;
@@ -101,6 +107,11 @@ const workflowRegistry = {
 		jobName: JobName.BatchResetCusEnts,
 		runner: "sqs",
 	} as WorkflowConfig<BatchResetCusEntsPayload>,
+
+	autoTopUp: {
+		jobName: JobName.AutoTopUp,
+		runner: "sqs",
+	} as WorkflowConfig<AutoTopUpPayload>,
 
 	storeInvoiceLineItems: {
 		jobName: JobName.StoreInvoiceLineItems,
@@ -187,6 +198,8 @@ export const workflows = {
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
 
+	triggerAutoTopUp: (payload: AutoTopUpPayload, options?: TriggerOptions) =>
+		triggerWorkflow({ name: "autoTopUp", payload, options }),
 	triggerStoreInvoiceLineItems: (
 		payload: StoreInvoiceLineItemsPayload,
 		options?: TriggerOptions,

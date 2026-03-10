@@ -3,14 +3,14 @@ import { z } from "zod/v4";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
 export const ExtCreateBalanceParamsSchema = BalanceParamsBaseSchema.extend({
-	included: z.number().optional().meta({
+	included_grant: z.number().optional().meta({
 		description:
 			"The initial balance amount to grant. For metered features, this is the number of units the customer can use.",
 	}),
 
 	unlimited: z.boolean().optional().meta({
 		description:
-			"If true, the balance has unlimited usage. Cannot be combined with 'included'.",
+			"If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.",
 	}),
 	reset: z
 		.object({
@@ -32,6 +32,11 @@ export const ExtCreateBalanceParamsSchema = BalanceParamsBaseSchema.extend({
 		description:
 			"Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.",
 	}),
+
+	balance_id: z.string().optional().meta({
+		description:
+			"A unique identifier for this balance. Use this to target the balance in future update / delete calls.",
+	}),
 }).refine((data) => {
 	if (data.entity_id && !data.customer_id) {
 		return false;
@@ -52,7 +57,7 @@ export const ValidateCreateBalanceParamsSchema =
 			return false;
 		}
 
-		const included = data.included ?? data.granted_balance;
+		const included = data.included_grant ?? data.granted_balance;
 
 		if (data.feature.type === FeatureType.Boolean) {
 			if (included !== undefined || data.unlimited || data.reset?.interval) {

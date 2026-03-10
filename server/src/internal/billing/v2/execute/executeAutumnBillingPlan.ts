@@ -3,8 +3,9 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { InvoiceService } from "@/internal/invoices/InvoiceService";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
@@ -55,21 +56,19 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// ctx.logger.debug(
-	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
-	// );
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// 3. Update customer product options
+	// 3. Update customer product (DB + cache)
 	if (updateCustomerProduct) {
 		const { customerProduct, updates } = updateCustomerProduct;
 
-		await CusProductService.update({
+		await customerProductActions.updateDbAndCache({
 			ctx,
+			customerId: autumnBillingPlan.customerId,
 			cusProductId: customerProduct.id,
 			updates,
 		});
@@ -102,13 +101,14 @@ export const executeAutumnBillingPlan = async ({
 
 	// 7. Upsert invoice (if provided)
 	if (!autumnInvoice && autumnBillingPlan.upsertInvoice) {
-		autumnInvoice = await InvoiceService.upsert({
-			db,
+		autumnInvoice = await invoiceActions.upsertToDbAndCache({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
 			invoice: autumnBillingPlan.upsertInvoice,
 		});
 	}
 
-	// 8. Trigger workflow to store invoice line items (async via SQS)
+	// 9. Trigger workflow to store invoice line items (async via SQS)
 	if (autumnInvoice && stripeInvoice) {
 		await workflows.triggerStoreInvoiceLineItems({
 			orgId: ctx.org.id,
@@ -119,7 +119,7 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// 9. Trigger workflow to store deferred line items (ProrateNextCycle pending items)
+	// 10. Trigger workflow to store deferred line items (ProrateNextCycle pending items)
 	// These are invoice items created without an invoice — stored with invoice_id = null
 	if (
 		stripeInvoiceItems &&

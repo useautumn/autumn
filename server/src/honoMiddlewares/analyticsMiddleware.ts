@@ -77,10 +77,12 @@ const logResponse = async ({
 	ctx,
 	c,
 	skipUrls,
+	durationMs,
 }: {
 	ctx: AutumnContext;
 	c: Context<HonoEnv>;
 	skipUrls: string[];
+	durationMs: number;
 }) => {
 	try {
 		// Skip logging for certain URLs
@@ -112,8 +114,9 @@ const logResponse = async ({
 		const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
 		const statusColor = c.res.status === 200 ? chalk.green : chalk.yellow;
 
-		log(`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug})`, {
+		log(`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`, {
 			statusCode: c.res.status,
+			durationMs,
 			res: responseBody,
 		});
 
@@ -169,10 +172,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Re-fetch ctx after next() since handlers may have replaced it via c.set("ctx", {...})
 	const finalCtx = c.get("ctx");
+	const durationMs = Date.now() - finalCtx.timestamp;
 
 	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
-		.then(() => logResponse({ ctx: finalCtx, c, skipUrls }))
+		.then(() => logResponse({ ctx: finalCtx, c, skipUrls, durationMs }))
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

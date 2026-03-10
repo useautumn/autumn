@@ -77,9 +77,59 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       Whether to send email receipts to the customer.
     </DynamicResponseField>
 
+    <DynamicResponseField name="billing_controls" type="object">
+      Billing controls for the customer (auto top-ups, etc.)
+      <Expandable title="properties">
+        <DynamicResponseField name="auto_topups" type="object[]">
+          List of auto top-up configurations per feature.
+          <Expandable title="properties">
+            <DynamicResponseField name="feature_id" type="string">
+              The ID of the feature (credit balance) to auto top-up.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="enabled" type="boolean">
+              Whether auto top-up is enabled.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="threshold" type="number">
+              When the balance drops below this threshold, an auto top-up will be purchased.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="quantity" type="number">
+              Amount of credits to add per auto top-up.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="purchase_limit" type="object">
+              Optional rate limit to cap how often auto top-ups occur.
+              <Expandable title="properties">
+                <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
+                  The time interval for the purchase limit window.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="interval_count" type="number">
+                  Number of intervals in the purchase limit window.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="limit" type="number">
+                  Maximum number of auto top-ups allowed within the interval.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
     <DynamicResponseField name="subscriptions" type="object[]">
       Active and scheduled recurring plans that this customer has attached.
       <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+        </DynamicResponseField>
+
         <DynamicResponseField name="plan" type="object">
           The full plan object if expanded.
           <Expandable title="properties">
@@ -933,6 +983,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "env": "sandbox",
       "metadata": {},
       "sendEmailReceipts": false,
+      "billingControls": {
+        "autoTopups": []
+      },
       "subscriptions": [
         {
           "planId": "pro_plan",

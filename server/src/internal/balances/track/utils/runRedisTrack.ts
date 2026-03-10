@@ -94,6 +94,7 @@ export const runRedisTrack = async ({
 			deductions: featureDeductions,
 			deductionOptions: {
 				overageBehaviour: overageBehavior || "cap",
+				triggerAutoTopUp: true,
 			},
 		}),
 	);

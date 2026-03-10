@@ -209,6 +209,25 @@ const freeAllocatedWorkflows = ({
 	}) as LimitedItem;
 
 /**
+ * Weekly messages - resets each week
+ * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ */
+const weeklyMessages = ({
+	includedUsage = 100,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+		interval: ProductItemInterval.Week,
+		entityFeatureId,
+	}) as LimitedItem;
+
+/**
  * Lifetime messages - never resets (interval: null)
  * @param includedUsage - One-time usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -365,7 +384,7 @@ const volumePrepaidMessages = ({
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number; flat_amount?: number | null }[];
+	tiers?: { to: number | "inf"; amount: number; flat_amount?: number }[];
 	config?: ProductItemConfig;
 } = {}): LimitedItem =>
 	constructPrepaidItem({
@@ -373,7 +392,7 @@ const volumePrepaidMessages = ({
 		tiers: tiers as {
 			to: number;
 			amount: number;
-			flat_amount?: number | null;
+			flat_amount?: number;
 		}[],
 		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
@@ -710,6 +729,7 @@ export const items = {
 	freeAllocatedUsers,
 	freeAllocatedWorkflows,
 	unlimitedMessages,
+	weeklyMessages,
 	lifetimeMessages,
 	monthlyMessagesWithRollover,
 

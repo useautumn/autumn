@@ -94,15 +94,27 @@ const customerProductsToPhaseItems = ({
  * Uses the existing discount ID so Stripe reuses the same discount object,
  * preserving the original start/end timestamps and remaining duration for repeating coupons.
  * Falls back to coupon ID for new discounts that don't have a discount ID yet.
+ *
+ * Discounts that have already expired before the phase starts are excluded —
+ * Stripe rejects schedule phases that reference a discount whose end has passed.
  */
 const stripeDiscountsToPhaseDiscounts = ({
 	stripeDiscounts,
+	phaseStartDateSeconds,
 }: {
 	stripeDiscounts?: StripeDiscountWithCoupon[];
+	phaseStartDateSeconds: number;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] | undefined => {
 	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
 
-	return stripeDiscounts.map((discount) =>
+	const activeDiscounts = stripeDiscounts.filter(
+		(discount) =>
+			discount.end == null || discount.end > phaseStartDateSeconds,
+	);
+
+	if (activeDiscounts.length === 0) return undefined;
+
+	return activeDiscounts.map((discount) =>
 		discount.id
 			? { discount: discount.id }
 			: { coupon: discount.source.coupon.id },
@@ -198,13 +210,15 @@ export const buildStripePhasesUpdate = ({
 			return msToSeconds(normalizedTrialEndsAt);
 		};
 
+		const phaseStartDateSeconds = msToSeconds(startMs);
 		const phase: Stripe.SubscriptionScheduleUpdateParams.Phase = {
 			items: phaseItems,
-			start_date: msToSeconds(startMs),
+			start_date: phaseStartDateSeconds,
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
+				phaseStartDateSeconds,
 			}),
 		};
 

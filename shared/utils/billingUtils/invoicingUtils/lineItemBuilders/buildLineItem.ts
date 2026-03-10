@@ -42,9 +42,12 @@ export const buildLineItem = ({
 	}
 
 	// Update context with effective period
+	const defaultDiscountable = context.direction === "charge" && amount >= 0;
+
 	const updatedContext: LineItemContext = {
 		...context,
 		effectivePeriod,
+		discountable: context.discountable ?? defaultDiscountable,
 	};
 
 	// 2. Apply proration if needed

@@ -41,8 +41,8 @@ export const getBasePriceDisplay = ({
 		};
 	}
 
-	// Check if there's a valid base price
-	const priceExists = notNullish(basePrice) && basePrice.price > 0;
+	// Check if there's a valid base price (including $0)
+	const priceExists = notNullish(basePrice) && basePrice.price >= 0;
 	if (priceExists && basePrice) {
 		const formattedAmount = formatAmount({
 			currency,

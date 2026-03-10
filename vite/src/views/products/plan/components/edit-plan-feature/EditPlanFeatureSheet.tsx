@@ -71,6 +71,36 @@ export function EditPlanFeatureSheet({
 		setItem(newItem);
 	};
 
+	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
+		
+		setVolumePricingMode(mode);
+		if (!item?.tiers) {
+			console.log("[VolumeModeChange] no tiers, returning early");
+			return;
+		}
+
+		// Migrate tier amounts so the diff is detectable and the UI reflects the new mode
+		const migratedTiers = item.tiers.map((tier) => {
+			if (mode === "flat") {
+				// Copy per-unit amount into flat_amount, zero out amount
+				return {
+					...tier,
+					flat_amount: tier.flat_amount ?? tier.amount,
+					amount: 0,
+				};
+			}
+			// Copy flat_amount into amount, clear flat_amount
+			return {
+				...tier,
+				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
+				flat_amount: null,
+			};
+		});
+
+		console.log("[VolumeModeChange] migratedTiers AFTER:", JSON.stringify(migratedTiers));
+		setItem({ ...item, tiers: migratedTiers });
+	};
+
 	const handleBeforeCommit = () => {
 		if (!isVolumeBased) return;
 		const mode = showVolumePricingToggle ? volumePricingMode : "per_unit";
@@ -95,20 +125,25 @@ export function EditPlanFeatureSheet({
 		}
 	};
 
-	const emptyPriceItem =
-		item?.usage_model &&
-		item.tiers?.length === 1 &&
-		item.tiers[0].amount === 0 &&
-		!item.included_usage;
-
-	const hasChanges = hasItemChanges && !emptyPriceItem;
-
 	if (!item) {
 		return null;
 	}
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
+
+	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
+	const isZeroPriceItem =
+		isFeaturePrice &&
+		item.tiers?.length === 1 &&
+		item.tiers[0].amount === 0 &&
+		!item.included_usage;
+
+	const hasChanges = hasItemChanges || isZeroPriceItem;
+
+	console.log("[EditPlanFeatureSheet] hasItemChanges:", hasItemChanges, "| isZeroPriceItem:", isZeroPriceItem, "| hasChanges:", hasChanges);
+	console.log("[EditPlanFeatureSheet] current item.tiers:", JSON.stringify(item.tiers));
+	console.log("[EditPlanFeatureSheet] volumePricingMode:", volumePricingMode);
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -161,7 +196,7 @@ export function EditPlanFeatureSheet({
 											volumePricingMode={volumePricingMode}
 											showVolumePricingToggle={showVolumePricingToggle}
 											onTierBehaviorChange={handleTierBehaviorChange}
-											onVolumePricingModeChange={setVolumePricingMode}
+											onVolumePricingModeChange={handleVolumePricingModeChange}
 										/>
 									) : (
 										"Price"

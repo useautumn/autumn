@@ -211,6 +211,7 @@ Use this after an action happens to decrement usage, or send a negative value to
 
 * [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 * [update](docs/sdks/balances/README.md#update) - Update a customer balance.
+* [delete](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
 
 ### [Billing](docs/sdks/billing/README.md)
 

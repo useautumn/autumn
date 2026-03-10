@@ -4,6 +4,7 @@ import type {
 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -201,6 +202,18 @@ export const executeRedisDeduction = async ({
 				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
 			);
 		});
+
+		if (options.triggerAutoTopUp) {
+			triggerAutoTopUp({
+				ctx,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
+				);
+			});
+		}
 	}
 
 	return {

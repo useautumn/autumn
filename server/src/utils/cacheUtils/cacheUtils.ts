@@ -6,6 +6,46 @@ import { logger } from "../../external/logtail/logtailUtils.js";
 const tracer = trace.getTracer("redis");
 
 /**
+ * Executes a Redis SET ... NX and routes the three possible outcomes to callbacks:
+ * - `"OK"` (key was set) → `onSuccess`
+ * - `null` (key already exists) → `onKeyAlreadyExists`
+ * - Redis unavailable / error → `onRedisUnavailable`
+ */
+export const tryRedisNx = async <
+	TUnavailable,
+	TSuccess,
+	TExists,
+>({
+	operation,
+	redisInstance,
+	onRedisUnavailable,
+	onSuccess,
+	onKeyAlreadyExists,
+}: {
+	operation: () => Promise<"OK" | null>;
+	redisInstance?: Redis;
+	onRedisUnavailable: () => TUnavailable | Promise<TUnavailable>;
+	onSuccess: () => TSuccess | Promise<TSuccess>;
+	onKeyAlreadyExists: () => TExists | Promise<TExists>;
+}): Promise<TUnavailable | TSuccess | TExists> => {
+	const targetRedis = redisInstance ?? redis;
+
+	try {
+		if (targetRedis.status !== "ready") {
+			logger.error("Redis not ready, skipping NX write");
+			return await onRedisUnavailable();
+		}
+
+		const result = await operation();
+		if (result === "OK") return await onSuccess();
+		return await onKeyAlreadyExists();
+	} catch (error) {
+		logger.error(`Redis NX write failed: ${error}`);
+		return await onRedisUnavailable();
+	}
+};
+
+/**
  * Executes a Redis write operation with automatic fallback handling.
  * Returns the result of the operation if successful, null if Redis is unavailable or operation fails.
  * If the operation returns void/undefined, returns true instead.
