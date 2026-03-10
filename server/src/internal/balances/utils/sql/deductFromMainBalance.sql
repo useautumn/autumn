@@ -7,12 +7,14 @@ RETURNS TABLE (
   deducted numeric,
   new_balance numeric,
   new_entities jsonb,
-  new_adjustment numeric
+  new_adjustment numeric,
+  mutation_logs jsonb
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
   -- Extract parameters from JSONB
+  customer_entitlement_id text := NULLIF(params->>'customer_entitlement_id', '');
   current_balance numeric := (params->>'current_balance')::numeric;
   current_entities jsonb := COALESCE(params->'current_entities', '{}'::jsonb);
   current_adjustment numeric := COALESCE((params->>'current_adjustment')::numeric, 0);
@@ -48,6 +50,7 @@ DECLARE
   entity_adjustment numeric;
   ceiling numeric;
   max_addable numeric;
+  mutation_logs_json jsonb := '[]'::jsonb;
 BEGIN
   
   -- Initialize return values
@@ -112,6 +115,20 @@ BEGIN
             to_jsonb(COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0) - deduct_amount)
           );
         END IF;
+
+        mutation_logs_json := mutation_logs_json || jsonb_build_array(
+          jsonb_build_object(
+            'target_type', 'customer_entitlement',
+            'customer_entitlement_id', customer_entitlement_id,
+            'rollover_id', NULL,
+            'entity_id', entity_key,
+            'credit_cost', credit_cost,
+            'balance_delta', -deduct_amount,
+            'adjustment_delta', CASE WHEN alter_granted_balance THEN -deduct_amount ELSE 0 END,
+            'usage_delta', 0,
+            'value_delta', deduct_amount / credit_cost
+          )
+        );
         
         remaining := remaining - deduct_amount;
         deducted_amount := deducted_amount + deduct_amount;
@@ -170,6 +187,20 @@ BEGIN
           to_jsonb(COALESCE((result_entities->target_entity_id->>'adjustment')::numeric, 0) - deducted_amount)
         );
       END IF;
+
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', customer_entitlement_id,
+          'rollover_id', NULL,
+          'entity_id', target_entity_id,
+          'credit_cost', credit_cost,
+          'balance_delta', -deducted_amount,
+          'adjustment_delta', CASE WHEN alter_granted_balance THEN -deducted_amount ELSE 0 END,
+          'usage_delta', 0,
+          'value_delta', deducted_amount / credit_cost
+        )
+      );
     ELSE
       result_entities := current_entities;
     END IF;
@@ -215,10 +246,31 @@ BEGIN
     IF alter_granted_balance THEN
       result_adjustment := result_adjustment - deducted_amount;
     END IF;
+
+    IF deducted_amount != 0 THEN
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', customer_entitlement_id,
+          'rollover_id', NULL,
+          'entity_id', NULL,
+          'credit_cost', credit_cost,
+          'balance_delta', -deducted_amount,
+          'adjustment_delta', CASE WHEN alter_granted_balance THEN -deducted_amount ELSE 0 END,
+          'usage_delta', 0,
+          'value_delta', deducted_amount / credit_cost
+        )
+      );
+    END IF;
   END IF;
   
   -- Return results
-  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_adjustment;
+  RETURN QUERY
+  SELECT
+    deducted_amount,
+    result_balance,
+    result_entities,
+    result_adjustment,
+    mutation_logs_json;
 END;
 $$;
-

@@ -4,7 +4,7 @@
 DROP FUNCTION IF EXISTS deduct_from_rollovers(jsonb);
 
 CREATE FUNCTION deduct_from_rollovers(params jsonb)
-RETURNS TABLE(total_deducted numeric)
+RETURNS TABLE(total_deducted numeric, mutation_logs jsonb)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -23,6 +23,7 @@ DECLARE
   current_balance numeric;
   current_usage numeric;
   current_entities jsonb;
+  current_cus_ent_id text;
   
   entity_key text;
   entity_balance numeric;
@@ -33,6 +34,7 @@ DECLARE
   new_usage numeric;
   new_entities jsonb;
   rollover_total_deducted_features numeric := 0;
+  mutation_logs_json jsonb := '[]'::jsonb;
 BEGIN
   -- Normalize input: if rollovers array provided use it, otherwise convert rollover_ids to same format
   IF params->'rollovers' IS NOT NULL AND jsonb_typeof(params->'rollovers') = 'array' AND jsonb_array_length(params->'rollovers') > 0 THEN
@@ -45,13 +47,13 @@ BEGIN
     FROM unnest(rollover_ids) AS id;
   ELSE
     -- No rollovers to process
-    RETURN QUERY SELECT 0::numeric;
+    RETURN QUERY SELECT 0::numeric, '[]'::jsonb;
     RETURN;
   END IF;
   
   -- Early return if no amount
   IF remaining_amount <= 0 THEN
-    RETURN QUERY SELECT 0::numeric;
+    RETURN QUERY SELECT 0::numeric, '[]'::jsonb;
     RETURN;
   END IF;
 
@@ -64,8 +66,8 @@ BEGIN
     credit_cost := COALESCE((rollover_obj->>'credit_cost')::numeric, 1);
     
     -- Lock and fetch rollover data
-    SELECT r.balance, COALESCE(r.usage, 0), r.entities
-    INTO current_balance, current_usage, current_entities
+    SELECT r.balance, COALESCE(r.usage, 0), r.entities, r.cus_ent_id
+    INTO current_balance, current_usage, current_entities, current_cus_ent_id
     FROM rollovers r
     WHERE r.id = rollover_id
     FOR UPDATE;
@@ -99,6 +101,19 @@ BEGIN
         WHERE r.id = rollover_id;
         
         feature_deduct_amount := credit_deduct_amount / credit_cost;
+        mutation_logs_json := mutation_logs_json || jsonb_build_array(
+          jsonb_build_object(
+            'target_type', 'rollover',
+            'customer_entitlement_id', current_cus_ent_id,
+            'rollover_id', rollover_id,
+            'entity_id', target_entity_id,
+            'credit_cost', credit_cost,
+            'balance_delta', -credit_deduct_amount,
+            'adjustment_delta', 0,
+            'usage_delta', credit_deduct_amount,
+            'value_delta', feature_deduct_amount
+          )
+        );
         remaining_amount := remaining_amount - feature_deduct_amount;
         rollover_total_deducted_features := rollover_total_deducted_features + feature_deduct_amount;
       END IF;
@@ -132,6 +147,19 @@ BEGIN
           );
           
           feature_deduct_amount := credit_deduct_amount / credit_cost;
+          mutation_logs_json := mutation_logs_json || jsonb_build_array(
+            jsonb_build_object(
+              'target_type', 'rollover',
+              'customer_entitlement_id', current_cus_ent_id,
+              'rollover_id', rollover_id,
+              'entity_id', entity_key,
+              'credit_cost', credit_cost,
+              'balance_delta', -credit_deduct_amount,
+              'adjustment_delta', 0,
+              'usage_delta', credit_deduct_amount,
+              'value_delta', feature_deduct_amount
+            )
+          );
           remaining_amount := remaining_amount - feature_deduct_amount;
           rollover_total_deducted_features := rollover_total_deducted_features + feature_deduct_amount;
         END IF;
@@ -153,12 +181,25 @@ BEGIN
         WHERE r.id = rollover_id;
         
         feature_deduct_amount := credit_deduct_amount / credit_cost;
+        mutation_logs_json := mutation_logs_json || jsonb_build_array(
+          jsonb_build_object(
+            'target_type', 'rollover',
+            'customer_entitlement_id', current_cus_ent_id,
+            'rollover_id', rollover_id,
+            'entity_id', NULL,
+            'credit_cost', credit_cost,
+            'balance_delta', -credit_deduct_amount,
+            'adjustment_delta', 0,
+            'usage_delta', credit_deduct_amount,
+            'value_delta', feature_deduct_amount
+          )
+        );
         remaining_amount := remaining_amount - feature_deduct_amount;
         rollover_total_deducted_features := rollover_total_deducted_features + feature_deduct_amount;
       END IF;
     END IF;
   END LOOP;
   
-  RETURN QUERY SELECT rollover_total_deducted_features;
+  RETURN QUERY SELECT rollover_total_deducted_features, mutation_logs_json;
 END;
 $$;

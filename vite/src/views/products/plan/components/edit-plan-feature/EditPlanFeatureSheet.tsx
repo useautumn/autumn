@@ -42,9 +42,7 @@ export function EditPlanFeatureSheet({
 	// Infer initial mode from tier data: if any tier has flat_amount > 0, default to flat
 	const [volumePricingMode, setVolumePricingMode] = useState<VolumePricingMode>(
 		() => {
-			const hasFlatAmount = item?.tiers?.some(
-				(t) => t.flat_amount != null,
-			);
+			const hasFlatAmount = item?.tiers?.some((t) => t.flat_amount != null);
 			return hasFlatAmount ? "flat" : "per_unit";
 		},
 	);
@@ -72,7 +70,6 @@ export function EditPlanFeatureSheet({
 	};
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		
 		setVolumePricingMode(mode);
 		if (!item?.tiers) {
 			console.log("[VolumeModeChange] no tiers, returning early");
@@ -97,7 +94,10 @@ export function EditPlanFeatureSheet({
 			};
 		});
 
-		console.log("[VolumeModeChange] migratedTiers AFTER:", JSON.stringify(migratedTiers));
+		console.log(
+			"[VolumeModeChange] migratedTiers AFTER:",
+			JSON.stringify(migratedTiers),
+		);
 		setItem({ ...item, tiers: migratedTiers });
 	};
 
@@ -140,10 +140,6 @@ export function EditPlanFeatureSheet({
 		!item.included_usage;
 
 	const hasChanges = hasItemChanges || isZeroPriceItem;
-
-	console.log("[EditPlanFeatureSheet] hasItemChanges:", hasItemChanges, "| isZeroPriceItem:", isZeroPriceItem, "| hasChanges:", hasChanges);
-	console.log("[EditPlanFeatureSheet] current item.tiers:", JSON.stringify(item.tiers));
-	console.log("[EditPlanFeatureSheet] volumePricingMode:", volumePricingMode);
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
