@@ -7,6 +7,8 @@ const __dirname = dirname(__filename);
 
 // Path to script folders
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
+const DEDUCTION_DIR = join(__dirname, "deduction");
+const LOCK_DIR = join(DEDUCTION_DIR, "lock");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
 const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
@@ -42,6 +44,31 @@ const DEDUCT_FROM_MAIN_BALANCE = readFileSync(
 	"utf-8",
 );
 
+const RUN_DEDUCTION_ON_CONTEXT = readFileSync(
+	join(DEDUCT_DIR, "runDeductionOnContext.lua"),
+	"utf-8",
+);
+
+const MUTATION_ITEM_UTILS = readFileSync(
+	join(DEDUCTION_DIR, "mutationItemUtils.lua"),
+	"utf-8",
+);
+
+const LOCK_RECEIPT_UTILS = readFileSync(
+	join(LOCK_DIR, "lockReceipt.lua"),
+	"utf-8",
+);
+
+const LOCK_STATE_UTILS = readFileSync(
+	join(LOCK_DIR, "lockStateUtils.lua"),
+	"utf-8",
+);
+
+const LOCK_UNWIND_UTILS = readFileSync(
+	join(LOCK_DIR, "unwindLockUtils.lua"),
+	"utf-8",
+);
+
 // ============================================================================
 // MAIN SCRIPT
 // ============================================================================
@@ -63,7 +90,27 @@ ${CONTEXT_UTILS}
 ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
+${RUN_DEDUCTION_ON_CONTEXT}
+${MUTATION_ITEM_UTILS}
+${LOCK_RECEIPT_UTILS}
+${LOCK_STATE_UTILS}
+${LOCK_UNWIND_UTILS}
 ${mainScript}`;
+
+const claimLockReceiptMainScript = readFileSync(
+	join(LOCK_DIR, "claimLockReceipt.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically claims a lock receipt by transitioning status: pending → processing.
+ * KEYS[1]: lock_receipt_key
+ * Returns nil on success, or an error code string if not claimable.
+ */
+export const CLAIM_LOCK_RECEIPT_SCRIPT = `${LUA_UTILS}
+${LOCK_RECEIPT_UTILS}
+${LOCK_STATE_UTILS}
+${claimLockReceiptMainScript}`;
 
 // ============================================================================
 // DELETE FULL CUSTOMER CACHE SCRIPTS

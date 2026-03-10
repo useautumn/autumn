@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, type LimitedItem } from "@autumn/shared";
+import { getCustomerEvents } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -9,7 +10,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { timeout } from "../../../utils/genUtils";
-import { getCustomerEvents } from "../../testBalanceUtils";
 
 const userItem = constructFeatureItem({
 	featureId: TestFeature.Users,

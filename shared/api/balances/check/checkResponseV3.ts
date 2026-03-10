@@ -15,7 +15,8 @@ export const CheckResponseV3Schema = z.object({
 		description: "The ID of the customer that was checked.",
 	}),
 	entity_id: z.string().nullish().meta({
-		description: "The ID of the entity, if an entity-scoped check was performed.",
+		description:
+			"The ID of the entity, if an entity-scoped check was performed.",
 	}),
 	required_balance: z.number().optional().meta({
 		description: "The required balance that was checked against.",
@@ -25,6 +26,11 @@ export const CheckResponseV3Schema = z.object({
 		description:
 			"The customer's balance for this feature. Null if the customer has no balance for this feature.",
 	}),
+
+	// lock_key: z.string().optional().meta({
+	// 	description:
+	// 		"The lock key associated with this check when lock mode is enabled.",
+	// }),
 
 	preview: CheckFeaturePreviewSchema.optional().meta({
 		description:
