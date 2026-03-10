@@ -44,6 +44,8 @@ export const parseCheckParamsForLock = ({
 	const lockKey = lock.key ?? generateKsuid({ prefix: "lck" });
 	const hashedKey = Bun.hash(lockKey).toString();
 
+	console.log("Hashed key:", hashedKey);
+
 	const finalLock: ParsedLockParams = {
 		enabled: true,
 		key: lockKey,

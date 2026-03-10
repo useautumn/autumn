@@ -222,6 +222,7 @@ then
       lock_key = lock.key or cjson.null,
       hashed_key = lock.hashed_key or cjson.null,
       status = 'pending',
+      region = lock.region or cjson.null,
       customer_id = full_customer.id or cjson.null,
       feature_id = feature_id or cjson.null,
       entity_id = target_entity_id or cjson.null,
