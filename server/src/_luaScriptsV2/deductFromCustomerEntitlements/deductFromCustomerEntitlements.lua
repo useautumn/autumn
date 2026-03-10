@@ -1,14 +1,14 @@
 --[[
   Lua Script: Deduct from Customer Entitlements in Redis
-  
+
   Uses JSON.NUMINCRBY for atomic incremental updates.
   Reads CURRENT balance from Redis before each calculation to avoid stale reads.
-  
+
   Deduction Order (mirrors SQL performDeduction.sql):
     1. Deduct from rollovers first (oldest first by expires_at)
     2. Pass 1: Deduct from main balance (floor at 0)
     3. Pass 2: Allow negative if usage_allowed
-  
+
   Helper functions are prepended via string interpolation from:
     - luaUtils.lua (safe_table, safe_number, find_entitlement, build_entity_path, sorted_keys, is_nil)
     - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
@@ -16,9 +16,9 @@
     - deductFromRollovers.lua (deduct_from_rollovers)
     - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
     - getTotalBalance.lua (get_total_balance)
-  
+
   KEYS[1] = FullCustomer cache key
-  
+
   ARGV[1] = JSON params:
     {
       sorted_entitlements: [{ customer_entitlement_id, credit_cost, entity_feature_id, usage_allowed, min_balance, max_balance }],
@@ -32,7 +32,7 @@
       overage_behaviour: "cap" | "reject" | "allow",
       feature_id: string
     }
-  
+
   Returns JSON:
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
@@ -83,9 +83,9 @@ end
 local full_customer = cjson.decode(full_customer_json)
 
 if not full_customer.customer_products then
-  return cjson.encode({ 
-    error = 'NO_CUSTOMER_PRODUCTS', 
-    updates = {}, 
+  return cjson.encode({
+    error = 'NO_CUSTOMER_PRODUCTS',
+    updates = {},
     rollover_updates = {},
     mutation_logs = empty_logs,
     remaining = 0
@@ -192,13 +192,30 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     mutation_logs = mutation_logs,
     logs = context.logs
   })
-end 
+end
 
 if not is_nil(lock)
-  and not is_nil(lock.enabled)
-  and lock.enabled
-  and not is_nil(lock.redis_receipt_key)
+    and not is_nil(lock.enabled)
+    and lock.enabled
+    and not is_nil(lock.redis_receipt_key)
 then
+  -- Check if lock receipt already exists; if so, reject without applying writes
+  local existing_receipt = nil
+  if redis.call('EXISTS', lock.redis_receipt_key) == 1 then
+    existing_receipt = load_lock_receipt(lock.redis_receipt_key)
+  end
+  if not is_nil(existing_receipt) then
+    return cjson.encode({
+      error = 'LOCK_ALREADY_EXISTS',
+      feature_id = feature_id,
+      remaining = 0,
+      updates = {},
+      rollover_updates = rollover_updates,
+      mutation_logs = mutation_logs,
+      logs = context.logs
+    })
+  end
+
   save_lock_receipt_from_updates({
     lock_receipt_key = lock.redis_receipt_key,
     receipt = {

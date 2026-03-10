@@ -1,4 +1,7 @@
 import { test } from "bun:test";
+import { type ApiCustomerV5, ErrCode } from "@autumn/shared";
+import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -37,5 +40,111 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-1: lock not su
 				lock: { enabled: true, key: customerId },
 			});
 		},
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERR-2: duplicate lock key (Redis path) → 409
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate lock key (Redis) → 409")}`, async () => {
+	const freeProd = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 20 })],
+	});
+
+	const customerId = "lock-error-duplicate-redis-1";
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await deleteLock({ ctx, lockKey: customerId });
+
+	// First check — should succeed and create the lock receipt
+	await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 5,
+		lock: { enabled: true, key: customerId },
+	});
+
+	// Second check with same lock key — should fail with LockAlreadyExists
+	await expectAutumnError({
+		errCode: ErrCode.LockAlreadyExists,
+		func: async () => {
+			await autumnV2_1.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				required_balance: 5,
+				lock: { enabled: true, key: customerId },
+			});
+		},
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERR-3: duplicate lock key (Postgres / skip_cache path) → 409
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate lock key (Postgres) → 409")}`, async () => {
+	const freeProd = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 20 })],
+	});
+
+	const customerId = "lock-error-duplicate-postgres-1";
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await deleteLock({ ctx, lockKey: customerId });
+
+	// First check via Postgres — should succeed
+	await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 5,
+		lock: { enabled: true, key: customerId },
+		skip_cache: true,
+	});
+
+	// Second check with same lock key — should fail with LockAlreadyExists
+	await expectAutumnError({
+		errCode: ErrCode.LockAlreadyExists,
+		func: async () => {
+			await autumnV2_1.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				required_balance: 5,
+				lock: { enabled: true, key: customerId },
+				skip_cache: true,
+			});
+		},
+	});
+
+	const customerAfter =
+		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+
+	expectBalanceCorrect({
+		customer: customerAfter,
+		featureId: TestFeature.Messages,
+		remaining: 15,
+	});
+
+	const customerAfterNoncached = await autumnV2_1.customers.get<ApiCustomerV5>(
+		customerId,
+		{ skip_cache: "true" },
+	);
+
+	expectBalanceCorrect({
+		customer: customerAfterNoncached,
+		featureId: TestFeature.Messages,
+		remaining: 15,
 	});
 });

@@ -1,4 +1,4 @@
-import { InternalError } from "@autumn/shared";
+import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
 import { currentRegion, redis } from "@/external/redis/initRedis.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -23,6 +23,16 @@ export const saveLockReceipt = async ({
 	entityId?: string;
 	items: MutationLogItem[];
 }) => {
+	// Check if a lock receipt already exists before writing
+	const existing = await redis.call("EXISTS", lock.redis_receipt_key);
+	if (existing === 1) {
+		throw new RecaseError({
+			message: `A lock with this key already exists`,
+			code: ErrCode.LockAlreadyExists,
+			statusCode: 409,
+		});
+	}
+
 	const result = await tryRedisWrite(
 		() =>
 			redis.call(
