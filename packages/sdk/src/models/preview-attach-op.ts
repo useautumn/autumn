@@ -109,7 +109,16 @@ export type PreviewAttachTo = number | string;
 export type PreviewAttachTier = {
   to: number | string;
   amount: number;
+  flatAmount?: number | null | undefined;
 };
+
+export const PreviewAttachTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PreviewAttachTierBehavior = ClosedEnum<
+  typeof PreviewAttachTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -152,9 +161,10 @@ export type PreviewAttachPrice = {
    */
   amount?: number | undefined;
   /**
-   * Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewAttachTier> | undefined;
+  tierBehavior?: PreviewAttachTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -401,6 +411,17 @@ export type PreviewAttachPlanSchedule = ClosedEnum<
   typeof PreviewAttachPlanSchedule
 >;
 
+export type PreviewAttachCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 export type PreviewAttachParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -435,6 +456,10 @@ export type PreviewAttachParams = {
    */
   prorationBehavior?: PreviewAttachProrationBehavior | undefined;
   /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
+  /**
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<PreviewAttachAttachDiscount> | undefined;
@@ -450,6 +475,14 @@ export type PreviewAttachParams = {
    * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
    */
   planSchedule?: PreviewAttachPlanSchedule | undefined;
+  /**
+   * Additional parameters to pass into the creation of the Stripe checkout session.
+   */
+  checkoutSessionParams?: { [k: string]: any } | undefined;
+  /**
+   * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+   */
+  customLineItems?: Array<PreviewAttachCustomLineItem> | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -643,16 +676,25 @@ export function previewAttachToToJSON(
 export type PreviewAttachTier$Outbound = {
   to: number | string;
   amount: number;
+  flat_amount?: number | null | undefined;
 };
 
 /** @internal */
 export const PreviewAttachTier$outboundSchema: z.ZodMiniType<
   PreviewAttachTier$Outbound,
   PreviewAttachTier
-> = z.object({
-  to: smartUnion([z.number(), z.string()]),
-  amount: z.number(),
-});
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.number(),
+    flatAmount: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
 export function previewAttachTierToJSON(
   previewAttachTier: PreviewAttachTier,
@@ -661,6 +703,11 @@ export function previewAttachTierToJSON(
     PreviewAttachTier$outboundSchema.parse(previewAttachTier),
   );
 }
+
+/** @internal */
+export const PreviewAttachTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachTierBehavior
+> = z.enum(PreviewAttachTierBehavior);
 
 /** @internal */
 export const PreviewAttachItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -676,6 +723,7 @@ export const PreviewAttachBillingMethod$outboundSchema: z.ZodMiniEnum<
 export type PreviewAttachPrice$Outbound = {
   amount?: number | undefined;
   tiers?: Array<PreviewAttachTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
@@ -691,6 +739,7 @@ export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.optional(z.number()),
     tiers: z.optional(z.array(z.lazy(() => PreviewAttachTier$outboundSchema))),
+    tierBehavior: z.optional(PreviewAttachTierBehavior$outboundSchema),
     interval: PreviewAttachItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
@@ -699,6 +748,7 @@ export const PreviewAttachPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
       billingMethod: "billing_method",
@@ -989,6 +1039,31 @@ export const PreviewAttachPlanSchedule$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachPlanSchedule);
 
 /** @internal */
+export type PreviewAttachCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const PreviewAttachCustomLineItem$outboundSchema: z.ZodMiniType<
+  PreviewAttachCustomLineItem$Outbound,
+  PreviewAttachCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function previewAttachCustomLineItemToJSON(
+  previewAttachCustomLineItem: PreviewAttachCustomLineItem,
+): string {
+  return JSON.stringify(
+    PreviewAttachCustomLineItem$outboundSchema.parse(
+      previewAttachCustomLineItem,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -998,10 +1073,13 @@ export type PreviewAttachParams$Outbound = {
   customize?: PreviewAttachCustomize$Outbound | undefined;
   invoice_mode?: PreviewAttachInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   discounts?: Array<PreviewAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
+  checkout_session_params?: { [k: string]: any } | undefined;
+  custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1024,12 +1102,17 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       PreviewAttachProrationBehavior$outboundSchema,
     ),
+    subscriptionId: z.optional(z.string()),
     discounts: z.optional(
       z.array(z.lazy(() => PreviewAttachAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
+    checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => PreviewAttachCustomLineItem$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1039,9 +1122,12 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
+      checkoutSessionParams: "checkout_session_params",
+      customLineItems: "custom_line_items",
     });
   }),
 );

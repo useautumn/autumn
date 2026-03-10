@@ -1,3 +1,4 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import {
 	type AppEnv,
@@ -8,11 +9,13 @@ import {
 	FreeTrialSchema,
 	FullCusProductSchema,
 	FullCustomerEntitlementSchema,
-	InvoiceSchema,
+	type InsertInvoice,
 	PriceSchema,
+	ReplaceableSchema,
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
@@ -30,9 +33,13 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			balance: z.number().optional(),
 		})
 		.optional(),
+
+	deletedReplaceables: z.array(ReplaceableSchema).optional(),
+	insertReplaceables: z.array(z.custom<InsertReplaceable>()).optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
+	customerId: z.string(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: z
@@ -47,6 +54,8 @@ export const AutumnBillingPlanSchema = z.object({
 				ended_at: z.number().nullish(),
 
 				scheduled_ids: z.array(z.string()).optional(),
+
+				subscription_ids: z.array(z.string()).optional(),
 			}),
 		})
 		.optional(),
@@ -65,6 +74,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
 	lineItems: z.array(LineItemSchema).optional(),
+	customLineItems: z.array(CustomLineItemSchema).optional(),
 
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
@@ -72,7 +82,7 @@ export const AutumnBillingPlanSchema = z.object({
 
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
-	upsertInvoice: InvoiceSchema.optional(),
+	upsertInvoice: z.custom<InsertInvoice>().optional(),
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

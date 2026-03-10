@@ -1,5 +1,11 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
-import type { FullCusProduct } from "@models/cusProductModels/cusProductModels.js";
+import type {
+	CusProduct,
+	FullCusProduct,
+} from "@models/cusProductModels/cusProductModels.js";
+import type { Product } from "@models/productModels/productModels";
+import { orgDefaultAppliesToEntities } from "../../..";
+import type { SharedContext } from "../../../types/sharedContext";
 import {
 	isFreeProduct,
 	isOneOffProduct,
@@ -12,7 +18,9 @@ import { cusProductToPrices } from "../convertCusProduct";
 // PRODUCT TYPE CHECKS
 // ============================================================================
 
-export const isCustomerProductMain = (customerProduct?: FullCusProduct) => {
+export const isCustomerProductMain = (
+	customerProduct?: CusProduct & { product: Product },
+) => {
 	if (!customerProduct) return false;
 	return !customerProduct.product.is_add_on;
 };
@@ -219,16 +227,45 @@ export const customerProductHasSubscription = (cusProduct?: FullCusProduct) => {
 	return notNullish(subId);
 };
 
-export const isCustomerProductEntityScoped = (
-	customerProduct?: FullCusProduct,
-) => {
+/** Returns true if multiple customer products share the given product ID. */
+export const customerProductsHaveDuplicateProductId = ({
+	customerProducts,
+	productId,
+}: {
+	customerProducts: FullCusProduct[];
+	productId: string;
+}): boolean => {
+	return (
+		customerProducts.filter((cp) => cp.product.id === productId).length > 1
+	);
+};
+
+export const isCustomerProductEntityScoped = (customerProduct?: CusProduct) => {
 	if (!customerProduct) return false;
 	return notNullish(customerProduct.internal_entity_id);
 };
 
 export const isCustomerProductCustomerScoped = (
-	customerProduct?: FullCusProduct,
+	customerProduct?: CusProduct,
 ) => {
 	if (!customerProduct) return false;
 	return nullish(customerProduct.internal_entity_id);
+};
+
+export const customerProductEligibleForDefaultProduct = ({
+	ctx,
+	customerProduct,
+}: {
+	ctx: SharedContext;
+	customerProduct: FullCusProduct;
+}) => {
+	const orgDefaultScopeMatches = orgDefaultAppliesToEntities({ ctx })
+		? isCustomerProductEntityScoped(customerProduct)
+		: isCustomerProductCustomerScoped(customerProduct);
+
+	if (!orgDefaultScopeMatches) return false;
+	if (!isCustomerProductMain(customerProduct)) return false;
+	if (!isCustomerProductRecurring(customerProduct)) return false;
+
+	return true;
 };

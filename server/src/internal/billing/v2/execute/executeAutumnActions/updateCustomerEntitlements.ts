@@ -1,11 +1,11 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
 /**
- * Update customer entitlement balances based on quantity changes.
- * @param ctx - The Autumn context.
- * @param quantityUpdateDetails - List of quantity update details impacting entitlement balances.
+ * Update customer entitlement balances and replaceables based on quantity changes.
  */
 export const updateCustomerEntitlements = async ({
 	ctx,
@@ -14,15 +14,22 @@ export const updateCustomerEntitlements = async ({
 	ctx: AutumnContext;
 	updates: AutumnBillingPlan["updateCustomerEntitlements"];
 }) => {
-	const { db, logger } = ctx;
+	const { logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange = 0, customerEntitlement, updates } = updateDetail;
+		const {
+			balanceChange = 0,
+			customerEntitlement,
+			updates,
+			insertReplaceables,
+			deletedReplaceables,
+		} = updateDetail;
 
 		logger.debug(
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
 		);
 
+		// 1. Handle field-level updates (e.g. next_reset_at, adjustment, entities)
 		if (updates) {
 			await CusEntService.update({
 				ctx,
@@ -32,19 +39,33 @@ export const updateCustomerEntitlements = async ({
 			continue;
 		}
 
-		if (balanceChange > 0) {
-			await CusEntService.increment({
-				ctx,
-				id: customerEntitlement.id,
-				amount: balanceChange,
-			});
-		} else if (balanceChange < 0) {
-			const absoluteDecrement = Math.abs(balanceChange);
+		// 2. Handle balance change (DB + cache)
+		if (balanceChange !== 0) {
+			const customerId =
+				customerEntitlement.customer_id ??
+				customerEntitlement.internal_customer_id;
 
-			await CusEntService.decrement({
+			await customerEntitlementActions.adjustBalanceDbAndCache({
 				ctx,
-				id: customerEntitlement.id,
-				amount: absoluteDecrement,
+				customerId,
+				cusEntId: customerEntitlement.id,
+				delta: balanceChange,
+			});
+		}
+
+		// 3. Handle replaceable inserts
+		if (insertReplaceables && insertReplaceables.length > 0) {
+			await RepService.insert({
+				ctx,
+				data: insertReplaceables,
+			});
+		}
+
+		// 4. Handle replaceable deletes
+		if (deletedReplaceables && deletedReplaceables.length > 0) {
+			await RepService.deleteInIds({
+				ctx,
+				ids: deletedReplaceables.map((r) => r.id),
 			});
 		}
 	}

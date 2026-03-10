@@ -154,6 +154,7 @@ const initCusProduct = ({
 		entity_id: entityId,
 		api_semver: apiVersion || null,
 		billing_version: BillingVersion.V1,
+		external_id: null,
 	};
 };
 
@@ -395,7 +396,7 @@ export const createFullCusProduct = async ({
 		const options = getEntOptions(optionsList, entitlement);
 		const relatedPrice = getEntRelatedPrice(entitlement, prices);
 
-		const cusEnt: any = initCusEntitlement({
+		const cusEnt = initCusEntitlement({
 			entitlement,
 			customer,
 			cusProductId: cusProdId,

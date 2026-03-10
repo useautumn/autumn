@@ -109,7 +109,7 @@ class CheckParams(BaseModel):
         return m
 
 
-Scenario = Union[
+CheckScenario = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -184,6 +184,8 @@ class TiersTypedDict(TypedDict):
     r"""The maximum amount of usage for this tier."""
     amount: float
     r"""The price of the product item for this tier."""
+    flat_amount: NotRequired[Nullable[float]]
+    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
 
 
 class Tiers(BaseModel):
@@ -192,6 +194,43 @@ class Tiers(BaseModel):
 
     amount: float
     r"""The price of the product item for this tier."""
+
+    flat_amount: OptionalNullable[float] = UNSET
+    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        nullable_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+CheckTierBehavior = Union[
+    Literal[
+        "graduated",
+        "volume",
+    ],
+    UnrecognizedStr,
+]
 
 
 UsageModel = Union[
@@ -368,6 +407,8 @@ class CheckItemTypedDict(TypedDict):
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
     tiers: NotRequired[Nullable[List[TiersTypedDict]]]
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
+    tier_behavior: NotRequired[Nullable[CheckTierBehavior]]
+    r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
     usage_model: NotRequired[Nullable[UsageModel]]
     r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
     billing_units: NotRequired[Nullable[float]]
@@ -413,6 +454,9 @@ class CheckItem(BaseModel):
     tiers: OptionalNullable[List[Tiers]] = UNSET
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
 
+    tier_behavior: OptionalNullable[CheckTierBehavior] = UNSET
+    r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
+
     usage_model: OptionalNullable[UsageModel] = UNSET
     r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
 
@@ -449,6 +493,7 @@ class CheckItem(BaseModel):
                 "interval_count",
                 "price",
                 "tiers",
+                "tier_behavior",
                 "usage_model",
                 "billing_units",
                 "reset_usage_when_enabled",
@@ -469,6 +514,7 @@ class CheckItem(BaseModel):
                 "interval_count",
                 "price",
                 "tiers",
+                "tier_behavior",
                 "usage_model",
                 "billing_units",
                 "reset_usage_when_enabled",
@@ -740,7 +786,7 @@ class Product(BaseModel):
 class PreviewTypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario
+    scenario: CheckScenario
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -757,7 +803,7 @@ class PreviewTypedDict(TypedDict):
 class Preview(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario
+    scenario: CheckScenario
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str

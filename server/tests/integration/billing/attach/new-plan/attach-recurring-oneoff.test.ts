@@ -257,3 +257,36 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		env: ctx.env,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("recurring-oneoff 3: attach one off base price with consumable messages")}`, async () => {
+	const customerId = "recurring-oneoff-attach-both-invoice-mode-false";
+	const basePrice = 20;
+	const wordsPricePerPack = 15;
+	const messagesPricePerPack = 10;
+	const billingUnits = 100;
+
+	const consumableMessagesItem = items.consumableMessages({
+		includedUsage: 0,
+		price: messagesPricePerPack,
+	});
+
+	const pro = products.oneOff({
+		items: [consumableMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+
+	console.log("Result:", result);
+});

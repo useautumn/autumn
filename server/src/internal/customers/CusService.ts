@@ -18,6 +18,7 @@ import {
 	eq,
 	getTableColumns,
 	ilike,
+	inArray,
 	or,
 	sql,
 	type Table,
@@ -28,7 +29,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
-import { updateCachedCustomerData } from "./cusUtils/fullCustomerCacheUtils/updateCachedCustomerData.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
 // const tracer = trace.getTracer("express");
@@ -371,12 +371,6 @@ export class CusService {
 			if (results && results.length > 0) {
 				const customer = results[0] as Customer;
 
-				await updateCachedCustomerData({
-					ctx,
-					customerId: idOrInternalId,
-					updates: update,
-				});
-
 				return customer;
 			} else {
 				return null;
@@ -430,6 +424,42 @@ export class CusService {
 			.returning();
 
 		return results;
+	}
+
+	/** Deletes customers in batches to avoid locking all rows at once. */
+	static async safeDeleteByOrgId({
+		db,
+		orgId,
+		env,
+		batchSize = 250,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		batchSize?: number;
+	}) {
+		if (env === AppEnv.Live)
+			throw new Error("Cannot delete all customers under org in live mode");
+
+		while (true) {
+			const batch = await db
+				.select({ internal_id: customers.internal_id })
+				.from(customers)
+				.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+				.limit(batchSize);
+
+			if (batch.length === 0) break;
+
+			const ids = batch.map((r) => r.internal_id);
+
+			await db.delete(customers).where(
+				and(
+					inArray(customers.internal_id, ids),
+					eq(customers.org_id, orgId),
+					eq(customers.env, env),
+				),
+			);
+		}
 	}
 
 	static async getByVercelId({

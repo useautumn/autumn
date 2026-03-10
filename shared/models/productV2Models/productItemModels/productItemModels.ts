@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
+import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "../../productModels/productEnums.js";
 import { OnDecrease, OnIncrease } from "./productItemEnums.js";
 
@@ -13,16 +14,32 @@ export enum ProductItemType {
 	Price = "price",
 }
 
-export const PriceTierSchema = z.object({
-	to: z.number().or(z.literal(TierInfinite)).meta({
-		description: "The maximum amount of usage for this tier.",
-		example: 100,
-	}),
-	amount: z.number().meta({
-		description: "The price of the product item for this tier.",
-		example: 10,
-	}),
-});
+export const PriceTierSchema = z
+	.object({
+		to: z.number().or(z.literal(TierInfinite)).meta({
+			description: "The maximum amount of usage for this tier.",
+			example: 100,
+		}),
+		amount: z.number().optional().meta({
+			description: "The price of the product item for this tier.",
+			example: 10,
+		}),
+		flat_amount: z.number().optional().meta({
+			description:
+				"A flat fee charged for this tier, in addition to the per-unit amount.",
+		}),
+	})
+	.refine(
+		(val) => val.amount != null || val.flat_amount != null,
+		{
+			message: "Either amount or flat_amount, or both must be defined",
+			path: ["amount", "flat_amount"],
+		},
+	)
+	.transform((val) => ({
+		...val,
+		amount: val.amount ?? 0,
+	}));
 
 export enum UsageModel {
 	Prepaid = "prepaid",
@@ -117,6 +134,10 @@ export const ProductItemSchema = z.object({
 	billing_units: z.number().nullish().meta({
 		description:
 			"The billing units of the product item (eg $1 for 30 credits).",
+	}),
+
+	tier_behavior: z.enum(TierBehavior).nullish().meta({
+		description: "The type of tiered pricing: graduated or volume-based.",
 	}),
 
 	// Others

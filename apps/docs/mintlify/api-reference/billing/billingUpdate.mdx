@@ -51,8 +51,8 @@ const response = await autumn.billing.update({
   The ID of the entity to attach the plan to.
 </DynamicParamField>
 
-<DynamicParamField body="plan_id" type="string" required>
-  The ID of the plan.
+<DynamicParamField body="plan_id" type="string">
+  The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
 </DynamicParamField>
 
 <DynamicParamField body="feature_quantities" type="object[]">
@@ -135,14 +135,18 @@ const response = await autumn.billing.update({
             </DynamicParamField>
 
             <DynamicParamField body="tiers" type="object[]">
-              Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.
+              Tiered pricing. Either 'amount' or 'tiers' is required.
               <Expandable title="properties">
                 <DynamicParamField body="to" type="number" required />
 
                 <DynamicParamField body="amount" type="number" required />
 
+                <DynamicParamField body="flat_amount" type="number | null" />
+
               </Expandable>
             </DynamicParamField>
+
+            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
               Billing interval. For consumable features, should match reset.interval.
@@ -243,6 +247,10 @@ const response = await autumn.billing.update({
 
 <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
   How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+</DynamicParamField>
+
+<DynamicParamField body="subscription_id" type="string">
+  A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
 </DynamicParamField>
 
 <DynamicParamField body="cancel_action" type="'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'">

@@ -32,7 +32,7 @@ test.concurrent(`${chalk.yellowBright("update-included1: basic update granted_ba
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 100,
-		granted_balance: 150,
+		included_grant: 150,
 	});
 
 	const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
@@ -77,7 +77,7 @@ test.concurrent(`${chalk.yellowBright("update-included2: update granted_balance 
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 50,
-		granted_balance: 75,
+		included_grant: 75,
 		interval: ResetInterval.Month,
 	});
 
@@ -147,7 +147,7 @@ test.concurrent(`${chalk.yellowBright("update-included3: update granted_balance 
 		feature_id: TestFeature.Messages,
 		entity_id: entities[0].id,
 		current_balance: 50,
-		granted_balance: 75,
+		included_grant: 75,
 		interval: ResetInterval.Month,
 	});
 
@@ -181,7 +181,7 @@ test.concurrent(`${chalk.yellowBright("update-included3: update granted_balance 
 		feature_id: TestFeature.Messages,
 		entity_id: entities[1].id,
 		current_balance: 25,
-		granted_balance: 50,
+		included_grant: 50,
 	});
 
 	// Entity 2 should be updated
@@ -243,7 +243,7 @@ test.concurrent(`${chalk.yellowBright("update-included4: update current_balance 
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
-		granted_balance: 150,
+		included_grant: 150,
 		current_balance: 50,
 	});
 

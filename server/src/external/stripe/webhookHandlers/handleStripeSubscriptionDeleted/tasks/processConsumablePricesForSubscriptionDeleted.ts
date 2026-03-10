@@ -72,16 +72,18 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 	// not up to when the cycle would have ended.
 	// Falls back to nowMs if ended_at is not available.
 	const { lineItems, updateCustomerEntitlements, billingContext } =
-		eventContextToArrearLineItems({
+		await eventContextToArrearLineItems({
 			ctx,
 			eventContext,
 			periodEndMs: stripeSubscription.ended_at
 				? secondsToMs(stripeSubscription.ended_at)
 				: undefined,
+			stripeDiscountable: false,
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 
-	if (lineItems.length > 0) {
+	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	if (lineItems.length > 0 && !skipOverageSubmission) {
 		// 2. Create, finalize, and pay a single invoice with all line items
 		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
 
@@ -90,6 +92,9 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			billingContext,
 			stripeInvoiceAction: {
 				addLineParams: { lines: invoiceLines },
+			},
+			options: {
+				skipSubscriptionLink: true,
 			},
 		});
 

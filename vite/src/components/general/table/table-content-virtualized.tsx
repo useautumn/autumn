@@ -23,6 +23,7 @@ export function TableContentVirtualized({
 		table,
 		virtualization,
 	} = context;
+	const { isLoading } = context;
 	const sheetType = useSheetStore((s) => s.type);
 	const rows = table.getRowModel().rows;
 
@@ -94,8 +95,8 @@ export function TableContentVirtualized({
 					className,
 				)}
 			>
-				{/* Overlay - SAME as TableContent */}
-				{sheetType && (
+				{/* Overlay - shown when a sheet is open or data is loading */}
+				{(sheetType || isLoading) && (
 					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 

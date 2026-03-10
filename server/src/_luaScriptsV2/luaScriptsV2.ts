@@ -129,30 +129,65 @@ export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${updateMainScript}`;
 
 // ============================================================================
-// UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
+// ADJUST CUSTOMER ENTITLEMENT BALANCE SCRIPT
 // ============================================================================
 
+const CUS_ENT_DIR = join(__dirname, "customerEntitlements");
+
+const adjustBalanceMainScript = readFileSync(
+	join(CUS_ENT_DIR, "adjustCustomerEntitlementBalance.lua"),
+	"utf-8",
+);
+
 /**
- * Lua script for atomically updating top-level customer fields in the cached
- * FullCustomer (name, email, metadata, send_email_receipts, etc.).
+ * Lua script for atomically incrementing a cusEnt balance in the cached
+ * FullCustomer via JSON.NUMINCRBY. Safe with concurrent deductions.
  */
+export const ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT = `${LUA_UTILS}
+${adjustBalanceMainScript}`;
+
+// ============================================================================
+// CUSTOMER SCRIPTS (top-level customer fields, entities, invoices)
+// ============================================================================
+
+const CUSTOMER_DIR = join(__dirname, "customers");
+
+/** Atomically update top-level customer fields (name, email, metadata, etc.). */
 export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
-	join(__dirname, "updateCustomerData.lua"),
+	join(CUSTOMER_DIR, "updateCustomerData.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically append an entity to the customer's entities array.
+ * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active.
+ */
+export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "appendEntityToCustomer.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically upsert an invoice in the customer's invoices array.
+ * Matches by stripe_id — replaces if found, appends if not.
+ * CRDT-safe: JSON.ARRAPPEND uses merge, JSON.SET uses update-vs-update.
+ */
+export const UPSERT_INVOICE_IN_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "upsertInvoice.lua"),
 	"utf-8",
 );
 
 // ============================================================================
-// APPEND ENTITY TO CUSTOMER SCRIPT
+// CUSTOMER PRODUCT SCRIPTS
 // ============================================================================
 
+const CUS_PRODUCT_DIR = join(__dirname, "customerProducts");
+
 /**
- * Lua script for atomically appending an entity to the customer's entities
- * array in the cached FullCustomer. Checks for duplicates before appending.
- *
- * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active,
- * so concurrent appends from different regions will both succeed.
+ * Atomically update specific fields on a cusProduct in the cached FullCustomer.
+ * CRDT-safe: JSON.SET on specific paths uses "update vs update" resolution.
  */
-export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
-	join(__dirname, "appendEntityToCustomer.lua"),
+export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = readFileSync(
+	join(CUS_PRODUCT_DIR, "updateCustomerProduct.lua"),
 	"utf-8",
 );

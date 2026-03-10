@@ -98,6 +98,8 @@ r"""Current status of the subscription."""
 
 
 class GetEntitySubscriptionTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
     plan_id: str
     r"""The unique identifier of the subscribed plan."""
     auto_enable: bool
@@ -126,6 +128,9 @@ class GetEntitySubscriptionTypedDict(TypedDict):
 
 
 class GetEntitySubscription(BaseModel):
+    id: str
+    r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
+
     plan_id: str
     r"""The unique identifier of the subscribed plan."""
 

@@ -148,12 +148,14 @@
 					{
 						"group": "Billing",
 						"pages": [
-							"api-reference/billing/billingAttach",
+							"api-reference/billing/attach",
 							"api-reference/billing/billingUpdate",
 							"api-reference/billing/previewAttach",
 							"api-reference/billing/previewUpdate",
 							"api-reference/billing/openCustomerPortal",
-							"api-reference/billing/setupPayment"
+							"api-reference/billing/setupPayment",
+							"api-reference/billing/previewMultiAttach",
+							"api-reference/billing/multiAttach"
 						]
 					},
 					{
@@ -162,7 +164,8 @@
 							"api-reference/core/check",
 							"api-reference/core/track",
 							"api-reference/balances/createBalance",
-							"api-reference/balances/updateBalance"
+							"api-reference/balances/updateBalance",
+							"api-reference/balances/deleteBalance"
 						]
 					},
 					{

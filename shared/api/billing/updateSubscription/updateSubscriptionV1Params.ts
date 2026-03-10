@@ -1,31 +1,60 @@
+import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
+		plan_id: z.string().optional().meta({
+			description:
+				"The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.",
+		}),
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
 				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
 		}),
+
+		processor_subscription_id: z.string().nullable().optional().meta({
+			internal: true,
+		}),
+
+		no_billing_changes: z.boolean().optional().meta({
+			internal: true,
+		}),
+
+		status: z
+			.enum([
+				CusProductStatus.Active,
+				CusProductStatus.PastDue,
+				CusProductStatus.Expired,
+			])
+			.optional()
+			.meta({
+				internal: true,
+			}),
 	});
+
+const UPDATE_FIELDS = [
+	"feature_quantities",
+	"version",
+	"customize",
+	"cancel_action",
+	"processor_subscription_id",
+	"no_billing_changes",
+	"status",
+] as const satisfies (keyof z.input<
+	typeof ExtUpdateSubscriptionV1ParamsSchema
+>)[];
+
 export const UpdateSubscriptionV1ParamsSchema =
 	ExtUpdateSubscriptionV1ParamsSchema.extend({
-		plan_id: z.string().optional(),
 		customer_product_id: z.string().optional().meta({
 			internal: true,
 		}),
-	}).refine(
-		(data) =>
-			data.feature_quantities !== undefined ||
-			data.version !== undefined ||
-			data.customize !== undefined ||
-			data.cancel_action !== undefined,
-		{
-			message:
-				"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",
-		},
-	);
+	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
+		message:
+			"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",
+	});
 
 export type UpdateSubscriptionV1Params = z.infer<
 	typeof UpdateSubscriptionV1ParamsSchema

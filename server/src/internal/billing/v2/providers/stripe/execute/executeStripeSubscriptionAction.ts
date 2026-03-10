@@ -1,6 +1,7 @@
 import type {
 	BillingContext,
 	BillingPlan,
+	Invoice,
 	StripeBillingPlanResult,
 } from "@autumn/shared";
 import { ms, StripeBillingStage, tryCatch } from "@autumn/shared";
@@ -15,9 +16,10 @@ import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/ut
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
-import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,
@@ -90,13 +92,14 @@ export const executeStripeSubscriptionAction = async ({
 			})
 		: false;
 
+	let autumnInvoice: Invoice | undefined;
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		await upsertInvoiceFromBilling({
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
 	}
 
@@ -109,12 +112,18 @@ export const executeStripeSubscriptionAction = async ({
 			stripeSubscription,
 		};
 
+		const deferredInvoiceMode = isDeferredInvoiceMode({
+			billingContext,
+		});
+
 		await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
 			billingContext: deferredBillingContext,
 			stripeInvoice: latestStripeInvoice,
-			expiresAt: Date.now() + ms.days(30),
+			expiresAt: deferredInvoiceMode
+				? Date.now() + ms.days(10)
+				: Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.SubscriptionAction,
 		});
 
@@ -123,6 +132,7 @@ export const executeStripeSubscriptionAction = async ({
 			stripeSubscription,
 			deferred: true,
 			requiredAction,
+			autumnInvoice,
 		};
 	}
 
@@ -152,5 +162,6 @@ export const executeStripeSubscriptionAction = async ({
 	return {
 		stripeSubscription,
 		stripeInvoice: latestStripeInvoice,
+		autumnInvoice,
 	};
 };

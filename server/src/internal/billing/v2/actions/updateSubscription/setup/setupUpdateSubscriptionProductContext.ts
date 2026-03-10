@@ -2,7 +2,6 @@ import {
 	cusProductToProduct,
 	type FullCustomer,
 	notNullish,
-	RecaseError,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -30,12 +29,6 @@ export const setupUpdateSubscriptionProductContext = async ({
 		params,
 		fullCustomer,
 	});
-
-	if (!targetCustomerProduct) {
-		throw new RecaseError({
-			message: `Customer ${fullCustomer.id} does not have the plan ${params.plan_id}.`,
-		});
-	}
 
 	let fullProduct = cusProductToProduct({ cusProduct: targetCustomerProduct });
 

@@ -1,3 +1,4 @@
+import type { BillingContext } from "@autumn/shared";
 import {
 	type BillingPeriod,
 	cloneEntitlementWithUpdatedQuantity,
@@ -14,7 +15,6 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
@@ -83,8 +83,9 @@ export const computeUpdateQuantityLineItems = ({
 		currency: orgToCurrency({ org }),
 		direction: "charge",
 		now: currentEpochMs,
-		billingTiming: "in_arrear",
+		billingTiming: "in_advance",
 		billingPeriod,
+		customerProduct,
 	};
 
 	const refundLineItem = usagePriceToLineItem({

@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -11,10 +12,12 @@ export const executeDeferredBillingPlan = async ({
 	ctx,
 	metadata,
 	stripeSubscription,
+	stripeInvoice,
 }: {
 	ctx: AutumnContext;
 	metadata: Metadata;
 	stripeSubscription?: Stripe.Subscription;
+	stripeInvoice?: Stripe.Invoice;
 }) => {
 	const { db } = ctx;
 	const data = metadata.data as DeferredAutumnBillingPlanData;
@@ -30,15 +33,13 @@ export const executeDeferredBillingPlan = async ({
 		},
 	});
 
-	// Execute stripe billing plan
-	await executeStripeBillingPlan({
+	// Execute stripe billing plan (resume from where we left off)
+	const stripeBillingResult = await executeStripeBillingPlan({
 		ctx,
 		billingPlan,
 		billingContext,
 		resumeAfter,
 	});
-
-	// Add stripe subscription ID to billing plan?
 
 	if (stripeSubscription) {
 		addStripeSubscriptionIdToBillingPlan({
@@ -50,7 +51,16 @@ export const executeDeferredBillingPlan = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
+		stripeInvoice: stripeBillingResult.stripeInvoice ?? stripeInvoice,
+		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
+		autumnInvoice: stripeBillingResult.autumnInvoice,
 	});
 
 	await MetadataService.delete({ db, id: metadata.id });
+
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId: billingContext.fullCustomer.id ?? "",
+		source: "executeInvoiceDeferredBillingPlan",
+	});
 };

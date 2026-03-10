@@ -4,6 +4,7 @@
 
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
+import { ClosedEnum } from "../types/enums.js";
 import {
   CustomerExpand,
   CustomerExpand$outboundSchema,
@@ -11,6 +12,73 @@ import {
 
 export type GetOrCreateCustomerGlobals = {
   xApiVersion?: string | undefined;
+};
+
+/**
+ * The time interval for the purchase limit window.
+ */
+export const GetOrCreateCustomerInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type GetOrCreateCustomerInterval = ClosedEnum<
+  typeof GetOrCreateCustomerInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type GetOrCreateCustomerPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: GetOrCreateCustomerInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type GetOrCreateCustomerAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: GetOrCreateCustomerPurchaseLimit | undefined;
+};
+
+/**
+ * Billing controls for the customer (auto top-ups, etc.)
+ */
+export type GetOrCreateCustomerBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<GetOrCreateCustomerAutoTopup> | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -48,10 +116,126 @@ export type GetOrCreateCustomerParams = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Billing controls for the customer (auto top-ups, etc.)
+   */
+  billingControls?: GetOrCreateCustomerBillingControls | undefined;
+  /**
    * Customer expand options
    */
   expand?: Array<CustomerExpand> | undefined;
 };
+
+/** @internal */
+export const GetOrCreateCustomerInterval$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerInterval
+> = z.enum(GetOrCreateCustomerInterval);
+
+/** @internal */
+export type GetOrCreateCustomerPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const GetOrCreateCustomerPurchaseLimit$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerPurchaseLimit$Outbound,
+  GetOrCreateCustomerPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: GetOrCreateCustomerInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function getOrCreateCustomerPurchaseLimitToJSON(
+  getOrCreateCustomerPurchaseLimit: GetOrCreateCustomerPurchaseLimit,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerPurchaseLimit$outboundSchema.parse(
+      getOrCreateCustomerPurchaseLimit,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: GetOrCreateCustomerPurchaseLimit$Outbound | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerAutoTopup$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerAutoTopup$Outbound,
+  GetOrCreateCustomerAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => GetOrCreateCustomerPurchaseLimit$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+    });
+  }),
+);
+
+export function getOrCreateCustomerAutoTopupToJSON(
+  getOrCreateCustomerAutoTopup: GetOrCreateCustomerAutoTopup,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerAutoTopup$outboundSchema.parse(
+      getOrCreateCustomerAutoTopup,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerBillingControls$Outbound = {
+  auto_topups?: Array<GetOrCreateCustomerAutoTopup$Outbound> | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerBillingControls$Outbound,
+  GetOrCreateCustomerBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerAutoTopup$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+    });
+  }),
+);
+
+export function getOrCreateCustomerBillingControlsToJSON(
+  getOrCreateCustomerBillingControls: GetOrCreateCustomerBillingControls,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerBillingControls$outboundSchema.parse(
+      getOrCreateCustomerBillingControls,
+    ),
+  );
+}
 
 /** @internal */
 export type GetOrCreateCustomerParams$Outbound = {
@@ -64,6 +248,7 @@ export type GetOrCreateCustomerParams$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
+  billing_controls?: GetOrCreateCustomerBillingControls$Outbound | undefined;
   expand?: Array<string> | undefined;
 };
 
@@ -82,6 +267,9 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
+    billingControls: z.optional(
+      z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
+    ),
     expand: z.optional(z.array(CustomerExpand$outboundSchema)),
   }),
   z.transform((v) => {
@@ -91,6 +279,7 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
       createInStripe: "create_in_stripe",
       autoEnablePlanId: "auto_enable_plan_id",
       sendEmailReceipts: "send_email_receipts",
+      billingControls: "billing_controls",
     });
   }),
 );

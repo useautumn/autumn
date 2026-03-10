@@ -9,6 +9,13 @@ In this example we'll create the pricing for a premium AI chatbot. We're going t
 - A <Badge color="green">Free</Badge> plan that gives users 5 chat messages per month for free
 - A <Badge color="blue">Pro</Badge> plan that gives users 100 chat messages per month for $20 per month.
 
+{/* REACT DOCS */}
+<View title="React hooks" icon="react">
+
+<Info>
+Autumn's client-side [hooks](/react/hooks/useCustomer) allow you to handle billing directly from your frontend. They are supported for apps with a TypeScript frontend and backend.
+</Info>
+
 <Steps>
 <Step>
 ### Create your pricing plans
@@ -58,14 +65,7 @@ pip install autumn-sdk
 </Note>
 
 </Step>
-</Steps>
 
-{/* REACT DOCS */}
-<View title="React" icon="react">
-
-Autumn's client-side [hooks](/react/hooks/useCustomer) allow you to handle billing directly from your frontend.
-
-<Steps>
 <Step>
 ### Add Endpoints Server-side
 
@@ -257,7 +257,7 @@ You will see your user under the [customers](https://app.useautumn.com/customers
 
 ### Stripe Payment Flow
 
-Call `attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. The customer is redirected to an Autumn checkout page where they can review prorations and plan changes before confirming. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
+Call `attach` when the customer wants to purchase the <Badge color="blue">Pro</Badge> plan. This will return a Stripe payment URL. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
 
 <Note>
 Use Stripe's test card `4242 4242 4242 4242` to make a purchase in sandbox. You can enter any Expiry and CVV.
@@ -293,7 +293,7 @@ The **`redirectMode: "always"`** flag will always return a payment URL.
 
 New purchases redirect to Stripe Checkout to enter payment details, and subsequent charges redirect to an Autumn hosted, one-click confirmation page.
 
-You can build your own billing confirmation flows by using the `previewAttach` function.
+You can build your own billing confirmation flows by using the [previewAttach](/api-reference/billing/previewAttach) function.
 </Note>
 
 </Step>
@@ -301,18 +301,78 @@ You can build your own billing confirmation flows by using the `previewAttach` f
 
 </View>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 {/* SERVER SDK DOCS */}
 <View title="Server SDK" icon="server">
 
 <Steps>
 <Step>
+### Create your pricing plans
+
+Create a plan for each pricing tier that your app offers. In our example we'll create a "Free" and "Pro" plan, and assign them features.
+
+<CreatePlans />
+
+</Step>
+
+<Step>
+### Installation
+
+[Create an Autumn Secret key](https://app.useautumn.com/sandbox/dev?tab=api_keys), and paste it in your `.env` variables. Then, install the Autumn SDK. If you're using the CLI, this will be done for you.
+
+```bash .env
+AUTUMN_SECRET_KEY=am_sk_test_42424242...
+```
+
+<CodeGroup>
+
+```bash bun
+bun add autumn-js
+```
+
+```bash npm
+npm install autumn-js
+```
+
+```bash pnpm
+pnpm add autumn-js
+```
+
+```bash yarn
+yarn add autumn-js
+```
+
+```bash pip
+pip install autumn-sdk
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step>
 ### Create an Autumn customer
 
 When the customer signs up, create an Autumn customer for them. Autumn will automatically enable the <Badge color="green">Free</Badge> plan, since you marked it with the `auto-enable` flag.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
-```typescript
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
@@ -326,7 +386,7 @@ const customer = await autumn.customers.getOrCreate({
 });
 ```
 
-```python
+```python Python
 import asyncio
 from autumn_sdk import Autumn
 
@@ -365,13 +425,19 @@ In the Autumn dashboard, you will see your user under the [customers](https://ap
 </Step>
 
 <Step>
+
+
+
+
+
+
 ### Stripe Payment Flow
 
-Call `billing.attach` to attach the <Badge color="blue">Pro</Badge> plan to the customer. Redirect the customer to the returned `paymentUrl` to complete payment or confirm the plan change.
+Call `attach` when the customer wants to purchase the <Badge color="blue">Pro</Badge> plan. This will return a Stripe payment URL. Once they've paid, Autumn will grant access to "100 messages per month" defined in Step 1.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
-```typescript
+```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ 
@@ -388,7 +454,7 @@ const response = await autumn.billing.attach({
 redirect(response.paymentUrl);
 ```
 
-```python
+```python Python
 import asyncio
 from autumn_sdk import Autumn
 
@@ -426,11 +492,11 @@ This can be used for any plan changes scenario (upgrades, downgrades, one-time t
 Upgrades will happen immediately, and downgrades will be scheduled for the next billing cycle.
 
 <Note>
-  **`redirectMode: "always"`** (shown above) always returns a `paymentUrl`, redirecting the customer to review and confirm the plan change — whether it's a new subscription, upgrade, or downgrade.
+The **`redirectMode: "always"`** flag will always return a payment URL. 
 
-  **Build your own UI:** If you want to handle checkout yourself:
-  1. Call [previewAttach](/api-reference/billing/previewAttach) to get line items and pricing details
-  2. Call `attach` with `redirectMode: "if_required"` — this only returns a `paymentUrl` when a payment action is needed (e.g., no card on file), otherwise charges automatically
+New purchases redirect to Stripe Checkout to enter payment details, and subsequent charges redirect to an Autumn hosted, one-click confirmation page.
+
+You can build your own billing confirmation flows by using the [previewAttach](/api-reference/billing/previewAttach) function.
 </Note>
 
 </Step>

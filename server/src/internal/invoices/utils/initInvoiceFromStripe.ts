@@ -1,8 +1,8 @@
 import {
+	deduplicateArray,
 	type FullCustomer,
 	type FullProduct,
-	type Invoice,
-	type InvoiceStatus,
+	type InsertInvoice,
 	secondsToMs,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
@@ -20,17 +20,24 @@ export const initInvoiceFromStripe = async ({
 	stripeInvoice,
 	fullProducts,
 	fullCustomer,
+	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	stripeInvoice: Stripe.Invoice;
 	fullProducts: FullProduct[];
 	fullCustomer: FullCustomer;
-}): Promise<Invoice> => {
-	const productIds = fullProducts.map((p) => p.id);
-	const internalProductIds = fullProducts.map((p) => p.internal_id);
+	internalEntityId?: string;
+}): Promise<InsertInvoice> => {
+	const productIds = deduplicateArray(fullProducts.map((p) => p.id));
+	const internalProductIds = deduplicateArray(
+		fullProducts.map((p) => p.internal_id),
+	);
 
 	const internalCustomerId = fullCustomer.internal_id;
-	const internalEntityId = fullCustomer.entity?.internal_id;
+
+	if (!internalEntityId) {
+		internalEntityId = fullCustomer.entity?.internal_id;
+	}
 
 	const autumnInvoiceItems = await getInvoiceItems({
 		stripeInvoice,
@@ -51,7 +58,7 @@ export const initInvoiceFromStripe = async ({
 		created_at: secondsToMs(stripeInvoice.created),
 		stripe_id: stripeInvoice.id!,
 		hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
-		status: stripeInvoice.status as InvoiceStatus | null,
+		status: stripeInvoice.status as string | undefined,
 		internal_entity_id: internalEntityId || null,
 		total: atmnTotal,
 		currency: stripeInvoice.currency,

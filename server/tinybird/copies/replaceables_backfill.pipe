@@ -1,0 +1,30 @@
+DESCRIPTION >
+    Chunked backfill of replaceables from Postgres into replaceables.
+    Chunks by created_at (epoch ms / bigint). Cast numeric columns to match datasource schema.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        assumeNotNull(id)                                               AS id,
+        coalesce(cus_ent_id, '')                                       AS cus_ent_id,
+        created_at::Int64                                               AS created_at,
+        from_entity_id,
+        if(coalesce(delete_next_cycle, false) = true, 1, 0)           AS delete_next_cycle,
+        'read'                                                          AS __action,
+        toDateTime64(now(), 6)                                         AS __commit_timestamp,
+        0                                                               AS __commit_lsn,
+        concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'replaceables',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE created_at > {{Int64(start_epoch_ms, 0)}}
+      AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
+
+TYPE COPY
+TARGET_DATASOURCE replaceables

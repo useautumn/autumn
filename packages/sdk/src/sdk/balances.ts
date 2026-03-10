@@ -3,6 +3,7 @@
  */
 
 import { balancesCreate } from "../funcs/balances-create.js";
+import { balancesDelete } from "../funcs/balances-delete.js";
 import { balancesUpdate } from "../funcs/balances-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -31,6 +32,20 @@ export class Balances extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.UpdateBalanceResponse> {
     return unwrapAsync(balancesUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+   */
+  async delete(
+    request: models.DeleteBalanceParams,
+    options?: RequestOptions,
+  ): Promise<models.DeleteBalanceResponse> {
+    return unwrapAsync(balancesDelete(
       this,
       request,
       options,

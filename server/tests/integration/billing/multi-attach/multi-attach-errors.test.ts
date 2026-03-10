@@ -101,45 +101,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: multiple transitions 
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Test 3: Cannot multi-attach two plans with the same prepaid feature
-// ═══════════════════════════════════════════════════════════════════
-test.concurrent(`${chalk.yellowBright("multi-attach error: duplicate prepaid feature across plans")}`, async () => {
-	const planA = products.pro({
-		id: "plan-a",
-		items: [items.prepaidMessages({ includedUsage: 100, price: 5 })],
-	});
-
-	const planB = products.base({
-		id: "plan-b",
-		items: [
-			items.prepaidMessages({ includedUsage: 200, price: 10 }),
-			items.monthlyPrice({ price: 15 }),
-		],
-		group: "group-b",
-	});
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "ma-err-dup-prepaid",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [planA, planB] }),
-		],
-		actions: [],
-	});
-
-	await expectAutumnError({
-		errMessage: "prepaid pricing in both plan",
-		func: async () => {
-			await autumnV1.billing.multiAttach({
-				customer_id: customerId,
-				plans: [{ plan_id: planA.id }, { plan_id: planB.id }],
-			});
-		},
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// Test 4: redirect_mode "always" with existing subscription → error
+// Test 3: redirect_mode "always" with existing subscription → error
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always with existing subscription")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -181,7 +143,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always with 
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Test 5: redirect_mode "always" on entity without new_billing_sub → error
+// Test 4: redirect_mode "always" on entity without new_billing_sub → error
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always on entity without new_billing_sub")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

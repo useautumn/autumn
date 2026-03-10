@@ -35,9 +35,27 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.create(customer_id="cus_123", feature_id="api_calls", included=1000, reset={
+                res = autumn.balances.create(customer_id="cus_123", feature_id="api_calls", reset={
                     "interval": "month",
                 })
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/balances.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.balances.delete(customer_id="cus_123", feature_id="api_calls")
 
                 # Handle response
                 print(res)
@@ -95,6 +113,37 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/billing.multi_attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.multi_attach(customer_id="cus_123", plans=[
+                    {
+                        "plan_id": "pro_plan",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "feature_quantities": [
+                            {
+                                "feature_id": "seats",
+                                "quantity": 5,
+                            },
+                        ],
+                    },
+                ], redirect_mode="if_required")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/billing.open_customer_portal"]["post"]
     update:
       x-codeSamples:
@@ -128,6 +177,37 @@ actions:
             ) as autumn:
 
                 res = autumn.billing.preview_attach(customer_id="cus_123", plan_id="pro_plan")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.preview_multi_attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.1",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.preview_multi_attach(customer_id="cus_123", plans=[
+                    {
+                        "plan_id": "pro_plan",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "feature_quantities": [
+                            {
+                                "feature_id": "seats",
+                                "quantity": 5,
+                            },
+                        ],
+                    },
+                ], redirect_mode="if_required")
 
                 # Handle response
                 print(res)

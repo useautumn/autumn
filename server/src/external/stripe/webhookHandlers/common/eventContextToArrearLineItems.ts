@@ -33,21 +33,23 @@ import { logWebhookArrearLineItems } from "./logs/logWebhookArrearLineItems";
  * We use `skipDescriptionTag: true` so the description doesn't include "[inc. discount]"
  * since we're not pre-deducting the discount from the amount sent to Stripe.
  */
-export const eventContextToArrearLineItems = ({
+export const eventContextToArrearLineItems = async ({
 	ctx,
 	eventContext,
 	periodEndMs,
 	cusEntFilter,
+	stripeDiscountable = true,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: BaseWebhookEventContext;
 	periodEndMs?: number;
 	cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
-}): {
+	stripeDiscountable?: boolean;
+}): Promise<{
 	lineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 	billingContext: BillingContext;
-} => {
+}> => {
 	const billingContext = buildBillingContextForArrearInvoice({
 		eventContext,
 		periodEndMs,
@@ -65,7 +67,7 @@ export const eventContextToArrearLineItems = ({
 			customerProduct,
 			billingContext,
 			filters: { cusEntFilter },
-			options: { updateNextResetAt: true, discountable: true },
+			options: { updateNextResetAt: true, discountable: stripeDiscountable },
 		});
 		lineItems.push(...productLineItems);
 		updateCustomerEntitlements.push(...productUpdates);
@@ -74,7 +76,8 @@ export const eventContextToArrearLineItems = ({
 	// Apply discounts to line items (for our DB records)
 	// Note: discountable: true lets Stripe auto-apply discounts, but we still
 	// need to track discounts on our side for accurate DB storage
-	const discounts = extractStripeDiscounts({
+	const discounts = await extractStripeDiscounts({
+		ctx,
 		stripeSubscription: eventContext.stripeSubscription,
 		stripeCustomer: eventContext.stripeCustomer,
 	});

@@ -1,92 +1,131 @@
 ---
 name: billing
-description: Debug, edit, and fix billing endpoints. Covers legacy endpoints (attach/checkout/cancel) and the new v2 4-layer architecture (setup, compute, evaluate, execute). Use when working on billing, subscription, invoicing, or Stripe integration code.
+description: Debug, edit, and fix billing operations. Covers the V2 action-based architecture (attach, multiAttach, updateSubscription, allocatedInvoice, createWithDefaults, setupPayment). Use when working on billing, subscription, invoicing, or Stripe integration code.
 ---
 
-# Billing Endpoints Guide
+# Billing Operations Guide
 
 ## When to Use This Skill
 
 - Debugging billing issues (double charges, missing invoices, wrong subscription items)
-- Adding new billing endpoints
+- Adding new billing actions
 - Understanding how Autumn state maps to Stripe
 - Fixing subscription update/cancel/attach flows
 - Working with subscription schedules (future changes)
+- Understanding allocated invoice (mid-cycle usage-based invoicing)
 
-## Endpoint Quick Reference
+## V2 Billing Actions
 
-| Operation | Handler | Architecture | Notes |
-|-----------|---------|--------------|-------|
-| Attach product | `billing/attach/handleAttach.ts` | Legacy | Adds product to customer |
-| Checkout | `billing/checkout/handleCheckoutV2.ts` | Legacy | Creates Stripe checkout session |
-| Cancel | `customers/cancel/handleCancel.ts` | Legacy | Cancels subscription |
-| **Update subscription** | `billing/v2/updateSubscription/handleUpdateSubscription.ts` | **V2** | Quantity/plan changes |
-
-**All new billing endpoints MUST use V2 architecture.**
-
-## V2 Architecture: The 4-Layer Pattern
-
-Every V2 billing endpoint follows this exact pattern. Copy this template:
+All billing logic is orchestrated through **`billingActions`** (`billing/v2/actions/index.ts`). Handlers are thin — they call an action, then format the response.
 
 ```typescript
-// From: billing/v2/updateSubscription/handleUpdateSubscription.ts
+// billing/v2/actions/index.ts
+export const billingActions = {
+  attach,              // Single product attach
+  multiAttach,         // Attach multiple products atomically
+  setupPayment,        // Setup payment method (+ optional plan validation)
+  updateSubscription,  // Update quantity, cancel, uncancel, custom plan
+  migrate,             // Programmatic product migration (not HTTP-exposed)
 
-export const handleUpdateSubscription = createRoute({
-  body: UpdateSubscriptionV0ParamsSchema,
+  legacy: {            // V1→V2 bridge adapters (backward compat)
+    attach: legacyAttach,
+    updateQuantity,
+    renew,
+  },
+} as const;
+```
+
+Two additional billing operations live outside `billingActions` but use the same evaluate+execute pipeline:
+- **`createAllocatedInvoice`** — mid-cycle invoicing triggered by balance deduction
+- **`createCustomerWithDefaults`** — customer creation with default products
+
+### Action Quick Reference
+
+| Action | Trigger | What It Does |
+|--------|---------|--------------|
+| `attach` | HTTP `billing.attach` | Add/upgrade/downgrade a single product. Handles transitions, prorations, trials, checkout mode |
+| `multiAttach` | HTTP `billing.multi_attach` | Attach multiple products atomically. At most one transition allowed |
+| `updateSubscription` | HTTP `billing.update` | Change quantity, cancel (immediate/end-of-cycle), uncancel, update custom plan items |
+| `setupPayment` | HTTP `billing.setup_payment` | Create Stripe setup checkout. Optionally validates a plan via preview first |
+| `createAllocatedInvoice` | Programmatic (balance deduction) | Invoice for allocated usage changes (prepaid overages, usage upgrades/downgrades) |
+| `createCustomerWithDefaults` | Programmatic (customer creation) | Two-phase: create customer + products in DB, then create Stripe subscription for paid defaults |
+
+Each HTTP action also has a **preview** variant (`billing.preview_attach`, `billing.preview_multi_attach`, `billing.preview_update`) that runs setup+compute+evaluate but skips execution.
+
+The **legacy V1 attach** (`POST /attach`) still exists and delegates to `billingActions.legacy.attach`, which converts old `AttachParams` format into V2 billing context overrides. Similarly `legacyUpdateQuantity` and `legacyRenew` bridge old flows to V2.
+
+### Handler Pattern
+
+Handlers are thin wrappers — they parse params, call the action, format response:
+
+```typescript
+// billing/v2/handlers/handleAttachV2.ts
+export const handleAttachV2 = createRoute({
+  versionedBody: { latest: AttachParamsV1Schema, [ApiVersion.V1_Beta]: AttachParamsV0Schema },
+  resource: AffectedResource.Attach,
+  lock: { /* distributed lock per customer */ },
   handler: async (c) => {
     const ctx = c.get("ctx");
     const body = c.req.valid("json");
 
-    // 1. SETUP - Fetch all context needed for billing operation
-    const billingContext = await setupUpdateSubscriptionBillingContext({
+    const { billingContext, billingResult } = await billingActions.attach({
       ctx,
       params: body,
-    });
-    logUpdateSubscriptionContext({ ctx, billingContext });
-
-    // 2. COMPUTE - Determine Autumn state changes
-    const autumnBillingPlan = await computeUpdateSubscriptionPlan({
-      ctx,
-      billingContext,
-      params: body,
-    });
-    logUpdateSubscriptionPlan({ ctx, plan: autumnBillingPlan, billingContext });
-
-    // 3. ERROR HANDLING - Validate before execution
-    await handleUpdateSubscriptionErrors({
-      ctx,
-      billingContext,
-      autumnBillingPlan,
-      params: body,
+      preview: false,
     });
 
-    // 4. EVALUATE - Map Autumn changes to Stripe changes (UNIFIED)
-    const stripeBillingPlan = await evaluateStripeBillingPlan({
-      ctx,
-      billingContext,
-      autumnBillingPlan,
-    });
-    logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
-
-    // 5. EXECUTE - Run Stripe actions, then Autumn DB updates
-    const billingResult = await executeBillingPlan({
-      ctx,
-      billingContext,
-      billingPlan: {
-        autumn: autumnBillingPlan,
-        stripe: stripeBillingPlan,
-      },
-    });
-
-    const response = billingResultToResponse({ billingContext, billingResult });
-    return c.json(response, 200);
+    return c.json(billingResultToResponse({ billingContext, billingResult }), 200);
   },
 });
 ```
 
-**Key principle**: `evaluateStripeBillingPlan` and `executeBillingPlan` are UNIFIED across all endpoints. Rarely modify them.
+## The 4-Layer Pattern (Inside Each Action)
+
+Every action follows: **Setup → Compute → Evaluate → Execute**
+
+```typescript
+// billing/v2/actions/attach/attach.ts (simplified)
+export async function attach({ ctx, params, preview }) {
+  // 1. SETUP — Fetch all context (customer, Stripe, products, trial, cycle anchors)
+  const billingContext = await setupAttachBillingContext({ ctx, params });
+
+  // 2. COMPUTE — Determine Autumn state changes (new products, transitions, line items)
+  const autumnBillingPlan = computeAttachPlan({ ctx, attachBillingContext: billingContext, params });
+
+  // 3. EVALUATE — Map Autumn changes → Stripe actions (UNIFIED across all actions)
+  const stripeBillingPlan = await evaluateStripeBillingPlan({ ctx, billingContext, autumnBillingPlan });
+
+  // 4. ERRORS — Validate before execution
+  handleAttachV2Errors({ ctx, billingContext, billingPlan, params });
+
+  if (preview) return { billingContext, billingPlan };
+
+  // 5. EXECUTE — Run Stripe first, then Autumn DB (UNIFIED across all actions)
+  const billingResult = await executeBillingPlan({ ctx, billingContext, billingPlan });
+  return { billingContext, billingPlan, billingResult };
+}
+```
+
+**Key principle**: `evaluateStripeBillingPlan` and `executeBillingPlan` are **UNIFIED** across all actions. Only modify them when adding new Stripe action types.
 
 **See [V2 Four-Layer Pattern Deep Dive](./references/v2-four-layer-pattern.md) for detailed explanation.**
+
+## Allocated Invoice
+
+**Not an HTTP endpoint** — triggered during `executePostgresDeduction` when allocated (prepaid) usage changes.
+
+**File**: `server/src/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.ts`
+
+**When it fires**: A customer with usage-based allocated pricing (e.g., prepaid seats) has their usage change. The system needs to invoice for the delta.
+
+**Flow**:
+1. **Setup** (`setupAllocatedInvoiceContext`) — re-fetches full customer, computes previous/new usage and overage from entitlement snapshots
+2. **Compute** (`computeAllocatedInvoicePlan`) — builds refund line item for previous usage + charge line item for new usage. Handles upgrade (delete replaceables) and downgrade (create replaceables) scenarios
+3. **Evaluate + Execute** — standard unified pipeline (`evaluateStripeBillingPlan` → `executeBillingPlan`)
+4. **Post-execute** — if Stripe invoice payment fails, voids invoice and throws `PayInvoiceFailed`
+5. **Mutation** — calls `refreshDeductionUpdate` to mutate the deduction update with replaceable and balance changes
+
+**Key difference from other actions**: Produces only `updateCustomerEntitlements` + `lineItems` (no `insertCustomerProducts`). The AutumnBillingPlan is minimal since the customer product already exists.
 
 ## Two Critical Stripe Mappings
 
@@ -126,8 +165,6 @@ FullCusProduct[]
   → Stripe.SubscriptionScheduleUpdateParams.Phase[]
 ```
 
-**Test reference**: `tests/unit/billing/stripe/subscription-schedules/build-schedule-phases.spec.ts`
-
 **See [Stripe Schedule Phases Reference](./references/stripe-schedule-phases.md) for details.**
 
 ## Stripe Invoice Decision Tree
@@ -161,31 +198,35 @@ Does Stripe force-create an invoice?
 | Schedule phases wrong | Transition points incorrect | Check `buildTransitionPoints`, run schedule phases tests |
 | Trial not ending | `trialContext` not set up correctly | Check `setupTrialContext` |
 | Quantities wrong | Metered vs licensed confusion | `undefined` = metered, `0` = entity placeholder, `N` = licensed |
+| Allocated invoice fails | Stripe payment failed for usage delta | Invoice is voided, `PayInvoiceFailed` thrown |
 
 **See [Common Bugs Reference](./references/common-bugs.md) for detailed debugging steps.**
 
-## Adding a New Billing Endpoint
+## Adding a New Billing Action
 
-1. **Create setup function**: `setup/setupXxxBillingContext.ts`
+1. **Create action function**: `billing/v2/actions/myAction/myAction.ts`
+   - Follow the attach.ts pattern: setup → compute → evaluate → errors → execute
+   - Return `{ billingContext, billingPlan, billingResult }`
+
+2. **Create setup function**: `billing/v2/actions/myAction/setup/setupMyActionBillingContext.ts`
    - Extend `BillingContext` interface if needed
-   - Fetch customer, products, Stripe state, timestamps
+   - Use shared setup functions (`setupFullCustomerContext`, `setupStripeBillingContext`, etc.)
 
-2. **Create compute function**: `compute/computeXxxPlan.ts`
-   - Return `AutumnBillingPlan` with insertCustomerProducts, deleteCustomerProduct, lineItems
+3. **Create compute function**: `billing/v2/actions/myAction/compute/computeMyActionPlan.ts`
+   - Return `AutumnBillingPlan` with insertCustomerProducts, lineItems, etc.
 
-3. **Create error handler**: `errors/handleXxxErrors.ts`
-   - Validate before execution
+4. **Create error handler**: `billing/v2/actions/myAction/errors/handleMyActionErrors.ts`
 
-4. **Wire up handler**: `handleXxx.ts`
-   - Use the 4-layer template above
+5. **Register in `billingActions`**: `billing/v2/actions/index.ts`
 
-5. **DO NOT modify** `evaluateStripeBillingPlan` or `executeBillingPlan` unless absolutely necessary
+6. **Create handler** (if HTTP-exposed): `billing/v2/handlers/handleMyAction.ts`
+   - Thin wrapper calling `billingActions.myAction()`
 
-**See [V2 Four-Layer Pattern](./references/v2-four-layer-pattern.md) for detailed guidance.**
+7. **DO NOT modify** `evaluateStripeBillingPlan` or `executeBillingPlan` unless absolutely necessary
 
 ## Invoicing Utilities (Pure Calculations)
 
-The `shared/utils/billingUtils/` folder contains **pure calculation functions** that determine what customers are charged. These are the foundation of all billing operations.
+The `shared/utils/billingUtils/` folder contains **pure calculation functions** that determine what customers are charged.
 
 **Key utilities**:
 
@@ -197,8 +238,6 @@ The `shared/utils/billingUtils/` folder contains **pure calculation functions** 
 | `buildLineItem` | `invoicingUtils/lineItemBuilders/` | Core line item builder |
 | `fixedPriceToLineItem` | `invoicingUtils/lineItemBuilders/` | Build line item for fixed prices |
 | `usagePriceToLineItem` | `invoicingUtils/lineItemBuilders/` | Build line item for usage prices |
-| `getCycleEnd` | `cycleUtils/` | Calculate billing cycle end |
-| `getCycleStart` | `cycleUtils/` | Calculate billing cycle start |
 
 **Key concepts**:
 - `LineItem.amount` is positive for charges, negative for refunds
@@ -210,47 +249,38 @@ The `shared/utils/billingUtils/` folder contains **pure calculation functions** 
 
 ## Key File Locations
 
-### V2 Billing (`server/src/internal/billing/v2/`)
+### V2 Actions (`server/src/internal/billing/v2/actions/`)
+
+| Action | Key Files |
+|--------|-----------|
+| **attach** | `attach/attach.ts`, `attach/setup/setupAttachBillingContext.ts`, `attach/compute/computeAttachPlan.ts` |
+| **multiAttach** | `multiAttach/multiAttach.ts`, `multiAttach/setup/`, `multiAttach/compute/` |
+| **updateSubscription** | `updateSubscription/updateSubscription.ts`, `updateSubscription/compute/` (cancel/, customPlan/, updateQuantity/) |
+| **setupPayment** | `setupPayment/setupPayment.ts` |
+
+### Shared V2 Infrastructure (`server/src/internal/billing/v2/`)
 
 | Layer | Key Files |
 |-------|-----------|
-| **Setup** | `setup/setupFullCustomerContext.ts`, `setup/setupTrialContext.ts`, `providers/stripe/setup/setupStripeBillingContext.ts` |
-| **Compute** | `updateSubscription/compute/computeUpdateSubscriptionPlan.ts`, `compute/computeAutumnUtils/buildAutumnLineItems.ts` |
-| **Evaluate** | `providers/stripe/actionBuilders/evaluateStripeBillingPlan.ts`, `providers/stripe/actionBuilders/buildStripeSubscriptionAction.ts` |
-| **Execute** | `execute/executeBillingPlan.ts`, `providers/stripe/execute/executeStripeBillingPlan.ts` |
+| **Evaluate** | `providers/stripe/actionBuilders/evaluateStripeBillingPlan.ts` |
+| **Execute** | `execute/executeBillingPlan.ts`, `execute/executeAutumnBillingPlan.ts` |
+| **Shared Setup** | `setup/setupFullCustomerContext.ts`, `setup/setupBillingCycleAnchor.ts`, `providers/stripe/setup/setupStripeBillingContext.ts` |
+| **Shared Compute** | `compute/computeAutumnUtils/buildAutumnLineItems.ts`, `compute/finalize/finalizeLineItems.ts` |
 
-### Stripe Mapping Utilities
+### Non-billingActions Operations
 
-| Purpose | File |
-|---------|------|
-| Customer product → Stripe item specs | `providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs.ts` |
-| Build subscription items update | `providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate.ts` |
-| Build schedule phases | `providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate.ts` |
-| Build transition points | `providers/stripe/utils/subscriptionSchedules/buildTransitionPoints.ts` |
-| Check if Stripe creates invoice | `providers/stripe/utils/invoices/shouldCreateManualStripeInvoice.ts` |
+| Operation | Key Files |
+|-----------|-----------|
+| **allocatedInvoice** | `server/src/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.ts`, `compute/computeAllocatedInvoicePlan.ts` |
+| **createWithDefaults** | `server/src/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.ts` |
 
 ### Types
 
 | Type | Location | Purpose |
 |------|----------|---------|
-| `BillingContext` | `billingContext.ts` | Customer, products, Stripe state, timestamps |
-| `AutumnBillingPlan` | `types/autumnBillingPlan.ts` | Autumn state changes (inserts, deletes, line items) |
-| `StripeBillingPlan` | `types/stripeBillingPlan/stripeBillingPlan.ts` | Stripe actions (subscription, invoice, schedule) |
-
-### Invoicing Utilities (`shared/utils/billingUtils/`)
-
-| Purpose | File |
-|---------|------|
-| Amount calculations | `invoicingUtils/lineItemUtils/priceToLineAmount.ts`, `tiersToLineAmount.ts` |
-| Line item builders | `invoicingUtils/lineItemBuilders/buildLineItem.ts`, `fixedPriceToLineItem.ts`, `usagePriceToLineItem.ts` |
-| Proration | `invoicingUtils/prorationUtils/applyProration.ts` |
-| Billing cycles | `cycleUtils/getCycleEnd.ts`, `getCycleStart.ts` |
-
-### Tests
-
-| What | Location |
-|------|----------|
-| Schedule phases | `tests/unit/billing/stripe/subscription-schedules/build-schedule-phases.spec.ts` |
+| `BillingContext` | `shared/models/billingModels/context/billingContext.ts` | Customer, products, Stripe state, timestamps |
+| `AutumnBillingPlan` | `shared/models/billingModels/plan/autumnBillingPlan.ts` | Autumn state changes (inserts, deletes, line items) |
+| `StripeBillingPlan` | Types in `billing/v2/providers/stripe/` | Stripe actions (subscription, invoice, schedule) |
 
 ## Reference Files
 
