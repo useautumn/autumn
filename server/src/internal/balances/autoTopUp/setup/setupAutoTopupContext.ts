@@ -79,7 +79,7 @@ export const setupAutoTopupContext = async ({
 
 	if (!paymentMethod) {
 		logger.warn(
-			`[setupAutoTopupContext] No payment method for customer ${stripeCus.id}, skipping`,
+			`[setupAutoTopupContext] No payment method for customer ${stripeCus?.id}, skipping`,
 		);
 		return null;
 	}
