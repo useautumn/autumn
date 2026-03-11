@@ -1,2 +1,2 @@
 export * from "./entityBillingControls.js";
-export * from "./entitySpendLimit.js";
+export * from "./spendLimit.js";
