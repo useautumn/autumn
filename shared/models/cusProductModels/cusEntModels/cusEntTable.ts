@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -80,6 +81,9 @@ export const customerEntitlements = pgTable(
 			table.internal_customer_id,
 		),
 		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
+		index("idx_customer_entitlements_loose_customer_expires")
+			.on(table.internal_customer_id, table.expires_at)
+			.where(sql`${table.customer_product_id} IS NULL`),
 	],
 );
 

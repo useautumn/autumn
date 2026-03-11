@@ -28,7 +28,6 @@ export const initDrizzle = (params?: {
 	});
 
 	if (process.env.DATABASE_REPLICA_URL !== undefined) {
-		console.log("Using replica database");
 		const clientReplica = postgres(process.env.DATABASE_REPLICA_URL, {
 			max: maxConnections,
 		});

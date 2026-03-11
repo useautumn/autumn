@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -51,6 +52,9 @@ export const customers = pgTable(
 			.where(
 				sql`${table.id} IS NULL AND ${table.email} IS NOT NULL AND ${table.email} != ''`,
 			),
+		index("idx_customers_org_env_fingerprint")
+			.on(table.org_id, table.env, table.fingerprint)
+			.where(sql`${table.fingerprint} IS NOT NULL`),
 	],
 ).enableRLS();
 
