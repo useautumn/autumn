@@ -27,6 +27,10 @@ export const MultiAttachPlanSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan to attach.",
 	}),
+	variant_id: z.string().optional().meta({
+		description: "The ID of the variant of the plan to attach.",
+		internal: true,
+	}),
 	customize: MultiAttachCustomizePlanSchema.meta({
 		description:
 			"Customize the plan to attach. Can override the price or items.",

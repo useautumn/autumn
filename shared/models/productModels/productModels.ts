@@ -12,7 +12,7 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
-	minor_version: z.number().default(0),
+	minor_version: z.number().default(1),
 	group: z.string(),
 
 	env: z.enum(AppEnv),
@@ -40,7 +40,7 @@ export const CreateProductSchema = z.object({
 	is_add_on: z.boolean().default(false),
 	is_default: z.boolean().default(false),
 	version: z.number().optional().default(1),
-	minor_version: z.number().optional().default(0),
+	minor_version: z.number().optional().default(1),
 	group: z.string().optional().default(""),
 });
 

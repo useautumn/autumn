@@ -30,7 +30,7 @@ export const products = pgTable(
 		is_default: boolean("is_default").notNull().default(false),
 		group: text().default(""),
 		version: numeric({ mode: "number" }).notNull().default(1),
-		minor_version: numeric({ mode: "number" }).notNull().default(0),
+		minor_version: numeric({ mode: "number" }).notNull().default(1),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		internal_parent_product_id: text("internal_parent_product_id"),
 		variant_id: text("variant_id"),

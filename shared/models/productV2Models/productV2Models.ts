@@ -12,9 +12,10 @@ export const ProductV2Schema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number().default(1),
-	minor_version: z.number().default(0),
+	minor_version: z.number().default(1),
 	group: z.string().nullable(),
 	env: z.nativeEnum(AppEnv),
+	variant_id: z.string().nullish(),
 
 	// free_trial: FreeTrialSchema.nullish(),
 	free_trial: ApiFreeTrialSchema.nullish(),
