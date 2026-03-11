@@ -28,8 +28,6 @@ export const setupCreateCustomer = async ({
 		});
 	}
 
-	console.log("Customer data:", customerData);
-
 	// 2. Init full customer
 	const fullCustomer = initFullCustomer({ ctx, customerId, customerData });
 
