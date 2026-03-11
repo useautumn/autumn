@@ -50,7 +50,7 @@ export const initDrizzle = (params?: {
 			return replicas[1] ?? replicas[0]!;
 		});
 
-		return { db, client };
+		return { db, client, clientReplica };
 	}
 
 	return { db: dbMain, client };
