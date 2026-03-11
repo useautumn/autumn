@@ -22,26 +22,6 @@ Check if a user has enough remaining balance of messages, before executing the a
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export function SendChatMessage() {
-	const { check, refetch } = useCustomer();
-
-	const handleSendMessage = async () => {
-		const { allowed } = check({ featureId: "messages" });
-
-		if (!allowed) {
-			alert("You're out of messages");
-		} else {
-			// Send chatbot message
-			// Then refresh customer usage data
-			await refetch();
-		}
-	};
-}
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -95,9 +75,29 @@ curl -X POST 'https://api.useautumn.com/v1/check' \
 
 <Accordion title="Using React hooks to check access client-side">
 
-When using [React hooks](/react/hooks/useCustomer), you have access to the [`data`](/react/hooks/useCustomer#data) object, which you can use to [display billing data](/documentation/getting-started/display-billing) to your users (subscription status, feature permissions, usage balances, etc). 
+When using [React hooks](/react/hooks/useCustomer), you have access to the [`customer`](/react/hooks/useCustomer#data) object, which you can use to [display billing data](/documentation/getting-started/display-billing) to your users (subscription status, feature permissions, usage balances, etc). 
 
 You can use the client-side `check` function to gate features and show paywalls. Permissions are determined by reading the local `data` state, so no call to Autumn's API is made. The "true" state should always be fetched server-side.
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export function SendChatMessage() {
+	const { check, refetch } = useCustomer();
+
+	const handleSendMessage = async () => {
+		const { allowed } = check({ featureId: "messages" });
+
+		if (!allowed) {
+			alert("You're out of messages");
+		} else {
+			// Send chatbot message
+			// Then refresh customer usage data
+			await refetch();
+		}
+	};
+}
+```
 
 </Accordion>
 

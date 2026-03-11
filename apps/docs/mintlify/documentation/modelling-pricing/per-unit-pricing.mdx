@@ -1,0 +1,212 @@
+---
+title: Per-Unit Pricing
+description: Charge customers based on the number of units they use, such as seats or workspaces
+---
+
+Per-unit pricing charges customers based on the quantity of a resource they use — seats, workspaces, environments, or any other non-consumable feature. Customers either commit to a quantity upfront (prepaid) or are billed based on actual usage at the end of each billing cycle (usage-based).
+
+> **Example** <br />
+> A collaboration tool charges $10/seat/month. The plan includes 5 seats for free, and each additional seat costs $10.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create a `non-consumable` metered feature and add it to a plan with a per-unit price:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: seats.id,
+      included: 5,
+      price: {
+        amount: 10,
+        interval: 'month',
+        billingUnits: 1,
+        billingMethod: 'usage_based',
+      },
+      proration: {
+        onIncrease: 'prorate',
+        onDecrease: 'prorate',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add a `metered`, `non-consumable` feature (e.g., "Seats")
+3. Set an **included** amount (e.g., 5 seats for free)
+4. Add a **price** per unit (e.g., $10 per seat per month)
+5. Choose the **billing method**:
+   - **Prepaid** — customer selects quantity at checkout, charged upfront
+   - **Usage-based** — billed for actual usage at end of billing cycle
+6. Under **Advanced**, configure [proration](/documentation/modelling-pricing/proration) behavior for mid-cycle changes
+7. Save the plan
+
+</Tab>
+</Tabs>
+
+## Billing methods
+
+| Method | Behavior |
+|--------|----------|
+| **Prepaid** | Customer commits to a quantity at checkout and pays immediately. To change quantity, they update their subscription. |
+| **Usage-based** | Customer is billed for the actual number of units at the end of each billing cycle. |
+
+### Prepaid per-unit
+
+With prepaid, the customer selects a quantity when purchasing. Pass the quantity via `options`:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.checkout({
+  customer_id: "user_123",
+  plan_id: "pro",
+  options: [{
+    feature_id: "seats",
+    quantity: 10,
+  }],
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.checkout(
+    customer_id="user_123",
+    plan_id="pro",
+    options=[{
+        "feature_id": "seats",
+        "quantity": 10,
+    }],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "options": [{
+      "feature_id": "seats",
+      "quantity": 10
+    }]
+  }'
+```
+
+</CodeGroup>
+
+### Usage-based per-unit
+
+With usage-based billing, track seat additions and removals as they happen. Autumn bills the total at the end of the billing cycle.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.track({
+  customer_id: "user_123",
+  feature_id: "seats",
+  value: 1,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.track(
+    customer_id="user_123",
+    feature_id="seats",
+    value=1,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+## Checking access
+
+Before allowing a user to add a new seat, check if they have capacity:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.check({
+  customer_id: "user_123",
+  feature_id: "seats",
+});
+
+if (!data.allowed) {
+  // Prompt user to purchase more seats
+}
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="seats",
+)
+
+if not response.allowed:
+    # Prompt user to purchase more seats
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats"
+  }'
+```
+
+</CodeGroup>
+
+## Proration on quantity changes
+
+When a customer increases or decreases their seat count mid-billing-cycle, you can configure how the price adjustment is handled. See [Proration](/documentation/modelling-pricing/proration) for details.

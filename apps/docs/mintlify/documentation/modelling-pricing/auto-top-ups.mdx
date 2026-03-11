@@ -1,0 +1,161 @@
+---
+title: Auto Top-Ups
+description: Automatically replenish customer balances when they run low
+---
+
+Auto top-ups automatically purchase additional balance for a customer when their usage drops below a configured threshold. This prevents service interruptions for customers who don't want to manually manage their balance.
+
+> **Example** <br />
+> A customer has 500 credits. When their balance drops below 100, Autumn automatically purchases 500 more credits using their saved payment method.
+
+## Prerequisites
+
+Auto top-ups require:
+1. A [one-off prepaid plan](/documentation/modelling-pricing/one-off-purchases) (the top-up plan) that the customer has purchased at least once
+2. The customer must have a saved payment method on file
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Auto top-ups are configured per customer, not in `autumn.config.ts`. First, create a top-up plan:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const creditTopUp = plan({
+  id: 'credit_top_up',
+  name: 'Credit Top-Up',
+  addOn: true,
+  items: [
+    item({
+      featureId: credits.id,
+      price: {
+        amount: 10,
+        billingUnits: 500,
+        billingMethod: 'prepaid',
+      },
+    }),
+  ],
+});
+```
+
+Then configure auto top-ups per customer via the API (see below).
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to the **Customers** page
+2. Click on a customer
+3. Under their balance for a feature, configure **Auto Top-Up**:
+   - **Threshold**: the balance level that triggers a top-up
+   - **Quantity**: how many units to purchase each time
+4. The customer must have a saved payment method and have previously purchased a prepaid top-up plan for that feature
+
+</Tab>
+</Tabs>
+
+## Configuring auto top-ups via API
+
+Set up auto top-ups for a customer by updating their billing controls:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.update("user_123", {
+  billing_controls: {
+    auto_topups: [{
+      feature_id: "credits",
+      enabled: true,
+      threshold: 100,
+      quantity: 500,
+    }],
+  },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.customers.update(
+    "user_123",
+    billing_controls={
+        "auto_topups": [{
+            "feature_id": "credits",
+            "enabled": True,
+            "threshold": 100,
+            "quantity": 500,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/user_123" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "billing_controls": {
+      "auto_topups": [{
+        "feature_id": "credits",
+        "enabled": true,
+        "threshold": 100,
+        "quantity": 500
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Auto top-up configuration
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to monitor |
+| `enabled` | boolean | Whether auto top-up is active |
+| `threshold` | number | Balance level that triggers a top-up |
+| `quantity` | number | How many units to purchase each time |
+| `purchase_limit` | object | Optional limit on how often top-ups can occur |
+
+### Purchase limits
+
+To prevent runaway spending, you can set a purchase limit:
+
+```json
+{
+  "purchase_limit": {
+    "interval": "month",
+    "interval_count": 1,
+    "limit": 5
+  }
+}
+```
+
+This limits the customer to 5 auto top-ups per month. Supported intervals: `hour`, `day`, `week`, `month`.
+
+## How it works
+
+1. After every usage event (via `track`), Autumn checks the customer's remaining balance
+2. If the balance falls below the configured `threshold`, an auto top-up is triggered
+3. Autumn creates an invoice for the configured `quantity` using the existing prepaid top-up plan
+4. The invoice is charged to the customer's saved payment method
+5. The balance is replenished with the purchased amount
+
+<Note>
+Auto top-ups use burst suppression to prevent duplicate purchases when multiple track events happen in quick succession. There's a 30-second cooldown between top-ups for the same feature.
+</Note>

@@ -1,0 +1,129 @@
+---
+title: Volume-Based Tiers
+description: Charge a single rate based on the total volume of usage
+---
+
+Volume-based pricing uses tiers to determine a single rate, then applies that rate to the **entire** usage volume. Unlike [graduated pricing](/documentation/modelling-pricing/graduated-pricing), where each tier has its own rate, volume-based pricing gives the customer a single per-unit price based on the total amount consumed.
+
+> **Example** <br />
+> A data platform charges:
+> - 0–1,000 records: $0.10 each
+> - 1,001–10,000 records: $0.08 each
+> - 10,001+: $0.05 each
+>
+> A customer who processes 15,000 records falls into the 10,001+ tier and pays: 15,000 × $0.05 = **$750**
+>
+> Compare this to graduated pricing, where the same usage would cost: (1,000 × $0.10) + (9,000 × $0.08) + (5,000 × $0.05) = $1,070
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Use the `tiers` array with `tierBehavior: 'volume'` on a plan item price:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const records = feature({
+  id: 'records',
+  name: 'Records Processed',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 50, interval: 'month' },
+  items: [
+    item({
+      featureId: records.id,
+      reset: { interval: 'month' },
+      price: {
+        tiers: [
+          { to: 1000, amount: 0.10 },
+          { to: 10000, amount: 0.08 },
+          { to: 'inf', amount: 0.05 },
+        ],
+        tierBehavior: 'volume',
+        billingMethod: 'usage_based',
+        interval: 'month',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add a **consumable** feature
+3. Under **Price**, select **Tiered**
+4. Switch the tier behavior to **Volume**
+5. Add tiers with the upper limit (`to`) and rate (`amount`) for each range
+6. Set the billing method to **Usage-based** and the billing interval
+7. Save the plan
+
+</Tab>
+</Tabs>
+
+## How volume-based pricing works
+
+At the end of the billing period, Autumn:
+
+1. Looks at the total usage for the feature
+2. Finds the tier the total falls into
+3. Applies that single tier's rate to the **entire** usage
+
+| Total usage | Matching tier | Rate | Charge |
+|-------------|---------------|------|--------|
+| 500 | 0–1,000 | $0.10 | 500 × $0.10 = **$50** |
+| 5,000 | 1,001–10,000 | $0.08 | 5,000 × $0.08 = **$400** |
+| 15,000 | 10,001+ | $0.05 | 15,000 × $0.05 = **$750** |
+
+## Tier configuration
+
+Each tier has the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `to` | number or `"inf"` | The upper boundary of this tier |
+| `amount` | number | Price per unit when total usage falls in this tier |
+| `flat_amount` | number | Optional flat fee added when this tier is the matching tier |
+
+<Note>
+Tiers must be in ascending order by `to`. The final tier should use `"inf"`.
+</Note>
+
+## Flat amounts
+
+Each tier can include an optional `flat_amount` — a fixed fee added on top of the per-unit charge when that tier is the matching tier. This is useful for combining a base fee with volume pricing.
+
+```ts
+price: {
+  tiers: [
+    { to: 1000, amount: 0.10, flat_amount: 0 },
+    { to: 10000, amount: 0.08, flat_amount: 50 },
+    { to: 'inf', amount: 0.05, flat_amount: 100 },
+  ],
+  tierBehavior: 'volume',
+  billingMethod: 'usage_based',
+  interval: 'month',
+}
+```
+
+A customer with 5,000 records would pay: (5,000 × $0.08) + $50 = **$450**
+
+## Graduated vs volume-based
+
+| | Graduated | Volume-based |
+|---|-----------|--------------|
+| **Rate applied** | Each tier at its own rate | Entire usage at a single rate |
+| **Total charge** | Sum of each tier's charge | Total usage × matching tier rate |
+| **Best for** | Rewarding growth with lower marginal rates | Simpler pricing with volume discounts |
+
+See [Graduated Pricing](/documentation/modelling-pricing/graduated-pricing) for the alternative model.
