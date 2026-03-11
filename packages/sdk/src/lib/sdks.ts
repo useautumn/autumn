@@ -18,6 +18,7 @@ import { encodeForm } from "./encodings.js";
 import { env, fillGlobals } from "./env.js";
 import {
   HTTPClient,
+  type RequestInput,
   isAbortError,
   isConnectionError,
   isTimeoutError,
@@ -165,9 +166,9 @@ export class ClientSDK {
     }
 
     const securityHeaders = new Headers(security?.headers || {});
-    for (const [k, v] of securityHeaders) {
+    securityHeaders.forEach((v, k) => {
       headers.set(k, v);
-    }
+    });
 
     let cookie = headers.get("cookie") || "";
     for (const [k, v] of Object.entries(security?.cookies || {})) {
@@ -179,9 +180,9 @@ export class ClientSDK {
     const userHeaders = new Headers(
       options?.headers ?? options?.fetchOptions?.headers,
     );
-    for (const [k, v] of userHeaders) {
+    userHeaders.forEach((v, k) => {
       headers.set(k, v);
-    }
+    });
 
     // Only set user agent header in non-browser-like environments since CORS
     // policy disallows setting it in browsers e.g. Chrome throws an error.
@@ -205,7 +206,7 @@ export class ClientSDK {
       Object.assign(fetchOptions, { duplex: "half" });
     }
 
-    let input;
+    let input: RequestInput;
     try {
       input = this.#hooks.beforeCreateRequest(context, {
         url: reqURL,
@@ -321,9 +322,9 @@ async function logRequest(logger: Logger | undefined, req: Request) {
   logger.group(`> Request: ${req.method} ${req.url}`);
 
   logger.group("Headers:");
-  for (const [k, v] of req.headers.entries()) {
+  req.headers.forEach((v, k) => {
     logger.log(`${k}: ${v}`);
-  }
+  });
   logger.groupEnd();
 
   logger.group("Body:");
@@ -336,10 +337,10 @@ async function logRequest(logger: Logger | undefined, req: Request) {
       break;
     case ct === "multipart/form-data": {
       const body = await req.clone().formData();
-      for (const [k, v] of body) {
+      body.forEach((v, k) => {
         const vlabel = v instanceof Blob ? "<Blob>" : v;
         logger.log(`${k}: ${vlabel}`);
-      }
+      });
       break;
     }
     default:
@@ -367,9 +368,9 @@ async function logResponse(
   logger.log("Status Code:", res.status, res.statusText);
 
   logger.group("Headers:");
-  for (const [k, v] of res.headers.entries()) {
+  res.headers.forEach((v, k) => {
     logger.log(`${k}: ${v}`);
-  }
+  });
   logger.groupEnd();
 
   logger.group("Body:");
@@ -390,10 +391,10 @@ async function logResponse(
       break;
     case matchContentType(res, "multipart/form-data"): {
       const body = await res.clone().formData();
-      for (const [k, v] of body) {
+      body.forEach((v, k) => {
         const vlabel = v instanceof Blob ? "<Blob>" : v;
         logger.log(`${k}: ${vlabel}`);
-      }
+      });
       break;
     }
     default:
