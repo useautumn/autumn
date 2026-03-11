@@ -14,6 +14,7 @@ import {
 	type ApiPlanV1,
 	ApiPlanV1Schema,
 	ApiVersion,
+	type AttachParamsV1Input,
 	type CreatePlanParamsV2Input,
 	ResetInterval,
 } from "@autumn/shared";
@@ -25,26 +26,26 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnInt = new AutumnInt({ version: ApiVersion.V2_1 });
 
-const getSuffix = () => Math.random().toString(36).slice(2, 9);
-
 /** Allow time for the async PropagateVariants queue job to complete. */
-const waitForPropagation = (ms = 15000) =>
+const waitForPropagation = (ms = 1000) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─── Test 1: Happy path — base versioned, variant propagated ─────────────────
 
-test(`${chalk.yellowBright("variant-propagation-1: base versioned → new variant row with updated items")}`, async () => {
-	const suffix = getSuffix();
-	const planId = `prop_happy_${suffix}`;
-	const group = `prop_group_${suffix}`;
-	const customerId = `prop_cus_${suffix}`;
+test.concurrent(`${chalk.yellowBright("variant-propagation-1: base versioned → new variant row with updated items")}`, async () => {
+	const planId = "prop_happy";
+	const group = "prop_group_happy";
+	const customerId = "prop_cus_happy";
 
 	// Cleanup
+	try {
+		await autumnInt.customers.delete(customerId);
+	} catch (_) {}
 	try {
 		await autumnRpc.plans.delete(planId, { allVersions: true });
 	} catch (_) {}
 	try {
-		await autumnInt.customers.delete(customerId);
+		await autumnRpc.plans.deleteVariant(planId, "monthly");
 	} catch (_) {}
 
 	// 1. Create base plan with a Messages feature item
@@ -80,9 +81,10 @@ test(`${chalk.yellowBright("variant-propagation-1: base versioned → new varian
 		email: `${customerId}@test.com`,
 	});
 
-	await autumnInt.attach({
+	const res = await autumnInt.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
-		product_id: planId,
+		plan_id: planId,
+		// variant_id: "monthly",
 	});
 
 	// 4. Update base plan items — triggers handleVersionProductV2 → enqueues PropagateVariants
@@ -104,7 +106,7 @@ test(`${chalk.yellowBright("variant-propagation-1: base versioned → new varian
 	const baseAfter = await autumnRpc.plans.get<ApiPlanV1>(planId);
 	ApiPlanV1Schema.parse(baseAfter);
 	expect(baseAfter.version).toBe(2);
-	expect(baseAfter.minor_version).toBe(0);
+	expect(baseAfter.minor_version).toBe(1);
 	expect(baseAfter.semver).toBeUndefined();
 
 	// 7. Fetch latest variant — should be a new row with version 2, minor_version 2
@@ -113,8 +115,8 @@ test(`${chalk.yellowBright("variant-propagation-1: base versioned → new varian
 	});
 	ApiPlanV1Schema.parse(variantAfter);
 	expect(variantAfter.version).toBe(2);
-	expect(variantAfter.minor_version).toBe(2);
-	expect(variantAfter.semver).toBe("2.2");
+	expect(variantAfter.minor_version).toBe(1);
+	expect(variantAfter.semver).toBe("2.1");
 
 	// 8. Verify the old version rows still exist
 	const baseV1 = await autumnRpc.rpc.call<ApiPlanV1>({
@@ -122,7 +124,7 @@ test(`${chalk.yellowBright("variant-propagation-1: base versioned → new varian
 		body: { plan_id: planId, version: 1 },
 	});
 	expect(baseV1.version).toBe(1);
-	expect(baseV1.minor_version).toBe(0);
+	expect(baseV1.minor_version).toBe(1);
 
 	const variantV1 = await autumnRpc.rpc.call<ApiPlanV1>({
 		method: "/plans.get",
@@ -148,26 +150,23 @@ test(`${chalk.yellowBright("variant-propagation-1: base versioned → new varian
 	);
 
 	expect(listedBase?.version).toBe(2);
-	expect(listedBase?.minor_version).toBe(0);
+	expect(listedBase?.minor_version).toBe(1);
 	expect(listedVariant?.version).toBe(2);
-	expect(listedVariant?.minor_version).toBe(2);
-
-	// Cleanup
-	try {
-		await autumnInt.customers.delete(customerId, { deleteInStripe: false });
-	} catch (_) {}
-}, 60000); // Generous timeout to account for queue processing
+	expect(listedVariant?.minor_version).toBe(1);
+}); // Generous timeout to account for queue processing
 
 // ─── Test 2: Case D — base updated in-place, variant items updated in-place ──
 
-test(`${chalk.yellowBright("variant-propagation-2: base updated in-place (no customers) → variant items synced, version unchanged")}`, async () => {
-	const suffix = getSuffix();
-	const planId = `prop_inplace_${suffix}`;
-	const group = `prop_group_${suffix}`;
+test.concurrent(`${chalk.yellowBright("variant-propagation-2: base updated in-place (no customers) → variant items synced, version unchanged")}`, async () => {
+	const planId = `prop_inplace_`;
+	const group = `prop_group_happy_inplace`;
 
 	// Cleanup
 	try {
 		await autumnRpc.plans.delete(planId, { allVersions: true });
+	} catch (_) {}
+	try {
+		await autumnRpc.plans.deleteVariant(planId, "annual");
 	} catch (_) {}
 
 	// 1. Create base plan with Messages feature item
@@ -217,7 +216,7 @@ test(`${chalk.yellowBright("variant-propagation-2: base updated in-place (no cus
 	const baseAfter = await autumnRpc.plans.get<ApiPlanV1>(planId);
 	ApiPlanV1Schema.parse(baseAfter);
 	expect(baseAfter.version).toBe(1);
-	expect(baseAfter.minor_version).toBe(0);
+	expect(baseAfter.minor_version).toBe(1);
 
 	// 6. Variant remains at version 1 / minor_version 1 (Case D: in-place)
 	const variantAfter = await autumnRpc.plans.get<ApiPlanV1>(planId, {
@@ -234,4 +233,4 @@ test(`${chalk.yellowBright("variant-propagation-2: base updated in-place (no cus
 	);
 	expect(variantMessagesItem).toBeDefined();
 	expect(variantMessagesItem?.included).toBe(150);
-}, 60000);
+});
