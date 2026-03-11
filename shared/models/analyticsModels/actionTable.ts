@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	jsonb,
 	pgTable,
 	text,
@@ -55,6 +56,7 @@ export const actions = pgTable(
 			foreignColumns: [entities.internal_id],
 			name: "actions_entity_id_fkey",
 		}).onDelete("set null"),
+		index("idx_actions_on_internal_entity_id").on(table.internal_entity_id),
 	],
 ).enableRLS();
 
