@@ -16,7 +16,7 @@ export class VercelResourceService {
 	 * Create a new Vercel resource
 	 * @throws RecaseError if installation already has a resource
 	 */
-	static async create({
+	static async createOrBlockIfOthersExist({
 		db,
 		resource,
 	}: {
