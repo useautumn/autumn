@@ -71,6 +71,7 @@ export const getApiEntityBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		balances: apiBalances,
+		billing_controls: { spend_limits: entity.spend_limits ?? undefined },
 	} satisfies ApiEntityV2);
 
 	return {

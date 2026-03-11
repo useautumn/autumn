@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
+	type ApiCustomerV3,
+	type ApiEntityBillingControlsInput,
 	type AttachBodyV0,
 	type CancelBody,
 	type CheckoutParams,
@@ -13,7 +15,6 @@ import {
 	type CheckResponseV1,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	type ApiCustomerV3,
 	CustomerExpand,
 	EntityExpand,
 	ErrCode,
@@ -136,6 +137,33 @@ export class AutumnCliV2 {
 
 			throw new AutumnError({
 				message: error.message || `POST ${path} failed`,
+				code: error.code || ErrCode.InternalError,
+			});
+		}
+
+		return response.json();
+	}
+
+	async patch(path: string, body: any) {
+		const response = await fetch(`${this.baseUrl}${path}`, {
+			method: "PATCH",
+			headers: this.headers,
+			body: JSON.stringify(body),
+		});
+
+		if (response.status !== 200) {
+			let error: any;
+			try {
+				error = await response.json();
+			} catch (_e) {
+				throw new AutumnError({
+					message: `PATCH ${path} failed with status ${response.status}`,
+					code: ErrCode.InternalError,
+				});
+			}
+
+			throw new AutumnError({
+				message: error.message || `PATCH ${path} failed`,
 				code: error.code || ErrCode.InternalError,
 			});
 		}
@@ -334,6 +362,20 @@ export class AutumnCliV2 {
 
 		delete: async (customerId: string, entityId: string) => {
 			return await this.delete(`/customers/${customerId}/entities/${entityId}`);
+		},
+
+		update: async (
+			customerId: string,
+			entityId: string,
+			updates: {
+				billing_controls?: ApiEntityBillingControlsInput;
+			},
+		) => {
+			return await this.post(`/entities.update`, {
+				customer_id: customerId,
+				entity_id: entityId,
+				...updates,
+			});
 		},
 	};
 

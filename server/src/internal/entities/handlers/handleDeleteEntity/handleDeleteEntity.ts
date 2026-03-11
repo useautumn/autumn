@@ -89,6 +89,8 @@ export const handleDeleteEntity = createRoute({
 				let newEntities: {
 					[key: string]: EntityBalance;
 				};
+				if (entity.id === null) continue;
+
 				if (replaceable) {
 					const { newEntities: newEntities_ } = replaceEntityInCusEnt({
 						cusEnt: linkedCusEnt,
@@ -104,34 +106,34 @@ export const handleDeleteEntity = createRoute({
 					newEntities = newEntities_;
 				}
 
-			await CusEntService.update({
-				ctx: {
-					db,
-					logger,
-					org,
-					env,
-					customerId: customer_id,
-				},
-				id: linkedCusEnt.id,
-				updates: {
-					entities: newEntities,
-				},
-			});
+				await CusEntService.update({
+					ctx: {
+						db,
+						logger,
+						org,
+						env,
+						customerId: customer_id,
+					},
+					id: linkedCusEnt.id,
+					updates: {
+						entities: newEntities,
+					},
+				});
 			}
 
-		if (!replaceable) {
-			await CusEntService.increment({
-				ctx: {
-					db,
-					logger,
-					org,
-					env,
-					customerId: customer_id,
-				},
-				id: mainCusEnt.id,
-				amount: 1,
-			});
-		}
+			if (!replaceable) {
+				await CusEntService.increment({
+					ctx: {
+						db,
+						logger,
+						org,
+						env,
+						customerId: customer_id,
+					},
+					id: mainCusEnt.id,
+					amount: 1,
+				});
+			}
 		}
 
 		// Cancel any subs
