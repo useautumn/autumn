@@ -4,7 +4,6 @@
 
 import { balancesCreate } from "../funcs/balances-create.js";
 import { balancesDelete } from "../funcs/balances-delete.js";
-import { balancesTrackTokens } from "../funcs/balances-track-tokens.js";
 import { balancesUpdate } from "../funcs/balances-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -33,20 +32,6 @@ export class Balances extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.UpdateBalanceResponse> {
     return unwrapAsync(balancesUpdate(
-      this,
-      request,
-      options,
-    ));
-  }
-
-  /**
-   * Track AI token usage against a customer's AI credit system balance.
-   */
-  async trackTokens(
-    request: models.TrackTokensParams,
-    options?: RequestOptions,
-  ): Promise<models.TrackTokensResponse> {
-    return unwrapAsync(balancesTrackTokens(
       this,
       request,
       options,
