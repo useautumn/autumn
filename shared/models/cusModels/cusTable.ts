@@ -12,7 +12,7 @@ import {
 import { collatePgColumn } from "../../db/utils.js";
 import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
-import type { AutoTopup } from "./billingControlModels.js";
+import type { AutoTopup } from "./billingControls/customerBillingControls.js";
 
 export type CustomerProcessor = {
 	type: "stripe";

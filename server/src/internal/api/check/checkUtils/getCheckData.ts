@@ -56,7 +56,7 @@ export const getCheckData = async ({
 		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
 
-	let apiEntity: ApiCustomerV5 | ApiEntityV2 | undefined;
+	let apiSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
 	const start = performance.now();
 	const fullCustomer = await getOrCreateCachedFullCustomer({
 		ctx,
@@ -73,7 +73,7 @@ export const getCheckData = async ({
 		`[check] getOrCreateCachedFullCustomer took ${performance.now() - start}ms`,
 	);
 
-	apiEntity = apiCustomer;
+	apiSubject = apiCustomer;
 	if (entity_id && fullCustomer.entity) {
 		const { apiEntity: apiEntityResult } = await getApiEntityBase({
 			ctx,
@@ -81,10 +81,10 @@ export const getCheckData = async ({
 			fullCus: fullCustomer,
 		});
 
-		apiEntity = apiEntityResult;
+		apiSubject = apiEntityResult;
 	}
 
-	if (!apiEntity) {
+	if (!apiSubject) {
 		throw new InternalError({
 			message: "failed to get entity object from cache",
 		});
@@ -93,7 +93,7 @@ export const getCheckData = async ({
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
 		feature,
-		apiEntity,
+		apiSubject,
 		requiredBalance,
 	});
 
@@ -112,12 +112,13 @@ export const getCheckData = async ({
 		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
 	});
 
-	const apiBalance = apiEntity.balances?.[featureToUse.id];
+	const apiBalance = apiSubject.balances?.[featureToUse.id];
 
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
 		apiBalance,
+		apiSubject,
 		originalFeature: feature,
 		featureToUse,
 	};
