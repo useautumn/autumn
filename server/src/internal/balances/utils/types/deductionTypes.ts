@@ -22,6 +22,7 @@ export type DeductionOptions = {
 export type CustomerEntitlementDeduction = {
 	customer_entitlement_id: string;
 	credit_cost: number;
+	feature_id: string;
 	entity_feature_id: string | null;
 	usage_allowed: boolean;
 	min_balance: number | undefined;
@@ -38,6 +39,7 @@ export type RolloverDeduction = {
 export type PreparedFeatureDeduction = {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
+	availableOverageByFeatureId?: Record<string, number>;
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];
