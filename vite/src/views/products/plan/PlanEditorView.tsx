@@ -18,7 +18,7 @@ import { useOpenAddFeatureSheet } from "./hooks/useOpenAddFeatureSheet";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 export default function PlanEditorView() {
-	const { product_id } = useParams();
+	const { product_id, variant_id } = useParams();
 
 	const {
 		product: originalProduct,

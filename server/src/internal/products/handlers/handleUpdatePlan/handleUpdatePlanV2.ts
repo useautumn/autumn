@@ -1,10 +1,14 @@
 import {
 	AffectedResource,
 	apiPlan,
+	mapToProductV2,
+	productsAreSame,
 	UpdatePlanParamsV2Schema,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { handleVersionVariantMinor } from "@/internal/products/handlers/handleVersionProduct.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
@@ -19,7 +23,7 @@ export const handleUpdatePlanV2 = createRoute({
 		const { plan_id, variant_id, new_plan_id, ...planParams } = body;
 		const ctx = c.get("ctx");
 
-		// Variant update path — skip versioning, Stripe, rewards
+		// Variant update path
 		if (variant_id) {
 			const variant = await ProductService.getVariant({
 				db: ctx.db,
@@ -47,6 +51,48 @@ export const handleUpdatePlanV2 = createRoute({
 			});
 
 			const newItems = mapped.items ?? curItems;
+			const nextVariantProduct = {
+				...mapToProductV2({
+					product: variant,
+					features: ctx.features,
+				}),
+				...mapped,
+				items: newItems,
+			};
+			const hasCustomers = await CusProductService.getByInternalProductId({
+				db: ctx.db,
+				internalProductId: variant.internal_id,
+				limit: 1,
+			});
+
+			const { itemsSame } = productsAreSame({
+				newProductV2: nextVariantProduct,
+				curProductV1: variant,
+				features: ctx.features,
+			});
+
+			if (hasCustomers.length > 0 && !itemsSame) {
+				await handleVersionVariantMinor({
+					ctx,
+					newProductV2: nextVariantProduct,
+					latestVariant: variant,
+				});
+
+				const versionedVariant = await ProductService.getVariant({
+					db: ctx.db,
+					planId: plan_id,
+					variantId: variant_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				});
+
+				return c.json(
+					await getPlanResponse({
+						product: versionedVariant,
+						features: ctx.features,
+					}),
+				);
+			}
 
 			await handleNewProductItems({
 				db: ctx.db,

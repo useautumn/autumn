@@ -19,6 +19,15 @@ interface PlanSectionTitleProps {
 	selectedVersion?: number;
 	onVersionChange?: (version: number) => void;
 	trialAction?: ReactNode;
+	variantVersions?: { version: number; minor_version: number }[] | null;
+	selectedMinorVersion?: number;
+	onSemverChange?: ({
+		version,
+		minorVersion,
+	}: {
+		version: number;
+		minorVersion: number;
+	}) => void;
 }
 
 export function PlanSectionTitle({
@@ -27,18 +36,45 @@ export function PlanSectionTitle({
 	selectedVersion,
 	onVersionChange,
 	trialAction,
+	variantVersions,
+	selectedMinorVersion,
+	onSemverChange,
 }: PlanSectionTitleProps) {
-	const showVersionSelector = numVersions !== undefined && numVersions > 1;
+	const useSemver = variantVersions && variantVersions.length > 0;
+	const showVersionSelector =
+		useSemver || (numVersions !== undefined && numVersions > 1);
 
-	const versionOptions = showVersionSelector
-		? Array.from(
-				{ length: numVersions },
-				(_, index) => numVersions - index,
-			).map((version) => ({
-				label: `Version ${version}`,
-				value: String(version),
+	const versionOptions = useSemver
+		? variantVersions.map((v) => ({
+				label: `v${v.version}.${v.minor_version}`,
+				value: `${v.version}.${v.minor_version}`,
 			}))
-		: [];
+		: numVersions !== undefined && numVersions > 1
+			? Array.from(
+					{ length: numVersions },
+					(_, index) => numVersions - index,
+				).map((version) => ({
+					label: `Version ${version}`,
+					value: String(version),
+				}))
+			: [];
+
+	const currentValue = useSemver
+		? selectedVersion !== undefined && selectedMinorVersion !== undefined
+			? `${selectedVersion}.${selectedMinorVersion}`
+			: versionOptions[0]?.value
+		: selectedVersion !== undefined
+			? String(selectedVersion)
+			: undefined;
+
+	const handleChange = (value: string) => {
+		if (useSemver && onSemverChange) {
+			const [maj, min] = value.split(".").map(Number);
+			onSemverChange({ version: maj, minorVersion: min });
+		} else {
+			onVersionChange?.(Number(value));
+		}
+	};
 
 	return (
 		<span className="flex items-center justify-between w-full gap-2">
@@ -62,14 +98,7 @@ export function PlanSectionTitle({
 			<span className="flex items-center gap-2">
 				{trialAction}
 				{showVersionSelector && (
-					<Select
-						value={
-							selectedVersion !== undefined
-								? String(selectedVersion)
-								: undefined
-						}
-						onValueChange={(value) => onVersionChange?.(Number(value))}
-					>
+					<Select value={currentValue} onValueChange={handleChange}>
 						<SelectTrigger className="w-fit h-7 text-xs whitespace-nowrap">
 							<SelectValue />
 						</SelectTrigger>

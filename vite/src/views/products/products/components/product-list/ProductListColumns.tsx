@@ -10,9 +10,11 @@ import { ProductListRowToolbar } from "./ProductListRowToolbar";
 
 export const createProductListColumns = ({
 	showGroup = false,
+	showVariant = false,
 	onDeleteClick,
 }: {
 	showGroup?: boolean;
+	showVariant?: boolean;
 	onDeleteClick?: (product: ProductV2) => void;
 } = {}) => [
 	{
@@ -52,6 +54,22 @@ export const createProductListColumns = ({
 			);
 		},
 	},
+	...(showVariant
+		? [
+				{
+					header: "Variant",
+					accessorKey: "variant_id",
+					enableSorting: false,
+					cell: ({ row }: { row: Row<ProductV2> }) => {
+						return (
+							<div className="text-t2 font-mono">
+								{row.original.variant_id || ""}
+							</div>
+						);
+					},
+				},
+			]
+		: []),
 	...(showGroup
 		? [
 				{

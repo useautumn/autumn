@@ -16,6 +16,23 @@ type ProductWithCounts = ProductV2 & {
 	active_count?: number;
 };
 
+const getProductRowId = ({ product }: { product: ProductV2 }) =>
+	product.variant_id ? `${product.id}:${product.variant_id}` : product.id;
+
+const isNewerProductVersion = ({
+	product,
+	existing,
+}: {
+	product: ProductV2;
+	existing: ProductV2;
+}) => {
+	if (product.version !== existing.version) {
+		return product.version > existing.version;
+	}
+
+	return product.minor_version > existing.minor_version;
+};
+
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
 	const { queryStates } = useProductsQueryState();
@@ -41,7 +58,10 @@ export function ProductListTable() {
 
 			// Deduplicate by ID, keeping the latest version
 			const deduplicated = filtered?.reduce((acc, product) => {
-				const existingIndex = acc.findIndex((p) => p.id === product.id);
+				const productRowId = getProductRowId({ product });
+				const existingIndex = acc.findIndex(
+					(p) => getProductRowId({ product: p }) === productRowId,
+				);
 
 				if (existingIndex === -1) {
 					acc.push(product);
@@ -49,7 +69,7 @@ export function ProductListTable() {
 					const existing = acc[existingIndex];
 					if (queryStates.showArchivedProducts) {
 						// If showing archived, always keep the newest version
-						if (product.version > existing.version) {
+						if (isNewerProductVersion({ product, existing })) {
 							acc[existingIndex] = product;
 						}
 					} else {
@@ -59,7 +79,7 @@ export function ProductListTable() {
 						} else if (!product.archived && existing.archived) {
 							// Replace archived with non-archived
 							acc[existingIndex] = product;
-						} else if (product.version > existing.version) {
+						} else if (isNewerProductVersion({ product, existing })) {
 							// Both have same archived status, keep newer version
 							acc[existingIndex] = product;
 						}
@@ -101,19 +121,30 @@ export function ProductListTable() {
 		[recurringBasePlans, recurringAddOnPlans, oneTimePlans],
 	);
 
+	// Check if any product is a variant
+	const hasAnyVariant = useMemo(
+		() =>
+			recurringBasePlans?.some((product) => Boolean(product.variant_id)) ||
+			recurringAddOnPlans?.some((product) => Boolean(product.variant_id)) ||
+			oneTimePlans?.some((product) => Boolean(product.variant_id)),
+		[recurringBasePlans, recurringAddOnPlans, oneTimePlans],
+	);
+
 	const columns = useMemo(
 		() =>
 			createProductListColumns({
 				showGroup: hasAnyGroup,
+				showVariant: hasAnyVariant,
 				onDeleteClick: handleDeleteClick,
 			}),
-		[hasAnyGroup, handleDeleteClick],
+		[hasAnyGroup, hasAnyVariant, handleDeleteClick],
 	);
 
 	const recurringBaseTable = useProductTable({
 		data: recurringBasePlans || [],
 		columns,
 		options: {
+			getRowId: (product) => getProductRowId({ product }),
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
@@ -126,6 +157,7 @@ export function ProductListTable() {
 		data: recurringAddOnPlans || [],
 		columns,
 		options: {
+			getRowId: (product) => getProductRowId({ product }),
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
@@ -138,6 +170,7 @@ export function ProductListTable() {
 		data: oneTimePlans || [],
 		columns,
 		options: {
+			getRowId: (product) => getProductRowId({ product }),
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
@@ -146,8 +179,12 @@ export function ProductListTable() {
 		},
 	});
 
-	const getRowHref = (product: ProductWithCounts) =>
-		pushPage({ path: `/products/${product.id}` });
+	const getRowHref = (product: ProductWithCounts) => {
+		const basePath = product.variant_id
+			? `/products/${product.id}/variants/${product.variant_id}`
+			: `/products/${product.id}`;
+		return pushPage({ path: basePath, preserveParams: false });
+	};
 
 	const enableSorting = true;
 

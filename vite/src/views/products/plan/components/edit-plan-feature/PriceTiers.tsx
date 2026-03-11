@@ -160,6 +160,8 @@ export function PriceTiers({
 		return actualValue === 0 ? "" : actualValue.toString();
 	};
 
+	const isFlatMode = volumePricingMode === "flat";
+
 	// Only show pricing UI if billing type is "priced" (has tiers)
 	if (!tiers || tiers.length === 0) {
 		return null;
@@ -169,14 +171,17 @@ export function PriceTiers({
 	if (tiers.length === 1) {
 		const firstTier = tiers[0];
 		const amountKey = "single-tier-amount";
+		const displayAmount = isFlatMode
+			? (firstTier.flat_amount ?? 0)
+			: firstTier.amount;
 
 		return (
 			<div className="space-y-2">
 				<div className="flex gap-2 w-full items-center">
 					<InputGroup>
 						<InputGroupInput
-							value={getDisplayValue(amountKey, firstTier.amount)}
-							onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
+							value={getDisplayValue(amountKey, displayAmount)}
+							onFocus={() => handleInputFocus(amountKey, displayAmount)}
 							onBlur={() => handleInputBlur(amountKey, "amount", 0)}
 							onChange={(e) =>
 								handleInputChange(amountKey, e.target.value, "amount", 0)

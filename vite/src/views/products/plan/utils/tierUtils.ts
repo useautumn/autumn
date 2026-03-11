@@ -1,5 +1,27 @@
 import { Infinite, type ProductItem } from "@autumn/shared";
 
+export type VolumePricingMode = "per_unit" | "flat";
+
+/** Cleans tier data based on the active pricing mode before committing. */
+export const cleanTiersForMode = ({
+	item,
+	mode,
+}: {
+	item: ProductItem;
+	mode: VolumePricingMode;
+}): ProductItem => {
+	if (!item.tiers) return item;
+
+	const cleanedTiers = item.tiers.map((tier) => {
+		if (mode === "flat") {
+			return { ...tier, amount: 0 };
+		}
+		return { ...tier, flat_amount: undefined };
+	});
+
+	return { ...item, tiers: cleanedTiers };
+};
+
 export const addTier = ({
 	item,
 	setItem,
@@ -131,23 +153,3 @@ export const updateTier = ({
 };
 
 export type VolumePricingMode = "flat" | "per_unit";
-
-/** Cleans tier data based on the active pricing mode before committing. */
-export const cleanTiersForMode = ({
-	item,
-	mode,
-}: {
-	item: ProductItem;
-	mode: VolumePricingMode;
-}): ProductItem => {
-	if (!item.tiers) return item;
-
-	const cleanedTiers = item.tiers.map((tier) => {
-		if (mode === "flat") {
-			return { ...tier, amount: 0 };
-		}
-		return { ...tier, flat_amount: null };
-	});
-
-	return { ...item, tiers: cleanedTiers };
-};

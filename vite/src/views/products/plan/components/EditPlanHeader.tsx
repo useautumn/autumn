@@ -1,6 +1,7 @@
 import { UserIcon } from "@phosphor-icons/react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
+import { useParams } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
@@ -33,7 +34,8 @@ import { ConfirmMigrationDialog } from "./ConfirmMigrationDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
-	const { numVersions } = useProductQuery();
+	const { numVersions, variantVersions } = useProductQuery();
+	const { variant_id } = useParams();
 	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
@@ -44,19 +46,33 @@ export const EditPlanHeader = () => {
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
-	const versionOptions = Array.from(
-		{ length: numVersions },
-		(_, i) => numVersions - i,
-	);
+	const useSemver =
+		!!variant_id && variantVersions && variantVersions.length > 0;
+
 	const currentVersion = queryStates.version || product.version;
+	const currentMinorVersion =
+		queryStates.minorVersion ?? product.minor_version ?? 1;
 
 	const handleVersionChange = (version: string) => {
-		const versionNumber = parseFloat(version);
-		if (versionNumber === numVersions && !isCusPlanEditor) {
-			// Remove version param for latest version
-			setQueryStates({ version: null });
+		if (useSemver) {
+			const [maj, min] = version.split(".").map(Number);
+			const isLatest =
+				variantVersions[0] &&
+				maj === variantVersions[0].version &&
+				min === variantVersions[0].minor_version;
+
+			if (isLatest && !isCusPlanEditor) {
+				setQueryStates({ version: null, minorVersion: null });
+			} else {
+				setQueryStates({ version: maj, minorVersion: min });
+			}
 		} else {
-			setQueryStates({ version: versionNumber });
+			const versionNumber = parseFloat(version);
+			if (versionNumber === numVersions && !isCusPlanEditor) {
+				setQueryStates({ version: null });
+			} else {
+				setQueryStates({ version: versionNumber });
+			}
 		}
 	};
 
@@ -142,7 +158,10 @@ export const EditPlanHeader = () => {
 								{product.name}
 							</span>
 						</AdminHover>
-						<span className="text-sm text-t3">v{product.version}</span>
+						<span className="text-sm text-t3">
+							v{product.version}
+							{variant_id ? `.${product.minor_version ?? 1}` : ""}
+						</span>
 					</div>
 				</div>
 				<div className="flex flex-row justify-between items-center">
@@ -172,22 +191,46 @@ export const EditPlanHeader = () => {
 							</Button>
 						)}
 
-						{numVersions && numVersions > 1 && (
+						{useSemver && variantVersions.length > 1 ? (
 							<Select
-								value={currentVersion.toString()}
+								value={`${currentVersion}.${currentMinorVersion}`}
 								onValueChange={handleVersionChange}
 							>
 								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 									<SelectValue placeholder="Version" />
 								</SelectTrigger>
 								<SelectContent>
-									{versionOptions.map((version) => (
-										<SelectItem key={version} value={version.toString()}>
-											Version {version}
-										</SelectItem>
-									))}
+									{variantVersions.map((v) => {
+										const semver = `${v.version}.${v.minor_version}`;
+										return (
+											<SelectItem key={semver} value={semver}>
+												v{semver}
+											</SelectItem>
+										);
+									})}
 								</SelectContent>
 							</Select>
+						) : (
+							numVersions > 1 && (
+								<Select
+									value={currentVersion.toString()}
+									onValueChange={handleVersionChange}
+								>
+									<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+										<SelectValue placeholder="Version" />
+									</SelectTrigger>
+									<SelectContent>
+										{Array.from(
+											{ length: numVersions },
+											(_, i) => numVersions - i,
+										).map((version) => (
+											<SelectItem key={version} value={version.toString()}>
+												Version {version}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)
 						)}
 						{!isCusPlanEditor && <PlanToolbar />}
 					</div>

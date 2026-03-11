@@ -244,7 +244,6 @@ export function useHasItemChanges() {
 			item1: item,
 			item2: initialItem,
 			features,
-			logDifferences: true,
 		});
 
 		return !same;

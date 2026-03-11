@@ -534,6 +534,35 @@ export class ProductService {
 		return data[0].version;
 	}
 
+	/** Returns all (version, minor_version) pairs for a specific variant, sorted newest-first. */
+	static async listVariantVersions({
+		db,
+		productId,
+		variantId,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		productId: string;
+		variantId: string;
+		orgId: string;
+		env: AppEnv;
+	}) {
+		return db.query.products.findMany({
+			columns: {
+				version: true,
+				minor_version: true,
+			},
+			where: and(
+				eq(products.id, productId),
+				eq(products.variant_id, variantId),
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+			),
+			orderBy: [desc(products.version), desc(products.minor_version)],
+		});
+	}
+
 	// UPDATES
 	static async updateByInternalId({
 		db,

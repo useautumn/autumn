@@ -55,7 +55,7 @@ export const getLatestProducts = (products: FullProduct[]) => {
 			if (
 				product.version > cur.version ||
 				(product.version === cur.version &&
-					(product.minor_version ?? 0) > (cur.minor_version ?? 0))
+					(product.minor_version ?? 1) > (cur.minor_version ?? 1))
 			) {
 				acc[key] = product;
 			}
@@ -103,7 +103,7 @@ export const constructProduct = ({
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: version,
-		minor_version: 0,
+		minor_version: 1,
 		group: productData.group || "",
 
 		env,
