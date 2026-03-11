@@ -46,7 +46,7 @@ export const expectBoundaryAndParity = async ({
 }: {
 	autumn: AutumnV2_1Client;
 	customerId: string;
-	entityId: string;
+	entityId?: string;
 	featureId: string;
 	allowedRequiredBalance: number;
 	blockedRequiredBalance: number;
@@ -56,14 +56,14 @@ export const expectBoundaryAndParity = async ({
 }) => {
 	const allowedCached = await autumn.check<CheckResponseV3>({
 		customer_id: customerId,
-		entity_id: entityId,
+		...(entityId ? { entity_id: entityId } : {}),
 		feature_id: featureId,
 		required_balance: allowedRequiredBalance,
 	});
 
 	const blockedCached = await autumn.check<CheckResponseV3>({
 		customer_id: customerId,
-		entity_id: entityId,
+		...(entityId ? { entity_id: entityId } : {}),
 		feature_id: featureId,
 		required_balance: blockedRequiredBalance,
 	});
@@ -83,7 +83,7 @@ export const expectBoundaryAndParity = async ({
 
 	const allowedUncached = await autumn.check<CheckResponseV3>({
 		customer_id: customerId,
-		entity_id: entityId,
+		...(entityId ? { entity_id: entityId } : {}),
 		feature_id: featureId,
 		required_balance: allowedRequiredBalance,
 		skip_cache: true,
@@ -91,7 +91,7 @@ export const expectBoundaryAndParity = async ({
 
 	const blockedUncached = await autumn.check<CheckResponseV3>({
 		customer_id: customerId,
-		entity_id: entityId,
+		...(entityId ? { entity_id: entityId } : {}),
 		feature_id: featureId,
 		required_balance: blockedRequiredBalance,
 		skip_cache: true,

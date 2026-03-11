@@ -8,6 +8,6 @@ export const EntityBillingControlsSchema = z.object({
 });
 
 export type EntityBillingControls = z.infer<typeof EntityBillingControlsSchema>;
-export type EntityBillingControlsInput = z.input<
+export type EntityBillingControlsParams = z.input<
 	typeof EntityBillingControlsSchema
 >;

@@ -199,11 +199,14 @@ ${adjustBalanceMainScript}`;
 
 const CUSTOMER_DIR = join(__dirname, "customers");
 
-/** Atomically update top-level customer fields (name, email, metadata, etc.). */
-export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
+const updateCustomerDataMainScript = readFileSync(
 	join(CUSTOMER_DIR, "updateCustomerData.lua"),
 	"utf-8",
 );
+
+/** Atomically update top-level customer fields (name, email, metadata, etc.). */
+export const UPDATE_CUSTOMER_DATA_SCRIPT = `${LUA_UTILS}
+${updateCustomerDataMainScript}`;
 
 /**
  * Atomically append an entity to the customer's entities array.
