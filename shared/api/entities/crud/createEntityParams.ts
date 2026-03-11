@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData.js";
+import { ApiEntityBillingControlsSchema } from "../billingControls/entityBillingControls.js";
 
 export const CreateEntityParamsV0Schema = z.object({
 	id: z
@@ -16,6 +17,9 @@ export const CreateEntityParamsV0Schema = z.object({
 	}),
 	feature_id: z.string().meta({
 		description: "The ID of the feature this entity is associated with",
+	}),
+	billing_controls: ApiEntityBillingControlsSchema.optional().meta({
+		description: "Billing controls for the entity.",
 	}),
 	customer_data: CustomerDataSchema.optional().meta({
 		description:
