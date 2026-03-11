@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { schemas as schema } from "@autumn/shared";
+import { withReplicas } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
@@ -22,11 +23,38 @@ export const initDrizzle = (params?: {
 		max: maxConnections,
 	});
 
-	const db = drizzle(client, {
+	const dbMain = drizzle(client, {
 		schema,
 	});
 
-	return { db, client };
+	if (process.env.DATABASE_REPLICA_URL !== undefined) {
+		console.log("Using replica database");
+		const clientReplica = postgres(process.env.DATABASE_REPLICA_URL, {
+			max: maxConnections,
+		});
+
+		const dbReplica = drizzle(clientReplica, {
+			schema,
+		});
+
+		const db = withReplicas(dbMain, [dbMain, dbReplica], (replicas) => {
+			const probabilityWeights = [0.7, 0.3];
+			let cumulativeProbability = 0;
+			const randomValue = Math.random();
+
+			for (const [index, replica] of replicas.entries()) {
+				cumulativeProbability += probabilityWeights[index] ?? 0;
+				if (randomValue < cumulativeProbability) {
+					return replica;
+				}
+			}
+			return replicas[1] ?? replicas[0]!;
+		});
+
+		return { db, client };
+	}
+
+	return { db: dbMain, client };
 };
 
 export type DrizzleCli = ReturnType<typeof initDrizzle>["db"];
