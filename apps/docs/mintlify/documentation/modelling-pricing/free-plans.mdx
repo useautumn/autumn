@@ -1,0 +1,135 @@
+---
+title: Free Plans
+description: Offer free tiers with usage limits to onboard customers
+---
+
+Free plans let you give every new customer access to a limited set of features at no cost. They're the foundation of freemium models — customers start free and upgrade when they need more.
+
+> **Example** <br />
+> A developer tool offers a free tier with 100 API requests per month and 1 workspace. When a user exceeds the limit, they're prompted to upgrade.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create a plan with no `price` and set `autoEnable: true`:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const apiRequests = feature({
+  id: 'api_requests',
+  name: 'API Requests',
+  type: 'metered',
+  consumable: true,
+});
+
+export const workspaces = feature({
+  id: 'workspaces',
+  name: 'Workspaces',
+  type: 'metered',
+  consumable: false,
+});
+
+export const free = plan({
+  id: 'free',
+  name: 'Free',
+  group: 'main',
+  autoEnable: true,
+  items: [
+    item({
+      featureId: apiRequests.id,
+      included: 100,
+      reset: { interval: 'month' },
+    }),
+    item({
+      featureId: workspaces.id,
+      included: 1,
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and click **Create Plan**
+2. Set the plan name and ID (e.g., "Free", `free`)
+3. Leave the **Price** empty (no base price)
+4. Add features with grant amounts and reset intervals
+5. Toggle **Auto-enable** so the plan is automatically assigned to new customers
+6. Set a **group** (e.g., `main`) if you have paid plans the customer can upgrade to
+7. Click **Create**
+
+</Tab>
+</Tabs>
+
+## How it works
+
+When `autoEnable` is set:
+
+1. Every new customer created via the API or SDK is automatically assigned this plan
+2. Feature balances are provisioned immediately — no checkout or payment needed
+3. When the customer [upgrades](/documentation/customers/managing-subscriptions#upgrades) to a paid plan in the same group, the free plan is replaced
+
+<Note>
+If a customer cancels their paid plan and you have an auto-enabled free plan in the same group, the free plan will be re-activated automatically.
+</Note>
+
+## Gating features
+
+Use the [check](/documentation/customers/check) endpoint to gate access based on the free plan's limits:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.check({
+  customer_id: "user_123",
+  feature_id: "api_requests",
+});
+
+if (!data.allowed) {
+  // Prompt user to upgrade
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="api_requests",
+)
+
+if not response.allowed:
+    # Prompt user to upgrade
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "api_requests"
+  }'
+```
+
+</CodeGroup>
+
+When `allowed` is `false`, the customer has exhausted their free tier balance. This is a good moment to prompt them to upgrade.
+
+## Tips
+
+- Set a **group** on your free plan that matches your paid plans, so upgrades automatically replace the free tier
+- Use `reset` intervals (e.g., monthly) to give customers a recurring allowance
+- Combine with [pay-per-use](/documentation/modelling-pricing/pay-per-use) to let free users optionally pay for overages

@@ -1,0 +1,224 @@
+---
+title: Trials
+description: Let customers try paid plans before committing
+---
+
+Free trials give customers temporary access to a paid plan before they're charged. Autumn supports two trial modes: **card required** (collect payment info upfront, bill when trial ends) and **card not required** (no payment info needed, access expires automatically).
+
+> **Example** <br />
+> A SaaS tool offers a 14-day free trial of their Pro plan. If the customer doesn't cancel, billing begins on day 15.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Add a `freeTrial` object to your plan:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const messages = feature({
+  id: 'messages',
+  name: 'Messages',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  group: 'main',
+  price: { amount: 20, interval: 'month' },
+  freeTrial: {
+    durationLength: 14,
+    durationType: 'day',
+    cardRequired: true,
+  },
+  items: [
+    item({
+      featureId: messages.id,
+      included: 1000,
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+```
+
+Trial duration types: `day`, `month`, `year`.
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and open your plan (or create a new one)
+2. Under **Plan Settings**, toggle on **Free Trial**
+3. Set the **duration** (e.g., 14 days)
+4. Choose whether a **card is required**:
+   - **Card required**: customer goes through Stripe Checkout, but isn't charged until the trial ends
+   - **Card not required**: no checkout needed — the plan can be attached directly
+5. Save your changes
+
+</Tab>
+</Tabs>
+
+## Card required trials
+
+When `cardRequired` is `true`, the customer must provide payment information to start the trial. Stripe creates a subscription with a trial period — no charge occurs until the trial ends.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.checkout({
+  customer_id: "user_123",
+  plan_id: "pro",
+});
+
+// Returns Stripe Checkout URL — customer adds card and starts trial
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.checkout(
+    customer_id="user_123",
+    plan_id="pro",
+)
+# Returns Stripe Checkout URL
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+If the customer doesn't cancel before the trial ends, their card is automatically charged.
+
+## Card not required trials
+
+When `cardRequired` is `false`, no checkout is needed. You can attach the plan directly:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.attach({
+  customer_id: "user_123",
+  plan_id: "pro",
+});
+```
+
+```python Python
+response = await autumn.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+When the trial expires, the customer loses access unless they add a payment method. If a [free plan](/documentation/modelling-pricing/free-plans) with `autoEnable` exists in the same group, it's activated as a fallback.
+
+<Tip>
+You can combine `autoEnable` with `cardRequired: false` to create an **auto-trial** plan. The trial starts automatically when a customer is created, and expires after the trial period.
+</Tip>
+
+## Trial deduplication
+
+Each customer can only use a plan's trial **once**. If they try to attach the same plan again, the trial is skipped and they're billed immediately.
+
+### Fingerprint-based deduplication
+
+To prevent trial abuse across multiple accounts, set a `fingerprint` when creating a customer (e.g., device ID, browser fingerprint). Autumn checks whether any customer with the same fingerprint has already used the trial.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.create({
+  id: "user_456",
+  name: "Jane Doe",
+  email: "jane@example.com",
+  fingerprint: "device_abc123",
+});
+```
+
+```python Python
+await autumn.customers.create(
+    id="user_456",
+    name="Jane Doe",
+    email="jane@example.com",
+    fingerprint="device_abc123",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "user_456",
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "fingerprint": "device_abc123"
+  }'
+```
+
+</CodeGroup>
+
+## Cancelling a trial
+
+Cancel a trial using the same [cancel](/documentation/customers/managing-subscriptions#cancellations) flow as any subscription:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.cancel({
+  customer_id: "user_123",
+  plan_id: "pro",
+  cancel_immediately: true,
+});
+```
+
+```python Python
+await autumn.cancel(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_immediately=True,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/cancel" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_immediately": true
+  }'
+```
+
+</CodeGroup>

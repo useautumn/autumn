@@ -231,6 +231,93 @@ curl -X POST 'https://api.useautumn.com/v1/billing/update' \
 
 </CodeGroup>
 
+### Uncancelling a plan
+
+If a subscription has a pending cancellation, a scheduled downgrade, or a scheduled plan switch, you can reverse it with `cancelAction: "uncancel"`.
+
+A subscription is pending cancellation when `canceledAt` is not null while the subscription is still `active`.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export default function BillingPage() {
+  const { data: customer, updateSubscription } = useCustomer();
+
+  const cancellingSub = customer?.subscriptions.find(
+    (sub) => sub.status === "active" && sub.canceledAt !== null
+  );
+
+  return cancellingSub ? (
+    <button onClick={() => updateSubscription({ 
+      planId: cancellingSub.planId, 
+      cancelAction: "uncancel" 
+    })}>
+      Keep plan
+    </button>
+  ) : null;
+}
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const cancellingSub = customer.subscriptions?.find(
+  (sub) => sub.status === "active" && sub.canceledAt !== null
+);
+
+if (cancellingSub) {
+  await autumn.billing.update({
+    customerId: "user_123",
+    planId: cancellingSub.planId,
+    cancelAction: "uncancel",
+  });
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+cancelling_sub = next(
+    (s for s in customer.subscriptions
+     if s.status == "active" and s.canceled_at is not None),
+    None,
+)
+
+if cancelling_sub:
+    await autumn.billing.update(
+        customer_id="user_123",
+        plan_id=cancelling_sub.plan_id,
+        cancel_action="uncancel",
+    )
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "uncancel"
+  }'
+```
+
+</CodeGroup>
+
 ### Stripe billing portal
 
 The Stripe billing portal lets users manage their payment method, view past invoices, and cancel their plan.

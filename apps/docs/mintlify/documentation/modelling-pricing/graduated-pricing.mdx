@@ -1,0 +1,106 @@
+---
+title: Graduated Pricing
+description: Set tiered pricing where different usage ranges are charged at different rates
+---
+
+Graduated pricing splits usage into tiers, and each tier is charged at its own rate. This means the price per unit decreases as usage increases — customers pay less per unit for higher volumes, but each range has its own rate.
+
+> **Example** <br />
+> An API service charges:
+> - First 1,000 requests: $0.01 each
+> - Next 9,000 requests (1,001–10,000): $0.008 each
+> - Everything above 10,000: $0.005 each
+>
+> A customer who makes 15,000 requests pays: (1,000 × $0.01) + (9,000 × $0.008) + (5,000 × $0.005) = **$107**
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Use the `tiers` array on a plan item price. By default, tiers use graduated behavior:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const apiCalls = feature({
+  id: 'api_calls',
+  name: 'API Calls',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: apiCalls.id,
+      reset: { interval: 'month' },
+      price: {
+        tiers: [
+          { to: 1000, amount: 0.01 },
+          { to: 10000, amount: 0.008 },
+          { to: 'inf', amount: 0.005 },
+        ],
+        billingMethod: 'usage_based',
+        interval: 'month',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add a **consumable** feature
+3. Under **Price**, select **Tiered**
+4. The default tier behavior is **Graduated**
+5. Add tiers with the **upper limit** (`to`) and **rate** (`amount`) for each range. Use `inf` for the final tier
+6. Set the billing method to **Usage-based** and the billing interval
+7. Save the plan
+
+</Tab>
+</Tabs>
+
+## How graduated pricing works
+
+At the end of the billing period, Autumn calculates the total charge by applying each tier's rate to the usage that falls within that tier's range:
+
+| Usage range | Rate | Charge |
+|-------------|------|--------|
+| 0 – 1,000 | $0.01 | 1,000 × $0.01 = $10 |
+| 1,001 – 10,000 | $0.008 | 9,000 × $0.008 = $72 |
+| 10,001+ | $0.005 | 5,000 × $0.005 = $25 |
+| **Total** | | **$107** |
+
+Each tier's rate only applies to the usage **within that tier's range**. This is in contrast to [volume-based pricing](/documentation/modelling-pricing/volume-based-tiers), where a single rate is applied to the entire usage.
+
+## Tier configuration
+
+Each tier has the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `to` | number or `"inf"` | The upper boundary of this tier. Use `"inf"` for the final tier. |
+| `amount` | number | Price per unit within this tier |
+| `flat_amount` | number | Optional flat fee added when this tier is reached |
+
+<Note>
+Tiers must be in ascending order by `to`. The final tier should always use `"inf"` to capture all remaining usage.
+</Note>
+
+## Graduated vs volume-based
+
+| | Graduated | Volume-based |
+|---|-----------|--------------|
+| **Rate applied** | Each tier at its own rate | Entire usage at a single rate |
+| **Total charge** | Sum of each tier's charge | Total usage × matching tier rate |
+| **Best for** | Rewarding growth with lower marginal rates | Simpler pricing with volume discounts |
+
+See [Volume-Based Tiers](/documentation/modelling-pricing/volume-based-tiers) for the alternative model.
