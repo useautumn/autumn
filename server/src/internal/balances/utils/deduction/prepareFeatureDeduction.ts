@@ -10,6 +10,7 @@ import {
 	orgToInStatuses,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type {
@@ -35,7 +36,8 @@ export const prepareFeatureDeduction = ({
 	options?: DeductionOptions;
 }): PreparedFeatureDeduction => {
 	const { org } = ctx;
-	const { feature, targetBalance } = deduction;
+	const { env } = ctx;
+	const { feature, lock, targetBalance } = deduction;
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
@@ -118,6 +120,26 @@ export const prepareFeatureDeduction = ({
 			return 0;
 		});
 
+	const ONE_DAY_S = 24 * 60 * 60;
+	const ONE_HOUR_S = 60 * 60;
+
+	const preparedLock = lock
+		? {
+				...lock,
+				hashed_key: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
+				redis_receipt_key: buildLockReceiptKey({
+					orgId: org.id,
+					env,
+					lockKey: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
+				}),
+				created_at: Date.now(),
+				// TTL: expires_at + 1 hour (in seconds), or now + 1 day
+				ttl_at: lock.expires_at
+					? Math.ceil(lock.expires_at / 1000) + ONE_HOUR_S
+					: Math.ceil(Date.now() / 1000) + ONE_DAY_S,
+			}
+		: undefined;
+
 	return {
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
@@ -126,5 +148,6 @@ export const prepareFeatureDeduction = ({
 			credit_cost: r.credit_cost,
 		})),
 		unlimitedFeatureIds,
+		lock: preparedLock,
 	};
 };

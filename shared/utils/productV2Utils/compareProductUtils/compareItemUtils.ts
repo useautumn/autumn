@@ -103,7 +103,7 @@ const tiersAreSame = (
 		(tier, index) =>
 			tier.amount === tiers2[index].amount &&
 			tier.to === tiers2[index].to &&
-			(tier.flat_amount ?? 0) === (tiers2[index].flat_amount ?? 0),
+			tier.flat_amount === tiers2[index].flat_amount,
 	);
 };
 
