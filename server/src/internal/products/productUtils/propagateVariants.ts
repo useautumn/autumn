@@ -6,7 +6,12 @@ import type {
 	Price,
 	Product,
 } from "@autumn/shared";
-import { entitlements, prices, products } from "@autumn/shared";
+import {
+	customerProducts,
+	entitlements,
+	prices,
+	products,
+} from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { logger as loggerType } from "@/external/logtail/logtailUtils.js";
@@ -253,6 +258,48 @@ const buildVariantPrices = ({
 	return { allPrices, insertPrices, upsertPrices, deletePriceIds };
 };
 
+const hasCustomersOnVariantVersion = async ({
+	db,
+	variant,
+	orgId,
+	env,
+}: {
+	db: DrizzleCli;
+	variant: FullProduct;
+	orgId: string;
+	env: AppEnv;
+}) => {
+	const directMatches = await CusProductService.getByInternalProductId({
+		db,
+		internalProductId: variant.internal_id,
+		limit: 1,
+	});
+
+	if (directMatches.length > 0) return true;
+	if (!variant.variant_id) return false;
+
+	const joinedMatches = await db
+		.select({ customerProductId: customerProducts.id })
+		.from(customerProducts)
+		.innerJoin(
+			products,
+			eq(customerProducts.internal_product_id, products.internal_id),
+		)
+		.where(
+			and(
+				eq(products.id, variant.id),
+				eq(products.variant_id, variant.variant_id),
+				eq(products.version, variant.version),
+				eq(products.minor_version, variant.minor_version),
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+			),
+		)
+		.limit(1);
+
+	return joinedMatches.length > 0;
+};
+
 export const propagateVariants = async ({
 	db,
 	payload,
@@ -270,10 +317,17 @@ export const propagateVariants = async ({
 		baseWasVersioned,
 	} = payload;
 
-	// Step 1: Find all latest variant versions pinned to the old base
+	const currentBase = await ProductService.getFull({
+		db,
+		idOrInternalId: baseProductInternalId,
+		orgId,
+		env,
+	});
+
+	// Step 1: Find all latest variant versions for this plan.
 	const allVariants = (await db.query.products.findMany({
 		where: and(
-			eq(products.internal_parent_product_id, baseProductInternalId),
+			eq(products.id, currentBase.id),
 			eq(products.org_id, orgId),
 			eq(products.env, env),
 		),
@@ -341,14 +395,15 @@ export const propagateVariants = async ({
 				});
 			} else {
 				// ── Cases C + D: base updated in-place → check if variant has customers ──
-				const cusProducts = await CusProductService.getByInternalProductId({
+				const hasCustomers = await hasCustomersOnVariantVersion({
 					db,
-					internalProductId: variant.internal_id,
-					limit: 1,
+					variant,
+					orgId,
+					env,
 				});
 
-				if (cusProducts.length > 0) {
-					// Case C: variant has customers → new version row with minor bump
+				if (hasCustomers) {
+					// Case C: variant has customers → new version row with variant major bump
 					await propagateVariantVersioned({
 						db,
 						ctx: { orgId, env, logger },
@@ -406,17 +461,17 @@ const propagateVariantVersioned = async ({
 	oldVariantEnts: EntitlementWithFeature[];
 	oldVariantPrices: Price[];
 	/**
-	 * Cases A+B (false): mirror the base's new major version, reset minor_version to variant's current + 1.
-	 * Case C (true): keep the variant's own major version, bump minor_version by 1.
+	 * Cases A+B (false): mirror the base's new major version, reset minor_version to 1.
+	 * Case C (true): bump the variant's own major version and reset minor_version to 1.
 	 */
 	minorBump: boolean;
 }) => {
 	const { orgId, env, logger } = ctx;
 
-	// Cases A+B: new base version → variant tracks base's major version, minor starts at existing + 1
-	// Case C: base updated in-place, variant has customers → keep variant's major version, increment minor
-	const newVersion = minorBump ? variant.version : newBase.version;
-	const newMinorVersion = (variant.minor_version ?? 0) + 1;
+	// Cases A+B: new base version → variant tracks base's major version, minor resets to 1
+	// Case C: base updated in-place, variant has customers → bump variant major version, reset minor
+	const newVersion = minorBump ? variant.version + 1 : newBase.version;
+	const newMinorVersion = 1;
 
 	const newVariantProduct: Product = {
 		id: variant.id,
@@ -432,7 +487,9 @@ const propagateVariantVersioned = async ({
 		org_id: variant.org_id,
 		created_at: Date.now(),
 		processor: variant.processor ?? undefined,
-		internal_parent_product_id: newBase.internal_id,
+		internal_parent_product_id: minorBump
+			? variant.internal_id
+			: newBase.internal_id,
 		variant_id: variant.variant_id,
 		archived: false,
 	};
