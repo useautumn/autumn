@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -53,6 +54,10 @@ export const entities = pgTable(
 		index("idx_entities_internal_customer_id").using(
 			"hash",
 			table.internal_customer_id,
+		),
+		index("idx_entities_customer_internal_desc").on(
+			table.internal_customer_id,
+			sql`${table.internal_id} DESC`,
 		),
 	],
 );
