@@ -18,10 +18,10 @@ export const CreditSystemConfigSchema = z.object({
 });
 
 export const ModelMarkups = z.record(
-	z.string(), // Represents the model name
+	z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
 	z.object({
-		markup: z.number(), // percentage markup, e.g. 2 for 2%
-		// Made this an object in case we want to add more model-specific config in the future
+		markup: z.number(), // percentage markup, e.g. 20 for 20%
+		humanModelName: z.string().optional(), // e.g. "Claude Opus 4.5" for UI display
 	}),
 ).nullish()
 

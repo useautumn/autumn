@@ -1,13 +1,12 @@
+import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
 import {
 	type CreditSchemaItem,
 	ErrCode,
 	type Feature,
 	FeatureType,
-	normaliseAiModelName,
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -88,14 +87,7 @@ const getModelCreditCost = async ({
 	const markups = creditSystem.model_markups || {};
 
 	// Try exact match first (new "providerKey/modelKey" format)
-	let markupEntry = markups[modelName];
-
-	// Fallback: try normalized match for legacy keys
-	if (!markupEntry) {
-		const normalizedModelName = normaliseAiModelName(modelName);
-		markupEntry = markups[normalizedModelName];
-	}
-
+	const markupEntry = markups[modelName];
 	const { markup } = markupEntry ?? { markup: 0 };
 
 	const pricingData = await getModelsDevPricing();
@@ -113,7 +105,7 @@ const getModelCreditCost = async ({
 
 	if (!model) {
 		throw new RecaseError({
-			message: `Model ${modelName} not found in models.dev pricing data`,
+			message: `Model ${modelName} not found in models.dev pricing data ${providerKey} provider config.`,
 			code: ErrCode.FeatureNotFound,
 			data: { modelName },
 		});

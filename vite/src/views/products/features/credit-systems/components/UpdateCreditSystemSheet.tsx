@@ -91,7 +91,8 @@ function UpdateCreditSystemSheet({
 						? undefined
 						: creditSystem.config?.schema?.map((x: CreditSchemaItem) => ({
 								metered_feature_id: x.metered_feature_id,
-								credit_cost: x.credit_amount != null ? Number(x.credit_amount) : 0,
+								credit_cost:
+									x.credit_amount != null ? Number(x.credit_amount) : 0,
 							})),
 					event_names: creditSystem.event_names,
 					display: undefined,

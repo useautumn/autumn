@@ -1,6 +1,7 @@
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 
 const OPENROUTER_CACHE_KEY = "openrouter_pricing";
+const MODELS_DEV_CACHE_KEY = "models_dev_pricing";
 
 export interface OpenRouterModel {
 	id: string;
@@ -50,13 +51,6 @@ export interface DefaultParameters {
 	top_k?: number;
 	repetition_penalty?: number;
 }
-export const normaliseAiModelName = (modelName: string): string => {
-	return modelName
-		.toLowerCase()
-		.replace(/\./g, "-") // claude-opus-4.6 → claude-opus-4-6
-		.replace(/-\d{8}$/, "") // strip trailing dates like -20251001
-		.replace(/^[^/]+\//, ""); // strip provider prefix: meta-llama/llama → llama
-};
 
 export const getOpenrouterPricing = async () => {
 	const [cached, redundantCached] = [
@@ -68,25 +62,73 @@ export const getOpenrouterPricing = async () => {
 	if (cached) {
 		return cached;
 	}
+
 	const response = await fetch("https://openrouter.ai/api/v1/models");
-	const { data: models }: { data: OpenRouterModel[] } = await response.json();
-	if (!response.ok && redundantCached) {
-		// If the request failed but we have a redundant cache, use it
-		return redundantCached;
-	} else if (!response.ok) {
-		// If the request failed and we don't have a redundant cache, throw an error
+	if (!response.ok) {
+		if (redundantCached) return redundantCached;
 		throw new Error(
 			"Failed to fetch OpenRouter pricing and no cache available",
 		);
 	}
 
+	const { data: models }: { data: OpenRouterModel[] } = await response.json();
 	await Promise.all([
 		CacheManager.setJson(OPENROUTER_CACHE_KEY, models, 60 * 60 * 3), // Cache for 3 hours
 		CacheManager.setJson(
 			`${OPENROUTER_CACHE_KEY}_redundant`,
-			redundantCached || models,
+			models,
 			60 * 60 * 72,
 		), // Cache redundant copy for 3 days
 	]);
 	return models;
+};
+
+interface ModelsDevModel {
+	id: string;
+	name: string;
+	cost: {
+		input: number;
+		output: number;
+	}
+}
+
+interface ModelsDevProvider {
+	id: string;
+	name: string;
+	models: Record<string, ModelsDevModel>;
+}
+
+export const getModelsDevPricing = async () => {
+	const cached =
+		await CacheManager.getJson<Record<string, ModelsDevProvider>>(
+			MODELS_DEV_CACHE_KEY,
+		);
+	if (cached) {
+		return cached;
+	}
+
+	const redundantCached = await CacheManager.getJson<Record<string, ModelsDevProvider>>(
+		`${MODELS_DEV_CACHE_KEY}_redundant`,
+	);
+
+	try {
+		const response = await fetch("https://models.dev/api.json");
+		if (!response.ok) return redundantCached;
+
+		const data: Record<string, ModelsDevProvider> = await response.json();
+		await Promise.all([
+			CacheManager.setJson(MODELS_DEV_CACHE_KEY, data, 60 * 60 * 3), // Cache for 3 hours
+			CacheManager.setJson(
+				`${MODELS_DEV_CACHE_KEY}_redundant`,
+				data,
+				60 * 60 * 72,
+			), // Cache redundant copy for 3 days
+		]);
+		return data;
+	} catch {
+		if (redundantCached) return redundantCached;
+		throw new Error(
+			"Failed to fetch models.dev pricing and no cache available",
+		);
+	}
 };

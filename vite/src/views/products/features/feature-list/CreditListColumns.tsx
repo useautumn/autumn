@@ -1,8 +1,8 @@
-import type { Feature } from "@autumn/shared";
-import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
+import type { Feature } from "@autumn/shared";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
@@ -43,12 +43,14 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 		accessorKey: "features",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const creditSystem = row.original;
-			const modelMarkupKeys = creditSystem.model_markups
-				? Object.keys(creditSystem.model_markups)
+			const modelMarkupEntries = creditSystem.model_markups
+				? Object.entries(creditSystem.model_markups)
 				: null;
 			const featureIds =
-				modelMarkupKeys && modelMarkupKeys.length > 0
-					? modelMarkupKeys.join(", ")
+				modelMarkupEntries && modelMarkupEntries.length > 0
+					? modelMarkupEntries
+							.map(([key, value]) => value.humanModelName ?? key)
+							.join(", ")
 					: creditSystem.config?.schema
 							?.map(
 								(schema: { metered_feature_id: string }) =>

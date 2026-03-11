@@ -1,3 +1,6 @@
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
+import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import {
 	AffectedResource,
 	ErrCode,
@@ -5,9 +8,6 @@ import {
 	type TrackParams,
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 
 export const handleTrackTokens = createRoute({
@@ -18,9 +18,11 @@ export const handleTrackTokens = createRoute({
 		const ctx = c.get("ctx");
 
 		// Auto-detect AI credit system feature
-		const aiCreditFeature = body.feature_id
-			? ctx.features.find((f) => f.id === body.feature_id)
-			: ctx.features.find((f) => f.is_ai_credit_system === true);
+		const aiCreditFeatures = body.feature_id
+			? ctx.features.filter((f) => f.id === body.feature_id)
+			: ctx.features.filter((f) => f.is_ai_credit_system === true);
+
+		const aiCreditFeature = aiCreditFeatures[0];
 
 		if (!aiCreditFeature) {
 			throw new RecaseError({
@@ -31,13 +33,22 @@ export const handleTrackTokens = createRoute({
 				statusCode: 404,
 			});
 		}
+		if (aiCreditFeatures.length > 1) {
+			throw new RecaseError({
+				message:
+					"Multiple AI credit system features found for this organization with no explicit feature_id provided. Please specify a feature_id to disambiguate.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		const rawModelName = body.model;
 
 		const featureDeductions: FeatureDeduction[] = [
 			{
 				feature: aiCreditFeature,
 				deduction: 1,
 				tokenUsage: {
-					modelName: body.model,
+					modelName: rawModelName,
 					inputTokens: body.input_tokens,
 					outputTokens: body.output_tokens,
 				},
@@ -48,7 +59,7 @@ export const handleTrackTokens = createRoute({
 		const cost = await getCreditCost({
 			featureId: aiCreditFeature.id,
 			creditSystem: aiCreditFeature,
-			modelName: body.model,
+			modelName: rawModelName,
 			tokens: {
 				input: body.input_tokens,
 				output: body.output_tokens,
@@ -63,7 +74,7 @@ export const handleTrackTokens = createRoute({
 			value: cost,
 			properties: {
 				...body.properties,
-				model: body.model,
+				model: rawModelName,
 				input_tokens: body.input_tokens,
 				output_tokens: body.output_tokens,
 				cost,
