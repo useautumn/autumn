@@ -621,7 +621,7 @@ export const getPaginatedFullCusQuery = ({
 			withSubs
 			? sql`, customer_subscriptions AS (
       SELECT 
-        cpwp.internal_customer_id,
+        s.internal_customer_id,
         COALESCE(
           json_agg(row_to_json(s)) FILTER (WHERE s.stripe_id IS NOT NULL),
           '[]'::json
@@ -638,7 +638,33 @@ export const getPaginatedFullCusQuery = ({
     )`
 				: sql``
 		}
-    
+
+    ${
+			withEvents
+				? sql`, customer_events AS (
+      SELECT 
+        e.internal_customer_id,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', e.id,
+              'event_name', e.event_name,
+              'value', e.value,
+              'timestamp', e.timestamp,
+              'properties', e.properties
+            )
+            ORDER BY e.timestamp DESC, e.id DESC
+          ) FILTER (WHERE e.id IS NOT NULL),
+          '[]'::json
+        ) AS events
+      FROM events e
+      WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
+        AND e.set_usage = false
+      GROUP BY e.internal_customer_id
+    )`
+				: sql``
+		}
+     
     ${
 			withEntities
 				? sql`, customer_entities AS (
