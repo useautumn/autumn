@@ -410,8 +410,7 @@ export class CusProductService {
 		return await db
 			.update(customerProducts)
 			.set(updates)
-			.where(eq(customerProducts.id, cusProductId))
-			.returning();
+			.where(eq(customerProducts.id, cusProductId));
 	}
 
 	static async updateByStripeSubId({
