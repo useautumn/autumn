@@ -95,6 +95,5 @@ main().catch((error: unknown) => {
 		process.exit(1);
 	}
 
-	console.error("Database initialization failed");
-	process.exit(1);
+	console.error("Database initialization failed:", error);
 });
