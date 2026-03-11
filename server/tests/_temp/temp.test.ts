@@ -1,89 +1,97 @@
-import { test } from "bun:test";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario";
+import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import type { AutumnInt } from "@/external/autumn/autumnCli";
-import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-
-const testStripeCustomerWithGBP = async ({
-	ctx,
-	autumn,
-}: {
-	ctx: AutumnContext;
-	autumn: AutumnInt;
-}) => {
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	// 1. Create Stripe customer
-	const stripeCus = await stripeCli.customers.create({
-		email: "test-gbp@example.com",
-		name: "GBP Test Customer",
-	});
-
-	const paymentMethod = await stripeCli.paymentMethods.create({
-		type: "card",
-		card: {
-			token: "tok_visa",
-		},
-	});
-
-	await stripeCli.paymentMethods.attach(paymentMethod.id, {
-		customer: stripeCus.id,
-	});
-
-	const subscription = await stripeCli.subscriptions.create({
-		customer: stripeCus.id,
-		items: [
-			{
-				price_data: {
-					currency: "gbp",
-					unit_amount: 1000,
-					recurring: {
-						interval: "month",
-						interval_count: 1,
-					},
-					product: "prod_U5XwDFBQB4TQJ7",
-				},
-				quantity: 1,
-			},
-		],
-		default_payment_method: paymentMethod.id,
-	});
-
-	console.log("Subscription created", subscription);
-
-	// 2. Create Autumn customer with stripe_id
-	const autumnCus = await autumn.customers.create({
-		id: "gbp-test-customer",
-		name: "GBP Test Customer",
-		email: "test-gbp@example.com",
-		stripe_id: stripeCus.id,
-	});
-	console.log("Created:", { stripeCus: stripeCus.id, autumnCus });
-};
 
 /**
  * Scenario:
- * - Customer has pro ($20/mo) with 2-month repeating 20% off coupon
- * - Delete the coupon from Stripe (coupon.deleted = true)
- * - Advance 2 weeks (mid-cycle)
- * - Upgrade to premium ($50/mo) — immediate switch
- *
- * Expected:
- * - Upgrade succeeds (no error even though coupon is deleted)
- * - Discount ID unchanged (same di_xxx — carried over via { discount: id })
- * - Discount end timestamp unchanged (duration not reset)
+ * 1. Customer on premium ($50/mo) with success PM
+ * 2. Swap to a failing PM
+ * 3. Advance to next billing cycle — invoice fails, subscription goes past_due
+ * 4. Attach pro ($20/mo) — downgrade
+ * 5. Check: does the Stripe subscription recover to active?
  */
-test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 3: upgrade carries over discount when coupon is deleted")}`, async () => {
-	const customerId = "temp";
+test.concurrent(`${chalk.yellowBright("past-due recovery: attach pro after premium goes past_due")}`, async () => {
+	const customerId = "temp-past-due-recovery";
 
-	const { autumnV1, testClockId, ctx } = await initScenario({
-		// customerId,
-		setup: [
-			// s.customer({ paymentMethod: "success" }),
-			// s.products({ list: [pro, premium] }),
-		],
-		actions: [],
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const premium = products.premium({
+		id: "premium",
+		items: [messagesItem],
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
 	});
 
-	await testStripeCustomerWithGBP({ ctx, autumn: autumnV1 });
+	const { autumnV1, ctx, customer } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.removePaymentMethod(),
+			s.attachPaymentMethod({ type: "fail" }),
+			s.advanceToNextInvoice(),
+			s.attachPaymentMethod({ type: "success" }),
+		],
+	});
+
+	const stripeCustomerId = customer.processor?.id;
+	if (!stripeCustomerId) throw new Error("No stripe customer id");
+
+	const subsBefore = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomerId,
+	});
+
+	console.log(
+		"Subscription status BEFORE attach pro:",
+		subsBefore.data.map((sub) => ({
+			id: sub.id,
+			status: sub.status,
+		})),
+	);
+
+	expect(subsBefore.data.length).toBeGreaterThan(0);
+	expect(subsBefore.data[0].status).toBe("past_due");
+
+	// Downgrade to pro
+	const attachResult = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+	});
+
+	console.log("billing.attach result:", JSON.stringify(attachResult, null, 2));
+
+	// Wait for Stripe to process
+	await new Promise((resolve) => setTimeout(resolve, 3000));
+
+	const subsAfter = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomerId,
+	});
+
+	console.log(
+		"Subscription status AFTER attach pro:",
+		subsAfter.data.map((sub) => ({
+			id: sub.id,
+			status: sub.status,
+		})),
+	);
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	console.log(
+		"Customer products after:",
+		JSON.stringify(customerAfter.products, null, 2),
+	);
+
+	// Check if subscription recovered to active
+	const activeSubs = subsAfter.data.filter((sub) => sub.status === "active");
+	console.log(`Active subscriptions: ${activeSubs.length}`);
+
+	expect(activeSubs.length).toBeGreaterThan(0);
 });

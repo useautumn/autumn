@@ -17,7 +17,7 @@ Prepaid features are features where customers pay upfront for a quantity (e.g., 
 
 <Expandable title="Example plan with prepaid feature">
 ```typescript autumn.config.ts
-import { feature, plan, planItem } from "atmn";
+import { feature, item, plan } from "atmn";
 
 export const seats = feature({
   id: "seats",
@@ -34,7 +34,7 @@ export const team = plan({
     interval: "month",
   },
   items: [
-    planItem({
+    item({
       featureId: seats.id,
       included: 5, // 5 seats included
       price: {

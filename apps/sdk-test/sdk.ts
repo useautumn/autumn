@@ -1,13 +1,19 @@
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn();
+const autumn = new Autumn({
+  secretKey: process.env.AUTUMN_SECRET_KEY,
+});
 
-const res = await autumn.plans.create({
-  planId: "pro_plan",
-  name: "Pro Plan",
-  price: {
-    amount: 10,
-    interval: "month",
+const res = await autumn.customers.getOrCreate({
+  customerId: "john",
+});
+
+await autumn.check({
+  customerId: "john",
+  featureId: "chat_messages",
+  lock: {
+    enabled: true,
+    lockId: "test",
   },
 });
 

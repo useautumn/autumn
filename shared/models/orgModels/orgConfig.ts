@@ -27,6 +27,9 @@ export const OrgConfigSchema = z.object({
 
 	// skip_overage_submission
 	skip_overage_submission: z.boolean().default(false),
+
+	// disable stripe writes
+	disable_stripe_writes: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

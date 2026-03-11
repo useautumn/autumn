@@ -15,8 +15,8 @@ export const attachToSchema = z.union([z.number(), z.string()]);
 
 export const attachTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachInvoiceModeSchema = z.object({
@@ -64,8 +64,8 @@ export const attachToOutboundSchema = z.union([z.number(), z.string()]);
 
 export const attachTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flat_amount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachPriceOutboundSchema = z.object({

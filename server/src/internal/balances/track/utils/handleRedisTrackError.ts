@@ -1,5 +1,7 @@
 import {
+	ErrCode,
 	InsufficientBalanceError,
+	RecaseError,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
@@ -37,6 +39,15 @@ export const handleRedisTrackError = async ({
 			value: body.value ?? 1,
 			featureId: body.feature_id,
 			eventName: body.event_name,
+		});
+	}
+
+	// Handle duplicate lock key
+	if (error.code === RedisDeductionErrorCode.LockAlreadyExists) {
+		throw new RecaseError({
+			message: "A lock with this ID already exists",
+			code: ErrCode.LockAlreadyExists,
+			statusCode: 409,
 		});
 	}
 

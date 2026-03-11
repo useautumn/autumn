@@ -211,6 +211,7 @@ class Autumn(BaseSDK):
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
+        lock: Optional[Union[models.CheckLock, models.CheckLockTypedDict]] = None,
         with_preview: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -227,6 +228,7 @@ class Autumn(BaseSDK):
         :param required_balance: Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.
         :param properties: Additional properties to attach to the usage event if send_event is true.
         :param send_event: If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+        :param lock: Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
         :param with_preview: If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -250,6 +252,7 @@ class Autumn(BaseSDK):
             required_balance=required_balance,
             properties=properties,
             send_event=send_event,
+            lock=utils.get_pydantic_model(lock, Optional[models.CheckLock]),
             with_preview=with_preview,
         )
 
@@ -321,6 +324,7 @@ class Autumn(BaseSDK):
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
+        lock: Optional[Union[models.CheckLock, models.CheckLockTypedDict]] = None,
         with_preview: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -337,6 +341,7 @@ class Autumn(BaseSDK):
         :param required_balance: Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1.
         :param properties: Additional properties to attach to the usage event if send_event is true.
         :param send_event: If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+        :param lock: Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
         :param with_preview: If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -360,6 +365,7 @@ class Autumn(BaseSDK):
             required_balance=required_balance,
             properties=properties,
             send_event=send_event,
+            lock=utils.get_pydantic_model(lock, Optional[models.CheckLock]),
             with_preview=with_preview,
         )
 
@@ -431,6 +437,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -446,6 +453,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -468,6 +476,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
         req = self._build_request(
@@ -538,6 +547,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -553,6 +563,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -575,6 +586,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
         req = self._build_request_async(
