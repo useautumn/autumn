@@ -2,12 +2,14 @@ import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { calculateProrationFromPeriod } from "@tests/integration/billing/utils/proration/calculateProration";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FREE-TO-PAID TESTS
@@ -78,16 +80,26 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 // 2. Adding monthly base price + consumable to free product
 test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumable")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const monthlyBasePrice = 20;
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "f2p-add-base-cons",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [free] }),
 		],
-		actions: [s.attach({ productId: "base" })],
+		actions: [
+			s.attach({ productId: "base" }),
+			s.advanceTestClock({ weeks: 2 }),
+		],
 	});
+
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const originalResetAt =
+		customerBefore.features[TestFeature.Messages].next_reset_at;
+	expect(originalResetAt).toBeDefined();
 
 	// Track some usage before update
 	const messagesUsage = 30;
@@ -100,7 +112,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 		{ timeout: 2000 },
 	);
 
-	const priceItem = items.monthlyPrice();
+	const priceItem = items.monthlyPrice({ price: monthlyBasePrice });
 	const consumableItem = items.consumableMessages({ includedUsage: 50 });
 
 	const updateParams = {
@@ -110,9 +122,17 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+	const expectedPreviewTotal = calculateProrationFromPeriod({
+		billingPeriod: {
+			start: advancedTo,
+			end: addMonths(advancedTo, 1).getTime(),
+		},
+		advancedTo,
+		amount: monthlyBasePrice,
+	});
 
-	// Should charge $20 for monthly base price (consumable overage not charged on update)
-	expect(preview.total).toEqual(20);
+	// Free -> paid starts a fresh paid cycle, so the full monthly base price is charged.
+	expect(preview.total).toEqual(expectedPreviewTotal);
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -124,12 +144,16 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 		includedUsage: consumableItem.included_usage,
 		balance: consumableItem.included_usage - messagesUsage,
 		usage: messagesUsage,
+		resetsAt: addMonths(advancedTo, 1).getTime(),
 	});
+	expect(customer.features[TestFeature.Messages].next_reset_at).not.toEqual(
+		originalResetAt,
+	);
 
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20,
+		latestTotal: expectedPreviewTotal,
 	});
 
 	await expectSubToBeCorrect({
