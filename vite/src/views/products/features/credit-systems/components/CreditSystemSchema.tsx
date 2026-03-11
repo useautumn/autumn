@@ -2,27 +2,34 @@ import type { CreateFeature } from "@autumn/shared";
 import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
-import { useOpenRouterModels } from "@/hooks/queries/useOpenRouterModels";
+import type { ModelsDevProvider } from "@/hooks/queries/useOpenRouterModels";
+import { useModelsDevPricing } from "@/hooks/queries/useOpenRouterModels";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
 type CreditSchemaMode = "classic" | "ai";
 
-function getFlagshipModels(models: OpenRouterModel[]): OpenRouterModel[] {
-	const flagshipModels: OpenRouterModel[] = [];
-	const interestedCompanies = ["anthropic", "openai", "google"];
-	for (const company of interestedCompanies) {
-		const companyModels = models
-			.filter((model) => model.id.startsWith(company))
-			.sort(
-				(a, b) =>
-					new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-			)
+function getDefaultModelMarkups(
+	providers: Record<string, ModelsDevProvider>,
+): Record<string, { markup: number; humanModelName: string }> {
+	const result: Record<string, { markup: number; humanModelName: string }> = {};
+	const preferredProvider =
+		providers["openrouter"] ?? Object.values(providers)[0];
+	if (!preferredProvider) return result;
+
+	const providerKey = preferredProvider.id;
+	for (const company of ["anthropic", "openai", "google"]) {
+		const companyModels = Object.entries(preferredProvider.models)
+			.filter(([key]) => key.startsWith(company))
 			.slice(0, 3);
-		flagshipModels.push(...companyModels);
+		for (const [modelKey, model] of companyModels) {
+			result[`${providerKey}/${modelKey}`] = {
+				markup: 0,
+				humanModelName: model.name,
+			};
+		}
 	}
-	return flagshipModels;
+	return result;
 }
 
 interface CreditSystemSchemaProps {
@@ -36,21 +43,18 @@ export function CreditSystemSchema({
 	setCreditSystem,
 	disableModeSwitch = false,
 }: CreditSystemSchemaProps) {
-	const { models } = useOpenRouterModels();
+	const { providers } = useModelsDevPricing();
 
 	const mode: CreditSchemaMode =
 		(creditSystem.is_ai_credit_system ?? false) ? "ai" : "classic";
 
 	const handleModeChange = (newMode: string) => {
 		if (newMode === "ai") {
-			const flagshipModels = getFlagshipModels(models);
-			const modelMarkups = Object.fromEntries(
-				flagshipModels.map((model) => [model.id, { markup: 0 }]),
-			);
+			const modelMarkups = getDefaultModelMarkups(providers);
 			setCreditSystem({
 				...creditSystem,
 				config: { ...creditSystem.config, schema: [] },
-				model_markups: flagshipModels.length > 0 ? modelMarkups : {},
+				model_markups: Object.keys(modelMarkups).length > 0 ? modelMarkups : {},
 				is_ai_credit_system: true,
 			});
 		} else {

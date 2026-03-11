@@ -1,34 +1,49 @@
+import { useMemo } from "react";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
+import type {
+	ModelsDevModel,
+	ModelsDevProvider,
+} from "@/hooks/queries/useOpenRouterModels";
 
 interface AiModelSelectDropdownProps {
 	value: string;
-	onValueChange: (modelId: string) => void;
-	models: OpenRouterModel[];
+	onValueChange: (modelKey: string) => void;
+	provider: ModelsDevProvider;
 	isLoading: boolean;
+	humanModelName?: string;
 }
 
 export function AiModelSelectDropdown({
 	value,
 	onValueChange,
-	models,
+	provider,
 	isLoading,
+	humanModelName,
 }: AiModelSelectDropdownProps) {
-	const handleValueChange = (modelId: string) => {
-		const model = models.find((m) => m.id === modelId);
-		if (model) onValueChange(modelId);
-	};
+	const models: ModelsDevModel[] = useMemo(
+		() => Object.values(provider.models),
+		[provider],
+	);
 
 	return (
-		// Prevent wheel events from bubbling to the sheet's scroll container
-		// so the dropdown list can be scrolled independently
 		<div onWheel={(e) => e.stopPropagation()}>
 			<SearchableSelect
 				value={value || null}
-				onValueChange={handleValueChange}
+				onValueChange={onValueChange}
 				options={models}
 				getOptionValue={(model) => model.id}
 				getOptionLabel={(model) => model.name}
+				renderValue={(option) =>
+					option ? (
+						<span>{option.name}</span>
+					) : humanModelName ? (
+						<span>{humanModelName}</span>
+					) : (
+						<span className="text-t3">
+							{isLoading ? "Loading models..." : "Select model"}
+						</span>
+					)
+				}
 				placeholder={isLoading ? "Loading models..." : "Select model"}
 				searchable
 				searchPlaceholder="Search models..."

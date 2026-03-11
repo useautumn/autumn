@@ -1,17 +1,18 @@
 import { X } from "lucide-react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
-import type { OpenRouterModel } from "@/hooks/queries/useOpenRouterModels";
+import type { ModelsDevProvider } from "@/hooks/queries/useOpenRouterModels";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 
 interface AiCreditSchemaRowProps {
-	modelId: string;
+	modelKey: string;
 	markup: number;
-	models: OpenRouterModel[];
+	humanModelName?: string;
+	provider: ModelsDevProvider;
 	isLoading: boolean;
-	onModelChange: (oldModelId: string, newModelId: string) => void;
-	onMarkupChange: (modelId: string, markup: number) => void;
-	onRemove: (modelId: string) => void;
+	onModelChange: (oldModelKey: string, newModelKey: string) => void;
+	onMarkupChange: (modelKey: string, markup: number) => void;
+	onRemove: (modelKey: string) => void;
 }
 
 function formatCost(value: number | null | undefined): string {
@@ -20,21 +21,19 @@ function formatCost(value: number | null | undefined): string {
 }
 
 export function AiCreditSchemaRow({
-	modelId,
+	modelKey,
 	markup,
-	models,
+	humanModelName,
+	provider,
 	isLoading,
 	onModelChange,
 	onMarkupChange,
 	onRemove,
 }: AiCreditSchemaRowProps) {
-	const model = models.find((m) => m.id === modelId);
-	const actualInput = model
-		? (Number.parseFloat(model.pricing.prompt) || 0) * 1_000_000
-		: null;
-	const actualOutput = model
-		? (Number.parseFloat(model.pricing.completion) || 0) * 1_000_000
-		: null;
+	const model = provider.models[modelKey];
+
+	const actualInput = model ? (model.cost.input ?? 0) : null;
+	const actualOutput = model ? (model.cost.output ?? 0) : null;
 	const multiplier = 1 + markup / 100;
 	const userInput = actualInput != null ? actualInput * multiplier : null;
 	const userOutput = actualOutput != null ? actualOutput * multiplier : null;
@@ -46,10 +45,11 @@ export function AiCreditSchemaRow({
 					Model
 				</div>
 				<AiModelSelectDropdown
-					value={modelId}
-					onValueChange={(newModelId) => onModelChange(modelId, newModelId)}
-					models={models}
+					value={modelKey}
+					onValueChange={(newModelKey) => onModelChange(modelKey, newModelKey)}
+					provider={provider}
 					isLoading={isLoading}
+					humanModelName={humanModelName}
 				/>
 			</div>
 			<div>
@@ -84,8 +84,10 @@ export function AiCreditSchemaRow({
 					type="number"
 					lang="en"
 					value={markup}
-					onChange={(e) => onMarkupChange(modelId, Number(e.target.value) || 0)}
-					onBlur={(e) => onMarkupChange(modelId, Number(e.target.value) || 0)}
+					onChange={(e) =>
+						onMarkupChange(modelKey, Number(e.target.value) || 0)
+					}
+					onBlur={(e) => onMarkupChange(modelKey, Number(e.target.value) || 0)}
 					placeholder="0"
 					className="w-full lg:w-20"
 				/>
@@ -120,7 +122,7 @@ export function AiCreditSchemaRow({
 					variant="skeleton"
 					iconOrientation="center"
 					icon={<X />}
-					onClick={() => onRemove(modelId)}
+					onClick={() => onRemove(modelKey)}
 				/>
 			</div>
 		</div>

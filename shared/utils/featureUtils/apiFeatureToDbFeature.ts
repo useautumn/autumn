@@ -152,7 +152,8 @@ export const featureV1ToDbFeature = ({
 		);
 	}
 
-	const modelMarkups = apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
+	const modelMarkups =
+		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
 
 	return {
 		internal_id: originalFeature?.internal_id ?? "",

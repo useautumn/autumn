@@ -3,13 +3,11 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	normaliseAiModelName,
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import {
-	getOpenrouterPricing,
-	normaliseAiModelName,
-} from "@/internal/features/utils/getOpenrouterPricing";
+import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -87,25 +85,47 @@ const getModelCreditCost = async ({
 	input: number;
 	output: number;
 }) => {
-	const models = await getOpenrouterPricing();
 	const markups = creditSystem.model_markups || {};
-	const { markup } = markups[modelName] || { markup: 0 };
-	const model = models.find(
-		(m) => normaliseAiModelName(m.id) === normaliseAiModelName(modelName),
-	);
-	if (!model) {
+
+	// Try exact match first (new "providerKey/modelKey" format)
+	let markupEntry = markups[modelName];
+
+	// Fallback: try normalized match for legacy keys
+	if (!markupEntry) {
+		const normalizedModelName = normaliseAiModelName(modelName);
+		markupEntry = markups[normalizedModelName];
+	}
+
+	const { markup } = markupEntry ?? { markup: 0 };
+
+	const pricingData = await getModelsDevPricing();
+	if (!pricingData) {
 		throw new RecaseError({
-			message: `Model ${modelName} not found in OpenRouter pricing data`,
+			message: "Failed to fetch models.dev pricing data",
 			code: ErrCode.FeatureNotFound,
-			data: {
-				modelName,
-				normalisedModelName: normaliseAiModelName(modelName),
-			},
 		});
 	}
-	const actualInputCost = new Decimal(model.pricing.prompt);
-	const actualOutputCost = new Decimal(model.pricing.completion);
-	const totalCost = actualInputCost.mul(input).add(actualOutputCost.mul(output));
+
+	// Try to find model by parsing "providerKey/modelKey" format
+	const [providerKey, ...modelParts] = modelName.split("/");
+	const modelKey = modelParts.join("/");
+	const model = pricingData[providerKey]?.models[modelKey];
+
+	if (!model) {
+		throw new RecaseError({
+			message: `Model ${modelName} not found in models.dev pricing data`,
+			code: ErrCode.FeatureNotFound,
+			data: { modelName },
+		});
+	}
+
+	// model.cost.input / model.cost.output are in $/M tokens
+	const actualInputCost = new Decimal(model.cost.input);
+	const actualOutputCost = new Decimal(model.cost.output);
+	const totalCost = actualInputCost
+		.mul(input)
+		.add(actualOutputCost.mul(output))
+		.div(1_000_000);
 	const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
 	return markedUpCost.toNumber();
 };
@@ -147,7 +167,7 @@ export const getCreditCost = async ({
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
 			return new Decimal(schemaItem.credit_amount)
-			.div(schemaItem.feature_amount ?? 1)
+				.div(schemaItem.feature_amount ?? 1)
 				.mul(amount)
 				.toNumber();
 		}
