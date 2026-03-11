@@ -4,13 +4,14 @@ import {
 	type VercelResourceSecretRotatedEvent,
 	VercelWebhooks,
 } from "@/external/vercel/misc/vercelWebhookTypes";
+import { VercelResourceService } from "@/external/vercel/services/VercelResourceService";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 export const handleRotateResourceSecret = createRoute({
 	handler: async (c) => {
 		const { env, integrationConfigurationId, resourceId } = c.req.param();
-		const { org } = c.get("ctx");
-		const body = c.req.valid("json");
+		const { org, db } = c.get("ctx");
+		const body = await c.req.json();
 		const claims = c.get("vercelClaims");
 
 		if (!claims || claims?.user_role !== "admin") {
@@ -20,6 +21,24 @@ export const handleRotateResourceSecret = createRoute({
 					message: "Unauthorized",
 				},
 				401,
+			);
+		}
+
+		const resource = await VercelResourceService.getByIdAndInstallation({
+			db,
+			resourceId,
+			installationId: integrationConfigurationId,
+			orgId: org.id,
+			env: env as AppEnv,
+		});
+
+		if (!resource) {
+			return c.json(
+				{
+					code: "validation_error",
+					message: "Resource not found",
+				},
+				400,
 			);
 		}
 
