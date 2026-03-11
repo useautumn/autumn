@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export const EntitySpendLimitSchema = z
+export const DbSpendLimitSchema = z
 	.object({
 		feature_id: z.string().optional().meta({
 			description: "Optional feature ID this spend limit applies to.",
@@ -26,4 +26,4 @@ export const EntitySpendLimitSchema = z
 		},
 	);
 
-export type EntitySpendLimit = z.infer<typeof EntitySpendLimitSchema>;
+export type DbSpendLimit = z.infer<typeof DbSpendLimitSchema>;

@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { EntitySpendLimitSchema } from "./entitySpendLimit.js";
+import { DbSpendLimitSchema } from "./spendLimit.js";
 
 export const EntityBillingControlsSchema = z.object({
-	spend_limits: z.array(EntitySpendLimitSchema).optional().meta({
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description: "List of overage spend limits per feature.",
 	}),
 });

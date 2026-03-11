@@ -114,3 +114,60 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: require feature_
 			}),
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("entity billing controls: reject duplicate spend limit feature ids on create and update")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "entity-billing-controls-3",
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		func: async () =>
+			await autumnV2_1.entities.create(customerId, {
+				id: "entity-3",
+				name: "Entity 3",
+				feature_id: TestFeature.Users,
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: TestFeature.Messages,
+							enabled: true,
+							overage_limit: 10,
+						},
+						{
+							feature_id: TestFeature.Messages,
+							enabled: false,
+							overage_limit: 20,
+						},
+					],
+				},
+			}),
+	});
+
+	await autumnV2_1.entities.create(customerId, {
+		id: "entity-4",
+		name: "Entity 4",
+		feature_id: TestFeature.Users,
+	});
+
+	await expectAutumnError({
+		func: async () =>
+			await autumnV2_1.entities.update(customerId, "entity-4", {
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: TestFeature.Credits,
+							enabled: true,
+							overage_limit: 15,
+						},
+						{
+							feature_id: TestFeature.Credits,
+							enabled: true,
+							overage_limit: 30,
+						},
+					],
+				},
+			}),
+	});
+});
