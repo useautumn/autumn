@@ -15,7 +15,12 @@ import {
 } from "@/components/v2/inputs/InputGroup";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { addTier, removeTier, updateTier } from "../../utils/tierUtils";
+import {
+	addTier,
+	removeTier,
+	updateTier,
+	type VolumePricingMode,
+} from "../../utils/tierUtils";
 import { BillingUnits } from "./BillingUnits";
 
 const getTierToDisplay = ({
@@ -82,7 +87,11 @@ const TierToInput = ({ index }: { index: number }) => {
 	);
 };
 
-export function PriceTiers() {
+export function PriceTiers({
+	volumePricingMode,
+}: {
+	volumePricingMode?: VolumePricingMode;
+}) {
 	const { item, setItem } = useProductItemContext();
 	const { org } = useOrg();
 	const currency = org?.default_currency?.toUpperCase() ?? "USD";
@@ -119,7 +128,7 @@ export function PriceTiers() {
 
 	const handleInputBlur = (
 		key: string,
-		field: "amount" | "to",
+		field: "amount" | "to" | "flat_amount",
 		tierIndex?: number,
 	) => {
 		const rawValue = editingValues[key] || "";
@@ -133,7 +142,7 @@ export function PriceTiers() {
 	const handleInputChange = (
 		key: string,
 		value: string,
-		field: "amount" | "to",
+		field: "amount" | "to" | "flat_amount",
 		tierIndex?: number,
 	) => {
 		setEditingValues((prev) => ({ ...prev, [key]: value }));
@@ -208,7 +217,10 @@ export function PriceTiers() {
 	return (
 		<div className="space-y-2">
 			{tiers.map((tier: PriceTier, index: number) => {
-				const amountKey = `tier-${index}-amount`;
+				const isFlatMode = volumePricingMode === "flat";
+				const amountField = isFlatMode ? "flat_amount" : "amount";
+				const amountKey = `tier-${index}-${amountField}`;
+				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
 				return (
 					<div key={index} className="flex gap-2 w-full items-center">
@@ -222,11 +234,16 @@ export function PriceTiers() {
 
 						<InputGroup className="min-w-0 w-26 shrink-0">
 							<InputGroupInput
-								value={getDisplayValue(amountKey, tier.amount)}
-								onFocus={() => handleInputFocus(amountKey, tier.amount)}
-								onBlur={() => handleInputBlur(amountKey, "amount", index)}
+								value={getDisplayValue(amountKey, amountValue)}
+								onFocus={() => handleInputFocus(amountKey, amountValue)}
+								onBlur={() => handleInputBlur(amountKey, amountField, index)}
 								onChange={(e) =>
-									handleInputChange(amountKey, e.target.value, "amount", index)
+									handleInputChange(
+										amountKey,
+										e.target.value,
+										amountField,
+										index,
+									)
 								}
 								inputMode="decimal"
 								placeholder="0.00"
@@ -236,7 +253,7 @@ export function PriceTiers() {
 							</InputGroupAddon>
 						</InputGroup>
 
-						<BillingUnits />
+						{!isFlatMode && <BillingUnits />}
 
 						<div className="flex items-center gap-1 shrink-0">
 							<IconButton

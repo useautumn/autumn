@@ -189,8 +189,6 @@ class SyncBatchingManagerV2 {
 		context: CustomerBatchContext;
 	}): Promise<void> {
 		try {
-			const dedupHash = this.buildDeduplicationHash({ context });
-
 			await addTaskToQueue({
 				jobName: JobName.SyncBalanceBatchV3,
 				payload: {
@@ -203,7 +201,7 @@ class SyncBatchingManagerV2 {
 					rolloverIds: Array.from(context.rolloverIds),
 				},
 				messageGroupId: context.customerId,
-				messageDeduplicationId: dedupHash,
+				generateDeduplicationId: false,
 			});
 
 			logger.info(
@@ -214,16 +212,6 @@ class SyncBatchingManagerV2 {
 				`[SyncV3] Failed to queue sync for ${context.customerId}: ${error}`,
 			);
 		}
-	}
-
-	private buildDeduplicationHash({
-		context,
-	}: {
-		context: CustomerBatchContext;
-	}): string {
-		const dedupKey = `${context.orgId}:${context.env}:${context.customerId}`;
-		const dedupTimestamp = Math.floor(Date.now() / 10);
-		return Bun.hash(`${dedupKey}:${dedupTimestamp}`).toString(36);
 	}
 }
 

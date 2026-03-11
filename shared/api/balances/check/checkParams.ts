@@ -1,8 +1,9 @@
 import { z } from "zod/v4";
-import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
+import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
+import { LockParamsSchema, ParsedLockParamsSchema } from "../common/lockParams";
 import { CheckExpand } from "./enums/CheckExpand";
 
 export const CheckQuerySchema = z.object({
@@ -26,6 +27,8 @@ export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 		description:
 			"If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.",
 	}),
+
+	lock: LockParamsSchema.optional(),
 
 	with_preview: z.boolean().optional().meta({
 		description:
@@ -70,6 +73,10 @@ export const CheckParamsSchema = ExtCheckParamsSchema.extend({
 	},
 );
 
-export type CheckParams = z.infer<typeof CheckParamsSchema>;
+export const ParsedCheckParamsSchema = CheckParamsSchema.extend({
+	lock: ParsedLockParamsSchema.optional(),
+});
 
+export type CheckParams = z.infer<typeof CheckParamsSchema>;
+export type ParsedCheckParams = z.infer<typeof ParsedCheckParamsSchema>;
 export type CheckQuery = z.infer<typeof CheckQuerySchema>;

@@ -1,11 +1,7 @@
 import type {
 	CustomerEntitlementFilters,
 	FullCusEntWithFullCusProduct,
-	FullCustomer,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { DeductionUpdate } from "./deductionUpdate";
-import type { FeatureDeduction } from "./featureDeduction.js";
 
 /** Behavior options for deduction */
 export type DeductionOptions = {
@@ -20,25 +16,6 @@ export type DeductionOptions = {
 
 	/** @deprecated skipAdditionalBalance is deprecated and will be removed in a future release. */
 	skipAdditionalBalance?: boolean;
-};
-
-/** Core params for deduction (shared by Redis & Postgres) */
-type DeductionParams = {
-	ctx: AutumnContext;
-	fullCus: FullCustomer;
-	entityId?: string;
-	deductions: FeatureDeduction[];
-	options?: DeductionOptions;
-};
-
-/** Result from deduction (same for Redis & Postgres) */
-type DeductionResult = {
-	oldFullCus: FullCustomer;
-	fullCus: FullCustomer | undefined;
-	isPaidAllocated: boolean;
-	actualDeductions: Record<string, number>;
-	remainingAmounts: Record<string, number>;
-	modifiedCusEntIds: string[];
 };
 
 /** Input for a single entitlement in the deduction script (Lua/SQL) */
@@ -64,10 +41,13 @@ export type PreparedFeatureDeduction = {
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];
-};
-
-/** Result from Postgres deduction */
-type PostgresDeductionResult = {
-	updates: Record<string, DeductionUpdate>;
-	remaining: number;
+	lock?: {
+		enabled: true;
+		lock_id?: string;
+		hashed_key?: string;
+		expires_at?: number;
+		redis_receipt_key: string;
+		created_at: number;
+		ttl_at: number;
+	};
 };

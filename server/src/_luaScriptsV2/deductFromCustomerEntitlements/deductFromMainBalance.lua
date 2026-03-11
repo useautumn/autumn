@@ -145,18 +145,22 @@ local function deduct_from_main_balance(params)
     if to_change ~= 0 then
       local entity_path = build_entity_path(base_path, params.target_entity_id)
       
-      queue_balance_update({
+      queue_customer_entitlement_mutation({
         context = context,
         path = entity_path,
         delta = -to_change,
         alter_granted_balance = params.alter_granted_balance,
+        customer_entitlement_id = ent_id,
+        entity_id = params.target_entity_id,
+        credit_cost = params.credit_cost,
+        value_delta = to_change / params.credit_cost,
       })
       
-      update_in_memory_customer_entitlement({
+      update_in_memory_customer_entitlement_mutation({
         target = entities,
         entity_id = params.target_entity_id,
-        delta = -to_change,
-        alter_granted_balance = params.alter_granted_balance,
+        balance_delta = -to_change,
+        adjustment_delta = params.alter_granted_balance and -to_change or 0,
       })
       
       deducted = to_change
@@ -191,18 +195,22 @@ local function deduct_from_main_balance(params)
       if to_change ~= 0 then
         local entity_path = build_entity_path(base_path, entity_key)
         
-        queue_balance_update({
+        queue_customer_entitlement_mutation({
           context = context,
           path = entity_path,
           delta = -to_change,
           alter_granted_balance = params.alter_granted_balance,
+          customer_entitlement_id = ent_id,
+          entity_id = entity_key,
+          credit_cost = params.credit_cost,
+          value_delta = to_change / params.credit_cost,
         })
         
-        update_in_memory_customer_entitlement({
+        update_in_memory_customer_entitlement_mutation({
           target = entities,
           entity_id = entity_key,
-          delta = -to_change,
-          alter_granted_balance = params.alter_granted_balance,
+          balance_delta = -to_change,
+          adjustment_delta = params.alter_granted_balance and -to_change or 0,
         })
         
         deducted = deducted + to_change
@@ -236,18 +244,22 @@ local function deduct_from_main_balance(params)
       local delta = -to_change
       logger.log("%s queuing: delta=%s, alter_granted_balance=%s", prefix, delta, tostring(params.alter_granted_balance))
       
-      queue_balance_update({
+      queue_customer_entitlement_mutation({
         context = context,
         path = base_path,
         delta = delta,
         alter_granted_balance = params.alter_granted_balance,
+        customer_entitlement_id = ent_id,
+        entity_id = nil,
+        credit_cost = params.credit_cost,
+        value_delta = to_change / params.credit_cost,
       })
       
-      update_in_memory_customer_entitlement({
+      update_in_memory_customer_entitlement_mutation({
         target = ent_data,
         entity_id = nil,
-        delta = delta,
-        alter_granted_balance = params.alter_granted_balance,
+        balance_delta = delta,
+        adjustment_delta = params.alter_granted_balance and delta or 0,
       })
       
       logger.log("%s after update: balance=%s, adjustment=%s", prefix, ent_data.balance, ent_data.adjustment)

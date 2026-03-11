@@ -27,6 +27,7 @@ export const handleTrack = createRoute({
 			? getTrackFeatureDeductions({
 					ctx,
 					featureId: body.feature_id,
+					lock: body.lock,
 					value: body.value,
 				})
 			: getTrackEventNameDeductions({

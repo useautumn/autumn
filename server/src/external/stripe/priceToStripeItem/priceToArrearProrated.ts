@@ -12,6 +12,14 @@ export const priceToInArrearProrated = ({
 	const config = price.config as UsagePriceConfig;
 	const quantity = existingUsage || 0;
 
+	let adjustedQuantity = quantity;
+	if (quantity > 0) {
+		// If the quantity is a decimal, round up to the nearest integer for Stripe
+		if (!Number.isInteger(quantity)) {
+			adjustedQuantity = Math.ceil(quantity);
+		}
+	}
+
 	if (quantity === 0 && isCheckout) {
 		return {
 			price: config.stripe_placeholder_price_id,
@@ -19,7 +27,7 @@ export const priceToInArrearProrated = ({
 	} else {
 		return {
 			price: config.stripe_price_id,
-			quantity,
+			quantity: adjustedQuantity,
 		};
 	}
 };

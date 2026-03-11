@@ -1,6 +1,6 @@
 {
 	"watch": ["../shared", "src"],
-	"ext": "js,ts",
+	"ext": "js,ts,lua",
 	"ignore": [
 		"../shared/dist/**/*.d.ts",
 		"../shared/node_modules",
@@ -13,4 +13,3 @@
 		"NODE_ENV": "development"
 	}
 }
-
