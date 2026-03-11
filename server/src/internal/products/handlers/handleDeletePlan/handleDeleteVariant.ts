@@ -26,7 +26,7 @@ export const handleDeleteVariant = createRoute({
 
 		if (!variant) {
 			throw new ProductNotFoundError({
-				productId: `${plan_id}/${variant_id}`,
+				productId: `${plan_id}:${variant_id}`,
 			});
 		}
 
