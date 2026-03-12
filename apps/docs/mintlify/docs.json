@@ -56,45 +56,65 @@
 						]
 					},
 					{
-						"group": "Configure Pricing",
+						"group": "Concepts",
 						"pages": [
-							"documentation/pricing/plans",
-							"documentation/pricing/features",
-							"documentation/pricing/plan-features",
-							"documentation/pricing/credits",
-							"documentation/pricing/versioning",
-							"documentation/pricing/rewards"
+							"documentation/concepts/overview",
+							"documentation/concepts/plans",
+							"documentation/concepts/features",
+							"documentation/concepts/plan-items",
+							"documentation/concepts/subscriptions",
+							"documentation/concepts/balances",
+							"documentation/concepts/stripe"
 						]
 					},
 					{
-						"group": "Manage Customers",
+						"group": "Modelling Pricing",
 						"pages": [
-							{
-								"group": "Subscriptions",
-								"pages": [
-									"documentation/customers/subscriptions/overview",
-									"documentation/customers/subscriptions/accepting-payments",
-									"documentation/customers/subscriptions/managing-subscriptions"
-								]
-							},
-							{
-								"group": "Balances",
-								"pages": [
-									"documentation/customers/balances/overview",
-									"documentation/customers/balances/balance-stacking",
-									"documentation/customers/balances/managing-balances"
-								]
-							},
-							"documentation/customers/check",
-							"documentation/customers/tracking-usage",
-							"documentation/customers/feature-entities",
-							"documentation/customers/creating-customers",
-							"documentation/customers/managing-customers"
+							"documentation/modelling-pricing/recurring",
+							"documentation/modelling-pricing/one-off-purchases",
+							"documentation/modelling-pricing/free-plans",
+							"documentation/modelling-pricing/trials",
+							"documentation/modelling-pricing/credit-systems",
+							"documentation/modelling-pricing/per-unit-pricing",
+							"documentation/modelling-pricing/usage-based-pricing",
+							"documentation/modelling-pricing/rollovers",
+							"documentation/modelling-pricing/proration",
+								"documentation/modelling-pricing/spend-limits",
+							"documentation/modelling-pricing/auto-top-ups",
+							"documentation/modelling-pricing/add-ons",
+							"documentation/modelling-pricing/graduated-pricing",
+							"documentation/modelling-pricing/volume-based-tiers",
+							"documentation/modelling-pricing/sub-entity-balances",
+							"documentation/modelling-pricing/sub-entity-plans",
+							"documentation/modelling-pricing/rewards"
 						]
 					},
+				{
+					"group": "Billing & Subscriptions",
+					"pages": [
+						"documentation/customers/payment-flow",
+						"documentation/customers/subscription-lifecycle",
+						"documentation/customers/updating-subscriptions",
+						"documentation/customers/custom-plans",
+						"documentation/customers/versioning"
+					]
+				},
+				{
+					"group": "Customers",
+					"pages": [
+						"documentation/customers/creating-customers",
+						"documentation/customers/managing-customers",
+						"documentation/customers/check",
+						"documentation/customers/tracking-usage",
+						"documentation/customers/balance-locking",
+						"documentation/customers/managing-balances",
+						"documentation/customers/feature-entities"
+					]
+				},
 					{
 						"group": "Additional Resources",
 						"pages": [
+							"documentation/edge-cases",
 							"documentation/webhooks",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",

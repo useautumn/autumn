@@ -1,0 +1,111 @@
+---
+title: "Edge Cases"
+description: "How Autumn handles 3DS, payment failures, and other uncommon states"
+---
+
+In addition to the subscription lifecycle, Autumn automatically handles a number of edge cases to make sure your customers are always billed correctly.
+
+## 3D Secure (3DS)
+
+When a payment requires 3D Secure authentication, the `attach` response returns:
+
+```json
+{
+  "required_action": {
+    "code": "3ds_required",
+    "reason": "Payment requires 3D Secure authentication"
+  },
+  "payment_url": "https://invoice.stripe.com/..."
+}
+```
+
+As normal, redirect the customer to the `payment_url` to complete authentication. Once they authenticate, Autumn processes the payment and activates the plan automatically via the `invoice.paid` webhook.
+
+<Warning>
+The invoice URL expires after **10 minutes**. If the customer doesn't complete authentication in time, the invoice is automatically voided and the attach must be retried.
+</Warning>
+
+## Payment Failures
+
+If the customer's payment method is declined during `attach`, the response returns:
+
+```json
+{
+  "required_action": {
+    "code": "payment_failed",
+    "reason": "Card was declined"
+  },
+  "payment_url": "https://invoice.stripe.com/..."
+}
+```
+
+The `payment_url` links to Stripe's hosted invoice page where the customer can update their payment method and retry. As with 3DS, the invoice is auto-voided after 10 minutes if left unresolved.
+
+A third code, `payment_method_required`, is returned when no payment method is on file at all. In this case, redirect the customer to the `payment_url` which points to a Stripe Checkout session.
+
+## Past Due Subscriptions
+
+If a recurring payment fails (e.g. card expired between billing cycles), the subscription status becomes `past_due`. To resolve this:
+
+1. Direct the customer to the [billing portal](/api-reference/billing/openCustomerPortal) to update their payment method
+2. Once updated, Stripe automatically retries the failed invoice
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { openBillingPortal } = useCustomer();
+
+<Button onClick={() => openBillingPortal({ returnUrl: window.location.href })} />
+```
+
+```typescript Node.js
+const { data } = await autumn.billing.openCustomerPortal("user_123", {
+  returnUrl: "https://your-app.com/billing",
+});
+// Redirect to data.url
+```
+
+```python Python
+response = await autumn.billing.open_customer_portal(
+    "user_123",
+    return_url="https://your-app.com/billing",
+)
+# Redirect to response.url
+```
+
+</CodeGroup>
+
+<Note>
+If you'd like to block feature access when a subscription is `past_due`, please contact us. We can enable a configuration flag to do this for you.
+</Note>
+
+
+## Subscription Expiry
+
+When a subscription is deleted or expires, any open invoices associated with it are automatically voided. This prevents a scenario where a customer could pay a stale invoice for a subscription that no longer exists — the payment would go through but have no effect.
+
+This also applies when a subscription transitions to `past_due` and is automatically canceled (if that behavior is enabled for your organization).
+
+## Proration Failures
+
+When an upgrade generates a proration invoice that fails to pay, Autumn automatically **rolls back the subscription update** to the customer's previous plan. The open invoice is then handled through the same 3DS / payment failure flow described above — the customer receives an invoice URL to resolve the payment.
+
+## Concurrent Requests
+
+Autumn uses distributed locking to prevent race conditions across billing operations. All mutating billing endpoints — `attach`, `multi_attach`, and `update_subscription` — share a per-customer lock. If two requests arrive simultaneously for the same customer, the second request receives a `429` response. This prevents duplicate subscriptions, double charges, or conflicting subscription updates.
+
+The same lock is shared with auto top-ups, so a top-up triggered by usage can't race against a manual attach for the same customer.
+
+## Duplicate Webhook Delivery
+
+Stripe may deliver the same webhook event multiple times. Autumn deduplicates webhooks using a per-event idempotency key — if the same Stripe event ID is received more than once within a 5-minute window, the duplicate is acknowledged without reprocessing.
+
+Additionally, when Autumn initiates a subscription change (e.g. a cancellation or upgrade), it sets a short-lived lock on the subscription. This prevents the resulting Stripe webhook from re-processing the change that Autumn already applied, avoiding double-counting or conflicting state updates.
+
+## API Idempotency
+
+All API requests support an `Idempotency-Key` header. If the same key is sent within 24 hours, the duplicate request is rejected with a `409` response. This is useful when retrying requests after network failures — you won't accidentally attach the same plan twice.
+
+For event tracking (`track`), the `idempotency_key` field on the request body provides the same guarantee, backed by both a Redis check and a database-level unique constraint.

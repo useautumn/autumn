@@ -1,0 +1,128 @@
+---
+title: Rollovers
+description: Allow unused balances to carry over to the next billing period
+---
+
+Rollovers let unused feature balances carry forward to the next billing cycle instead of being lost at reset. This gives customers more flexibility and prevents wasted allocation.
+
+> **Example** <br />
+> A customer on a plan with 1,000 credits/month only uses 600 in January. With rollovers enabled, the remaining 400 credits carry over — giving them 1,400 credits available in February.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Add a `rollover` config to a plan item:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: credits.id,
+      included: 1000,
+      reset: { interval: 'month' },
+      rollover: {
+        max: 2000,
+        expiryDurationType: 'forever',
+        expiryDurationLength: 1,
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and edit a plan
+2. Select a **consumable** feature on the plan
+3. Under **Advanced**, toggle on **Rollovers**
+4. Set the **maximum rollover cap** — the most unused balance that can be carried over (leave empty for no cap)
+5. Set the **expiry**:
+   - **Forever** — rollover balances never expire
+   - **Month** — rollover balances expire after a set number of months
+6. Save the plan
+
+</Tab>
+</Tabs>
+
+## Rollover configuration
+
+| Field | Description |
+|-------|-------------|
+| `max` | Maximum amount that can roll over. Set to `null` for no cap. |
+| `expiryDurationType` | `"forever"` (never expires) or `"month"` (expires after N months) |
+| `expiryDurationLength` | Number of months until rollover balances expire. Ignored if type is `"forever"`. |
+
+## How rollovers work
+
+At the end of each billing cycle, when a feature's balance resets:
+
+1. Autumn checks how much unused balance remains
+2. If rollovers are configured, the unused balance is saved as a **rollover balance**
+3. The feature resets to its granted amount, and the rollover is added on top
+4. If a `max` cap is set, the oldest rollover balances are trimmed first (FIFO)
+5. Expired rollover balances are removed automatically
+
+## Viewing rollover balances
+
+Rollover balances appear in the `breakdown` array when you retrieve a customer's balances. Each rollover entry has its own expiry date:
+
+<Expandable title="customer balance with rollovers">
+```json
+{
+  "balances": {
+    "credits": {
+      "included_usage": 1400,
+      "balance": 1400,
+      "usage": 0,
+      "breakdown": [
+        {
+          "plan_id": "pro",
+          "included_usage": 1000,
+          "balance": 1000,
+          "usage": 0,
+          "interval": "month",
+          "next_reset_at": 1745193600000
+        },
+        {
+          "id": "roll_abc123",
+          "included_usage": 400,
+          "balance": 400,
+          "usage": 0,
+          "interval": "one_off",
+          "expires_at": null
+        }
+      ]
+    }
+  }
+}
+```
+</Expandable>
+
+## Deduction order
+
+Rollover balances are treated as `one_off` (lifetime) balances. Because Autumn's [deduction order](/documentation/concepts/balances#deduction-order) uses shorter intervals first, monthly balances are consumed before rollover balances — ensuring that new allocation is used before carried-over amounts.
+
+<Note>
+Rollovers are only available on `consumable` features with a reset interval. Non-consumable features (like seats) don't reset and therefore don't support rollovers.
+</Note>
+
+## Entity rollovers
+
+If you're using [sub-entity balances](/documentation/modelling-pricing/sub-entity-balances), rollovers are tracked per entity. Each entity's unused balance rolls over independently.
