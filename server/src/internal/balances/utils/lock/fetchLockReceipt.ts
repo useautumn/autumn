@@ -55,10 +55,7 @@ export const fetchLockReceipt = async ({
 	}
 
 	if (!receipt.items || !Array.isArray(receipt.items)) {
-		throw new RecaseError({
-			message: `Lock receipt is missing items for ID: ${lockId}`,
-			code: ErrCode.InvalidRequest,
-		});
+		receipt.items = [];
 	}
 
 	return {
