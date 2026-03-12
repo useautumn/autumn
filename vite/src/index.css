@@ -552,3 +552,19 @@ input[type="number"]::-webkit-inner-spin-button {
 		opacity: 1;
 	}
 }
+
+/* Noise grain background overlay */
+body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	pointer-events: none;
+	background-image: url("/noise.png");
+	background-repeat: repeat;
+	opacity: 0.03;
+}
+
+:is(.dark) body::before {
+	opacity: 0.04;
+}
