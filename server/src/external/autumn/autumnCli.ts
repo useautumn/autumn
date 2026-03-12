@@ -611,6 +611,33 @@ export class AutumnInt {
 		},
 	};
 
+	entitiesV2 = {
+		create: async ({
+			customer_id,
+			entity_id,
+			name,
+			feature_id,
+			billing_controls,
+			customer_data,
+		}: {
+			customer_id: string;
+			entity_id: string;
+			name?: string | null;
+			feature_id: string;
+			billing_controls?: ApiEntityBillingControlsParams;
+			customer_data?: CreateEntityParams["customer_data"];
+		}) => {
+			return await this.post(`/entities.create`, {
+				customer_id,
+				entity_id,
+				name,
+				feature_id,
+				billing_controls,
+				customer_data,
+			});
+		},
+	};
+
 	products = {
 		update: async <TResponse = any, TInput = any>(
 			productId: string,
