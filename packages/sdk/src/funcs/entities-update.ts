@@ -26,38 +26,29 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
+ * Updates an existing entity and returns the refreshed entity object.
  *
- * Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.
+ * Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
  *
  * @example
  * ```typescript
- * // Create a seat entity
- * const response = await client.entities.create({
- *
- *   customerId: "cus_123",
- *   entityId: "seat_42",
- *   featureId: "seats",
- *   name: "Seat 42",
- * });
+ * // Update a seat entity's billing controls
+ * const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
  * ```
  *
- * @param name - The name of the entity (optional)
- * @param featureId - The ID of the feature this entity is associated with
- * @param billingControls - Billing controls for the entity. (optional)
- * @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
- * @param customerId - The ID of the customer to create the entity for.
+ * @param customerId - The ID of the customer that owns the entity. (optional)
  * @param entityId - The ID of the entity.
+ * @param billingControls - Billing controls to replace on the entity. (optional)
  *
- * @returns The created entity object including its current subscriptions, purchases, and balances.
+ * @returns The updated entity object including its current subscriptions, purchases, and balances.
  */
-export function entitiesCreate(
+export function entitiesUpdate(
   client: AutumnCore,
-  request: models.CreateEntityParams,
+  request: models.UpdateEntityParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CreateEntityResponse,
+    models.UpdateEntityResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -77,12 +68,12 @@ export function entitiesCreate(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateEntityParams,
+  request: models.UpdateEntityParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CreateEntityResponse,
+      models.UpdateEntityResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -97,7 +88,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CreateEntityParams$outboundSchema, value),
+    (value) => z.parse(models.UpdateEntityParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -106,7 +97,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/entities.create")();
+  const path = pathToFunc("/v1/entities.update")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -125,7 +116,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "createEntity",
+    operationID: "updateEntity",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -164,7 +155,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CreateEntityResponse,
+    models.UpdateEntityResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -174,7 +165,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.CreateEntityResponse$inboundSchema),
+    M.json(200, models.UpdateEntityResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);
