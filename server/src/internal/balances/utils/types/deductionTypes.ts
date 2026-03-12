@@ -1,5 +1,6 @@
 import type {
 	CustomerEntitlementFilters,
+	DbSpendLimit,
 	FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 
@@ -39,7 +40,8 @@ export type RolloverDeduction = {
 export type PreparedFeatureDeduction = {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
-	availableOverageByFeatureId?: Record<string, number>;
+	spendLimitByFeatureId?: Record<string, DbSpendLimit>;
+	usageBasedCusEntIdsByFeatureId?: Record<string, string[]>;
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];

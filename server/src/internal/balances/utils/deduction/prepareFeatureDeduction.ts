@@ -1,8 +1,9 @@
 import {
 	cusEntToStartingBalance,
 	type FullCustomer,
-	fullCustomerToAvailableOverage,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToSpendLimitByFeatureId,
+	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
@@ -75,11 +76,15 @@ export const prepareFeatureDeduction = ({
 	}
 
 	const effectiveFeatureIds = relevantFeatures.map((f) => f.id);
-	const availableOverageByFeatureId = fullCustomerToAvailableOverage({
-		ctx,
+	const spendLimitByFeatureId = fullCustomerToSpendLimitByFeatureId({
 		fullCustomer,
 		featureIds: effectiveFeatureIds,
 	});
+	const usageBasedCusEntIdsByFeatureId =
+		fullCustomerToUsageBasedCusEntsByFeatureId({
+			fullCustomer,
+			featureIds: effectiveFeatureIds,
+		});
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
@@ -152,9 +157,13 @@ export const prepareFeatureDeduction = ({
 	return {
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
-		availableOverageByFeatureId:
-			Object.keys(availableOverageByFeatureId).length > 0
-				? availableOverageByFeatureId
+		spendLimitByFeatureId:
+			Object.keys(spendLimitByFeatureId).length > 0
+				? spendLimitByFeatureId
+				: undefined,
+		usageBasedCusEntIdsByFeatureId:
+			Object.keys(usageBasedCusEntIdsByFeatureId).length > 0
+				? usageBasedCusEntIdsByFeatureId
 				: undefined,
 		rollovers: sortedRollovers.map((r) => ({
 			id: r.id,
