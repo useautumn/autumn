@@ -79,6 +79,7 @@
 							"documentation/modelling-pricing/usage-based-pricing",
 							"documentation/modelling-pricing/rollovers",
 							"documentation/modelling-pricing/proration",
+								"documentation/modelling-pricing/spend-limits",
 							"documentation/modelling-pricing/auto-top-ups",
 							"documentation/modelling-pricing/add-ons",
 							"documentation/modelling-pricing/graduated-pricing",
