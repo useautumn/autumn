@@ -562,9 +562,9 @@ body::before {
 	pointer-events: none;
 	background-image: url("/noise.png");
 	background-repeat: repeat;
-	opacity: 0.03;
+	opacity: 0.08;
 }
 
 :is(.dark) body::before {
-	opacity: 0.04;
+	opacity: 0.10;
 }
