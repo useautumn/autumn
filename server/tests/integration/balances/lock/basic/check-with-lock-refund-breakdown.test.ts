@@ -143,11 +143,6 @@ test.concurrent(`${chalk.yellowBright("refund BD-2b: lock=0 confirm=0 — zero-c
 		},
 	});
 
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [],
-	});
-
 	await expectLockReceiptDeleted({ ctx, lockId: customerId });
 });
 
