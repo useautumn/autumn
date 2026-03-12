@@ -1,3 +1,7 @@
+import type { ApiSpendLimit } from "@api/billingControls";
+import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
+import { apiSubjectToSpendLimit } from "@api/customers/utils/apiSubjectToSpendLimit";
+import type { Feature } from "@models/featureModels/featureModels";
 import { sumValues } from "@utils/utils";
 import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
@@ -37,11 +41,29 @@ export const apiBalanceV1ToMaxOverage = ({
 
 export const apiBalanceV1ToAvailableOverage = ({
 	apiBalance,
+	apiSubject,
+	feature,
 }: {
 	apiBalance: ApiBalanceV1;
+	apiSubject: ApiSubjectV0;
+	feature: Feature;
 }): number | undefined => {
-	const maxOverage = apiBalanceV1ToMaxOverage({ apiBalance });
 	const overage = apiBalanceV1ToOverage({ apiBalance });
+	const spendLimit: ApiSpendLimit | undefined = apiSubject
+		? apiSubjectToSpendLimit({
+				subject: apiSubject,
+				feature,
+			})
+		: undefined;
+
+	if (spendLimit?.overage_limit !== undefined) {
+		return Math.max(
+			0,
+			new Decimal(spendLimit.overage_limit).sub(overage).toNumber(),
+		);
+	}
+
+	const maxOverage = apiBalanceV1ToMaxOverage({ apiBalance });
 
 	if (maxOverage === undefined) {
 		return undefined;

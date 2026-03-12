@@ -32,7 +32,7 @@ export const applyExistingStatesToCustomerProduct = ({
 
 		existingUsages = cusProductToExistingUsages({
 			cusProduct: fromCustomerProduct,
-			entityId: fullCustomer.entity?.id,
+			entityId: fullCustomer.entity?.id ?? undefined,
 			...existingUsagesConfig,
 		});
 	}

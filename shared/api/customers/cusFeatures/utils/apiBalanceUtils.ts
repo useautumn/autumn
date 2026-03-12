@@ -1,11 +1,7 @@
-import {
-	type ApiBalanceBreakdownV1,
-	type ApiBalanceV1,
-	type ApiFeatureV1,
-	cusEntsToPlanId,
-	cusEntsToRollovers,
-	type FullCusEntWithFullCusProduct,
-} from "@autumn/shared";
+import type { ApiFeatureV1 } from "@api/features/apiFeatureV1";
+import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
+import { cusEntsToPlanId, cusEntsToRollovers } from "@utils/index.js";
+import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
 
 export const getBooleanApiBalance = ({
 	cusEnts,
@@ -51,7 +47,7 @@ export const getBooleanApiBalance = ({
 			} satisfies ApiBalanceBreakdownV1,
 		],
 		rollovers: undefined,
-	} satisfies ApiBalanceV1;
+	};
 };
 
 export const getUnlimitedApiBalance = ({
@@ -64,7 +60,7 @@ export const getUnlimitedApiBalance = ({
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
-	const entityId = undefined; // Unlimited features don't have entity context
+	const entityId = undefined;
 
 	return {
 		object: "balance",
