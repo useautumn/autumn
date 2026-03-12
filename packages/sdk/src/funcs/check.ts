@@ -54,6 +54,7 @@ import { Result } from "../types/fp.js";
  * @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
  * @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
  * @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
+ * @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
  * @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
  *
  * @returns Whether access is allowed, plus the current balance for that feature.

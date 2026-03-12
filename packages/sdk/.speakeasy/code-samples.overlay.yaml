@@ -75,6 +75,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/balances.finalize"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.balances.finalize({
+                lockId: "lock_abc123",
+                action: "confirm",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/balances.track"]["post"]
     update:
       x-codeSamples:
@@ -499,6 +522,38 @@ actions:
             async function run() {
               const result = await autumn.entities.get({
                 entityId: "seat_42",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/entities.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.1",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.entities.update({
+                customerId: "cus_123",
+                entityId: "seat_42",
+                billingControls: {
+                  spendLimits: [
+                    {
+                      featureId: "messages",
+                      enabled: true,
+                      overageLimit: 25,
+                    },
+                  ],
+                },
               });
 
               console.log(result);

@@ -21,6 +21,7 @@ type CustomerDataUpdates = Pick<
 	| "processor"
 	| "processors"
 	| "auto_topups"
+	| "spend_limits"
 >;
 
 /**

@@ -2,6 +2,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -81,6 +82,13 @@ export const customerProducts = pgTable(
 			foreignColumns: [entities.internal_id],
 			name: "customer_products_internal_entity_id_fkey",
 		}).onDelete("set null"),
+		index("idx_customer_products_customer_status").on(
+			table.internal_customer_id,
+			table.status,
+		),
+		index("idx_customer_products_on_internal_entity_id").on(
+			table.internal_entity_id,
+		),
 	],
 );
 

@@ -17,6 +17,24 @@ export type CheckGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+ */
+export type CheckLock = {
+  /**
+   * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+   */
+  lockId: string;
+  /**
+   * Must be true to enable locking.
+   */
+  enabled: true;
+  /**
+   * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+   */
+  expiresAt?: number | undefined;
+};
+
 export type CheckParams = {
   /**
    * The ID of the customer.
@@ -42,6 +60,10 @@ export type CheckParams = {
    * If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
    */
   sendEvent?: boolean | undefined;
+  /**
+   * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+   */
+  lock?: CheckLock | undefined;
   /**
    * If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
    */
@@ -100,26 +122,6 @@ export const CheckInterval = {
   Year: "year",
 } as const;
 export type CheckInterval = OpenEnum<typeof CheckInterval>;
-
-/**
- * The maximum amount of usage for this tier.
- */
-export type CheckTo = number | string;
-
-export type Tiers = {
-  /**
-   * The maximum amount of usage for this tier.
-   */
-  to: number | string;
-  /**
-   * The price of the product item for this tier.
-   */
-  amount: number;
-  /**
-   * A flat fee charged for this tier, in addition to the per-unit amount.
-   */
-  flatAmount?: number | null | undefined;
-};
 
 export const CheckTierBehavior = {
   Graduated: "graduated",
@@ -208,7 +210,7 @@ export type CheckItem = {
   /**
    * Tiered pricing for the product item. Not applicable for fixed price items.
    */
-  tiers?: Array<Tiers> | null | undefined;
+  tiers?: Array<any | null> | null | undefined;
   /**
    * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
    */
@@ -442,6 +444,35 @@ export type CheckResponse = {
 };
 
 /** @internal */
+export type CheckLock$Outbound = {
+  lock_id: string;
+  enabled: true;
+  expires_at?: number | undefined;
+};
+
+/** @internal */
+export const CheckLock$outboundSchema: z.ZodMiniType<
+  CheckLock$Outbound,
+  CheckLock
+> = z.pipe(
+  z.object({
+    lockId: z.string(),
+    enabled: z.literal(true),
+    expiresAt: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      lockId: "lock_id",
+      expiresAt: "expires_at",
+    });
+  }),
+);
+
+export function checkLockToJSON(checkLock: CheckLock): string {
+  return JSON.stringify(CheckLock$outboundSchema.parse(checkLock));
+}
+
+/** @internal */
 export type CheckParams$Outbound = {
   customer_id: string;
   feature_id: string;
@@ -449,6 +480,7 @@ export type CheckParams$Outbound = {
   required_balance?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   send_event?: boolean | undefined;
+  lock?: CheckLock$Outbound | undefined;
   with_preview?: boolean | undefined;
 };
 
@@ -464,6 +496,7 @@ export const CheckParams$outboundSchema: z.ZodMiniType<
     requiredBalance: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
     sendEvent: z.optional(z.boolean()),
+    lock: z.optional(z.lazy(() => CheckLock$outboundSchema)),
     withPreview: z.optional(z.boolean()),
   }),
   z.transform((v) => {
@@ -521,44 +554,6 @@ export const CheckInterval$inboundSchema: z.ZodMiniType<
   CheckInterval,
   unknown
 > = openEnums.inboundSchema(CheckInterval);
-
-/** @internal */
-export const CheckTo$inboundSchema: z.ZodMiniType<CheckTo, unknown> =
-  smartUnion([types.number(), types.string()]);
-
-export function checkToFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const Tiers$inboundSchema: z.ZodMiniType<Tiers, unknown> = z.pipe(
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-    flat_amount: z.optional(z.nullable(types.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-    });
-  }),
-);
-
-export function tiersFromJSON(
-  jsonString: string,
-): SafeParseResult<Tiers, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Tiers$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Tiers' from JSON`,
-  );
-}
 
 /** @internal */
 export const CheckTierBehavior$inboundSchema: z.ZodMiniType<
@@ -671,7 +666,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       interval: z.optional(z.nullable(CheckInterval$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
-      tiers: z.optional(z.nullable(z.array(z.lazy(() => Tiers$inboundSchema)))),
+      tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
       tier_behavior: z.optional(z.nullable(CheckTierBehavior$inboundSchema)),
       usage_model: z.optional(z.nullable(UsageModel$inboundSchema)),
       billing_units: z.optional(z.nullable(types.number())),

@@ -1,5 +1,5 @@
 import type {
-	CustomerBillingControlsInput,
+	CustomerBillingControlsParams,
 	PurchaseLimitInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -14,7 +14,7 @@ export const makeAutoTopupConfig = ({
 	quantity?: number;
 	enabled?: boolean;
 	purchaseLimit?: { interval: PurchaseLimitInterval; limit: number };
-} = {}): CustomerBillingControlsInput => ({
+} = {}): CustomerBillingControlsParams => ({
 	auto_topups: [
 		{
 			feature_id: TestFeature.Messages,

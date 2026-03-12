@@ -1,5 +1,11 @@
 import { z } from "zod/v4";
-import { PurchaseLimitIntervalEnum } from "./billingControls/purchaseLimitInterval.js";
+import {
+	type EntityBillingControls,
+	type EntityBillingControlsParams,
+	EntityBillingControlsSchema,
+} from "./entityBillingControls.js";
+import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
+import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -36,7 +42,36 @@ export const CustomerBillingControlsSchema = z.object({
 	auto_topups: z.array(AutoTopupSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+		description: "List of overage spend limits per feature.",
+	}),
 });
+
+export const CustomerBillingControlsParamsSchema =
+	CustomerBillingControlsSchema.check((ctx) => {
+		const billingControls = ctx.value;
+		const featureIds = new Set<string>();
+
+		for (const [index, spendLimit] of (
+			billingControls.spend_limits ?? []
+		).entries()) {
+			if (!spendLimit.feature_id) {
+				continue;
+			}
+
+			if (featureIds.has(spendLimit.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one spend limit entry is allowed per feature_id",
+					input: spendLimit.feature_id,
+					path: ["spend_limits", index, "feature_id"],
+				});
+				return;
+			}
+
+			featureIds.add(spendLimit.feature_id);
+		}
+	});
 
 export type AutoTopupPurchaseLimit = z.infer<
 	typeof AutoTopupPurchaseLimitSchema
@@ -46,6 +81,13 @@ export type CustomerBillingControls = z.infer<
 	typeof CustomerBillingControlsSchema
 >;
 
-export type CustomerBillingControlsInput = z.input<
-	typeof CustomerBillingControlsSchema
+export type CustomerBillingControlsParams = z.input<
+	typeof CustomerBillingControlsParamsSchema
 >;
+
+export { EntityBillingControlsSchema, DbSpendLimitSchema };
+export type {
+	EntityBillingControls,
+	EntityBillingControlsParams,
+	DbSpendLimit,
+};

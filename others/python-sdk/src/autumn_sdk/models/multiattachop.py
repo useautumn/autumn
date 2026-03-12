@@ -153,38 +153,29 @@ MultiAttachTo = TypeAliasType("MultiAttachTo", Union[float, str])
 
 class MultiAttachTierTypedDict(TypedDict):
     to: MultiAttachToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
 class MultiAttachTier(BaseModel):
     to: MultiAttachTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -696,11 +687,79 @@ MultiAttachRedirectMode = Literal[
 r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
 
 
+class MultiAttachSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class MultiAttachSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class MultiAttachBillingControlsTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[MultiAttachSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class MultiAttachBillingControls(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[MultiAttachSpendLimit]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class MultiAttachEntityDataTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID that this entity is associated with"""
     name: NotRequired[str]
     r"""Name of the entity"""
+    billing_controls: NotRequired[MultiAttachBillingControlsTypedDict]
+    r"""Billing controls for the entity."""
 
 
 class MultiAttachEntityData(BaseModel):
@@ -710,9 +769,12 @@ class MultiAttachEntityData(BaseModel):
     name: Optional[str] = None
     r"""Name of the entity"""
 
+    billing_controls: Optional[MultiAttachBillingControls] = None
+    r"""Billing controls for the entity."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name"])
+        optional_fields = set(["name", "billing_controls"])
         serialized = handler(self)
         m = {}
 

@@ -1,10 +1,6 @@
-import type {
-	ApiBalanceBreakdownV1,
-	ApiBalanceV1,
-	FullCusEntWithFullCusProduct,
-	FullCustomer,
-} from "@autumn/shared";
 import {
+	type ApiBalanceBreakdownV1,
+	type ApiBalanceV1,
 	CheckExpand,
 	CustomerExpand,
 	cusEntsToAdjustment,
@@ -26,18 +22,46 @@ import {
 	expandIncludes,
 	type Feature,
 	FeatureType,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
 	getCusEntBalance,
 	isUnlimitedCusEnt,
 	nullish,
+	type SharedContext,
 	sumValues,
 } from "@autumn/shared";
+import { AllowanceType } from "@models/productModels/entModels/entModels.js";
 import { Decimal } from "decimal.js";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
 	getBooleanApiBalance,
 	getUnlimitedApiBalance,
 } from "./apiBalanceUtils.js";
+
+const getUnlimitedAndUsageAllowed = ({
+	cusEnts,
+	internalFeatureId,
+	includeUsageLimit = true,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+	internalFeatureId: string;
+	includeUsageLimit?: boolean;
+}) => {
+	const unlimited = cusEnts.some(
+		(cusEnt) =>
+			cusEnt.internal_feature_id === internalFeatureId &&
+			(cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
+				cusEnt.unlimited),
+	);
+
+	const usageAllowed = cusEnts.some(
+		(cusEnt) =>
+			cusEnt.internal_feature_id === internalFeatureId &&
+			cusEnt.usage_allowed &&
+			(includeUsageLimit ? nullish(cusEnt.entitlement.usage_limit) : true),
+	);
+
+	return { unlimited, usageAllowed };
+};
 
 const getApiBalanceBreakdownItem = ({
 	fullCus,
@@ -46,11 +70,8 @@ const getApiBalanceBreakdownItem = ({
 	fullCus: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }): ApiBalanceBreakdownV1 => {
-	const entityId = fullCus.entity?.id;
-
+	const entityId = fullCus.entity?.id ?? fullCus.entity?.internal_id;
 	const planId = cusEntsToPlanId({ cusEnts: [customerEntitlement] });
-
-	// Included grant
 	const allowance = cusEntsToAllowance({
 		cusEnts: [customerEntitlement],
 		entityId,
@@ -60,55 +81,36 @@ const getApiBalanceBreakdownItem = ({
 		entityId,
 	});
 	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
-
-	// Prepaid grant
 	const prepaidGrant = cusEntsToPrepaidQuantity({
 		cusEnts: [customerEntitlement],
 		sumAcrossEntities: nullish(entityId),
 	});
-
-	// Remaining
 	const remaining = cusEntsToCurrentBalance({
 		cusEnts: [customerEntitlement],
 		entityId,
 	});
-
-	// Usage
 	const usage = cusEntsToUsage({ cusEnts: [customerEntitlement], entityId });
-
-	// Unlimited
 	const unlimited = isUnlimitedCusEnt(customerEntitlement);
-
-	// Reset
 	const reset = cusEntsToReset({ cusEnts: [customerEntitlement] });
-
-	// Price
 	const price = customerEntitlementToBalancePrice({ customerEntitlement });
-
 	const overage = cusEntToInvoiceOverage({
 		cusEnt: customerEntitlement,
 		entityId,
 	});
 
-	const expiresAt = customerEntitlement.expires_at;
-
 	return {
 		object: "balance_breakdown",
-
 		id: customerEntitlement.external_id ?? customerEntitlement.id,
 		plan_id: planId,
-
 		included_grant: includedGrant,
 		prepaid_grant: prepaidGrant,
-		remaining: remaining,
-		usage: usage,
-		unlimited: unlimited,
-
-		reset: reset,
-		price: price,
-		expires_at: expiresAt,
-
-		overage: overage,
+		remaining,
+		usage,
+		unlimited,
+		reset,
+		price,
+		expires_at: customerEntitlement.expires_at,
+		overage,
 	};
 };
 
@@ -118,12 +120,12 @@ export const getApiBalance = ({
 	cusEnts,
 	feature,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullCus: FullCustomer;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 }): { data: ApiBalanceV1 } => {
-	const entityId = fullCus.entity?.id;
+	const entityId = fullCus.entity?.id ?? fullCus.entity?.internal_id;
 
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
@@ -132,7 +134,6 @@ export const getApiBalance = ({
 		? dbToApiFeatureV1({ ctx, dbFeature: feature })
 		: undefined;
 
-	// 1. If feature is boolean
 	if (feature.type === FeatureType.Boolean) {
 		return {
 			data: getBooleanApiBalance({
@@ -143,12 +144,11 @@ export const getApiBalance = ({
 	}
 
 	const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-		cusEnts: cusEnts,
+		cusEnts,
 		internalFeatureId: feature.internal_id,
 		includeUsageLimit: false,
 	});
 
-	// 2. If feature is unlimited
 	if (unlimited) {
 		return {
 			data: getUnlimitedApiBalance({ apiFeature, cusEnts }),
@@ -162,29 +162,20 @@ export const getApiBalance = ({
 		}),
 	);
 
-	// Build breakdown items - one per customer entitlement
 	const breakdownItems = cusEnts.map((cusEnt) =>
 		getApiBalanceBreakdownItem({ fullCus, customerEntitlement: cusEnt }),
 	);
-
-	// Calculate totals from breakdown
 	const totalGranted = sumValues(
 		breakdownItems.map((item) =>
 			new Decimal(item.included_grant).add(item.prepaid_grant).toNumber(),
 		),
 	);
-
 	const totalUsage = sumValues(breakdownItems.map((item) => item.usage));
-
 	const totalRemaining = sumValues(
 		breakdownItems.map((item) => item.remaining),
 	);
-
 	const totalMaxPurchase = cusEntsToMaxPurchase({ cusEnts, entityId });
-
 	const nextResetAt = cusEntsToNextResetAt({ cusEnts });
-
-	// Rollover calculations
 	const totalRollovers = cusEntsToRollovers({ cusEnts, entityId });
 	const totalRolloverGranted = cusEntsToRolloverGranted({ cusEnts, entityId });
 	const totalRolloverBalance = cusEntsToRolloverBalance({ cusEnts, entityId });
@@ -193,28 +184,21 @@ export const getApiBalance = ({
 	return {
 		data: {
 			object: "balance",
-
 			feature_id: feature.id,
 			feature: apiFeature,
-
 			granted: new Decimal(totalGranted).add(totalRolloverGranted).toNumber(),
-
 			remaining: new Decimal(totalRemaining)
 				.add(totalRolloverBalance)
 				.add(totalUnused)
 				.toNumber(),
-
 			usage: new Decimal(totalUsage)
 				.add(totalRolloverUsage)
 				.sub(totalUnused)
 				.toNumber(),
-
-			unlimited: unlimited,
+			unlimited,
 			overage_allowed: usageAllowed ?? false,
-
 			max_purchase: totalMaxPurchase,
 			next_reset_at: nextResetAt,
-
 			breakdown: breakdownItems,
 			rollovers: totalRollovers,
 		},

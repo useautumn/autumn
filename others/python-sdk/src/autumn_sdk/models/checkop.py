@@ -10,9 +10,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -45,6 +46,49 @@ class CheckGlobals(BaseModel):
         return m
 
 
+class CheckLockTypedDict(TypedDict):
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+    enabled: Literal[True]
+    r"""Must be true to enable locking."""
+    expires_at: NotRequired[float]
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+
+class CheckLock(BaseModel):
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+
+    enabled: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="enabled"),
+    ] = True
+    r"""Must be true to enable locking."""
+
+    expires_at: Optional[float] = None
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CheckParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
@@ -58,6 +102,8 @@ class CheckParamsTypedDict(TypedDict):
     r"""Additional properties to attach to the usage event if send_event is true."""
     send_event: NotRequired[bool]
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
+    lock: NotRequired[CheckLockTypedDict]
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
     with_preview: NotRequired[bool]
     r"""If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls."""
 
@@ -81,6 +127,9 @@ class CheckParams(BaseModel):
     send_event: Optional[bool] = None
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
 
+    lock: Optional[CheckLock] = None
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
     with_preview: Optional[bool] = None
     r"""If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls."""
 
@@ -92,6 +141,7 @@ class CheckParams(BaseModel):
                 "required_balance",
                 "properties",
                 "send_event",
+                "lock",
                 "with_preview",
             ]
         )
@@ -169,59 +219,6 @@ CheckInterval = Union[
     ],
     UnrecognizedStr,
 ]
-
-
-CheckToTypedDict = TypeAliasType("CheckToTypedDict", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-CheckTo = TypeAliasType("CheckTo", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-class TiersTypedDict(TypedDict):
-    to: CheckToTypedDict
-    r"""The maximum amount of usage for this tier."""
-    amount: float
-    r"""The price of the product item for this tier."""
-    flat_amount: NotRequired[Nullable[float]]
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-
-class Tiers(BaseModel):
-    to: CheckTo
-    r"""The maximum amount of usage for this tier."""
-
-    amount: float
-    r"""The price of the product item for this tier."""
-
-    flat_amount: OptionalNullable[float] = UNSET
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
 
 
 CheckTierBehavior = Union[
@@ -405,7 +402,7 @@ class CheckItemTypedDict(TypedDict):
     r"""The interval count of the product item."""
     price: NotRequired[Nullable[float]]
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
-    tiers: NotRequired[Nullable[List[TiersTypedDict]]]
+    tiers: NotRequired[Nullable[List[Nullable[Any]]]]
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
     tier_behavior: NotRequired[Nullable[CheckTierBehavior]]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
@@ -451,7 +448,7 @@ class CheckItem(BaseModel):
     price: OptionalNullable[float] = UNSET
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
 
-    tiers: OptionalNullable[List[Tiers]] = UNSET
+    tiers: OptionalNullable[List[Nullable[Any]]] = UNSET
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
 
     tier_behavior: OptionalNullable[CheckTierBehavior] = UNSET
@@ -884,3 +881,9 @@ class CheckResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    CheckLock.model_rebuild()
+except NameError:
+    pass

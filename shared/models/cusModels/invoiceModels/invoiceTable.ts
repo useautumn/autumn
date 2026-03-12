@@ -1,6 +1,7 @@
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -43,6 +44,11 @@ export const invoices = pgTable(
 			name: "invoices_internal_entity_id_fkey",
 		}).onDelete("cascade"),
 		unique("invoices_stripe_id_key").on(table.stripe_id),
+		index("idx_invoices_customer_created").on(
+			table.internal_customer_id,
+			sql`${table.created_at} DESC`,
+			sql`${table.id} DESC`,
+		),
 	],
 );
 
