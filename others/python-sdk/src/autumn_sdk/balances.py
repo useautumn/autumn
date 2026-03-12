@@ -5,7 +5,7 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Mapping, Optional, Union
+from typing import Any, Dict, Mapping, Optional, Union
 
 
 class Balances(BaseSDK):
@@ -679,6 +679,7 @@ class Balances(BaseSDK):
         lock_id: str,
         action: models.Action,
         override_value: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -688,7 +689,8 @@ class Balances(BaseSDK):
 
         :param lock_id: The lock ID that was passed into the previous check call.
         :param action: Use 'confirm' to commit the deduction, or 'release' to return the held balance.
-        :param override_value: Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.
+        :param override_value: Additional properties to attach to this finalize lock event.
+        :param properties: Additional properties to attach to this finalize lock event.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -708,6 +710,7 @@ class Balances(BaseSDK):
             lock_id=lock_id,
             action=action,
             override_value=override_value,
+            properties=properties,
         )
 
         req = self._build_request(
@@ -775,6 +778,7 @@ class Balances(BaseSDK):
         lock_id: str,
         action: models.Action,
         override_value: Optional[float] = None,
+        properties: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -784,7 +788,8 @@ class Balances(BaseSDK):
 
         :param lock_id: The lock ID that was passed into the previous check call.
         :param action: Use 'confirm' to commit the deduction, or 'release' to return the held balance.
-        :param override_value: Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.
+        :param override_value: Additional properties to attach to this finalize lock event.
+        :param properties: Additional properties to attach to this finalize lock event.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -804,6 +809,7 @@ class Balances(BaseSDK):
             lock_id=lock_id,
             action=action,
             override_value=override_value,
+            properties=properties,
         )
 
         req = self._build_request_async(
