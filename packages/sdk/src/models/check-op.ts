@@ -101,26 +101,6 @@ export const CheckInterval = {
 } as const;
 export type CheckInterval = OpenEnum<typeof CheckInterval>;
 
-/**
- * The maximum amount of usage for this tier.
- */
-export type CheckTo = number | string;
-
-export type Tiers = {
-  /**
-   * The maximum amount of usage for this tier.
-   */
-  to: number | string;
-  /**
-   * The price of the product item for this tier.
-   */
-  amount: number;
-  /**
-   * A flat fee charged for this tier, in addition to the per-unit amount.
-   */
-  flatAmount?: number | null | undefined;
-};
-
 export const CheckTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
@@ -208,7 +188,7 @@ export type CheckItem = {
   /**
    * Tiered pricing for the product item. Not applicable for fixed price items.
    */
-  tiers?: Array<Tiers> | null | undefined;
+  tiers?: Array<any | null> | null | undefined;
   /**
    * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
    */
@@ -523,44 +503,6 @@ export const CheckInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckInterval);
 
 /** @internal */
-export const CheckTo$inboundSchema: z.ZodMiniType<CheckTo, unknown> =
-  smartUnion([types.number(), types.string()]);
-
-export function checkToFromJSON(
-  jsonString: string,
-): SafeParseResult<CheckTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CheckTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const Tiers$inboundSchema: z.ZodMiniType<Tiers, unknown> = z.pipe(
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-    flat_amount: z.optional(z.nullable(types.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-    });
-  }),
-);
-
-export function tiersFromJSON(
-  jsonString: string,
-): SafeParseResult<Tiers, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Tiers$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Tiers' from JSON`,
-  );
-}
-
-/** @internal */
 export const CheckTierBehavior$inboundSchema: z.ZodMiniType<
   CheckTierBehavior,
   unknown
@@ -671,7 +613,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       interval: z.optional(z.nullable(CheckInterval$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
-      tiers: z.optional(z.nullable(z.array(z.lazy(() => Tiers$inboundSchema)))),
+      tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
       tier_behavior: z.optional(z.nullable(CheckTierBehavior$inboundSchema)),
       usage_model: z.optional(z.nullable(UsageModel$inboundSchema)),
       billing_units: z.optional(z.nullable(types.number())),

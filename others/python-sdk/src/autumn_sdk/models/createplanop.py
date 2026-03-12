@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -144,48 +144,37 @@ class CreatePlanResetRequest(BaseModel):
         return m
 
 
-CreatePlanToRequestTypedDict = TypeAliasType(
-    "CreatePlanToRequestTypedDict", Union[float, str]
-)
+CreatePlanToTypedDict = TypeAliasType("CreatePlanToTypedDict", Union[float, str])
 
 
-CreatePlanToRequest = TypeAliasType("CreatePlanToRequest", Union[float, str])
+CreatePlanTo = TypeAliasType("CreatePlanTo", Union[float, str])
 
 
-class CreatePlanTierRequestTypedDict(TypedDict):
-    to: CreatePlanToRequestTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+class CreatePlanTierTypedDict(TypedDict):
+    to: CreatePlanToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
-class CreatePlanTierRequest(BaseModel):
-    to: CreatePlanToRequest
+class CreatePlanTier(BaseModel):
+    to: CreatePlanTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -224,7 +213,7 @@ class CreatePlanItemPriceRequestTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    tiers: NotRequired[List[CreatePlanTierRequestTypedDict]]
+    tiers: NotRequired[List[CreatePlanTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreatePlanTierBehaviorRequest]
     interval_count: NotRequired[float]
@@ -247,7 +236,7 @@ class CreatePlanItemPriceRequest(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    tiers: Optional[List[CreatePlanTierRequest]] = None
+    tiers: Optional[List[CreatePlanTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[CreatePlanTierBehaviorRequest] = None
@@ -812,53 +801,6 @@ class CreatePlanResetResponse(BaseModel):
         return m
 
 
-CreatePlanToResponseTypedDict = TypeAliasType(
-    "CreatePlanToResponseTypedDict", Union[float, str]
-)
-
-
-CreatePlanToResponse = TypeAliasType("CreatePlanToResponse", Union[float, str])
-
-
-class CreatePlanTierResponseTypedDict(TypedDict):
-    to: CreatePlanToResponseTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
-
-
-class CreatePlanTierResponse(BaseModel):
-    to: CreatePlanToResponse
-
-    amount: float
-
-    flat_amount: OptionalNullable[float] = UNSET
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
 CreatePlanTierBehaviorResponse = Union[
     Literal[
         "graduated",
@@ -903,7 +845,7 @@ class CreatePlanItemPriceResponseTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
-    tiers: NotRequired[List[CreatePlanTierResponseTypedDict]]
+    tiers: NotRequired[List[Nullable[Any]]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[CreatePlanTierBehaviorResponse]
     interval_count: NotRequired[float]
@@ -926,7 +868,7 @@ class CreatePlanItemPriceResponse(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
-    tiers: Optional[List[CreatePlanTierResponse]] = None
+    tiers: Optional[List[Nullable[Any]]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[CreatePlanTierBehaviorResponse] = None

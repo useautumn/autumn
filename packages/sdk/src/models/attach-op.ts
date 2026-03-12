@@ -105,8 +105,8 @@ export type AttachTo = number | string;
 
 export type AttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const AttachTierBehavior = {
@@ -468,6 +468,10 @@ export type AttachParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<AttachCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
 };
 
 /**
@@ -663,8 +667,8 @@ export function attachToToJSON(attachTo: AttachTo): string {
 /** @internal */
 export type AttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -674,8 +678,8 @@ export const AttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1038,6 +1042,7 @@ export type AttachParams$Outbound = {
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -1067,6 +1072,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
     ),
+    processorSubscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1082,6 +1088,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
     });
   }),
 );

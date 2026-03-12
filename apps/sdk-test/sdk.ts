@@ -8,17 +8,9 @@ const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.entities.create({
-  name: "Deployment 1",
+await autumn.billing.update({
   customerId: "john",
-  entityId: "deployment_1",
-  featureId: "DEPLOYMENTS",
-});
-
-await autumn.billing.attach({
-  customerId: "john",
-  entityId: "deployment_1",
-  planId: "hobby",
+  noBillingChanges: true,
 });
 
 console.log(JSON.stringify(res, null, 2));

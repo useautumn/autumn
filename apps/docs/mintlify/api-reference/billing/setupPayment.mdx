@@ -105,9 +105,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicParamField body="to" type="number" required />
 
-                <DynamicParamField body="amount" type="number" required />
+                <DynamicParamField body="amount" type="number" />
 
-                <DynamicParamField body="flat_amount" type="number | null" />
+                <DynamicParamField body="flat_amount" type="number" />
 
               </Expandable>
             </DynamicParamField>
@@ -235,6 +235,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicParamField>
 
   </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="processor_subscription_id" type="string">
+  The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
 </DynamicParamField>
 
 

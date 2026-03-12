@@ -237,16 +237,8 @@ const { allowed } = await autumn.check({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[]">
+            <DynamicResponseField name="tiers" type="any[]">
               Tiered pricing configuration if applicable.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
-
-                <DynamicResponseField name="amount" type="number" />
-
-                <DynamicResponseField name="flat_amount" type="number | null" />
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
@@ -385,22 +377,8 @@ const { allowed } = await autumn.check({
               The price of the product item. Should be `null` if tiered pricing is set.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[] | null">
+            <DynamicResponseField name="tiers" type="any[] | null">
               Tiered pricing for the product item. Not applicable for fixed price items.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number">
-                  The maximum amount of usage for this tier.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  The price of the product item for this tier.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="flat_amount" type="number | null">
-                  A flat fee charged for this tier, in addition to the per-unit amount.
-                </DynamicResponseField>
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">

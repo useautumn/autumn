@@ -53,6 +53,7 @@ export class Billing extends ClientSDK {
    * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+   * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -140,6 +141,7 @@ export class Billing extends ClientSDK {
    * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+   * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed changes.
    */
@@ -222,6 +224,7 @@ export class Billing extends ClientSDK {
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+   * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
    */
@@ -257,6 +260,7 @@ export class Billing extends ClientSDK {
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+   * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
    *
    * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
    */
