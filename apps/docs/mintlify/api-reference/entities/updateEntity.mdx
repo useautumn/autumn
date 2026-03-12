@@ -1,6 +1,6 @@
 ---
-title: "Update Customer"
-openapi: "openapi POST /v1/customers.update"
+title: "Update Entity"
+openapi: "openapi POST /v1/entities.update"
 ---
 
 import { DynamicParamField } from "/components/dynamic-param-field.jsx";
@@ -9,77 +9,17 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 ### Body Parameters
 
-<DynamicParamField body="customer_id" type="string" required>
-  ID of the customer to update
+<DynamicParamField body="customer_id" type="string">
+  The ID of the customer that owns the entity.
 </DynamicParamField>
 
-<DynamicParamField body="name" type="string | null">
-  Customer's name
-</DynamicParamField>
-
-<DynamicParamField body="email" type="string | null">
-  Customer's email address
-</DynamicParamField>
-
-<DynamicParamField body="fingerprint" type="string | null">
-  Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse
-</DynamicParamField>
-
-<DynamicParamField body="metadata" type="object | null">
-  Additional metadata for the customer
-</DynamicParamField>
-
-<DynamicParamField body="stripe_id" type="string | null">
-  Stripe customer ID if you already have one
-</DynamicParamField>
-
-<DynamicParamField body="send_email_receipts" type="boolean">
-  Whether to send email receipts to this customer
+<DynamicParamField body="entity_id" type="string" required>
+  The ID of the entity.
 </DynamicParamField>
 
 <DynamicParamField body="billing_controls" type="object">
-  Billing controls for the customer (auto top-ups, etc.)
+  Billing controls to replace on the entity.
   <Expandable title="properties">
-    <DynamicParamField body="auto_topups" type="object[]">
-      List of auto top-up configurations per feature.
-      <Expandable title="properties">
-        <DynamicParamField body="feature_id" type="string" required>
-          The ID of the feature (credit balance) to auto top-up.
-        </DynamicParamField>
-
-        <DynamicParamField body="enabled" type="boolean">
-          Whether auto top-up is enabled.
-        </DynamicParamField>
-
-        <DynamicParamField body="threshold" type="number" required>
-          When the balance drops below this threshold, an auto top-up will be purchased.
-        </DynamicParamField>
-
-        <DynamicParamField body="quantity" type="number" required>
-          Amount of credits to add per auto top-up.
-        </DynamicParamField>
-
-        <DynamicParamField body="purchase_limit" type="object">
-          Optional rate limit to cap how often auto top-ups occur.
-          <Expandable title="properties">
-            <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
-              The time interval for the purchase limit window.
-            </DynamicParamField>
-
-            <DynamicParamField body="interval_count" type="number">
-              Number of intervals in the purchase limit window.
-            </DynamicParamField>
-
-            <DynamicParamField body="limit" type="number" required>
-              Maximum number of auto top-ups allowed within the interval.
-            </DynamicParamField>
-
-          </Expandable>
-        </DynamicParamField>
-
-      </Expandable>
-    </DynamicParamField>
-
     <DynamicParamField body="spend_limits" type="object[]">
       List of overage spend limits per feature.
       <Expandable title="properties">
@@ -101,115 +41,34 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="new_customer_id" type="string">
-  New ID for the customer
-</DynamicParamField>
-
 
 ### Response
 
 <DynamicResponseField name="id" type="string | null">
-  Your unique identifier for the customer.
+  The unique identifier of the entity
 </DynamicResponseField>
 
 <DynamicResponseField name="name" type="string | null">
-  The name of the customer.
+  The name of the entity
 </DynamicResponseField>
 
-<DynamicResponseField name="email" type="string | null">
-  The email address of the customer.
+<DynamicResponseField name="customer_id" type="string | null">
+  The customer ID this entity belongs to
+</DynamicResponseField>
+
+<DynamicResponseField name="feature_id" type="string | null">
+  The feature ID this entity belongs to
 </DynamicResponseField>
 
 <DynamicResponseField name="created_at" type="number">
-  Timestamp of customer creation in milliseconds since epoch.
-</DynamicResponseField>
-
-<DynamicResponseField name="fingerprint" type="string | null">
-  A unique identifier (eg. serial number) to de-duplicate customers across devices or browsers. For example: apple device ID.
-</DynamicResponseField>
-
-<DynamicResponseField name="stripe_id" type="string | null">
-  Stripe customer ID.
+  Unix timestamp when the entity was created
 </DynamicResponseField>
 
 <DynamicResponseField name="env" type="'sandbox' | 'live'">
-  The environment this customer was created in.
-</DynamicResponseField>
-
-<DynamicResponseField name="metadata" type="object">
-  The metadata for the customer.
-</DynamicResponseField>
-
-<DynamicResponseField name="send_email_receipts" type="boolean">
-  Whether to send email receipts to the customer.
-</DynamicResponseField>
-
-<DynamicResponseField name="billing_controls" type="object">
-  Billing controls for the customer (auto top-ups, etc.)
-  <Expandable title="properties">
-    <DynamicResponseField name="auto_topups" type="object[]">
-      List of auto top-up configurations per feature.
-      <Expandable title="properties">
-        <DynamicResponseField name="feature_id" type="string">
-          The ID of the feature (credit balance) to auto top-up.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="enabled" type="boolean">
-          Whether auto top-up is enabled.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="threshold" type="number">
-          When the balance drops below this threshold, an auto top-up will be purchased.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="quantity" type="number">
-          Amount of credits to add per auto top-up.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="purchase_limit" type="object">
-          Optional rate limit to cap how often auto top-ups occur.
-          <Expandable title="properties">
-            <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
-              The time interval for the purchase limit window.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="interval_count" type="number">
-              Number of intervals in the purchase limit window.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="limit" type="number">
-              Maximum number of auto top-ups allowed within the interval.
-            </DynamicResponseField>
-
-          </Expandable>
-        </DynamicResponseField>
-
-      </Expandable>
-    </DynamicResponseField>
-
-    <DynamicResponseField name="spend_limits" type="object[]">
-      List of overage spend limits per feature.
-      <Expandable title="properties">
-        <DynamicResponseField name="feature_id" type="string">
-          Optional feature ID this spend limit applies to.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="enabled" type="boolean">
-          Whether this spend limit is enabled.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="overage_limit" type="number">
-          Maximum allowed overage spend for the target feature.
-        </DynamicResponseField>
-
-      </Expandable>
-    </DynamicResponseField>
-
-  </Expandable>
+  The environment (sandbox/live)
 </DynamicResponseField>
 
 <DynamicResponseField name="subscriptions" type="object[]">
-  Active and scheduled recurring plans that this customer has attached.
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string">
       The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
@@ -530,7 +389,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="purchases" type="object[]">
-  One-time purchases made by the customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan" type="object">
       The full plan object if expanded.
@@ -815,7 +673,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="balances.{key}" type="object">
-  Feature balances keyed by feature ID, showing usage limits and remaining amounts.
   <Expandable title="properties">
     <DynamicResponseField name="feature_id" type="string">
       The feature ID this balance is for.
@@ -1010,68 +867,121 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="billing_controls" type="object">
+  Billing controls for the entity.
+  <Expandable title="properties">
+    <DynamicResponseField name="spend_limits" type="object[]">
+      List of overage spend limits per feature.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          Optional feature ID this spend limit applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="enabled" type="boolean">
+          Whether this spend limit is enabled.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="overage_limit" type="number">
+          Maximum allowed overage spend for the target feature.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="invoices" type="object[]">
+  Invoices for this entity (only included when expand=invoices)
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_ids" type="string[]">
+      Array of plan IDs included in this invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string">
+      The status of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The currency code for the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when the invoice was created
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the Stripe-hosted invoice page
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 
 <ResponseExample>
 ```json 200
 {
-  "id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58",
-  "name": "Patrick",
-  "email": "patrick@useautumn.com",
-  "createdAt": 1771409161016,
-  "fingerprint": null,
-  "stripeId": "cus_U0BKxpq1mFhuJO",
+  "id": "seat_42",
+  "name": "Seat 42",
+  "customer_id": "cus_123",
+  "feature_id": "seats",
+  "created_at": 1771409161016,
   "env": "sandbox",
-  "metadata": {},
-  "sendEmailReceipts": false,
-  "billingControls": {
-    "autoTopups": []
-  },
   "subscriptions": [
     {
-      "planId": "pro_plan",
-      "autoEnable": true,
-      "addOn": false,
+      "plan_id": "pro_plan",
+      "auto_enable": true,
+      "add_on": false,
       "status": "active",
-      "pastDue": false,
-      "canceledAt": null,
-      "expiresAt": null,
-      "trialEndsAt": null,
-      "startedAt": 1771431921437,
-      "currentPeriodStart": 1771431921437,
-      "currentPeriodEnd": 1771999921437,
+      "past_due": false,
+      "canceled_at": null,
+      "expires_at": null,
+      "trial_ends_at": null,
+      "started_at": 1771431921437,
+      "current_period_start": 1771431921437,
+      "current_period_end": 1771999921437,
       "quantity": 1
     }
   ],
   "purchases": [],
   "balances": {
     "messages": {
-      "featureId": "messages",
+      "feature_id": "messages",
       "granted": 100,
-      "remaining": 0,
-      "usage": 100,
+      "remaining": 72,
+      "usage": 28,
       "unlimited": false,
-      "overageAllowed": false,
-      "maxPurchase": null,
-      "nextResetAt": 1773851121437,
+      "overage_allowed": false,
+      "max_purchase": null,
+      "next_reset_at": 1773851121437,
       "breakdown": [
         {
           "id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
-          "planId": "pro_plan",
-          "includedGrant": 100,
-          "prepaidGrant": 0,
-          "remaining": 0,
-          "usage": 100,
+          "plan_id": "pro_plan",
+          "included_grant": 100,
+          "prepaid_grant": 0,
+          "remaining": 72,
+          "usage": 28,
           "unlimited": false,
           "reset": {
             "interval": "month",
-            "resetsAt": 1773851121437
+            "resets_at": 1773851121437
           },
           "price": null,
-          "expiresAt": null
+          "expires_at": null
         }
       ]
     }
-  }
+  },
+  "invoices": []
 }
 ```
 </ResponseExample>

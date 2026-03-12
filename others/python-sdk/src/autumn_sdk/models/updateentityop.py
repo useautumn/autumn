@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
-from .customerdata import CustomerData, CustomerDataTypedDict
 from .plan import Plan, PlanTypedDict
 from autumn_sdk.types import (
     BaseModel,
@@ -19,11 +18,11 @@ from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
-class CreateEntityGlobalsTypedDict(TypedDict):
+class UpdateEntityGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class CreateEntityGlobals(BaseModel):
+class UpdateEntityGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -47,7 +46,7 @@ class CreateEntityGlobals(BaseModel):
         return m
 
 
-class CreateEntitySpendLimitRequestTypedDict(TypedDict):
+class UpdateEntitySpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
@@ -56,7 +55,7 @@ class CreateEntitySpendLimitRequestTypedDict(TypedDict):
     r"""Maximum allowed overage spend for the target feature."""
 
 
-class CreateEntitySpendLimitRequest(BaseModel):
+class UpdateEntitySpendLimitRequest(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
@@ -83,17 +82,17 @@ class CreateEntitySpendLimitRequest(BaseModel):
         return m
 
 
-class CreateEntityBillingControlsRequestTypedDict(TypedDict):
-    r"""Billing controls for the entity."""
+class UpdateEntityBillingControlsRequestTypedDict(TypedDict):
+    r"""Billing controls to replace on the entity."""
 
-    spend_limits: NotRequired[List[CreateEntitySpendLimitRequestTypedDict]]
+    spend_limits: NotRequired[List[UpdateEntitySpendLimitRequestTypedDict]]
     r"""List of overage spend limits per feature."""
 
 
-class CreateEntityBillingControlsRequest(BaseModel):
-    r"""Billing controls for the entity."""
+class UpdateEntityBillingControlsRequest(BaseModel):
+    r"""Billing controls to replace on the entity."""
 
-    spend_limits: Optional[List[CreateEntitySpendLimitRequest]] = None
+    spend_limits: Optional[List[UpdateEntitySpendLimitRequest]] = None
     r"""List of overage spend limits per feature."""
 
     @model_serializer(mode="wrap")
@@ -113,67 +112,43 @@ class CreateEntityBillingControlsRequest(BaseModel):
         return m
 
 
-class CreateEntityParamsTypedDict(TypedDict):
-    feature_id: str
-    r"""The ID of the feature this entity is associated with"""
-    customer_id: str
-    r"""The ID of the customer to create the entity for."""
+class UpdateEntityParamsTypedDict(TypedDict):
     entity_id: str
     r"""The ID of the entity."""
-    name: NotRequired[Nullable[str]]
-    r"""The name of the entity"""
-    billing_controls: NotRequired[CreateEntityBillingControlsRequestTypedDict]
-    r"""Billing controls for the entity."""
-    customer_data: NotRequired[CustomerDataTypedDict]
-    r"""Customer details to set when creating a customer"""
+    customer_id: NotRequired[str]
+    r"""The ID of the customer that owns the entity."""
+    billing_controls: NotRequired[UpdateEntityBillingControlsRequestTypedDict]
+    r"""Billing controls to replace on the entity."""
 
 
-class CreateEntityParams(BaseModel):
-    feature_id: str
-    r"""The ID of the feature this entity is associated with"""
-
-    customer_id: str
-    r"""The ID of the customer to create the entity for."""
-
+class UpdateEntityParams(BaseModel):
     entity_id: str
     r"""The ID of the entity."""
 
-    name: OptionalNullable[str] = UNSET
-    r"""The name of the entity"""
+    customer_id: Optional[str] = None
+    r"""The ID of the customer that owns the entity."""
 
-    billing_controls: Optional[CreateEntityBillingControlsRequest] = None
-    r"""Billing controls for the entity."""
-
-    customer_data: Optional[CustomerData] = None
-    r"""Customer details to set when creating a customer"""
+    billing_controls: Optional[UpdateEntityBillingControlsRequest] = None
+    r"""Billing controls to replace on the entity."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name", "billing_controls", "customer_data"])
-        nullable_fields = set(["name"])
+        optional_fields = set(["customer_id", "billing_controls"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
 
 
-CreateEntityEnv = Union[
+UpdateEntityEnv = Union[
     Literal[
         "sandbox",
         "live",
@@ -183,7 +158,7 @@ CreateEntityEnv = Union[
 r"""The environment (sandbox/live)"""
 
 
-CreateEntityStatus = Union[
+UpdateEntityStatus = Union[
     Literal[
         "active",
         "scheduled",
@@ -193,7 +168,7 @@ CreateEntityStatus = Union[
 r"""Current status of the subscription."""
 
 
-class CreateEntitySubscriptionTypedDict(TypedDict):
+class UpdateEntitySubscriptionTypedDict(TypedDict):
     id: str
     r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
     plan_id: str
@@ -202,7 +177,7 @@ class CreateEntitySubscriptionTypedDict(TypedDict):
     r"""Whether the plan was automatically enabled for the customer."""
     add_on: bool
     r"""Whether this is an add-on plan rather than a base subscription."""
-    status: CreateEntityStatus
+    status: UpdateEntityStatus
     r"""Current status of the subscription."""
     past_due: bool
     r"""Whether the subscription has overdue payments."""
@@ -223,7 +198,7 @@ class CreateEntitySubscriptionTypedDict(TypedDict):
     plan: NotRequired[PlanTypedDict]
 
 
-class CreateEntitySubscription(BaseModel):
+class UpdateEntitySubscription(BaseModel):
     id: str
     r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
 
@@ -236,7 +211,7 @@ class CreateEntitySubscription(BaseModel):
     add_on: bool
     r"""Whether this is an add-on plan rather than a base subscription."""
 
-    status: CreateEntityStatus
+    status: UpdateEntityStatus
     r"""Current status of the subscription."""
 
     past_due: bool
@@ -299,7 +274,7 @@ class CreateEntitySubscription(BaseModel):
         return m
 
 
-class CreateEntityPurchaseTypedDict(TypedDict):
+class UpdateEntityPurchaseTypedDict(TypedDict):
     plan_id: str
     r"""The unique identifier of the purchased plan."""
     expires_at: Nullable[float]
@@ -311,7 +286,7 @@ class CreateEntityPurchaseTypedDict(TypedDict):
     plan: NotRequired[PlanTypedDict]
 
 
-class CreateEntityPurchase(BaseModel):
+class UpdateEntityPurchase(BaseModel):
     plan_id: str
     r"""The unique identifier of the purchased plan."""
 
@@ -352,7 +327,7 @@ class CreateEntityPurchase(BaseModel):
         return m
 
 
-class CreateEntitySpendLimitResponseTypedDict(TypedDict):
+class UpdateEntitySpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
@@ -361,7 +336,7 @@ class CreateEntitySpendLimitResponseTypedDict(TypedDict):
     r"""Maximum allowed overage spend for the target feature."""
 
 
-class CreateEntitySpendLimitResponse(BaseModel):
+class UpdateEntitySpendLimitResponse(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
@@ -388,17 +363,17 @@ class CreateEntitySpendLimitResponse(BaseModel):
         return m
 
 
-class CreateEntityBillingControlsResponseTypedDict(TypedDict):
+class UpdateEntityBillingControlsResponseTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
-    spend_limits: NotRequired[List[CreateEntitySpendLimitResponseTypedDict]]
+    spend_limits: NotRequired[List[UpdateEntitySpendLimitResponseTypedDict]]
     r"""List of overage spend limits per feature."""
 
 
-class CreateEntityBillingControlsResponse(BaseModel):
+class UpdateEntityBillingControlsResponse(BaseModel):
     r"""Billing controls for the entity."""
 
-    spend_limits: Optional[List[CreateEntitySpendLimitResponse]] = None
+    spend_limits: Optional[List[UpdateEntitySpendLimitResponse]] = None
     r"""List of overage spend limits per feature."""
 
     @model_serializer(mode="wrap")
@@ -418,7 +393,7 @@ class CreateEntityBillingControlsResponse(BaseModel):
         return m
 
 
-class CreateEntityInvoiceTypedDict(TypedDict):
+class UpdateEntityInvoiceTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
     stripe_id: str
@@ -435,7 +410,7 @@ class CreateEntityInvoiceTypedDict(TypedDict):
     r"""URL to the Stripe-hosted invoice page"""
 
 
-class CreateEntityInvoice(BaseModel):
+class UpdateEntityInvoice(BaseModel):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
 
@@ -483,7 +458,7 @@ class CreateEntityInvoice(BaseModel):
         return m
 
 
-class CreateEntityResponseTypedDict(TypedDict):
+class UpdateEntityResponseTypedDict(TypedDict):
     r"""OK"""
 
     id: Nullable[str]
@@ -492,22 +467,22 @@ class CreateEntityResponseTypedDict(TypedDict):
     r"""The name of the entity"""
     created_at: float
     r"""Unix timestamp when the entity was created"""
-    env: CreateEntityEnv
+    env: UpdateEntityEnv
     r"""The environment (sandbox/live)"""
-    subscriptions: List[CreateEntitySubscriptionTypedDict]
-    purchases: List[CreateEntityPurchaseTypedDict]
+    subscriptions: List[UpdateEntitySubscriptionTypedDict]
+    purchases: List[UpdateEntityPurchaseTypedDict]
     balances: Dict[str, BalanceTypedDict]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID this entity belongs to"""
-    billing_controls: NotRequired[CreateEntityBillingControlsResponseTypedDict]
+    billing_controls: NotRequired[UpdateEntityBillingControlsResponseTypedDict]
     r"""Billing controls for the entity."""
-    invoices: NotRequired[List[CreateEntityInvoiceTypedDict]]
+    invoices: NotRequired[List[UpdateEntityInvoiceTypedDict]]
     r"""Invoices for this entity (only included when expand=invoices)"""
 
 
-class CreateEntityResponse(BaseModel):
+class UpdateEntityResponse(BaseModel):
     r"""OK"""
 
     id: Nullable[str]
@@ -519,12 +494,12 @@ class CreateEntityResponse(BaseModel):
     created_at: float
     r"""Unix timestamp when the entity was created"""
 
-    env: CreateEntityEnv
+    env: UpdateEntityEnv
     r"""The environment (sandbox/live)"""
 
-    subscriptions: List[CreateEntitySubscription]
+    subscriptions: List[UpdateEntitySubscription]
 
-    purchases: List[CreateEntityPurchase]
+    purchases: List[UpdateEntityPurchase]
 
     balances: Dict[str, Balance]
 
@@ -534,10 +509,10 @@ class CreateEntityResponse(BaseModel):
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID this entity belongs to"""
 
-    billing_controls: Optional[CreateEntityBillingControlsResponse] = None
+    billing_controls: Optional[UpdateEntityBillingControlsResponse] = None
     r"""Billing controls for the entity."""
 
-    invoices: Optional[List[CreateEntityInvoice]] = None
+    invoices: Optional[List[UpdateEntityInvoice]] = None
     r"""Invoices for this entity (only included when expand=invoices)"""
 
     @model_serializer(mode="wrap")
