@@ -41,6 +41,7 @@ export const creditTopUp = plan({
       price: {
         amount: 10,
         billingUnits: 500,
+        interval: 'one_off',
         billingMethod: 'prepaid',
       },
     }),
@@ -74,10 +75,11 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-await autumn.customers.update("user_123", {
-  billing_controls: {
-    auto_topups: [{
-      feature_id: "credits",
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    autoTopups: [{
+      featureId: "credits",
       enabled: true,
       threshold: 100,
       quantity: 500,
@@ -92,7 +94,7 @@ from autumn_sdk import Autumn
 autumn = Autumn("am_sk_...")
 
 await autumn.customers.update(
-    "user_123",
+    customer_id="user_123",
     billing_controls={
         "auto_topups": [{
             "feature_id": "credits",
@@ -105,10 +107,11 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/user_123" \
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
+    "customer_id": "user_123",
     "billing_controls": {
       "auto_topups": [{
         "feature_id": "credits",
