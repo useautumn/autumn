@@ -1,10 +1,10 @@
-import {
-	type AppEnv,
-	type Entity,
-	FeatureType,
-	FullCusEntWithFullCusProduct,
+import type {
+	AppEnv,
+	CreateEntityParams,
+	Entity,
+	Feature,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const constructEntity = ({
 	inputEntity,
@@ -14,8 +14,8 @@ export const constructEntity = ({
 	env,
 	deleted = false,
 }: {
-	inputEntity: any;
-	feature: any;
+	inputEntity: CreateEntityParams;
+	feature: Feature;
 	internalCustomerId: string;
 	orgId: string;
 	env: AppEnv;
@@ -24,7 +24,7 @@ export const constructEntity = ({
 	const entity: Entity = {
 		internal_id: generateId("ety"),
 		id: inputEntity.id,
-		name: inputEntity.name,
+		name: inputEntity.name ?? null,
 		internal_customer_id: internalCustomerId,
 		feature_id: feature.id,
 		internal_feature_id: feature.internal_id,
@@ -32,6 +32,7 @@ export const constructEntity = ({
 		env,
 		deleted,
 		created_at: Date.now(),
+		spend_limits: inputEntity.billing_controls?.spend_limits,
 	};
 
 	return entity;

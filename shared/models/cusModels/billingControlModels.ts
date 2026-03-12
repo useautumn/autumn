@@ -1,4 +1,13 @@
 import { z } from "zod/v4";
+import {
+	type EntityBillingControls,
+	type EntityBillingControlsInput,
+	EntityBillingControlsSchema,
+} from "./billingControls/entityBillingControls.js";
+import {
+	type EntitySpendLimit,
+	EntitySpendLimitSchema,
+} from "./billingControls/entitySpendLimit.js";
 import { PurchaseLimitIntervalEnum } from "./billingControls/purchaseLimitInterval.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
@@ -49,3 +58,10 @@ export type CustomerBillingControls = z.infer<
 export type CustomerBillingControlsInput = z.input<
 	typeof CustomerBillingControlsSchema
 >;
+
+export { EntityBillingControlsSchema, EntitySpendLimitSchema };
+export type {
+	EntityBillingControls,
+	EntityBillingControlsInput,
+	EntitySpendLimit,
+};

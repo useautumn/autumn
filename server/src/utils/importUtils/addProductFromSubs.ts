@@ -101,7 +101,7 @@ export const addProductFromSubs = async ({
 			cusProducts: cusProducts,
 			features: [],
 			internalEntityId: entity?.internal_id,
-			entityId: entity?.id,
+			entityId: entity?.id ?? entity?.internal_id,
 			isCustom: isCustom,
 		},
 

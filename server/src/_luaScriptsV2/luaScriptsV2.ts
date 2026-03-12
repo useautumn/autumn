@@ -215,6 +215,14 @@ export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
 );
 
 /**
+ * Atomically update specific fields on an entity inside the cached FullCustomer.
+ */
+export const UPDATE_ENTITY_IN_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "updateEntityInCustomer.lua"),
+	"utf-8",
+);
+
+/**
  * Atomically upsert an invoice in the customer's invoices array.
  * Matches by stripe_id — replaces if found, appends if not.
  * CRDT-safe: JSON.ARRAPPEND uses merge, JSON.SET uses update-vs-update.
