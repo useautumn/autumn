@@ -5,7 +5,7 @@ dotenv.config();
 
 import {
 	type ApiCustomerV3,
-	type ApiEntityBillingControlsInput,
+	type ApiEntityBillingControlsParams,
 	type AttachBodyV0,
 	type CancelBody,
 	type CheckoutParams,
@@ -368,7 +368,7 @@ export class AutumnCliV2 {
 			customerId: string,
 			entityId: string,
 			updates: {
-				billing_controls?: ApiEntityBillingControlsInput;
+				billing_controls?: ApiEntityBillingControlsParams;
 			},
 		) => {
 			return await this.post(`/entities.update`, {
