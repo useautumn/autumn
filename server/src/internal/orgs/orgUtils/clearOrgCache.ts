@@ -1,7 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { CacheManager } from "@server/utils/cacheUtils/CacheManager.js";
-import { CacheType } from "@server/utils/cacheUtils/CacheType.js";
+import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
 import { OrgService } from "../OrgService.js";
 
 export const clearOrgCache = async ({
@@ -13,9 +12,9 @@ export const clearOrgCache = async ({
 	db: DrizzleCli;
 	orgId: string;
 	env?: AppEnv;
-	logger?: any;
+	logger?: Pick<Console, "error" | "info" | "warn">;
 }) => {
-	// 1. Get all hashed secret key and public key for org
+	// 1. Get all hashed secret keys for org
 	try {
 		const org = await OrgService.getWithKeys({
 			db,
@@ -27,29 +26,18 @@ export const clearOrgCache = async ({
 			return;
 		}
 
-		const secretKeys = org.api_keys.map((key: any) => key.hashed_key);
-		const publicKeys = [org.test_pkey, org.live_pkey];
+		const secretKeys = org.api_keys
+			.map((key) => key.hashed_key)
+			.filter((key): key is string => Boolean(key));
 
-		const batchDelete = [];
-		for (const key of secretKeys) {
-			batchDelete.push(
-				CacheManager.invalidate({
-					action: CacheType.SecretKey,
-					value: key!,
+		await Promise.all(
+			secretKeys.map((hashedKey) =>
+				clearSecretKeyCache({
+					hashedKey,
+					logger,
 				}),
-			);
-		}
-
-		for (const key of publicKeys) {
-			batchDelete.push(
-				CacheManager.invalidate({
-					action: CacheType.PublicKey,
-					value: key!,
-				}),
-			);
-		}
-
-		await Promise.all(batchDelete);
+			),
+		);
 		logger.info(`Cleared cache for org ${org.slug} (${orgId})`);
 	} catch (error) {
 		logger.error(`Failed to clear cache for org ${orgId}`);
