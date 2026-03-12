@@ -101,6 +101,7 @@ export const executeRedisDeduction = async ({
 
 		const {
 			customerEntitlementDeductions,
+			availableOverageByFeatureId,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
@@ -119,6 +120,7 @@ export const executeRedisDeduction = async ({
 		// Call Lua script to deduct from FullCustomer in Redis
 		const luaParams = {
 			sorted_entitlements: customerEntitlementDeductions,
+			available_overage_by_feature_id: availableOverageByFeatureId ?? null,
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
 			target_entity_id: entityId || null,

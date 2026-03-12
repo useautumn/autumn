@@ -28,6 +28,7 @@ local function process_deduction_pass(params)
   local context = params.context
   local sorted_entitlements = params.sorted_entitlements or {}
   local target_entity_id = params.target_entity_id
+  local available_overage_by_feature_id = params.available_overage_by_feature_id
   local alter_granted_balance = params.alter_granted_balance or false
   local overage_behavior_is_allow = params.overage_behavior_is_allow or false
   local pass_number = params.pass_number
@@ -46,8 +47,19 @@ local function process_deduction_pass(params)
 
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost
+    local ent_feature_id = ent_obj.feature_id
     if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
       credit_cost = 1
+    end
+
+    local available_overage = nil
+    if pass_number == 2
+        and remaining_amount > 0
+        and not overage_behavior_is_allow
+        and not is_nil(available_overage_by_feature_id)
+        and not is_nil(ent_feature_id)
+    then
+      available_overage = available_overage_by_feature_id[ent_feature_id]
     end
 
     local usage_allowed = ent_obj.usage_allowed
@@ -71,6 +83,7 @@ local function process_deduction_pass(params)
         amount = remaining_amount,
         credit_cost = credit_cost,
         pass_number = pass_number,
+        available_overage = available_overage,
         min_balance = ent_obj.min_balance,
         max_balance = ent_obj.max_balance,
         alter_granted_balance = alter_granted_balance,
@@ -79,6 +92,17 @@ local function process_deduction_pass(params)
       })
 
       remaining_amount = remaining_amount - (deducted / credit_cost)
+
+      if deducted > 0
+          and not is_nil(available_overage)
+          and not is_nil(available_overage_by_feature_id)
+          and not is_nil(ent_feature_id)
+      then
+        available_overage_by_feature_id[ent_feature_id] = round_to_precision(
+          math.max(0, available_overage - deducted),
+          10
+        )
+      end
 
       if deducted ~= 0 then
         if not updates[ent_id] then
@@ -163,6 +187,7 @@ local function run_deduction_on_context(params)
   local sorted_entitlements = params.sorted_entitlements or {}
   local rollovers = params.rollovers
   local target_entity_id = params.target_entity_id
+  local available_overage_by_feature_id = params.available_overage_by_feature_id
   local alter_granted_balance = params.alter_granted_balance or false
   local overage_behaviour = params.overage_behaviour or 'cap'
   local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
@@ -197,6 +222,7 @@ local function run_deduction_on_context(params)
     context = context,
     sorted_entitlements = sorted_entitlements,
     target_entity_id = target_entity_id,
+    available_overage_by_feature_id = available_overage_by_feature_id,
     alter_granted_balance = alter_granted_balance,
     overage_behavior_is_allow = overage_behavior_is_allow,
     pass_number = 1,
@@ -212,6 +238,7 @@ local function run_deduction_on_context(params)
       context = context,
       sorted_entitlements = sorted_entitlements,
       target_entity_id = target_entity_id,
+      available_overage_by_feature_id = available_overage_by_feature_id,
       alter_granted_balance = alter_granted_balance,
       overage_behavior_is_allow = overage_behavior_is_allow,
       pass_number = 2,
