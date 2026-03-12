@@ -1,17 +1,14 @@
-import { invoices, stripeToAtmnAmount } from "@autumn/shared";
+import type Stripe from "stripe";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import {
-	getInvoiceDiscounts,
-	getStripeExpandedInvoice,
-} from "@/external/stripe/stripeInvoiceUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
+import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { generateId } from "@/utils/genUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { upsertInvoiceFromStripe } from "@/internal/invoices/actions/upsertFromStripe";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 const SyncInvoiceBodySchema = z.object({
 	stripe_invoice_id: z.string().startsWith("in_"),
-	product_id: z.string(),
 	internal_product_id: z.string(),
 });
 
@@ -23,30 +20,31 @@ export const handleSyncInvoice = createRoute({
 		const body = c.req.valid("json");
 		const { customer_id } = c.req.param();
 
-		// Resolve customer from URL param
-		const customer = await CusService.getByInternalId({
-			db,
-			internalId: customer_id,
-			errorIfNotFound: false,
+		const customer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customer_id,
+			allowNotFound: true,
 		});
 
 		if (!customer) {
 			return c.json({ error: "Customer not found" }, 404);
 		}
 
-		// Check if invoice already exists
-		const existing = await db.query.invoices.findFirst({
-			where: (inv, { eq }) => eq(inv.stripe_id, body.stripe_invoice_id),
+		const fullProduct = await ProductService.getFull({
+			db,
+			idOrInternalId: body.internal_product_id,
+			orgId: org.id,
+			env,
+			allowNotFound: true,
 		});
 
-		if (existing) {
-			return c.json({ error: "Invoice already synced", invoice: existing }, 409);
+		if (!fullProduct) {
+			return c.json({ error: "Product not found" }, 404);
 		}
 
 		const stripeCli = createStripeCli({ org, env });
 
-		// Fetch the invoice from Stripe (reuse shared utility for expanded discounts)
-		let stripeInvoice;
+		let stripeInvoice: Stripe.Invoice;
 		try {
 			stripeInvoice = await getStripeExpandedInvoice({
 				stripeCli,
@@ -56,33 +54,18 @@ export const handleSyncInvoice = createRoute({
 			return c.json({ error: "Invoice not found in Stripe" }, 404);
 		}
 
-		// Insert the invoice
-		const [result] = await db
-			.insert(invoices)
-			.values({
-				id: generateId("inv"),
-				internal_customer_id: customer.internal_id,
-				product_ids: [body.product_id],
-				internal_product_ids: [body.internal_product_id],
-				created_at: stripeInvoice.created * 1000,
-				stripe_id: stripeInvoice.id!,
-				hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
-				status: stripeInvoice.status ?? "unknown",
-				internal_entity_id: null,
-				total: stripeToAtmnAmount({
-					amount: stripeInvoice.total,
-					currency: stripeInvoice.currency,
-				}),
-				currency: stripeInvoice.currency,
-				discounts: getInvoiceDiscounts({ expandedInvoice: stripeInvoice }),
-				items: [],
-			} satisfies typeof invoices.$inferInsert)
-			.returning();
+		const invoice = await upsertInvoiceFromStripe({
+			ctx,
+			stripeInvoice,
+			fullCustomer: customer,
+			fullProducts: [fullProduct],
+			internalEntityId: customer.entity?.internal_id,
+		});
 
-		if (!result) {
-			return c.json({ error: "Failed to insert invoice" }, 500);
+		if (!invoice) {
+			return c.json({ error: "Failed to upsert invoice" }, 500);
 		}
 
-		return c.json({ success: true, invoice: result });
+		return c.json({ success: true, invoice });
 	},
 });
