@@ -89,20 +89,28 @@
 							"documentation/modelling-pricing/rewards"
 						]
 					},
-					{
-						"group": "Manage Customers",
-						"pages": [
-							"documentation/customers/payment-flow",
-							"documentation/customers/subscription-lifecycle",
-							"documentation/customers/managing-balances",
-							"documentation/customers/check",
-							"documentation/customers/tracking-usage",
-							"documentation/customers/feature-entities",
-							"documentation/customers/creating-customers",
-							"documentation/customers/managing-customers",
-							"documentation/customers/versioning"
-						]
-					},
+				{
+					"group": "Billing & Subscriptions",
+					"pages": [
+						"documentation/customers/payment-flow",
+						"documentation/customers/subscription-lifecycle",
+						"documentation/customers/updating-subscriptions",
+						"documentation/customers/custom-plans",
+						"documentation/customers/versioning"
+					]
+				},
+				{
+					"group": "Customers",
+					"pages": [
+						"documentation/customers/creating-customers",
+						"documentation/customers/managing-customers",
+						"documentation/customers/check",
+						"documentation/customers/tracking-usage",
+						"documentation/customers/balance-locking",
+						"documentation/customers/managing-balances",
+						"documentation/customers/feature-entities"
+					]
+				},
 					{
 						"group": "Additional Resources",
 						"pages": [
