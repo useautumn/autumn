@@ -3,11 +3,18 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { schemas as schema } from "@autumn/shared";
+import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { otelConfig } from "../utils/otel/otelConfig.js";
 
 export const client = postgres(process.env.DATABASE_URL!);
 export const db = drizzle(client, { schema });
+
+if (otelConfig.drizzle) {
+	instrumentDrizzleClient(db);
+}
 
 export const initDrizzle = (params?: {
 	maxConnections?: number;
@@ -25,6 +32,10 @@ export const initDrizzle = (params?: {
 	const dbMain = drizzle(client, {
 		schema,
 	});
+
+	if (otelConfig.drizzle) {
+		instrumentDrizzleClient(dbMain);
+	}
 
 	// if (process.env.DATABASE_REPLICA_URL !== undefined) {
 	// 	const clientReplica = postgres(process.env.DATABASE_REPLICA_URL, {
