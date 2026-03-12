@@ -1,12 +1,12 @@
 import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1.js";
 import { z } from "zod/v4";
+import { ApiEntityBillingControlsSchema } from "../billingControls/entityBillingControls.js";
 import {
 	ApiPurchaseV0Schema,
 	ApiSubscriptionV1Schema,
 } from "../customers/cusPlans/apiSubscriptionV1.js";
 import { ApiInvoiceV1Schema } from "../others/apiInvoice/apiInvoiceV1.js";
 import { ApiBaseEntitySchema } from "./apiBaseEntity.js";
-import { ApiEntityBillingControlsSchema } from "./billingControls/entityBillingControls.js";
 
 // V2 base entity - uses V1 subscriptions (single array with status field)
 export const BaseApiEntityV2Schema = ApiBaseEntitySchema.extend({

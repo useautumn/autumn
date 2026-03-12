@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiEntityBillingControlsSchema } from "../entities/billingControls/entityBillingControls.js";
+import { ApiEntityBillingControlsSchema } from "../billingControls/entityBillingControls.js";
 
 export const EntityDataSchema = z
 	.object({

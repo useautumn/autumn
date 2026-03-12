@@ -1,6 +1,7 @@
 // Main customer schemas
 export * from "./apiCustomer";
 export * from "./apiCustomerV5";
+export * from "./apiSubjectV0";
 export * from "./baseApiCustomer";
 // Submodules
 export * from "./components/index";
