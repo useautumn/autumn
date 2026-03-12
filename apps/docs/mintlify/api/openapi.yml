@@ -9227,6 +9227,91 @@ paths:
                 customer_id="cus_123",
                 feature_id="api_calls",
             )
+  /v1/balances.finalize:
+    post:
+      operationId: finalizeLock
+      description: Finalize a previously locked balance. Use 'confirm' to commit the
+        deduction, or 'release' to return the held balance.
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lock_id:
+                  type: string
+                  description: The lock ID that was passed into the previous check call.
+                action:
+                  enum:
+                    - confirm
+                    - release
+                  description: Use 'confirm' to commit the deduction, or 'release' to return the
+                    held balance.
+                override_value:
+                  type: number
+                  description: Override the original lock value with a different deduction amount.
+                    Only valid when action is 'confirm'.
+              required:
+                - lock_id
+                - action
+              title: FinalizeBalanceParams
+              examples:
+                - &a45
+                  lock_id: lock_abc123
+                  action: confirm
+                - lock_id: lock_abc123
+                  action: confirm
+                  override_value: 3
+                - lock_id: lock_abc123
+                  action: release
+            example: *a45
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+      x-speakeasy-name-override: finalize
+      parameters:
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "2.1"
+          x-speakeasy-globals-hidden: true
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.balances.finalize({
+              lockId: "lock_abc123",
+              action: "confirm",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.balances.finalize(
+                lock_id="lock_abc123",
+                action="confirm",
+            )
   /v1/balances.check:
     post:
       operationId: check
@@ -9269,6 +9354,26 @@ paths:
                   description: If true, atomically records a usage event while checking access.
                     The required_balance value is used as the usage amount.
                     Combines check + track in one call.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later
+                        via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and
+                        releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
+                  description: Reserve units of a feature upfront by passing a lock_id, then call
+                    balances.finalize to confirm or release the hold.
                 with_preview:
                   type: boolean
                   description: If true, includes upgrade/upsell information in the response when
@@ -9278,14 +9383,14 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a45
+                - &a46
                   customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a45
+            example: *a46
       responses:
         "200":
           description: OK
@@ -9665,7 +9770,7 @@ paths:
                   - customer_id
                   - balance
                 examples:
-                  - &a46
+                  - &a47
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -9692,7 +9797,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a46
+              example: *a47
       x-speakeasy-name-override: check
       parameters:
         - name: x-api-version
@@ -9767,15 +9872,33 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later
+                        via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and
+                        releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
               required:
                 - customer_id
               title: TrackParams
               examples:
-                - &a47
+                - &a48
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a47
+            example: *a48
       responses:
         "200":
           description: OK
@@ -9816,7 +9939,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a48
+                  - &a49
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -9841,7 +9964,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a48
+              example: *a49
       x-speakeasy-name-override: track
       parameters:
         - name: x-api-version
@@ -9926,14 +10049,14 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a49
+                - &a50
                   customer_id: cus_123
                   limit: 50
                 - feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a49
+            example: *a50
       responses:
         "200":
           description: OK
@@ -9992,7 +10115,7 @@ paths:
                   - limit
                   - total
                 examples:
-                  - &a50
+                  - &a51
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -10010,7 +10133,7 @@ paths:
                     has_more: false
                     offset: 0
                     limit: 100
-              example: *a50
+              example: *a51
       x-speakeasy-name-override: list
       parameters:
         - name: x-api-version
@@ -10112,7 +10235,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a51
+                - &a52
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -10123,7 +10246,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a51
+            example: *a52
       responses:
         "200":
           description: OK
@@ -10185,7 +10308,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a52
+                  - &a53
                     list:
                       - period: 1762905600000
                         values:
@@ -10232,7 +10355,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a52
+              example: *a53
       x-speakeasy-name-override: aggregate
       parameters:
         - name: x-api-version
@@ -10311,12 +10434,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a53
+                - &a54
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a53
+            example: *a54
       responses:
         "200":
           description: OK
@@ -10512,7 +10635,7 @@ paths:
                   - purchases
                   - balances
                 examples:
-                  - &a54
+                  - &a55
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -10557,7 +10680,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a54
+              example: *a55
       x-speakeasy-name-override: create
       parameters:
         - name: x-api-version
@@ -10622,11 +10745,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a55
+                - &a56
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a55
+            example: *a56
       responses:
         "200":
           description: OK
@@ -10822,7 +10945,7 @@ paths:
                   - purchases
                   - balances
                 examples:
-                  - &a56
+                  - &a57
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -10867,7 +10990,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a56
+              example: *a57
       x-speakeasy-name-override: get
       parameters:
         - name: x-api-version
@@ -10924,10 +11047,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a57
+                - &a58
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a57
+            example: *a58
       responses:
         "200":
           description: OK
@@ -10941,9 +11064,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a58
+                  - &a59
                     success: true
-              example: *a58
+              example: *a59
       x-speakeasy-name-override: delete
       parameters:
         - name: x-api-version
@@ -11000,10 +11123,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a59
+                - &a60
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a59
+            example: *a60
       responses:
         "200":
           description: OK
@@ -11026,11 +11149,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a60
+                  - &a61
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a60
+              example: *a61
       x-speakeasy-name-override: createCode
       parameters:
         - name: x-api-version
@@ -11087,10 +11210,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a61
+                - &a62
                   code: REF123
                   customer_id: cus_456
-            example: *a61
+            example: *a62
       responses:
         "200":
           description: OK
@@ -11113,11 +11236,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a62
+                  - &a63
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a62
+              example: *a63
       x-speakeasy-name-override: redeemCode
       parameters:
         - name: x-api-version

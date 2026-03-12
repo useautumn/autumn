@@ -26,6 +26,7 @@ export const initCustomerEntitlementEntities = ({
 		});
 
 		if (!featureMatches) continue;
+		if (!entity.id) continue;
 
 		entities[entity.id] = {
 			id: entity.id,

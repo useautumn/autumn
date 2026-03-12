@@ -1,7 +1,7 @@
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_enFqfiGJBWr24b3Gx6mDNQkuHvNAcHIWIvXeis6HLf",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
 const res = await autumn.customers.getOrCreate({

@@ -29,6 +29,7 @@ local function init_context(params)
   local context = {
     customer_entitlements = {},
     rollovers = {},
+    full_customer = params.full_customer,
     mutation_logs = {},
     pending_writes = {},
     logs = logs,

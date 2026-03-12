@@ -1,5 +1,6 @@
 import type {
 	CustomerEntitlementFilters,
+	DbSpendLimit,
 	FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 
@@ -22,6 +23,7 @@ export type DeductionOptions = {
 export type CustomerEntitlementDeduction = {
 	customer_entitlement_id: string;
 	credit_cost: number;
+	feature_id: string;
 	entity_feature_id: string | null;
 	usage_allowed: boolean;
 	min_balance: number | undefined;
@@ -38,6 +40,8 @@ export type RolloverDeduction = {
 export type PreparedFeatureDeduction = {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
+	spendLimitByFeatureId?: Record<string, DbSpendLimit>;
+	usageBasedCusEntIdsByFeatureId?: Record<string, string[]>;
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];

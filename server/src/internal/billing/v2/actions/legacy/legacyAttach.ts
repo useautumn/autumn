@@ -54,7 +54,7 @@ export const legacyAttach = async ({
 
 	const params: AttachParamsV1 = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
-		entity_id: fullCustomer.entity?.id,
+		entity_id: fullCustomer.entity?.id ?? undefined,
 		plan_id: fullProduct.id,
 
 		invoice_mode: attachParamsToInvoiceModeParams({ attachParams }),

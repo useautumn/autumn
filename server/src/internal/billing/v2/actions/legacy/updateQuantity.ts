@@ -67,7 +67,7 @@ export const updateQuantity = async ({
 
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
-		entity_id: fullCustomer.entity?.id,
+		entity_id: fullCustomer.entity?.id ?? undefined,
 		plan_id: fullProduct.id,
 
 		invoice_mode: body.invoice

@@ -42,7 +42,7 @@ export const updateGrantedBalance = async ({
 
 	const currentAllowance = cusEntsToAllowance({
 		cusEnts,
-		entityId: fullCustomer.entity?.id,
+		entityId: fullCustomer.entity?.id ?? undefined,
 		withRollovers: false,
 	});
 

@@ -104,6 +104,8 @@ export const executePostgresDeduction = async ({
 
 			const {
 				customerEntitlementDeductions,
+				spendLimitByFeatureId,
+				usageBasedCusEntIdsByFeatureId,
 				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
@@ -123,6 +125,9 @@ export const executePostgresDeduction = async ({
 				sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
+					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+					usage_based_cus_ent_ids_by_feature_id:
+						usageBasedCusEntIdsByFeatureId ?? null,
 					amount_to_deduct: toDeduct ?? null,
 					target_balance: targetBalance ?? null,
 					lock_receipt: lockReceipt ?? null,
