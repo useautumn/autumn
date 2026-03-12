@@ -547,3 +547,101 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit
 		},
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit6: disabled spend limit no longer caps entity product track")}`, async () => {
+	const entityProduct = products.base({
+		id: "track-entity-product-disabled-limit",
+		items: [
+			items.consumableMessages({
+				includedUsage: 100,
+				price: 0.5,
+			}),
+		],
+	});
+
+	const { autumnV2_1, customerId, entities } = await initScenario({
+		customerId: "track-entity-product-spend-limit-6",
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [entityProduct] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
+		],
+	});
+
+	await setEntitySpendLimit({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		overageLimit: 25,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 120,
+	});
+
+	await setEntitySpendLimit({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		overageLimit: 25,
+		enabled: false,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 10,
+		overage_behavior: "reject",
+	});
+
+	await expectEntityFeatureBalance({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		remaining: 0,
+		usage: 130,
+		breakdownLength: 1,
+	});
+	await expectEntityFeatureBalance({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		remaining: 0,
+		usage: 130,
+		breakdownLength: 1,
+		skipCache: true,
+	});
+
+	await expectCustomerFeatureBalance({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		remaining: 0,
+		usage: 130,
+		breakdownLength: 1,
+	});
+	await expectCustomerFeatureBalance({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		remaining: 0,
+		usage: 130,
+		breakdownLength: 1,
+		skipCache: true,
+	});
+});
