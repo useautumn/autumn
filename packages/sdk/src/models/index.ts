@@ -46,5 +46,6 @@ export * from "./setup-payment-op.js";
 export * from "./track-op.js";
 export * from "./update-balance-op.js";
 export * from "./update-customer-op.js";
+export * from "./update-entity-op.js";
 export * from "./update-feature-op.js";
 export * from "./update-plan-op.js";

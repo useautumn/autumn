@@ -71,6 +71,21 @@ export type GetOrCreateCustomerAutoTopup = {
   purchaseLimit?: GetOrCreateCustomerPurchaseLimit | undefined;
 };
 
+export type GetOrCreateCustomerSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -79,6 +94,10 @@ export type GetOrCreateCustomerBillingControls = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<GetOrCreateCustomerAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<GetOrCreateCustomerSpendLimit> | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -206,8 +225,44 @@ export function getOrCreateCustomerAutoTopupToJSON(
 }
 
 /** @internal */
+export type GetOrCreateCustomerSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerSpendLimit$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerSpendLimit$Outbound,
+  GetOrCreateCustomerSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function getOrCreateCustomerSpendLimitToJSON(
+  getOrCreateCustomerSpendLimit: GetOrCreateCustomerSpendLimit,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerSpendLimit$outboundSchema.parse(
+      getOrCreateCustomerSpendLimit,
+    ),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerBillingControls$Outbound = {
   auto_topups?: Array<GetOrCreateCustomerAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<GetOrCreateCustomerSpendLimit$Outbound> | undefined;
 };
 
 /** @internal */
@@ -219,10 +274,14 @@ export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
     autoTopups: z.optional(
       z.array(z.lazy(() => GetOrCreateCustomerAutoTopup$outboundSchema)),
     ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerSpendLimit$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
     });
   }),
 );

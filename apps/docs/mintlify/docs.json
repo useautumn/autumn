@@ -190,6 +190,7 @@
 						"pages": [
 							"api-reference/entities/getEntity",
 							"api-reference/entities/createEntity",
+							"api-reference/entities/updateEntity",
 							"api-reference/entities/deleteEntity"
 						]
 					},

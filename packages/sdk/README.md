@@ -447,6 +447,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -472,6 +473,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+* [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 * [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
 
 Use this when the underlying resource is removed and you no longer want entity-scoped balances or subscriptions tracked for it.
@@ -875,6 +891,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -914,6 +931,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+- [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 - [`eventsAggregate`](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 - [`eventsList`](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
 - [`featuresCreate`](docs/sdks/features/README.md#create) - Creates a new feature.

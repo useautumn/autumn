@@ -8,9 +8,19 @@ const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.billing.update({
+await autumn.entities.create({
   customerId: "john",
-  noBillingChanges: true,
+  entityId: "name",
+  featureId: "user",
+  billingControls: {
+    spendLimits: [
+      {
+        featureId: "test",
+        enabled: true,
+        overageLimit: 10,
+      },
+    ],
+  },
 });
 
 console.log(JSON.stringify(res, null, 2));

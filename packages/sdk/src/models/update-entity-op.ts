@@ -13,46 +13,75 @@ import { Balance, Balance$inboundSchema } from "./balance.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type GetEntityGlobals = {
+export type UpdateEntityGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type GetEntityParams = {
+export type UpdateEntitySpendLimitRequest = {
   /**
-   * The ID of the customer to create the entity for.
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls to replace on the entity.
+ */
+export type UpdateEntityBillingControlsRequest = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<UpdateEntitySpendLimitRequest> | undefined;
+};
+
+export type UpdateEntityParams = {
+  /**
+   * The ID of the customer that owns the entity.
    */
   customerId?: string | undefined;
   /**
    * The ID of the entity.
    */
   entityId: string;
+  /**
+   * Billing controls to replace on the entity.
+   */
+  billingControls?: UpdateEntityBillingControlsRequest | undefined;
 };
 
 /**
  * The environment (sandbox/live)
  */
-export const GetEntityEnv = {
+export const UpdateEntityEnv = {
   Sandbox: "sandbox",
   Live: "live",
 } as const;
 /**
  * The environment (sandbox/live)
  */
-export type GetEntityEnv = OpenEnum<typeof GetEntityEnv>;
+export type UpdateEntityEnv = OpenEnum<typeof UpdateEntityEnv>;
 
 /**
  * Current status of the subscription.
  */
-export const GetEntityStatus = {
+export const UpdateEntityStatus = {
   Active: "active",
   Scheduled: "scheduled",
 } as const;
 /**
  * Current status of the subscription.
  */
-export type GetEntityStatus = OpenEnum<typeof GetEntityStatus>;
+export type UpdateEntityStatus = OpenEnum<typeof UpdateEntityStatus>;
 
-export type GetEntitySubscription = {
+export type UpdateEntitySubscription = {
   /**
    * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
    */
@@ -73,7 +102,7 @@ export type GetEntitySubscription = {
   /**
    * Current status of the subscription.
    */
-  status: GetEntityStatus;
+  status: UpdateEntityStatus;
   /**
    * Whether the subscription has overdue payments.
    */
@@ -108,7 +137,7 @@ export type GetEntitySubscription = {
   quantity: number;
 };
 
-export type GetEntityPurchase = {
+export type UpdateEntityPurchase = {
   plan?: Plan | undefined;
   /**
    * The unique identifier of the purchased plan.
@@ -128,7 +157,7 @@ export type GetEntityPurchase = {
   quantity: number;
 };
 
-export type GetEntitySpendLimit = {
+export type UpdateEntitySpendLimitResponse = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -146,14 +175,14 @@ export type GetEntitySpendLimit = {
 /**
  * Billing controls for the entity.
  */
-export type GetEntityBillingControls = {
+export type UpdateEntityBillingControlsResponse = {
   /**
    * List of overage spend limits per feature.
    */
-  spendLimits?: Array<GetEntitySpendLimit> | undefined;
+  spendLimits?: Array<UpdateEntitySpendLimitResponse> | undefined;
 };
 
-export type GetEntityInvoice = {
+export type UpdateEntityInvoice = {
   /**
    * Array of plan IDs included in this invoice
    */
@@ -187,7 +216,7 @@ export type GetEntityInvoice = {
 /**
  * OK
  */
-export type GetEntityResponse = {
+export type UpdateEntityResponse = {
   /**
    * The unique identifier of the entity
    */
@@ -211,62 +240,138 @@ export type GetEntityResponse = {
   /**
    * The environment (sandbox/live)
    */
-  env: GetEntityEnv;
-  subscriptions: Array<GetEntitySubscription>;
-  purchases: Array<GetEntityPurchase>;
+  env: UpdateEntityEnv;
+  subscriptions: Array<UpdateEntitySubscription>;
+  purchases: Array<UpdateEntityPurchase>;
   balances: { [k: string]: Balance };
   /**
    * Billing controls for the entity.
    */
-  billingControls?: GetEntityBillingControls | undefined;
+  billingControls?: UpdateEntityBillingControlsResponse | undefined;
   /**
    * Invoices for this entity (only included when expand=invoices)
    */
-  invoices?: Array<GetEntityInvoice> | undefined;
+  invoices?: Array<UpdateEntityInvoice> | undefined;
 };
 
 /** @internal */
-export type GetEntityParams$Outbound = {
+export type UpdateEntitySpendLimitRequest$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const UpdateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
+  UpdateEntitySpendLimitRequest$Outbound,
+  UpdateEntitySpendLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function updateEntitySpendLimitRequestToJSON(
+  updateEntitySpendLimitRequest: UpdateEntitySpendLimitRequest,
+): string {
+  return JSON.stringify(
+    UpdateEntitySpendLimitRequest$outboundSchema.parse(
+      updateEntitySpendLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateEntityBillingControlsRequest$Outbound = {
+  spend_limits?: Array<UpdateEntitySpendLimitRequest$Outbound> | undefined;
+};
+
+/** @internal */
+export const UpdateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
+  UpdateEntityBillingControlsRequest$Outbound,
+  UpdateEntityBillingControlsRequest
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => UpdateEntitySpendLimitRequest$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function updateEntityBillingControlsRequestToJSON(
+  updateEntityBillingControlsRequest: UpdateEntityBillingControlsRequest,
+): string {
+  return JSON.stringify(
+    UpdateEntityBillingControlsRequest$outboundSchema.parse(
+      updateEntityBillingControlsRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateEntityParams$Outbound = {
   customer_id?: string | undefined;
   entity_id: string;
+  billing_controls?: UpdateEntityBillingControlsRequest$Outbound | undefined;
 };
 
 /** @internal */
-export const GetEntityParams$outboundSchema: z.ZodMiniType<
-  GetEntityParams$Outbound,
-  GetEntityParams
+export const UpdateEntityParams$outboundSchema: z.ZodMiniType<
+  UpdateEntityParams$Outbound,
+  UpdateEntityParams
 > = z.pipe(
   z.object({
     customerId: z.optional(z.string()),
     entityId: z.string(),
+    billingControls: z.optional(
+      z.lazy(() => UpdateEntityBillingControlsRequest$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      billingControls: "billing_controls",
     });
   }),
 );
 
-export function getEntityParamsToJSON(
-  getEntityParams: GetEntityParams,
+export function updateEntityParamsToJSON(
+  updateEntityParams: UpdateEntityParams,
 ): string {
-  return JSON.stringify(GetEntityParams$outboundSchema.parse(getEntityParams));
+  return JSON.stringify(
+    UpdateEntityParams$outboundSchema.parse(updateEntityParams),
+  );
 }
 
 /** @internal */
-export const GetEntityEnv$inboundSchema: z.ZodMiniType<GetEntityEnv, unknown> =
-  openEnums.inboundSchema(GetEntityEnv);
-
-/** @internal */
-export const GetEntityStatus$inboundSchema: z.ZodMiniType<
-  GetEntityStatus,
+export const UpdateEntityEnv$inboundSchema: z.ZodMiniType<
+  UpdateEntityEnv,
   unknown
-> = openEnums.inboundSchema(GetEntityStatus);
+> = openEnums.inboundSchema(UpdateEntityEnv);
 
 /** @internal */
-export const GetEntitySubscription$inboundSchema: z.ZodMiniType<
-  GetEntitySubscription,
+export const UpdateEntityStatus$inboundSchema: z.ZodMiniType<
+  UpdateEntityStatus,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityStatus);
+
+/** @internal */
+export const UpdateEntitySubscription$inboundSchema: z.ZodMiniType<
+  UpdateEntitySubscription,
   unknown
 > = z.pipe(
   z.object({
@@ -275,7 +380,7 @@ export const GetEntitySubscription$inboundSchema: z.ZodMiniType<
     plan_id: types.string(),
     auto_enable: types.boolean(),
     add_on: types.boolean(),
-    status: GetEntityStatus$inboundSchema,
+    status: UpdateEntityStatus$inboundSchema,
     past_due: types.boolean(),
     canceled_at: types.nullable(types.number()),
     expires_at: types.nullable(types.number()),
@@ -301,19 +406,19 @@ export const GetEntitySubscription$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntitySubscriptionFromJSON(
+export function updateEntitySubscriptionFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntitySubscription, SDKValidationError> {
+): SafeParseResult<UpdateEntitySubscription, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntitySubscription$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntitySubscription' from JSON`,
+    (x) => UpdateEntitySubscription$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntitySubscription' from JSON`,
   );
 }
 
 /** @internal */
-export const GetEntityPurchase$inboundSchema: z.ZodMiniType<
-  GetEntityPurchase,
+export const UpdateEntityPurchase$inboundSchema: z.ZodMiniType<
+  UpdateEntityPurchase,
   unknown
 > = z.pipe(
   z.object({
@@ -332,19 +437,19 @@ export const GetEntityPurchase$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntityPurchaseFromJSON(
+export function updateEntityPurchaseFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntityPurchase, SDKValidationError> {
+): SafeParseResult<UpdateEntityPurchase, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntityPurchase$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntityPurchase' from JSON`,
+    (x) => UpdateEntityPurchase$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityPurchase' from JSON`,
   );
 }
 
 /** @internal */
-export const GetEntitySpendLimit$inboundSchema: z.ZodMiniType<
-  GetEntitySpendLimit,
+export const UpdateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntitySpendLimitResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -360,24 +465,24 @@ export const GetEntitySpendLimit$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntitySpendLimitFromJSON(
+export function updateEntitySpendLimitResponseFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntitySpendLimit, SDKValidationError> {
+): SafeParseResult<UpdateEntitySpendLimitResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntitySpendLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntitySpendLimit' from JSON`,
+    (x) => UpdateEntitySpendLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntitySpendLimitResponse' from JSON`,
   );
 }
 
 /** @internal */
-export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
-  GetEntityBillingControls,
+export const UpdateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityBillingControlsResponse,
   unknown
 > = z.pipe(
   z.object({
     spend_limits: types.optional(
-      z.array(z.lazy(() => GetEntitySpendLimit$inboundSchema)),
+      z.array(z.lazy(() => UpdateEntitySpendLimitResponse$inboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -387,19 +492,20 @@ export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntityBillingControlsFromJSON(
+export function updateEntityBillingControlsResponseFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntityBillingControls, SDKValidationError> {
+): SafeParseResult<UpdateEntityBillingControlsResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntityBillingControls$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntityBillingControls' from JSON`,
+    (x) =>
+      UpdateEntityBillingControlsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityBillingControlsResponse' from JSON`,
   );
 }
 
 /** @internal */
-export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
-  GetEntityInvoice,
+export const UpdateEntityInvoice$inboundSchema: z.ZodMiniType<
+  UpdateEntityInvoice,
   unknown
 > = z.pipe(
   z.object({
@@ -421,19 +527,19 @@ export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntityInvoiceFromJSON(
+export function updateEntityInvoiceFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntityInvoice, SDKValidationError> {
+): SafeParseResult<UpdateEntityInvoice, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntityInvoice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntityInvoice' from JSON`,
+    (x) => UpdateEntityInvoice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityInvoice' from JSON`,
   );
 }
 
 /** @internal */
-export const GetEntityResponse$inboundSchema: z.ZodMiniType<
-  GetEntityResponse,
+export const UpdateEntityResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -442,15 +548,17 @@ export const GetEntityResponse$inboundSchema: z.ZodMiniType<
     customer_id: z.optional(z.nullable(types.string())),
     feature_id: z.optional(z.nullable(types.string())),
     created_at: types.number(),
-    env: GetEntityEnv$inboundSchema,
-    subscriptions: z.array(z.lazy(() => GetEntitySubscription$inboundSchema)),
-    purchases: z.array(z.lazy(() => GetEntityPurchase$inboundSchema)),
+    env: UpdateEntityEnv$inboundSchema,
+    subscriptions: z.array(
+      z.lazy(() => UpdateEntitySubscription$inboundSchema),
+    ),
+    purchases: z.array(z.lazy(() => UpdateEntityPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     billing_controls: types.optional(
-      z.lazy(() => GetEntityBillingControls$inboundSchema),
+      z.lazy(() => UpdateEntityBillingControlsResponse$inboundSchema),
     ),
     invoices: types.optional(
-      z.array(z.lazy(() => GetEntityInvoice$inboundSchema)),
+      z.array(z.lazy(() => UpdateEntityInvoice$inboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -463,12 +571,12 @@ export const GetEntityResponse$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getEntityResponseFromJSON(
+export function updateEntityResponseFromJSON(
   jsonString: string,
-): SafeParseResult<GetEntityResponse, SDKValidationError> {
+): SafeParseResult<UpdateEntityResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetEntityResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetEntityResponse' from JSON`,
+    (x) => UpdateEntityResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityResponse' from JSON`,
   );
 }
