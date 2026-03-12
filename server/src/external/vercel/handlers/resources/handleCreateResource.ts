@@ -81,7 +81,7 @@ export const handleCreateResource = createRoute({
 
 		try {
 			const product = await db.transaction(async (tx) => {
-				await VercelResourceService.create({
+				await VercelResourceService.createOrBlockIfOthersExist({
 					db: tx as unknown as DrizzleCli,
 					resource: {
 						id: resourceId,

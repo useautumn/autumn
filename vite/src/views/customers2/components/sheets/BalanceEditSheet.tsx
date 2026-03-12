@@ -242,7 +242,17 @@ function EntitlementInfoRows({
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
 			{selectedCusEnt.external_id && (
-				<InfoRow label="ID" value={selectedCusEnt.external_id} />
+				<InfoRow
+					label="ID"
+					value={
+						<span
+							className="block max-w-[220px] truncate font-mono text-xs"
+							title={selectedCusEnt.external_id}
+						>
+							{selectedCusEnt.external_id}
+						</span>
+					}
+				/>
 			)}
 			{entity && <InfoRow label="Entity" value={entity.name || entity.id} />}
 			<InfoRow label="Plan" value={cusProduct?.product.name || "N/A"} />

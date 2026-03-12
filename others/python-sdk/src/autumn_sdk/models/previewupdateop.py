@@ -635,6 +635,8 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
 
 class PreviewUpdateParams(BaseModel):
@@ -668,6 +670,9 @@ class PreviewUpdateParams(BaseModel):
     cancel_action: Optional[PreviewUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
+    no_billing_changes: Optional[bool] = None
+    r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -681,6 +686,7 @@ class PreviewUpdateParams(BaseModel):
                 "proration_behavior",
                 "subscription_id",
                 "cancel_action",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)

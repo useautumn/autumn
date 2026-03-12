@@ -11,7 +11,11 @@ export const FinalizeLockParamsV0Schema = z
 		}),
 		override_value: z.number().optional().meta({
 			description:
-				"Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.",
+				"Additional properties to attach to this finalize lock event.",
+		}),
+		properties: z.record(z.string(), z.any()).optional().meta({
+			description:
+				"Additional properties to attach to this finalize lock event.",
 		}),
 	})
 	.refine(

@@ -51,6 +51,7 @@ import { Result } from "../types/fp.js";
  * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+ * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */

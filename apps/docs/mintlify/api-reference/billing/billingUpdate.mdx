@@ -257,6 +257,10 @@ const response = await autumn.billing.update({
   Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
 </DynamicParamField>
 
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, the subscription is updated internally without applying billing changes in Stripe.
+</DynamicParamField>
+
 
 ### Response
 

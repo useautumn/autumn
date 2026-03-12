@@ -2,6 +2,7 @@ import { test } from "bun:test";
 import { type ApiCustomerV5, ResetInterval } from "@autumn/shared";
 import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
+import { expectLockReceiptDeleted } from "@tests/integration/balances/utils/lockUtils/expectLockReceiptDeleted.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -361,5 +362,127 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-2: lock crosses monthly→li
 		customer: customerDb,
 		featureId: TestFeature.Messages,
 		remaining: 167,
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EC-4: lock=0, confirm without override.
+// Zero-cost receipt should finalize cleanly with no deduction.
+// Final: monthly(free)=50. Total=50.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.concurrent(`${chalk.yellowBright("lock-edge EC-4: lock=0, confirm without override — zero-cost receipt finalizes cleanly")}`, async () => {
+	const freeProd = makeFreeProd();
+	const customerId = "lock-edge-4";
+	const lockKey = `${customerId}-lock`;
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await deleteLock({ ctx, lockId: lockKey });
+
+	await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 0,
+		lock: { enabled: true, lock_id: lockKey },
+	});
+
+	await autumnV2_1.balances.finalize({
+		lock_id: lockKey,
+		action: "confirm",
+	});
+
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 50,
+		breakdown: {
+			[ResetInterval.Month]: { remaining: 50, usage: 0 },
+		},
+	});
+
+	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
+
+	await timeout(3000);
+
+	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expectBalanceCorrect({
+		customer: customerDb,
+		featureId: TestFeature.Messages,
+		remaining: 50,
+		breakdown: {
+			[ResetInterval.Month]: { remaining: 50, usage: 0 },
+		},
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EC-5: lock=0, confirm override=1.2.
+// Finalize should allow an additional deduction even when the lock reserved
+// nothing. Final: monthly(free)=48.8. Total=48.8.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.concurrent(`${chalk.yellowBright("lock-edge EC-5: lock=0, confirm override=1.2 — additional amount is deducted")}`, async () => {
+	const freeProd = makeFreeProd();
+	const customerId = "lock-edge-5";
+	const lockKey = `${customerId}-lock`;
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await deleteLock({ ctx, lockId: lockKey });
+
+	await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 0,
+		lock: { enabled: true, lock_id: lockKey },
+	});
+
+	await autumnV2_1.balances.finalize({
+		lock_id: lockKey,
+		action: "confirm",
+		override_value: 1.2,
+	});
+
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 48.8,
+		breakdown: {
+			[ResetInterval.Month]: { remaining: 48.8, usage: 1.2 },
+		},
+	});
+
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: 1.2 }, { value: 0 }],
+	});
+
+	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
+
+	await timeout(3000);
+
+	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expectBalanceCorrect({
+		customer: customerDb,
+		featureId: TestFeature.Messages,
+		remaining: 48.8,
+		breakdown: {
+			[ResetInterval.Month]: { remaining: 48.8, usage: 1.2 },
+		},
 	});
 });
