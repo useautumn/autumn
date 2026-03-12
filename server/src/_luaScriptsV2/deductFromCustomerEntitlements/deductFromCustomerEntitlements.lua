@@ -21,7 +21,8 @@
 
   ARGV[1] = JSON params:
     {
-      sorted_entitlements: [{ customer_entitlement_id, credit_cost, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      sorted_entitlements: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      available_overage_by_feature_id: { [feature_id]: number } | null,
       amount_to_deduct: number | null,
       target_balance: number | null,
       target_entity_id: string | nil,
@@ -51,6 +52,7 @@ local params = cjson.decode(ARGV[1])
 
 -- Extract parameters
 local sorted_entitlements = params.sorted_entitlements or {}
+local available_overage_by_feature_id = params.available_overage_by_feature_id
 local amount_to_deduct = params.amount_to_deduct
 local target_balance = params.target_balance
 local target_entity_id = params.target_entity_id
@@ -147,6 +149,7 @@ logger.log("  overage_behaviour: %s", tostring(overage_behaviour or "nil"))
 local deduction_result = run_deduction_on_context({
   context = context,
   sorted_entitlements = sorted_entitlements,
+  available_overage_by_feature_id = available_overage_by_feature_id,
   rollovers = rollovers,
   amount_to_deduct = amount_to_deduct,
   target_balance = target_balance,

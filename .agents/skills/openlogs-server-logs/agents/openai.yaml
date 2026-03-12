@@ -1,0 +1,4 @@
+interface:
+  display_name: "Openlogs Server Logs"
+  short_description: "Fetch and inspect recent server logs"
+  default_prompt: "Use $openlogs-server-logs to inspect the latest local server logs with openlogs tail, or query a specific command with openlogs tail <query>."

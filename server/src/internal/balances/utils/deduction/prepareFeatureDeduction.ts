@@ -1,6 +1,7 @@
 import {
 	cusEntToStartingBalance,
 	type FullCustomer,
+	fullCustomerToAvailableOverage,
 	fullCustomerToCustomerEntitlements,
 	getMaxOverage,
 	getRelevantFeatures,
@@ -73,6 +74,13 @@ export const prepareFeatureDeduction = ({
 		}
 	}
 
+	const effectiveFeatureIds = relevantFeatures.map((f) => f.id);
+	const availableOverageByFeatureId = fullCustomerToAvailableOverage({
+		ctx,
+		fullCustomer,
+		featureIds: effectiveFeatureIds,
+	});
+
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
@@ -94,6 +102,7 @@ export const prepareFeatureDeduction = ({
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
+				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
 				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
@@ -143,6 +152,10 @@ export const prepareFeatureDeduction = ({
 	return {
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
+		availableOverageByFeatureId:
+			Object.keys(availableOverageByFeatureId).length > 0
+				? availableOverageByFeatureId
+				: undefined,
 		rollovers: sortedRollovers.map((r) => ({
 			id: r.id,
 			credit_cost: r.credit_cost,
