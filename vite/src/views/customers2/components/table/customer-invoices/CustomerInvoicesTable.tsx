@@ -117,8 +117,6 @@ export function CustomerInvoicesTable() {
 		},
 	});
 
-	// const hasInvoices = invoices.length > 0;
-
 	return (
 		<Table.Provider
 			config={{
@@ -130,7 +128,6 @@ export function CustomerInvoicesTable() {
 				onRowDoubleClick: openInvoiceUrl,
 				emptyStateText: "Invoices will display when a customer makes a payment",
 				flexibleTableColumns: true,
-				// rowClassName: "h-14 py-4 cursor-pointer",
 			}}
 		>
 			<Table.Container>
@@ -145,19 +142,10 @@ export function CustomerInvoicesTable() {
 						</Table.Actions>
 					)}
 				</Table.Toolbar>
-				{/* {hasInvoices ? ( */}
-
 				<Table.Content>
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
-				{/* <Table.Pagination /> */}
-
-				{/* ) : (
-					!isLoading && (
-						<EmptyState text="Invoices will display when a customer makes a payment" />
-					)
-				)} */}
 			</Table.Container>
 		</Table.Provider>
 	);

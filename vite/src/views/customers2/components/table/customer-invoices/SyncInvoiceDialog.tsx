@@ -64,12 +64,11 @@ export function SyncInvoiceDialog({
 		setIsLoading(true);
 		try {
 			await axiosInstance.post(
-				`/customers/${customer.id || customer.internal_id}/sync_invoice`,
+				`/customers/${customer.internal_id}/sync_invoice`,
 				{
 					stripe_invoice_id: stripeInvoiceId.trim(),
 					product_id: resolvedProduct.id,
 					internal_product_id: resolvedProduct.internal_id,
-					internal_customer_id: customer.internal_id,
 				},
 			);
 
