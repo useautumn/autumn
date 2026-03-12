@@ -162,6 +162,7 @@ export const attachParamsOutboundSchema = z.object({
 	custom_line_items: z
 		.union([z.array(attachCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
+	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -274,6 +275,7 @@ export const attachParamsSchema = z.object({
 	customLineItems: z
 		.union([z.array(attachCustomLineItemSchema), z.undefined()])
 		.optional(),
+	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;

@@ -8,12 +8,18 @@ const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.check({
+await autumn.entities.create({
   customerId: "john",
-  featureId: "chat_messages",
-  lock: {
-    enabled: true,
-    lockId: "test",
+  entityId: "name",
+  featureId: "user",
+  billingControls: {
+    spendLimits: [
+      {
+        featureId: "test",
+        enabled: true,
+        overageLimit: 10,
+      },
+    ],
   },
 });
 

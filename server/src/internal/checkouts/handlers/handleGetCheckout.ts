@@ -36,7 +36,7 @@ export const handleGetCheckout = createRoute({
 			},
 			entity: fullCustomer.entity
 				? {
-						id: fullCustomer.entity.id,
+						id: fullCustomer.entity.id ?? fullCustomer.entity.internal_id,
 						name: fullCustomer.entity.name || null,
 					}
 				: null,

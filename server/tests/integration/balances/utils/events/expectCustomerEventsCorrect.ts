@@ -1,4 +1,5 @@
 import { expect } from "bun:test";
+import type { CreateEvent } from "@autumn/shared";
 import { timeout } from "@/utils/genUtils";
 import { getCustomerEvents } from "./getCustomerEvents.js";
 
@@ -12,7 +13,10 @@ export const expectCustomerEventsCorrect = async ({
 	events: expectedEvents,
 }: {
 	customerId: string;
-	events: { value: number }[];
+	events: {
+		value: number;
+		properties?: Exclude<CreateEvent["properties"], undefined>;
+	}[];
 }) => {
 	await timeout(3000);
 	const events = await getCustomerEvents({ customerId });
@@ -20,5 +24,9 @@ export const expectCustomerEventsCorrect = async ({
 	expect(events).toHaveLength(expectedEvents.length);
 	for (let i = 0; i < expectedEvents.length; i++) {
 		expect(events[i].value).toBe(expectedEvents[i].value);
+		const expectedProperties = expectedEvents[i].properties;
+		if (expectedProperties !== undefined) {
+			expect(events[i].properties).toEqual(expectedProperties);
+		}
 	}
 };

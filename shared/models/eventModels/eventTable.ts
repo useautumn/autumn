@@ -50,6 +50,13 @@ export const events = pgTable(
 		),
 		index("idx_events_internal_customer_id").on(table.internal_customer_id),
 		index("idx_events_internal_entity_id").on(table.internal_entity_id),
+		index("idx_events_customer_non_usage_ts")
+			.on(
+				table.internal_customer_id,
+				sql`${table.timestamp} DESC`,
+				sql`${table.id} DESC`,
+			)
+			.where(sql`${table.set_usage} = false`),
 	],
 );
 

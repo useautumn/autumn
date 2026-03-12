@@ -49,6 +49,11 @@ const RUN_DEDUCTION_ON_CONTEXT = readFileSync(
 	"utf-8",
 );
 
+const SPEND_LIMIT_UTILS = readFileSync(
+	join(DEDUCT_DIR, "spendLimitUtils.lua"),
+	"utf-8",
+);
+
 const MUTATION_ITEM_UTILS = readFileSync(
 	join(DEDUCTION_DIR, "mutationItemUtils.lua"),
 	"utf-8",
@@ -90,6 +95,7 @@ ${CONTEXT_UTILS}
 ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
+${SPEND_LIMIT_UTILS}
 ${RUN_DEDUCTION_ON_CONTEXT}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS}
@@ -199,11 +205,14 @@ ${adjustBalanceMainScript}`;
 
 const CUSTOMER_DIR = join(__dirname, "customers");
 
-/** Atomically update top-level customer fields (name, email, metadata, etc.). */
-export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
+const updateCustomerDataMainScript = readFileSync(
 	join(CUSTOMER_DIR, "updateCustomerData.lua"),
 	"utf-8",
 );
+
+/** Atomically update top-level customer fields (name, email, metadata, etc.). */
+export const UPDATE_CUSTOMER_DATA_SCRIPT = `${LUA_UTILS}
+${updateCustomerDataMainScript}`;
 
 /**
  * Atomically append an entity to the customer's entities array.
@@ -211,6 +220,14 @@ export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
  */
 export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
 	join(CUSTOMER_DIR, "appendEntityToCustomer.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically update specific fields on an entity inside the cached FullCustomer.
+ */
+export const UPDATE_ENTITY_IN_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "updateEntityInCustomer.lua"),
 	"utf-8",
 );
 

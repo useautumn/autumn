@@ -36,9 +36,13 @@ export type FinalizeBalanceParams = {
    */
   action: Action;
   /**
-   * Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.
+   * Additional properties to attach to this finalize lock event.
    */
   overrideValue?: number | undefined;
+  /**
+   * Additional properties to attach to this finalize lock event.
+   */
+  properties?: { [k: string]: any } | undefined;
 };
 
 /**
@@ -58,6 +62,7 @@ export type FinalizeBalanceParams$Outbound = {
   lock_id: string;
   action: string;
   override_value?: number | undefined;
+  properties?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
@@ -69,6 +74,7 @@ export const FinalizeBalanceParams$outboundSchema: z.ZodMiniType<
     lockId: z.string(),
     action: Action$outboundSchema,
     overrideValue: z.optional(z.number()),
+    properties: z.optional(z.record(z.string(), z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {

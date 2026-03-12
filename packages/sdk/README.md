@@ -252,6 +252,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [multiAttach](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -313,6 +314,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -369,6 +371,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 * [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -391,6 +394,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
@@ -443,6 +447,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -468,6 +473,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+* [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 * [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
 
 Use this when the underlying resource is removed and you no longer want entity-scoped balances or subscriptions tracked for it.
@@ -650,6 +670,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -712,6 +733,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -756,6 +778,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 - [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
@@ -791,6 +814,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
@@ -867,6 +891,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -906,6 +931,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+- [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 - [`eventsAggregate`](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 - [`eventsList`](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
 - [`featuresCreate`](docs/sdks/features/README.md#create) - Creates a new feature.

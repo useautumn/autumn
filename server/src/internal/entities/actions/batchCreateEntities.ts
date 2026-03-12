@@ -73,6 +73,9 @@ export const batchCreateEntities = async ({
 			update: {
 				id: inputEntities[0].id,
 				name: inputEntities[0].name,
+				...(inputEntities[0].billing_controls && {
+					spend_limits: inputEntities[0].billing_controls.spend_limits,
+				}),
 			},
 		});
 
@@ -103,7 +106,7 @@ export const batchCreateEntities = async ({
 		const apiEntity = await getApiEntity({
 			ctx,
 			customerId,
-			entityId: entity.id,
+			entityId: entity.id ?? entity.internal_id,
 			fullCus: clonedFullCus,
 			withAutumnId,
 		});

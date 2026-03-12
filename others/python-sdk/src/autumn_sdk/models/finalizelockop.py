@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -50,7 +50,9 @@ class FinalizeBalanceParamsTypedDict(TypedDict):
     action: Action
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
     override_value: NotRequired[float]
-    r"""Override the original lock value with a different deduction amount. Only valid when action is 'confirm'."""
+    r"""Additional properties to attach to this finalize lock event."""
+    properties: NotRequired[Dict[str, Any]]
+    r"""Additional properties to attach to this finalize lock event."""
 
 
 class FinalizeBalanceParams(BaseModel):
@@ -61,11 +63,14 @@ class FinalizeBalanceParams(BaseModel):
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
 
     override_value: Optional[float] = None
-    r"""Override the original lock value with a different deduction amount. Only valid when action is 'confirm'."""
+    r"""Additional properties to attach to this finalize lock event."""
+
+    properties: Optional[Dict[str, Any]] = None
+    r"""Additional properties to attach to this finalize lock event."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["override_value"])
+        optional_fields = set(["override_value", "properties"])
         serialized = handler(self)
         m = {}
 

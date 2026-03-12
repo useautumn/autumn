@@ -410,8 +410,7 @@ export class CusProductService {
 		return await db
 			.update(customerProducts)
 			.set(updates)
-			.where(eq(customerProducts.id, cusProductId))
-			.returning();
+			.where(eq(customerProducts.id, cusProductId));
 	}
 
 	static async updateByStripeSubId({
@@ -442,20 +441,20 @@ export class CusProductService {
 			.returning({
 				id: customerProducts.id,
 			});
+		return updated;
+		// const fullUpdated = (await db.query.customerProducts.findMany({
+		// 	where: inArray(
+		// 		customerProducts.id,
+		// 		updated.map((u) => u.id),
+		// 	),
+		// 	with: {
+		// 		product: true,
+		// 		customer: true,
+		// 		...getFullCusProdRelations(),
+		// 	},
+		// })) as FullCusProduct[];
 
-		const fullUpdated = (await db.query.customerProducts.findMany({
-			where: inArray(
-				customerProducts.id,
-				updated.map((u) => u.id),
-			),
-			with: {
-				product: true,
-				customer: true,
-				...getFullCusProdRelations(),
-			},
-		})) as FullCusProduct[];
-
-		return fullUpdated as FullCusProduct[];
+		// return fullUpdated as FullCusProduct[];
 	}
 	static async updateByStripeScheduledId({
 		db,

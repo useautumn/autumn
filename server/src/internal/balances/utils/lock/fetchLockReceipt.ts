@@ -14,6 +14,27 @@ export type LockReceipt = {
 	items: MutationLogItem[];
 };
 
+const normalizeLockReceiptItems = ({
+	items,
+	lockId,
+}: {
+	items: LockReceipt["items"] | Record<string, never> | null | undefined;
+	lockId: string;
+}): MutationLogItem[] => {
+	if (Array.isArray(items)) {
+		return items;
+	}
+
+	if (items && typeof items === "object" && Object.keys(items).length === 0) {
+		return [];
+	}
+
+	throw new RecaseError({
+		message: `Lock receipt has invalid items for ID: ${lockId}`,
+		code: ErrCode.InvalidRequest,
+	});
+};
+
 export const fetchLockReceipt = async ({
 	ctx,
 	lockId,
@@ -60,6 +81,11 @@ export const fetchLockReceipt = async ({
 			code: ErrCode.InvalidRequest,
 		});
 	}
+
+	receipt.items = normalizeLockReceiptItems({
+		items: receipt.items,
+		lockId,
+	});
 
 	return {
 		receipt,

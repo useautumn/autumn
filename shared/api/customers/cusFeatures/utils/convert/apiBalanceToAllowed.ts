@@ -1,3 +1,4 @@
+import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
 import type { ApiBalanceV1 } from "@api/customers/cusFeatures/apiBalanceV1";
 import { apiBalanceV1ToAvailableOverage } from "@api/customers/cusFeatures/utils/convert/apiBalanceV1ToAvailableOverage";
 import type { Feature } from "@models/featureModels/featureModels";
@@ -6,10 +7,12 @@ import { Decimal } from "decimal.js";
 
 export const apiBalanceToAllowed = ({
 	apiBalance,
+	apiSubject,
 	feature,
 	requiredBalance,
 }: {
 	apiBalance: ApiBalanceV1;
+	apiSubject: ApiSubjectV0;
 	feature: Feature;
 	requiredBalance: number;
 }) => {
@@ -35,7 +38,11 @@ export const apiBalanceToAllowed = ({
 	// 3. Overage allowed
 	if (apiBalance.overage_allowed) {
 		// 1. Available overage
-		const availableOverage = apiBalanceV1ToAvailableOverage({ apiBalance });
+		const availableOverage = apiBalanceV1ToAvailableOverage({
+			apiBalance,
+			apiSubject,
+			feature,
+		});
 
 		if (notNullish(availableOverage)) {
 			return new Decimal(availableOverage)

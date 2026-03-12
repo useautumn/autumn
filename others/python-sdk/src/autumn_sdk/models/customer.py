@@ -124,11 +124,49 @@ class CustomerAutoTopup(BaseModel):
         return m
 
 
+class CustomerSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class CustomerSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CustomerBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     auto_topups: NotRequired[List[CustomerAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[CustomerSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature."""
 
 
 class CustomerBillingControls(BaseModel):
@@ -137,9 +175,12 @@ class CustomerBillingControls(BaseModel):
     auto_topups: Optional[List[CustomerAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
 
+    spend_limits: Optional[List[CustomerSpendLimit]] = None
+    r"""List of overage spend limits per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups"])
+        optional_fields = set(["auto_topups", "spend_limits"])
         serialized = handler(self)
         m = {}
 
@@ -407,7 +448,6 @@ class EntityTypedDict(TypedDict):
     r"""Unix timestamp when the entity was created"""
     env: EntityEnv
     r"""The environment (sandbox/live)"""
-    autumn_id: NotRequired[str]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
@@ -427,8 +467,6 @@ class Entity(BaseModel):
     env: EntityEnv
     r"""The environment (sandbox/live)"""
 
-    autumn_id: Optional[str] = None
-
     customer_id: OptionalNullable[str] = UNSET
     r"""The customer ID this entity belongs to"""
 
@@ -437,7 +475,7 @@ class Entity(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["autumn_id", "customer_id", "feature_id"])
+        optional_fields = set(["customer_id", "feature_id"])
         nullable_fields = set(["id", "name", "customer_id", "feature_id"])
         serialized = handler(self)
         m = {}
