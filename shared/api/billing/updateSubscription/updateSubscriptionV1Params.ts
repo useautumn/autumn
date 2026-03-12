@@ -19,7 +19,9 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		}),
 
 		no_billing_changes: z.boolean().optional().meta({
-			internal: true,
+			// internal: true,
+			description:
+				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
 		status: z

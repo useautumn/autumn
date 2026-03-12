@@ -1,7 +1,7 @@
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_enFqfiGJBWr24b3Gx6mDNQkuHvNAcHIWIvXeis6HLf",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
 const res = await autumn.customers.getOrCreate({
@@ -9,16 +9,18 @@ const res = await autumn.customers.getOrCreate({
 });
 
 await autumn.entities.create({
-  name: "Deployment 1",
   customerId: "john",
-  entityId: "deployment_1",
-  featureId: "DEPLOYMENTS",
-});
-
-await autumn.billing.attach({
-  customerId: "john",
-  entityId: "deployment_1",
-  planId: "hobby",
+  entityId: "name",
+  featureId: "user",
+  billingControls: {
+    spendLimits: [
+      {
+        featureId: "test",
+        enabled: true,
+        overageLimit: 10,
+      },
+    ],
+  },
 });
 
 console.log(JSON.stringify(res, null, 2));

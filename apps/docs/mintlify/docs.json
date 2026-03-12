@@ -45,19 +45,12 @@
 				"groups": [
 					{
 						"group": " ",
-						"pages": ["welcome"]
+						"pages": ["welcome", "documentation/getting-started/migration"]
 					},
 					{
 						"group": "Getting Started",
 						"pages": [
-							{
-								"group": "Setup and payments",
-								"pages": [
-									"documentation/getting-started/setup/react",
-									"documentation/getting-started/setup/sdk",
-									"documentation/getting-started/setup/convex"
-								]
-							},
+							"documentation/getting-started/setup",
 							"documentation/getting-started/gating",
 							"documentation/getting-started/display-billing"
 						]
@@ -76,19 +69,37 @@
 					{
 						"group": "Manage Customers",
 						"pages": [
+							{
+								"group": "Subscriptions",
+								"pages": [
+									"documentation/customers/subscriptions/overview",
+									"documentation/customers/subscriptions/accepting-payments",
+									"documentation/customers/subscriptions/managing-subscriptions"
+								]
+							},
+							{
+								"group": "Balances",
+								"pages": [
+									"documentation/customers/balances/overview",
+									"documentation/customers/balances/balance-stacking",
+									"documentation/customers/balances/managing-balances"
+								]
+							},
 							"documentation/customers/check",
 							"documentation/customers/tracking-usage",
-							"documentation/customers/balances",
 							"documentation/customers/feature-entities",
-							"documentation/customers/attaching-plans",
-							"documentation/customers/updating-subscriptions",
 							"documentation/customers/creating-customers",
 							"documentation/customers/managing-customers"
 						]
 					},
 					{
 						"group": "Additional Resources",
-						"pages": ["documentation/external-providers/revenuecat"]
+						"pages": [
+							"documentation/webhooks",
+							"documentation/external-providers/convex",
+							"documentation/external-providers/revenuecat",
+							"documentation/external-providers/vercel-marketplace"
+						]
 					}
 				]
 			},
@@ -96,15 +107,18 @@
 				"tab": "Examples",
 				"icon": "graduation-cap",
 				"pages": [
-					"examples/credits",
+					"examples/monetary-credits",
 					"examples/prepaid",
+					"examples/per-seat",
+					"examples/pay-as-you-go-overages",
+					"examples/entity-balances",
 					"examples/trial-card-required",
 					"examples/trial-card-not-required"
 				]
 			},
 			{
 				"tab": "React",
-				"icon": "image",
+				"icon": "react",
 				"groups": [
 					{
 						"group": "React Hooks",
@@ -123,8 +137,13 @@
 				]
 			},
 			{
+				"tab": "CLI",
+				"icon": "square-terminal",
+				"pages": ["cli/getting-started", "cli/config", "cli/commands"]
+			},
+			{
 				"tab": "API Reference",
-				"icon": "rectangle-terminal",
+				"icon": "display-code",
 				"groups": [
 					{
 						"group": "Billing",
@@ -146,7 +165,8 @@
 							"api-reference/core/track",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
-							"api-reference/balances/deleteBalance"
+							"api-reference/balances/deleteBalance",
+							"api-reference/balances/finalizeLock"
 						]
 					},
 					{
@@ -170,6 +190,7 @@
 						"pages": [
 							"api-reference/entities/getEntity",
 							"api-reference/entities/createEntity",
+							"api-reference/entities/updateEntity",
 							"api-reference/entities/deleteEntity"
 						]
 					},

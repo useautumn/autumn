@@ -95,8 +95,8 @@ export type PreviewMultiAttachTo = number | string;
 
 export type PreviewMultiAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewMultiAttachTierBehavior = {
@@ -422,6 +422,31 @@ export type PreviewMultiAttachRedirectMode = ClosedEnum<
   typeof PreviewMultiAttachRedirectMode
 >;
 
+export type PreviewMultiAttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type PreviewMultiAttachBillingControls = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<PreviewMultiAttachSpendLimit> | undefined;
+};
+
 export type PreviewMultiAttachEntityData = {
   /**
    * The feature ID that this entity is associated with
@@ -431,6 +456,10 @@ export type PreviewMultiAttachEntityData = {
    * Name of the entity
    */
   name?: string | undefined;
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: PreviewMultiAttachBillingControls | undefined;
 };
 
 export type PreviewMultiAttachParams = {
@@ -641,8 +670,8 @@ export function previewMultiAttachToToJSON(
 /** @internal */
 export type PreviewMultiAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -652,8 +681,8 @@ export const PreviewMultiAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1082,9 +1111,77 @@ export const PreviewMultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachRedirectMode);
 
 /** @internal */
+export type PreviewMultiAttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachSpendLimit$Outbound,
+  PreviewMultiAttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function previewMultiAttachSpendLimitToJSON(
+  previewMultiAttachSpendLimit: PreviewMultiAttachSpendLimit,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachSpendLimit$outboundSchema.parse(
+      previewMultiAttachSpendLimit,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachBillingControls$Outbound = {
+  spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachBillingControls$Outbound,
+  PreviewMultiAttachBillingControls
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachSpendLimit$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function previewMultiAttachBillingControlsToJSON(
+  previewMultiAttachBillingControls: PreviewMultiAttachBillingControls,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachBillingControls$outboundSchema.parse(
+      previewMultiAttachBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachEntityData$Outbound = {
   feature_id: string;
   name?: string | undefined;
+  billing_controls?: PreviewMultiAttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1095,10 +1192,14 @@ export const PreviewMultiAttachEntityData$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     name: z.optional(z.string()),
+    billingControls: z.optional(
+      z.lazy(() => PreviewMultiAttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      billingControls: "billing_controls",
     });
   }),
 );

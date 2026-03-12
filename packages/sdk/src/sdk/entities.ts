@@ -5,6 +5,7 @@
 import { entitiesCreate } from "../funcs/entities-create.js";
 import { entitiesDelete } from "../funcs/entities-delete.js";
 import { entitiesGet } from "../funcs/entities-get.js";
+import { entitiesUpdate } from "../funcs/entities-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
@@ -29,6 +30,7 @@ export class Entities extends ClientSDK {
    *
    * @param name - The name of the entity (optional)
    * @param featureId - The ID of the feature this entity is associated with
+   * @param billingControls - Billing controls for the entity. (optional)
    * @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
    * @param customerId - The ID of the customer to create the entity for.
    * @param entityId - The ID of the entity.
@@ -73,6 +75,34 @@ export class Entities extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.GetEntityResponse> {
     return unwrapAsync(entitiesGet(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Updates an existing entity and returns the refreshed entity object.
+   *
+   * Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+   *
+   * @example
+   * ```typescript
+   * // Update a seat entity's billing controls
+   * const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+   * ```
+   *
+   * @param customerId - The ID of the customer that owns the entity. (optional)
+   * @param entityId - The ID of the entity.
+   * @param billingControls - Billing controls to replace on the entity. (optional)
+   *
+   * @returns The updated entity object including its current subscriptions, purchases, and balances.
+   */
+  async update(
+    request: models.UpdateEntityParams,
+    options?: RequestOptions,
+  ): Promise<models.UpdateEntityResponse> {
+    return unwrapAsync(entitiesUpdate(
       this,
       request,
       options,

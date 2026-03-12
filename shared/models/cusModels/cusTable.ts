@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -12,7 +13,10 @@ import {
 import { collatePgColumn } from "../../db/utils.js";
 import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
-import type { AutoTopup } from "./billingControlModels.js";
+import type {
+	AutoTopup,
+	DbSpendLimit,
+} from "./billingControls/customerBillingControls.js";
 
 export type CustomerProcessor = {
 	type: "stripe";
@@ -37,6 +41,7 @@ export const customers = pgTable(
 			.default({} as ExternalProcessors),
 		send_email_receipts: boolean("send_email_receipts").default(false),
 		auto_topups: jsonb().$type<AutoTopup[]>(),
+		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
@@ -51,6 +56,9 @@ export const customers = pgTable(
 			.where(
 				sql`${table.id} IS NULL AND ${table.email} IS NOT NULL AND ${table.email} != ''`,
 			),
+		index("idx_customers_org_env_fingerprint")
+			.on(table.org_id, table.env, table.fingerprint)
+			.where(sql`${table.fingerprint} IS NOT NULL`),
 	],
 ).enableRLS();
 

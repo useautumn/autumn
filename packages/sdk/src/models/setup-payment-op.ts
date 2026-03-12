@@ -108,8 +108,8 @@ export type SetupPaymentTo = number | string;
 
 export type SetupPaymentTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const SetupPaymentTierBehavior = {
@@ -435,6 +435,10 @@ export type SetupPaymentParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<SetupPaymentCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
 };
 
 /**
@@ -577,8 +581,8 @@ export function setupPaymentToToJSON(setupPaymentTo: SetupPaymentTo): string {
 /** @internal */
 export type SetupPaymentTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -588,8 +592,8 @@ export const SetupPaymentTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -938,6 +942,7 @@ export type SetupPaymentParams$Outbound = {
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -964,6 +969,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
     ),
+    processorSubscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -976,6 +982,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
     });
   }),
 );

@@ -8,6 +8,7 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
+	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0Input,
@@ -22,11 +23,12 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
-	type CustomerBillingControlsInput,
+	type CustomerBillingControlsParams,
 	CustomerExpand,
 	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
+	type FinalizeLockParamsV0,
 	type LegacyVersion,
 	type OrgConfig,
 	type ProductItem,
@@ -511,7 +513,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
-				billing_controls?: CustomerBillingControlsInput;
+				billing_controls?: CustomerBillingControlsParams;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
@@ -590,6 +592,21 @@ export class AutumnInt {
 			const data = await this.delete(
 				`/customers/${customerId}/entities/${entityId}`,
 			);
+			return data;
+		},
+
+		update: async (
+			customerId: string,
+			entityId: string,
+			updates: {
+				billing_controls?: ApiEntityBillingControlsParams;
+			},
+		) => {
+			const data = await this.post(`/entities.update`, {
+				customer_id: customerId,
+				entity_id: entityId,
+				...updates,
+			});
 			return data;
 		},
 	};
@@ -847,6 +864,22 @@ export class AutumnInt {
 		},
 		delete: async (params: DeleteBalanceParamsV0) => {
 			const data = await this.post(`/balances.delete`, params);
+			return data;
+		},
+		finalize: async (
+			params: FinalizeLockParamsV0,
+			{
+				skipCache = false,
+				headers,
+			}: {
+				skipCache?: boolean;
+				headers?: Record<string, string>;
+			} = {},
+		) => {
+			const data = await this.post(`/balances.finalize`, params, {
+				...(skipCache ? { "x-skip-cache": "true" } : {}),
+				...headers,
+			});
 			return data;
 		},
 	};

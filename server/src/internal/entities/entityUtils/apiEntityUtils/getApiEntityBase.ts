@@ -1,3 +1,4 @@
+import { getApiBalances } from "@api/customers/cusFeatures";
 import {
 	type ApiEntityV2,
 	ApiEntityV2Schema,
@@ -8,7 +9,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/getApiBalances.js";
 import { getApiSubscriptions } from "../../../customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscriptions.js";
 
 /**
@@ -71,6 +71,7 @@ export const getApiEntityBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		balances: apiBalances,
+		billing_controls: { spend_limits: entity.spend_limits ?? undefined },
 	} satisfies ApiEntityV2);
 
 	return {

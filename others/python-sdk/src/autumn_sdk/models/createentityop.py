@@ -47,6 +47,72 @@ class CreateEntityGlobals(BaseModel):
         return m
 
 
+class CreateEntitySpendLimitRequestTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class CreateEntitySpendLimitRequest(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityBillingControlsRequestTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[CreateEntitySpendLimitRequestTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class CreateEntityBillingControlsRequest(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[CreateEntitySpendLimitRequest]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityParamsTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this entity is associated with"""
@@ -56,6 +122,8 @@ class CreateEntityParamsTypedDict(TypedDict):
     r"""The ID of the entity."""
     name: NotRequired[Nullable[str]]
     r"""The name of the entity"""
+    billing_controls: NotRequired[CreateEntityBillingControlsRequestTypedDict]
+    r"""Billing controls for the entity."""
     customer_data: NotRequired[CustomerDataTypedDict]
     r"""Customer details to set when creating a customer"""
 
@@ -73,12 +141,15 @@ class CreateEntityParams(BaseModel):
     name: OptionalNullable[str] = UNSET
     r"""The name of the entity"""
 
+    billing_controls: Optional[CreateEntityBillingControlsRequest] = None
+    r"""Billing controls for the entity."""
+
     customer_data: Optional[CustomerData] = None
     r"""Customer details to set when creating a customer"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name", "customer_data"])
+        optional_fields = set(["name", "billing_controls", "customer_data"])
         nullable_fields = set(["name"])
         serialized = handler(self)
         m = {}
@@ -281,6 +352,72 @@ class CreateEntityPurchase(BaseModel):
         return m
 
 
+class CreateEntitySpendLimitResponseTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class CreateEntitySpendLimitResponse(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityBillingControlsResponseTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[CreateEntitySpendLimitResponseTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class CreateEntityBillingControlsResponse(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[CreateEntitySpendLimitResponse]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityInvoiceTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
@@ -360,11 +497,12 @@ class CreateEntityResponseTypedDict(TypedDict):
     subscriptions: List[CreateEntitySubscriptionTypedDict]
     purchases: List[CreateEntityPurchaseTypedDict]
     balances: Dict[str, BalanceTypedDict]
-    autumn_id: NotRequired[str]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID this entity belongs to"""
+    billing_controls: NotRequired[CreateEntityBillingControlsResponseTypedDict]
+    r"""Billing controls for the entity."""
     invoices: NotRequired[List[CreateEntityInvoiceTypedDict]]
     r"""Invoices for this entity (only included when expand=invoices)"""
 
@@ -390,20 +528,23 @@ class CreateEntityResponse(BaseModel):
 
     balances: Dict[str, Balance]
 
-    autumn_id: Optional[str] = None
-
     customer_id: OptionalNullable[str] = UNSET
     r"""The customer ID this entity belongs to"""
 
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID this entity belongs to"""
 
+    billing_controls: Optional[CreateEntityBillingControlsResponse] = None
+    r"""Billing controls for the entity."""
+
     invoices: Optional[List[CreateEntityInvoice]] = None
     r"""Invoices for this entity (only included when expand=invoices)"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["autumn_id", "customer_id", "feature_id", "invoices"])
+        optional_fields = set(
+            ["customer_id", "feature_id", "billing_controls", "invoices"]
+        )
         nullable_fields = set(["id", "name", "customer_id", "feature_id"])
         serialized = handler(self)
         m = {}

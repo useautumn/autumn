@@ -6,33 +6,29 @@ export const temp: TestGroup = {
 	tier: "domain",
 	paths: [
 		// Cancel immediately with default tests
-		"integration/billing/update-subscription/cancel/immediately/cancel-immediately.test.ts",
 
-		// Cancel end of cycle tests
-		"integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts",
-
-		// Uncancel tests
+		"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice.test.ts",
+		"integration/billing/attach/scheduled-switch/scheduled-switch-consumable.test.ts",
+		"integration/billing/legacy/attach/invoice/legacy-attach-invoice-mode.test.ts",
+		"integration/billing/legacy/attach/upgrade/legacy-upgrade-merged.test.ts",
+		"integration/billing/legacy/attach/upgrade/legacy-upgrade-usage.test.ts",
+		"integration/billing/migrations/migrate-trials.test.ts",
+		"integration/billing/update-subscription/custom-plan/update-paid-basic.test.ts",
+		"integration/billing/legacy/attach/new/legacy-new-merged.test.ts",
+		"integration/billing/legacy/attach/update-quantity/legacy-update-quantity.test.ts",
+		"integration/billing/migrations/migrate-free.test.ts",
+		"integration/billing/migrations/migrate-states.test.ts",
+		"integration/billing/update-subscription/cancel/uncancel/uncancel-combined.test.ts",
+		"integration/billing/update-subscription/custom-plan/update-paid-prepaid.test.ts",
+		"integration/billing/attach/invoice/attach-invoice-draft-deferred.test.ts",
+		"integration/billing/legacy/attach/invoice/payment-failure/legacy-attach-payment-failed.test.ts",
+		"integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+		"integration/billing/update-subscription/custom-plan/update-free-to-paid.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-trials.test.ts",
+		"integration/billing/legacy/attach/checkout/legacy-checkout-basic.test.ts",
+		"integration/billing/migrations/migrate-paid.test.ts",
+		"integration/billing/multi-attach/checkout/multi-attach-checkout-basic.test.ts",
 		"integration/billing/update-subscription/cancel/uncancel/uncancel-basic.test.ts",
-
-		// Create customer with defaults
-		"integration/crud/customers/create-customer-defaults.test.ts",
-
-		// Default applies to entities (the new behavior)
-		"integration/org-config/default-applies-to-entity.test.ts",
-
-		// Stripe webhook: subscription deleted (activates defaults)
-		"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted.test.ts",
-
-		// Stripe webhook: subscription updated uncancel
-		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-uncancel.test.ts",
-
-		// Scheduled switch basic (pro to free downgrade flows)
-		"integration/billing/attach/scheduled-switch/scheduled-switch-basic.test.ts",
-
-		// Scheduled switch with entities
-		"integration/billing/attach/scheduled-switch/scheduled-switch-entities-basic.test.ts",
-
-		// Invoice created consumable (usage-in-arrear)
-		"integration/billing/stripe-webhooks/invoice-created/invoice-created-consumable.test.ts",
+		"integration/billing/update-subscription/custom-plan/update-paid-features.test.ts",
 	],
 };

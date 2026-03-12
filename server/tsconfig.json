@@ -9,6 +9,8 @@
 		"moduleResolution": "bundler",
 		"module": "Preserve",
 
+		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
+    "types": ["bun", "node"],
 		// "declaration": true,
 		"jsx": "react-jsx",
 		"rootDir": ".",
@@ -40,7 +42,7 @@
 
 			// Explicitly set drizzle-orm path to avoid monorepo issues
 			"drizzle-orm": ["../node_modules/drizzle-orm"],
-			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]			
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments"],

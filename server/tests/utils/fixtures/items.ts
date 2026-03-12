@@ -89,6 +89,35 @@ const monthlyMessages = ({
 };
 
 /**
+ * Hourly messages - resets each hour
+ * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
+ */
+const hourlyMessages = ({
+	includedUsage = 100,
+	entityFeatureId,
+	resetUsageWhenEnabled,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+	resetUsageWhenEnabled?: boolean;
+} = {}): LimitedItem => {
+	const item = constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+		interval: ProductItemInterval.Hour,
+		entityFeatureId,
+	}) as LimitedItem;
+
+	if (resetUsageWhenEnabled !== undefined) {
+		item.reset_usage_when_enabled = resetUsageWhenEnabled;
+	}
+
+	return item;
+};
+
+/**
  * Monthly words - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -721,6 +750,7 @@ export const items = {
 
 	// Free metered
 	free,
+	hourlyMessages,
 	monthlyMessages,
 	monthlyWords,
 	monthlyCredits,

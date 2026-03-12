@@ -212,6 +212,7 @@ Use this after an action happens to decrement usage, or send a negative value to
 * [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 * [update](docs/sdks/balances/README.md#update) - Update a customer balance.
 * [delete](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+* [finalize](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 
 ### [Billing](docs/sdks/billing/README.md)
 
@@ -253,6 +254,9 @@ Use entities when usage and access must be scoped to sub-resources (for example 
 * [get](docs/sdks/entities/README.md#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
+* [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
 * [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
 
 Use this when the underlying resource is removed and you no longer want entity-scoped balances or subscriptions tracked for it.
