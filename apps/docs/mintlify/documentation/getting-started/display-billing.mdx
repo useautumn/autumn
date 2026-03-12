@@ -1,5 +1,5 @@
 ---
-title: "Display billing data"
+title: "Build your billing page"
 description: "Display usage and billing data in your app for your users"
 ---
 
@@ -118,9 +118,91 @@ curl -X POST 'https://api.useautumn.com/v1/customers' \
 ```
 </CodeGroup>
 
-### Switching or cancelling plans
+## Billing flows
 
-Switching plans uses `billing.attach`. See [Attaching Plans](/documentation/customers/attaching-plans) for the full guide.
+### Customer eligibility
+
+When building a pricing page, you need to know what each plan means for the current customer — is it an upgrade, a downgrade, or their current plan? Is a free trial available?
+
+Pass a `customerId` when listing plans and each plan will include a `customerEligibility` object:
+
+- **`scenario`** — The attach scenario for this customer: `new`, `upgrade`, `downgrade`, `active`, `scheduled`, `cancel`, `expired`, `past_due`, or `renew`
+- **`trialAvailable`** — Whether the customer is eligible for the plan's free trial
+
+<CodeGroup>
+
+```jsx React
+import { useListPlans, useCustomer } from "autumn-js/react";
+
+const buttonText = {
+  new: "Get started",
+  upgrade: "Upgrade",
+  downgrade: "Downgrade",
+  active: "Current plan",
+};
+
+export default function PricingPage() {
+  const { data: plans } = useListPlans();
+  const { attach } = useCustomer();
+
+  return plans?.map((plan) => (
+    <button
+      key={plan.id}
+      disabled={plan.customerEligibility?.scenario === "active"}
+      onClick={() => attach({ planId: plan.id })}
+    >
+      {buttonText[plan.customerEligibility?.scenario] ?? "Get started"}
+    </button>
+  ));
+}
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { list: plans } = await autumn.plans.list({
+  customerId: "user_123",
+});
+
+// Each plan includes customerEligibility.scenario and customerEligibility.trialAvailable
+for (const plan of plans) {
+  console.log(plan.name, plan.customerEligibility?.scenario);
+  // e.g. "Free" "downgrade", "Pro" "active", "Enterprise" "upgrade"
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+plans = await autumn.plans.list(customer_id="user_123")
+
+# Each plan includes customer_eligibility.scenario and customer_eligibility.trial_available
+for plan in plans.list:
+    print(plan.name, plan.customer_eligibility.scenario)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/plans.list' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Each plan in the response includes customer_eligibility
+```
+
+</CodeGroup>
+
+<Tip>
+The React `useListPlans` hook automatically includes customer context from `AutumnProvider`, so `customerEligibility` is populated on every plan without extra configuration.
+</Tip>
+
+### Switching plans
+
+Switching plans uses `billing.attach`. See [Attaching Plans](/documentation/customers/payment-flow) for the full guide.
 
 <CodeGroup>
 
@@ -176,7 +258,9 @@ curl -X POST 'https://api.useautumn.com/v1/attach' \
 
 </CodeGroup>
 
-To cancel a plan, use `billing.update` with a `cancelAction`. See [Updating Subscriptions](/documentation/customers/updating-subscriptions#canceling-a-subscription) for details.
+### Cancelling a plan
+
+Cancel a subscription using `billing.update` with a `cancelAction`. See [Subscription Lifecycle](/documentation/customers/subscription-lifecycle#cancellations) for the full guide on immediate vs end-of-cycle cancellations.
 
 <CodeGroup>
 
@@ -231,7 +315,94 @@ curl -X POST 'https://api.useautumn.com/v1/billing/update' \
 
 </CodeGroup>
 
-### Stripe billing portal
+### Uncancelling a plan
+
+If a subscription has a pending cancellation, a scheduled downgrade, or a scheduled plan switch, you can reverse it with `cancelAction: "uncancel"`.
+
+A subscription is pending cancellation when `canceledAt` is not null while the subscription is still `active`.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export default function BillingPage() {
+  const { data: customer, updateSubscription } = useCustomer();
+
+  const cancellingSub = customer?.subscriptions.find(
+    (sub) => sub.status === "active" && sub.canceledAt !== null
+  );
+
+  return cancellingSub ? (
+    <button onClick={() => updateSubscription({ 
+      planId: cancellingSub.planId, 
+      cancelAction: "uncancel" 
+    })}>
+      Keep plan
+    </button>
+  ) : null;
+}
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const cancellingSub = customer.subscriptions?.find(
+  (sub) => sub.status === "active" && sub.canceledAt !== null
+);
+
+if (cancellingSub) {
+  await autumn.billing.update({
+    customerId: "user_123",
+    planId: cancellingSub.planId,
+    cancelAction: "uncancel",
+  });
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+cancelling_sub = next(
+    (s for s in customer.subscriptions
+     if s.status == "active" and s.canceled_at is not None),
+    None,
+)
+
+if cancelling_sub:
+    await autumn.billing.update(
+        customer_id="user_123",
+        plan_id=cancelling_sub.plan_id,
+        cancel_action="uncancel",
+    )
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "uncancel"
+  }'
+```
+
+</CodeGroup>
+
+## Stripe billing portal
 
 The Stripe billing portal lets users manage their payment method, view past invoices, and cancel their plan.
 
@@ -290,7 +461,7 @@ curl -X POST 'https://api.useautumn.com/v1/billing.open_customer_portal' \
 </CodeGroup>
 
 
-### Usage history chart
+## Usage history chart
 
 Autumn provides aggregate time series queries for usage data. Pass the response to a charting library like Recharts.
 

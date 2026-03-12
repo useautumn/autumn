@@ -1,0 +1,270 @@
+---
+title: Sub-Entity Plans
+description: Assign separate plans to entities under a parent customer
+---
+
+Sub-entity plans let you attach different subscription tiers to individual entities (users, workspaces, projects) under a parent customer. Each entity can be on a different plan with its own features and billing, while the parent customer handles payment.
+
+> **Example** <br />
+> A company manages multiple workspaces. Each workspace can be on a different tier — Workspace A is on the Free tier (100 requests/month), while Workspace B is on the Pro tier (10,000 requests/month). Both are billed to the parent organization.
+
+## When to use sub-entity plans
+
+Use sub-entity plans when entities under a customer need **different plan tiers**. If all entities get the same features and limits, use [sub-entity balances](/documentation/modelling-pricing/sub-entity-balances) instead.
+
+| Scenario | Approach |
+|----------|----------|
+| All seats get the same 50 credits/month | Sub-entity balances |
+| Each seat can be Free or Pro tier | Sub-entity plans |
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create your plans as normal — no special entity configuration needed on the plan itself. The entity-level attachment happens at runtime via the API.
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const requests = feature({
+  id: 'requests',
+  name: 'API Requests',
+  type: 'metered',
+  consumable: true,
+});
+
+export const workspaceFree = plan({
+  id: 'workspace_free',
+  name: 'Workspace Free',
+  group: 'workspace',
+  items: [
+    item({
+      featureId: requests.id,
+      included: 100,
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+
+export const workspacePro = plan({
+  id: 'workspace_pro',
+  name: 'Workspace Pro',
+  group: 'workspace',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: requests.id,
+      included: 10000,
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Create your plan tiers as normal (e.g., "Workspace Free", "Workspace Pro")
+2. Set the same **group** on plans that should replace each other on upgrade/downgrade
+3. Entity-level attachment is handled via the API — no special dashboard configuration needed
+
+</Tab>
+</Tabs>
+
+## Attaching plans to entities
+
+First, create the entity. Then attach a plan to it by passing the `entity_id` in the attach call:
+
+#### Create the entity
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.entities.create({
+  customerId: "org_123",
+  entityId: "workspace_a",
+  featureId: "workspaces",
+  name: "Workspace A",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.entities.create(
+    customer_id="org_123",
+    entity_id="workspace_a",
+    feature_id="workspaces",
+    name="Workspace A",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/entities" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "entity_id": "workspace_a",
+    "feature_id": "workspaces",
+    "name": "Workspace A"
+  }'
+```
+
+</CodeGroup>
+
+#### Attach a plan to the entity
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "org_123",
+  planId: "workspace_pro",
+  entityId: "workspace_a",
+});
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="org_123",
+    plan_id="workspace_pro",
+    entity_id="workspace_a",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "plan_id": "workspace_pro",
+    "entity_id": "workspace_a"
+  }'
+```
+
+</CodeGroup>
+
+Each entity's subscription is created separately in Stripe, with billing cycles synced to the parent customer.
+
+## Checking and tracking per entity
+
+Pass the `entity_id` to scope `check` and `track` calls to a specific entity:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.check({
+  customer_id: "org_123",
+  feature_id: "requests",
+  entity_id: "workspace_a",
+});
+
+console.log(data.allowed);
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="org_123",
+    feature_id="requests",
+    entity_id="workspace_a",
+)
+
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "feature_id": "requests",
+    "entity_id": "workspace_a"
+  }'
+```
+
+</CodeGroup>
+
+## Upgrading an entity's plan
+
+To upgrade or downgrade an entity, attach the new plan with the same `entity_id`. The same [upgrade/downgrade](/documentation/customers/billing/subscription-lifecycle) logic applies:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.billing.attach({
+  customerId: "org_123",
+  planId: "workspace_pro",
+  entityId: "workspace_a",
+});
+```
+
+```python Python
+await autumn.billing.attach(
+    customer_id="org_123",
+    plan_id="workspace_pro",
+    entity_id="workspace_a",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "plan_id": "workspace_pro",
+    "entity_id": "workspace_a"
+  }'
+```
+
+</CodeGroup>
+
+## Cancelling an entity's plan
+
+Use `billing.update` with `cancelAction` to cancel an entity's plan. The same [cancel/uncancel](/documentation/customers/billing/subscription-lifecycle#cancellations) behavior applies.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.billing.update({
+  customerId: "org_123",
+  planId: "workspace_pro",
+  entityId: "workspace_a",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```python Python
+await autumn.billing.update(
+    customer_id="org_123",
+    plan_id="workspace_pro",
+    entity_id="workspace_a",
+    cancel_action="cancel_end_of_cycle",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing.update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "plan_id": "workspace_pro",
+    "entity_id": "workspace_a",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>

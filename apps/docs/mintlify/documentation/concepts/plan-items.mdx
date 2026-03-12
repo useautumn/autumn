@@ -1,5 +1,5 @@
 ---
-title: "Adding features to plans"
+title: "Plan Items"
 description: "Configure what customers get access to when they purchase a plan"
 ---
 
@@ -8,6 +8,24 @@ When you add a feature to a plan, you define what customers on that plan can use
 There are 2 types of plan features: 
 - **Included Features**: features provided at no additional cost, either as a granted usage limit or a boolean flag
 - **Priced Features**: features that are billed for, either as a prepaid quantity or a usage-based price. Priced features can also have an included amount.
+
+```mermaid
+flowchart LR
+    FEAT[Feature] --> PI{Add to Plan}
+    PI --> INCL[Included]
+    PI --> PRICED[Priced]
+    
+    INCL --> G1[Grant Amount]
+    INCL --> R1[Reset Interval]
+    INCL --> A1[Rollovers]
+    
+    PRICED --> G2[Grant Amount]
+    PRICED --> P1[Price + Billing Units]
+    PRICED --> UM[Usage Model\nprepaid / usage-based]
+    PRICED --> A2[Max Limit\nProration]
+```
+
+When a customer purchases a plan, the items in the plan become [balances](/documentation/concepts/balances) under the customer.
 
 
 ## Included Features

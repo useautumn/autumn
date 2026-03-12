@@ -1,5 +1,5 @@
 ---
-title: "How features work"
+title: "Features"
 description: "Learn about features in Autumn and how to create them"
 ---
 
@@ -7,6 +7,15 @@ Features represent the parts of your product that you want to control access to,
 
 - **Metered features**: features that require you to keep track of a usage balance (eg, credits, API requests)
 - **Boolean features**: features that can be either enabled or disabled (eg, access to a premium analytics dashboard).
+
+```mermaid
+flowchart TD
+    F[Feature] --> BOOL[Boolean\non/off flag]
+    F --> METERED[Metered\nusage tracked]
+    METERED --> CON[Consumable\nresets periodically\neg credits, API calls]
+    METERED --> NC[Non-consumable\npersistent quantity\neg seats, storage]
+    CON -.->|"optionally part of"| CS[Credit System\nshared balance pool]
+```
 
 When you create a feature, you can set a display name, and it's ID. This will be used to identify the feature when you make API calls to Autumn, to check or tracking usage of the feature.
 
@@ -20,7 +29,7 @@ When adding features to a plan, you will be able to set reset cycles for `consum
 
 Under the "advanced" section of the feature creation sheet, you can also define [event names](/documentation/customers/tracking-usage#using-event-names). This gives you more control over how events interact with customer balances in Autumn. 
 
-Metered features can each act as their own, standlone balance, or be added to a [credit system](/documentation/pricing/credits). This lets you define credit costs per feature, and let many features draw from a common credit balance. 
+Metered features can each act as their own, standlone balance, or be added to a [credit system](/documentation/modelling-pricing/credit-systems). This lets you define credit costs per feature, and let many features draw from a common credit balance. 
 
 ## Boolean features
 
