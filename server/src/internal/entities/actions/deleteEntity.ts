@@ -94,6 +94,8 @@ export const deleteEntity = async ({
 			let newEntities: {
 				[key: string]: EntityBalance;
 			};
+
+			if (entity.id === null) continue;
 			if (replaceable) {
 				const { newEntities: newEntities_ } = replaceEntityInCusEnt({
 					cusEnt: linkedCusEnt,

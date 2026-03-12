@@ -46,7 +46,7 @@ const getApiBalanceBreakdownItem = ({
 	fullCus: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }): ApiBalanceBreakdownV1 => {
-	const entityId = fullCus.entity?.id;
+	const entityId = fullCus.entity?.id ?? fullCus.entity?.internal_id;
 
 	const planId = cusEntsToPlanId({ cusEnts: [customerEntitlement] });
 
@@ -123,7 +123,7 @@ export const getApiBalance = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 }): { data: ApiBalanceV1 } => {
-	const entityId = fullCus.entity?.id;
+	const entityId = fullCus.entity?.id ?? fullCus.entity?.internal_id;
 
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,

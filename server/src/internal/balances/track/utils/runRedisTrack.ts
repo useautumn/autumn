@@ -90,7 +90,7 @@ export const runRedisTrack = async ({
 		executeRedisDeduction({
 			ctx,
 			fullCustomer,
-			entityId: fullCustomer.entity?.id,
+			entityId: fullCustomer.entity?.id ?? undefined,
 			deductions: featureDeductions,
 			deductionOptions: {
 				overageBehaviour: overageBehavior || "cap",

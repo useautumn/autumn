@@ -21,6 +21,7 @@ export const handleCreateEntityV2 = createRoute({
 					id: body.entity_id,
 					name: body.name,
 					feature_id: body.feature_id,
+					billing_controls: body.billing_controls,
 				},
 			],
 			customerData: customer_data,

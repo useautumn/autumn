@@ -2,6 +2,7 @@ import {
 	boolean,
 	foreignKey,
 	index,
+	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -9,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { features } from "../../featureModels/featureTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
+import type { EntitySpendLimit } from "../billingControlModels.js";
 import { customers } from "../cusTable.js";
 
 export const entities = pgTable(
@@ -23,6 +25,7 @@ export const entities = pgTable(
 		name: text(),
 		deleted: boolean().default(false).notNull(),
 		internal_feature_id: text("internal_feature_id"),
+		spend_limits: jsonb().$type<EntitySpendLimit[]>(),
 
 		// Optional...
 		feature_id: text("feature_id"),
