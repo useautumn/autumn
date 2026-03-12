@@ -11,12 +11,20 @@ type UpdateEntityInCacheResult = {
 	error?: string;
 };
 
-const shouldDeleteCache = ({ error }: { error?: string }) => {
-	return (
-		error === "no_entities" ||
-		error === "empty_entities" ||
-		error === "entity_not_found"
-	);
+const deleteStaleCache = async ({
+	ctx,
+	customerId,
+	source,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	source: string;
+}) => {
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+		source,
+	});
 };
 
 export const updateEntityInCache = async ({
@@ -57,6 +65,11 @@ export const updateEntityInCache = async ({
 			logger.warn(
 				`[updateEntityInCache] Redis write failed for entity ${idOrInternalId}`,
 			);
+			await deleteStaleCache({
+				ctx,
+				customerId,
+				source: "updateEntityInCache: redis_write_failed",
+			});
 			return null;
 		}
 
@@ -80,13 +93,11 @@ export const updateEntityInCache = async ({
 			};
 		}
 
-		if (shouldDeleteCache({ error: parsed.error })) {
-			await deleteCachedFullCustomer({
-				ctx,
-				customerId,
-				source: "updateEntityInCache",
-			});
-		}
+		await deleteStaleCache({
+			ctx,
+			customerId,
+			source: `updateEntityInCache: ${parsed.error ?? "unknown_error"}`,
+		});
 
 		logger.warn(
 			`[updateEntityInCache] entity ${idOrInternalId}: ${parsed.error ?? "unknown_error"}`,
@@ -100,6 +111,11 @@ export const updateEntityInCache = async ({
 		ctx.logger.error(
 			`[updateEntityInCache] entity ${idOrInternalId}: error, ${error}`,
 		);
+		await deleteStaleCache({
+			ctx,
+			customerId,
+			source: "updateEntityInCache: exception",
+		});
 		return null;
 	}
 };

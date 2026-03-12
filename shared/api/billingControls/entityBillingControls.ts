@@ -7,8 +7,9 @@ export const ApiEntityBillingControlsSchema = z.object({
 	}),
 });
 
-export const ApiEntityBillingControlsInputSchema =
-	ApiEntityBillingControlsSchema.superRefine((billingControls, ctx) => {
+export const ApiEntityBillingControlsParamsSchema =
+	ApiEntityBillingControlsSchema.check((ctx) => {
+		const billingControls = ctx.value;
 		const featureIds = new Set<string>();
 
 		for (const [index, spendLimit] of (
@@ -19,9 +20,10 @@ export const ApiEntityBillingControlsInputSchema =
 			}
 
 			if (featureIds.has(spendLimit.feature_id)) {
-				ctx.addIssue({
+				ctx.issues.push({
 					code: "custom",
 					message: "Only one spend limit entry is allowed per feature_id",
+					input: spendLimit.feature_id,
 					path: ["spend_limits", index, "feature_id"],
 				});
 				return;
@@ -34,6 +36,6 @@ export const ApiEntityBillingControlsInputSchema =
 export type ApiEntityBillingControls = z.infer<
 	typeof ApiEntityBillingControlsSchema
 >;
-export type ApiEntityBillingControlsInput = z.input<
-	typeof ApiEntityBillingControlsInputSchema
+export type ApiEntityBillingControlsParams = z.input<
+	typeof ApiEntityBillingControlsParamsSchema
 >;

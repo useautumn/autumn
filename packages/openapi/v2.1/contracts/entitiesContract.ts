@@ -5,12 +5,14 @@ import {
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import {
 	createEntityJsDoc,
 	deleteEntityJsDoc,
 	getEntityJsDoc,
+	updateEntityJsDoc,
 } from "../jsDocs/entityJsDocs";
 
 const API_ENTITY_V2_EXAMPLE = {
@@ -96,6 +98,44 @@ export const getEntityContract = oc
 				{
 					customer_id: "cus_123",
 					entity_id: "seat_42",
+				},
+			],
+		}),
+	)
+	.output(
+		ApiEntityV2Schema.meta({
+			examples: [API_ENTITY_V2_EXAMPLE],
+		}),
+	);
+
+export const updateEntityContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/entities.update",
+		operationId: "updateEntity",
+		tags: ["entities"],
+		description: updateEntityJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "update",
+		}),
+	})
+	.input(
+		UpdateEntityParamsSchema.meta({
+			title: "UpdateEntityParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					entity_id: "seat_42",
+					billing_controls: {
+						spend_limits: [
+							{
+								feature_id: "messages",
+								enabled: true,
+								overage_limit: 25,
+							},
+						],
+					},
 				},
 			],
 		}),

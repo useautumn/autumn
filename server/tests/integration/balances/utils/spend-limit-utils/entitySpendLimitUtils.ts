@@ -116,6 +116,7 @@ export const expectCustomerFeatureBalance = async ({
 	breakdownLength?: number;
 	skipCache?: boolean;
 }) => {
+	await timeout(3000);
 	const customer = await autumn.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: skipCache ? "true" : undefined,
 	});
@@ -227,6 +228,71 @@ export const expectSendEventBlocked = async ({
 		usage: customerExpectation.usage,
 		maxPurchase: customerExpectation.maxPurchase,
 		breakdownLength: customerExpectation.breakdownLength,
+	});
+};
+
+export const expectCustomerSendEventBlocked = async ({
+	autumn,
+	customerId,
+	requestFeatureId,
+	requiredBalance,
+	customer,
+	expectedFeatureId = requestFeatureId,
+	expectedResponseRequiredBalance = requiredBalance,
+}: {
+	autumn: AutumnV2_1Client;
+	customerId: string;
+	requestFeatureId: string;
+	requiredBalance: number;
+	customer: {
+		granted: number;
+		remaining: number;
+		usage: number;
+		maxPurchase?: number | null;
+		breakdownLength?: number;
+	};
+	expectedFeatureId?: string;
+	expectedResponseRequiredBalance?: number;
+}) => {
+	const response = await autumn.check<CheckResponseV3>({
+		customer_id: customerId,
+		feature_id: requestFeatureId,
+		required_balance: requiredBalance,
+		send_event: true,
+	});
+
+	expect(response).toMatchObject({
+		allowed: false,
+		customer_id: customerId,
+		required_balance: expectedResponseRequiredBalance,
+		balance: {
+			feature_id: expectedFeatureId,
+			granted: customer.granted,
+			remaining: customer.remaining,
+			usage: customer.usage,
+			...(customer.maxPurchase === undefined
+				? {}
+				: {
+						max_purchase: customer.maxPurchase,
+					}),
+		},
+	});
+
+	if (customer.breakdownLength !== undefined) {
+		expect(response.balance?.breakdown).toHaveLength(customer.breakdownLength);
+	}
+
+	await timeout(4000);
+
+	await expectCustomerFeatureCachedAndDb({
+		autumn,
+		customerId,
+		featureId: expectedFeatureId,
+		granted: customer.granted,
+		remaining: customer.remaining,
+		usage: customer.usage,
+		maxPurchase: customer.maxPurchase,
+		breakdownLength: customer.breakdownLength,
 	});
 };
 

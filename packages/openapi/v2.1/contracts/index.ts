@@ -27,6 +27,7 @@ import {
 	createEntityContract,
 	deleteEntityContract,
 	getEntityContract,
+	updateEntityContract,
 } from "./entitiesContract.js";
 import {
 	eventsAggregateContract,
@@ -97,6 +98,7 @@ export const v2_1ContractRouter = oc.router({
 	// Entities
 	entitiesCreate: createEntityContract,
 	entitiesGet: getEntityContract,
+	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 
 	// Referrals

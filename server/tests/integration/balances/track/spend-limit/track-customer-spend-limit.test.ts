@@ -7,17 +7,17 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { setCustomerSpendLimit } from "../../utils/spend-limit-utils/customerSpendLimitUtils.js";
 import {
-	expectCustomerFeatureBalance,
+	expectCustomerFeatureCachedAndDb,
+	expectCustomerSendEventBlocked,
 	expectEntityFeatureBalance,
-	expectSendEventBlocked,
 	getActionUnitsForCreditAmount,
-	setEntitySpendLimit,
 } from "../../utils/spend-limit-utils/entitySpendLimitUtils.js";
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit1: lifetime + consumable entity product caps overage and keeps entity/customer balances aligned")}`, async () => {
-	const entityProduct = products.base({
-		id: "track-entity-product-lifetime-consumable",
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit1: lifetime + consumable customer messages cap track overage")}`, async () => {
+	const customerProduct = products.base({
+		id: "track-customer-lifetime-consumable",
 		items: [
 			items.lifetimeMessages({
 				includedUsage: 1000,
@@ -30,52 +30,34 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit1: lifeti
 		],
 	});
 
-	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-1",
+	const { autumnV2_1, customerId } = await initScenario({
+		customerId: "track-customer-spend-limit-1",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
-			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.products({ list: [customerProduct] }),
 		],
-		actions: [
-			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
-		],
+		actions: [s.billing.attach({ productId: customerProduct.id })],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		value: 1120,
 	});
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		value: 10,
 	});
 
-	await expectEntityFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		entityId: entities[0].id,
-		featureId: TestFeature.Messages,
-		granted: 1100,
-		remaining: 0,
-		usage: 1125,
-		maxPurchase: 300,
-		breakdownLength: 2,
-	});
-
-	await expectCustomerFeatureBalance({
+	await expectCustomerFeatureCachedAndDb({
 		autumn: autumnV2_1,
 		customerId,
 		featureId: TestFeature.Messages,
@@ -91,19 +73,17 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit1: lifeti
 		func: async () =>
 			await autumnV2_1.track({
 				customer_id: customerId,
-				entity_id: entities[0].id,
 				feature_id: TestFeature.Messages,
 				value: 1,
 				overage_behavior: "reject",
 			}),
 	});
-	await expectSendEventBlocked({
+	await expectCustomerSendEventBlocked({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		requestFeatureId: TestFeature.Messages,
 		requiredBalance: 1,
-		entity: {
+		customer: {
 			granted: 1100,
 			remaining: 0,
 			usage: 1125,
@@ -113,9 +93,9 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit1: lifeti
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepaid + consumable entity product caps overage")}`, async () => {
-	const entityProduct = products.base({
-		id: "track-entity-product-prepaid-consumable",
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit2: prepaid + consumable customer messages cap track overage")}`, async () => {
+	const customerProduct = products.base({
+		id: "track-customer-prepaid-consumable",
 		items: [
 			items.prepaidMessages({
 				includedUsage: 100,
@@ -130,17 +110,15 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 	});
 
 	const prepaidQuantity = 600;
-	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-2",
+	const { autumnV2_1, customerId } = await initScenario({
+		customerId: "track-customer-spend-limit-2",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
-			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.products({ list: [customerProduct] }),
 		],
 		actions: [
 			s.billing.attach({
-				productId: entityProduct.id,
-				entityIndex: 0,
+				productId: customerProduct.id,
 				options: [
 					{
 						feature_id: TestFeature.Messages,
@@ -151,31 +129,27 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 		],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		value: 820,
 	});
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		value: 10,
 	});
 
-	await expectEntityFeatureBalance({
+	await expectCustomerFeatureCachedAndDb({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		granted: 800,
 		remaining: 0,
@@ -183,22 +157,22 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 		breakdownLength: 2,
 	});
 
-	await expectCustomerFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		featureId: TestFeature.Messages,
-		granted: 800,
-		remaining: 0,
-		usage: 825,
-		breakdownLength: 2,
+	await expectAutumnError({
+		errCode: ErrCode.InsufficientBalance,
+		func: async () =>
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+				overage_behavior: "reject",
+			}),
 	});
-	await expectSendEventBlocked({
+	await expectCustomerSendEventBlocked({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		requestFeatureId: TestFeature.Messages,
 		requiredBalance: 1,
-		entity: {
+		customer: {
 			granted: 800,
 			remaining: 0,
 			usage: 825,
@@ -207,9 +181,104 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two entity products with different spend limits stay isolated and roll up to customer totals")}`, async () => {
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit3: prepaid addon + consumable customer messages cap track overage")}`, async () => {
+	const consumableProduct = products.base({
+		id: "track-customer-consumable",
+		items: [
+			items.consumableMessages({
+				includedUsage: 200,
+				price: 0.5,
+			}),
+		],
+	});
+
+	const prepaidAddon = products.base({
+		id: "track-customer-prepaid-addon",
+		isAddOn: true,
+		items: [
+			items.prepaidMessages({
+				includedUsage: 100,
+				billingUnits: 100,
+				price: 8.5,
+			}),
+		],
+	});
+
+	const { autumnV2_1, customerId } = await initScenario({
+		customerId: "track-customer-spend-limit-3",
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [consumableProduct, prepaidAddon] }),
+		],
+		actions: [
+			s.billing.attach({ productId: consumableProduct.id }),
+			s.billing.attach({
+				productId: prepaidAddon.id,
+				options: [
+					{
+						feature_id: TestFeature.Messages,
+						quantity: 600,
+					},
+				],
+			}),
+		],
+	});
+
+	await setCustomerSpendLimit({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		overageLimit: 25,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 820,
+	});
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 10,
+	});
+
+	await expectCustomerFeatureCachedAndDb({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 800,
+		remaining: 0,
+		usage: 825,
+		breakdownLength: 2,
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InsufficientBalance,
+		func: async () =>
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+				overage_behavior: "reject",
+			}),
+	});
+	await expectCustomerSendEventBlocked({
+		autumn: autumnV2_1,
+		customerId,
+		requestFeatureId: TestFeature.Messages,
+		requiredBalance: 1,
+		customer: {
+			granted: 800,
+			remaining: 0,
+			usage: 825,
+			breakdownLength: 2,
+		},
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit4: customer spend limit is enforced on aggregate entity product balances")}`, async () => {
 	const entityProduct = products.base({
-		id: "track-entity-product-two-entities",
+		id: "track-customer-entity-product",
 		items: [
 			items.prepaidMessages({
 				includedUsage: 100,
@@ -225,7 +294,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two en
 
 	const prepaidQuantity = 600;
 	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-3",
+		customerId: "track-customer-spend-limit-4",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
 			s.products({ list: [entityProduct] }),
@@ -255,46 +324,25 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two en
 		],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 	});
-	await setEntitySpendLimit({
-		autumn: autumnV2_1,
-		customerId,
-		entityId: entities[1].id,
-		featureId: TestFeature.Messages,
-		overageLimit: 40,
-	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
-		value: 820,
-	});
-	await autumnV2_1.track({
-		customer_id: customerId,
-		entity_id: entities[0].id,
-		feature_id: TestFeature.Messages,
-		value: 10,
+		value: 810,
 	});
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		feature_id: TestFeature.Messages,
-		value: 820,
+		value: 810,
 	});
-	await autumnV2_1.track({
-		customer_id: customerId,
-		entity_id: entities[1].id,
-		feature_id: TestFeature.Messages,
-		value: 25,
-	});
-
 	await expectEntityFeatureBalance({
 		autumn: autumnV2_1,
 		customerId,
@@ -302,7 +350,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two en
 		featureId: TestFeature.Messages,
 		granted: 800,
 		remaining: 0,
-		usage: 825,
+		usage: 810,
 		breakdownLength: 2,
 	});
 	await expectEntityFeatureBalance({
@@ -312,130 +360,174 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two en
 		featureId: TestFeature.Messages,
 		granted: 800,
 		remaining: 0,
-		usage: 840,
+		usage: 810,
 		breakdownLength: 2,
 	});
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 10,
+	});
 
-	await expectCustomerFeatureBalance({
+	await expectCustomerFeatureCachedAndDb({
 		autumn: autumnV2_1,
 		customerId,
 		featureId: TestFeature.Messages,
 		granted: 1600,
 		remaining: 0,
-		usage: 1665,
+		usage: 1625,
 		breakdownLength: 4,
 	});
-	await expectSendEventBlocked({
-		autumn: autumnV2_1,
-		customerId,
-		entityId: entities[0].id,
-		requestFeatureId: TestFeature.Messages,
-		requiredBalance: 1,
-		entity: {
-			granted: 800,
-			remaining: 0,
-			usage: 825,
-			breakdownLength: 2,
-		},
-		customer: {
-			granted: 1600,
-			remaining: 0,
-			usage: 1665,
-			breakdownLength: 4,
-		},
+
+	await expectAutumnError({
+		errCode: ErrCode.InsufficientBalance,
+		func: async () =>
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+				overage_behavior: "reject",
+			}),
 	});
-	await expectSendEventBlocked({
+	await expectCustomerSendEventBlocked({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[1].id,
 		requestFeatureId: TestFeature.Messages,
 		requiredBalance: 1,
-		entity: {
-			granted: 800,
-			remaining: 0,
-			usage: 840,
-			breakdownLength: 2,
-		},
 		customer: {
 			granted: 1600,
 			remaining: 0,
-			usage: 1665,
+			usage: 1625,
 			breakdownLength: 4,
 		},
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit4: allocated workflows entity product caps overage")}`, async () => {
-	const entityProduct = products.base({
-		id: "track-entity-product-workflows",
-		items: [items.allocatedWorkflows({ includedUsage: 1 })],
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit5: customer spend limit is enforced on aggregate per-entity balances")}`, async () => {
+	const perEntityProduct = products.base({
+		id: "track-customer-per-entity-product",
+		items: [
+			items.prepaidMessages({
+				includedUsage: 100,
+				billingUnits: 100,
+				price: 8.5,
+				entityFeatureId: TestFeature.Users,
+			}),
+			items.consumableMessages({
+				includedUsage: 200,
+				price: 0.5,
+				entityFeatureId: TestFeature.Users,
+			}),
+		],
 	});
 
+	const prepaidQuantity = 600;
 	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-4",
+		customerId: "track-customer-spend-limit-5",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
-			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.products({ list: [perEntityProduct] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
+			s.billing.attach({
+				productId: perEntityProduct.id,
+				options: [
+					{
+						feature_id: TestFeature.Messages,
+						quantity: prepaidQuantity,
+					},
+				],
+			}),
 		],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
-		featureId: TestFeature.Workflows,
-		overageLimit: 2,
+		featureId: TestFeature.Messages,
+		overageLimit: 25,
 	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
-		feature_id: TestFeature.Workflows,
-		value: 1,
+		feature_id: TestFeature.Messages,
+		value: 810,
 	});
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
-		feature_id: TestFeature.Workflows,
-		value: 2,
+		entity_id: entities[1].id,
+		feature_id: TestFeature.Messages,
+		value: 810,
 	});
-
 	await expectEntityFeatureBalance({
 		autumn: autumnV2_1,
 		customerId,
 		entityId: entities[0].id,
-		featureId: TestFeature.Workflows,
-		granted: 1,
+		featureId: TestFeature.Messages,
+		granted: 800,
 		remaining: 0,
-		usage: 3,
-		breakdownLength: 1,
+		usage: 810,
+		breakdownLength: 2,
 	});
-	await expectSendEventBlocked({
+	await expectEntityFeatureBalance({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
-		requestFeatureId: TestFeature.Workflows,
+		entityId: entities[1].id,
+		featureId: TestFeature.Messages,
+		granted: 800,
+		remaining: 0,
+		usage: 810,
+		breakdownLength: 2,
+	});
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 10,
+	});
+
+	await expectCustomerFeatureCachedAndDb({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 1600,
+		remaining: 0,
+		usage: 1625,
+		breakdownLength: 2,
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InsufficientBalance,
+		func: async () =>
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+				overage_behavior: "reject",
+			}),
+	});
+	await expectCustomerSendEventBlocked({
+		autumn: autumnV2_1,
+		customerId,
+		requestFeatureId: TestFeature.Messages,
 		requiredBalance: 1,
-		entity: {
-			granted: 1,
+		customer: {
+			granted: 1600,
 			remaining: 0,
-			usage: 3,
-			breakdownLength: 1,
+			usage: 1625,
+			breakdownLength: 2,
 		},
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit-system entity product uses converted credits and caps overage")}`, async () => {
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit6: credit-system customer tracking uses converted credits and caps overage")}`, async () => {
 	const includedCredits = 100;
 	const spendLimitCredits = 25;
 	const existingOverageCredits = 20;
 
-	const entityProduct = products.base({
-		id: "track-entity-product-credits",
+	const customerProduct = products.base({
+		id: "track-customer-credits",
 		items: [
 			items.consumable({
 				featureId: TestFeature.Credits,
@@ -446,16 +538,13 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit
 		],
 	});
 
-	const { autumnV2_1, customerId, entities, ctx } = await initScenario({
-		customerId: "track-entity-product-spend-limit-5",
+	const { autumnV2_1, customerId, ctx } = await initScenario({
+		customerId: "track-customer-spend-limit-6",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
-			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.products({ list: [customerProduct] }),
 		],
-		actions: [
-			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
-		],
+		actions: [s.billing.attach({ productId: customerProduct.id })],
 	});
 
 	const creditsFeature = ctx.features.find(
@@ -475,40 +564,25 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit
 		creditCostPerActionUnit: action1CreditCost,
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Credits,
 		overageLimit: spendLimitCredits,
 	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Action1,
 		value: firstTrackValue,
 	});
 	await autumnV2_1.track({
 		customer_id: customerId,
-		entity_id: entities[0].id,
 		feature_id: TestFeature.Action1,
 		value: secondTrackValue,
 	});
 
-	await expectEntityFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		entityId: entities[0].id,
-		featureId: TestFeature.Credits,
-		granted: includedCredits,
-		remaining: 0,
-		usage: includedCredits + spendLimitCredits,
-		maxPurchase: 300,
-		breakdownLength: 1,
-	});
-
-	await expectCustomerFeatureBalance({
+	await expectCustomerFeatureCachedAndDb({
 		autumn: autumnV2_1,
 		customerId,
 		featureId: TestFeature.Credits,
@@ -524,21 +598,19 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit
 		func: async () =>
 			await autumnV2_1.track({
 				customer_id: customerId,
-				entity_id: entities[0].id,
 				feature_id: TestFeature.Action1,
 				value: 1 / action1CreditCost,
 				overage_behavior: "reject",
 			}),
 	});
-	await expectSendEventBlocked({
+	await expectCustomerSendEventBlocked({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		requestFeatureId: TestFeature.Action1,
 		requiredBalance: 1 / action1CreditCost,
 		expectedFeatureId: TestFeature.Credits,
 		expectedResponseRequiredBalance: 1,
-		entity: {
+		customer: {
 			granted: includedCredits,
 			remaining: 0,
 			usage: includedCredits + spendLimitCredits,
@@ -548,105 +620,68 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit5: credit
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit6: concurrent entity consumable tracking respects spend limit and keeps cache/db aligned")}`, async () => {
-	const entityProduct = products.base({
-		id: "track-entity-product-concurrency",
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit7: disabled customer spend limit no longer caps rejecting track")}`, async () => {
+	const customerProduct = products.base({
+		id: "track-customer-disabled-limit",
 		items: [
 			items.consumableMessages({
-				includedUsage: 5,
-				price: 0.1,
+				includedUsage: 100,
+				price: 0.5,
 			}),
 		],
 	});
 
-	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-6",
+	const { autumnV2_1, customerId } = await initScenario({
+		customerId: "track-customer-spend-limit-7",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
-			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.products({ list: [customerProduct] }),
 		],
-		actions: [
-			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
-		],
+		actions: [s.billing.attach({ productId: customerProduct.id })],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
-		overageLimit: 5,
+		overageLimit: 25,
 	});
 
-	const results = await Promise.allSettled(
-		Array.from({ length: 5 }, () =>
-			autumnV2_1.track({
-				customer_id: customerId,
-				entity_id: entities[0].id,
-				feature_id: TestFeature.Messages,
-				value: 3,
-				overage_behavior: "reject",
-			}),
-		),
-	);
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 120,
+	});
 
-	const successCount = results.filter(
-		(result) => result.status === "fulfilled",
-	).length;
-	const rejectedCount = results.filter(
-		(result) => result.status === "rejected",
-	).length;
-
-	expect(successCount).toBe(3);
-	expect(rejectedCount).toBe(2);
-
-	await expectEntityFeatureBalance({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
-		granted: 5,
+		overageLimit: 25,
+		enabled: false,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 10,
+		overage_behavior: "reject",
+	});
+
+	await expectCustomerFeatureCachedAndDb({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 100,
 		remaining: 0,
-		usage: 9,
+		usage: 130,
 		breakdownLength: 1,
-	});
-	await expectEntityFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		entityId: entities[0].id,
-		featureId: TestFeature.Messages,
-		granted: 5,
-		remaining: 0,
-		usage: 9,
-		breakdownLength: 1,
-		skipCache: true,
-	});
-
-	await expectCustomerFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		featureId: TestFeature.Messages,
-		granted: 5,
-		remaining: 0,
-		usage: 9,
-		breakdownLength: 1,
-	});
-	await expectCustomerFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		featureId: TestFeature.Messages,
-		granted: 5,
-		remaining: 0,
-		usage: 9,
-		breakdownLength: 1,
-		skipCache: true,
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit7: disabled spend limit no longer caps entity product track")}`, async () => {
+test.concurrent(`${chalk.yellowBright("track-customer-spend-limit8: disabled customer spend limit no longer caps aggregate entity-product track across entities")}`, async () => {
 	const entityProduct = products.base({
-		id: "track-entity-product-disabled-limit",
+		id: "track-customer-disabled-entity-product",
 		items: [
 			items.consumableMessages({
 				includedUsage: 100,
@@ -656,21 +691,21 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit7: disabl
 	});
 
 	const { autumnV2_1, customerId, entities } = await initScenario({
-		customerId: "track-entity-product-spend-limit-7",
+		customerId: "track-customer-spend-limit-8",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
 			s.products({ list: [entityProduct] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
 			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
+			s.billing.attach({ productId: entityProduct.id, entityIndex: 1 }),
 		],
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 	});
@@ -679,13 +714,18 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit7: disabl
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
-		value: 120,
+		value: 110,
+	});
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[1].id,
+		feature_id: TestFeature.Messages,
+		value: 110,
 	});
 
-	await setEntitySpendLimit({
+	await setCustomerSpendLimit({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 		enabled: false,
@@ -706,38 +746,37 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit7: disabl
 		featureId: TestFeature.Messages,
 		granted: 100,
 		remaining: 0,
-		usage: 130,
+		usage: 120,
 		breakdownLength: 1,
 	});
 	await expectEntityFeatureBalance({
 		autumn: autumnV2_1,
 		customerId,
-		entityId: entities[0].id,
+		entityId: entities[1].id,
 		featureId: TestFeature.Messages,
 		granted: 100,
 		remaining: 0,
-		usage: 130,
+		usage: 110,
 		breakdownLength: 1,
-		skipCache: true,
 	});
 
-	await expectCustomerFeatureBalance({
+	await expectCustomerFeatureCachedAndDb({
 		autumn: autumnV2_1,
 		customerId,
 		featureId: TestFeature.Messages,
-		granted: 100,
+		granted: 200,
 		remaining: 0,
-		usage: 130,
-		breakdownLength: 1,
+		usage: 230,
+		breakdownLength: 2,
 	});
-	await expectCustomerFeatureBalance({
-		autumn: autumnV2_1,
-		customerId,
-		featureId: TestFeature.Messages,
-		granted: 100,
-		remaining: 0,
-		usage: 130,
-		breakdownLength: 1,
-		skipCache: true,
-	});
+
+	expect(
+		(
+			await autumnV2_1.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				required_balance: 10,
+			})
+		).allowed,
+	).toBe(true);
 });
