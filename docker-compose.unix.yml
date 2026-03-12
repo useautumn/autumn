@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=autumn
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d autumn"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   valkey:
     image: docker.io/valkey/valkey:8.0
     environment:
@@ -64,8 +81,14 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - DATABASE_URL=${DOCKER_DATABASE_URL:-postgresql://myuser:mypassword@postgres:5432/autumn}
     depends_on:
-      - shared
+      shared:
+        condition: service_started
+      valkey:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # BullMQ Workers
@@ -83,8 +106,14 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - DATABASE_URL=${DOCKER_DATABASE_URL:-postgresql://myuser:mypassword@postgres:5432/autumn}
     depends_on:
-      - shared
+      shared:
+        condition: service_started
+      valkey:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # Run localtunnel
@@ -102,6 +131,7 @@ services:
 volumes:
   # Shared package dist output
   shared-dist:
+  postgres-data:
   valkey-data:
 
   # Node modules volumes to avoid host/container conflicts
