@@ -70,6 +70,7 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		source: "handleCreateBalance",
 	},
 
+	// BILLING ROUTES
 	{
 		method: "POST",
 		url: "/billing.attach",
@@ -82,15 +83,45 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 	},
 	{
 		method: "POST",
+		url: "/billing.setup_payment",
+		source: "setupPayment",
+	},
+	{
+		method: "POST",
+		url: "/billing.multi_attach",
+		source: "multiAttach",
+	},
+
+	// BALANCES
+	{
+		method: "POST",
 		url: "/balances.create",
 		source: "createBalance",
 	},
+	{
+		method: "POST",
+		url: "/balances.delete",
+		source: "createBalance",
+	},
 
-	// // Update customer
-	// {
-	// 	method: "POST",
-	// 	url: "/customers.update",
-	// },
+	// ENTITIES
+	{
+		method: "POST",
+		url: "/entities.create",
+		source: "createEntity",
+	},
+	{
+		method: "POST",
+		url: "/entities.delete",
+		source: "deleteEntity",
+	},
+
+	// CUSTOMERS
+	{
+		method: "POST",
+		url: "/customers.delete",
+		source: "deleteCustomer",
+	},
 ];
 
 /**
