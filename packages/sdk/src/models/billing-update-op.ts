@@ -109,8 +109,8 @@ export type BillingUpdateTo = number | string;
 
 export type BillingUpdateTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const BillingUpdateTierBehavior = {
@@ -440,6 +440,10 @@ export type UpdateSubscriptionParams = {
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
+  /**
+   * If true, the subscription is updated internally without applying billing changes in Stripe.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -645,8 +649,8 @@ export function billingUpdateToToJSON(
 /** @internal */
 export type BillingUpdateTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -656,8 +660,8 @@ export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -987,6 +991,7 @@ export type UpdateSubscriptionParams$Outbound = {
   proration_behavior?: string | undefined;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1011,6 +1016,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1022,6 +1028,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

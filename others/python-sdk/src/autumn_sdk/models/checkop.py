@@ -171,59 +171,6 @@ CheckInterval = Union[
 ]
 
 
-CheckToTypedDict = TypeAliasType("CheckToTypedDict", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-CheckTo = TypeAliasType("CheckTo", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-class TiersTypedDict(TypedDict):
-    to: CheckToTypedDict
-    r"""The maximum amount of usage for this tier."""
-    amount: float
-    r"""The price of the product item for this tier."""
-    flat_amount: NotRequired[Nullable[float]]
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-
-class Tiers(BaseModel):
-    to: CheckTo
-    r"""The maximum amount of usage for this tier."""
-
-    amount: float
-    r"""The price of the product item for this tier."""
-
-    flat_amount: OptionalNullable[float] = UNSET
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
 CheckTierBehavior = Union[
     Literal[
         "graduated",
@@ -405,7 +352,7 @@ class CheckItemTypedDict(TypedDict):
     r"""The interval count of the product item."""
     price: NotRequired[Nullable[float]]
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
-    tiers: NotRequired[Nullable[List[TiersTypedDict]]]
+    tiers: NotRequired[Nullable[List[Nullable[Any]]]]
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
     tier_behavior: NotRequired[Nullable[CheckTierBehavior]]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
@@ -451,7 +398,7 @@ class CheckItem(BaseModel):
     price: OptionalNullable[float] = UNSET
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
 
-    tiers: OptionalNullable[List[Tiers]] = UNSET
+    tiers: OptionalNullable[List[Nullable[Any]]] = UNSET
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
 
     tier_behavior: OptionalNullable[CheckTierBehavior] = UNSET
