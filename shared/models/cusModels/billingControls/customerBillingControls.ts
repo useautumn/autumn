@@ -3,12 +3,9 @@ import {
 	type EntityBillingControls,
 	type EntityBillingControlsInput,
 	EntityBillingControlsSchema,
-} from "./billingControls/entityBillingControls.js";
-import {
-	type EntitySpendLimit,
-	EntitySpendLimitSchema,
-} from "./billingControls/entitySpendLimit.js";
-import { PurchaseLimitIntervalEnum } from "./billingControls/purchaseLimitInterval.js";
+} from "./entityBillingControls.js";
+import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
+import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -45,6 +42,9 @@ export const CustomerBillingControlsSchema = z.object({
 	auto_topups: z.array(AutoTopupSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+		description: "List of overage spend limits per feature.",
+	}),
 });
 
 export type AutoTopupPurchaseLimit = z.infer<
@@ -59,9 +59,5 @@ export type CustomerBillingControlsInput = z.input<
 	typeof CustomerBillingControlsSchema
 >;
 
-export { EntityBillingControlsSchema, EntitySpendLimitSchema };
-export type {
-	EntityBillingControls,
-	EntityBillingControlsInput,
-	EntitySpendLimit,
-};
+export { EntityBillingControlsSchema, DbSpendLimitSchema };
+export type { EntityBillingControls, EntityBillingControlsInput, DbSpendLimit };
