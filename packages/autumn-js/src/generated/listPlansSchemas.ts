@@ -26,14 +26,6 @@ export const listPlansCreditSchemaSchema = z.object({
 	creditCost: z.number(),
 });
 
-export const listPlansToSchema = z.union([z.number(), z.string()]);
-
-export const listPlansTierSchema = z.object({
-	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional().nullable(),
-});
-
 export const listPlansItemDisplaySchema = z.object({
 	primaryText: z.string(),
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
@@ -88,7 +80,7 @@ export const listPlansBillingMethodSchema = openEnumSchema;
 
 export const listPlansItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(listPlansTierSchema), z.undefined()]).optional(),
+	tiers: z.union([z.array(z.any().nullable()), z.undefined()]).optional(),
 	tierBehavior: z
 		.union([listPlansTierBehaviorSchema, z.undefined()])
 		.optional(),

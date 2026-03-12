@@ -108,8 +108,8 @@ export type PreviewAttachTo = number | string;
 
 export type PreviewAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewAttachTierBehavior = {
@@ -483,6 +483,10 @@ export type PreviewAttachParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<PreviewAttachCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -675,8 +679,8 @@ export function previewAttachToToJSON(
 /** @internal */
 export type PreviewAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -686,8 +690,8 @@ export const PreviewAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1080,6 +1084,7 @@ export type PreviewAttachParams$Outbound = {
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -1113,6 +1118,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => PreviewAttachCustomLineItem$outboundSchema)),
     ),
+    processorSubscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1128,6 +1134,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
     });
   }),
 );

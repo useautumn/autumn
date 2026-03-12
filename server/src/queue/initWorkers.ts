@@ -93,6 +93,26 @@ const startPollingLoop = async ({
 		);
 	};
 
+	const recycleWorkerIfNeeded = () => {
+		if (totalMessagesProcessed < MAX_MESSAGES_BEFORE_RECYCLE) {
+			return;
+		}
+
+		if (activeMigrationJobs > 0) {
+			console.log(
+				`${prefix} Recycle deferred at ${totalMessagesProcessed} messages because ${activeMigrationJobs} migration job(s) are still running`,
+			);
+			return;
+		}
+
+		const mem = process.memoryUsage();
+		console.log(
+			`${prefix} Recycling after ${totalMessagesProcessed} messages (rss=${(mem.rss / 1024 / 1024).toFixed(0)}MB heap=${(mem.heapUsed / 1024 / 1024).toFixed(0)}MB)`,
+		);
+		clearInterval(statsInterval);
+		process.exit(0);
+	};
+
 	const logStatsAndCheckZeroMessages = () => {
 		const elapsedSeconds = ((Date.now() - lastStatsTime) / 1000).toFixed(0);
 		const mem = process.memoryUsage();
@@ -322,15 +342,7 @@ const startPollingLoop = async ({
 				await batchDeleteMessages({ sqs, toDelete });
 
 				Sentry.getCurrentScope().clear();
-
-				if (totalMessagesProcessed >= MAX_MESSAGES_BEFORE_RECYCLE) {
-					const mem = process.memoryUsage();
-					console.log(
-						`${prefix} Recycling after ${totalMessagesProcessed} messages (rss=${(mem.rss / 1024 / 1024).toFixed(0)}MB heap=${(mem.heapUsed / 1024 / 1024).toFixed(0)}MB)`,
-					);
-					clearInterval(statsInterval);
-					process.exit(0);
-				}
+				recycleWorkerIfNeeded();
 			} else {
 				const newClient = handleEmptyPoll();
 				if (newClient) sqs = newClient;

@@ -191,38 +191,29 @@ PreviewAttachTo = TypeAliasType("PreviewAttachTo", Union[float, str])
 
 class PreviewAttachTierTypedDict(TypedDict):
     to: PreviewAttachToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
 class PreviewAttachTier(BaseModel):
     to: PreviewAttachTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -703,6 +694,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[PreviewAttachCustomLineItemTypedDict]]
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+    processor_subscription_id: NotRequired[str]
+    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -751,6 +744,9 @@ class PreviewAttachParams(BaseModel):
     custom_line_items: Optional[List[PreviewAttachCustomLineItem]] = None
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
+    processor_subscription_id: Optional[str] = None
+    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -768,6 +764,7 @@ class PreviewAttachParams(BaseModel):
                 "plan_schedule",
                 "checkout_session_params",
                 "custom_line_items",
+                "processor_subscription_id",
             ]
         )
         serialized = handler(self)

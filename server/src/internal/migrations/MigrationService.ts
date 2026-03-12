@@ -82,7 +82,7 @@ export class MigrationService {
 
 			if (existingJobs.length > 0) {
 				throw new RecaseError({
-					message: `Another migration is ongoing for customers on the ${fromProduct.name} product, cannot create a new migration`,
+					message: `Another migration is ongoing for customers on the ${fromProduct.name} product, cannot create a new migration. Migration ID: ${existingJobs[0].id}`,
 					code: ErrCode.MigrationAlreadyInProgress,
 					statusCode: 409,
 				});
