@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
+import { RedirectModeSchema } from "../common/redirectMode";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -38,7 +39,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
-		// refund_behavior: RefundBehaviorSchema.optional(),
+		redirect_mode: RedirectModeSchema.optional(),
 	})
 
 		.check((ctx) => {

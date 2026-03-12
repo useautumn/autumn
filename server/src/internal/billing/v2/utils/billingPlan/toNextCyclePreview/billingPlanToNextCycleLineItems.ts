@@ -1,4 +1,5 @@
 import {
+	type AutumnBillingPlan,
 	type BillingContext,
 	type FullCusProduct,
 	ms,
@@ -16,11 +17,13 @@ import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPrevie
 export const billingPlanToNextCycleLineItems = ({
 	ctx,
 	customerProducts,
+	autumnBillingPlan,
 	billingContext,
 	nextCycleStart,
 }: {
 	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
+	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	nextCycleStart: number;
 }) => {
@@ -60,6 +63,10 @@ export const billingPlanToNextCycleLineItems = ({
 			timestampsMatch(lineItem.context.billingPeriod.start, nextCycleStart),
 	);
 
+	const deferredLineItems = (autumnBillingPlan.lineItems ?? []).filter(
+		(lineItem) => lineItem.chargeImmediately === false,
+	);
+
 	if (billingContext.stripeDiscounts?.length) {
 		const nextCycleDiscounts = filterStripeDiscountsForNextCycle({
 			stripeDiscounts: billingContext.stripeDiscounts,
@@ -73,9 +80,10 @@ export const billingPlanToNextCycleLineItems = ({
 		});
 	}
 
-	const previewLineItems = nextCycleAutumnLineItems.map(
-		lineItemToPreviewLineItem,
-	);
+	const previewLineItems = [
+		...nextCycleAutumnLineItems,
+		...deferredLineItems,
+	].map(lineItemToPreviewLineItem);
 
 	const subtotal = sumValues(previewLineItems.map((line) => line.subtotal));
 	const total = sumValues(previewLineItems.map((line) => line.total));

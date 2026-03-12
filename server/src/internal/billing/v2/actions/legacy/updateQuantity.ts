@@ -8,6 +8,7 @@ import {
 	findActiveCustomerProductById,
 	InternalError,
 } from "@autumn/shared";
+import { te } from "date-fns/locale";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
@@ -81,6 +82,7 @@ export const updateQuantity = async ({
 		feature_quantities: optionsListToFeatureQuantities({
 			optionsList: attachParams.optionsList,
 		}),
+		redirect_mode: "if_required",
 	};
 
 	const res = await billingActions.updateSubscription({

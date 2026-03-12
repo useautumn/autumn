@@ -1,4 +1,5 @@
 import {
+	type BillingPreviewChange,
 	type BillingResponse,
 	CheckoutAction,
 	type ConfirmCheckoutResponse,
@@ -16,23 +17,48 @@ import { buildHeaderDescription } from "@/utils/buildHeaderDescription";
 
 const SUCCESS_REDIRECT_DELAY_MS = 2000;
 
-function buildOptionsArray(
-	incoming: { feature_quantities: { feature_id: string; quantity: number }[] }[],
+function haveMatchingQuantities({
+	incoming,
+	outgoing,
+}: {
+	incoming: BillingPreviewChange;
+	outgoing: BillingPreviewChange;
+}) {
+	if (incoming.feature_quantities.length !== outgoing.feature_quantities.length) {
+		return false;
+	}
+
+	const outgoingQuantities = new Map(
+		outgoing.feature_quantities.map((featureQuantity) => [
+			featureQuantity.feature_id,
+			featureQuantity.quantity,
+		]),
+	);
+
+	return incoming.feature_quantities.every(
+		(featureQuantity) =>
+			outgoingQuantities.get(featureQuantity.feature_id) ===
+			featureQuantity.quantity,
+	);
+}
+
+function buildFeatureQuantities(
+	incoming: BillingPreviewChange[],
 	quantities: Record<string, number>,
 ): { feature_id: string; quantity: number }[] {
-	const options: { feature_id: string; quantity: number }[] = [];
+	const featureQuantities: { feature_id: string; quantity: number }[] = [];
 
 	for (const change of incoming) {
 		for (const fq of change.feature_quantities) {
 			const quantity = quantities[fq.feature_id] ?? fq.quantity;
-			options.push({
+			featureQuantities.push({
 				feature_id: fq.feature_id,
 				quantity,
 			});
 		}
 	}
 
-	return options;
+	return featureQuantities;
 }
 
 export function useCheckoutState({
@@ -81,8 +107,8 @@ export function useCheckoutState({
 
 	// === Debounced preview ===
 	const debouncedPreview = useDebouncedCallback(
-		(options: { feature_id: string; quantity: number }[]) => {
-			previewMutation.mutate({ options });
+		(feature_quantities: { feature_id: string; quantity: number }[]) => {
+			previewMutation.mutate({ feature_quantities });
 		},
 		600,
 	);
@@ -91,8 +117,23 @@ export function useCheckoutState({
 	const derivedState = useMemo(() => {
 		const { action, env, preview, org, entity, status: checkoutStatus } =
 			checkoutData ?? {};
+		const adjustableFeatureIds = checkoutData?.adjustable_feature_ids ?? [];
 		const incoming = preview?.incoming;
 		const outgoing = preview?.outgoing;
+		const isUpdateQuantityIntent =
+			preview?.object === "update_subscription_preview" &&
+			preview.intent === "update_quantity";
+		const matchingOutgoingChange = incoming?.[0]
+			? outgoing?.find((change) => change.plan_id === incoming[0].plan_id)
+			: undefined;
+		const isUnchangedQuantityUpdate =
+			isUpdateQuantityIntent &&
+			Boolean(incoming?.[0]) &&
+			Boolean(matchingOutgoingChange) &&
+			haveMatchingQuantities({
+				incoming: incoming[0],
+				outgoing: matchingOutgoingChange,
+			});
 		const incomingPlan = incoming?.[0]?.plan;
 		const freeTrial = incomingPlan?.free_trial;
 		const hasActiveTrial = !!freeTrial;
@@ -124,6 +165,8 @@ export function useCheckoutState({
 			hasActiveTrial,
 			isSandbox: env === "sandbox",
 			headerDescription,
+			adjustableFeatureIds,
+			isUnchangedQuantityUpdate,
 		};
 	}, [checkoutData, routeMode]);
 
@@ -134,22 +177,22 @@ export function useCheckoutState({
 
 			if (checkoutData?.preview?.incoming) {
 				const newQuantities = { ...quantities, [featureId]: quantity };
-				const options = buildOptionsArray(
+				const featureQuantities = buildFeatureQuantities(
 					checkoutData.preview.incoming,
 					newQuantities,
 				);
-				debouncedPreview(options);
+				debouncedPreview(featureQuantities);
 			}
 		},
 		[checkoutData, quantities, debouncedPreview],
 	);
 
 	const handleConfirm = useCallback(() => {
-		const options = checkoutData?.preview?.incoming
-			? buildOptionsArray(checkoutData.preview.incoming, quantities)
+		const featureQuantities = checkoutData?.preview?.incoming
+			? buildFeatureQuantities(checkoutData.preview.incoming, quantities)
 			: [];
 
-		confirmMutation.mutate({ options }, {
+		confirmMutation.mutate({ feature_quantities: featureQuantities }, {
 			onSuccess: (result) => {
 				if (!result.success) {
 					setActionRequiredResponse(result);

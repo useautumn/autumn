@@ -130,6 +130,7 @@ export const billingPlanToNextCyclePreview = ({
 		billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: filteredCustomerProducts,
+			autumnBillingPlan: billingPlan.autumn,
 			billingContext,
 			nextCycleStart,
 		});

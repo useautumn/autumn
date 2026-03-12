@@ -8,6 +8,7 @@ import type {
 } from "@autumn/shared";
 import { format } from "date-fns";
 import { formatAmount } from "./formatUtils";
+import { getCheckoutPreviewIntent } from "./getCheckoutPreviewIntent";
 
 /**
  * Builds a phrase describing applied discounts.
@@ -138,6 +139,10 @@ export function buildHeaderDescription({
 }): string | undefined {
 	if (!preview) return undefined;
 
+	const isUpdateSubscriptionPreview =
+		preview.object === "update_subscription_preview";
+	const previewIntent = getCheckoutPreviewIntent({ preview });
+
 	const { total, currency, line_items, next_cycle } = preview;
 	const change = incoming?.[0];
 	const scenario = change?.plan?.customer_eligibility?.scenario;
@@ -158,15 +163,19 @@ export function buildHeaderDescription({
 	});
 
 	// Build the action phrase
-	let action = buildActionPhrase({
-		scenario,
-		outgoingPlanName,
-		incomingPlanName,
-		isRecurring,
-	});
+	let action = isUpdateSubscriptionPreview
+		? incomingPlanName
+			? `Update plan ${incomingPlanName}`
+			: "Update plan"
+		: buildActionPhrase({
+				scenario,
+				outgoingPlanName,
+				incomingPlanName,
+				isRecurring,
+			});
 
 	// Add entity if present
-	if (entityName) {
+	if (entityName && !isUpdateSubscriptionPreview) {
 		action += ` for ${entityName}`;
 	}
 
@@ -211,6 +220,10 @@ export function buildHeaderDescription({
 
 	// Handle scheduled changes (no immediate charges)
 	if (isScheduledChange) {
+		if (previewIntent === "update_quantity") {
+			return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today.`;
+		}
+
 		const effectiveDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
 	}

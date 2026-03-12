@@ -2,6 +2,14 @@ import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
 
+const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
+	return (
+		checkout.params.feature_quantities
+			?.filter((featureQuantity) => featureQuantity.adjustable === true)
+			.map((featureQuantity) => featureQuantity.feature_id) ?? []
+	);
+};
+
 /**
  * GET /checkouts/:checkout_id
  *
@@ -34,6 +42,7 @@ export const handleGetCheckout = createRoute({
 				name: fullCustomer.name || null,
 				email: fullCustomer.email || null,
 			},
+			adjustable_feature_ids: getAdjustableFeatureIds({ checkout }),
 			entity: fullCustomer.entity
 				? {
 						id: fullCustomer.entity.id ?? fullCustomer.entity.internal_id,

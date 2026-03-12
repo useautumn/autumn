@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 import {
 	ConfirmCheckoutResponseSchema,
 	GetCheckoutResponseSchema,
-} from "../checkout/checkoutResponses";
+	PreviewCheckoutResponseSchema,
+} from "../checkout";
 import { ConfirmCheckoutParamsSchema } from "../checkout/confirmCheckoutParams";
 
 export const getCheckoutContract = oc
@@ -26,7 +27,7 @@ export const previewCheckoutContract = oc
 			.object({ checkout_id: z.string() })
 			.extend(ConfirmCheckoutParamsSchema.shape),
 	)
-	.output(GetCheckoutResponseSchema);
+	.output(PreviewCheckoutResponseSchema);
 
 export const confirmCheckoutContract = oc
 	.route({

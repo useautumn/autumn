@@ -21,6 +21,7 @@ export function useAttachForm({
 			trialCardRequired: true,
 			planSchedule: null,
 			billingBehavior: null,
+			redirectMode: "if_required",
 			newBillingSubscription: false,
 			discounts: [],
 		} as AttachForm,

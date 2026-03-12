@@ -32,21 +32,6 @@ const GRADUATED_TIERS = [
 test(`${chalk.yellowBright("tiers: tiered prepaid (graduated) upgrade - starter → pro with 800 messages")}`, async () => {
 	const customerId = "tiers-tiered-prepaid-upgrade";
 
-	const tieredWords = items.tieredConsumableWords({
-		includedUsage: 100,
-		billingUnits: BILLING_UNITS,
-		tiers: GRADUATED_TIERS,
-	});
-
-	const volumePrepaidCredits = items.volumePrepaidCredits({
-		includedUsage: 100,
-		billingUnits: 0,
-		tiers: [
-			{ to: 500, flat_amount: 20, amount: 0 },
-			{ to: "inf" as const, flat_amount: 50, amount: 0.5 },
-		],
-	});
-
 	// Pro: graduated tiered prepaid messages ($49/mo, 100 included, 2-tier pricing)
 	const pro = products.base({
 		id: "pro",
@@ -58,8 +43,6 @@ test(`${chalk.yellowBright("tiers: tiered prepaid (graduated) upgrade - starter 
 				billingUnits: BILLING_UNITS,
 				tiers: GRADUATED_TIERS,
 			}),
-			tieredWords,
-			volumePrepaidCredits,
 			items.monthlyPrice({ price: 49 }),
 		],
 	});

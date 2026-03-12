@@ -1,7 +1,8 @@
 import { test } from "bun:test";
-import type {
-	ApiCustomerV3,
-	UpdateSubscriptionV1ParamsInput,
+import {
+	type ApiCustomerV3,
+	OnIncrease,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -10,14 +11,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 /**
- * Update Subscription Checkout - Quantity Scenario
+ * Update Subscription Checkout - Quantity Next Cycle Scenario
  *
  * Baseline scenario for frontend card exploration.
  * Starts with an attached prepaid plan, previews a quantity update on the same
- * product, then applies it so we can inspect the before/preview/after shapes.
+ * product with `ProrateNextCycle`, then applies it so we can inspect the
+ * before/preview/after shapes.
  */
 
-test(`${chalk.yellowBright("update-subscription-checkout: quantity update on same plan")}`, async () => {
+test(`${chalk.yellowBright("update-subscription-checkout: quantity update on same plan - prorate next cycle")}`, async () => {
 	const customerId = "update-sub-checkout-qty";
 
 	const pro = products.pro({
@@ -27,13 +29,19 @@ test(`${chalk.yellowBright("update-subscription-checkout: quantity update on sam
 			items.prepaidMessages({
 				includedUsage: 100,
 				billingUnits: 100,
+				prorationConfig: {
+					onIncrease: OnIncrease.ProrateNextCycle,
+				},
 			}),
 		],
 	});
 
 	const initialOptions = [{ feature_id: TestFeature.Messages, quantity: 300 }];
+	const updatedOptions = [
+		{ feature_id: TestFeature.Messages, quantity: 700, adjustable: true },
+	];
 
-	const { autumnV2_1 } = await initScenario({
+	const { autumnV2 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -48,7 +56,7 @@ test(`${chalk.yellowBright("update-subscription-checkout: quantity update on sam
 	});
 
 	const customerBefore =
-		await autumnV2_1.customers.get<ApiCustomerV3>(customerId);
+		await autumnV2.customers.get<ApiCustomerV3>(customerId);
 	console.log("customer before quantity update:", {
 		products: customerBefore.products?.map((product) => ({
 			id: product.id,
@@ -58,9 +66,6 @@ test(`${chalk.yellowBright("update-subscription-checkout: quantity update on sam
 		features: customerBefore.features?.[TestFeature.Messages],
 	});
 
-	const updatedOptions = [
-		{ feature_id: TestFeature.Messages, quantity: 400, adjustable: true },
-	];
 	const updateParams = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -68,10 +73,26 @@ test(`${chalk.yellowBright("update-subscription-checkout: quantity update on sam
 		redirect_mode: "always",
 	} satisfies UpdateSubscriptionV1ParamsInput;
 
+	const updatePreview =
+		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
+	console.log("update subscription preview:", updatePreview);
+
 	const updateResult =
-		await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
+		await autumnV2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
 			updateParams,
 		);
 
 	console.log("update subscription result:", updateResult);
+
+	const customerAfter = await autumnV2.customers.get<ApiCustomerV3>(customerId);
+	console.log("customer after quantity update:", {
+		products: customerAfter.products?.map((product) => ({
+			id: product.id,
+			name: product.name,
+			status: product.status,
+		})),
+		features: customerAfter.features?.[TestFeature.Messages],
+	});
 });

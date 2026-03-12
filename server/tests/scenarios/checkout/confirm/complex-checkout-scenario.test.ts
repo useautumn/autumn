@@ -42,7 +42,7 @@ test(`${chalk.yellowBright("checkout: complex - product with many line items")}`
 
 	// Options for prepaid features
 	const options = [
-		{ feature_id: TestFeature.Messages, quantity: 500 },
+		{ feature_id: TestFeature.Messages, quantity: 500, adjustable: true },
 		{ feature_id: TestFeature.Users, quantity: 10 },
 	];
 
