@@ -6,6 +6,7 @@ export const temp: TestGroup = {
 	tier: "domain",
 	paths: [
 		// Cancel immediately with default tests
+		"integration/balances/check/spend-limit",
 		"integration/balances/track/spend-limit",
 	],
 };
