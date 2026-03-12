@@ -21,7 +21,9 @@
 
   ARGV[1] = JSON params:
     {
-      sorted_entitlements: [{ customer_entitlement_id, credit_cost, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      sorted_entitlements: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
+      usage_based_cus_ent_ids_by_feature_id: { [feature_id]: string[] } | null,
       amount_to_deduct: number | null,
       target_balance: number | null,
       target_entity_id: string | nil,
@@ -51,6 +53,8 @@ local params = cjson.decode(ARGV[1])
 
 -- Extract parameters
 local sorted_entitlements = params.sorted_entitlements or {}
+local spend_limit_by_feature_id = params.spend_limit_by_feature_id
+local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
 local amount_to_deduct = params.amount_to_deduct
 local target_balance = params.target_balance
 local target_entity_id = params.target_entity_id
@@ -147,6 +151,8 @@ logger.log("  overage_behaviour: %s", tostring(overage_behaviour or "nil"))
 local deduction_result = run_deduction_on_context({
   context = context,
   sorted_entitlements = sorted_entitlements,
+  spend_limit_by_feature_id = spend_limit_by_feature_id,
+  usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
   rollovers = rollovers,
   amount_to_deduct = amount_to_deduct,
   target_balance = target_balance,

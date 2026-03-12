@@ -141,11 +141,49 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
         return m
 
 
+class UpdateCustomerSpendLimitRequestTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class UpdateCustomerSpendLimitRequest(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestTypedDict]]
     r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestTypedDict]]
+    r"""List of overage spend limits per feature."""
 
 
 class UpdateCustomerBillingControlsRequest(BaseModel):
@@ -154,9 +192,12 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
     auto_topups: Optional[List[UpdateCustomerAutoTopupRequest]] = None
     r"""List of auto top-up configurations per feature."""
 
+    spend_limits: Optional[List[UpdateCustomerSpendLimitRequest]] = None
+    r"""List of overage spend limits per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups"])
+        optional_fields = set(["auto_topups", "spend_limits"])
         serialized = handler(self)
         m = {}
 
@@ -365,11 +406,49 @@ class UpdateCustomerAutoTopupResponse(BaseModel):
         return m
 
 
+class UpdateCustomerSpendLimitResponseTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class UpdateCustomerSpendLimitResponse(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupResponseTypedDict]]
     r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UpdateCustomerSpendLimitResponseTypedDict]]
+    r"""List of overage spend limits per feature."""
 
 
 class UpdateCustomerBillingControlsResponse(BaseModel):
@@ -378,9 +457,12 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     auto_topups: Optional[List[UpdateCustomerAutoTopupResponse]] = None
     r"""List of auto top-up configurations per feature."""
 
+    spend_limits: Optional[List[UpdateCustomerSpendLimitResponse]] = None
+    r"""List of overage spend limits per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups"])
+        optional_fields = set(["auto_topups", "spend_limits"])
         serialized = handler(self)
         m = {}
 

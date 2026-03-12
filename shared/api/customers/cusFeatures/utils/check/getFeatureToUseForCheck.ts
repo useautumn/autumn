@@ -8,12 +8,12 @@ import {
 export const getFeatureToUseForCheck = ({
 	creditSystems,
 	feature,
-	apiEntity,
+	apiSubject,
 	requiredBalance,
 }: {
 	creditSystems: Feature[];
 	feature: Feature;
-	apiEntity: ApiCustomerV5 | ApiEntityV2;
+	apiSubject: ApiCustomerV5 | ApiEntityV2;
 	requiredBalance: number;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
@@ -21,12 +21,13 @@ export const getFeatureToUseForCheck = ({
 	// 3. Otherwise, feature to use is credit system if exists, otherwise return feature
 	if (creditSystems.length === 0) return feature;
 
-	const mainBalance = apiEntity?.balances?.[feature.id];
+	const mainBalance = apiSubject.balances?.[feature.id];
 
 	if (
 		mainBalance &&
 		apiBalanceToAllowed({
 			apiBalance: mainBalance,
+			apiSubject,
 			feature,
 			requiredBalance,
 		})
@@ -35,12 +36,13 @@ export const getFeatureToUseForCheck = ({
 	}
 
 	for (const creditSystem of creditSystems) {
-		const apiBalance = apiEntity?.balances?.[creditSystem.id];
+		const apiBalance = apiSubject.balances?.[creditSystem.id];
 		if (!apiBalance) continue;
 
 		if (
 			apiBalanceToAllowed({
 				apiBalance,
+				apiSubject,
 				feature: creditSystem,
 				requiredBalance,
 			})

@@ -70,15 +70,12 @@ export class EntityService {
 				),
 		});
 	}
-	static async insert({ db, data }: { db: DrizzleCli; data: any }) {
+	static async insert({ db, data }: { db: DrizzleCli; data: Entity[] }) {
 		if (data.length === 0) {
 			return [];
 		}
 
-		const results = await db
-			.insert(entities)
-			.values(data as any)
-			.returning();
+		const results = await db.insert(entities).values(data).returning();
 
 		return results as Entity[];
 	}
@@ -135,7 +132,7 @@ export class EntityService {
 	}: {
 		db: DrizzleCli;
 		internalId: string;
-		update: any;
+		update: Partial<Entity>;
 	}) {
 		const results = await db
 			.update(entities)

@@ -120,6 +120,24 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
+        <DynamicResponseField name="spend_limits" type="object[]">
+          List of overage spend limits per feature.
+          <Expandable title="properties">
+            <DynamicResponseField name="feature_id" type="string">
+              Optional feature ID this spend limit applies to.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="enabled" type="boolean">
+              Whether this spend limit is enabled.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="overage_limit" type="number">
+              Maximum allowed overage spend for the target feature.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 
@@ -279,16 +297,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                       Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="tiers" type="object[]">
+                    <DynamicResponseField name="tiers" type="any[]">
                       Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="to" type="number" />
-
-                        <DynamicResponseField name="amount" type="number" />
-
-                        <DynamicResponseField name="flat_amount" type="number | null" />
-
-                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
@@ -604,16 +614,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                       Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="tiers" type="object[]">
+                    <DynamicResponseField name="tiers" type="any[]">
                       Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="to" type="number" />
-
-                        <DynamicResponseField name="amount" type="number" />
-
-                        <DynamicResponseField name="flat_amount" type="number | null" />
-
-                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
@@ -894,16 +896,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   The per-unit price amount.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="tiers" type="object[]">
+                <DynamicResponseField name="tiers" type="any[]">
                   Tiered pricing configuration if applicable.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="to" type="number" />
-
-                    <DynamicResponseField name="amount" type="number" />
-
-                    <DynamicResponseField name="flat_amount" type="number | null" />
-
-                  </Expandable>
                 </DynamicResponseField>
 
                 <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">

@@ -105,9 +105,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicParamField body="to" type="number" required />
 
-                <DynamicParamField body="amount" type="number" required />
+                <DynamicParamField body="amount" type="number" />
 
-                <DynamicParamField body="flat_amount" type="number | null" />
+                <DynamicParamField body="flat_amount" type="number" />
 
               </Expandable>
             </DynamicParamField>
@@ -221,6 +221,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicParamField body="cancel_action" type="'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'">
   Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+</DynamicParamField>
+
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, the subscription is updated internally without applying billing changes in Stripe.
 </DynamicParamField>
 
 

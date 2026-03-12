@@ -78,7 +78,7 @@ export const fullCustomerToCustomerEntitlements = ({
 	sortCusEntsForDeduction({
 		cusEnts,
 		reverseOrder,
-		entityId: entity?.id,
+		entityId: entity?.id ?? undefined,
 		customerEntitlementFilters,
 	});
 
