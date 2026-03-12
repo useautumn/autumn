@@ -52,6 +52,8 @@ local function calculate_change(balance, amount, params)
       -- Pass 2: Floor at min_balance (can go below 0)
       if overage_behavior_is_allow then
         return amount  -- No floor constraint
+      elseif not is_nil(params.available_overage) then
+        return math.max(0, math.min(amount, params.available_overage))
       elseif params.min_balance then
         local to_deduct = math.min(amount, balance - params.min_balance)
         return math.max(0, to_deduct)
@@ -114,6 +116,7 @@ local function deduct_from_main_balance(params)
   
   -- Base calc_params (adjustment is set per-case since entities have their own)
   local base_calc_params = {
+    available_overage = params.available_overage,
     max_balance = params.max_balance,
     min_balance = params.min_balance,
     pass_number = params.pass_number,
@@ -131,6 +134,7 @@ local function deduct_from_main_balance(params)
     
     -- Use entity-specific adjustment
     local calc_params = {
+      available_overage = base_calc_params.available_overage,
       max_balance = base_calc_params.max_balance,
       min_balance = base_calc_params.min_balance,
       pass_number = base_calc_params.pass_number,
@@ -172,6 +176,7 @@ local function deduct_from_main_balance(params)
     -- ========================================================================
     local entities = ent_data.entities or {}
     local keys = sorted_keys(entities)
+    local remaining_available_overage = params.available_overage
     
     local remaining = amount
     for _, entity_key in ipairs(keys) do
@@ -183,6 +188,7 @@ local function deduct_from_main_balance(params)
       
       -- Use entity-specific adjustment
       local calc_params = {
+        available_overage = remaining_available_overage,
         max_balance = base_calc_params.max_balance,
         min_balance = base_calc_params.min_balance,
         pass_number = base_calc_params.pass_number,
@@ -215,6 +221,9 @@ local function deduct_from_main_balance(params)
         
         deducted = deducted + to_change
         remaining = remaining - to_change
+        if not is_nil(remaining_available_overage) and to_change > 0 then
+          remaining_available_overage = math.max(0, remaining_available_overage - to_change)
+        end
       end
     end
     
@@ -229,6 +238,7 @@ local function deduct_from_main_balance(params)
     
     -- Use customer_entitlement-level adjustment for top-level balance
     local calc_params = {
+      available_overage = base_calc_params.available_overage,
       max_balance = base_calc_params.max_balance,
       min_balance = base_calc_params.min_balance,
       pass_number = base_calc_params.pass_number,

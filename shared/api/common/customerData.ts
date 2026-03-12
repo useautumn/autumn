@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { CustomerBillingControlsSchema } from "../../models/cusModels/billingControlModels";
+import { CustomerBillingControlsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
 
 // for internal use only

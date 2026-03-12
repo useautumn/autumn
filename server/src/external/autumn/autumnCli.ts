@@ -8,6 +8,7 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
+	type ApiEntityBillingControlsInput,
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0Input,
@@ -591,6 +592,21 @@ export class AutumnInt {
 			const data = await this.delete(
 				`/customers/${customerId}/entities/${entityId}`,
 			);
+			return data;
+		},
+
+		update: async (
+			customerId: string,
+			entityId: string,
+			updates: {
+				billing_controls?: ApiEntityBillingControlsInput;
+			},
+		) => {
+			const data = await this.post(`/entities.update`, {
+				customer_id: customerId,
+				entity_id: entityId,
+				...updates,
+			});
 			return data;
 		},
 	};

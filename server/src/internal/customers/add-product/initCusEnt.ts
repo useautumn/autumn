@@ -41,7 +41,7 @@ const initCusEntEntities = ({
 
 	for (const entity of entities) {
 		if (!entitlementHasEntityFeature({ entitlement, entity })) continue;
-
+		if (!entity.id) continue;
 		if (existingCusEnt?.entities?.[entity.id]) {
 			continue;
 		}

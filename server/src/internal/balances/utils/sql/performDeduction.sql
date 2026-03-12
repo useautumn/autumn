@@ -12,6 +12,7 @@ AS $$
 DECLARE
   -- Extract parameters from JSONB
   sorted_entitlements jsonb := params->'sorted_entitlements';
+  available_overage_by_feature_id jsonb := params->'available_overage_by_feature_id';
   amount_to_deduct numeric := NULLIF((params->>'amount_to_deduct')::numeric, NULL);
   target_balance numeric := NULLIF((params->>'target_balance')::numeric, NULL);
   target_entity_id text := NULLIF(params->>'target_entity_id', '');
@@ -43,6 +44,8 @@ DECLARE
   ent_id text;
   credit_cost numeric;
   usage_allowed boolean;
+  ent_feature_id text;
+  available_overage numeric;
   min_balance numeric;
   max_balance numeric;
   has_entity_scope boolean;
@@ -175,6 +178,7 @@ BEGIN
     ent_id := ent_obj->>'customer_entitlement_id';
     credit_cost := (ent_obj->>'credit_cost')::numeric;
     usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false);
+    ent_feature_id := NULLIF(ent_obj->>'feature_id', '');
     min_balance := (ent_obj->>'min_balance')::numeric;
     max_balance := (ent_obj->>'max_balance')::numeric;
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
@@ -234,14 +238,15 @@ BEGIN
       'current_balance', current_balance,
       'current_entities', current_entities,
       'current_adjustment', new_adjustment,
-      'amount_to_deduct', remaining_amount,
-      'credit_cost', credit_cost,
-      'allow_negative', false,
-      'has_entity_scope', has_entity_scope,
-      'target_entity_id', target_entity_id,
-      'min_balance', min_balance,
-      'max_balance', max_balance,
-      'alter_granted_balance', alter_granted_balance,
+        'amount_to_deduct', remaining_amount,
+        'credit_cost', credit_cost,
+        'allow_negative', false,
+        'has_entity_scope', has_entity_scope,
+        'target_entity_id', target_entity_id,
+        'available_overage', NULL,
+        'min_balance', min_balance,
+        'max_balance', max_balance,
+        'alter_granted_balance', alter_granted_balance,
       'overage_behavior_is_allow', overage_behavior_is_allow
     ));
 
@@ -296,9 +301,18 @@ BEGIN
       ent_id := ent_obj->>'customer_entitlement_id';
       credit_cost := (ent_obj->>'credit_cost')::numeric;
       usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false) OR overage_behavior_is_allow;
+      ent_feature_id := NULLIF(ent_obj->>'feature_id', '');
       min_balance := (ent_obj->>'min_balance')::numeric;
       max_balance := (ent_obj->>'max_balance')::numeric;
       has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
+
+      available_overage := CASE
+        WHEN available_overage_by_feature_id IS NULL
+          OR ent_feature_id IS NULL
+          OR NOT (available_overage_by_feature_id ? ent_feature_id)
+        THEN NULL
+        ELSE (available_overage_by_feature_id->>ent_feature_id)::numeric
+      END;
       
       -- Skip entitlements without usage_allowed
       IF NOT usage_allowed THEN
@@ -334,6 +348,7 @@ BEGIN
         'allow_negative', true,
         'has_entity_scope', has_entity_scope,
         'target_entity_id', target_entity_id,
+        'available_overage', available_overage,
         'min_balance', min_balance,
         'max_balance', max_balance,
         'alter_granted_balance', alter_granted_balance,
@@ -394,6 +409,14 @@ BEGIN
         END IF;
 
         remaining_amount := remaining_amount - (deducted / credit_cost);
+
+        IF deducted > 0 AND available_overage IS NOT NULL THEN
+          available_overage_by_feature_id := jsonb_set(
+            COALESCE(available_overage_by_feature_id, '{}'::jsonb),
+            ARRAY[ent_feature_id],
+            to_jsonb(GREATEST(0, available_overage - deducted))
+          );
+        END IF;
       END IF;
     END LOOP;
   END IF;

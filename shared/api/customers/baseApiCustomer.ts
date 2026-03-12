@@ -1,4 +1,4 @@
-import { CustomerBillingControlsSchema } from "@models/cusModels/billingControlModels";
+import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 

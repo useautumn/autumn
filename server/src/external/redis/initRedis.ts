@@ -25,6 +25,7 @@ import {
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
@@ -205,6 +206,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("appendEntityToCustomer", {
 		numberOfKeys: 1,
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateEntityInCustomer", {
+		numberOfKeys: 1,
+		lua: UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	});
 
 	redisInstance.defineCommand("upsertInvoiceInCustomer", {
@@ -417,6 +423,10 @@ declare module "ioredis" {
 		appendEntityToCustomer(
 			cacheKey: string,
 			entityJson: string,
+		): Promise<string>;
+		updateEntityInCustomer(
+			cacheKey: string,
+			paramsJson: string,
 		): Promise<string>;
 		upsertInvoiceInCustomer(
 			cacheKey: string,

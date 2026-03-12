@@ -23,6 +23,10 @@ DECLARE
   allow_negative boolean := COALESCE((params->>'allow_negative')::boolean, false);
   has_entity_scope boolean := COALESCE((params->>'has_entity_scope')::boolean, false);
   target_entity_id text := NULLIF(params->>'target_entity_id', '');
+  available_overage numeric := CASE
+    WHEN params->>'available_overage' IS NULL THEN NULL
+    ELSE (params->>'available_overage')::numeric
+  END;
   min_balance numeric := CASE 
     WHEN params->>'min_balance' IS NULL THEN NULL
     ELSE (params->>'min_balance')::numeric
@@ -50,6 +54,7 @@ DECLARE
   entity_adjustment numeric;
   ceiling numeric;
   max_addable numeric;
+  remaining_available_overage numeric;
   mutation_logs_json jsonb := '[]'::jsonb;
 BEGIN
   
@@ -61,6 +66,7 @@ BEGIN
   -- ============================================================================
   IF has_entity_scope AND target_entity_id IS NULL THEN
     remaining := amount_to_deduct * credit_cost;
+    remaining_available_overage := available_overage;
     result_entities := current_entities;
     deducted_amount := 0;
     
@@ -90,13 +96,15 @@ BEGIN
           deduct_amount := remaining;
         END IF;
       ELSIF allow_negative THEN
-        IF min_balance IS NULL THEN
+        IF available_overage IS NOT NULL THEN
+          deduct_amount := LEAST(remaining, remaining_available_overage);
+        ELSIF min_balance IS NULL THEN
           deduct_amount := remaining;
         ELSE
           deduct_amount := LEAST(remaining, entity_balance - min_balance);
         END IF;
       ELSE
-        deduct_amount := LEAST(entity_balance, remaining);
+        deduct_amount := LEAST(GREATEST(entity_balance, 0), remaining);
       END IF;
       
       IF deduct_amount != 0 THEN
@@ -132,6 +140,13 @@ BEGIN
         
         remaining := remaining - deduct_amount;
         deducted_amount := deducted_amount + deduct_amount;
+
+        IF remaining_available_overage IS NOT NULL AND deduct_amount > 0 THEN
+          remaining_available_overage := GREATEST(
+            0,
+            remaining_available_overage - deduct_amount
+          );
+        END IF;
       END IF;
     END LOOP;
     
@@ -162,13 +177,18 @@ BEGIN
         deducted_amount := amount_to_deduct * credit_cost;
       END IF;
     ELSIF allow_negative THEN
-      IF min_balance IS NULL THEN
+      IF available_overage IS NOT NULL THEN
+        deducted_amount := LEAST(amount_to_deduct * credit_cost, available_overage);
+      ELSIF min_balance IS NULL THEN
         deducted_amount := amount_to_deduct * credit_cost;
       ELSE
         deducted_amount := LEAST(amount_to_deduct * credit_cost, entity_balance - min_balance);
       END IF;
     ELSE
-      deducted_amount := LEAST(entity_balance, amount_to_deduct * credit_cost);
+      deducted_amount := LEAST(
+        GREATEST(entity_balance, 0),
+        amount_to_deduct * credit_cost
+      );
     END IF;
     
     IF deducted_amount != 0 THEN
@@ -229,14 +249,19 @@ BEGIN
       END IF;
     ELSIF allow_negative THEN
       -- Pass 2: Can go negative (respecting min_balance)
-      IF min_balance IS NULL THEN
+      IF available_overage IS NOT NULL THEN
+        deducted_amount := LEAST(amount_to_deduct * credit_cost, available_overage);
+      ELSIF min_balance IS NULL THEN
         deducted_amount := amount_to_deduct * credit_cost;
       ELSE
         deducted_amount := LEAST(amount_to_deduct * credit_cost, current_balance - min_balance);
       END IF;
     ELSE
       -- Pass 1: Only deduct down to zero
-      deducted_amount := LEAST(current_balance, amount_to_deduct * credit_cost);
+      deducted_amount := LEAST(
+        GREATEST(current_balance, 0),
+        amount_to_deduct * credit_cost
+      );
     END IF;
     
     result_balance := current_balance - deducted_amount;
