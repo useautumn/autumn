@@ -121,6 +121,63 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 
 </CodeGroup>
 
+## One-off prices within a subscription
+
+A subscription plan can include both recurring and one-off prices. When it does, Autumn splits them at checkout:
+
+- **Recurring prices** bill every cycle as part of the Stripe subscription
+- **One-off prices** are charged once on the first invoice only
+
+This is useful for setup fees, one-time credit grants, or any charge that should happen once when the customer subscribes.
+
+> **Example** <br />
+> A Pro plan charges \$20/month plus a one-time \$50 setup fee. The customer's first invoice is \$70, and subsequent invoices are \$20.
+
+<Tabs>
+<Tab title="CLI">
+
+Add a non-consumable feature for the setup fee, then include it as a separate one-off item alongside the recurring base price:
+
+```ts autumn.config.ts expandable
+import { feature, item, plan } from 'atmn';
+
+export const setupFee = feature({
+  id: 'setup_fee',
+  name: 'Setup Fee',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: setupFee.id,
+      price: {
+        amount: 50,
+        billingMethod: 'prepaid',
+        interval: 'one_off',
+      },
+    }),
+  ],
+});
+```
+
+When you attach the plan, you can select a quantity for the setup fee. The \$20/month base price recurs on every invoice. The setup fee item is charged once on the first invoice only.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Create a **boolean** feature for the setup fee (e.g., `setup_fee`)
+2. Create a plan with a **recurring** base price (e.g., $20/month)
+3. Add the setup fee feature as an item and set its price interval to **One-off**
+4. The recurring charge will bill every cycle; the one-off charge applies to the first invoice only
+
+</Tab>
+</Tabs>
+
 ## Balance stacking
 
 One-off balances stack with existing balances from subscriptions. Autumn uses [deduction order](/documentation/concepts/balances#deduction-order) to ensure shorter-interval balances (e.g., monthly) are used before one-off (lifetime) balances.
@@ -132,3 +189,4 @@ One-off balances stack with existing balances from subscriptions. Autumn uses [d
 | Credit top-up | Prepaid price, add-on, no base price |
 | Lifetime plan | One-off base price, features with no reset |
 | One-time fee | One-off base price, no features |
+| Setup fee + subscription | Recurring base price, one-off item price on same plan |
