@@ -96,8 +96,8 @@ export type MultiAttachTo = number | string;
 
 export type MultiAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const MultiAttachTierBehavior = {
@@ -419,6 +419,31 @@ export type MultiAttachRedirectMode = ClosedEnum<
   typeof MultiAttachRedirectMode
 >;
 
+export type MultiAttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type MultiAttachBillingControls = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<MultiAttachSpendLimit> | undefined;
+};
+
 export type MultiAttachEntityData = {
   /**
    * The feature ID that this entity is associated with
@@ -428,6 +453,10 @@ export type MultiAttachEntityData = {
    * Name of the entity
    */
   name?: string | undefined;
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: MultiAttachBillingControls | undefined;
 };
 
 export type MultiAttachParams = {
@@ -645,8 +674,8 @@ export function multiAttachToToJSON(multiAttachTo: MultiAttachTo): string {
 /** @internal */
 export type MultiAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -656,8 +685,8 @@ export const MultiAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1055,9 +1084,73 @@ export const MultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachRedirectMode);
 
 /** @internal */
+export type MultiAttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const MultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
+  MultiAttachSpendLimit$Outbound,
+  MultiAttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function multiAttachSpendLimitToJSON(
+  multiAttachSpendLimit: MultiAttachSpendLimit,
+): string {
+  return JSON.stringify(
+    MultiAttachSpendLimit$outboundSchema.parse(multiAttachSpendLimit),
+  );
+}
+
+/** @internal */
+export type MultiAttachBillingControls$Outbound = {
+  spend_limits?: Array<MultiAttachSpendLimit$Outbound> | undefined;
+};
+
+/** @internal */
+export const MultiAttachBillingControls$outboundSchema: z.ZodMiniType<
+  MultiAttachBillingControls$Outbound,
+  MultiAttachBillingControls
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => MultiAttachSpendLimit$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function multiAttachBillingControlsToJSON(
+  multiAttachBillingControls: MultiAttachBillingControls,
+): string {
+  return JSON.stringify(
+    MultiAttachBillingControls$outboundSchema.parse(multiAttachBillingControls),
+  );
+}
+
+/** @internal */
 export type MultiAttachEntityData$Outbound = {
   feature_id: string;
   name?: string | undefined;
+  billing_controls?: MultiAttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1068,10 +1161,14 @@ export const MultiAttachEntityData$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     name: z.optional(z.string()),
+    billingControls: z.optional(
+      z.lazy(() => MultiAttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      billingControls: "billing_controls",
     });
   }),
 );

@@ -3,10 +3,11 @@
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
 from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, Optional
+from pydantic.functional_validators import AfterValidator
+from typing import Any, Dict, Literal, Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -38,6 +39,45 @@ class TrackGlobals(BaseModel):
         return m
 
 
+class TrackLockTypedDict(TypedDict):
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+    enabled: Literal[True]
+    r"""Must be true to enable locking."""
+    expires_at: NotRequired[float]
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+
+class TrackLock(BaseModel):
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+
+    enabled: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="enabled"),
+    ] = True
+    r"""Must be true to enable locking."""
+
+    expires_at: Optional[float] = None
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class TrackParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
@@ -51,6 +91,7 @@ class TrackParamsTypedDict(TypedDict):
     r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
+    lock: NotRequired[TrackLockTypedDict]
 
 
 class TrackParams(BaseModel):
@@ -72,10 +113,12 @@ class TrackParams(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
+    lock: Optional[TrackLock] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "entity_id", "event_name", "value", "properties"]
+            ["feature_id", "entity_id", "event_name", "value", "properties", "lock"]
         )
         serialized = handler(self)
         m = {}
@@ -153,3 +196,9 @@ class TrackResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    TrackLock.model_rebuild()
+except NameError:
+    pass

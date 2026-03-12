@@ -65,7 +65,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		skipCache: false,
+		skipCache: c.req.header("x-skip-cache") === "true",
 
 		// Test params:
 		extraLogs: {},

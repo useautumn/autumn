@@ -124,6 +124,21 @@ export type ListCustomersAutoTopup = {
   purchaseLimit?: ListCustomersPurchaseLimit | undefined;
 };
 
+export type ListCustomersSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -132,6 +147,10 @@ export type ListCustomersBillingControls = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<ListCustomersAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<ListCustomersSpendLimit> | undefined;
 };
 
 /**
@@ -439,6 +458,34 @@ export function listCustomersAutoTopupFromJSON(
 }
 
 /** @internal */
+export const ListCustomersSpendLimit$inboundSchema: z.ZodMiniType<
+  ListCustomersSpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function listCustomersSpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersSpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersSpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
   ListCustomersBillingControls,
   unknown
@@ -447,10 +494,14 @@ export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
     auto_topups: types.optional(
       z.array(z.lazy(() => ListCustomersAutoTopup$inboundSchema)),
     ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => ListCustomersSpendLimit$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
     });
   }),
 );

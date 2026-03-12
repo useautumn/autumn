@@ -310,7 +310,7 @@ export const attachToInsertParams = (
 
 		if (entity) {
 			internalEntityId = entity.internal_id;
-			attachEntityId = entity.id;
+			attachEntityId = entity.id ?? entity.internal_id;
 		}
 	}
 

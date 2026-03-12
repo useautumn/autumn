@@ -5,6 +5,7 @@ export enum RedisDeductionErrorCode {
 	InsufficientBalance = "INSUFFICIENT_BALANCE",
 	PaidAllocated = "PAID_ALLOCATED",
 	SkipCache = "SKIP_CACHE",
+	LockAlreadyExists = "LOCK_ALREADY_EXISTS",
 }
 
 /** Errors that should trigger a fallback to Postgres */

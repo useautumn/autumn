@@ -17,7 +17,7 @@ export const updateCustomerProductDbAndCache = async ({
 	cusProductId: string;
 	updates: Partial<InsertCustomerProduct>;
 }) => {
-	const result = await CusProductService.update({
+	await CusProductService.update({
 		ctx,
 		cusProductId,
 		updates,
@@ -29,6 +29,4 @@ export const updateCustomerProductDbAndCache = async ({
 		cusProductId,
 		updates,
 	});
-
-	return result;
 };

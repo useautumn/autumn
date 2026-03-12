@@ -135,6 +135,9 @@ export const ErrCode = {
 	// Entity
 	EntityIdRequired: "entity_id_required",
 
+	// Lock
+	LockAlreadyExists: "lock_already_exists",
+
 	// Subscription
 	InsertSubscriptionFailed: "insert_subscription_failed",
 	UpdateSubscriptionFailed: "update_subscription_failed",

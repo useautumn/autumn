@@ -52,6 +52,8 @@ local function calculate_change(balance, amount, params)
       -- Pass 2: Floor at min_balance (can go below 0)
       if overage_behavior_is_allow then
         return amount  -- No floor constraint
+      elseif not is_nil(params.available_overage) then
+        return math.max(0, math.min(amount, params.available_overage))
       elseif params.min_balance then
         local to_deduct = math.min(amount, balance - params.min_balance)
         return math.max(0, to_deduct)
@@ -114,6 +116,7 @@ local function deduct_from_main_balance(params)
   
   -- Base calc_params (adjustment is set per-case since entities have their own)
   local base_calc_params = {
+    available_overage = params.available_overage,
     max_balance = params.max_balance,
     min_balance = params.min_balance,
     pass_number = params.pass_number,
@@ -131,6 +134,7 @@ local function deduct_from_main_balance(params)
     
     -- Use entity-specific adjustment
     local calc_params = {
+      available_overage = base_calc_params.available_overage,
       max_balance = base_calc_params.max_balance,
       min_balance = base_calc_params.min_balance,
       pass_number = base_calc_params.pass_number,
@@ -145,18 +149,22 @@ local function deduct_from_main_balance(params)
     if to_change ~= 0 then
       local entity_path = build_entity_path(base_path, params.target_entity_id)
       
-      queue_balance_update({
+      queue_customer_entitlement_mutation({
         context = context,
         path = entity_path,
         delta = -to_change,
         alter_granted_balance = params.alter_granted_balance,
+        customer_entitlement_id = ent_id,
+        entity_id = params.target_entity_id,
+        credit_cost = params.credit_cost,
+        value_delta = to_change / params.credit_cost,
       })
       
-      update_in_memory_customer_entitlement({
+      update_in_memory_customer_entitlement_mutation({
         target = entities,
         entity_id = params.target_entity_id,
-        delta = -to_change,
-        alter_granted_balance = params.alter_granted_balance,
+        balance_delta = -to_change,
+        adjustment_delta = params.alter_granted_balance and -to_change or 0,
       })
       
       deducted = to_change
@@ -168,6 +176,7 @@ local function deduct_from_main_balance(params)
     -- ========================================================================
     local entities = ent_data.entities or {}
     local keys = sorted_keys(entities)
+    local remaining_available_overage = params.available_overage
     
     local remaining = amount
     for _, entity_key in ipairs(keys) do
@@ -179,6 +188,7 @@ local function deduct_from_main_balance(params)
       
       -- Use entity-specific adjustment
       local calc_params = {
+        available_overage = remaining_available_overage,
         max_balance = base_calc_params.max_balance,
         min_balance = base_calc_params.min_balance,
         pass_number = base_calc_params.pass_number,
@@ -191,22 +201,29 @@ local function deduct_from_main_balance(params)
       if to_change ~= 0 then
         local entity_path = build_entity_path(base_path, entity_key)
         
-        queue_balance_update({
+        queue_customer_entitlement_mutation({
           context = context,
           path = entity_path,
           delta = -to_change,
           alter_granted_balance = params.alter_granted_balance,
+          customer_entitlement_id = ent_id,
+          entity_id = entity_key,
+          credit_cost = params.credit_cost,
+          value_delta = to_change / params.credit_cost,
         })
         
-        update_in_memory_customer_entitlement({
+        update_in_memory_customer_entitlement_mutation({
           target = entities,
           entity_id = entity_key,
-          delta = -to_change,
-          alter_granted_balance = params.alter_granted_balance,
+          balance_delta = -to_change,
+          adjustment_delta = params.alter_granted_balance and -to_change or 0,
         })
         
         deducted = deducted + to_change
         remaining = remaining - to_change
+        if not is_nil(remaining_available_overage) and to_change > 0 then
+          remaining_available_overage = math.max(0, remaining_available_overage - to_change)
+        end
       end
     end
     
@@ -221,6 +238,7 @@ local function deduct_from_main_balance(params)
     
     -- Use customer_entitlement-level adjustment for top-level balance
     local calc_params = {
+      available_overage = base_calc_params.available_overage,
       max_balance = base_calc_params.max_balance,
       min_balance = base_calc_params.min_balance,
       pass_number = base_calc_params.pass_number,
@@ -236,18 +254,22 @@ local function deduct_from_main_balance(params)
       local delta = -to_change
       logger.log("%s queuing: delta=%s, alter_granted_balance=%s", prefix, delta, tostring(params.alter_granted_balance))
       
-      queue_balance_update({
+      queue_customer_entitlement_mutation({
         context = context,
         path = base_path,
         delta = delta,
         alter_granted_balance = params.alter_granted_balance,
+        customer_entitlement_id = ent_id,
+        entity_id = nil,
+        credit_cost = params.credit_cost,
+        value_delta = to_change / params.credit_cost,
       })
       
-      update_in_memory_customer_entitlement({
+      update_in_memory_customer_entitlement_mutation({
         target = ent_data,
         entity_id = nil,
-        delta = delta,
-        alter_granted_balance = params.alter_granted_balance,
+        balance_delta = delta,
+        adjustment_delta = params.alter_granted_balance and delta or 0,
       })
       
       logger.log("%s after update: balance=%s, adjustment=%s", prefix, ent_data.balance, ent_data.adjustment)

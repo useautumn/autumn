@@ -4,6 +4,7 @@
 
 import { balancesCreate } from "../funcs/balances-create.js";
 import { balancesDelete } from "../funcs/balances-delete.js";
+import { balancesFinalize } from "../funcs/balances-finalize.js";
 import { balancesUpdate } from "../funcs/balances-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -46,6 +47,20 @@ export class Balances extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.DeleteBalanceResponse> {
     return unwrapAsync(balancesDelete(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+   */
+  async finalize(
+    request: models.FinalizeBalanceParams,
+    options?: RequestOptions,
+  ): Promise<models.FinalizeLockResponse> {
+    return unwrapAsync(balancesFinalize(
       this,
       request,
       options,

@@ -1,0 +1,396 @@
+---
+title: Pay-as-you-go overages
+description: Let free plan users optionally add a card to pay for usage overages instead of getting blocked
+---
+
+Free plan users can optionally add a payment method so that if they exceed their included usage, they're billed for the overage rather than blocked. This is done by having two plans: a Free plan (no overages) and a Pay-as-you-go plan (with overage pricing).
+
+This is useful when you want to:
+- Avoid blocking engaged free users who exceed limits
+- Convert free users to paying customers through natural usage growth
+- Offer a "soft limit" experience without requiring upfront payment
+
+## Example case
+
+We have a product with the following pricing:
+- **Free plan**: 1,000 notifications per month included, blocked when exceeded
+- **Pay-as-you-go plan**: 1,000 notifications per month included, $1 per 1,000 notifications beyond the included amount
+
+If a free user exceeds 1,000 notifications, they get blocked.
+If they've switched to Pay-as-you-go (by adding a card), they're charged $1 per 1,000 notifications at the end of the billing period.
+
+## Configure Pricing
+
+<Steps>
+<Step>
+#### Create Feature
+
+Create a `metered` `consumable` feature called "notifications".
+
+</Step>
+
+<Step>
+#### Create Free Plan
+
+Create a free plan with 1,000 notifications included per month. Set `auto-enable` so new customers automatically start on this plan.
+
+</Step>
+
+<Step>
+#### Create Pay-as-you-go Plan
+
+Create a Pay-as-you-go plan with the same 1,000 notifications included, but with overage pricing:
+- **Grant amount**: 1,000 notifications
+- **Price**: $1 per 1,000 notifications per month
+- **Billing method**: Usage-based
+
+<Warning>
+In advanced, toggle **off** the "Reset usage when enabled" flag. This ensures that when a user switches from Free to Pay-as-you-go, their existing usage carries over instead of resetting to 0.
+</Warning>
+
+</Step>
+</Steps>
+
+## Implementation
+
+<Steps>
+<Step>
+#### Create an Autumn Customer
+
+When your user signs up, create an Autumn customer. This will automatically assign them the Free plan with 1,000 included notifications.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+const App = () => {
+  const { customer } = useCustomer();
+
+  console.log("Autumn customer:", customer);
+
+  return <h1>Welcome, {customer?.name || "user"}!</h1>;
+};
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data, error } = await autumn.customers.create({
+  id: "user_123",
+  name: "Jane Doe",
+  email: "jane@example.com",
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn('am_sk_42424242')
+
+async def main():
+    customer = await autumn.customers.create(
+        id="user_123",
+        name="Jane Doe",
+        email="jane@example.com",
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl --request POST \
+  --url https://api.useautumn.com/customers \
+  --header 'Authorization: Bearer am_sk_42424242' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": "user_123",
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+  }'
+```
+
+</CodeGroup>
+</Step>
+
+<Step>
+#### Check Access
+
+Before sending a notification, check if the customer has remaining capacity.
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export function SendNotification() {
+  const { check } = useCustomer();
+
+  const handleSendNotification = async () => {
+    const { data } = await check({ featureId: "notifications" });
+
+    if (!data?.allowed) {
+      // User is over limit on Free plan
+      // Prompt them to switch to Pay-as-you-go
+      alert("You've run out of notifications. Add a payment method to continue.");
+      return;
+    }
+
+    // Proceed with sending notification
+  };
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.check({
+  customer_id: "user_123",
+  feature_id: "notifications",
+});
+
+if (!data.allowed) {
+  console.log("User is over limit on Free plan");
+  // Prompt them to switch to Pay-as-you-go
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.check(
+        customer_id="user_123",
+        feature_id="notifications",
+    )
+    
+    if not response.allowed:
+        print("User is over limit on Free plan")
+        # Prompt them to switch to Pay-as-you-go
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "notifications"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response (Free plan user)">
+```json
+{
+  "allowed": true,
+  "customer_id": "user_123",
+  "feature_id": "notifications",
+  "balance": 870,
+  "usage": 130,
+  "included_usage": 1000,
+  "unlimited": false,
+  "overage_allowed": false
+}
+```
+When `balance` reaches 0 and `overage_allowed` is `false`, the user will be blocked.
+</Expandable>
+
+</Step>
+
+<Step>
+#### Track Usage
+
+After sending a notification, track the usage.
+
+<CodeGroup>
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+await autumn.track({
+  customer_id: "user_123",
+  feature_id: "notifications",
+  value: 1,
+});
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    await autumn.track(
+        customer_id="user_123",
+        feature_id="notifications",
+        value=1,
+    )
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "notifications",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step>
+#### Switch to Pay-as-you-go
+
+When the user is approaching or has exceeded their limit, prompt them to switch to the Pay-as-you-go plan. Use `attach` with `setup_payment: true` to collect their card without charging upfront.
+
+<Tip>
+You can retrieve the user's notification balance from the `check` or `customer` method, and use this to conditionally prompt them to add a payment method.
+
+</Tip>
+
+<CodeGroup>
+
+```jsx React
+import { useCustomer } from "autumn-js/react";
+
+export default function EnableOveragesButton() {
+  const { attach } = useCustomer();
+
+  return (
+    <button
+      onClick={async () => {
+        const { data } = await attach({
+          productId: "pay_as_you_go",
+          setupPayment: true,
+        });
+
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+      }}
+    >
+      Enable Pay-as-you-go
+    </button>
+  );
+}
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: 'am_sk_42424242',
+});
+
+const { data } = await autumn.attach({
+  customer_id: "user_123",
+  product_id: "pay_as_you_go",
+  setup_payment: true,
+  success_url: "https://your-app.com/settings",
+});
+
+if (data.url) {
+  // Redirect user to Stripe setup page
+}
+```
+
+```python Python
+import asyncio
+from autumn import Autumn
+
+autumn = Autumn("am_sk_42424242")
+
+async def main():
+    response = await autumn.attach(
+        customer_id="user_123",
+        product_id="pay_as_you_go",
+        setup_payment=True,
+        success_url="https://your-app.com/settings",
+    )
+    
+    if response.url:
+        # Redirect user to Stripe setup page
+        pass
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "product_id": "pay_as_you_go",
+    "setup_payment": true,
+    "success_url": "https://your-app.com/settings"
+  }'
+```
+
+</CodeGroup>
+
+<Note>
+Once the user completes the setup, they'll be switched from the Free plan to the Pay-as-you-go plan. Because "Reset usage when enabled" is off, their existing usage carries over. Any usage beyond 1,000 notifications will be billed at the end of the billing period.
+</Note>
+
+</Step>
+
+<Step>
+#### Overages are Now Enabled
+
+After switching to Pay-as-you-go, the user's `check` response will show `overage_allowed: true`. They can continue using the feature beyond their included limit.
+
+<Expandable title="check response (Pay-as-you-go user)">
+```json
+{
+  "allowed": true,
+  "customer_id": "user_123",
+  "feature_id": "notifications",
+  "balance": -200,
+  "usage": 1200,
+  "included_usage": 1000,
+  "unlimited": false,
+  "overage_allowed": true
+}
+```
+The user has sent 1,200 notifications (200 over the limit). They will be billed $0.20 at the end of the billing period.
+</Expandable>
+
+</Step>
+</Steps>
+
+## Summary
+
+| Plan | Over Limit | Result |
+|------|------------|--------|
+| Free | No | ✅ Allowed |
+| Free | Yes | ❌ Blocked |
+| Pay-as-you-go | No | ✅ Allowed |
+| Pay-as-you-go | Yes | ✅ Allowed, billed at end of period |

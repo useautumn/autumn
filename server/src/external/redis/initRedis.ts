@@ -17,6 +17,7 @@ import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
@@ -24,6 +25,7 @@ import {
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
@@ -207,6 +209,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
+	redisInstance.defineCommand("updateEntityInCustomer", {
+		numberOfKeys: 1,
+		lua: UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	});
+
 	redisInstance.defineCommand("upsertInvoiceInCustomer", {
 		numberOfKeys: 1,
 		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
@@ -220,6 +227,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("updateCustomerProduct", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	});
+
+	redisInstance.defineCommand("claimLockReceipt", {
+		numberOfKeys: 1,
+		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -426,6 +438,10 @@ declare module "ioredis" {
 			cacheKey: string,
 			entityJson: string,
 		): Promise<string>;
+		updateEntityInCustomer(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		upsertInvoiceInCustomer(
 			cacheKey: string,
 			invoiceJson: string,
@@ -434,6 +450,7 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
 

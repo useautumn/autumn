@@ -1,0 +1,103 @@
+---
+title: "Managing Subscriptions"
+description: "Handle upgrades, downgrades, and cancellations"
+---
+
+## Upgrades
+
+Upgrades happen when you attach a product with a higher price than the customer's current product. Use the same `attach` method—Autumn handles the rest.
+
+<Warning>
+If a payment method exists, attaching the product will immediately charge the customer. If upgrading from a free to a paid product, a checkout URL is generated instead.
+</Warning>
+
+**Pricing behavior:**
+
+- **Fixed prices** are prorated based on time remaining in the billing period
+- **Usage-based prices** bill outstanding usage at the old rate immediately, then apply the new rate going forward
+
+## Downgrades
+
+Downgrades happen when you attach a product with a lower price. Unlike upgrades, downgrades are **scheduled** to take effect at the end of the current billing period.
+
+The new product will have status `scheduled` until it activates. Customers can cancel a scheduled downgrade by re-attaching their current product.
+
+<Note>
+If you've set a [`group`](/documentation/pricing/plans#plan-properties) when creating products, upgrades and downgrades only apply between products in the same group. Attaching a product from a different group adds it alongside the existing product.
+</Note>
+
+## Cancellations
+
+Cancel a subscription using the `cancel` method. By default, cancellations take effect at the end of the billing period.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { cancel } = useCustomer();
+
+// Cancel at end of billing period
+await cancel({ productId: "pro" });
+
+// Cancel immediately
+await cancel({ productId: "pro", cancelImmediately: true });
+```
+
+```typescript Node.js
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+// Cancel at end of billing period
+await autumn.cancel({
+  customer_id: "user_123",
+  product_id: "pro",
+});
+
+// Cancel immediately
+await autumn.cancel({
+  customer_id: "user_123",
+  product_id: "pro",
+  cancel_immediately: true,
+});
+```
+
+```bash cURL
+# Cancel at end of billing period
+curl -X POST 'https://api.useautumn.com/v1/cancel' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "product_id": "pro"
+  }'
+
+# Cancel immediately
+curl -X POST 'https://api.useautumn.com/v1/cancel' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "product_id": "pro",
+    "cancel_immediately": true
+  }'
+```
+
+</CodeGroup>
+
+If you have a default product (with `auto-enable` set), it will be activated after the cancellation takes effect.
+
+## Usage reset behavior
+
+When a new product is enabled, you can control what happens to existing feature usage with the `reset_usage_when_enabled` property on the product item:
+
+- `true`: Usage resets to 0 (typical for consumable features like credits)
+- `false`: Usage carries over to the new product (typical for continuous features like seats)
+
+<Info>
+**Example:** A customer on Free has used 20 of their 100 credits. They upgrade to Pro which includes 500 credits.
+
+- If `reset_usage_when_enabled = true`: They get 500 credits
+- If `reset_usage_when_enabled = false`: They get 480 credits (500 - 20 used)
+</Info>

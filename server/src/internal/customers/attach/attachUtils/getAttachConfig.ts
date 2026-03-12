@@ -121,6 +121,7 @@ export const getAttachConfig = async ({
 			!invoiceAndEnable &&
 			![
 				AttachBranch.MultiAttachUpdate,
+				AttachBranch.MainIsTrial,
 				AttachBranch.NewVersion,
 				AttachBranch.SameCustomEnts,
 			].includes(branch));

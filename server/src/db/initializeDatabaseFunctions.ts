@@ -23,8 +23,10 @@ export const initializeDatabaseFunctions = async () => {
 			// Helper functions
 			"deductFromRollovers.sql",
 			"deductFromMainBalance.sql",
+			"unwindFromLockReceipt.sql",
 			"getTotalBalance.sql",
 			"deductFromAdditionalBalance.sql",
+			"getAvailableOverageFromSpendLimit.sql",
 			"performDeduction.sql",
 			"syncBalances.sql",
 			"syncBalancesV2.sql",

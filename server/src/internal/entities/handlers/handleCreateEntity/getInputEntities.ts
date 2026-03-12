@@ -65,7 +65,9 @@ export const validateAndGetInputEntities = async ({
 
 	for (const entity of existingEntities) {
 		if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
-			throw new EntityAlreadyExistsError({ entityId: entity.id });
+			throw new EntityAlreadyExistsError({
+				entityId: entity.id ?? entity.internal_id,
+			});
 		}
 	}
 
