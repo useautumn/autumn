@@ -2,11 +2,19 @@ import {
 	type Checkout,
 	type ConfirmCheckoutParams,
 	ConfirmCheckoutParamsSchema,
-	type GetCheckoutResponse,
+	type PreviewCheckoutResponse,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
+
+const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
+	return (
+		checkout.params.feature_quantities
+			?.filter((featureQuantity) => featureQuantity.adjustable === true)
+			.map((featureQuantity) => featureQuantity.feature_id) ?? []
+	);
+};
 
 /**
  * POST /checkouts/:checkout_id/preview
@@ -31,7 +39,7 @@ export const handlePreviewCheckout = createRoute({
 		});
 		const { fullCustomer } = billingContext;
 
-		const response: GetCheckoutResponse = {
+		const response: PreviewCheckoutResponse = {
 			env: checkout.env,
 			action: checkout.action,
 			status: checkout.status,
@@ -46,6 +54,7 @@ export const handlePreviewCheckout = createRoute({
 				name: fullCustomer.name || null,
 				email: fullCustomer.email || null,
 			},
+			adjustable_feature_ids: getAdjustableFeatureIds({ checkout }),
 			entity: fullCustomer.entity
 				? {
 						id: fullCustomer.entity.id ?? fullCustomer.entity.internal_id,

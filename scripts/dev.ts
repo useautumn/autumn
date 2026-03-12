@@ -35,6 +35,33 @@ function getEnvVariable(filePath: string, key: string): string | null {
 	return null;
 }
 
+function killPorts({ ports }: { ports: number[] }) {
+	if (process.platform === "win32") {
+		return;
+	}
+
+	try {
+		const portArgs = ports.map((port) => `-ti:${port}`);
+		const result = Bun.spawnSync(["lsof", ...portArgs], {
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const output = new TextDecoder().decode(result.stdout).trim();
+		if (!output) {
+			return;
+		}
+
+		const pids = [...new Set(output.split("\n").filter(Boolean))];
+		for (const pid of pids) {
+			process.kill(Number.parseInt(pid, 10), "SIGKILL");
+		}
+
+		console.log(`Killed processes on ports ${ports.join(", ")}.\n`);
+	} catch (error) {
+		console.warn("Port cleanup failed, continuing without cleanup.", error);
+	}
+}
+
 async function startDev() {
 	const rootDir = dirname(fileURLToPath(import.meta.url));
 	const projectRoot = join(rootDir, "..");
@@ -55,8 +82,10 @@ async function startDev() {
 				console.log("\n Using remote backend (*.useautumn.com)");
 				console.log("Skipping port cleanup...\n");
 			} else {
-				// Port cleanup disabled (detection is unreliable)
-				console.log("Skipping port cleanup...\n");
+				console.log("Cleaning up local dev ports...\n");
+				killPorts({
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT],
+				});
 			}
 
 			// Clear Vite cache to prevent dep optimization issues

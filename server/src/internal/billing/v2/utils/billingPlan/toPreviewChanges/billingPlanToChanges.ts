@@ -10,17 +10,15 @@ import {
 	isPrepaidPrice,
 	notNullish,
 	scopeExpandForCtx,
+	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/cusProductToBalances.js";
 import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription.js";
+import { billingPlanToOutgoingEffectiveAt } from "./billingPlanToEffectiveAt";
 
-/**
- * Convert cusProduct.options to feature_quantities with actual quantities
- * (multiplied by billingUnits for prepaid features)
- */
 function cusProductToFeatureQuantities({
 	ctx,
 	cusProduct,
@@ -35,7 +33,7 @@ function cusProductToFeatureQuantities({
 				features: ctx.features,
 				errorOnNotFound: true,
 			});
-			// Find the price for this feature to get billing units
+
 			const cusPrice = findCusPriceByFeature({
 				internalFeatureId: feature.internal_id,
 				cusPrices: cusProduct.customer_prices,
@@ -67,10 +65,54 @@ function cusProductToFeatureQuantities({
 		.filter(notNullish);
 }
 
-/**
- * Convert a BillingPlan into incoming and outgoing CheckoutChange arrays.
- * Incoming = products being added, Outgoing = products being canceled/expired/deleted.
- */
+const getIsOutgoing = ({
+	billingContext,
+	updates,
+}: {
+	billingContext: BillingContext;
+	updates: {
+		canceled?: boolean | null;
+		ended_at?: number | null;
+		status?: CusProductStatus | null;
+	};
+}) => {
+	if (
+		"intent" in billingContext &&
+		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity
+	) {
+		return true;
+	}
+
+	if (billingContext.cancelAction === "uncancel") {
+		return true;
+	}
+
+	return Boolean(
+		updates.canceled ||
+			updates.ended_at ||
+			updates.status === CusProductStatus.Expired,
+	);
+};
+
+const getShouldIncludeIncoming = ({
+	billingContext,
+	isOutgoing,
+	incoming,
+}: {
+	billingContext: BillingContext;
+	isOutgoing: boolean;
+	incoming: BillingPreviewChange[];
+}) => {
+	if ("intent" in billingContext) {
+		return (
+			billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
+			billingContext.cancelAction === "uncancel"
+		);
+	}
+
+	return !isOutgoing && incoming.length === 0;
+};
+
 export const billingPlanToChanges = async ({
 	ctx,
 	billingContext,
@@ -93,7 +135,6 @@ export const billingPlanToChanges = async ({
 		prefix: "incoming",
 	});
 
-	// 1. Products being added (incoming)
 	for (const cusProduct of autumn.insertCustomerProducts) {
 		const { data: subscription } = await getApiSubscription({
 			ctx: incomingCtx,
@@ -101,12 +142,12 @@ export const billingPlanToChanges = async ({
 			fullCus: fullCustomer,
 		});
 
-		// biome-ignore lint/correctness/noUnusedVariables: Might use this in the future
 		const balances = cusProductToBalances({
 			ctx: incomingCtx,
 			cusProduct,
 			fullCustomer,
 		});
+		void balances;
 
 		incoming.push({
 			plan_id: subscription.plan_id,
@@ -115,11 +156,10 @@ export const billingPlanToChanges = async ({
 				ctx: incomingCtx,
 				cusProduct,
 			}),
-			expires_at: subscription.expires_at,
+			effective_at: null,
 		});
 	}
 
-	// 2. Products being canceled/expired (outgoing)
 	const outgoingCtx = scopeExpandForCtx({
 		ctx,
 		prefix: "outgoing",
@@ -131,12 +171,17 @@ export const billingPlanToChanges = async ({
 		});
 		const { updates } = autumn.updateCustomerProduct;
 
-		const isOutgoing =
-			updates.canceled ||
-			updates.ended_at ||
-			updates.status === CusProductStatus.Expired;
+		const isOutgoing = getIsOutgoing({
+			billingContext,
+			updates,
+		});
+		const shouldIncludeIncoming = getShouldIncludeIncoming({
+			billingContext,
+			isOutgoing,
+			incoming,
+		});
 
-		if (!isOutgoing && updatedCustomerProduct && incoming.length === 0) {
+		if (shouldIncludeIncoming && updatedCustomerProduct) {
 			const { data: subscription } = await getApiSubscription({
 				ctx: incomingCtx,
 				cusProduct: updatedCustomerProduct,
@@ -150,26 +195,31 @@ export const billingPlanToChanges = async ({
 					ctx: incomingCtx,
 					cusProduct: updatedCustomerProduct,
 				}),
-				expires_at: subscription.expires_at,
+				effective_at: null,
 			});
 		}
 
-		// Include in outgoing if: canceled, has an end date, or being expired (immediate upgrade)
-		if (isOutgoing && updatedCustomerProduct) {
+		const outgoingCustomerProduct =
+			autumn.updateCustomerProduct.customerProduct;
+
+		if (isOutgoing && outgoingCustomerProduct) {
 			const { data: subscription } = await getApiSubscription({
 				ctx: outgoingCtx,
-				cusProduct: updatedCustomerProduct,
+				cusProduct: outgoingCustomerProduct,
 				fullCus: fullCustomer,
 			});
 
 			outgoing.push({
-				plan_id: updatedCustomerProduct.product.id,
+				plan_id: outgoingCustomerProduct.product.id,
 				plan: subscription.plan,
 				feature_quantities: cusProductToFeatureQuantities({
 					ctx: outgoingCtx,
-					cusProduct: updatedCustomerProduct,
+					cusProduct: outgoingCustomerProduct,
 				}),
-				expires_at: updatedCustomerProduct.ended_at ?? null,
+				effective_at: billingPlanToOutgoingEffectiveAt({
+					billingContext,
+					autumnBillingPlan: billingPlan.autumn,
+				}),
 			});
 		}
 	}

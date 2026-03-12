@@ -1,4 +1,5 @@
 import { test } from "bun:test";
+import type { AttachParamsV1 } from "@autumn/shared";
 import {
 	applySubscriptionDiscount,
 	createPercentCoupon,
@@ -42,7 +43,7 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 	});
 
 	// Setup: customer with payment method and starter plan attached
-	const { autumnV1 } = await initScenario({
+	const { autumnV2_1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -68,29 +69,20 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 		couponIds: [coupon.id],
 	});
 
-	// Get customer state before upgrade
-	const customerBefore = await autumnV1.customers.get(customerId);
-	console.log("customer before upgrade with discount:", {
-		products: customerBefore.products?.map(
-			(p: { id: string; name: string | null }) => ({
-				id: p.id,
-				name: p.name,
-			}),
-		),
-	});
-
 	// 1. Preview upgrade to pro (should show discounted charge)
-	const upgradePreview = await autumnV1.billing.previewAttach({
-		customer_id: customerId,
-		product_id: `pro_${customerId}`,
-		redirect_mode: "always",
-	});
+	const upgradePreview = await autumnV2_1.billing.previewAttach<AttachParamsV1>(
+		{
+			customer_id: customerId,
+			plan_id: pro.id,
+			redirect_mode: "always",
+		},
+	);
 	console.log("upgrade with 20% discount preview:", upgradePreview);
 
 	// 2. Perform the upgrade with redirect_mode: "always" (Autumn checkout URL)
-	const upgradeResult = await autumnV1.billing.attach({
+	const upgradeResult = await autumnV2_1.billing.attach<AttachParamsV1>({
 		customer_id: customerId,
-		product_id: `pro_${customerId}`,
+		plan_id: `pro_${customerId}`,
 		redirect_mode: "always",
 	});
 	console.log("upgrade with 20% discount result:", upgradeResult);

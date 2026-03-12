@@ -41,6 +41,7 @@ export function ConfirmSection() {
 		preview,
 		isSubscription,
 		hasActiveTrial,
+		isUnchangedQuantityUpdate,
 		handleConfirm,
 	} = useCheckoutContext();
 	const hasNextCycleUsage =
@@ -99,7 +100,8 @@ export function ConfirmSection() {
 							disabled={
 								hasActionRequiredState ||
 								status.isConfirming ||
-								status.isUpdating
+								status.isUpdating ||
+								isUnchangedQuantityUpdate
 							}
 						>
 							{getButtonText({

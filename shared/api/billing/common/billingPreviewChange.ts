@@ -13,8 +13,7 @@ export const BillingPreviewChangeSchema = z.object({
 			quantity: z.number(),
 		}),
 	),
-	expires_at: z.number().nullable(),
-	// balances: z.record(z.string(), ApiBalanceV1Schema),
+	effective_at: z.number().nullable(),
 });
 
 export type BillingPreviewChange = z.infer<typeof BillingPreviewChangeSchema>;

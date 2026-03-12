@@ -1,9 +1,9 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { type BillingPreviewResponse, orgToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingPlanToChanges } from "./billingPlan/billingPlanToChanges";
 import { billingPlanToImmediatePreview } from "./billingPlan/toImmediatePreview/billingPlanToImmediatePreview";
 import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
+import { billingPlanToChanges } from "./billingPlan/toPreviewChanges/billingPlanToChanges";
 import { logBillingPreview } from "./logs/logBillingPreview";
 
 export const billingPlanToPreviewResponse = async ({

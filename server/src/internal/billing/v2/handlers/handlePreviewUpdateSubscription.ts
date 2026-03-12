@@ -37,7 +37,6 @@ export const handlePreviewUpdateSubscription = createRoute({
 			ctx,
 			billingContext,
 			billingPlan,
-			params: body,
 		});
 
 		return c.json(previewResponse, 200);

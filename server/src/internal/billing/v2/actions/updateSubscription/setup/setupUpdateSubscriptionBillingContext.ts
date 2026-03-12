@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
@@ -127,7 +128,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 	let checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
-		redirectMode: params.redirect_mode,
+		redirectMode: params.redirect_mode ?? "if_required",
 		attachProduct: fullProduct,
 		stripeSubscription,
 		trialContext,
@@ -164,6 +165,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		invoiceMode,
 		featureQuantities,
+		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		customPrices,
 		customEnts,

@@ -15,13 +15,13 @@ export enum UpdateSubscriptionPreviewIntent {
 
 export const ExtPreviewUpdateSubscriptionResponseSchema =
 	ExtBillingPreviewResponseSchema.extend({
-		intent: z.nativeEnum(UpdateSubscriptionPreviewIntent),
+		intent: z.enum(UpdateSubscriptionPreviewIntent),
 	});
 
 export const PreviewUpdateSubscriptionResponseSchema =
 	BillingPreviewResponseSchema.extend({
 		object: z.literal("update_subscription_preview").meta({ internal: true }),
-		intent: z.nativeEnum(UpdateSubscriptionPreviewIntent),
+		intent: z.enum(UpdateSubscriptionPreviewIntent),
 	});
 
 export type ExtPreviewUpdateSubscriptionResponse = z.infer<

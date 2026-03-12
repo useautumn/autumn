@@ -101,7 +101,6 @@ export async function previewCheckoutAction({
 				}),
 				billingContext: updateSubscriptionResult.billingContext,
 				billingPlan,
-				params: params as UpdateSubscriptionV1Params,
 			});
 
 			return {

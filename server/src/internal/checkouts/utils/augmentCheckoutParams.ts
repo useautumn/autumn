@@ -44,13 +44,34 @@ export function augmentCheckoutParams({
 	checkout: Checkout;
 	body: ConfirmCheckoutParams;
 }): AttachParamsV1 | UpdateSubscriptionV1Params {
+	const mergeFeatureQuantities = ({
+		originalFeatureQuantities,
+	}: {
+		originalFeatureQuantities:
+			| AttachParamsV1["feature_quantities"]
+			| UpdateSubscriptionV1Params["feature_quantities"];
+	}) => {
+		return body.feature_quantities.map((featureQuantity) => {
+			const originalFeatureQuantity = originalFeatureQuantities?.find(
+				(original) => original.feature_id === featureQuantity.feature_id,
+			);
+
+			return {
+				...featureQuantity,
+				adjustable: originalFeatureQuantity?.adjustable,
+			};
+		});
+	};
+
 	switch (checkout.action) {
 		case CheckoutAction.Attach: {
 			const originalParams = checkout.params as AttachParamsV1;
 
 			return {
 				...originalParams,
-				feature_quantities: body.options,
+				feature_quantities: mergeFeatureQuantities({
+					originalFeatureQuantities: originalParams.feature_quantities,
+				}),
 			};
 		}
 		case CheckoutAction.UpdateSubscription: {
@@ -58,7 +79,9 @@ export function augmentCheckoutParams({
 
 			return {
 				...originalParams,
-				feature_quantities: body.options,
+				feature_quantities: mergeFeatureQuantities({
+					originalFeatureQuantities: originalParams.feature_quantities,
+				}),
 			};
 		}
 		default:
