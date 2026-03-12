@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -412,5 +412,83 @@ test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit4: prepa
 				},
 				{ skipCache: true },
 			),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit5: concurrent entity-product messages respect spend limit in Postgres path")}`, async () => {
+	const entityProduct = products.base({
+		id: "track-postgres-entity-product-concurrency",
+		items: [
+			items.consumableMessages({
+				includedUsage: 5,
+				price: 0.1,
+			}),
+		],
+	});
+
+	const { autumnV2, autumnV2_1, customerId, entities } = await initScenario({
+		customerId: "track-postgres-entity-spend-limit-5",
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [entityProduct] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
+		],
+	});
+
+	await setEntitySpendLimit({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		overageLimit: 5,
+	});
+
+	const results = await Promise.allSettled(
+		Array.from({ length: 5 }, () =>
+			autumnV2.track(
+				{
+					customer_id: customerId,
+					entity_id: entities[0].id,
+					feature_id: TestFeature.Messages,
+					value: 3,
+					overage_behavior: "reject",
+				},
+				{ skipCache: true },
+			),
+		),
+	);
+
+	const successCount = results.filter(
+		(result) => result.status === "fulfilled",
+	).length;
+	const rejectedCount = results.filter(
+		(result) => result.status === "rejected",
+	).length;
+
+	expect(successCount).toBe(3);
+	expect(rejectedCount).toBe(2);
+
+	await expectEntityFeatureCachedAndDb({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		granted: 5,
+		remaining: 0,
+		usage: 9,
+		breakdownLength: 1,
+	});
+
+	await expectCustomerFeatureCachedAndDb({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		granted: 5,
+		remaining: 0,
+		usage: 9,
+		breakdownLength: 1,
 	});
 });

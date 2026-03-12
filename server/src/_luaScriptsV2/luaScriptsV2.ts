@@ -49,6 +49,11 @@ const RUN_DEDUCTION_ON_CONTEXT = readFileSync(
 	"utf-8",
 );
 
+const SPEND_LIMIT_UTILS = readFileSync(
+	join(DEDUCT_DIR, "spendLimitUtils.lua"),
+	"utf-8",
+);
+
 const MUTATION_ITEM_UTILS = readFileSync(
 	join(DEDUCTION_DIR, "mutationItemUtils.lua"),
 	"utf-8",
@@ -90,6 +95,7 @@ ${CONTEXT_UTILS}
 ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
+${SPEND_LIMIT_UTILS}
 ${RUN_DEDUCTION_ON_CONTEXT}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS}
