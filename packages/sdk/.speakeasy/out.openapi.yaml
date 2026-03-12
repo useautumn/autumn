@@ -756,21 +756,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                       tier_behavior:
                         enum:
@@ -1081,21 +1069,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration if applicable.
                       tier_behavior:
                         enum:
@@ -2389,12 +2365,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -2710,21 +2683,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -3158,21 +3119,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -3584,21 +3533,9 @@ paths:
                                       tiers:
                                         type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                       tier_behavior:
                                         enum:
@@ -3956,12 +3893,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -4263,21 +4197,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -5306,6 +5228,8 @@ paths:
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
+        @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
       tags:
@@ -5431,12 +5355,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -5611,6 +5532,9 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -5835,12 +5759,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -6178,6 +6099,8 @@ paths:
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
+        @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates for the proposed changes.
       tags:
@@ -6303,12 +6226,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -6483,6 +6403,9 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -6705,12 +6628,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -7064,6 +6984,8 @@ paths:
 
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 
+        @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
       tags:
@@ -7189,12 +7111,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -7329,6 +7248,9 @@ paths:
                     - cancel_end_of_cycle
                     - uncancel
                   description: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying billing changes in Stripe.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -7458,6 +7380,8 @@ paths:
 
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 
+        @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+
 
         @returns A preview response with line items showing prorated charges or credits for the proposed changes.
       tags:
@@ -7583,12 +7507,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -7723,6 +7644,9 @@ paths:
                     - cancel_end_of_cycle
                     - uncancel
                   description: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying billing changes in Stripe.
               required:
                 - customer_id
               title: PreviewUpdateParams
@@ -7993,12 +7917,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -8148,6 +8069,9 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -8634,24 +8558,9 @@ paths:
                                     anyOf:
                                       - type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                              description: The maximum amount of usage for this tier.
-                                            amount:
-                                              type: number
-                                              description: The price of the product item for this tier.
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                              description: A flat fee charged for this tier, in addition to the per-unit amount.
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                       - type: "null"
                                     description: Tiered pricing for the product item. Not applicable for fixed price items.
                                   tier_behavior:

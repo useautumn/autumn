@@ -236,16 +236,8 @@ await autumn.track({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[]">
+            <DynamicResponseField name="tiers" type="any[]">
               Tiered pricing configuration if applicable.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
-
-                <DynamicResponseField name="amount" type="number" />
-
-                <DynamicResponseField name="flat_amount" type="number | null" />
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
@@ -440,16 +432,8 @@ await autumn.track({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[]">
+            <DynamicResponseField name="tiers" type="any[]">
               Tiered pricing configuration if applicable.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
-
-                <DynamicResponseField name="amount" type="number" />
-
-                <DynamicResponseField name="flat_amount" type="number | null" />
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">

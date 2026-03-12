@@ -107,6 +107,50 @@ test.concurrent(`${chalk.yellowBright("refund BD-2: lock=8 confirm=0 — full re
 	});
 });
 
+test.concurrent(`${chalk.yellowBright("refund BD-2b: lock=0 confirm=0 — zero-cost receipt finalizes cleanly")}`, async () => {
+	const freeProd = makeFreeProd();
+	const customerId = "lock-breakdown-2b";
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await deleteLock({ ctx, lockId: customerId });
+
+	await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 0,
+		lock: { enabled: true, lock_id: customerId },
+	});
+
+	await autumnV2_1.balances.finalize({
+		lock_id: customerId,
+		action: "confirm",
+	});
+
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 25,
+		breakdown: {
+			[ResetInterval.Hour]: { included_grant: 5, remaining: 5 },
+			[ResetInterval.OneOff]: { included_grant: 20, remaining: 20 },
+		},
+	});
+
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [],
+	});
+
+	await expectLockReceiptDeleted({ ctx, lockId: customerId });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BD-3: lock=5, confirm=3 → hourly=2, lifetime=20
 // Lock=5, only deducts from hourly (5). Confirm=3, unwind 2 from hourly only.
