@@ -8,6 +8,7 @@ import {
 	InternalError,
 	type Organization,
 	type Price,
+	priceUtils,
 } from "@autumn/shared";
 import {
 	getBillingType,
@@ -111,7 +112,7 @@ export const priceToStripeItem = ({
 	// 2. PREPAID, TIERED, ONE OFF
 	if (
 		billingType === BillingType.UsageInAdvance &&
-		priceIsOneOffAndTiered(price, relatedEnt)
+		priceUtils.isTieredOneOff({ price, product })
 	) {
 		lineItem = priceToOneOffAndTiered({
 			price,
@@ -119,6 +120,7 @@ export const priceToStripeItem = ({
 			relatedEnt,
 			org,
 			stripeProductId,
+			isCheckout,
 		});
 	}
 

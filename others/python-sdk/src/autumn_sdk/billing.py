@@ -46,6 +46,7 @@ class Billing(BaseSDK):
                 List[models.AttachCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -70,6 +71,7 @@ class Billing(BaseSDK):
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -111,6 +113,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request(
@@ -209,6 +212,7 @@ class Billing(BaseSDK):
                 List[models.AttachCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -233,6 +237,7 @@ class Billing(BaseSDK):
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -274,6 +279,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request_async(
@@ -681,6 +687,7 @@ class Billing(BaseSDK):
                 List[models.PreviewAttachCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -705,6 +712,7 @@ class Billing(BaseSDK):
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -746,6 +754,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request(
@@ -847,6 +856,7 @@ class Billing(BaseSDK):
                 List[models.PreviewAttachCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -871,6 +881,7 @@ class Billing(BaseSDK):
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -912,6 +923,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request_async(
@@ -1318,6 +1330,7 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1337,6 +1350,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1369,6 +1383,7 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request(
@@ -1455,6 +1470,7 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1474,6 +1490,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1506,6 +1523,7 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request_async(
@@ -1592,6 +1610,7 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1611,6 +1630,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1643,6 +1663,7 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request(
@@ -1729,6 +1750,7 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1748,6 +1770,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1780,6 +1803,7 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request_async(
@@ -2065,6 +2089,7 @@ class Billing(BaseSDK):
                 List[models.SetupPaymentCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2084,6 +2109,7 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2120,6 +2146,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request(
@@ -2213,6 +2240,7 @@ class Billing(BaseSDK):
                 List[models.SetupPaymentCustomLineItemTypedDict],
             ]
         ] = None,
+        processor_subscription_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2232,6 +2260,7 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2268,6 +2297,7 @@ class Billing(BaseSDK):
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
             ),
+            processor_subscription_id=processor_subscription_id,
         )
 
         req = self._build_request_async(

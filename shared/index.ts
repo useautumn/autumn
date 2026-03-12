@@ -47,9 +47,9 @@ export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable";
 export * from "./models/checkModels/checkPreviewModels";
-// 8. Customer Models
-export * from "./models/cusModels/billingControlModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
+// 8. Customer Models
+export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models

@@ -51,11 +51,15 @@ export const handleCreateCheckout = async ({
 		});
 	}
 
-	const { items } = itemSets[0];
+	let { items } = itemSets[0];
 
 	attachParams.itemSets = itemSets;
 
 	const isRecurring = pricesContainRecurring(attachParams.prices);
+	// biome-ignore lint/suspicious/noExplicitAny: unsure of the type, legacy method.
+	items = items.filter((item: any) =>
+		"quantity" in item ? item.quantity !== 0 : true,
+	);
 
 	// Insert metadata
 	const metadata = await attachParamsToMetadata({

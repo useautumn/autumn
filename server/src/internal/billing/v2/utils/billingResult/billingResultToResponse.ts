@@ -34,7 +34,7 @@ export const billingResultToResponse = ({
 
 	return {
 		customer_id: customerId,
-		entity_id: fullCustomer.entity?.id,
+		entity_id: fullCustomer.entity?.id ?? undefined,
 		invoice: stripeInvoice
 			? {
 					status: stripeInvoice.status,

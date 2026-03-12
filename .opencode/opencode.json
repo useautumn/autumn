@@ -18,6 +18,12 @@
 		"axiom": {
 			"type": "remote",
 			"url": "https://mcp.axiom.co/mcp"
+		},
+		"tinybird": {
+			"type": "remote",
+			"url": "https://mcp.tinybird.co?token={env:TINYBIRD_READ_TOKEN}",
+			"oauth": false,
+			"enabled": true
 		}
 	},
 

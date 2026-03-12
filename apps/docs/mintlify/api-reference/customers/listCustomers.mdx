@@ -120,6 +120,24 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
+        <DynamicResponseField name="spend_limits" type="object[]">
+          List of overage spend limits per feature.
+          <Expandable title="properties">
+            <DynamicResponseField name="feature_id" type="string">
+              Optional feature ID this spend limit applies to.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="enabled" type="boolean">
+              Whether this spend limit is enabled.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="overage_limit" type="number">
+              Maximum allowed overage spend for the target feature.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 

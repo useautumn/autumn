@@ -70,12 +70,14 @@ const handleAllowanceUsed = async ({
 
 	const oldAllowed = apiBalanceToAllowed({
 		apiBalance: prevCusFeature,
+		apiSubject: prevApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
 
 	const newAllowed = apiBalanceToAllowed({
 		apiBalance: newCusFeature,
+		apiSubject: newApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
@@ -139,12 +141,14 @@ export const handleThresholdReached = async ({
 
 		const oldAllowed = apiBalanceToAllowed({
 			apiBalance: prevApiCustomer.balances[feature.id],
+			apiSubject: prevApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});
 
 		const newAllowed = apiBalanceToAllowed({
 			apiBalance: newApiCustomer.balances[feature.id],
+			apiSubject: newApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});

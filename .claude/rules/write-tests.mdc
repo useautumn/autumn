@@ -32,6 +32,10 @@ const { autumnV1, otherCustomers } = await initScenario({
 });
 ```
 
+### 1.1. If You Are Testing Customer Creation, Do NOT Pass `customerId` to `initScenario`
+
+`initScenario({ customerId, ... })` creates or registers that customer as part of setup. If the test itself is meant to call `autumn.customers.create(...)`, leave `customerId` out of `initScenario` or you will be testing re-create behavior instead of create behavior.
+
 ### 2. `s.billing.attach` and `s.attach` Already Have Timeouts
 
 Both `s.billing.attach` (5-8s) and `s.attach` (4-5s) sleep after the API call. Do NOT add extra `await timeout()` after `initScenario` that already uses these in `actions`. Only add manual timeouts when calling `autumnV1.billing.attach()` directly in the test body.

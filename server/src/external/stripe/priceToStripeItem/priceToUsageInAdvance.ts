@@ -17,16 +17,31 @@ export const priceToOneOffAndTiered = ({
 	options,
 	stripeProductId,
 	org,
+	isCheckout,
 }: {
 	price: Price;
 	relatedEnt: EntitlementWithFeature;
 	options: FeatureOptions | undefined | null;
 	org: Organization;
 	stripeProductId: string;
+	isCheckout?: boolean;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const quantity = options?.quantity ?? 0;
-	const overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
+
+	const optionsQuantity = options?.quantity;
+	let finalQuantity = optionsQuantity;
+
+	if (optionsQuantity === 0 && isCheckout) {
+		// 1. If quantity is 0 and is checkout, skip over line item
+		return null;
+	} else if (nullish(optionsQuantity) && isCheckout) {
+		// 2. If quantity is nullish and is checkout, default to 1
+		finalQuantity = 1;
+	}
+
+	const overage = new Decimal(finalQuantity ?? 0)
+		.mul(config.billing_units!)
+		.toNumber();
 
 	const amount = getPriceForOverage({ price, overage });
 	if (!config.stripe_product_id) {
@@ -34,6 +49,7 @@ export const priceToOneOffAndTiered = ({
 			`WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`,
 		);
 	}
+
 	return {
 		price: undefined,
 		price_data: {

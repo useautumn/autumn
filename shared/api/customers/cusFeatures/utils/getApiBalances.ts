@@ -4,23 +4,20 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	orgToInStatuses,
+	type SharedContext,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-
 import { getApiBalance } from "./getApiBalance.js";
 
 export const getApiBalances = async ({
 	ctx,
 	fullCus,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullCus: FullCustomer;
 }): Promise<{ data: Record<string, ApiBalanceV1> }> => {
-	const { org } = ctx;
-
 	const allCusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
-		inStatuses: orgToInStatuses({ org }),
+		inStatuses: orgToInStatuses({ org: ctx.org }),
 		entity: fullCus.entity,
 	});
 
