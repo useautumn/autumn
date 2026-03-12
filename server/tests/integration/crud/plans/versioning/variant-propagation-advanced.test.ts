@@ -310,13 +310,9 @@ test.concurrent(`${chalk.yellowBright("variant-propagation-advanced: mixed base 
 		variant_name: "Multi Monthly",
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1>(
-		planId,
-		{
-			price: { amount: 1000, interval: BillingInterval.Month },
-		},
-		{ variantId: monthlyVariantId },
-	);
+	await autumnRpc.plans.updateVariant<ApiPlanV1>(planId, monthlyVariantId, {
+		price: { amount: 1000, interval: BillingInterval.Month },
+	});
 
 	await autumnRpc.plans.createVariant<ApiPlanV1>({
 		plan_id: planId,
@@ -324,13 +320,9 @@ test.concurrent(`${chalk.yellowBright("variant-propagation-advanced: mixed base 
 		variant_name: "Multi Annual",
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1>(
-		planId,
-		{
-			price: { amount: 10000, interval: BillingInterval.Year },
-		},
-		{ variantId: annualVariantId },
-	);
+	await autumnRpc.plans.updateVariant<ApiPlanV1>(planId, annualVariantId, {
+		price: { amount: 10000, interval: BillingInterval.Year },
+	});
 
 	await attachVariant({
 		customerId: monthlyCustomerId,
@@ -490,11 +482,9 @@ test.concurrent(`${chalk.yellowBright("variant-propagation-advanced: mixed base 
 		grantedBalance: 50,
 	});
 
-	await autumnRpc.plans.update<ApiPlanV1>(
-		planId,
-		{ items: monthlyItemsV3_2 },
-		{ variantId: monthlyVariantId },
-	);
+	await autumnRpc.plans.updateVariant<ApiPlanV1>(planId, monthlyVariantId, {
+		items: monthlyItemsV3_2,
+	});
 
 	await waitForPropagation();
 

@@ -7,15 +7,15 @@ import {
 	BillingMethod,
 	type CreatePlanParamsV2Input,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
-import { TestFeature } from "@tests/setup/v2Features";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-test.concurrent(`${chalk.yellowBright("rpc updateVariant: update variant items with variant_id")}`, async () => {
+test.concurrent(`${chalk.yellowBright("rpc updateVariant: update variant items")}`, async () => {
 	const suffix = getSuffix();
 	const planId = `rpc_upd_var_${suffix}`;
 	const group = `rpc_upd_var_group_${suffix}`;
@@ -46,8 +46,9 @@ test.concurrent(`${chalk.yellowBright("rpc updateVariant: update variant items w
 	expect(before.items).toHaveLength(0);
 
 	// Update the variant with a CreatePlanItemParamsV1-shaped feature item
-	const updated = await autumnRpc.plans.update<ApiPlanV1>(
+	const updated = await autumnRpc.plans.updateVariant<ApiPlanV1>(
 		planId,
+		"monthly",
 		{
 			items: [
 				{
@@ -63,7 +64,6 @@ test.concurrent(`${chalk.yellowBright("rpc updateVariant: update variant items w
 				},
 			],
 		},
-		{ variantId: "monthly" },
 	);
 
 	ApiPlanV1Schema.parse(updated);
@@ -91,11 +91,46 @@ test.concurrent(`${chalk.yellowBright("rpc updateVariant: unknown variant_id ret
 
 	let err: { code?: string } | null = null;
 	try {
-		await autumnRpc.plans.update<ApiPlanV1>(
-			planId,
-			{ items: [] },
-			{ variantId: "ghost" },
-		);
+		await autumnRpc.plans.updateVariant<ApiPlanV1>(planId, "ghost", {
+			items: [],
+		});
+	} catch (error: unknown) {
+		if (error && typeof error === "object" && "code" in error) {
+			err = error as { code?: string };
+		}
+	}
+
+	expect(err).toBeDefined();
+	if (err === null) throw new Error("Expected request to fail");
+	expect(err.code).toBeDefined();
+});
+
+test.concurrent(`${chalk.yellowBright("rpc update: variant_id now fails validation")}`, async () => {
+	const suffix = getSuffix();
+	const planId = `rpc_upd_var_invalid_${suffix}`;
+	const group = `rpc_upd_var_group_${suffix}`;
+
+	try {
+		await autumnRpc.plans.delete(planId, { allVersions: true });
+	} catch (_error) {}
+
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: planId,
+		name: "Update Variant Invalid Base",
+		group,
+		auto_enable: false,
+	});
+
+	let err: { code?: string } | null = null;
+	try {
+		await autumnRpc.rpc.call<ApiPlanV1>({
+			method: "/plans.update",
+			body: {
+				plan_id: planId,
+				variant_id: "monthly",
+				items: [],
+			},
+		});
 	} catch (error: unknown) {
 		if (error && typeof error === "object" && "code" in error) {
 			err = error as { code?: string };

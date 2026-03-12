@@ -16,6 +16,7 @@ import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
 import { handleUpdatePlanV1 } from "./handlers/handleUpdatePlan/handleUpdatePlanV1.js";
 import { handleUpdatePlanV2 } from "./handlers/handleUpdatePlan/handleUpdatePlanV2.js";
+import { handleUpdateVariant } from "./handlers/handleUpdatePlan/handleUpdateVariant.js";
 
 export const honoProductBetaRouter = new Hono<HonoEnv>();
 honoProductBetaRouter.get("", ...handleListPlans);
@@ -56,5 +57,6 @@ plansRpcRouter.post("/plans.create", ...handleCreatePlanV2);
 plansRpcRouter.post("/plans.createVariant", ...handleCreateVariant);
 plansRpcRouter.post("/plans.deleteVariant", ...handleDeleteVariant);
 plansRpcRouter.post("/plans.update", ...handleUpdatePlanV2);
+plansRpcRouter.post("/plans.updateVariant", ...handleUpdateVariant);
 plansRpcRouter.post("/plans.delete", ...handleDeletePlanV2);
 plansRpcRouter.post("/plans.get", ...handleGetPlanV2);

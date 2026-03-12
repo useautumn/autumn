@@ -35,13 +35,9 @@ export const UpdatePlanParamsV1Schema =
 
 export const UpdatePlanParamsV2Schema = z
 	.object({
-		plan_id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.meta({
-				description: "The ID of the plan to update.",
-			}),
+		plan_id: z.string().nonempty().regex(idRegex).meta({
+			description: "The ID of the plan to update.",
+		}),
 	})
 	.extend(UpdatePlanParamsV1Schema.omit({ id: true }).shape)
 	.extend({
@@ -52,23 +48,17 @@ export const UpdatePlanParamsV2Schema = z
 			description: "Whether the plan is automatically enabled.",
 		}),
 
-		new_plan_id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.optional()
-			.meta({
-				description:
-					"The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.",
-			}),
-
-		description: z.string().optional().meta({
+		new_plan_id: z.string().nonempty().regex(idRegex).optional().meta({
+			description:
+				"The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.",
+		}),
+		variant_id: z.never().optional().meta({
+			description:
+				"Variant updates must use plans.updateVariant instead of plans.update.",
 			internal: true,
 		}),
 
-		variant_id: z.string().optional().meta({
-			description:
-				"If provided, updates the specified variant instead of the base plan.",
+		description: z.string().optional().meta({
 			internal: true,
 		}),
 	});

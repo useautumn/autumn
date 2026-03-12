@@ -23,6 +23,7 @@ const productRoutes = [
 	// RPC plan routes
 	{ method: "POST", url: "/plans.create" },
 	{ method: "POST", url: "/plans.update" },
+	{ method: "POST", url: "/plans.updateVariant" },
 	{ method: "POST", url: "/plans.delete" },
 ];
 
