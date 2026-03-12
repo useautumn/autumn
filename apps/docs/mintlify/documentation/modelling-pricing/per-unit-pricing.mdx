@@ -6,7 +6,7 @@ description: Charge customers based on the number of units they use, such as sea
 Per-unit pricing charges customers based on the quantity of a resource they use — seats, workspaces, environments, or any other non-consumable feature. Customers either commit to a quantity upfront (prepaid) or are billed based on actual usage at the end of each billing cycle (usage-based).
 
 > **Example** <br />
-> A collaboration tool charges $10/seat/month. The plan includes 5 seats for free, and each additional seat costs $10.
+> A collaboration tool charges \$10/seat/month. The plan includes 5 seats for free, and each additional seat costs \$10.
 
 ## Setting up
 
@@ -36,12 +36,7 @@ export const pro = plan({
       price: {
         amount: 10,
         interval: 'month',
-        billingUnits: 1,
         billingMethod: 'usage_based',
-      },
-      proration: {
-        onIncrease: 'prorate',
-        onDecrease: 'prorate',
       },
     }),
   ],

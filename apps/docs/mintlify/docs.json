@@ -58,13 +58,13 @@
 					{
 						"group": "Concepts",
 						"pages": [
+							"documentation/concepts/overview",
 							"documentation/concepts/plans",
 							"documentation/concepts/features",
 							"documentation/concepts/plan-items",
 							"documentation/concepts/subscriptions",
 							"documentation/concepts/balances",
-							"documentation/concepts/versioning",
-							"documentation/concepts/rewards"
+							"documentation/concepts/stripe"
 						]
 					},
 					{
@@ -76,15 +76,16 @@
 							"documentation/modelling-pricing/trials",
 							"documentation/modelling-pricing/credit-systems",
 							"documentation/modelling-pricing/per-unit-pricing",
+							"documentation/modelling-pricing/usage-based-pricing",
 							"documentation/modelling-pricing/rollovers",
 							"documentation/modelling-pricing/proration",
-							"documentation/modelling-pricing/pay-per-use",
 							"documentation/modelling-pricing/auto-top-ups",
 							"documentation/modelling-pricing/add-ons",
 							"documentation/modelling-pricing/graduated-pricing",
 							"documentation/modelling-pricing/volume-based-tiers",
 							"documentation/modelling-pricing/sub-entity-balances",
-							"documentation/modelling-pricing/sub-entity-plans"
+							"documentation/modelling-pricing/sub-entity-plans",
+							"documentation/modelling-pricing/rewards"
 						]
 					},
 					{
@@ -97,7 +98,8 @@
 							"documentation/customers/tracking-usage",
 							"documentation/customers/feature-entities",
 							"documentation/customers/creating-customers",
-							"documentation/customers/managing-customers"
+							"documentation/customers/managing-customers",
+							"documentation/customers/versioning"
 						]
 					},
 					{

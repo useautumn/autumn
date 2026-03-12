@@ -8,6 +8,15 @@ Features represent the parts of your product that you want to control access to,
 - **Metered features**: features that require you to keep track of a usage balance (eg, credits, API requests)
 - **Boolean features**: features that can be either enabled or disabled (eg, access to a premium analytics dashboard).
 
+```mermaid
+flowchart TD
+    F[Feature] --> BOOL[Boolean\non/off flag]
+    F --> METERED[Metered\nusage tracked]
+    METERED --> CON[Consumable\nresets periodically\neg credits, API calls]
+    METERED --> NC[Non-consumable\npersistent quantity\neg seats, storage]
+    CON -.->|"optionally part of"| CS[Credit System\nshared balance pool]
+```
+
 When you create a feature, you can set a display name, and it's ID. This will be used to identify the feature when you make API calls to Autumn, to check or tracking usage of the feature.
 
 ## Metered features

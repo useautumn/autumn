@@ -28,7 +28,6 @@ export const credits = feature({
 export const creditTopUp = plan({
   id: 'credit_top_up',
   name: 'Credit Top-Up',
-  addOn: true,
   items: [
     item({
       featureId: credits.id,
@@ -36,15 +35,12 @@ export const creditTopUp = plan({
         amount: 10,
         billingUnits: 500,
         billingMethod: 'prepaid',
+        interval: 'one_off',
       },
     }),
   ],
 });
 ```
-
-<Tip>
-Set `addOn: true` so the plan can be purchased alongside an existing subscription instead of replacing it.
-</Tip>
 
 Push changes with `atmn push`.
 
@@ -65,9 +61,9 @@ Push changes with `atmn push`.
 
 When a customer purchases a one-off plan:
 
-1. Autumn creates a Stripe invoice (not a subscription) and charges it immediately
-2. The feature balance is provisioned with the purchased quantity
-3. The balance has a `one_off` interval — it never resets or expires
+- Autumn creates a Stripe invoice (not a subscription) and charges it immediately
+- The feature balance is provisioned with the purchased quantity
+- The balance has a `one_off` interval — it never resets or expires
 
 <Note>
 One-off purchases don't create Stripe subscriptions. They generate a one-time invoice instead.
