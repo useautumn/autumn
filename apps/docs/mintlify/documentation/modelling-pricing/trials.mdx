@@ -15,7 +15,7 @@ Free trials give customers temporary access to a paid plan before they're charge
 
 Add a `freeTrial` object to your plan:
 
-```ts autumn.config.ts
+```ts autumn.config.ts expandable
 import { feature, item, plan } from 'atmn';
 
 export const messages = feature({
@@ -143,14 +143,51 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 When the trial expires, the customer loses access unless they add a payment method. If a [free plan](/documentation/modelling-pricing/free-plans) with `autoEnable` exists in the same group, it's activated as a fallback.
 
 <Tip>
-You can combine `autoEnable` with `cardRequired: false` to create an **auto-trial** plan. The trial starts automatically when a customer is created, and expires after the trial period.
+You can combine `autoEnable` with `cardRequired: false` to create an **auto-trial** plan. The trial starts automatically when a customer is created, and expires after the trial period — no API call needed.
 </Tip>
+
+
+
+
+
+## Checking trial status
+
+The customer's subscription includes a `trial_ends_at` timestamp when a trial is active. You can also expand `trials_used` to see which trials a customer has consumed:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.customers.get("user_123");
+
+for (const sub of data.subscriptions) {
+  if (sub.trialEndsAt) {
+    console.log(`Trialing until ${new Date(sub.trialEndsAt)}`);
+  }
+}
+```
+
+```python Python
+response = await autumn.customers.get("user_123")
+
+for sub in response.subscriptions:
+    if sub.trial_ends_at:
+        print(f"Trialing until {sub.trial_ends_at}")
+```
+
+</CodeGroup>
+
+
+
+
+
+
+
+
+
 
 ## Trial deduplication
 
 Each customer can only use a plan's trial **once**. If they try to attach the same plan again, the trial is skipped and they're billed immediately.
-
-### Fingerprint-based deduplication
 
 To prevent trial abuse across multiple accounts, set a `fingerprint` when creating a customer (e.g., device ID, browser fingerprint). Autumn checks whether any customer with the same fingerprint has already used the trial.
 
@@ -188,37 +225,292 @@ curl -X POST "https://api.useautumn.com/v1/customers" \
 
 </CodeGroup>
 
-## Cancelling a trial
+<Note>
+Custom trials passed via `customize.freeTrial` always **bypass** deduplication. Use this for support cases where you want to grant a second trial.
+</Note>
 
-Cancel a trial using the same [cancel](/documentation/customers/managing-subscriptions#cancellations) flow as any subscription:
+
+You can check which trials a customer has already used by expanding `trials_used` on the customer object:
 
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.cancel({
-  customer_id: "user_123",
-  plan_id: "pro",
-  cancel_immediately: true,
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  expand: ["trials_used"],
 });
 ```
 
 ```python Python
-await autumn.cancel(
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    expand=["trials_used"],
+)
+
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "user_123",
+    "expand": ["trials_used"]
+  }'
+```
+
+</CodeGroup>
+
+
+
+
+
+
+## Upgrades and Downgrades
+
+When upgrading to a plan with a trial, the trial behavior depends on the customer's current state and whether the new plan has an unused trial:
+
+| Current state | Unused trial? | Result |
+|---|---|---|
+| Trialing | Yes | Current trial ends. Fresh trial starts on new plan. |
+| Trialing | No | Current trial ends. Billing starts immediately. |
+| Active (not trialing) | Yes | Trial starts. Current cycle refunded. |
+| Active (not trialing) | No | No trial. Billing starts at new price. |
+
+When a customer downgrades during a trial, the lower plan is scheduled to activate when the trial ends. The lower plan's own trial is not applied - you cannot get a new trial on a downgrade.
+
+<Note>
+You can override any of these behaviors by passing `customize.freeTrial` on the attach call. See [Overriding trial behavior](#overriding-trial-behavior) below.
+</Note>
+
+## Overriding trial behavior
+
+You can override the default trial behavior on any `/attach` or `/update-subscription` call by passing `customize.freeTrial`:
+
+<Tabs>
+<Tab title="Custom trial">
+
+Pass a `freeTrial` object to start a trial with a custom duration. This **bypasses deduplication** — the customer always gets the trial, even if they've trialed this plan before.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.attach({
+  customerId: "user_123",
+  planId: "pro",
+  customize: {
+    freeTrial: {
+      durationLength: 30,
+      durationType: "day",
+      cardRequired: true,
+    },
+  },
+});
+```
+
+```python Python
+await autumn.attach(
     customer_id="user_123",
     plan_id="pro",
-    cancel_immediately=True,
+    customize={
+        "free_trial": {
+            "duration_length": 30,
+            "duration_type": "day",
+            "card_required": True,
+        }
+    },
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/cancel" \
+curl -X POST "https://api.useautumn.com/v1/attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_123",
     "plan_id": "pro",
-    "cancel_immediately": true
+    "customize": {
+      "free_trial": {
+        "duration_length": 30,
+        "duration_type": "day",
+        "card_required": true
+      }
+    }
   }'
 ```
 
 </CodeGroup>
+
+</Tab>
+<Tab title="End / skip trial">
+
+Pass `freeTrial: null` to skip the trial entirely and begin billing immediately — even if the plan has a trial configured.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.attach({
+  customerId: "user_123",
+  planId: "pro",
+  customize: {
+    freeTrial: null,
+  },
+});
+// Charged immediately, no trial
+```
+
+```python Python
+await autumn.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    customize={"free_trial": None},
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "customize": { "free_trial": null }
+  }'
+```
+
+</CodeGroup>
+
+You can also pass `freeTrial: null` on `/update-subscription` to end an active trial early and start billing right away.
+
+</Tab>
+<Tab title="Extend trial">
+
+To extend a trial, call `/update-subscription` with a new `customize.freeTrial`. The new trial duration is computed **from now** — it replaces the current trial end date rather than adding to it.
+
+<CodeGroup>
+
+```typescript TypeScript
+// Customer is 5 days into a 14-day trial.
+// This gives them a fresh 14 days from now (not 14 + 9 remaining).
+await autumn.updateSubscription({
+  customerId: "user_123",
+  planId: "pro",
+  customize: {
+    freeTrial: {
+      durationLength: 14,
+      durationType: "day",
+    },
+  },
+});
+```
+
+```python Python
+await autumn.update_subscription(
+    customer_id="user_123",
+    plan_id="pro",
+    customize={
+        "free_trial": {
+            "duration_length": 14,
+            "duration_type": "day",
+        }
+    },
+)
+```
+
+</CodeGroup>
+
+<Warning>
+Trial extensions are **replacement**, not additive. If a customer is 5 days into a 14-day trial and you set a new 14-day trial, they get 14 days from today (19 days total from the original start), not 14 days added to the remaining 9.
+</Warning>
+
+</Tab>
+</Tabs>
+
+
+
+
+
+
+
+
+
+
+
+## Trials with shared subscriptions
+
+When using [entities](/documentation/modelling-pricing/sub-entity-plans) or add-ons, trial state is shared across the same Stripe subscription. This is because Stripe manages trials at the subscription level.
+
+<Tip>
+You can pass in `newBillingSubscription: true` to create a new subscription for each plan, rather than merging into the existing subscription.
+</Tip>
+
+Here are some principles to keep in mind when using trials with shared subscriptions:
+
+#### First entity gets the trial
+
+When the first entity is attached with a trial plan, the trial starts on the shared subscription. Any subsequent entities attached to the same subscription **inherit the existing trial state** — they don't start their own independent trial.
+
+#### Adding plans to a non-trialing subscription
+
+If the subscription is **not** trialing, new plans are charged immediately — even if the product they're being attached to has a trial configured. The product's trial config is ignored for merges into an active subscription.
+
+#### Shared trial state affects all plans
+
+Because entities (by default) share a subscription, trial state changes affect **all** entities:
+
+- **Entity upgrade to a plan with a trial**: a fresh trial starts, and all other entities on the subscription inherit the new trial end date.
+- **Entity upgrade to a plan without a trial**: the trial ends for **all** entities, and they're all billed immediately.
+- **Entity downgrade during trial**: the downgrade is scheduled for when the trial ends.
+
+
+Passing `customize.freeTrial` on an entity attach or upgrade affects the **shared subscription**, so all entities are affected. Similarly, passing `freeTrial: null` ends the trial for all entities on the subscription.
+
+## Resetting usage after trial 
+
+<Note>
+This feature is coming soon.
+</Note>
+
+By default, feature usage during a trial carries over into the paid period. If you want usage to **reset when billing starts**, pass `transition_rules.reset_after_trial_end` with the feature IDs to reset:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.attach({
+  customerId: "user_123",
+  planId: "pro",
+  transitionRules: {
+    resetAfterTrialEnd: ["messages"],
+  },
+});
+```
+
+```python Python
+await autumn.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    transition_rules={
+        "reset_after_trial_end": ["messages"],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "transition_rules": {
+      "reset_after_trial_end": ["messages"]
+    }
+  }'
+```
+
+</CodeGroup>
+
+This sets the feature's reset cycle to begin when the trial ends rather than when the trial starts, so the customer gets a full fresh allowance once they start paying.
+
+
+

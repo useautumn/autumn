@@ -3,44 +3,9 @@ title: "Payment Flow"
 description: "Hosted checkout pages vs building your own payment flow"
 ---
 
-When you call `billing.attach`, Autumn handles payment collection through one of two paths depending on the `redirect_mode` you choose:
-
-- **Hosted pages** — redirect the customer to a checkout page (Stripe or Autumn) to review and pay
-- **Custom checkout** — show pricing in your own UI, then charge the customer's saved payment method directly
-
-```mermaid
-graph TD
-  A["billing.attach"] --> B{"redirect_mode"}
-  B -->|"always (default)"| C{"Has payment method?"}
-  B -->|"if_required"| D{"Has payment method?"}
-  B -->|"never"| E["Charge directly"]
-
-  C -->|Yes| F["Autumn Checkout URL"]
-  C -->|No| G["Stripe Checkout URL"]
-
-  D -->|Yes| H["Charge directly — no redirect"]
-  D -->|No| G
-
-  F -->|"Customer confirms"| I["Plan enabled"]
-  G -->|"Customer pays"| I
-  H --> I
-  E -->|"Success"| I
-  E -->|"No payment method"| J["Error: payment_method_required"]
-```
-
-## `redirect_mode`
-
-The `redirect_mode` parameter controls when `billing.attach` returns a `paymentUrl` instead of charging directly.
-
-| Mode | Behavior | Best for |
-|---|---|---|
-| `"always"` **(default)** | Always returns a `paymentUrl`. New customers go to Stripe Checkout, existing customers go to Autumn Checkout for confirmation. | Getting started quickly — just redirect and you're done |
-| `"if_required"` | Only returns a `paymentUrl` when the customer has no payment method. Otherwise charges directly. | Building your own checkout UI |
-| `"never"` | Never returns a `paymentUrl`. Attempts to charge the saved payment method directly. Fails if none exists. | Backend-only flows where you've already collected payment |
-
 ## Using hosted pages
 
-The simplest approach: call `billing.attach` and redirect the customer to the returned `paymentUrl`. Autumn handles the rest.
+By default, `billing.attach` returns a `paymentUrl` — just redirect the customer and Autumn handles payment collection, confirmation, and activation.
 
 <CodeGroup>
 
@@ -58,7 +23,6 @@ import { useCustomer } from "autumn-js/react";
 
 const { attach } = useCustomer();
 
-// Automatically redirects the customer
 await attach({ planId: "pro" });
 ```
 
@@ -82,35 +46,26 @@ curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
 
 </CodeGroup>
 
-Where the customer lands depends on their situation:
-
-| Scenario | Checkout type | What happens |
-|---|---|---|
-| New subscription, no payment method | **Stripe Checkout** | Customer enters card details and pays |
-| New subscription, has payment method | **Autumn Checkout** | Customer reviews the plan and confirms |
-| Upgrade or downgrade | **Autumn Checkout** | Customer reviews prorated charges and confirms |
-
-After checkout completes, the customer is redirected to your `success_url` (or the default URL configured in your Autumn dashboard).
-
-<Tip>
-Pass a `successUrl` to control where the customer returns after checkout:
-
-```typescript
-await autumn.billing.attach({
-  customerId: "user_123",
-  planId: "pro",
-  successUrl: "https://your-app.com/billing?success=true",
-});
-```
-</Tip>
+New customers without a payment method are sent to **Stripe Checkout**. Existing customers are sent to **Autumn Checkout** to review and confirm. After checkout, the customer is redirected to your `successUrl` (or the default URL in your Autumn dashboard).
 
 ## Building your own checkout
 
-For full control over the UI, use a two-step flow: preview the change, show it in your own interface, then execute it.
+For full control over the checkout experience, use `redirectMode: "if_required"`. This charges the saved payment method directly instead of redirecting — the customer is only sent to Stripe Checkout if they don't have a payment method yet.
+
+```mermaid actions={false}
+graph LR
+  A["previewAttach"] --> B["user confirms"] --> C["attach"] --> D{"Payment method?"}
+  D -->|Yes| E["Charged"]
+  D -->|No| F["Stripe Checkout"]
+  E --> G["Plan enabled"]
+  F --> G
+  style A fill:#f472b622,stroke:#f472b6
+  style C fill:#f472b622,stroke:#f472b6
+```
 
 ### Step 1: Preview the charge
 
-Call `billing.previewAttach` to get a breakdown of what the customer will be charged — line items, totals, proration credits, and next billing cycle info.
+Call `billing.previewAttach` to get line items, totals, and proration details to display in your UI.
 
 <CodeGroup>
 
@@ -123,7 +78,6 @@ const preview = await autumn.billing.previewAttach({
 // preview.lineItems  — array of charges and credits
 // preview.total      — net amount in cents
 // preview.currency   — e.g. "usd"
-// preview.nextCycle  — next billing cycle details
 ```
 
 ```tsx React
@@ -139,7 +93,6 @@ preview = await autumn.billing.preview_attach(
     customer_id="user_123",
     plan_id="pro",
 )
-# preview.line_items, preview.total, preview.currency
 ```
 
 ```bash cURL
@@ -182,7 +135,7 @@ curl -X POST 'https://api.useautumn.com/v1/billing.preview_attach' \
 
 ### Step 2: Confirm and charge
 
-Once the customer confirms in your UI, call `billing.attach` with `redirectMode: "if_required"`. This charges the saved payment method directly — no redirect needed unless the customer doesn't have one yet.
+Once the customer confirms, call `billing.attach` with `redirectMode: "if_required"`.
 
 <CodeGroup>
 
@@ -194,10 +147,8 @@ const response = await autumn.billing.attach({
 });
 
 if (response.paymentUrl) {
-  // No payment method on file — redirect to Stripe Checkout
   redirect(response.paymentUrl);
 } else {
-  // Charged successfully, plan is active
   showSuccess();
 }
 ```
@@ -211,8 +162,6 @@ const response = await attach({
   planId: "pro",
   redirectMode: "if_required",
 });
-
-// If no redirect happened, the plan was attached
 ```
 
 ```python Python
@@ -223,11 +172,9 @@ response = await autumn.billing.attach(
 )
 
 if response.payment_url:
-    # Redirect to Stripe Checkout
-    pass
+    redirect(response.payment_url)
 else:
-    # Plan attached and charged
-    pass
+    show_success()
 ```
 
 ```bash cURL
@@ -243,27 +190,10 @@ curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
 
 </CodeGroup>
 
-## Understanding the response
+## Handling the response
 
-Every `billing.attach` call returns the same response shape. The key fields to handle:
+The `billing.attach` response has two key fields:
 
-### `payment_url`
+**`payment_url`** — a URL the customer should be redirected to, or `null` if no redirect is needed.
 
-A URL the customer should be redirected to, or `null` if no redirect is needed.
-
-| Value | Meaning |
-|---|---|
-| Autumn Checkout URL | Customer needs to review and confirm the change |
-| Stripe Checkout URL | Customer needs to enter payment details |
-| Stripe Invoice URL | Payment requires action (3DS, retry) |
-| `null` | Payment succeeded — no redirect needed |
-
-### `required_action`
-
-Present when the payment couldn't be processed automatically. See [Edge Cases](/documentation/customers/billing/edge-cases) for handling each code.
-
-| Code | Meaning |
-|---|---|
-| `3ds_required` | Customer must complete 3D Secure authentication at the `payment_url` |
-| `payment_failed` | Card was declined — `payment_url` links to Stripe's hosted invoice to retry |
-| `payment_method_required` | No payment method on file — `payment_url` links to Stripe Checkout |
+**`required_action`** — present when payment couldn't be processed automatically. See [Edge Cases](/documentation/customers/billing/edge-cases) for details on handling 3DS, payment failures, and retries.

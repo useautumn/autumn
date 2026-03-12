@@ -1,0 +1,107 @@
+---
+title: "How It Works"
+sidebarTitle: "Overview"
+description: "How features, plans, subscriptions and balances fit together"
+---
+
+Autumn's data model has a clear pipeline: you define **features**, bundle them into **plans** with pricing, and when a plan is attached to a customer, it creates a **subscription** and provisions **balances** that you can check and track in real-time.
+
+```mermaid actions={false}
+%%{init: {'flowchart': {'padding': 6, 'nodeSpacing': 10, 'rankSpacing': 20, 'subGraphTitleMargin': {'top': 4, 'bottom': 12}}} }%%
+flowchart LR
+    subgraph features["**Features**"]
+        F3["AI Credits"]:::credit
+    end
+
+    subgraph plan["**Plan**"]
+        direction TB
+        subgraph price["Price"]
+            P1["$200/year"]:::pricing
+        end
+        subgraph planItems["Plan items"]
+            PI1["200 AI credits/month"]:::credit
+        end
+        price ~~~ planItems
+    end
+
+    subgraph customer["**Customer**"]
+        direction TB
+        subgraph customerPlans["Subscription"]
+            C1["$200/year"]:::pricing
+        end
+        subgraph balances["Balances"]
+            B1["146/200 AI credits left"]:::credit
+        end
+        customerPlans ~~~ balances
+    end
+
+
+    features ~~~ plan ~~~ customer
+
+    classDef credit fill:#22c55e30,stroke:#22c55e
+    classDef pricing fill:#ec489930,stroke:#ec4899
+
+    style features fill:#eab30820,stroke:#eab308
+    style plan fill:#7c3aed10,stroke:#7c3aed
+    style customer fill:#0ea5e910,stroke:#0ea5e9
+
+    style price fill:none,stroke:none
+    style planItems fill:none,stroke:none
+    style customerPlans fill:none,stroke:none
+    style balances fill:none,stroke:none
+```
+
+## Features
+
+Features represent the parts of your product you want to control access to. There are three types: **boolean** (on/off flags like premium analytics), **consumable** (usage that resets, like API requests or credits), and **non-consumable** (persistent quantities like seats or storage).
+
+Features are the atomic building blocks — everything else is built on top of them.
+
+<Card title="Features" icon="puzzle-piece" href="/documentation/concepts/features">
+  Learn about feature types and how to create them
+</Card>
+
+## Plans
+
+Plans bundle features together with a base price. Each plan represents a distinct pricing tier or package you offer — free, pro, enterprise, or any add-on. You define which features are included, how they're priced, and any properties like trials or auto-enable.
+
+<Card title="Plans" icon="layer-group" href="/documentation/concepts/plans">
+  Learn about plan pricing, properties and groups
+</Card>
+
+## Plan Items
+
+When you add a feature to a plan, it becomes a **plan item** with its own configuration. Included items grant a usage amount at no extra cost. Priced items add billing — either prepaid or usage-based — with options for billing units, tiers, and proration.
+
+Plan items are where the "what" (features) meets the "how much" (pricing).
+
+<Card title="Plan Items" icon="sliders" href="/documentation/concepts/plan-items">
+  Configure grants, pricing and usage models
+</Card>
+
+## Subscriptions
+
+When you attach a plan to a customer, Autumn creates a Stripe subscription under the hood and provisions balances for each feature in the plan. Subscriptions track status (active, trialing, past_due, etc.) and handle the payment lifecycle.
+
+<Card title="Subscriptions" icon="arrows-repeat" href="/documentation/concepts/subscriptions">
+  How Autumn manages Stripe subscriptions
+</Card>
+
+## Balances
+
+Balances are the customer-facing result of everything above. Each plan item becomes a balance that tracks what the customer has been granted, what they've used, and what remains. Balances from multiple sources (plans, add-ons, top-ups) stack together, with shorter-interval balances consumed first.
+
+Your app interacts with Autumn primarily through balances — calling `/check` to gate access and `/track` to record usage.
+
+<Card title="Balances" icon="scale-balanced" href="/documentation/concepts/balances">
+  Understand balance stacking, resets and deduction order
+</Card>
+
+## Runtime
+
+Once your features, plans and pricing are configured, your app interacts with Autumn through four core endpoints.
+
+- **[Customer](/api-reference/customers/getOrCreateCustomer)**: Idempotent get-or-create. Call on every login/signup and Autumn returns the existing customer or creates a new one. Aggregates subscriptions, balances, invoices and payment methods in a single response.
+- **[Attach](/api-reference/billing/attach)**: Subscribe a customer to a plan or purchase a one-time product. Handles new subscriptions, upgrades, downgrades and add-ons, creating the Stripe subscription and provisioning balances automatically.
+- **[Check](/api-reference/core/check)**: Feature gate. Returns whether a customer has access based on their active plans and remaining balance. Set `send_event` to atomically deduct usage while checking.
+- **[Track](/api-reference/core/track)**: Record usage against a customer's balance. Each call decrements the remaining allowance for a feature, powering metered billing and usage limits.

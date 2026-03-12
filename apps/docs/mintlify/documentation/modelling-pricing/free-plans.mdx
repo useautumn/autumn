@@ -58,22 +58,15 @@ Push changes with `atmn push`.
 
 1. Navigate to **Plans** and click **Create Plan**
 2. Set the plan name and ID (e.g., "Free", `free`)
-3. Leave the **Price** empty (no base price)
-4. Add features with grant amounts and reset intervals
-5. Toggle **Auto-enable** so the plan is automatically assigned to new customers
-6. Set a **group** (e.g., `main`) if you have paid plans the customer can upgrade to
-7. Click **Create**
+3. Toggle **Auto-enable** so the plan is automatically assigned to new customers
+4. Add features and save your changes
 
 </Tab>
 </Tabs>
 
 ## How it works
 
-When `autoEnable` is set:
-
-1. Every new customer created via the API or SDK is automatically assigned this plan
-2. Feature balances are provisioned immediately — no checkout or payment needed
-3. When the customer [upgrades](/documentation/customers/managing-subscriptions#upgrades) to a paid plan in the same group, the free plan is replaced
+When `autoEnable` is set, every new customer created via the API or SDK is automatically assigned this plan. This flag can only be set if there are no prices on the plan. Since there are no prices, no payment is required.
 
 <Note>
 If a customer cancels their paid plan and you have an auto-enabled free plan in the same group, the free plan will be re-activated automatically.
@@ -127,9 +120,3 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 </CodeGroup>
 
 When `allowed` is `false`, the customer has exhausted their free tier balance. This is a good moment to prompt them to upgrade.
-
-## Tips
-
-- Set a **group** on your free plan that matches your paid plans, so upgrades automatically replace the free tier
-- Use `reset` intervals (e.g., monthly) to give customers a recurring allowance
-- Combine with [pay-per-use](/documentation/modelling-pricing/pay-per-use) to let free users optionally pay for overages

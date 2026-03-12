@@ -26,11 +26,65 @@ A credit system is made up of a list of [features](/documentation/concepts/featu
   system.
 </Warning>
 
+<Tabs>
+<Tab title="CLI">
+
+Define metered features, then create a `credit_system` feature with a `creditSchema` that maps each feature to a credit cost:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const basicMessage = feature({
+  id: 'basic_message',
+  name: 'Basic Message',
+  type: 'metered',
+  consumable: true,
+});
+
+export const premiumMessage = feature({
+  id: 'premium_message',
+  name: 'Premium Message',
+  type: 'metered',
+  consumable: true,
+});
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'credit_system',
+  creditSchema: [
+    { meteredFeatureId: basicMessage.id, creditCost: 1 },
+    { meteredFeatureId: premiumMessage.id, creditCost: 10 },
+  ],
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: credits.id,
+      included: 200,
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
 1. Navigate to the features page, under Plans.
 2. Click "Create Credit System"
 4. Add the features that can draw from this credit system.
 5. For each feature, define how many credits each unit of usage should cost (eg, 3 credits per "premium request").
 6. Click "Create"
+
+</Tab>
+</Tabs>
 
 <Info>
 **Example**
@@ -182,6 +236,18 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 Since the customer started with a balance of 100 credits, and used 18 credits, their remaining balance is 82 credits.
 
+## Stacking with direct balances
+
+A feature can have both a direct balance **and** belong to a credit system. When this happens, the balances stack and **direct balances are always consumed before credit system balances**, regardless of interval.
+
+> **Example** <br />
+> A customer's plan grants `10 premium messages` per month directly, plus `200 credits` per month from a credit system (where each premium message costs 10 credits). <br /><br />
+> When the customer sends a premium message, Autumn deducts from the direct premium message balance first. Once those 10 direct messages are used up, subsequent premium messages draw from the credit pool instead.
+
+<Note>
+  The `check` endpoint accounts for both balances. If the customer has 5 direct premium messages remaining plus 100 credits (enough for 10 more premium messages), `check` will report that the customer is allowed.
+</Note>
+
 ## Monetary credits
 
 You may want your credit system to represent a monetary value: eg, $10 of credits. To implement this, you can map each credit to a cent value (eg, 1 credit = 1 cent).
@@ -202,6 +268,6 @@ See the credits pricing guide for a more detailed example of setting up a moneta
 <Card
   title="Credits Example"
   horizontal
-  href="/examples/credits"
+  href="/examples/monetary-credits"
   icon="money-bills"
 />
