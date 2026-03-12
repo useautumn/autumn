@@ -22,6 +22,7 @@ export * from "./delete-customer-op.js";
 export * from "./delete-entity-op.js";
 export * from "./delete-feature-op.js";
 export * from "./delete-plan-op.js";
+export * from "./finalize-lock-op.js";
 export * from "./get-entity-op.js";
 export * from "./get-feature-op.js";
 export * from "./get-or-create-customer-op.js";

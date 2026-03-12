@@ -1,0 +1,27 @@
+---
+title: "Finalize Lock"
+openapi: "openapi POST /v1/balances.finalize"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="lock_id" type="string" required>
+  The lock ID that was passed into the previous check call.
+</DynamicParamField>
+
+<DynamicParamField body="action" type="'confirm' | 'release'" required>
+  Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+</DynamicParamField>
+
+<DynamicParamField body="override_value" type="number">
+  Override the original lock value with a different deduction amount. Only valid when action is 'confirm'.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />

@@ -65,6 +65,24 @@ const { allowed } = await autumn.check({
   If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
 </DynamicParamField>
 
+<DynamicParamField body="lock" type="object">
+  Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+  <Expandable title="properties">
+    <DynamicParamField body="lock_id" type="string" required>
+      A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+    </DynamicParamField>
+
+    <DynamicParamField body="enabled" type="any" required>
+      Must be true to enable locking.
+    </DynamicParamField>
+
+    <DynamicParamField body="expires_at" type="number">
+      Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="with_preview" type="boolean">
   If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
 </DynamicParamField>

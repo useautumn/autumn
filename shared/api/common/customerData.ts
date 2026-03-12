@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { CustomerBillingControlsSchema } from "../../models/cusModels/billingControlModels";
+import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
 
 // for internal use only
@@ -50,7 +50,7 @@ export const CustomerDataSchema = z
 			description: "Whether to send email receipts to this customer",
 		}),
 
-		billing_controls: CustomerBillingControlsSchema.optional().meta({
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the customer (auto top-ups, etc.)",
 		}),
 

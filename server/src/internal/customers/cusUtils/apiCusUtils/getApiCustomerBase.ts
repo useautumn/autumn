@@ -1,3 +1,4 @@
+import { getApiBalances } from "@api/customers/cusFeatures";
 import {
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
@@ -8,7 +9,6 @@ import {
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
-import { getApiBalances } from "./getApiBalance/getApiBalances.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
@@ -61,7 +61,10 @@ export const getApiCustomerBase = async ({
 		purchases: apiPurchases,
 		balances: apiBalances,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
-		billing_controls: { auto_topups: fullCus.auto_topups ?? undefined },
+		billing_controls: {
+			auto_topups: fullCus.auto_topups ?? undefined,
+			spend_limits: fullCus.spend_limits ?? undefined,
+		},
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)

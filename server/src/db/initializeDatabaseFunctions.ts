@@ -26,6 +26,7 @@ export const initializeDatabaseFunctions = async () => {
 			"unwindFromLockReceipt.sql",
 			"getTotalBalance.sql",
 			"deductFromAdditionalBalance.sql",
+			"getAvailableOverageFromSpendLimit.sql",
 			"performDeduction.sql",
 			"syncBalances.sql",
 			"syncBalancesV2.sql",

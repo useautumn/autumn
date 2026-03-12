@@ -17,6 +17,24 @@ export type CheckGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+ */
+export type CheckLock = {
+  /**
+   * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+   */
+  lockId: string;
+  /**
+   * Must be true to enable locking.
+   */
+  enabled: true;
+  /**
+   * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+   */
+  expiresAt?: number | undefined;
+};
+
 export type CheckParams = {
   /**
    * The ID of the customer.
@@ -42,6 +60,10 @@ export type CheckParams = {
    * If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
    */
   sendEvent?: boolean | undefined;
+  /**
+   * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+   */
+  lock?: CheckLock | undefined;
   /**
    * If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
    */
@@ -422,6 +444,35 @@ export type CheckResponse = {
 };
 
 /** @internal */
+export type CheckLock$Outbound = {
+  lock_id: string;
+  enabled: true;
+  expires_at?: number | undefined;
+};
+
+/** @internal */
+export const CheckLock$outboundSchema: z.ZodMiniType<
+  CheckLock$Outbound,
+  CheckLock
+> = z.pipe(
+  z.object({
+    lockId: z.string(),
+    enabled: z.literal(true),
+    expiresAt: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      lockId: "lock_id",
+      expiresAt: "expires_at",
+    });
+  }),
+);
+
+export function checkLockToJSON(checkLock: CheckLock): string {
+  return JSON.stringify(CheckLock$outboundSchema.parse(checkLock));
+}
+
+/** @internal */
 export type CheckParams$Outbound = {
   customer_id: string;
   feature_id: string;
@@ -429,6 +480,7 @@ export type CheckParams$Outbound = {
   required_balance?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   send_event?: boolean | undefined;
+  lock?: CheckLock$Outbound | undefined;
   with_preview?: boolean | undefined;
 };
 
@@ -444,6 +496,7 @@ export const CheckParams$outboundSchema: z.ZodMiniType<
     requiredBalance: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
     sendEvent: z.optional(z.boolean()),
+    lock: z.optional(z.lazy(() => CheckLock$outboundSchema)),
     withPreview: z.optional(z.boolean()),
   }),
   z.transform((v) => {

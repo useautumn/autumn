@@ -7,6 +7,7 @@ import { handleDeleteEntityV2 } from "./handlers/handleDeleteEntity/handleDelete
 import { handleGetEntity } from "./handlers/handleGetEntity/handleGetEntity.js";
 import { handleGetEntityV2 } from "./handlers/handleGetEntity/handleGetEntityV2.js";
 import { handleListEntities } from "./handlers/handleListEntities.js";
+import { handleUpdateEntity } from "./handlers/handleUpdateEntity/handleUpdateEntity.js";
 
 export const entityRouter = new Hono<HonoEnv>();
 
@@ -30,3 +31,4 @@ export const entityRpcRouter = new Hono<HonoEnv>();
 entityRpcRouter.post("/entities.create", ...handleCreateEntityV2);
 entityRpcRouter.post("/entities.get", ...handleGetEntityV2);
 entityRpcRouter.post("/entities.delete", ...handleDeleteEntityV2);
+entityRpcRouter.post("/entities.update", ...handleUpdateEntity);

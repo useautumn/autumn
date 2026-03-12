@@ -47,6 +47,10 @@ trackedFiles:
     id: 3aed33ce6e6f
     last_write_checksum: sha1:b90d4c5be66a58cd4d5193eea652c1b609c5fe0f
     pristine_git_object: 29eee34883817c578ab4b0f8e51e0215d61ad190
+  docs/models/action.md:
+    id: 3b583d6a609e
+    last_write_checksum: sha1:72773682ff50533bc180ba2562b9a99251b0ff46
+    pristine_git_object: 2254d6362f569f198c928970f3bffa4a02a78730
   docs/models/aggregateeventscustomrange.md:
     id: 6bcfabf82b0c
     last_write_checksum: sha1:db82c5b951354ad2d10f2346cf57b098402df524
@@ -389,8 +393,8 @@ trackedFiles:
     pristine_git_object: 188c047ce6cdf1f916ff0e22079a8fed3e3d8916
   docs/models/checkparams.md:
     id: 41de438d57cd
-    last_write_checksum: sha1:f2aed28036cd5b17c20d62833aa62dc277fd32ce
-    pristine_git_object: 8efeab8cd364c0993690e157f38d92330e3c5ce3
+    last_write_checksum: sha1:ab7c54bfe0c657851a59fedd447c99bb3acdb4c2
+    pristine_git_object: 7848c33fdbffc71c09fadd8ad859214182f00e0a
   docs/models/checkproperties.md:
     id: 2bf3cd652685
     last_write_checksum: sha1:32df3ad190735a35b8508139f9d1cc80f48451e6
@@ -839,6 +843,18 @@ trackedFiles:
     id: 9fd6a7ea7659
     last_write_checksum: sha1:e78cc7c19a8c81fe196161343bfa5a508572a13b
     pristine_git_object: b81adbcda5cd11189273956e2702422c649aa141
+  docs/models/finalizebalanceparams.md:
+    id: 610af9b4049c
+    last_write_checksum: sha1:3268c71defa9225a1ca7dd12bb5a5ee40fa07431
+    pristine_git_object: 8818455b8a759925e3bfd727e7e36a8310ee4ce4
+  docs/models/finalizelockglobals.md:
+    id: 9d4bb30ca240
+    last_write_checksum: sha1:21e04ffc835a849a55954edb45b61cc2a450d7da
+    pristine_git_object: ca4aaf9dd339a4c939bc50a3f5d48eb3642061b0
+  docs/models/finalizelockresponse.md:
+    id: 6c912a11f195
+    last_write_checksum: sha1:24fad6be1b587d550d69d76547bd6647616ce7be
+    pristine_git_object: 08a61e80ffd6f6c17caade17602049e3492420eb
   docs/models/freetrial.md:
     id: dc73eb37daef
     last_write_checksum: sha1:0f8ee227ca42edfb64780b836e99518a340e3d82
@@ -2011,10 +2027,14 @@ trackedFiles:
     id: b4e733cd9cda
     last_write_checksum: sha1:70b3a0fc0755ff36e6d8e961d8ae4799535039d5
     pristine_git_object: 42d7bc2cf84f25facd8045ee8030db34a5140cbc
+  docs/models/tracklock.md:
+    id: 6d6c070750b0
+    last_write_checksum: sha1:a53c5f07d6241ee9b4c2bc0b71d4f0d463e3d0d4
+    pristine_git_object: f1e697416673e14db7f4890c0e1bfcff448ce2de
   docs/models/trackparams.md:
     id: 516394b4d7e6
-    last_write_checksum: sha1:9d27cf849db16ebac4834f29e6e5423d38da8f75
-    pristine_git_object: 2ab698ddd29ad8e254eb9eb66cb487fc0934e402
+    last_write_checksum: sha1:b7f5843914e63232886dcfa5e5e01cdb8040159a
+    pristine_git_object: 55d736bf4922089b3156933234268f3bfacb3b78
   docs/models/trackresponse.md:
     id: 0b465752b71b
     last_write_checksum: sha1:37b7e626597751d93bde3c9e2047bd018bcce2d5
@@ -2321,12 +2341,12 @@ trackedFiles:
     pristine_git_object: 69dd549ec7f5f885101d08dd502e25748183aebf
   docs/sdks/autumn/README.md:
     id: d27c9292a1a3
-    last_write_checksum: sha1:e1d3c9b4a3b03ebd42af4c0f815adf4ab4a7693b
-    pristine_git_object: e71ec2951397e3d106e2edc7ee83fecab2a6765e
+    last_write_checksum: sha1:decbbae10575448052f4e852586b47d224d90c09
+    pristine_git_object: 13cba5b7b8077125d179840131661cd55ebfa228
   docs/sdks/balances/README.md:
     id: 6ca85866f00d
-    last_write_checksum: sha1:8c37443d371db024ee4e2e115fad067fcaab2098
-    pristine_git_object: c65e8f6e2b742922bde3c9c00fb05402ba86a90d
+    last_write_checksum: sha1:07d1fea63932b914a18531602de171745f116368
+    pristine_git_object: bd0430a776b3f0acd2aa0c4f352cf2a3523a8e02
   docs/sdks/billing/README.md:
     id: dc915331dd9d
     last_write_checksum: sha1:79d93af96af3eaff8f2b0c58292cd890a5f1a094
@@ -2393,8 +2413,8 @@ trackedFiles:
     pristine_git_object: 640279bb0265e22047255effeeec245c86c47396
   src/autumn_sdk/balances.py:
     id: 0a15be654dad
-    last_write_checksum: sha1:fc7e79f948e396a0dee7b5a828e3f5a5193f0ed5
-    pristine_git_object: 6395c38100ef042cb524d059dd1a986c553cf26d
+    last_write_checksum: sha1:9282f82cf01e9f7fc258896f3511bee1fead0585
+    pristine_git_object: c74d5183f50f5ae5c19bccb5047a7343f820ee4e
   src/autumn_sdk/basesdk.py:
     id: 8c9c35fe744d
     last_write_checksum: sha1:5d6abacbd251bd806538b19ab9662994bbfc6e24
@@ -2519,6 +2539,10 @@ trackedFiles:
     id: 4dd8168b93d3
     last_write_checksum: sha1:585309f932b912462149332ed81f959856f40e93
     pristine_git_object: e56bbf69c72fd11e9cee0ef824d4e73beeadf5db
+  src/autumn_sdk/models/finalizelockop.py:
+    id: 8ae2484b0916
+    last_write_checksum: sha1:17e8ae7cf4de21f579122bb4672ea7f73c099100
+    pristine_git_object: 068be5d7e841e31324c4755a170ebaf4ece73448
   src/autumn_sdk/models/getentityop.py:
     id: 6a624594b41f
     last_write_checksum: sha1:eac43512ce3ebf427d1fb47f6fba3ce2d1f8a5c0
@@ -2597,8 +2621,8 @@ trackedFiles:
     pristine_git_object: 37c653662988b5cf07e6c4fbca8a71c6d7218acb
   src/autumn_sdk/models/trackop.py:
     id: 2a744315e781
-    last_write_checksum: sha1:6b678a5fe2b9b2cd1a2d690edcec1f53528338ec
-    pristine_git_object: 9c7d0df6601b1d44153685012748d354d22661f4
+    last_write_checksum: sha1:4ca2da3aa576367d068af96b93cf4f27aa9e088d
+    pristine_git_object: 64a5e19604f5856a4ffca00e398ed2b41ed1cb09
   src/autumn_sdk/models/updatebalanceop.py:
     id: cd80d90d4cae
     last_write_checksum: sha1:117fa3e7840c3b04fb9c10dfe30dfae219f712ad
@@ -2629,8 +2653,8 @@ trackedFiles:
     pristine_git_object: 4fde94822b61d8a600b721fcbda99116c0e7a6ad
   src/autumn_sdk/sdk.py:
     id: 9e733b372628
-    last_write_checksum: sha1:bd673b47696a5c5983b90aab5eae0cb1d53160e8
-    pristine_git_object: fad6e0b0279e58ee1a55fd5a813daef574e70ccb
+    last_write_checksum: sha1:a22754bfcc074a201e15b76ba4982128d16f5251
+    pristine_git_object: 285140a4af75927b60618366985919de071d720e
   src/autumn_sdk/sdkconfiguration.py:
     id: e65df2e44fc0
     last_write_checksum: sha1:233b710dff940202f00e389e0c8fa6a33f6ae7b4
@@ -3215,6 +3239,26 @@ examples:
           x-api-version: "2.1"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls"}
+      responses:
+        "200":
+          application/json: {"success": true}
+  finalizeBalance:
+    speakeasy-default-finalize-balance:
+      parameters:
+        header:
+          x-api-version: "2.1"
+      requestBody:
+        application/json: {"lock_id": "lock_abc123", "action": "confirm"}
+      responses:
+        "200":
+          application/json: {"success": true}
+  finalizeLock:
+    speakeasy-default-finalize-lock:
+      parameters:
+        header:
+          x-api-version: "2.1"
+      requestBody:
+        application/json: {"lock_id": "lock_abc123", "action": "confirm"}
       responses:
         "200":
           application/json: {"success": true}

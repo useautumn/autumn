@@ -9,10 +9,14 @@ export const handleListEntities = createRoute({
 		const fullCus = await CusService.getFull({
 			ctx,
 			idOrInternalId: customer_id,
+			withEntities: true,
 		});
 
 		return c.json({
-			list: fullCus.entities,
+			list: fullCus.entities.map(({ spend_limits, ...entity }) => ({
+				...entity,
+				billing_controls: { spend_limits: spend_limits ?? undefined },
+			})),
 		});
 	},
 });
