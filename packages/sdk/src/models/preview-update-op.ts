@@ -439,6 +439,10 @@ export type PreviewUpdateParams = {
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
   cancelAction?: PreviewUpdateCancelAction | undefined;
+  /**
+   * If true, the subscription is updated internally without applying billing changes in Stripe.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 export type PreviewUpdateDiscount = {
@@ -973,6 +977,7 @@ export type PreviewUpdateParams$Outbound = {
   proration_behavior?: string | undefined;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -997,6 +1002,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1008,6 +1014,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

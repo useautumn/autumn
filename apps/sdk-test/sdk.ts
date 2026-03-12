@@ -8,13 +8,9 @@ const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.check({
+await autumn.billing.update({
   customerId: "john",
-  featureId: "chat_messages",
-  lock: {
-    enabled: true,
-    lockId: "test",
-  },
+  noBillingChanges: true,
 });
 
 console.log(JSON.stringify(res, null, 2));

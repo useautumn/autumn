@@ -5588,6 +5588,10 @@ paths:
         auto-generated proration invoice. Only valid for immediate plan changes
         (eg. upgrades or one off plans). (optional)
 
+        @param processorSubscriptionId - The processor subscription ID to link.
+        Use this to attach an existing Stripe subscription instead of creating a
+        new one. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -5929,6 +5933,10 @@ paths:
                   description: Custom line items that override the auto-generated proration
                     invoice. Only valid for immediate plan changes (eg. upgrades
                     or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an
+                    existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -6552,6 +6560,10 @@ paths:
         auto-generated proration invoice. Only valid for immediate plan changes
         (eg. upgrades or one off plans). (optional)
 
+        @param processorSubscriptionId - The processor subscription ID to link.
+        Use this to attach an existing Stripe subscription instead of creating a
+        new one. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -6893,6 +6905,10 @@ paths:
                   description: Custom line items that override the auto-generated proration
                     invoice. Only valid for immediate plan changes (eg. upgrades
                     or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an
+                    existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -7522,6 +7538,9 @@ paths:
         'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a
         pending cancellation. (optional)
 
+        @param noBillingChanges - If true, the subscription is updated
+        internally without applying billing changes in Stripe. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if next action is required).
@@ -7816,6 +7835,10 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying
+                    billing changes in Stripe.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -7967,6 +7990,9 @@ paths:
         'cancel_immediately' cancels now with prorated refund,
         'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a
         pending cancellation. (optional)
+
+        @param noBillingChanges - If true, the subscription is updated
+        internally without applying billing changes in Stripe. (optional)
 
 
         @returns A preview response with line items showing prorated charges or
@@ -8262,6 +8288,10 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying
+                    billing changes in Stripe.
               required:
                 - customer_id
               title: PreviewUpdateParams
@@ -8717,6 +8747,10 @@ paths:
                   description: Custom line items that override the auto-generated proration
                     invoice. Only valid for immediate plan changes (eg. upgrades
                     or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an
+                    existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
               title: SetupPaymentParams

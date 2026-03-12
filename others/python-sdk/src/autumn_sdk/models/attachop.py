@@ -695,6 +695,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[AttachCustomLineItemTypedDict]]
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+    processor_subscription_id: NotRequired[str]
+    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
 
 
 class AttachParams(BaseModel):
@@ -743,6 +745,9 @@ class AttachParams(BaseModel):
     custom_line_items: Optional[List[AttachCustomLineItem]] = None
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
+    processor_subscription_id: Optional[str] = None
+    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -760,6 +765,7 @@ class AttachParams(BaseModel):
                 "plan_schedule",
                 "checkout_session_params",
                 "custom_line_items",
+                "processor_subscription_id",
             ]
         )
         serialized = handler(self)

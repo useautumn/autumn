@@ -4,7 +4,6 @@ import {
 	type CusProductStatus,
 	type FullCustomer,
 } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -30,7 +29,7 @@ export const fixUnexpectedStatuses = async ({
 }) => {
 	const { db, logger, org, env } = ctx;
 
-	const cursoryUpdated = await CusProductService.updateByStripeSubId({
+	await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: stripeSubscription.id,
 		notInStatuses: ALL_STATUSES,
@@ -41,23 +40,23 @@ export const fixUnexpectedStatuses = async ({
 		},
 	});
 
-	if (cursoryUpdated.length > 0) {
-		Sentry.captureException(
-			new Error(
-				`[syncCustomerProductStatus] Cursory update needed - ${cursoryUpdated.length} products had unexpected statuses`,
-			),
-			{
-				extra: {
-					cusProductIds: cursoryUpdated.map((cp) => cp.id),
-					customerId: fullCustomer.id,
-					stripeSubId: stripeSubscription.id,
-					orgId: org.id,
-					env,
-				},
-			},
-		);
-		logger.warn(
-			`[syncCustomerProductStatus] Fixed ${cursoryUpdated.length} products with unexpected statuses`,
-		);
-	}
+	// if (cursoryUpdated.length > 0) {
+	// 	Sentry.captureException(
+	// 		new Error(
+	// 			`[syncCustomerProductStatus] Cursory update needed - ${cursoryUpdated.length} products had unexpected statuses`,
+	// 		),
+	// 		{
+	// 			extra: {
+	// 				cusProductIds: cursoryUpdated.map((cp) => cp.id),
+	// 				customerId: fullCustomer.id,
+	// 				stripeSubId: stripeSubscription.id,
+	// 				orgId: org.id,
+	// 				env,
+	// 			},
+	// 		},
+	// 	);
+	// 	logger.warn(
+	// 		`[syncCustomerProductStatus] Fixed ${cursoryUpdated.length} products with unexpected statuses`,
+	// 	);
+	// }
 };
