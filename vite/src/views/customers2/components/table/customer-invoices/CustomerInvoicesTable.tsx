@@ -14,6 +14,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
 import { CustomerInvoicesColumns } from "./CustomerInvoicesColumns";
+import { SyncInvoiceDialog } from "./SyncInvoiceDialog";
 
 export function CustomerInvoicesTable() {
 	const { customer, products, isLoading } = useCusQuery();
@@ -138,9 +139,11 @@ export function CustomerInvoicesTable() {
 						<Receipt size={16} weight="fill" className="text-subtle" />
 						Invoices
 					</Table.Heading>
-					{/* <Table.Actions>
-						<CustomerInvoicesShowAllButton />
-					</Table.Actions> */}
+					{isAdmin && (
+						<Table.Actions>
+							<SyncInvoiceDialog products={products ?? []} />
+						</Table.Actions>
+					)}
 				</Table.Toolbar>
 				{/* {hasInvoices ? ( */}
 
