@@ -23,6 +23,7 @@ export const BillingParamsBaseV1Schema = z.object({
 		description:
 			"If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.",
 	}),
+
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),

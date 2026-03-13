@@ -5,6 +5,8 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
+import { handleCarryOverBalancesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverBalancesErrors";
+import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverUsagesErrors";
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
@@ -53,7 +55,13 @@ export const handleAttachV2Errors = async ({
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
 
-	// 8. Proration behavior errors (none restrictions)
+	// 8. Carry over balances errors (non-consumable features, downgrade block)
+	handleCarryOverBalancesErrors({ ctx, params, billingContext });
+
+	// 9. Carry over usages errors (non-consumable features, downgrade block)
+	handleCarryOverUsagesErrors({ ctx, params, billingContext });
+
+	// 10. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
 		billingContext,
 		currentCustomerProduct: billingContext.currentCustomerProduct,
@@ -61,14 +69,14 @@ export const handleAttachV2Errors = async ({
 		params,
 	});
 
-	// 9. Subscription ID uniqueness
+	// 11. Subscription ID uniqueness
 	await handleSubscriptionIdErrors({
 		db: ctx.db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		subscriptionIds: [billingContext.externalId],
 	});
 
-	// 9. Custom line items errors (only valid for subscription updates)
+	// 12. Custom line items errors (only valid for subscription updates)
 	handleCustomLineItemsErrors({
 		params,
 		billingContext,
