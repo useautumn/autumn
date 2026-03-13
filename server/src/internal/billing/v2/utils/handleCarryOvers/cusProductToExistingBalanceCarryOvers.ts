@@ -9,8 +9,8 @@ import {
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import {
-	buildCarryOverCustomerEntitlement,
-	buildCarryOverEntitlement,
+	initCarryOverCustomerEntitlement,
+	initCarryOverEntitlement,
 } from "@/internal/billing/v2/utils/handleCarryOvers/initCarryOverEntitlements";
 
 export const cusProductToExistingBalanceCarryOvers = ({
@@ -58,12 +58,12 @@ export const cusProductToExistingBalanceCarryOvers = ({
 				.flatMap(([entityId, entityBalance]) => {
 					const entity = fullCustomer.entities?.find((e) => e.id === entityId);
 					if (!entity) return [];
-					const ent = buildCarryOverEntitlement({
+					const ent = initCarryOverEntitlement({
 						cusEnt,
 						orgId,
 						allowance: entityBalance.balance,
 					});
-					const cusEntRow = buildCarryOverCustomerEntitlement({
+					const cusEntRow = initCarryOverCustomerEntitlement({
 						cusEnt,
 						entitlementId: ent.id,
 						internalCustomerId: customer.internal_id,
@@ -83,12 +83,12 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		const balance = cusEnt.balance ?? 0;
 		if (balance <= 0) continue;
 
-		const ent = buildCarryOverEntitlement({
+		const ent = initCarryOverEntitlement({
 			cusEnt,
 			orgId,
 			allowance: balance,
 		});
-		const cusEntRow = buildCarryOverCustomerEntitlement({
+		const cusEntRow = initCarryOverCustomerEntitlement({
 			cusEnt,
 			entitlementId: ent.id,
 			internalCustomerId: customer.internal_id,

@@ -1,46 +1,49 @@
-import type { AttachParamsV1, FullCustomerEntitlement } from "@autumn/shared";
 import {
+	type AttachParamsV1,
 	deduplicateArray,
+	type ExistingUsagesConfig,
+	type Feature,
+	type FullCusProduct,
 	featureUtils,
-	isBooleanCusEnt,
-	isUnlimitedCusEnt,
+	isBooleanFeature,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Mutates featuresToCarryUsagesFor with consumable feature IDs from carry_over_usages params and returns it. */
-export const applyCarryOverUsageFeatureIds = ({
+/** Returns existing usages config overrides from carry_over_usages params. */
+export const carryOverUsagesToExistingUsagesConfig = ({
+	ctx,
 	params,
-	currentCustomerEntitlements,
-	featuresToCarryUsagesFor,
+	currentCustomerProduct,
 }: {
+	ctx: AutumnContext;
 	params: AttachParamsV1;
-	currentCustomerEntitlements: FullCustomerEntitlement[];
-	featuresToCarryUsagesFor: string[];
-}): string[] => {
+	currentCustomerProduct: FullCusProduct;
+}): ExistingUsagesConfig | undefined => {
 	const carryOverUsages = params.carry_over_usages;
-	if (!carryOverUsages?.enabled) return featuresToCarryUsagesFor;
+	if (!carryOverUsages?.enabled) return undefined;
+
+	if (!carryOverUsages.feature_ids)
+		return {
+			fromCustomerProduct: currentCustomerProduct,
+			carryAllConsumableFeatures: true,
+		};
 
 	const allConsumableFeatureIds = deduplicateArray(
-		currentCustomerEntitlements
+		ctx.features
 			.filter(
-				(ce) =>
-					!isBooleanCusEnt({ cusEnt: ce }) &&
-					!isUnlimitedCusEnt(ce) &&
-					!featureUtils.isAllocated(ce.entitlement.feature),
+				(f: Feature) =>
+					!isBooleanFeature({ feature: f }) && !featureUtils.isAllocated(f),
 			)
-			.map((ce) => ce.entitlement.feature.id),
+			.map((feature) => feature.id),
 	);
 
-	const overrideFeatureIds = carryOverUsages.feature_ids
-		? allConsumableFeatureIds.filter((id) =>
-				carryOverUsages.feature_ids!.includes(id),
-			)
-		: allConsumableFeatureIds;
-
-	featuresToCarryUsagesFor.splice(
-		0,
-		featuresToCarryUsagesFor.length,
-		...overrideFeatureIds,
+	const overrideFeatureIds = allConsumableFeatureIds.filter((id) =>
+		carryOverUsages.feature_ids?.includes(id),
 	);
 
-	return featuresToCarryUsagesFor;
+	return {
+		fromCustomerProduct: currentCustomerProduct,
+		carryAllConsumableFeatures: false,
+		consumableFeatureIdsToCarry: overrideFeatureIds,
+	};
 };

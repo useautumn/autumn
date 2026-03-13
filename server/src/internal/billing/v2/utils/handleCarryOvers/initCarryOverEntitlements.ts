@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
 
-export const buildCarryOverEntitlement = ({
+export const initCarryOverEntitlement = ({
 	cusEnt,
 	orgId,
 	allowance,
@@ -32,7 +32,7 @@ export const buildCarryOverEntitlement = ({
 	rollover: null,
 });
 
-export const buildCarryOverCustomerEntitlement = ({
+export const initCarryOverCustomerEntitlement = ({
 	cusEnt,
 	entitlementId,
 	internalCustomerId,
