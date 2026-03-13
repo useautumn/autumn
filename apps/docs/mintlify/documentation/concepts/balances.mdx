@@ -12,13 +12,10 @@ Balances are created in two ways:
 
 ```mermaid
 flowchart LR
-    F[Feature] -->|added to plan| PF[Plan Feature]
+    F[Feature] -->|added to plan| PF[Plan Item]
     PF -->|plan attached to customer| B[Customer Balance]
     
 ```
-
-Customers can also [Stack Balances](/documentation/customers/balance-stacking) of the same feature from multiple plans (eg, an add-on plan), or different reset intervals (eg, monthly credits and one-time top-ups).
-
 
 ## Core Fields
 
@@ -80,7 +77,7 @@ Non-consumable features don't reset. Instead, they support **proration** when qu
 
 ### Credit Systems
 
-A [credit system](/documentation/pricing/credits) lets multiple features draw from a single shared balance.
+A [credit system](/documentation/modelling-pricing/credit-systems) lets multiple features draw from a single shared balance.
 
 When you check or track usage, you use the underlying feature ID (e.g., `premium_message`), but the balance is deducted from the credit system.
 
@@ -97,9 +94,75 @@ For example, if you have a credit system with a credit cost of 2 credits per API
 A balance can be positive or negative:
 
 - **Positive balance**: Customer has unused allowance remaining
-- **Negative balance**: Customer has used more than their allowance (only possible if [overage](/documentation/pricing/plan-features#priced-features) is enabled)
+- **Negative balance**: Customer has used more than their allowance (only possible if [overage](/documentation/concepts/plan-items#priced-features) is enabled)
 
 <Note>
 Features can only have a negative balance if they have a usage-based price that allows overage. Otherwise, tracking stops when balance reaches 0.
 </Note>
 
+## Balance Stacking
+
+A single feature can have balances from multiple sources - different plans, add-ons, or standalone grants. 
+
+Autumn combines these into a single parent balance while tracking each source separately in a `breakdown` array, grouped by plan and interval.
+
+> **Example** <br />
+> A customer has a feature, `messages`, with the following balances:
+> - Pro plan: 500 messages per month
+> - Top-up add-on: 200 lifetime messages
+>
+> Their total available balance is 700 `messages`.
+
+### The Breakdown Array
+
+Each balance source is tracked separately in the `breakdown` array. This lets you see exactly where the balance came from and how much remains from each source.
+
+```json expandable
+{
+  "balances": {
+    "messages": {
+      "included_usage": 700,
+      "balance": 700,
+      "usage": 0,
+      "breakdown": [
+        {
+          "id": "ent_abc123",
+          "product_id": "pro",
+          "included_usage": 500,
+          "balance": 500,
+          "usage": 0,
+          "interval": "month",
+          "next_reset_at": 1745193600000
+        },
+        {
+          "id": "ent_def456",
+          "product_id": "top-up",
+          "included_usage": 200,
+          "balance": 200,
+          "usage": 0,
+          "interval": "one_off",
+          "next_reset_at": null
+        }
+      ]
+    }
+  }
+}
+```
+
+### Deduction Order
+
+When usage is tracked, Autumn deducts from balances in a specific order based on their reset interval. **Shorter intervals are deducted first** by default.
+
+The order is: `hour` (shortest) > `day` > `week` > `month` > `quarter` > `semi_annual` > `year` > `one_off` (lifetime - never resets).
+
+This ensures that expiring balances are used before permanent ones.
+
+<Note>
+If you need the deduction order reversed (longest interval first), please [contact us](https://discord.gg/STqxY92zuS).
+</Note>
+
+> **Example** <br />
+> Suppose a customer has two balances for messages: 500 monthly and 200 lifetime. They have a total of 700 messages. <br />
+> - The customer uses 400 messages. The monthly balance (the shorter interval) is used up first, leaving 100 in monthly and 200 in lifetime (300 total). <br />
+> - The customer uses another 200 messages. The remaining 100 monthly is depleted, and the next 100 is deducted from the lifetime balance. Now, monthly is 0, lifetime is 100 (100 total). <br />
+> - On the next cycle, the monthly balance resets to 500, and the lifetime remains at 100, for a new total of 600. <br />

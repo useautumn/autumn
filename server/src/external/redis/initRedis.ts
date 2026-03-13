@@ -28,6 +28,7 @@ import {
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
+import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -241,13 +242,23 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 };
 
 /** Create a Redis connection for a specific region */
-const createRedisConnection = (cacheUrl: string): Redis => {
+const createRedisConnection = ({
+	cacheUrl,
+	region,
+}: {
+	cacheUrl: string;
+	region: string;
+}): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
 		family: 4,
 		keepAlive: 10000,
 	});
-	return configureRedisInstance(instance);
+	// instrumentRedis must run first so its defineCommand patch
+	// is in place when configureRedisInstance registers Lua commands.
+	instrumentRedis({ redis: instance, region });
+	configureRedisInstance(instance);
+	return instance;
 };
 
 // Primary Redis instance (current region or default)
@@ -258,7 +269,10 @@ if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const redis = createRedisConnection(primaryCacheUrl!);
+const redis = createRedisConnection({
+	cacheUrl: primaryCacheUrl!,
+	region: currentRegion,
+});
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
@@ -295,7 +309,7 @@ export const getRegionalRedis = (region: string): Redis => {
 
 	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
-	regionalInstance = createRedisConnection(cacheUrl);
+	regionalInstance = createRedisConnection({ cacheUrl, region });
 	regionalRedisInstances.set(region, regionalInstance);
 
 	return regionalInstance;

@@ -3,14 +3,14 @@ title: "Entities"
 description: "Learn how to use feature entities to track balances per separate entity, such as a user or a workspace"
 ---
 
-Feature entities are used to keep track of sub-balances for a feature. For example, you may have a product that allows 500 credits **per user** per month.
+Entities are sub accounts of a customer. For example, you may have a product that allows 500 credits **per user** per month.
 
 ## Product setup
 
 There are two ways you can handle entities depending on your use case.
 
-1. **Entity product items**: this is the simplest way of handling entities, and keeps everything under 1 subscription.
-2. **Attaching a product to an entity**: if an entity can have its own subscription tiers, then you can attach a product directly at the entity level by passing the [entity ID](/api-reference/billing/billingAttach#body-entity-id) into an attach function. Each will be under its own subscription in Stripe with the billing cycles synced.
+1. **Entity-level balances**: this is the simplest way of handling entities, and keeps everything under 1 subscription. This is useful when all entities get the same features and limits.
+2. **Entity-level subscriptions**: if an entity can have its own subscription tiers (ie basic seats, pro seats), then you can attach a product directly at the entity level by passing the [entity ID](/api-reference/billing/billingAttach#body-entity-id) into an attach function. Each will be under its own subscription in Stripe with the billing cycles synced.
 
 <Info>
 **Example**

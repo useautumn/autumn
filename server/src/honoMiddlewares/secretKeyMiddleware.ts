@@ -87,7 +87,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.org = org;
 	ctx.features = features;
 	ctx.env = env;
-	ctx.userId = userId;
+	ctx.userId = userId ?? undefined;
 	ctx.authType = AuthType.SecretKey;
 	if (data?.user) {
 		ctx.user = data.user;
