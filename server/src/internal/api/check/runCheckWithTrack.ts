@@ -4,7 +4,6 @@ import {
 	CheckResponseV3Schema,
 	ErrCode,
 	FeatureType,
-	type FullCustomer,
 	featureUtils,
 	InsufficientBalanceError,
 	InternalError,
@@ -52,6 +51,14 @@ export const runCheckWithTrack = async ({
 		});
 	}
 
+	if (checkData.originalFeature.type === FeatureType.Boolean) {
+		throw new RecaseError({
+			message: "Not allowed to pass in send_event: true for a boolean feature",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const featureDeductions = getTrackFeatureDeductions({
 		ctx,
 		featureId: body.feature_id,
@@ -71,7 +78,6 @@ export const runCheckWithTrack = async ({
 	};
 
 	let allowed = true;
-	let fullCustomer: FullCustomer | undefined;
 
 	try {
 		// Use V2_1 to get ApiBalanceV1 format internally
@@ -135,7 +141,7 @@ export const runCheckWithTrack = async ({
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
-		// lock_id: body.lock?.lock_id,
+		flag: checkData.apiFlag ?? null,
 	});
 
 	return checkResponse;

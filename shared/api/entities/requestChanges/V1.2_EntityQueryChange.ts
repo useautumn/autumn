@@ -6,10 +6,7 @@ import {
 import type { z } from "zod/v4";
 import type { SharedContext } from "../../../types/sharedContext";
 import { CustomerExpand } from "../../customers/components/customerExpand/customerExpand";
-import {
-	type GetEntityQuery,
-	GetEntityQuerySchema,
-} from "../entityOpModels";
+import { type GetEntityQuery, GetEntityQuerySchema } from "../entityOpModels";
 
 /**
  * V1_2_EntityQueryChange: Transforms entity query TO latest format
@@ -60,6 +57,7 @@ export const V1_2_EntityQueryChange = defineVersionChange({
 			...existingExpand,
 			CustomerExpand.SubscriptionsPlan,
 			CustomerExpand.BalancesFeature,
+			CustomerExpand.FlagsFeature,
 			CustomerExpand.PurchasesPlan,
 		] as GetEntityQuery["expand"];
 
