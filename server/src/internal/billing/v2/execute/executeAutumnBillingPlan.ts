@@ -5,6 +5,7 @@ import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutum
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -33,6 +34,7 @@ export const executeAutumnBillingPlan = async ({
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
+		insertCustomerEntitlements,
 	} = autumnBillingPlan;
 
 	if (customEntitlements) {
@@ -56,6 +58,16 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	if (insertCustomerEntitlements) {
+		await CusEntService.insert({
+			ctx,
+			data: insertCustomerEntitlements,
+		});
+	}
+
+	// ctx.logger.debug(
+	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
+	// );
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,

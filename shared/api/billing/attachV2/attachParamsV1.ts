@@ -38,6 +38,37 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.",
 	}),
+
+	carry_over_balances: z
+		.object({
+			enabled: z.boolean().meta({
+				description: "Whether to carry over balances from the previous plan.",
+			}),
+			feature_ids: z.array(z.string()).optional().meta({
+				description:
+					"The IDs of the features to carry over balances from. If left undefined, all features will be carried over.",
+			}),
+		})
+		.optional()
+		.meta({
+			description: "Whether to carry over balances from the previous plan.",
+		}),
+
+	carry_over_usages: z
+		.object({
+			enabled: z.boolean().meta({
+				description: "Whether to carry over usages from the previous plan.",
+			}),
+			feature_ids: z.array(z.string()).optional().meta({
+				description:
+					"The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.",
+			}),
+		})
+		.optional()
+		.meta({
+			description: "Whether to carry over usages from the previous plan.",
+		}),
+
 	no_billing_changes: z.boolean().optional().meta({
 		internal: true,
 	}),
