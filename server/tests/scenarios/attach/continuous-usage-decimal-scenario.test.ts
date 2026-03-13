@@ -14,7 +14,7 @@ import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem";
  * - Track 0.0003 (decimal amount)
  * - Ensure @priceToArrearProrated is correct.
  */
-test.concurrent(`${chalk.yellowBright("billing-units-continuous-use-decimal: track 0.0003 (decimal amount)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("continuous-usage-decimal: track 0.0003 (decimal amount)")}`, async () => {
 	const customerId_one = "billing-units-continuous-use-decimal-1";
 	const customerId_two = "billing-units-continuous-use-decimal-2";
 

@@ -81,7 +81,7 @@ export const billingContextToCheckoutResponse = async ({
 		.toNumber();
 
 	// 4. Get next cycle preview
-	const nextCycle = billingPlanToNextCyclePreview({
+	const { nextCycle } = billingPlanToNextCyclePreview({
 		ctx,
 		billingContext,
 		billingPlan,

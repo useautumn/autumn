@@ -64,7 +64,7 @@ const filterConfigs = [
 	}),
 	createFilterConfig<PreviewLineItem>({
 		schema: PreviewLineItemSchema,
-		omitFields: ["custom", "object", "quantity"],
+		omitFields: ["custom", "object"],
 	}),
 	createFilterConfig<BillingPreviewResponse>({
 		schema: BillingPreviewResponseSchema,

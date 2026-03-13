@@ -11,7 +11,7 @@ import chalk from "chalk";
  * and a customer with a payment method ready for attachment.
  */
 
-test(`${chalk.yellowBright("billing-units-1000: product with 1000 billing units + customer")}`, async () => {
+test(`${chalk.yellowBright("prepaid-1000-billing: product with 1000 billing scale + customer")}`, async () => {
 	const customerId = "billing-units-1000";
 
 	const prepaidMessagesItem = items.prepaidMessages({
