@@ -306,6 +306,7 @@ const prepaid = ({
 	billingUnits = 100,
 	includedUsage = 0,
 	config,
+	prorationConfig,
 	entityFeatureId,
 }: {
 	featureId: string;
@@ -313,16 +314,34 @@ const prepaid = ({
 	billingUnits?: number;
 	includedUsage?: number;
 	config?: ProductItemConfig;
+	prorationConfig?: {
+		onIncrease?: ProductItemConfig["on_increase"];
+		onDecrease?: ProductItemConfig["on_decrease"];
+	};
 	entityFeatureId?: string;
-}): LimitedItem =>
-	constructPrepaidItem({
+}): LimitedItem => {
+	const mergedConfig =
+		config || prorationConfig
+			? {
+					...config,
+					...(prorationConfig?.onIncrease
+						? { on_increase: prorationConfig.onIncrease }
+						: {}),
+					...(prorationConfig?.onDecrease
+						? { on_decrease: prorationConfig.onDecrease }
+						: {}),
+				}
+			: undefined;
+
+	return constructPrepaidItem({
 		featureId,
 		price,
 		billingUnits,
 		includedUsage,
-		config,
+		config: mergedConfig,
 		entityFeatureId,
 	}) as LimitedItem;
+};
 
 /**
  * Prepaid messages - purchase units upfront ($10/unit)
@@ -334,12 +353,17 @@ const prepaidMessages = ({
 	billingUnits = 100,
 	price = 10,
 	config,
+	prorationConfig,
 	entityFeatureId,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
 	price?: number;
 	config?: ProductItemConfig;
+	prorationConfig?: {
+		onIncrease?: ProductItemConfig["on_increase"];
+		onDecrease?: ProductItemConfig["on_decrease"];
+	};
 	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	prepaid({
@@ -348,6 +372,7 @@ const prepaidMessages = ({
 		billingUnits,
 		includedUsage,
 		config,
+		prorationConfig,
 		entityFeatureId,
 	});
 

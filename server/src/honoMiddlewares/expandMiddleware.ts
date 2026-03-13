@@ -8,46 +8,45 @@ type ExpandCarrier = {
 
 interface RequestWithValidation {
 	valid(target: "query"): ExpandCarrier | undefined;
-	valid(target: "json"): ExpandCarrier | undefined;
 }
 
 /**
- * Extracts expand from validated query/body data and sets it in context.
- * Runs AFTER versionedValidator so it reads transformed data.
+ * Reads expand metadata into ctx, using validated query data and raw body data.
  */
 export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
+	const getRawBodyExpand = async ({
+		c,
+	}: {
+		c: Parameters<MiddlewareHandler<HonoEnv>>[0];
+	}) => {
+		if (!["POST", "PUT", "PATCH"].includes(c.req.method)) {
+			return undefined;
+		}
+
+		try {
+			const body = (await c.req.json()) as ExpandCarrier | null;
+			return body ?? undefined;
+		} catch {
+			return undefined;
+		}
+	};
+
 	return async (c, next) => {
 		const req = c.req as typeof c.req & RequestWithValidation;
 
-		// Read from validated data (after version transformations applied)
-		// Fall back to raw query if no validated data exists
+		// Keep query behavior as-is so any query validation/transforms still apply.
 		let validatedQuery: ExpandCarrier | undefined;
 		try {
 			validatedQuery = req.valid("query");
 		} catch {
-			// No validated query data - use raw query
 			validatedQuery = c.req.query() as ExpandCarrier | undefined;
 		}
 
-		// Try to get validated body for POST/PUT/PATCH requests
-		let validatedBody: ExpandCarrier | undefined;
-		if (["POST", "PUT", "PATCH"].includes(c.req.method)) {
-			try {
-				validatedBody = req.valid("json");
-			} catch {
-				// No validated body - try raw body
-				try {
-					validatedBody = await c.req.json();
-				} catch {
-					validatedBody = undefined;
-				}
-			}
-		}
+		const rawBody = await getRawBodyExpand({ c });
 
 		// Precedence: body expand > query expand
-		const expandValue = validatedBody?.expand ?? validatedQuery?.expand;
-		const skipCacheQuery =
-			validatedBody?.skip_cache ?? validatedQuery?.skip_cache;
+		const expandValue = rawBody?.expand ?? validatedQuery?.expand;
+		const skipCacheQuery = rawBody?.skip_cache ?? validatedQuery?.skip_cache;
 
 		const skipCacheValue =
 			(typeof skipCacheQuery === "boolean" && skipCacheQuery === true) ||

@@ -1,3 +1,4 @@
+export { checkoutActions } from "./actions";
 export {
 	deleteCheckoutCache,
 	getCheckoutCache,

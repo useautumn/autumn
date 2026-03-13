@@ -8,12 +8,17 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { UpdateSubscriptionV1Params } from "@autumn/shared";
-import chalk from "chalk";
 import {
-	computeUpdateSubscriptionIntent,
+	type FullCusProduct,
 	UpdateSubscriptionIntent,
-} from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionIntent";
+	type UpdateSubscriptionV1Params,
+} from "@autumn/shared";
+import chalk from "chalk";
+import { setupUpdateSubscriptionIntent } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionIntent";
+
+const customerProduct = {
+	prices: [],
+} as unknown as FullCusProduct;
 
 const baseParams: UpdateSubscriptionV1Params = {
 	customer_id: "cus_test",
@@ -28,7 +33,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				version: 2,
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
@@ -40,7 +49,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				feature_quantities: [{ feature_id: "seats", quantity: 10 }],
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
@@ -51,7 +64,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				version: 0,
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
@@ -64,7 +81,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				feature_quantities: [{ feature_id: "seats", quantity: 5 }],
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdateQuantity);
 		});
@@ -78,7 +99,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				],
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdateQuantity);
 		});
@@ -93,7 +118,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				},
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
@@ -107,7 +136,11 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				},
 			};
 
-			const result = computeUpdateSubscriptionIntent(params);
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});

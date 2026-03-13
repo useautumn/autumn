@@ -40,6 +40,12 @@ export function AttachFooter() {
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
 	const previewData = previewQuery.data;
+	const confirmLabel =
+		formValues.redirectMode === "always"
+			? previewData?.checkout_type === "stripe_checkout"
+				? "Redirect to Stripe Checkout"
+				: "Redirect to Autumn Checkout"
+			: "Attach Product";
 	const isReady =
 		hasProductSelected && !isLoading && !hasError && !!previewData;
 	const showSkeleton = hasProductSelected && isLoading;
@@ -141,7 +147,10 @@ export function AttachFooter() {
 								</span>
 							</TooltipTrigger>
 							{invoiceDisabledReason && (
-								<TooltipContent side="top" className="max-w-(--radix-tooltip-trigger-width)">
+								<TooltipContent
+									side="top"
+									className="max-w-(--radix-tooltip-trigger-width)"
+								>
 									{invoiceDisabledReason}
 								</TooltipContent>
 							)}
@@ -152,7 +161,7 @@ export function AttachFooter() {
 							onClick={handleConfirm}
 							isLoading={isPending}
 						>
-							Attach Product
+							{confirmLabel}
 						</Button>
 					</motion.div>
 				)}

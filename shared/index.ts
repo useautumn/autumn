@@ -6,6 +6,7 @@ export * from "./api/apiUtils";
 // Billing common schemas
 export * from "./api/billing/common/attachPreviewResponse";
 export * from "./api/billing/common/billingBehavior";
+export * from "./api/billing/common/billingPreviewChange";
 export * from "./api/billing/common/billingPreviewResponse";
 export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
