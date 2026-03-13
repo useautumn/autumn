@@ -51,6 +51,10 @@ export function augmentCheckoutParams({
 			| AttachParamsV1["feature_quantities"]
 			| UpdateSubscriptionV1Params["feature_quantities"];
 	}) => {
+		if (!body.feature_quantities) {
+			return originalFeatureQuantities;
+		}
+
 		return body.feature_quantities.map((featureQuantity) => {
 			const originalFeatureQuantity = originalFeatureQuantities?.find(
 				(original) => original.feature_id === featureQuantity.feature_id,
