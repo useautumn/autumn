@@ -302,6 +302,54 @@ const { allowed } = await autumn.check({
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="flag" type="object | null">
+  The feature flag associated with this check. Present for boolean features that the customer has access to via their plan.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for this flag.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_id" type="string | null">
+      The plan ID this flag originates from, or null for standalone flags.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when this flag expires, or null for no expiration.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this flag is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature" type="object">
+      The full feature object if expanded.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The unique identifier for this feature.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="name" type="string">
+          Human-readable name displayed in the dashboard.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
+          Feature type.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="consumable" type="boolean">
+          For metered features: true if usage resets periodically.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="archived" type="boolean">
+          Whether the feature is archived.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="preview" type="object">
   Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
   <Expandable title="properties">
@@ -560,7 +608,8 @@ const { allowed } = await autumn.check({
         "expires_at": null
       }
     ]
-  }
+  },
+  "flag": null
 }
 ```
 </ResponseExample>

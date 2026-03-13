@@ -261,6 +261,10 @@ const response = await autumn.billing.update({
   If true, the subscription is updated internally without applying billing changes in Stripe.
 </DynamicParamField>
 
+<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'">
+  Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' (default) only when payment action is needed, 'never' disables redirects entirely.
+</DynamicParamField>
+
 
 ### Response
 
