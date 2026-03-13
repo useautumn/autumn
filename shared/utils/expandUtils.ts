@@ -60,15 +60,20 @@ export const scopeExpandForCtx = <T extends { expand: string[] }>({
 	prefix,
 }: {
 	ctx: T;
-	prefix: string;
+	prefix: string | string[];
 }): T => {
+	const prefixes = Array.isArray(prefix) ? prefix : [prefix];
+
 	return {
 		...ctx,
 		expand: ctx.expand.flatMap((entry) => {
-			if (entry === prefix) return [""];
-			if (entry.startsWith(`${prefix}.`)) {
-				return [entry.slice(prefix.length + 1)];
+			for (const currentPrefix of prefixes) {
+				if (entry === currentPrefix) return [""];
+				if (entry.startsWith(`${currentPrefix}.`)) {
+					return [entry.slice(currentPrefix.length + 1)];
+				}
 			}
+
 			return [];
 		}),
 	};

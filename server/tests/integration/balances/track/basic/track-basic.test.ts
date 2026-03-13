@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
+import { track } from "@tests/_groups/domains/balances/track";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -188,10 +189,76 @@ test.concurrent(`${chalk.yellowBright("track-basic3: track specific feature_id o
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC4: Track with unlimited balance
+// TRACK-BASIC4: Track boolean feature is a no-op
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("track-basic4: track with unlimited balance")}`, async () => {
+test.concurrent(`${chalk.yellowBright("track-basic4: track boolean feature is a no-op")}`, async () => {
+	const dashboardItem = items.dashboard();
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const freeProd = products.base({
+		id: "free-boolean-track",
+		items: [dashboardItem, messagesItem],
+	});
+
+	const { customerId, autumnV1, autumnV2 } = await initScenario({
+		customerId: "track-basic4-boolean",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerBefore.features[TestFeature.Dashboard]).toMatchObject({
+		balance: 0,
+		usage: 0,
+	});
+	expect(customerBefore.features[TestFeature.Messages]).toMatchObject({
+		balance: 100,
+		usage: 0,
+	});
+
+	const trackRes: TrackResponseV2 = await autumnV2.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Dashboard,
+	});
+
+	expect(trackRes).toMatchObject({
+		customer_id: customerId,
+		value: 1,
+		balance: null,
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customer.features[TestFeature.Dashboard]).toMatchObject({
+		balance: 0,
+		usage: 0,
+	});
+	expect(customer.features[TestFeature.Messages]).toMatchObject({
+		balance: 100,
+		usage: 0,
+	});
+
+	await timeout(2000);
+
+	const customerNonCached = await autumnV1.customers.get<ApiCustomerV3>(
+		customerId,
+		{ skip_cache: "true" },
+	);
+	expect(customerNonCached.features[TestFeature.Dashboard]).toMatchObject({
+		balance: 0,
+		usage: 0,
+	});
+	expect(customerNonCached.features[TestFeature.Messages]).toMatchObject({
+		balance: 100,
+		usage: 0,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-BASIC5: Track with unlimited balance
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("track-basic5: track with unlimited balance")}`, async () => {
 	const unlimitedMessagesItem = items.unlimitedMessages();
 	const freeProd = products.base({
 		id: "free",
@@ -199,7 +266,7 @@ test.concurrent(`${chalk.yellowBright("track-basic4: track with unlimited balanc
 	});
 
 	const { customerId, autumnV1, autumnV2 } = await initScenario({
-		customerId: "track-basic4",
+		customerId: "track-basic5",
 		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
 		actions: [s.attach({ productId: freeProd.id })],
 	});

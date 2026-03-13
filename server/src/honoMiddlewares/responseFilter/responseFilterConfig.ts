@@ -3,6 +3,8 @@ import {
 	ApiBalanceBreakdownV1Schema,
 	type ApiBalanceV1,
 	ApiBalanceV1Schema,
+	type ApiFlagV0,
+	ApiFlagV0Schema,
 	type AttachPreviewResponse,
 	AttachPreviewResponseSchema,
 	type BillingPreviewResponse,
@@ -76,6 +78,10 @@ const filterConfigs = [
 	}),
 	createFilterConfig<PreviewUpdateSubscriptionResponse>({
 		schema: PreviewUpdateSubscriptionResponseSchema,
+		omitFields: ["object"],
+	}),
+	createFilterConfig<ApiFlagV0>({
+		schema: ApiFlagV0Schema,
 		omitFields: ["object"],
 	}),
 ];
