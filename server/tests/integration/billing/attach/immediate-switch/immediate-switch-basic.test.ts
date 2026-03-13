@@ -26,6 +26,7 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Free to Pro
@@ -174,11 +175,14 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 2: pro to premium"
 		usage: 0,
 	});
 
+	await timeout(2000);
+
 	// Verify invoices: pro ($20) + upgrade ($30)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 30,
+		latestInvoiceProductId: premium.id,
 	});
 });
 

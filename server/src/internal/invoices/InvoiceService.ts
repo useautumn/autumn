@@ -14,7 +14,7 @@ import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
 import { Autumn } from "autumn-js";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 
 export const processInvoice = ({
@@ -258,10 +258,18 @@ export class InvoiceService {
 					discounts: invoice.discounts,
 					total: invoice.total,
 					product_ids: invoice.product_ids?.length
-						? invoice.product_ids
+						? sql`CASE
+							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0
+							THEN excluded.product_ids
+							ELSE ${invoices.product_ids}
+						END`
 						: undefined,
 					internal_product_ids: invoice.internal_product_ids?.length
-						? invoice.internal_product_ids
+						? sql`CASE
+							WHEN ${invoices.internal_product_ids} IS NULL OR cardinality(${invoices.internal_product_ids}) = 0
+							THEN excluded.internal_product_ids
+							ELSE ${invoices.internal_product_ids}
+						END`
 						: undefined,
 				},
 			})

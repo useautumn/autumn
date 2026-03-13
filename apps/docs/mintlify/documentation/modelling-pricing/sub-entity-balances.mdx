@@ -1,0 +1,240 @@
+---
+title: Sub-Entity Balances
+description: Grant individual usage limits to entities like users or workspaces under a customer
+---
+
+Sub-entity balances let you set usage limits that apply to each entity (user, workspace, project, etc.) individually under a parent customer. Instead of a single shared pool, each entity gets its own independent balance.
+
+> **Example** <br />
+> A team plan costs $30/seat/month. Each seat gets 50 AI meeting summaries per month. If a team has 5 users, each user has their own balance of 50 summaries — they can't use each other's allocation.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create features for both the entity count (e.g., seats) and the per-entity feature (e.g., summaries). Then link them via `entityFeatureId` on the plan item:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const summaries = feature({
+  id: 'summaries',
+  name: 'Meeting Summaries',
+  type: 'metered',
+  consumable: true,
+});
+
+export const team = plan({
+  id: 'team',
+  name: 'Team',
+  price: { amount: 30, interval: 'month' },
+  items: [
+    item({
+      featureId: seats.id,
+      included: 1,
+      price: {
+        amount: 30,
+        interval: 'month',
+        billingUnits: 1,
+        billingMethod: 'usage_based',
+      },
+    }),
+    item({
+      featureId: summaries.id,
+      included: 50,
+      reset: { interval: 'month' },
+      entityFeatureId: seats.id,
+    }),
+  ],
+});
+```
+
+The `entityFeatureId` links the summaries feature to the seats feature — each seat (entity) will receive its own balance of 50 summaries.
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add the entity feature (e.g., "Seats") — this is the feature that counts entities
+3. Add the per-entity feature (e.g., "Meeting Summaries")
+4. Under **Advanced** for the per-entity feature, set **Entity Feature** to point to the entity feature (e.g., "Seats")
+5. Set the grant amount and reset interval for the per-entity feature
+6. Save the plan
+
+</Tab>
+</Tabs>
+
+## Creating entities
+
+When a new team member joins, create an entity. This automatically increments the entity feature count (e.g., seats) and provisions the per-entity balance:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.entities.create({
+  customerId: "org_123",
+  entityId: "user_alice",
+  featureId: "seats",
+  name: "Alice",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.entities.create(
+    customer_id="org_123",
+    entity_id="user_alice",
+    feature_id="seats",
+    name="Alice",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/entities" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "entity_id": "user_alice",
+    "feature_id": "seats",
+    "name": "Alice"
+  }'
+```
+
+</CodeGroup>
+
+## Checking and tracking per entity
+
+Pass the `entity_id` to `check` and `track` to operate on a specific entity's balance:
+
+#### Check access
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.check({
+  customer_id: "org_123",
+  feature_id: "summaries",
+  entity_id: "user_alice",
+});
+
+console.log(data.allowed);
+console.log(data.balance);
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="org_123",
+    feature_id="summaries",
+    entity_id="user_alice",
+)
+
+print(response.allowed)
+print(response.balance)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "feature_id": "summaries",
+    "entity_id": "user_alice"
+  }'
+```
+
+</CodeGroup>
+
+#### Track usage
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.track({
+  customer_id: "org_123",
+  feature_id: "summaries",
+  entity_id: "user_alice",
+  value: 1,
+});
+```
+
+```python Python
+await autumn.track(
+    customer_id="org_123",
+    feature_id="summaries",
+    entity_id="user_alice",
+    value=1,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "feature_id": "summaries",
+    "entity_id": "user_alice",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+## Customer-level vs entity-level
+
+| Level | How to use | Behavior |
+|-------|-----------|----------|
+| **Entity-level** | Pass `entity_id` in check/track | Checks/deducts from that entity's individual balance |
+| **Customer-level** | Omit `entity_id` | Returns the total balance across all entities |
+
+<Note>
+When tracking at the customer level (without `entity_id`), usage is deducted from the first-created entity to keep entity-level totals in sync with the customer-level total.
+</Note>
+
+## Deleting entities
+
+When a team member leaves, delete the entity. This decrements the entity feature count and removes their balance:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.entities.delete({
+  customerId: "org_123",
+  entityId: "user_alice",
+});
+```
+
+```python Python
+await autumn.entities.delete(
+    customer_id="org_123",
+    entity_id="user_alice",
+)
+```
+
+```bash cURL
+curl -X DELETE "https://api.useautumn.com/v1/entities/user_alice" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "org_123" }'
+```
+
+</CodeGroup>
