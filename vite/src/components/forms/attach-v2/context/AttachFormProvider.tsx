@@ -128,6 +128,7 @@ export function AttachFormProvider({
 		trialCardRequired,
 		planSchedule,
 		billingBehavior,
+		redirectMode,
 		newBillingSubscription,
 		discounts,
 	} = formValues;
@@ -223,6 +224,7 @@ export function AttachFormProvider({
 		trialCardRequired,
 		planSchedule,
 		billingBehavior,
+		redirectMode,
 		newBillingSubscription,
 		discounts,
 	});

@@ -159,7 +159,7 @@ export const handleOneOffFunction = async ({
 		}
 
 		await insertInvoiceFromAttach({
-			db: ctx.db,
+			ctx,
 			attachParams,
 			invoiceId: stripeInvoice.id,
 			logger,
@@ -172,7 +172,7 @@ export const handleOneOffFunction = async ({
 
 	logger.info("3. Creating invoice from stripe");
 	await insertInvoiceFromAttach({
-		db: ctx.db,
+		ctx,
 		attachParams,
 		invoiceId: stripeInvoice.id,
 		logger,

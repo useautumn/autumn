@@ -7,14 +7,14 @@ import { matchRoute } from "./middlewareUtils.js";
  * Route patterns that trigger customer cache deletion
  */
 const cusPrefixedUrls = [
-	{
-		method: "POST",
-		url: "/customers/:customer_id",
-	},
-	{
-		method: "PATCH",
-		url: "/customers/:customer_id",
-	},
+	// {
+	// 	method: "POST",
+	// 	url: "/customers/:customer_id",
+	// },
+	// {
+	// 	method: "PATCH",
+	// 	url: "/customers/:customer_id",
+	// },
 	{
 		method: "DELETE",
 		url: "/customers/:customer_id",
@@ -70,6 +70,7 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		source: "handleCreateBalance",
 	},
 
+	// BILLING ROUTES
 	{
 		method: "POST",
 		url: "/billing.attach",
@@ -82,8 +83,44 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 	},
 	{
 		method: "POST",
+		url: "/billing.setup_payment",
+		source: "setupPayment",
+	},
+	{
+		method: "POST",
+		url: "/billing.multi_attach",
+		source: "multiAttach",
+	},
+
+	// BALANCES
+	{
+		method: "POST",
 		url: "/balances.create",
 		source: "createBalance",
+	},
+	{
+		method: "POST",
+		url: "/balances.delete",
+		source: "createBalance",
+	},
+
+	// ENTITIES
+	{
+		method: "POST",
+		url: "/entities.create",
+		source: "createEntity",
+	},
+	{
+		method: "POST",
+		url: "/entities.delete",
+		source: "deleteEntity",
+	},
+
+	// CUSTOMERS
+	{
+		method: "POST",
+		url: "/customers.delete",
+		source: "deleteCustomer",
 	},
 ];
 

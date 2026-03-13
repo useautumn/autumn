@@ -34,6 +34,7 @@ type FeatureOption = {
 type EntityConfig = {
 	count: number;
 	featureId: string;
+	defaultGroup?: string;
 };
 
 type GeneratedEntity = {
@@ -126,6 +127,9 @@ type BillingAttachAction = {
 	timeout?: number;
 	items?: ProductItem[]; // Custom product items (creates is_custom product)
 	subscriptionId?: string;
+	invoice?: boolean;
+	enableProductImmediately?: boolean;
+	finalizeInvoice?: boolean;
 };
 
 type MultiAttachPlan = {
@@ -311,16 +315,20 @@ const products = ({
  * Entities are auto-generated with ids "ent-1", "ent-2", etc.
  * @param count - Number of entities to create
  * @param featureId - Feature ID for all entities (e.g., TestFeature.Users)
+ * @param defaultGroup - Optional default_group passed via customer_data.internal_options
  * @example s.entities({ count: 2, featureId: TestFeature.Users })
+ * @example s.entities({ count: 1, featureId: TestFeature.Users, defaultGroup: "my-customer" })
  */
 const entities = ({
 	count,
 	featureId,
+	defaultGroup,
 }: {
 	count: number;
 	featureId: string;
+	defaultGroup?: string;
 }): ConfigFn => {
-	return (config) => ({ ...config, entityConfig: { count, featureId } });
+	return (config) => ({ ...config, entityConfig: { count, featureId, defaultGroup } });
 };
 
 /**
@@ -405,7 +413,7 @@ const attach = ({
 	timeout?: number;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-	const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+	const defaultTimeout = concurrency > 1 ? 8000 : 4000;
 	return (config) => ({
 		...config,
 		actions: [
@@ -731,6 +739,9 @@ const billingAttach = ({
 	timeout,
 	items,
 	subscriptionId,
+	invoice,
+	enableProductImmediately,
+	finalizeInvoice,
 }: {
 	productId: string;
 	customerId?: string;
@@ -741,6 +752,9 @@ const billingAttach = ({
 	timeout?: number;
 	items?: ProductItem[];
 	subscriptionId?: string;
+	invoice?: boolean;
+	enableProductImmediately?: boolean;
+	finalizeInvoice?: boolean;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
@@ -749,16 +763,19 @@ const billingAttach = ({
 		actions: [
 			...config.actions,
 			{
-				type: "billingAttach" as const,
-				productId,
-				customerId,
-				entityIndex,
-				options,
-				newBillingSubscription,
-				planSchedule,
-				timeout: timeout ?? defaultTimeout,
-				items,
-				subscriptionId,
+			type: "billingAttach" as const,
+			productId,
+			customerId,
+			entityIndex,
+			options,
+			newBillingSubscription,
+			planSchedule,
+			timeout: timeout ?? defaultTimeout,
+			items,
+			subscriptionId,
+			invoice,
+			enableProductImmediately,
+			finalizeInvoice,
 			},
 		],
 	});
@@ -1222,10 +1239,18 @@ export async function initScenario({
 				"Cannot create entities: customerId is required when using s.entities()",
 			);
 		}
+		const defaultGroup = config.entityConfig?.defaultGroup;
 		const entityDefs = generatedEntities.map((e) => ({
 			id: e.id,
 			name: e.name,
 			feature_id: e.featureId,
+			...(defaultGroup && {
+				customer_data: {
+					internal_options: {
+						default_group: defaultGroup,
+					},
+				},
+			}),
 		}));
 		await autumnV1.entities.create(customerId, entityDefs);
 	}
@@ -1453,19 +1478,22 @@ export async function initScenario({
 				entityId = generatedEntities[action.entityIndex].id;
 			}
 
-			await autumnV1.billing.attach(
-				{
-					customer_id: targetCustomerId,
-					product_id: prefixedProductId,
-					entity_id: entityId,
-					options: action.options,
-					new_billing_subscription: action.newBillingSubscription,
-					plan_schedule: action.planSchedule,
-					items: action.items,
-					subscription_id: action.subscriptionId,
-				},
-				{ timeout: action.timeout },
-			);
+		await autumnV1.billing.attach(
+			{
+				customer_id: targetCustomerId,
+				product_id: prefixedProductId,
+				entity_id: entityId,
+				options: action.options,
+				new_billing_subscription: action.newBillingSubscription,
+				plan_schedule: action.planSchedule,
+				items: action.items,
+				subscription_id: action.subscriptionId,
+				invoice: action.invoice,
+				enable_product_immediately: action.enableProductImmediately,
+				finalize_invoice: action.finalizeInvoice,
+			},
+			{ timeout: action.timeout },
+		);
 		} else if (action.type === "billingMultiAttach") {
 			if (!customerId) {
 				throw new Error(

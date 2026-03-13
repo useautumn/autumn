@@ -1,5 +1,6 @@
 import type {
 	CancelAction,
+	CheckoutMode,
 	Entitlement,
 	FeatureOptions,
 	FreeTrial,
@@ -48,7 +49,7 @@ export interface BillingContext {
 	resetCycleAnchorMs: number | "now";
 
 	// Stripe context
-	stripeCustomer: Stripe.Customer;
+	stripeCustomer?: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
@@ -68,4 +69,8 @@ export interface BillingContext {
 
 	billingVersion: BillingVersion;
 	successUrl?: string;
+
+	skipBillingChanges?: boolean;
+
+	checkoutMode?: CheckoutMode;
 }

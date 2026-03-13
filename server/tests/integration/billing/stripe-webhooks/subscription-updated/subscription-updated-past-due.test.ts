@@ -18,8 +18,10 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductPastDue } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Subscription enters past_due after failed payment at renewal
@@ -76,5 +78,56 @@ test.concurrent(`${chalk.yellowBright("sub.updated: product enters past_due afte
 		latestTotal: 20,
 		latestStatus: "open",
 		latestInvoiceProductId: pro.id,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("sub.updated 2: invoice mode upgrade, product enters past_due after no payment")}`, async () => {
+	const customerId = "sub-updated-2";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 10 });
+	const dashboardItem = items.dashboard();
+	const adminItem = items.adminRights();
+
+	const pro = products.pro({
+		id: "pro",
+		items: [dashboardItem, messagesItem, adminItem],
+	});
+
+	const premium = products.premium({
+		id: "premium",
+		items: [dashboardItem, messagesItem, adminItem],
+	});
+
+	const { autumnV1, testClockId, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.billing.attach({
+				productId: premium.id,
+				invoice: true,
+				enableProductImmediately: true,
+				finalizeInvoice: true,
+			}),
+			// s.removePaymentMethod(),
+			// s.attachPaymentMethod({ type: "fail" }),
+			s.advanceTestClock({ weeks: 6 }),
+		],
+	});
+
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: addMonths(new Date(advancedTo), 1).getTime(),
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductPastDue({
+		customer,
+		productId: premium.id,
 	});
 });

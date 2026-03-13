@@ -12,21 +12,6 @@ The customer details page shows:
 - **Invoices**: See billing history, payment status, amounts and hosted invoice pages
 - **Events**: View feature usage events that have been tracked for the customer
 
-## Enabling a Product
-
-You can enable a product for a customer either via the API using the `billing.attach` method or via the dashboard.
-
-If you're enabling a product for a customer that already has a product, Autumn will handle the upgrade or downgrade between the two products.
-
-#### Custom Product Versions
-
-When attaching a product via the Dashboard, you can optionally make changes to the product items before enabling it. This will create a custom version of the product.
-
-When enabling a custom product, what happens will depend on the changes you made:
-
-- **Changing features only**: this will take effect immediately, provisioning the new features while keeping the same reset dates
-- **Changing pricing**: this will follow Autumn's upgrade and downgrade logic, depending on whether the pricing is higher or lower than the existing product
-
 ## Editing Feature Balances
 
 You can directly edit a customer's feature balances via the dashboard, to give them additional allowance or alter how much they'll be charged for their next invoice (typically in case of errors).

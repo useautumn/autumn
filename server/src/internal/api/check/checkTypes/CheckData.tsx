@@ -1,9 +1,10 @@
-import type { ApiBalanceV1, Feature } from "@autumn/shared";
+import type { ApiBalanceV1, ApiCustomerV5, ApiEntityV2, Feature } from "@autumn/shared";
 
 export interface CheckData {
 	customerId: string;
 	entityId?: string;
 	apiBalance?: ApiBalanceV1;
+	apiSubject: ApiCustomerV5 | ApiEntityV2;
 	originalFeature: Feature;
 	featureToUse: Feature;
 }

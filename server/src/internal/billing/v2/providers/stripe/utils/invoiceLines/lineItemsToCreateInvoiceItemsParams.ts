@@ -1,6 +1,7 @@
 import { atmnToStripeAmount, type LineItem, msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import { lineItemToMetadata } from "./lineItemToMetadata";
+import { lineItemToStripeProductId } from "./lineItemToStripeProductId";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceItemCreateParams
@@ -22,7 +23,9 @@ const toStripeCreateInvoiceItemParams = ({
 	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
 	const lineAmount = discountable ? amount : amountAfterDiscounts;
 	const isNegative = lineAmount < 0;
-	const stripeProductId = context.product.processor?.id ?? "";
+
+	const stripeProductId = lineItemToStripeProductId({ lineItem });
+
 	const shouldUsePriceData = !isNegative && stripeProductId;
 
 	return {

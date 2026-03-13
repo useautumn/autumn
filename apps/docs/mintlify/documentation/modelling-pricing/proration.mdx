@@ -1,0 +1,112 @@
+---
+title: Proration
+description: Handle mid-cycle plan changes with prorated billing
+---
+
+Proration adjusts billing when a customer changes their subscription mid-cycle — whether upgrading to a higher plan, downgrading, or changing the quantity of a non-consumable feature like seats. Autumn calculates the prorated amount and either charges or credits the customer.
+
+> **Example** <br />
+> A customer on a $20/month plan upgrades to a $50/month plan halfway through the billing cycle. They're charged $15 (the prorated difference for the remaining half of the month).
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Add a `proration` config to a priced plan item:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: seats.id,
+      included: 5,
+      price: {
+        amount: 10,
+        interval: 'month',
+        billingUnits: 1,
+        billingMethod: 'usage_based',
+      },
+      proration: {
+        onIncrease: 'prorate',
+        onDecrease: 'prorate',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and edit a plan
+2. Select a **non-consumable** priced feature (e.g., seats)
+3. Under **Advanced**, configure **Proration Behavior**:
+   - **On Increase**: what happens when the customer adds more units
+   - **On Decrease**: what happens when the customer removes units
+4. Save the plan
+
+</Tab>
+</Tabs>
+
+## Proration options
+
+### On Increase
+
+| Option | Behavior |
+|--------|----------|
+| `prorate` | Charge the prorated difference immediately |
+| `charge_immediately` | Charge the full unit price immediately (no proration) |
+
+### On Decrease
+
+| Option | Behavior |
+|--------|----------|
+| `prorate` | Credit the prorated difference immediately |
+| `no_action` | No credit or refund — change takes effect at next billing cycle |
+
+<Note>
+Proration is only relevant for `non-consumable` features (like seats, workspaces). Consumable features (like API requests) are billed based on usage, not quantity changes.
+</Note>
+
+## Plan-level proration
+
+When a customer switches between plans (upgrade or downgrade), Autumn prorates automatically:
+
+- **Upgrades**: the customer is charged the prorated difference between the old and new plan prices for the remainder of the billing cycle. This happens immediately.
+- **Downgrades**: the plan change is **scheduled** to take effect at the end of the current billing period. The customer continues on their current plan until then.
+
+<Info>
+**Example**
+
+A customer is on a $20/month plan and upgrades to a $50/month plan on day 15 of a 30-day cycle.
+
+- Old plan credit: $20 × (15/30) = $10 credit
+- New plan charge: $50 × (15/30) = $25 charge
+- Net charge: $25 - $10 = **$15**
+</Info>
+
+## Usage-based proration
+
+For usage-based prices, when a plan change occurs mid-cycle:
+
+1. Outstanding usage at the **old rate** is billed immediately
+2. The new rate applies going forward for the rest of the billing period
+
+## Stripe integration
+
+Autumn uses Stripe's proration system under the hood. Prorated amounts appear as line items on the customer's next invoice (or are charged immediately, depending on configuration).

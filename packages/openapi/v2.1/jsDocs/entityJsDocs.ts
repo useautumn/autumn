@@ -2,6 +2,7 @@ import {
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
 
@@ -67,4 +68,33 @@ export const deleteEntityJsDoc = createJSDocDescription({
 	],
 	methodName: "entities.delete",
 	returns: "A success flag indicating the entity was deleted.",
+});
+
+export const updateEntityJsDoc = createJSDocDescription({
+	description:
+		"Updates an existing entity and returns the refreshed entity object.",
+	whenToUse:
+		"Use this to change entity billing controls or other mutable entity fields after the entity has already been created.",
+	body: UpdateEntityParamsSchema,
+	examples: [
+		example({
+			description: "Update a seat entity's billing controls",
+			values: {
+				customerId: "cus_123",
+				entityId: "seat_42",
+				billingControls: {
+					spendLimits: [
+						{
+							featureId: "messages",
+							enabled: true,
+							overageLimit: 25,
+						},
+					],
+				},
+			},
+		}),
+	],
+	methodName: "entities.update",
+	returns:
+		"The updated entity object including its current subscriptions, purchases, and balances.",
 });

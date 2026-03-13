@@ -2,6 +2,88 @@
 Browse our [Examples](/examples) for guides on setting up credit systems, top ups and other common pricing models.
 </Tip>
 <Tabs>
+<Tab title="CLI">
+
+Run the following command in your root directory:
+
+<CodeGroup>
+```bash bun
+bunx atmn init
+```
+```bash npm
+npx atmn init
+```
+```bash pnpm
+pnpm dlx atmn init
+```
+</CodeGroup>
+
+This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/cli/config) to build your own.
+
+```typescript autumn.config.ts [expandable]
+import { feature, item, plan } from "atmn";
+
+// Features
+export const messages = feature({
+  id: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
+});
+
+// Plans
+export const free = plan({
+  id: "free",
+  name: "Free",
+  autoEnable: true,
+  items: [
+    // 5 messages per month
+    item({
+      featureId: messages.id,
+      included: 5,
+      reset: { interval: "month" },
+    }),
+  ],
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: {
+    amount: 20,
+    interval: "month",
+  },
+  items: [
+    // 100 messages per month
+    item({
+      featureId: messages.id,
+      included: 100,
+      reset: { interval: "month" },
+    }),
+  ],
+});
+```
+
+Then, push your changes to Autumn's sandbox environment.
+
+<CodeGroup>
+```bash bun
+bunx atmn push
+```
+```bash npm
+npx atmn push
+```
+```bash pnpm
+pnpm dlx atmn push
+```
+</CodeGroup>
+
+<Tip>
+  If you already have products created in the dashboard, run `atmn pull` to
+  pull them into your local config.
+</Tip>
+
+</Tab>
 <Tab title="Dashboard">
 Create your [Autumn account](https://app.useautumn.com/), and the Free and Pro plans in the [Plans](https://app.useautumn.com/products) tab.
 <AccordionGroup>
@@ -53,77 +135,6 @@ Create your [Autumn account](https://app.useautumn.com/), and the Free and Pro p
   </Accordion>
 </AccordionGroup>
 </Tab>
-<Tab title="CLI">
-
-<Info>
-The CLI is in beta. The dashboard is the source of truth for plans and features and has the most up-to-date configurations.
-</Info>
-
-Run the following command in your root directory:
-
-```bash
-npx atmn init
-```
-
-This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/api-reference/cli/config) to build your own.
-
-```typescript autumn.config.ts [expandable]
-import { feature, plan, planItem } from "atmn";
-
-// Features
-export const messages = feature({
-  id: "messages",
-  name: "Messages",
-  type: "metered",
-  consumable: true,
-});
-
-// Plans
-export const free = plan({
-  id: "free",
-  name: "Free",
-  autoEnable: true,
-  items: [
-    // 5 messages per month
-    planItem({
-      featureId: messages.id,
-      included: 5,
-      reset: { interval: "month" },
-    }),
-  ],
-});
-
-export const pro = plan({
-  id: "pro",
-  name: "Pro",
-  price: {
-    amount: 20,
-    interval: "month",
-  },
-  items: [
-    // 100 messages per month
-    planItem({
-      featureId: messages.id,
-      included: 100,
-      reset: { interval: "month" },
-    }),
-  ],
-});
-```
-
-Then, push your changes to Autumn's sandbox environment.
-
-```bash
-npx atmn push
-```
-
-<Tip>
-  If you already have products created in the dashboard, run `npx atmn pull` to
-  pull them into your local config.
-</Tip>
-
-</Tab>
 
 
 </Tabs>
-

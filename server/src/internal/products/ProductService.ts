@@ -28,7 +28,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
-import { getLatestProducts } from "./productUtils";
+import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 
 const parseFreeTrials = ({
@@ -131,12 +131,14 @@ export class ProductService {
 		env,
 		group,
 		inIds,
+		onlyFree = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
 		group?: string;
 		inIds?: string[];
+		onlyFree?: boolean;
 	}) {
 		const prods = (await db.query.products.findMany({
 			where: and(
@@ -166,6 +168,12 @@ export class ProductService {
 		parseFreeTrials({ products: prods });
 
 		const latestProducts = getLatestProducts(prods);
+
+		if (onlyFree) {
+			return latestProducts.filter((p) =>
+				isFreeProduct(p.prices),
+			) as FullProduct[];
+		}
 
 		return latestProducts as FullProduct[];
 	}
@@ -524,6 +532,32 @@ export class ProductService {
 		await db
 			.delete(products)
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
+	}
+
+	/** Deletes products in batches to avoid locking all rows at once. */
+	static async safeDeleteByOrgId({
+		db,
+		orgId,
+		env,
+		batchSize = 250,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		batchSize?: number;
+	}) {
+		while (true) {
+			const batch = await db
+				.select({ internal_id: products.internal_id })
+				.from(products)
+				.where(and(eq(products.org_id, orgId), eq(products.env, env)))
+				.limit(batchSize);
+
+			if (batch.length === 0) break;
+
+			const ids = batch.map((r) => r.internal_id);
+			await db.delete(products).where(inArray(products.internal_id, ids));
+		}
 	}
 
 	static async getDeletionText({

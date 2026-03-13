@@ -40,6 +40,7 @@ export const customerProductToArrearLineItems = ({
 		includePeriodDescription?: boolean;
 		updateNextResetAt?: boolean;
 		discountable?: boolean;
+		includeZeroAmounts?: boolean;
 	};
 }): {
 	lineItems: LineItem[];
@@ -94,7 +95,9 @@ export const customerProductToArrearLineItems = ({
 			direction: "charge",
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
-			currency: orgToCurrency({ org: ctx.org }),
+			currency:
+				billingContext.stripeCustomer?.currency ??
+				orgToCurrency({ org: ctx.org }),
 			customerProduct,
 			customerPrice: cusPrice,
 		};
@@ -109,7 +112,7 @@ export const customerProductToArrearLineItems = ({
 		});
 
 		// Only include line items with non-zero amounts
-		if (lineItem.amount !== 0) {
+		if (options.includeZeroAmounts || lineItem.amount !== 0) {
 			lineItems.push(lineItem);
 		}
 

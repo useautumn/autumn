@@ -36,7 +36,7 @@ export const setupAllocatedInvoiceContext = async ({
 		ctx,
 		params: {
 			customer_id: oldFullCustomer.id ?? oldFullCustomer.internal_id,
-			entity_id: oldFullCustomer.entity?.id,
+			entity_id: oldFullCustomer.entity?.id ?? undefined,
 		},
 	});
 

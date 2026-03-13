@@ -7,12 +7,14 @@ RETURNS TABLE (
   deducted numeric,
   new_balance numeric,
   new_entities jsonb,
-  new_adjustment numeric
+  new_adjustment numeric,
+  mutation_logs jsonb
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
   -- Extract parameters from JSONB
+  customer_entitlement_id text := NULLIF(params->>'customer_entitlement_id', '');
   current_balance numeric := (params->>'current_balance')::numeric;
   current_entities jsonb := COALESCE(params->'current_entities', '{}'::jsonb);
   current_adjustment numeric := COALESCE((params->>'current_adjustment')::numeric, 0);
@@ -21,6 +23,10 @@ DECLARE
   allow_negative boolean := COALESCE((params->>'allow_negative')::boolean, false);
   has_entity_scope boolean := COALESCE((params->>'has_entity_scope')::boolean, false);
   target_entity_id text := NULLIF(params->>'target_entity_id', '');
+  available_overage numeric := CASE
+    WHEN params->>'available_overage' IS NULL THEN NULL
+    ELSE (params->>'available_overage')::numeric
+  END;
   min_balance numeric := CASE 
     WHEN params->>'min_balance' IS NULL THEN NULL
     ELSE (params->>'min_balance')::numeric
@@ -48,6 +54,8 @@ DECLARE
   entity_adjustment numeric;
   ceiling numeric;
   max_addable numeric;
+  remaining_available_overage numeric;
+  mutation_logs_json jsonb := '[]'::jsonb;
 BEGIN
   
   -- Initialize return values
@@ -58,6 +66,7 @@ BEGIN
   -- ============================================================================
   IF has_entity_scope AND target_entity_id IS NULL THEN
     remaining := amount_to_deduct * credit_cost;
+    remaining_available_overage := available_overage;
     result_entities := current_entities;
     deducted_amount := 0;
     
@@ -87,13 +96,15 @@ BEGIN
           deduct_amount := remaining;
         END IF;
       ELSIF allow_negative THEN
-        IF min_balance IS NULL THEN
+        IF available_overage IS NOT NULL THEN
+          deduct_amount := LEAST(remaining, remaining_available_overage);
+        ELSIF min_balance IS NULL THEN
           deduct_amount := remaining;
         ELSE
           deduct_amount := LEAST(remaining, entity_balance - min_balance);
         END IF;
       ELSE
-        deduct_amount := LEAST(entity_balance, remaining);
+        deduct_amount := LEAST(GREATEST(entity_balance, 0), remaining);
       END IF;
       
       IF deduct_amount != 0 THEN
@@ -112,9 +123,30 @@ BEGIN
             to_jsonb(COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0) - deduct_amount)
           );
         END IF;
+
+        mutation_logs_json := mutation_logs_json || jsonb_build_array(
+          jsonb_build_object(
+            'target_type', 'customer_entitlement',
+            'customer_entitlement_id', customer_entitlement_id,
+            'rollover_id', NULL,
+            'entity_id', entity_key,
+            'credit_cost', credit_cost,
+            'balance_delta', -deduct_amount,
+            'adjustment_delta', CASE WHEN alter_granted_balance THEN -deduct_amount ELSE 0 END,
+            'usage_delta', 0,
+            'value_delta', deduct_amount / credit_cost
+          )
+        );
         
         remaining := remaining - deduct_amount;
         deducted_amount := deducted_amount + deduct_amount;
+
+        IF remaining_available_overage IS NOT NULL AND deduct_amount > 0 THEN
+          remaining_available_overage := GREATEST(
+            0,
+            remaining_available_overage - deduct_amount
+          );
+        END IF;
       END IF;
     END LOOP;
     
@@ -145,13 +177,18 @@ BEGIN
         deducted_amount := amount_to_deduct * credit_cost;
       END IF;
     ELSIF allow_negative THEN
-      IF min_balance IS NULL THEN
+      IF available_overage IS NOT NULL THEN
+        deducted_amount := LEAST(amount_to_deduct * credit_cost, available_overage);
+      ELSIF min_balance IS NULL THEN
         deducted_amount := amount_to_deduct * credit_cost;
       ELSE
         deducted_amount := LEAST(amount_to_deduct * credit_cost, entity_balance - min_balance);
       END IF;
     ELSE
-      deducted_amount := LEAST(entity_balance, amount_to_deduct * credit_cost);
+      deducted_amount := LEAST(
+        GREATEST(entity_balance, 0),
+        amount_to_deduct * credit_cost
+      );
     END IF;
     
     IF deducted_amount != 0 THEN
@@ -170,6 +207,20 @@ BEGIN
           to_jsonb(COALESCE((result_entities->target_entity_id->>'adjustment')::numeric, 0) - deducted_amount)
         );
       END IF;
+
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', customer_entitlement_id,
+          'rollover_id', NULL,
+          'entity_id', target_entity_id,
+          'credit_cost', credit_cost,
+          'balance_delta', -deducted_amount,
+          'adjustment_delta', CASE WHEN alter_granted_balance THEN -deducted_amount ELSE 0 END,
+          'usage_delta', 0,
+          'value_delta', deducted_amount / credit_cost
+        )
+      );
     ELSE
       result_entities := current_entities;
     END IF;
@@ -198,14 +249,19 @@ BEGIN
       END IF;
     ELSIF allow_negative THEN
       -- Pass 2: Can go negative (respecting min_balance)
-      IF min_balance IS NULL THEN
+      IF available_overage IS NOT NULL THEN
+        deducted_amount := LEAST(amount_to_deduct * credit_cost, available_overage);
+      ELSIF min_balance IS NULL THEN
         deducted_amount := amount_to_deduct * credit_cost;
       ELSE
         deducted_amount := LEAST(amount_to_deduct * credit_cost, current_balance - min_balance);
       END IF;
     ELSE
       -- Pass 1: Only deduct down to zero
-      deducted_amount := LEAST(current_balance, amount_to_deduct * credit_cost);
+      deducted_amount := LEAST(
+        GREATEST(current_balance, 0),
+        amount_to_deduct * credit_cost
+      );
     END IF;
     
     result_balance := current_balance - deducted_amount;
@@ -215,10 +271,31 @@ BEGIN
     IF alter_granted_balance THEN
       result_adjustment := result_adjustment - deducted_amount;
     END IF;
+
+    IF deducted_amount != 0 THEN
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', customer_entitlement_id,
+          'rollover_id', NULL,
+          'entity_id', NULL,
+          'credit_cost', credit_cost,
+          'balance_delta', -deducted_amount,
+          'adjustment_delta', CASE WHEN alter_granted_balance THEN -deducted_amount ELSE 0 END,
+          'usage_delta', 0,
+          'value_delta', deducted_amount / credit_cost
+        )
+      );
+    END IF;
   END IF;
   
   -- Return results
-  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_adjustment;
+  RETURN QUERY
+  SELECT
+    deducted_amount,
+    result_balance,
+    result_entities,
+    result_adjustment,
+    mutation_logs_json;
 END;
 $$;
-

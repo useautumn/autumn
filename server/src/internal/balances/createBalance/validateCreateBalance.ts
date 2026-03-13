@@ -1,5 +1,6 @@
 import {
 	type CreateBalanceParamsV0,
+	ErrCode,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
@@ -7,6 +8,7 @@ import {
 	ValidateCreateBalanceParamsSchema,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase";
 
 export const validateCreateBalanceParams = async ({
@@ -36,6 +38,38 @@ export const validateCreateBalanceParams = async ({
 	if (entity && feature.id === entity.feature_id) {
 		throw new RecaseError({
 			message: `Cannot give an entity a balance of its own feature type`,
+		});
+	}
+
+	if (params.balance_id) {
+		await validateBalanceIdUnique({
+			ctx,
+			balanceId: params.balance_id,
+			internalCustomerId: fullCustomer.internal_id,
+		});
+	}
+};
+
+const validateBalanceIdUnique = async ({
+	ctx,
+	balanceId,
+	internalCustomerId,
+}: {
+	ctx: AutumnContext;
+	balanceId: string;
+	internalCustomerId: string;
+}) => {
+	const existing = await CusEntService.get({
+		ctx,
+		externalId: balanceId,
+		internalCustomerId,
+	});
+
+	if (existing) {
+		throw new RecaseError({
+			message: `balance_id '${balanceId}' is already in use for this customer`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 409,
 		});
 	}
 };

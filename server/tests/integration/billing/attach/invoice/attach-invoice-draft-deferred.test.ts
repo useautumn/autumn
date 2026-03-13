@@ -24,9 +24,10 @@ import {
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
+import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -452,6 +453,8 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 4: one-off")}`, 
 	await completeInvoiceCheckout({
 		url: finalizedInvoice.hosted_invoice_url!,
 	});
+
+	await timeout(10000);
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 

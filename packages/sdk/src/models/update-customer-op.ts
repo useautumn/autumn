@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
@@ -15,6 +15,92 @@ import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type UpdateCustomerGlobals = {
   xApiVersion?: string | undefined;
+};
+
+/**
+ * The time interval for the purchase limit window.
+ */
+export const UpdateCustomerIntervalRequest = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type UpdateCustomerIntervalRequest = ClosedEnum<
+  typeof UpdateCustomerIntervalRequest
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type UpdateCustomerPurchaseLimitRequest = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: UpdateCustomerIntervalRequest;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type UpdateCustomerAutoTopupRequest = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
+};
+
+export type UpdateCustomerSpendLimitRequest = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the customer (auto top-ups, etc.)
+ */
+export type UpdateCustomerBillingControlsRequest = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<UpdateCustomerAutoTopupRequest> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<UpdateCustomerSpendLimitRequest> | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -47,6 +133,10 @@ export type UpdateCustomerParams = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Billing controls for the customer (auto top-ups, etc.)
+   */
+  billingControls?: UpdateCustomerBillingControlsRequest | undefined;
+  /**
    * Your unique identifier for the customer
    */
   newCustomerId?: string | undefined;
@@ -65,6 +155,92 @@ export const UpdateCustomerEnv = {
 export type UpdateCustomerEnv = OpenEnum<typeof UpdateCustomerEnv>;
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const UpdateCustomerIntervalResponse = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type UpdateCustomerIntervalResponse = OpenEnum<
+  typeof UpdateCustomerIntervalResponse
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type UpdateCustomerPurchaseLimitResponse = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: UpdateCustomerIntervalResponse;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type UpdateCustomerAutoTopupResponse = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: UpdateCustomerPurchaseLimitResponse | undefined;
+};
+
+export type UpdateCustomerSpendLimitResponse = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the customer (auto top-ups, etc.)
+ */
+export type UpdateCustomerBillingControlsResponse = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<UpdateCustomerAutoTopupResponse> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<UpdateCustomerSpendLimitResponse> | undefined;
+};
+
+/**
  * Current status of the subscription.
  */
 export const UpdateCustomerStatus = {
@@ -77,6 +253,10 @@ export const UpdateCustomerStatus = {
 export type UpdateCustomerStatus = OpenEnum<typeof UpdateCustomerStatus>;
 
 export type UpdateCustomerSubscription = {
+  /**
+   * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+   */
+  id: string;
   plan?: Plan | undefined;
   /**
    * The unique identifier of the subscribed plan.
@@ -189,6 +369,10 @@ export type UpdateCustomerResponse = {
    */
   sendEmailReceipts: boolean;
   /**
+   * Billing controls for the customer (auto top-ups, etc.)
+   */
+  billingControls: UpdateCustomerBillingControlsResponse;
+  /**
    * Active and scheduled recurring plans that this customer has attached.
    */
   subscriptions: Array<UpdateCustomerSubscription>;
@@ -203,6 +387,158 @@ export type UpdateCustomerResponse = {
 };
 
 /** @internal */
+export const UpdateCustomerIntervalRequest$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerIntervalRequest
+> = z.enum(UpdateCustomerIntervalRequest);
+
+/** @internal */
+export type UpdateCustomerPurchaseLimitRequest$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const UpdateCustomerPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerPurchaseLimitRequest$Outbound,
+  UpdateCustomerPurchaseLimitRequest
+> = z.pipe(
+  z.object({
+    interval: UpdateCustomerIntervalRequest$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function updateCustomerPurchaseLimitRequestToJSON(
+  updateCustomerPurchaseLimitRequest: UpdateCustomerPurchaseLimitRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerPurchaseLimitRequest$outboundSchema.parse(
+      updateCustomerPurchaseLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerAutoTopupRequest$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: UpdateCustomerPurchaseLimitRequest$Outbound | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerAutoTopupRequest$Outbound,
+  UpdateCustomerAutoTopupRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => UpdateCustomerPurchaseLimitRequest$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+    });
+  }),
+);
+
+export function updateCustomerAutoTopupRequestToJSON(
+  updateCustomerAutoTopupRequest: UpdateCustomerAutoTopupRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerAutoTopupRequest$outboundSchema.parse(
+      updateCustomerAutoTopupRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerSpendLimitRequest$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitRequest$Outbound,
+  UpdateCustomerSpendLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function updateCustomerSpendLimitRequestToJSON(
+  updateCustomerSpendLimitRequest: UpdateCustomerSpendLimitRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerSpendLimitRequest$outboundSchema.parse(
+      updateCustomerSpendLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerBillingControlsRequest$Outbound = {
+  auto_topups?: Array<UpdateCustomerAutoTopupRequest$Outbound> | undefined;
+  spend_limits?: Array<UpdateCustomerSpendLimitRequest$Outbound> | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerBillingControlsRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerBillingControlsRequest$Outbound,
+  UpdateCustomerBillingControlsRequest
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => UpdateCustomerAutoTopupRequest$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => UpdateCustomerSpendLimitRequest$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function updateCustomerBillingControlsRequestToJSON(
+  updateCustomerBillingControlsRequest: UpdateCustomerBillingControlsRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerBillingControlsRequest$outboundSchema.parse(
+      updateCustomerBillingControlsRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerParams$Outbound = {
   customer_id: string;
   name?: string | null | undefined;
@@ -211,6 +547,7 @@ export type UpdateCustomerParams$Outbound = {
   metadata?: { [k: string]: any } | null | undefined;
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
+  billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
 };
 
@@ -227,6 +564,9 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.nullable(z.record(z.string(), z.any()))),
     stripeId: z.optional(z.nullable(z.string())),
     sendEmailReceipts: z.optional(z.boolean()),
+    billingControls: z.optional(
+      z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
+    ),
     newCustomerId: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -234,6 +574,7 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
       customerId: "customer_id",
       stripeId: "stripe_id",
       sendEmailReceipts: "send_email_receipts",
+      billingControls: "billing_controls",
       newCustomerId: "new_customer_id",
     });
   }),
@@ -254,6 +595,132 @@ export const UpdateCustomerEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerEnv);
 
 /** @internal */
+export const UpdateCustomerIntervalResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerIntervalResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerIntervalResponse);
+
+/** @internal */
+export const UpdateCustomerPurchaseLimitResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerPurchaseLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: UpdateCustomerIntervalResponse$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function updateCustomerPurchaseLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerPurchaseLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerPurchaseLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerPurchaseLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerAutoTopupResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerAutoTopupResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => UpdateCustomerPurchaseLimitResponse$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+    });
+  }),
+);
+
+export function updateCustomerAutoTopupResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerAutoTopupResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerAutoTopupResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerAutoTopupResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function updateCustomerSpendLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerSpendLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerSpendLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerSpendLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerBillingControlsResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => UpdateCustomerAutoTopupResponse$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => UpdateCustomerSpendLimitResponse$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+    });
+  }),
+);
+
+export function updateCustomerBillingControlsResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerBillingControlsResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerBillingControlsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerBillingControlsResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerStatus$inboundSchema: z.ZodMiniType<
   UpdateCustomerStatus,
   unknown
@@ -265,6 +732,7 @@ export const UpdateCustomerSubscription$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     plan: types.optional(Plan$inboundSchema),
     plan_id: types.string(),
     auto_enable: types.boolean(),
@@ -351,6 +819,9 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     env: UpdateCustomerEnv$inboundSchema,
     metadata: z.record(z.string(), z.any()),
     send_email_receipts: types.boolean(),
+    billing_controls: z.lazy(() =>
+      UpdateCustomerBillingControlsResponse$inboundSchema
+    ),
     subscriptions: z.array(
       z.lazy(() => UpdateCustomerSubscription$inboundSchema),
     ),
@@ -362,6 +833,7 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
       "created_at": "createdAt",
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
+      "billing_controls": "billingControls",
     });
   }),
 );

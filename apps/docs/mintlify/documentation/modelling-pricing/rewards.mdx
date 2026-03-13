@@ -1,0 +1,218 @@
+---
+title: Rewards and Referrals
+description: Learn how to use rewards and referrals to incentivize your customers.
+---
+
+Rewards like discounts and free products are a powerful way to incentivize customers. You can give these rewards directly via promo codes, or automatically through a referral program.
+
+## Rewards
+
+Autumn's rewards are an enhanced layer over Stripe's coupons. You can create:
+
+- **Percentage discounts** — a percentage off invoices
+- **Fixed discounts** — a fixed amount off invoices
+- **Free products** — grant a free add-on product to customers
+
+### Setting up
+
+1. Navigate to the **Products** page, and click the **Rewards** tab
+2. Click **"+ Reward"**
+3. Fill out the fields: Name, Promo Code, Discount value
+4. Select which products it should apply to
+5. Click **"Create"**
+
+### Free products
+
+You can give away any add-on product to a customer with a promo code.
+
+> **Example** <br />
+> A customer has access to 50 AI messages per month. They redeem a code for a free booster pack of an additional 100 messages per month.
+
+To create a free product reward, under reward **Type**, select "Free Product". Then choose the add-on product from the selector. You must have at least one add-on product created before doing this.
+
+<Warning>
+  Free product promo codes cannot be redeemed through Stripe's checkout page.
+  Use the redeem endpoint instead.
+</Warning>
+
+## Referral Programs
+
+Referral programs automatically grant rewards to customers who bring on new customers. You define the program in the Dashboard, then implement it in your application with just two API calls.
+
+### Setting up
+
+1. Navigate to the **Products** page, and click the **Rewards** tab
+2. Click **"+ Referral Program"**
+3. Give the program an **ID** (you'll use this in the API) and select a **reward** to grant
+4. Choose the **trigger event** — when the new customer signs up, or when they purchase a product
+5. Set a **max redemptions** limit (how many times one referrer can be rewarded)
+6. Choose **who receives the reward** — the referrer only, or both the referrer and the new customer
+
+### Referral program configuration
+
+| Field | Description |
+|-------|-------------|
+| Program ID | Identifier used to refer to the program in the API |
+| Reward | The reward to grant (discount or free product) |
+| Trigger event | `customer_creation` (on sign up) or `checkout` (on product purchase) |
+| Products | Which products trigger the reward (checkout trigger only) |
+| Exclude trial | Skip triggering for trial subscriptions |
+| Max redemptions | Limit how many times one referrer's code can be used |
+| Received by | `referrer` only, or `all` (both referrer and redeemer) |
+
+### Creating a referral code
+
+Generate a referral code for the customer making the referral:
+
+<CodeGroup>
+
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+const { data, refetch } = useReferrals({ programId: "free-month" });
+
+await refetch();
+
+console.log(data?.code); // "4EXWV1"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.createCode({
+  customerId: "user_123",
+  programId: "free-month",
+});
+
+console.log(response.code); // "4EXWV1"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.create_code(
+    customer_id="user_123",
+    program_id="free-month",
+)
+print(response.code)  # "4EXWV1"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.create_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "program_id": "free-month"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="Response">
+```json
+{
+  "code": "4EXWV1",
+  "customerId": "user_123",
+  "createdAt": 1744797427206
+}
+```
+</Expandable>
+
+### Redeeming a referral code
+
+From the new customer, redeem the referral code:
+
+<CodeGroup>
+
+```jsx React
+import { useReferrals } from "autumn-js/react";
+
+const { redeemCode } = useReferrals({ programId: "free-month" });
+
+const response = await redeemCode({ code: "4EXWV1" });
+
+console.log(response.rewardId); // "free-month"
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.referrals.redeemCode({
+  code: "4EXWV1",
+  customerId: "new_user_123",
+});
+
+console.log(response.rewardId); // "free-month"
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.referrals.redeem_code(
+    code="4EXWV1",
+    customer_id="new_user_123",
+)
+print(response.reward_id)  # "free-month"
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/referrals.redeem_code' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "code": "4EXWV1",
+    "customer_id": "new_user_123"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="Response">
+```json
+{
+  "id": "rr_2vo3Jt9oqF6XgAlWI1MjYktv4dB",
+  "customerId": "new_user_123",
+  "rewardId": "free-month",
+  "referrer": {
+    "id": "user_123",
+    "name": "Alice",
+    "email": "alice@example.com",
+    "createdAt": 1744700000000
+  },
+  "redeemer": {
+    "id": "new_user_123",
+    "name": "Bob",
+    "email": "bob@example.com",
+    "createdAt": 1744797427206
+  }
+}
+```
+</Expandable>
+
+### How it works
+
+1. A referrer generates a unique code via the [create code](/api-reference/referrals/createReferralCode) endpoint
+2. A new customer redeems the code via the [redeem code](/api-reference/referrals/redeemReferralCode) endpoint
+3. If the trigger is `customer_creation`, the reward is applied immediately on redemption
+4. If the trigger is `checkout`, the reward is applied when the redeemer purchases an eligible product
+5. The reward is granted to the referrer only, or both referrer and redeemer, depending on the program configuration
+
+### Validation rules
+
+- A customer **cannot redeem their own** referral code
+- A customer can only **redeem one code per referral program**
+- Referral codes respect the **max redemptions** limit set on the program
+- If **exclude trial** is enabled, checkout rewards won't trigger for trial subscriptions
+
+<Note>
+In the customer details page, you can see which customers have made referrals and been referred.
+</Note>

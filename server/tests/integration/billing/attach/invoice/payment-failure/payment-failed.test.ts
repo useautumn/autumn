@@ -7,12 +7,16 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { getStripeSubscription } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { expectCustomerProductCorrect } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeInvoiceCheckoutV2 } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { SubService } from "@/internal/subscriptions/SubService";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEW PLAN - Payment Failed
@@ -28,7 +32,7 @@ test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () 
 		items: [messagesItem, priceItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [s.customer({ paymentMethod: "fail" }), s.products({ list: [pro] })],
 		actions: [],
@@ -45,6 +49,21 @@ test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
+
+	await completeInvoiceCheckoutV2({
+		url: result.payment_url!,
+	});
+
+	const { subscription: stripeSubscription } = await getStripeSubscription({
+		customerId,
+	});
+
+	const dbSubscription = await SubService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeSubscription.id,
+	});
+
+	expect(dbSubscription).toBeDefined();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -88,6 +107,12 @@ test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () =
 	expect(result.payment_url).toBeDefined();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProductCorrect({
+		customer,
+		productId: pro.id,
+		state: "active",
+	});
 
 	// Should still have pro's balance (upgrade not applied)
 	expectCustomerFeatureCorrect({

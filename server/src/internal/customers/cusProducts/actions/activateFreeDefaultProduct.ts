@@ -1,7 +1,9 @@
 import {
+	customerProductEligibleForDefaultProduct,
+	enrichFullCustomerWithEntity,
 	type FullCusProduct,
 	type FullCustomer,
-	isCustomerProductCustomerScoped,
+	type FullProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -12,13 +14,22 @@ export const activateFreeDefaultProduct = async ({
 	ctx,
 	customerProduct,
 	fullCustomer,
+	defaultProduct,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
+	defaultProduct?: FullProduct;
 }): Promise<FullCusProduct | undefined> => {
 	const { logger } = ctx;
-	if (!isCustomerProductCustomerScoped(customerProduct)) {
+
+	// customerProduct eligible for default product
+	const eligibleForDefaultProduct = customerProductEligibleForDefaultProduct({
+		ctx,
+		customerProduct,
+	});
+
+	if (!eligibleForDefaultProduct) {
 		logger.debug(
 			`[activateFreeDefaultProduct] Skipping - product is not main recurring customer scoped: ${customerProduct.product.name}`,
 		);
@@ -26,10 +37,12 @@ export const activateFreeDefaultProduct = async ({
 	}
 
 	// 1. Get free default product for group
-	const freeDefaultProduct = await productActions.getFreeDefaultByGroup({
-		ctx,
-		productGroup: customerProduct.product.group,
-	});
+	const freeDefaultProduct =
+		defaultProduct ??
+		(await productActions.getFreeDefaultByGroup({
+			ctx,
+			productGroup: customerProduct.product.group,
+		}));
 
 	if (!freeDefaultProduct) return;
 
@@ -37,7 +50,10 @@ export const activateFreeDefaultProduct = async ({
 	const newCustomerProduct = initFullCustomerProductFromProduct({
 		ctx,
 		initContext: {
-			fullCustomer,
+			fullCustomer: enrichFullCustomerWithEntity({
+				fullCustomer,
+				internalEntityId: customerProduct.internal_entity_id ?? null,
+			}),
 			fullProduct: freeDefaultProduct,
 			currentEpochMs: Date.now(),
 			featureQuantities: [],
@@ -56,6 +72,7 @@ export const activateFreeDefaultProduct = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
+			customerId: fullCustomer?.id ?? "",
 			insertCustomerProducts: [newCustomerProduct],
 		},
 	});

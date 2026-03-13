@@ -2,6 +2,8 @@ import { oc } from "@orpc/contract";
 import {
 	balancesCheckContract,
 	balancesCreateContract,
+	balancesDeleteContract,
+	balancesFinalizeContract,
 	balancesTrackContract,
 	balancesUpdateContract,
 } from "./balancesContract.js";
@@ -25,6 +27,7 @@ import {
 	createEntityContract,
 	deleteEntityContract,
 	getEntityContract,
+	updateEntityContract,
 } from "./entitiesContract.js";
 import {
 	eventsAggregateContract,
@@ -83,6 +86,8 @@ export const v2_1ContractRouter = oc.router({
 	// Balances
 	balancesCreate: balancesCreateContract,
 	balancesUpdate: balancesUpdateContract,
+	balancesDelete: balancesDeleteContract,
+	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
 
@@ -93,6 +98,7 @@ export const v2_1ContractRouter = oc.router({
 	// Entities
 	entitiesCreate: createEntityContract,
 	entitiesGet: getEntityContract,
+	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 
 	// Referrals

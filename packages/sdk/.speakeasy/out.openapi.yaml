@@ -52,6 +52,75 @@ components:
         send_email_receipts:
           type: boolean
           description: Whether to send email receipts to this customer
+        billing_controls:
+          type: object
+          properties:
+            auto_topups:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The ID of the feature (credit balance) to auto top-up.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether auto top-up is enabled.
+                  threshold:
+                    type: number
+                    minimum: 0
+                    description: When the balance drops below this threshold, an auto top-up will be purchased.
+                  quantity:
+                    type: number
+                    minimum: 1
+                    description: Amount of credits to add per auto top-up.
+                  purchase_limit:
+                    type: object
+                    properties:
+                      interval:
+                        enum:
+                          - hour
+                          - day
+                          - week
+                          - month
+                        description: The time interval for the purchase limit window.
+                      interval_count:
+                        type: number
+                        minimum: 1
+                        default: 1
+                        description: Number of intervals in the purchase limit window.
+                      limit:
+                        type: number
+                        minimum: 1
+                        description: Maximum number of auto top-ups allowed within the interval.
+                    required:
+                      - interval
+                      - limit
+                    description: Optional rate limit to cap how often auto top-ups occur.
+                required:
+                  - feature_id
+                  - threshold
+                  - quantity
+              description: List of auto top-up configurations per feature.
+            spend_limits:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: Optional feature ID this spend limit applies to.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether this spend limit is enabled.
+                  overage_limit:
+                    type: number
+                    minimum: 0
+                    description: Maximum allowed overage spend for the target feature.
+              description: List of overage spend limits per feature.
+          description: Billing controls for the customer (auto top-ups, etc.)
       title: CustomerData
       description: Customer details to set when creating a customer
     CustomerExpand:
@@ -110,11 +179,83 @@ components:
         send_email_receipts:
           type: boolean
           description: Whether to send email receipts to the customer.
+        billing_controls:
+          type: object
+          properties:
+            auto_topups:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The ID of the feature (credit balance) to auto top-up.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether auto top-up is enabled.
+                  threshold:
+                    type: number
+                    minimum: 0
+                    description: When the balance drops below this threshold, an auto top-up will be purchased.
+                  quantity:
+                    type: number
+                    minimum: 1
+                    description: Amount of credits to add per auto top-up.
+                  purchase_limit:
+                    type: object
+                    properties:
+                      interval:
+                        enum:
+                          - hour
+                          - day
+                          - week
+                          - month
+                        description: The time interval for the purchase limit window.
+                      interval_count:
+                        type: number
+                        minimum: 1
+                        default: 1
+                        description: Number of intervals in the purchase limit window.
+                      limit:
+                        type: number
+                        minimum: 1
+                        description: Maximum number of auto top-ups allowed within the interval.
+                    required:
+                      - interval
+                      - limit
+                    description: Optional rate limit to cap how often auto top-ups occur.
+                required:
+                  - feature_id
+                  - threshold
+                  - quantity
+              description: List of auto top-up configurations per feature.
+            spend_limits:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: Optional feature ID this spend limit applies to.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether this spend limit is enabled.
+                  overage_limit:
+                    type: number
+                    minimum: 0
+                    description: Maximum allowed overage spend for the target feature.
+              description: List of overage spend limits per feature.
+          description: Billing controls for the customer (auto top-ups, etc.)
         subscriptions:
           type: array
           items:
             type: object
             properties:
+              id:
+                type: string
+                description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
               plan:
                 $ref: "#/components/schemas/Plan"
                 description: The full plan object if expanded.
@@ -167,6 +308,7 @@ components:
                 type: number
                 description: Number of units of this subscription (for per-seat plans).
             required:
+              - id
               - plan_id
               - auto_enable
               - add_on
@@ -257,8 +399,6 @@ components:
           items:
             type: object
             properties:
-              autumn_id:
-                type: string
               id:
                 anyOf:
                   - type: string
@@ -424,6 +564,7 @@ components:
         - env
         - metadata
         - send_email_receipts
+        - billing_controls
         - subscriptions
         - purchases
         - balances
@@ -437,6 +578,8 @@ components:
           env: sandbox
           metadata: {}
           sendEmailReceipts: false
+          billingControls:
+            autoTopups: []
           subscriptions:
             - planId: pro_plan
               autoEnable: true
@@ -645,21 +788,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                       tier_behavior:
                         enum:
@@ -970,21 +1101,9 @@ components:
                       tiers:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            to:
-                              anyOf:
-                                - type: number
-                                - const: inf
-                            amount:
-                              type: number
-                            flat_amount:
-                              anyOf:
-                                - type: number
-                                - type: "null"
-                          required:
-                            - to
-                            - amount
+                          anyOf:
+                            - {}
+                            - type: "null"
                         description: Tiered pricing configuration if applicable.
                       tier_behavior:
                         enum:
@@ -1117,6 +1236,8 @@ paths:
 
         @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 
+        @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+
         @param expand - Customer expand options (optional)
       tags:
         - customers
@@ -1169,6 +1290,75 @@ paths:
                 send_email_receipts:
                   type: boolean
                   description: Whether to send email receipts to this customer
+                billing_controls:
+                  type: object
+                  properties:
+                    auto_topups:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature (credit balance) to auto top-up.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether auto top-up is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: When the balance drops below this threshold, an auto top-up will be purchased.
+                          quantity:
+                            type: number
+                            minimum: 1
+                            description: Amount of credits to add per auto top-up.
+                          purchase_limit:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                description: The time interval for the purchase limit window.
+                              interval_count:
+                                type: number
+                                minimum: 1
+                                default: 1
+                                description: Number of intervals in the purchase limit window.
+                              limit:
+                                type: number
+                                minimum: 1
+                                description: Maximum number of auto top-ups allowed within the interval.
+                            required:
+                              - interval
+                              - limit
+                            description: Optional rate limit to cap how often auto top-ups occur.
+                        required:
+                          - feature_id
+                          - threshold
+                          - quantity
+                      description: List of auto top-up configurations per feature.
+                    spend_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Optional feature ID this spend limit applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether this spend limit is enabled.
+                          overage_limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum allowed overage spend for the target feature.
+                      description: List of overage spend limits per feature.
+                  description: Billing controls for the customer (auto top-ups, etc.)
                 expand:
                   type: array
                   items:
@@ -1303,11 +1493,83 @@ paths:
                         send_email_receipts:
                           type: boolean
                           description: Whether to send email receipts to the customer.
+                        billing_controls:
+                          type: object
+                          properties:
+                            auto_topups:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The ID of the feature (credit balance) to auto top-up.
+                                  enabled:
+                                    type: boolean
+                                    default: false
+                                    description: Whether auto top-up is enabled.
+                                  threshold:
+                                    type: number
+                                    minimum: 0
+                                    description: When the balance drops below this threshold, an auto top-up will be purchased.
+                                  quantity:
+                                    type: number
+                                    minimum: 1
+                                    description: Amount of credits to add per auto top-up.
+                                  purchase_limit:
+                                    type: object
+                                    properties:
+                                      interval:
+                                        enum:
+                                          - hour
+                                          - day
+                                          - week
+                                          - month
+                                        description: The time interval for the purchase limit window.
+                                      interval_count:
+                                        type: number
+                                        minimum: 1
+                                        default: 1
+                                        description: Number of intervals in the purchase limit window.
+                                      limit:
+                                        type: number
+                                        minimum: 1
+                                        description: Maximum number of auto top-ups allowed within the interval.
+                                    required:
+                                      - interval
+                                      - limit
+                                    description: Optional rate limit to cap how often auto top-ups occur.
+                                required:
+                                  - feature_id
+                                  - threshold
+                                  - quantity
+                              description: List of auto top-up configurations per feature.
+                            spend_limits:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: Optional feature ID this spend limit applies to.
+                                  enabled:
+                                    type: boolean
+                                    default: false
+                                    description: Whether this spend limit is enabled.
+                                  overage_limit:
+                                    type: number
+                                    minimum: 0
+                                    description: Maximum allowed overage spend for the target feature.
+                              description: List of overage spend limits per feature.
+                          description: Billing controls for the customer (auto top-ups, etc.)
                         subscriptions:
                           type: array
                           items:
                             type: object
                             properties:
+                              id:
+                                type: string
+                                description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
                               plan:
                                 $ref: "#/components/schemas/Plan"
                                 description: The full plan object if expanded.
@@ -1360,6 +1622,7 @@ paths:
                                 type: number
                                 description: Number of units of this subscription (for per-seat plans).
                             required:
+                              - id
                               - plan_id
                               - auto_enable
                               - add_on
@@ -1418,6 +1681,7 @@ paths:
                         - env
                         - metadata
                         - send_email_receipts
+                        - billing_controls
                         - subscriptions
                         - purchases
                         - balances
@@ -1431,6 +1695,8 @@ paths:
                           env: sandbox
                           metadata: {}
                           sendEmailReceipts: false
+                          billingControls:
+                            autoTopups: []
                           subscriptions:
                             - planId: pro_plan
                               autoEnable: true
@@ -1498,6 +1764,8 @@ paths:
                         env: sandbox
                         metadata: {}
                         sendEmailReceipts: false
+                        billingControls:
+                          autoTopups: []
                         subscriptions:
                           - planId: pro_plan
                             autoEnable: true
@@ -1591,6 +1859,75 @@ paths:
                 send_email_receipts:
                   type: boolean
                   description: Whether to send email receipts to this customer
+                billing_controls:
+                  type: object
+                  properties:
+                    auto_topups:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature (credit balance) to auto top-up.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether auto top-up is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: When the balance drops below this threshold, an auto top-up will be purchased.
+                          quantity:
+                            type: number
+                            minimum: 1
+                            description: Amount of credits to add per auto top-up.
+                          purchase_limit:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                description: The time interval for the purchase limit window.
+                              interval_count:
+                                type: number
+                                minimum: 1
+                                default: 1
+                                description: Number of intervals in the purchase limit window.
+                              limit:
+                                type: number
+                                minimum: 1
+                                description: Maximum number of auto top-ups allowed within the interval.
+                            required:
+                              - interval
+                              - limit
+                            description: Optional rate limit to cap how often auto top-ups occur.
+                        required:
+                          - feature_id
+                          - threshold
+                          - quantity
+                      description: List of auto top-up configurations per feature.
+                    spend_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Optional feature ID this spend limit applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether this spend limit is enabled.
+                          overage_limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum allowed overage spend for the target feature.
+                      description: List of overage spend limits per feature.
+                  description: Billing controls for the customer (auto top-ups, etc.)
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
                   description: New ID for the customer
@@ -1650,11 +1987,83 @@ paths:
                   send_email_receipts:
                     type: boolean
                     description: Whether to send email receipts to the customer.
+                  billing_controls:
+                    type: object
+                    properties:
+                      auto_topups:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The ID of the feature (credit balance) to auto top-up.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether auto top-up is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: When the balance drops below this threshold, an auto top-up will be purchased.
+                            quantity:
+                              type: number
+                              minimum: 1
+                              description: Amount of credits to add per auto top-up.
+                            purchase_limit:
+                              type: object
+                              properties:
+                                interval:
+                                  enum:
+                                    - hour
+                                    - day
+                                    - week
+                                    - month
+                                  description: The time interval for the purchase limit window.
+                                interval_count:
+                                  type: number
+                                  minimum: 1
+                                  default: 1
+                                  description: Number of intervals in the purchase limit window.
+                                limit:
+                                  type: number
+                                  minimum: 1
+                                  description: Maximum number of auto top-ups allowed within the interval.
+                              required:
+                                - interval
+                                - limit
+                              description: Optional rate limit to cap how often auto top-ups occur.
+                          required:
+                            - feature_id
+                            - threshold
+                            - quantity
+                        description: List of auto top-up configurations per feature.
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether this spend limit is enabled.
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum allowed overage spend for the target feature.
+                        description: List of overage spend limits per feature.
+                    description: Billing controls for the customer (auto top-ups, etc.)
                   subscriptions:
                     type: array
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
                         plan:
                           $ref: "#/components/schemas/Plan"
                           description: The full plan object if expanded.
@@ -1707,6 +2116,7 @@ paths:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
                       required:
+                        - id
                         - plan_id
                         - auto_enable
                         - add_on
@@ -1765,6 +2175,7 @@ paths:
                   - env
                   - metadata
                   - send_email_receipts
+                  - billing_controls
                   - subscriptions
                   - purchases
                   - balances
@@ -1778,6 +2189,8 @@ paths:
                     env: sandbox
                     metadata: {}
                     sendEmailReceipts: false
+                    billingControls:
+                      autoTopups: []
                     subscriptions:
                       - planId: pro_plan
                         autoEnable: true
@@ -2052,12 +2465,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -2373,21 +2783,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -2821,21 +3219,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -3247,21 +3633,9 @@ paths:
                                       tiers:
                                         type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                            amount:
-                                              type: number
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                       tier_behavior:
                                         enum:
@@ -3619,12 +3993,9 @@ paths:
                                 amount:
                                   type: number
                                 flat_amount:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
+                                  type: number
                               required:
                                 - to
-                                - amount
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                           tier_behavior:
                             enum:
@@ -3926,21 +4297,9 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    type: object
-                                    properties:
-                                      to:
-                                        anyOf:
-                                          - type: number
-                                          - const: inf
-                                      amount:
-                                        type: number
-                                      flat_amount:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                    required:
-                                      - to
-                                      - amount
+                                    anyOf:
+                                      - {}
+                                      - type: "null"
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                                 tier_behavior:
                                   enum:
@@ -4955,6 +5314,8 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+
         @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 
         @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -4964,6 +5325,10 @@ paths:
         @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+
+        @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+
+        @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
@@ -5090,12 +5455,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -5221,6 +5583,9 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                subscription_id:
+                  type: string
+                  description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
                 discounts:
                   type: array
                   items:
@@ -5252,6 +5617,24 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe checkout session.
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -5476,12 +5859,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -5584,6 +5964,9 @@ paths:
                       version:
                         type: number
                         description: The version of the plan to attach.
+                      subscription_id:
+                        type: string
+                        description: A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
                     required:
                       - plan_id
                   description: The list of plans to attach to the customer.
@@ -5672,6 +6055,27 @@ paths:
                     name:
                       type: string
                       description: Name of the entity
+                    billing_controls:
+                      type: object
+                      properties:
+                        spend_limits:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: Optional feature ID this spend limit applies to.
+                              enabled:
+                                type: boolean
+                                default: false
+                                description: Whether this spend limit is enabled.
+                              overage_limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum allowed overage spend for the target feature.
+                          description: List of overage spend limits per feature.
+                      description: Billing controls for the entity.
                   required:
                     - feature_id
               required:
@@ -5802,6 +6206,8 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+
         @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 
         @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -5811,6 +6217,10 @@ paths:
         @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+
+        @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+
+        @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
 
         @returns A preview response with line items, totals, and effective dates for the proposed changes.
@@ -5937,12 +6347,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -6068,6 +6475,9 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                subscription_id:
+                  type: string
+                  description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
                 discounts:
                   type: array
                   items:
@@ -6099,6 +6509,24 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe checkout session.
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
                 - plan_id
@@ -6321,12 +6749,9 @@ paths:
                                           amount:
                                             type: number
                                           flat_amount:
-                                            anyOf:
-                                              - type: number
-                                              - type: "null"
+                                            type: number
                                         required:
                                           - to
-                                          - amount
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                     tier_behavior:
                                       enum:
@@ -6429,6 +6854,9 @@ paths:
                       version:
                         type: number
                         description: The version of the plan to attach.
+                      subscription_id:
+                        type: string
+                        description: A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
                     required:
                       - plan_id
                   description: The list of plans to attach to the customer.
@@ -6517,6 +6945,27 @@ paths:
                     name:
                       type: string
                       description: Name of the entity
+                    billing_controls:
+                      type: object
+                      properties:
+                        spend_limits:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: Optional feature ID this spend limit applies to.
+                              enabled:
+                                type: boolean
+                                default: false
+                                description: Whether this spend limit is enabled.
+                              overage_limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum allowed overage spend for the target feature.
+                          description: List of overage spend limits per feature.
+                      description: Billing controls for the entity.
                   required:
                     - feature_id
               required:
@@ -6661,6 +7110,8 @@ paths:
 
         @param entityId - The ID of the entity to attach the plan to. (optional)
 
+        @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
+
         @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 
         @param version - The version of the plan to attach. (optional)
@@ -6671,7 +7122,11 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+
+        @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 
         @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
@@ -6692,7 +7147,7 @@ paths:
                   description: The ID of the entity to attach the plan to.
                 plan_id:
                   type: string
-                  description: The ID of the plan.
+                  description: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
                 feature_quantities:
                   type: array
                   items:
@@ -6798,12 +7253,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -6929,15 +7381,20 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                subscription_id:
+                  type: string
+                  description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
                 cancel_action:
                   enum:
                     - cancel_immediately
                     - cancel_end_of_cycle
                     - uncancel
                   description: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying billing changes in Stripe.
               required:
                 - customer_id
-                - plan_id
               title: UpdateSubscriptionParams
               examples:
                 - customer_id: cus_123
@@ -7049,6 +7506,8 @@ paths:
 
         @param entityId - The ID of the entity to attach the plan to. (optional)
 
+        @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
+
         @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 
         @param version - The version of the plan to attach. (optional)
@@ -7059,7 +7518,11 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+
+        @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 
         @returns A preview response with line items showing prorated charges or credits for the proposed changes.
@@ -7080,7 +7543,7 @@ paths:
                   description: The ID of the entity to attach the plan to.
                 plan_id:
                   type: string
-                  description: The ID of the plan.
+                  description: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
                 feature_quantities:
                   type: array
                   items:
@@ -7186,12 +7649,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -7317,15 +7777,20 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                subscription_id:
+                  type: string
+                  description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
                 cancel_action:
                   enum:
                     - cancel_immediately
                     - cancel_end_of_cycle
                     - uncancel
                   description: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, the subscription is updated internally without applying billing changes in Stripe.
               required:
                 - customer_id
-                - plan_id
               title: PreviewUpdateParams
               examples:
                 - customer_id: cus_123
@@ -7594,12 +8059,9 @@ paths:
                                     amount:
                                       type: number
                                     flat_amount:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
+                                      type: number
                                   required:
                                     - to
-                                    - amount
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                               tier_behavior:
                                 enum:
@@ -7708,6 +8170,9 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                subscription_id:
+                  type: string
+                  description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
                 discounts:
                   type: array
                   items:
@@ -7731,6 +8196,24 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe checkout session.
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                processor_subscription_id:
+                  type: string
+                  description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -7786,12 +8269,12 @@ paths:
                 entity_id:
                   type: string
                   description: The ID of the entity for entity-scoped balances (e.g., per-seat limits).
-                included:
+                included_grant:
                   type: number
                   description: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
                 unlimited:
                   type: boolean
-                  description: If true, the balance has unlimited usage. Cannot be combined with 'included'.
+                  description: If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
                 reset:
                   type: object
                   properties:
@@ -7816,6 +8299,9 @@ paths:
                 expires_at:
                   type: number
                   description: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+                balance_id:
+                  type: string
+                  description: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
               required:
                 - customer_id
                 - feature_id
@@ -7884,6 +8370,15 @@ paths:
                     - semi_annual
                     - year
                   description: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+                included_grant:
+                  type: number
+                  description: Set the granted balance to this exact value.
+                balance_id:
+                  type: string
+                  description: Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
+                next_reset_at:
+                  type: number
+                  description: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
               required:
                 - customer_id
                 - feature_id
@@ -7905,6 +8400,121 @@ paths:
                 required:
                   - success
       x-speakeasy-name-override: update
+      parameters:
+        - *a1
+  /v1/balances.delete:
+    post:
+      operationId: deleteBalance
+      description: Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer.
+                entity_id:
+                  type: string
+                  description: The ID of the entity.
+                feature_id:
+                  type: string
+                  description: The ID of the feature.
+                balance_id:
+                  type: string
+                  description: The ID of the balance to delete.
+                interval:
+                  enum:
+                    - one_off
+                    - minute
+                    - hour
+                    - day
+                    - week
+                    - month
+                    - quarter
+                    - semi_annual
+                    - year
+                  description: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
+              required:
+                - customer_id
+              title: DeleteBalanceParams
+              examples:
+                - customer_id: cus_123
+                  feature_id: api_calls
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+      x-speakeasy-name-override: delete
+      parameters:
+        - *a1
+  /v1/balances.finalize:
+    post:
+      operationId: finalizeLock
+      description: Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lock_id:
+                  type: string
+                  description: The lock ID that was passed into the previous check call.
+                action:
+                  enum:
+                    - confirm
+                    - release
+                  description: Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+                override_value:
+                  type: number
+                  description: Additional properties to attach to this finalize lock event.
+                properties:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional properties to attach to this finalize lock event.
+              required:
+                - lock_id
+                - action
+              title: FinalizeBalanceParams
+              examples:
+                - lock_id: lock_abc123
+                  action: confirm
+                - lock_id: lock_abc123
+                  action: confirm
+                  override_value: 3
+                - lock_id: lock_abc123
+                  action: release
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+      x-speakeasy-name-override: finalize
       parameters:
         - *a1
   /v1/balances.check:
@@ -7957,6 +8567,8 @@ paths:
 
         @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
 
+        @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
+
         @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 
@@ -7989,6 +8601,23 @@ paths:
                 send_event:
                   type: boolean
                   description: If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
+                  description: Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
                 with_preview:
                   type: boolean
                   description: If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
@@ -8147,24 +8776,9 @@ paths:
                                     anyOf:
                                       - type: array
                                         items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                - const: inf
-                                              description: The maximum amount of usage for this tier.
-                                            amount:
-                                              type: number
-                                              description: The price of the product item for this tier.
-                                            flat_amount:
-                                              anyOf:
-                                                - type: number
-                                                - type: "null"
-                                              description: A flat fee charged for this tier, in addition to the per-unit amount.
-                                          required:
-                                            - to
-                                            - amount
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
                                       - type: "null"
                                     description: Tiered pricing for the product item. Not applicable for fixed price items.
                                   tier_behavior:
@@ -8471,6 +9085,22 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                lock:
+                  type: object
+                  properties:
+                    lock_id:
+                      type: string
+                      maxLength: 256
+                      description: A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+                    enabled:
+                      const: true
+                      description: Must be true to enable locking.
+                    expires_at:
+                      type: number
+                      description: Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+                  required:
+                    - lock_id
+                    - enabled
               required:
                 - customer_id
               title: TrackParams
@@ -8887,6 +9517,8 @@ paths:
 
         @param featureId - The ID of the feature this entity is associated with
 
+        @param billingControls - Billing controls for the entity. (optional)
+
         @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 
         @param customerId - The ID of the customer to create the entity for.
@@ -8912,6 +9544,27 @@ paths:
                 feature_id:
                   type: string
                   description: The ID of the feature this entity is associated with
+                billing_controls:
+                  type: object
+                  properties:
+                    spend_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Optional feature ID this spend limit applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether this spend limit is enabled.
+                          overage_limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum allowed overage spend for the target feature.
+                      description: List of overage spend limits per feature.
+                  description: Billing controls for the entity.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
                   description: Customer attributes used to resolve the customer when customer_id is not provided.
@@ -8939,8 +9592,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  autumn_id:
-                    type: string
                   id:
                     anyOf:
                       - type: string
@@ -8974,6 +9625,9 @@ paths:
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
                         plan:
                           $ref: "#/components/schemas/Plan"
                           description: The full plan object if expanded.
@@ -9026,6 +9680,7 @@ paths:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
                       required:
+                        - id
                         - plan_id
                         - auto_enable
                         - add_on
@@ -9071,6 +9726,27 @@ paths:
                       type: string
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether this spend limit is enabled.
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum allowed overage spend for the target feature.
+                        description: List of overage spend limits per feature.
+                    description: Billing controls for the entity.
                   invoices:
                     type: array
                     items:
@@ -9233,8 +9909,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  autumn_id:
-                    type: string
                   id:
                     anyOf:
                       - type: string
@@ -9268,6 +9942,9 @@ paths:
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
                         plan:
                           $ref: "#/components/schemas/Plan"
                           description: The full plan object if expanded.
@@ -9320,6 +9997,7 @@ paths:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
                       required:
+                        - id
                         - plan_id
                         - auto_enable
                         - add_on
@@ -9365,6 +10043,27 @@ paths:
                       type: string
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether this spend limit is enabled.
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum allowed overage spend for the target feature.
+                        description: List of overage spend limits per feature.
+                    description: Billing controls for the entity.
                   invoices:
                     type: array
                     items:
@@ -9457,6 +10156,329 @@ paths:
                             expires_at: null
                     invoices: []
       x-speakeasy-name-override: get
+      parameters:
+        - *a1
+  /v1/entities.update:
+    post:
+      operationId: updateEntity
+      description: |-
+        Updates an existing entity and returns the refreshed entity object.
+
+        Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+        @example
+        ```typescript
+        // Update a seat entity's billing controls
+        const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+        ```
+
+        @param customerId - The ID of the customer that owns the entity. (optional)
+        @param entityId - The ID of the entity.
+        @param billingControls - Billing controls to replace on the entity. (optional)
+
+        @returns The updated entity object including its current subscriptions, purchases, and balances.
+      tags:
+        - entities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer that owns the entity.
+                entity_id:
+                  type: string
+                  description: The ID of the entity.
+                billing_controls:
+                  type: object
+                  properties:
+                    spend_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Optional feature ID this spend limit applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether this spend limit is enabled.
+                          overage_limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum allowed overage spend for the target feature.
+                      description: List of overage spend limits per feature.
+                  description: Billing controls to replace on the entity.
+              required:
+                - entity_id
+              title: UpdateEntityParams
+              examples:
+                - customer_id: cus_123
+                  entity_id: seat_42
+                  billing_controls:
+                    spend_limits:
+                      - feature_id: messages
+                        enabled: true
+                        overage_limit: 25
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The unique identifier of the entity
+                  name:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The name of the entity
+                  customer_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The customer ID this entity belongs to
+                  feature_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The feature ID this entity belongs to
+                  created_at:
+                    type: number
+                    description: Unix timestamp when the entity was created
+                  env:
+                    enum:
+                      - sandbox
+                      - live
+                    description: The environment (sandbox/live)
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                          description: Current status of the subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - status
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                  purchases:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      $ref: "#/components/schemas/Balance"
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether this spend limit is enabled.
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum allowed overage spend for the target feature.
+                        description: List of overage spend limits per feature.
+                    description: Billing controls for the entity.
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                    description: Invoices for this entity (only included when expand=invoices)
+                required:
+                  - id
+                  - name
+                  - created_at
+                  - env
+                  - subscriptions
+                  - purchases
+                  - balances
+                examples:
+                  - id: seat_42
+                    name: Seat 42
+                    customer_id: cus_123
+                    feature_id: seats
+                    created_at: 1771409161016
+                    env: sandbox
+                    subscriptions:
+                      - plan_id: pro_plan
+                        auto_enable: true
+                        add_on: false
+                        status: active
+                        past_due: false
+                        canceled_at: null
+                        expires_at: null
+                        trial_ends_at: null
+                        started_at: 1771431921437
+                        current_period_start: 1771431921437
+                        current_period_end: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    balances:
+                      messages:
+                        feature_id: messages
+                        granted: 100
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        overage_allowed: false
+                        max_purchase: null
+                        next_reset_at: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            included_grant: 100
+                            prepaid_grant: 0
+                            remaining: 72
+                            usage: 28
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resets_at: 1773851121437
+                            price: null
+                            expires_at: null
+                    invoices: []
+      x-speakeasy-name-override: update
       parameters:
         - *a1
   /v1/entities.delete:

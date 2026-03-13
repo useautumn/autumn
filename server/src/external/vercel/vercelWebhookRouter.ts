@@ -1,5 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
+import { handleRotateResourceSecret } from "@/external/vercel/handlers/resources/handleRotateResourceSecret.js";
 import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
@@ -128,6 +129,13 @@ vercelWebhookRouter.delete(
 	vercelSeederMiddleware,
 	vercelOidcAuthMiddleware,
 	...handleDeleteInstallation,
+);
+
+vercelWebhookRouter.post(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId/secrets/rotate",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleRotateResourceSecret,
 );
 
 // Vercel marketplace webhooks - POST with signature validation

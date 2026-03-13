@@ -44,6 +44,7 @@ import { Result } from "../types/fp.js";
  *
  * @param name - The name of the entity (optional)
  * @param featureId - The ID of the feature this entity is associated with
+ * @param billingControls - Billing controls for the entity. (optional)
  * @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
  * @param customerId - The ID of the customer to create the entity for.
  * @param entityId - The ID of the entity.

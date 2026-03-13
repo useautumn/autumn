@@ -227,10 +227,12 @@ describe(
 				const prepaidUpdate = result.find((item) =>
 					item.id?.includes("prepaid"),
 				);
-				expect(prepaidUpdate).toEqual({
-					id: "si_premium_prepaid",
-					quantity: 200,
-				});
+				expect(prepaidUpdate).toEqual(
+					expect.objectContaining({
+						id: "si_premium_prepaid",
+						quantity: 200,
+					}),
+				);
 
 				// Metered consumable gets added since it wasn't in the stripe subscription
 				const consumableAdd = result.find((item) =>
@@ -297,10 +299,12 @@ describe(
 				const allocatedUpdate = result.find((item) =>
 					item.id?.includes("allocated"),
 				);
-				expect(allocatedUpdate).toEqual({
-					id: "si_premium_allocated",
-					quantity: 10,
-				});
+				expect(allocatedUpdate).toEqual(
+					expect.objectContaining({
+						id: "si_premium_allocated",
+						quantity: 10,
+					}),
+				);
 			});
 
 			test("Update multiple quantities (prepaid and allocated)", () => {
@@ -427,10 +431,12 @@ describe(
 				const prepaidUpdate = result.find((item) =>
 					item.id?.includes("prepaid"),
 				);
-				expect(prepaidUpdate).toEqual({
-					id: "si_premium_prepaid",
-					quantity: 50,
-				});
+				expect(prepaidUpdate).toEqual(
+					expect.objectContaining({
+						id: "si_premium_prepaid",
+						quantity: 50,
+					}),
+				);
 			});
 		});
 

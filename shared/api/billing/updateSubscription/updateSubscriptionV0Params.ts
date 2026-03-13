@@ -1,8 +1,10 @@
+import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
+import { RedirectModeSchema } from "../common/redirectMode";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -22,12 +24,22 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'prorate_immediately' (default): Invoice line items are charged immediately
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
+
+		processor_subscription_id: z.string().nullable().optional(),
+		no_billing_changes: z.boolean().optional(),
+		status: z
+			.enum([
+				CusProductStatus.Active,
+				CusProductStatus.PastDue,
+				CusProductStatus.Expired,
+			])
+			.optional(),
 	});
 
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
-		// refund_behavior: RefundBehaviorSchema.optional(),
+		redirect_mode: RedirectModeSchema.optional(),
 	})
 
 		.check((ctx) => {
@@ -82,28 +94,3 @@ export type ExtUpdateSubscriptionV0Params = z.infer<
 export type UpdateSubscriptionV0Params = z.infer<
 	typeof UpdateSubscriptionV0ParamsSchema
 >;
-
-// Schedules (epoch milliseconds)
-// plan_custom_start_date: z.number().optional(),
-// billing_cycle_anchor: z.number().optional(),
-
-// keep_existing_plan: true, //disable_plan_switch
-// prorate_billing: true,
-// invoice_only: true,
-
-// carry_over_balance: true,
-// reset_usage: true,
-
-// billing_custom_start_date: "2025-11-04",
-// billing_custom_end_date: "2025-12-04",
-// billing_cycle_anchor: "2025-11-04",
-// billing_due_date: "2025-11-04",
-
-// new_billing_subscription: true, //fka combine_subscriptions, separate_billing_subscriptions
-// require_payment_method: true, //fka force_checkout
-// reset_balances: true
-
-// plan_schedule: "immediate", // or "next_cycle", "custom_date"
-// plan_custom_start_date: "2025-11-04",
-// plan_custom_end_date: "2025-12-04",
-// billing_schedule: "immediate", // or "next_cycle", "custom_date"

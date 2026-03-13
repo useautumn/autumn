@@ -30,12 +30,15 @@ export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
 			(_, i) => `${product.id}:${i + 1}`,
 		).join(",");
 
-		pushPage({
+		// Build path via pushPage (handles sandbox prefix, encoding) but navigate
+		// ourselves so we can attach state that tells the customers page to skip
+		// restoring filters from localStorage.
+		const path = pushPage({
 			path: `/customers`,
-			navigate,
 			queryParams: { version: versionKeys },
 			preserveParams: false,
 		});
+		navigate(path, { state: { preAppliedFilters: true } });
 	};
 
 	return (

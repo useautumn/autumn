@@ -7,7 +7,7 @@ import { DynamicParamField } from "/components/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
 
-Creates a new plan with optional base price and feature configurations. See [How plans work](/documentation/pricing/plans) for concepts and [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
+Creates a new plan with optional base price and feature configurations. See [Plans](/documentation/concepts/plans) for concepts and [Plan Items](/documentation/concepts/plan-items) for item configuration.
 
 ### Plan Configuration
 
@@ -223,9 +223,9 @@ await autumn.plans.create({
           <Expandable title="properties">
             <DynamicParamField body="to" type="number" required />
 
-            <DynamicParamField body="amount" type="number" required />
+            <DynamicParamField body="amount" type="number" />
 
-            <DynamicParamField body="flat_amount" type="number | null" />
+            <DynamicParamField body="flat_amount" type="number" />
 
           </Expandable>
         </DynamicParamField>
@@ -457,16 +457,8 @@ await autumn.plans.create({
           Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
         </DynamicResponseField>
 
-        <DynamicResponseField name="tiers" type="object[]">
+        <DynamicResponseField name="tiers" type="any[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-          <Expandable title="properties">
-            <DynamicResponseField name="to" type="number" />
-
-            <DynamicResponseField name="amount" type="number" />
-
-            <DynamicResponseField name="flat_amount" type="number | null" />
-
-          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />

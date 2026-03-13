@@ -88,6 +88,8 @@ const createDevLogStream = () => {
 					"stripe_event",
 					"extras",
 					"type",
+
+					"durationMs",
 				];
 				const additionalFields = Object.keys(log)
 					.filter((key) => !excludeFields.includes(key))

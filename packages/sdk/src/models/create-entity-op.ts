@@ -22,6 +22,31 @@ export type CreateEntityGlobals = {
   xApiVersion?: string | undefined;
 };
 
+export type CreateEntitySpendLimitRequest = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type CreateEntityBillingControlsRequest = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CreateEntitySpendLimitRequest> | undefined;
+};
+
 export type CreateEntityParams = {
   /**
    * The name of the entity
@@ -31,6 +56,10 @@ export type CreateEntityParams = {
    * The ID of the feature this entity is associated with
    */
   featureId: string;
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: CreateEntityBillingControlsRequest | undefined;
   /**
    * Customer details to set when creating a customer
    */
@@ -70,6 +99,10 @@ export const CreateEntityStatus = {
 export type CreateEntityStatus = OpenEnum<typeof CreateEntityStatus>;
 
 export type CreateEntitySubscription = {
+  /**
+   * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+   */
+  id: string;
   plan?: Plan | undefined;
   /**
    * The unique identifier of the subscribed plan.
@@ -141,6 +174,31 @@ export type CreateEntityPurchase = {
   quantity: number;
 };
 
+export type CreateEntitySpendLimitResponse = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type CreateEntityBillingControlsResponse = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CreateEntitySpendLimitResponse> | undefined;
+};
+
 export type CreateEntityInvoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -176,7 +234,6 @@ export type CreateEntityInvoice = {
  * OK
  */
 export type CreateEntityResponse = {
-  autumnId?: string | undefined;
   /**
    * The unique identifier of the entity
    */
@@ -205,15 +262,87 @@ export type CreateEntityResponse = {
   purchases: Array<CreateEntityPurchase>;
   balances: { [k: string]: Balance };
   /**
+   * Billing controls for the entity.
+   */
+  billingControls?: CreateEntityBillingControlsResponse | undefined;
+  /**
    * Invoices for this entity (only included when expand=invoices)
    */
   invoices?: Array<CreateEntityInvoice> | undefined;
 };
 
 /** @internal */
+export type CreateEntitySpendLimitRequest$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const CreateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
+  CreateEntitySpendLimitRequest$Outbound,
+  CreateEntitySpendLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function createEntitySpendLimitRequestToJSON(
+  createEntitySpendLimitRequest: CreateEntitySpendLimitRequest,
+): string {
+  return JSON.stringify(
+    CreateEntitySpendLimitRequest$outboundSchema.parse(
+      createEntitySpendLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateEntityBillingControlsRequest$Outbound = {
+  spend_limits?: Array<CreateEntitySpendLimitRequest$Outbound> | undefined;
+};
+
+/** @internal */
+export const CreateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
+  CreateEntityBillingControlsRequest$Outbound,
+  CreateEntityBillingControlsRequest
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => CreateEntitySpendLimitRequest$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function createEntityBillingControlsRequestToJSON(
+  createEntityBillingControlsRequest: CreateEntityBillingControlsRequest,
+): string {
+  return JSON.stringify(
+    CreateEntityBillingControlsRequest$outboundSchema.parse(
+      createEntityBillingControlsRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateEntityParams$Outbound = {
   name?: string | null | undefined;
   feature_id: string;
+  billing_controls?: CreateEntityBillingControlsRequest$Outbound | undefined;
   customer_data?: CustomerData$Outbound | undefined;
   customer_id: string;
   entity_id: string;
@@ -227,6 +356,9 @@ export const CreateEntityParams$outboundSchema: z.ZodMiniType<
   z.object({
     name: z.optional(z.nullable(z.string())),
     featureId: z.string(),
+    billingControls: z.optional(
+      z.lazy(() => CreateEntityBillingControlsRequest$outboundSchema),
+    ),
     customerData: z.optional(CustomerData$outboundSchema),
     customerId: z.string(),
     entityId: z.string(),
@@ -234,6 +366,7 @@ export const CreateEntityParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      billingControls: "billing_controls",
       customerData: "customer_data",
       customerId: "customer_id",
       entityId: "entity_id",
@@ -267,6 +400,7 @@ export const CreateEntitySubscription$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     plan: types.optional(Plan$inboundSchema),
     plan_id: types.string(),
     auto_enable: types.boolean(),
@@ -339,6 +473,62 @@ export function createEntityPurchaseFromJSON(
 }
 
 /** @internal */
+export const CreateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
+  CreateEntitySpendLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function createEntitySpendLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntitySpendLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntitySpendLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntitySpendLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityBillingControlsResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CreateEntitySpendLimitResponse$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "spend_limits": "spendLimits",
+    });
+  }),
+);
+
+export function createEntityBillingControlsResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityBillingControlsResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateEntityBillingControlsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityBillingControlsResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityInvoice$inboundSchema: z.ZodMiniType<
   CreateEntityInvoice,
   unknown
@@ -378,7 +568,6 @@ export const CreateEntityResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
     id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
@@ -390,16 +579,19 @@ export const CreateEntityResponse$inboundSchema: z.ZodMiniType<
     ),
     purchases: z.array(z.lazy(() => CreateEntityPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    billing_controls: types.optional(
+      z.lazy(() => CreateEntityBillingControlsResponse$inboundSchema),
+    ),
     invoices: types.optional(
       z.array(z.lazy(() => CreateEntityInvoice$inboundSchema)),
     ),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
       "created_at": "createdAt",
+      "billing_controls": "billingControls",
     });
   }),
 );

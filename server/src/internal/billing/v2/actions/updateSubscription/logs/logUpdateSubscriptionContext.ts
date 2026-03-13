@@ -1,6 +1,6 @@
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logUpdateSubscriptionContext = ({
@@ -31,6 +31,7 @@ export const logUpdateSubscriptionContext = ({
 		ctx,
 		extras: {
 			billingContext: {
+				intent: billingContext.intent,
 				product: `${fullProduct?.id ?? "undefined"} (v${fullProduct?.version ?? "undefined"}) ${isCustom ? "custom" : "standard"}`,
 				customerProduct: `${customerProduct.id}`,
 
@@ -55,6 +56,7 @@ export const logUpdateSubscriptionContext = ({
 
 				defaultProduct: billingContext.defaultProduct?.name ?? "undefined",
 				cancelAction: cancelAction ? cancelAction : "no cancel operation",
+				skipBillingChanges: billingContext.skipBillingChanges,
 			},
 		},
 	});

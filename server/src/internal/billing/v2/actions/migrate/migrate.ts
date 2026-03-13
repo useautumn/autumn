@@ -47,12 +47,13 @@ export async function migrate({
 	const updateSubscriptionParams: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		customer_product_id: currentCustomerProduct.id,
-		entity_id: entity?.id,
+		entity_id: entity?.id ?? undefined,
 
 		proration_behavior: "none",
 		version: newProduct.version, // to trigger update custom plan intent
 
 		transition_rules: transitionRules,
+		redirect_mode: "if_required",
 	};
 
 	ctx.logger.info(

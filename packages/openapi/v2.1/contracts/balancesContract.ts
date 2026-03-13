@@ -3,7 +3,9 @@ import {
 	API_BALANCE_V1_EXAMPLE,
 	CheckResponseV3Schema,
 	CreateBalanceParamsV0Schema,
+	DeleteBalanceParamsV0Schema,
 	ExtCheckParamsSchema,
+	FinalizeLockParamsV0Schema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
 	UpdateBalanceParamsV0Schema,
@@ -140,6 +142,67 @@ export const balancesUpdateContract = oc
 					customer_id: "cus_123",
 					feature_id: "api_calls",
 					remaining: 5,
+				},
+			],
+		}),
+	)
+	.output(SuccessResponseSchema);
+
+export const balancesFinalizeContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/balances.finalize",
+		operationId: "finalizeLock",
+		tags: ["balances"],
+		description:
+			"Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "finalize",
+		}),
+	})
+	.input(
+		FinalizeLockParamsV0Schema.meta({
+			title: "FinalizeBalanceParams",
+			examples: [
+				{
+					lock_id: "lock_abc123",
+					action: "confirm",
+				},
+				{
+					lock_id: "lock_abc123",
+					action: "confirm",
+					override_value: 3,
+				},
+				{
+					lock_id: "lock_abc123",
+					action: "release",
+				},
+			],
+		}),
+	)
+	.output(SuccessResponseSchema);
+
+export const balancesDeleteContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/balances.delete",
+		operationId: "deleteBalance",
+		tags: ["balances"],
+		description:
+			"Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "delete",
+		}),
+	})
+	.input(
+		DeleteBalanceParamsV0Schema.meta({
+			title: "DeleteBalanceParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					feature_id: "api_calls",
 				},
 			],
 		}),

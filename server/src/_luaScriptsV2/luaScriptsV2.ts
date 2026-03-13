@@ -7,6 +7,8 @@ const __dirname = dirname(__filename);
 
 // Path to script folders
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
+const DEDUCTION_DIR = join(__dirname, "deduction");
+const LOCK_DIR = join(DEDUCTION_DIR, "lock");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
 const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
@@ -42,6 +44,36 @@ const DEDUCT_FROM_MAIN_BALANCE = readFileSync(
 	"utf-8",
 );
 
+const RUN_DEDUCTION_ON_CONTEXT = readFileSync(
+	join(DEDUCT_DIR, "runDeductionOnContext.lua"),
+	"utf-8",
+);
+
+const SPEND_LIMIT_UTILS = readFileSync(
+	join(DEDUCT_DIR, "spendLimitUtils.lua"),
+	"utf-8",
+);
+
+const MUTATION_ITEM_UTILS = readFileSync(
+	join(DEDUCTION_DIR, "mutationItemUtils.lua"),
+	"utf-8",
+);
+
+const LOCK_RECEIPT_UTILS = readFileSync(
+	join(LOCK_DIR, "lockReceipt.lua"),
+	"utf-8",
+);
+
+const LOCK_STATE_UTILS = readFileSync(
+	join(LOCK_DIR, "lockStateUtils.lua"),
+	"utf-8",
+);
+
+const LOCK_UNWIND_UTILS = readFileSync(
+	join(LOCK_DIR, "unwindLockUtils.lua"),
+	"utf-8",
+);
+
 // ============================================================================
 // MAIN SCRIPT
 // ============================================================================
@@ -63,7 +95,28 @@ ${CONTEXT_UTILS}
 ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
+${SPEND_LIMIT_UTILS}
+${RUN_DEDUCTION_ON_CONTEXT}
+${MUTATION_ITEM_UTILS}
+${LOCK_RECEIPT_UTILS}
+${LOCK_STATE_UTILS}
+${LOCK_UNWIND_UTILS}
 ${mainScript}`;
+
+const claimLockReceiptMainScript = readFileSync(
+	join(LOCK_DIR, "claimLockReceipt.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically claims a lock receipt by transitioning status: pending → processing.
+ * KEYS[1]: lock_receipt_key
+ * Returns nil on success, or an error code string if not claimable.
+ */
+export const CLAIM_LOCK_RECEIPT_SCRIPT = `${LUA_UTILS}
+${LOCK_RECEIPT_UTILS}
+${LOCK_STATE_UTILS}
+${claimLockReceiptMainScript}`;
 
 // ============================================================================
 // DELETE FULL CUSTOMER CACHE SCRIPTS
@@ -129,30 +182,76 @@ export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${updateMainScript}`;
 
 // ============================================================================
-// UPDATE CUSTOMER DATA SCRIPT (top-level customer fields)
+// ADJUST CUSTOMER ENTITLEMENT BALANCE SCRIPT
 // ============================================================================
 
+const CUS_ENT_DIR = join(__dirname, "customerEntitlements");
+
+const adjustBalanceMainScript = readFileSync(
+	join(CUS_ENT_DIR, "adjustCustomerEntitlementBalance.lua"),
+	"utf-8",
+);
+
 /**
- * Lua script for atomically updating top-level customer fields in the cached
- * FullCustomer (name, email, metadata, send_email_receipts, etc.).
+ * Lua script for atomically incrementing a cusEnt balance in the cached
+ * FullCustomer via JSON.NUMINCRBY. Safe with concurrent deductions.
  */
-export const UPDATE_CUSTOMER_DATA_SCRIPT = readFileSync(
-	join(__dirname, "updateCustomerData.lua"),
+export const ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT = `${LUA_UTILS}
+${adjustBalanceMainScript}`;
+
+// ============================================================================
+// CUSTOMER SCRIPTS (top-level customer fields, entities, invoices)
+// ============================================================================
+
+const CUSTOMER_DIR = join(__dirname, "customers");
+
+const updateCustomerDataMainScript = readFileSync(
+	join(CUSTOMER_DIR, "updateCustomerData.lua"),
+	"utf-8",
+);
+
+/** Atomically update top-level customer fields (name, email, metadata, etc.). */
+export const UPDATE_CUSTOMER_DATA_SCRIPT = `${LUA_UTILS}
+${updateCustomerDataMainScript}`;
+
+/**
+ * Atomically append an entity to the customer's entities array.
+ * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active.
+ */
+export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "appendEntityToCustomer.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically update specific fields on an entity inside the cached FullCustomer.
+ */
+export const UPDATE_ENTITY_IN_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "updateEntityInCustomer.lua"),
+	"utf-8",
+);
+
+/**
+ * Atomically upsert an invoice in the customer's invoices array.
+ * Matches by stripe_id — replaces if found, appends if not.
+ * CRDT-safe: JSON.ARRAPPEND uses merge, JSON.SET uses update-vs-update.
+ */
+export const UPSERT_INVOICE_IN_CUSTOMER_SCRIPT = readFileSync(
+	join(CUSTOMER_DIR, "upsertInvoice.lua"),
 	"utf-8",
 );
 
 // ============================================================================
-// APPEND ENTITY TO CUSTOMER SCRIPT
+// CUSTOMER PRODUCT SCRIPTS
 // ============================================================================
 
+const CUS_PRODUCT_DIR = join(__dirname, "customerProducts");
+
 /**
- * Lua script for atomically appending an entity to the customer's entities
- * array in the cached FullCustomer. Checks for duplicates before appending.
- *
- * CRDT-safe: JSON.ARRAPPEND uses merge conflict resolution in Active-Active,
- * so concurrent appends from different regions will both succeed.
+ * Atomically update specific fields on a cusProduct in the cached FullCustomer.
+ * CRDT-safe: JSON.SET on specific paths uses "update vs update" resolution.
  */
-export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = readFileSync(
-	join(__dirname, "appendEntityToCustomer.lua"),
+export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = readFileSync(
+	join(CUS_PRODUCT_DIR, "updateCustomerProduct.lua"),
 	"utf-8",
 );

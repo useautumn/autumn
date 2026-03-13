@@ -71,7 +71,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 
 	const { lineItems, updateCustomerEntitlements } =
-		eventContextToArrearLineItems({
+		await eventContextToArrearLineItems({
 			ctx,
 			eventContext,
 			periodEndMs: invoicePeriodEndMs,
@@ -83,7 +83,8 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				}),
 		});
 
-	if (lineItems.length > 0) {
+	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	if (lineItems.length > 0 && !skipOverageSubmission) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({

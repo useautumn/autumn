@@ -1,4 +1,3 @@
-import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
@@ -6,6 +5,7 @@ import { EntityDataSchema } from "../../../common/entityData";
 import { BillingBehaviorSchema } from "../billingBehavior";
 import { CustomizePlanV1Schema } from "../customizePlan/customizePlanV1";
 import { InvoiceModeParamsSchema } from "../invoiceModeParams";
+import { RedirectModeSchema } from "../redirectMode";
 import { TransitionRulesSchema } from "../transitionRules";
 
 export const BillingParamsBaseV1Schema = z.object({
@@ -45,13 +45,14 @@ export const BillingParamsBaseV1Schema = z.object({
 		internal: true,
 	}),
 
+	redirect_mode: RedirectModeSchema.default("if_required").meta({
+		description:
+			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
+	}),
+
 	subscription_id: z.string().optional().meta({
 		description:
 			"A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.",
-	}),
-	custom_line_items: z.array(CustomLineItemSchema).optional().meta({
-		description:
-			"Custom line items that override the auto-generated proration invoice. Only valid for immediate subscription updates that don't create a Stripe-managed invoice.",
 	}),
 
 	// Internal

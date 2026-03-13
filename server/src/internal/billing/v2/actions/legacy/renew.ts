@@ -65,7 +65,7 @@ export const renew = async ({
 
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
-		entity_id: fullCustomer.entity?.id,
+		entity_id: fullCustomer.entity?.id ?? undefined,
 		plan_id: fullProduct.id,
 
 		invoice_mode: body.invoice
@@ -78,6 +78,7 @@ export const renew = async ({
 
 		// feature_quantities: attachParams.optionsList,
 		cancel_action: "uncancel",
+		redirect_mode: "if_required",
 	};
 
 	return await billingActions.updateSubscription({

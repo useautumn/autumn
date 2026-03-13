@@ -47,6 +47,10 @@ export const rollovers = pgTable(
 			.onDelete("cascade"),
 
 		index("idx_rollovers_cus_ent_id").on(table.cus_ent_id),
+		index("idx_rollovers_cus_ent_expires").on(
+			table.cus_ent_id,
+			table.expires_at,
+		),
 	],
 ).enableRLS();
 

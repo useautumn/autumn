@@ -154,38 +154,29 @@ PreviewMultiAttachTo = TypeAliasType("PreviewMultiAttachTo", Union[float, str])
 
 class PreviewMultiAttachTierTypedDict(TypedDict):
     to: PreviewMultiAttachToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
 class PreviewMultiAttachTier(BaseModel):
     to: PreviewMultiAttachTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -527,6 +518,8 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
 
 
 class PreviewMultiAttachPlan(BaseModel):
@@ -542,9 +535,14 @@ class PreviewMultiAttachPlan(BaseModel):
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customize", "feature_quantities", "version"])
+        optional_fields = set(
+            ["customize", "feature_quantities", "version", "subscription_id"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -690,11 +688,79 @@ PreviewMultiAttachRedirectMode = Literal[
 r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
 
 
+class PreviewMultiAttachSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class PreviewMultiAttachSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachBillingControlsTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[PreviewMultiAttachSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class PreviewMultiAttachBillingControls(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[PreviewMultiAttachSpendLimit]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewMultiAttachEntityDataTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID that this entity is associated with"""
     name: NotRequired[str]
     r"""Name of the entity"""
+    billing_controls: NotRequired[PreviewMultiAttachBillingControlsTypedDict]
+    r"""Billing controls for the entity."""
 
 
 class PreviewMultiAttachEntityData(BaseModel):
@@ -704,9 +770,12 @@ class PreviewMultiAttachEntityData(BaseModel):
     name: Optional[str] = None
     r"""Name of the entity"""
 
+    billing_controls: Optional[PreviewMultiAttachBillingControls] = None
+    r"""Billing controls for the entity."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name"])
+        optional_fields = set(["name", "billing_controls"])
         serialized = handler(self)
         m = {}
 

@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -30,6 +30,172 @@ class GetOrCreateCustomerGlobals(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["x-api-version"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetOrCreateCustomerInterval = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: GetOrCreateCustomerInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class GetOrCreateCustomerPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: GetOrCreateCustomerInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[GetOrCreateCustomerPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+
+class GetOrCreateCustomerAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[GetOrCreateCustomerPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class GetOrCreateCustomerSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerBillingControlsTypedDict(TypedDict):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: NotRequired[List[GetOrCreateCustomerAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[GetOrCreateCustomerSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class GetOrCreateCustomerBillingControls(BaseModel):
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    auto_topups: Optional[List[GetOrCreateCustomerAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[GetOrCreateCustomerSpendLimit]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["auto_topups", "spend_limits"])
         serialized = handler(self)
         m = {}
 
@@ -62,6 +228,8 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    billing_controls: NotRequired[GetOrCreateCustomerBillingControlsTypedDict]
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
     expand: NotRequired[List[CustomerExpand]]
     r"""Customer expand options"""
 
@@ -93,6 +261,9 @@ class GetOrCreateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    billing_controls: Optional[GetOrCreateCustomerBillingControls] = None
+    r"""Billing controls for the customer (auto top-ups, etc.)"""
+
     expand: Optional[List[CustomerExpand]] = None
     r"""Customer expand options"""
 
@@ -108,6 +279,7 @@ class GetOrCreateCustomerParams(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
+                "billing_controls",
                 "expand",
             ]
         )

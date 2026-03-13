@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 import { core } from "./core";
 import { coreAttach } from "./core/coreAttach";
 import { coreBalances } from "./core/coreBalances";
+import { coreBilling } from "./core/coreBilling";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreMigrations } from "./core/coreMigrations";
 import { coreStripe } from "./core/coreStripe";
@@ -13,20 +14,22 @@ import { check } from "./domains/balances/check";
 import { track } from "./domains/balances/track";
 import { updateBalance } from "./domains/balances/updateBalance";
 import { billing } from "./domains/billing/billing";
+import { billingDiscounts } from "./domains/billing/billingDiscounts";
 import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
-import { temp } from "./domains/temp";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
+import { temp } from "./temp";
 import type { TestGroup, TestSuite } from "./types";
 
 export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
 	core,
+	coreBilling,
 	coreAttach,
 	coreBalances,
 	coreLegacy,
@@ -38,6 +41,7 @@ const allGroups: TestGroup[] = [
 	track,
 	updateBalance,
 	billing,
+	billingDiscounts,
 	billingV1,
 	billingV2,
 	billingV2Misc,

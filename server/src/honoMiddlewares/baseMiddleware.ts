@@ -65,7 +65,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		skipCache: false,
+		skipCache: c.req.header("x-skip-cache") === "true",
 
 		// Test params:
 		extraLogs: {},
@@ -74,6 +74,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			eventId: c.req.header("x-event-id"),
 			skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
 			skipWebhooks: c.req.header("x-skip-webhooks") === "true",
+			keepInternalFields: c.req.header("x-strip-internal") === "false",
 		},
 	});
 

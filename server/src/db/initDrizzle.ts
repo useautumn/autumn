@@ -3,11 +3,18 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { schemas as schema } from "@autumn/shared";
+import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { otelConfig } from "../utils/otel/otelConfig.js";
 
 export const client = postgres(process.env.DATABASE_URL!);
 export const db = drizzle(client, { schema });
+
+if (otelConfig.drizzle) {
+	instrumentDrizzleClient(db);
+}
 
 export const initDrizzle = (params?: {
 	maxConnections?: number;
@@ -22,11 +29,41 @@ export const initDrizzle = (params?: {
 		max: maxConnections,
 	});
 
-	const db = drizzle(client, {
+	const dbMain = drizzle(client, {
 		schema,
 	});
 
-	return { db, client };
+	if (otelConfig.drizzle) {
+		instrumentDrizzleClient(dbMain);
+	}
+
+	// if (process.env.DATABASE_REPLICA_URL !== undefined) {
+	// 	const clientReplica = postgres(process.env.DATABASE_REPLICA_URL, {
+	// 		max: maxConnections,
+	// 	});
+
+	// 	const dbReplica = drizzle(clientReplica, {
+	// 		schema,
+	// 	});
+
+	// 	const db = withReplicas(dbMain, [dbMain, dbReplica], (replicas) => {
+	// 		const probabilityWeights = [0.7, 0.3];
+	// 		let cumulativeProbability = 0;
+	// 		const randomValue = Math.random();
+
+	// 		for (const [index, replica] of replicas.entries()) {
+	// 			cumulativeProbability += probabilityWeights[index] ?? 0;
+	// 			if (randomValue < cumulativeProbability) {
+	// 				return replica;
+	// 			}
+	// 		}
+	// 		return replicas[1] ?? replicas[0]!;
+	// 	});
+
+	// 	return { db, client, clientReplica };
+	// }
+
+	return { db: dbMain, client };
 };
 
 export type DrizzleCli = ReturnType<typeof initDrizzle>["db"];

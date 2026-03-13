@@ -148,7 +148,7 @@ export const handleMultiAttachFlow = async ({
 
 	if (latestInvoice) {
 		await insertInvoiceFromAttach({
-			db,
+			ctx,
 			attachParams,
 			stripeInvoice: latestInvoice,
 			logger,
