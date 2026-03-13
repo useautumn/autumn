@@ -1,14 +1,15 @@
 import type {
 	ApiFreeTrialV2,
-	AttachPreviewResponse,
-	BillingPreviewChange,
 	BillingPreviewResponse,
 	CheckoutEntity,
-	PreviewUpdateSubscriptionResponse,
+	GetCheckoutResponse,
 } from "@autumn/shared";
 import { format } from "date-fns";
 import { formatAmount } from "./formatUtils";
 import { getCheckoutPreviewIntent } from "./getCheckoutPreviewIntent";
+
+type CheckoutPreview = GetCheckoutResponse["preview"];
+type CheckoutPreviewChange = CheckoutPreview["incoming"][number];
 
 /**
  * Builds a phrase describing applied discounts.
@@ -130,9 +131,9 @@ export function buildHeaderDescription({
 	freeTrial,
 	hasActiveTrial,
 }: {
-	preview?: AttachPreviewResponse | PreviewUpdateSubscriptionResponse;
-	incoming?: BillingPreviewChange[];
-	outgoing?: BillingPreviewChange[];
+	preview?: CheckoutPreview;
+	incoming?: CheckoutPreviewChange[];
+	outgoing?: CheckoutPreviewChange[];
 	entity?: CheckoutEntity;
 	freeTrial?: ApiFreeTrialV2 | null;
 	hasActiveTrial?: boolean;
