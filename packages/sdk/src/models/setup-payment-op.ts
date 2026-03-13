@@ -386,6 +386,34 @@ export type SetupPaymentCustomLineItem = {
   description: string;
 };
 
+/**
+ * Whether to carry over balances from the previous plan.
+ */
+export type SetupPaymentCarryOverBalances = {
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
+/**
+ * Whether to carry over usages from the previous plan.
+ */
+export type SetupPaymentCarryOverUsages = {
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
 export type SetupPaymentParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -439,6 +467,14 @@ export type SetupPaymentParams = {
    * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
    */
   processorSubscriptionId?: string | undefined;
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  carryOverBalances?: SetupPaymentCarryOverBalances | undefined;
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  carryOverUsages?: SetupPaymentCarryOverUsages | undefined;
 };
 
 /**
@@ -929,6 +965,70 @@ export function setupPaymentCustomLineItemToJSON(
 }
 
 /** @internal */
+export type SetupPaymentCarryOverBalances$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const SetupPaymentCarryOverBalances$outboundSchema: z.ZodMiniType<
+  SetupPaymentCarryOverBalances$Outbound,
+  SetupPaymentCarryOverBalances
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function setupPaymentCarryOverBalancesToJSON(
+  setupPaymentCarryOverBalances: SetupPaymentCarryOverBalances,
+): string {
+  return JSON.stringify(
+    SetupPaymentCarryOverBalances$outboundSchema.parse(
+      setupPaymentCarryOverBalances,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCarryOverUsages$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const SetupPaymentCarryOverUsages$outboundSchema: z.ZodMiniType<
+  SetupPaymentCarryOverUsages$Outbound,
+  SetupPaymentCarryOverUsages
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function setupPaymentCarryOverUsagesToJSON(
+  setupPaymentCarryOverUsages: SetupPaymentCarryOverUsages,
+): string {
+  return JSON.stringify(
+    SetupPaymentCarryOverUsages$outboundSchema.parse(
+      setupPaymentCarryOverUsages,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -943,6 +1043,8 @@ export type SetupPaymentParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
+  carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
+  carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
 };
 
 /** @internal */
@@ -970,6 +1072,12 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
     ),
     processorSubscriptionId: z.optional(z.string()),
+    carryOverBalances: z.optional(
+      z.lazy(() => SetupPaymentCarryOverBalances$outboundSchema),
+    ),
+    carryOverUsages: z.optional(
+      z.lazy(() => SetupPaymentCarryOverUsages$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -983,6 +1091,8 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
+      carryOverBalances: "carry_over_balances",
+      carryOverUsages: "carry_over_usages",
     });
   }),
 );

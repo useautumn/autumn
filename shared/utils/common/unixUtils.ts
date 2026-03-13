@@ -61,3 +61,13 @@ export const msToSeconds = (ms: number): number => {
 export const truncateMsToSecondPrecision = (ms: number): number => {
 	return Math.floor(ms / 1000) * 1000;
 };
+
+/**
+ * Returns true if two timestamps are within `toleranceMs` of each other.
+ * Defaults to 1 second to absorb Stripe's second-precision rounding drift.
+ */
+export const timestampsMatch = (
+	a: number,
+	b: number,
+	toleranceMs = ms.seconds(1),
+): boolean => Math.abs(a - b) <= toleranceMs;

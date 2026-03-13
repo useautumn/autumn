@@ -157,6 +157,105 @@ export type UpdateEntityPurchase = {
   quantity: number;
 };
 
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const UpdateEntityType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type UpdateEntityType = OpenEnum<typeof UpdateEntityType>;
+
+export type UpdateEntityCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type UpdateEntityDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type UpdateEntityFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: UpdateEntityType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<UpdateEntityCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: UpdateEntityDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type UpdateEntityFlags = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: UpdateEntityFeature | undefined;
+};
+
 export type UpdateEntitySpendLimitResponse = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -244,6 +343,7 @@ export type UpdateEntityResponse = {
   subscriptions: Array<UpdateEntitySubscription>;
   purchases: Array<UpdateEntityPurchase>;
   balances: { [k: string]: Balance };
+  flags: { [k: string]: UpdateEntityFlags };
   /**
    * Billing controls for the entity.
    */
@@ -448,6 +548,124 @@ export function updateEntityPurchaseFromJSON(
 }
 
 /** @internal */
+export const UpdateEntityType$inboundSchema: z.ZodMiniType<
+  UpdateEntityType,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityType);
+
+/** @internal */
+export const UpdateEntityCreditSchema$inboundSchema: z.ZodMiniType<
+  UpdateEntityCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDisplay$inboundSchema: z.ZodMiniType<
+  UpdateEntityDisplay,
+  unknown
+> = z.object({
+  singular: z.optional(z.nullable(types.string())),
+  plural: z.optional(z.nullable(types.string())),
+});
+
+export function updateEntityDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityFeature$inboundSchema: z.ZodMiniType<
+  UpdateEntityFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: UpdateEntityType$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => UpdateEntityCreditSchema$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => UpdateEntityDisplay$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function updateEntityFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityFlags$inboundSchema: z.ZodMiniType<
+  UpdateEntityFlags,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => UpdateEntityFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function updateEntityFlagsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityFlags, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityFlags$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityFlags' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateEntitySpendLimitResponse,
   unknown
@@ -554,6 +772,7 @@ export const UpdateEntityResponse$inboundSchema: z.ZodMiniType<
     ),
     purchases: z.array(z.lazy(() => UpdateEntityPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    flags: z.record(z.string(), z.lazy(() => UpdateEntityFlags$inboundSchema)),
     billing_controls: types.optional(
       z.lazy(() => UpdateEntityBillingControlsResponse$inboundSchema),
     ),

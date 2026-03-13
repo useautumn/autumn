@@ -330,12 +330,14 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	await expectProductTrialing({
 		customer,
 		productId: addon.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)

@@ -4,6 +4,7 @@ import {
 	ErrCode,
 	type Organization,
 	ProcessorType,
+	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { Stripe } from "stripe";
@@ -11,7 +12,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCustomer } from "@/external/stripe/customers";
 import { CusService } from "@/internal/customers/CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
 import { logger } from "../logtail/logtailUtils";
 

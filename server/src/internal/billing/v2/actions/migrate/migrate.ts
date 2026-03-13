@@ -53,6 +53,7 @@ export async function migrate({
 		version: newProduct.version, // to trigger update custom plan intent
 
 		transition_rules: transitionRules,
+		redirect_mode: "if_required",
 	};
 
 	ctx.logger.info(

@@ -71,6 +71,105 @@ export type CheckParams = {
 };
 
 /**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const FlagType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type FlagType = OpenEnum<typeof FlagType>;
+
+export type CheckCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type FlagDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type CheckFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: FlagType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<CheckCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: FlagDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type Flag = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: CheckFeature | undefined;
+};
+
+/**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
 export const CheckScenario = {
@@ -94,12 +193,12 @@ export const CheckEnv = {
  */
 export type CheckEnv = OpenEnum<typeof CheckEnv>;
 
-export const CheckType = {
+export const ProductType = {
   Feature: "feature",
   PricedFeature: "priced_feature",
   Price: "price",
 } as const;
-export type CheckType = OpenEnum<typeof CheckType>;
+export type ProductType = OpenEnum<typeof ProductType>;
 
 export const FeatureType = {
   SingleUse: "single_use",
@@ -135,7 +234,7 @@ export const UsageModel = {
 } as const;
 export type UsageModel = OpenEnum<typeof UsageModel>;
 
-export type CheckDisplay = {
+export type ProductDisplay = {
   primaryText: string;
   secondaryText?: string | null | undefined;
 };
@@ -182,7 +281,7 @@ export type CheckItem = {
   /**
    * The type of the product item
    */
-  type?: CheckType | null | undefined;
+  type?: ProductType | null | undefined;
   /**
    * The feature ID of the product item. If the item is a fixed price, should be `null`
    */
@@ -234,7 +333,7 @@ export type CheckItem = {
   /**
    * The display of the product item.
    */
-  display?: CheckDisplay | null | undefined;
+  display?: ProductDisplay | null | undefined;
   /**
    * Used in customer context. Quantity of the feature the customer has prepaid for.
    */
@@ -438,6 +537,10 @@ export type CheckResponse = {
    */
   balance: Balance | null;
   /**
+   * The flag associated with this check, if any.
+   */
+  flag: Flag | null;
+  /**
    * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
    */
   preview?: Preview | undefined;
@@ -516,6 +619,115 @@ export function checkParamsToJSON(checkParams: CheckParams): string {
 }
 
 /** @internal */
+export const FlagType$inboundSchema: z.ZodMiniType<FlagType, unknown> =
+  openEnums.inboundSchema(FlagType);
+
+/** @internal */
+export const CheckCreditSchema$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const FlagDisplay$inboundSchema: z.ZodMiniType<FlagDisplay, unknown> = z
+  .object({
+    singular: z.optional(z.nullable(types.string())),
+    plural: z.optional(z.nullable(types.string())),
+  });
+
+export function flagDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<FlagDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => FlagDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FlagDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckFeature$inboundSchema: z.ZodMiniType<CheckFeature, unknown> =
+  z.pipe(
+    z.object({
+      id: types.string(),
+      name: types.string(),
+      type: FlagType$inboundSchema,
+      consumable: types.boolean(),
+      event_names: types.optional(z.array(types.string())),
+      credit_schema: types.optional(
+        z.array(z.lazy(() => CheckCreditSchema$inboundSchema)),
+      ),
+      display: types.optional(z.lazy(() => FlagDisplay$inboundSchema)),
+      archived: types.boolean(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "event_names": "eventNames",
+        "credit_schema": "creditSchema",
+      });
+    }),
+  );
+
+export function checkFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<CheckFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const Flag$inboundSchema: z.ZodMiniType<Flag, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => CheckFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function flagFromJSON(
+  jsonString: string,
+): SafeParseResult<Flag, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Flag$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Flag' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckScenario$inboundSchema: z.ZodMiniType<
   CheckScenario,
   unknown
@@ -526,8 +738,8 @@ export const CheckEnv$inboundSchema: z.ZodMiniType<CheckEnv, unknown> =
   openEnums.inboundSchema(CheckEnv);
 
 /** @internal */
-export const CheckType$inboundSchema: z.ZodMiniType<CheckType, unknown> =
-  openEnums.inboundSchema(CheckType);
+export const ProductType$inboundSchema: z.ZodMiniType<ProductType, unknown> =
+  openEnums.inboundSchema(ProductType);
 
 /** @internal */
 export const FeatureType$inboundSchema: z.ZodMiniType<FeatureType, unknown> =
@@ -566,27 +778,29 @@ export const UsageModel$inboundSchema: z.ZodMiniType<UsageModel, unknown> =
   openEnums.inboundSchema(UsageModel);
 
 /** @internal */
-export const CheckDisplay$inboundSchema: z.ZodMiniType<CheckDisplay, unknown> =
-  z.pipe(
-    z.object({
-      primary_text: types.string(),
-      secondary_text: z.optional(z.nullable(types.string())),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "primary_text": "primaryText",
-        "secondary_text": "secondaryText",
-      });
-    }),
-  );
+export const ProductDisplay$inboundSchema: z.ZodMiniType<
+  ProductDisplay,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: z.optional(z.nullable(types.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
 
-export function checkDisplayFromJSON(
+export function productDisplayFromJSON(
   jsonString: string,
-): SafeParseResult<CheckDisplay, SDKValidationError> {
+): SafeParseResult<ProductDisplay, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckDisplay' from JSON`,
+    (x) => ProductDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ProductDisplay' from JSON`,
   );
 }
 
@@ -657,7 +871,7 @@ export function configFromJSON(
 export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
   .pipe(
     z.object({
-      type: z.optional(z.nullable(CheckType$inboundSchema)),
+      type: z.optional(z.nullable(ProductType$inboundSchema)),
       feature_id: z.optional(z.nullable(types.string())),
       feature_type: z.optional(z.nullable(FeatureType$inboundSchema)),
       included_usage: z.optional(
@@ -672,7 +886,9 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       billing_units: z.optional(z.nullable(types.number())),
       reset_usage_when_enabled: z.optional(z.nullable(types.boolean())),
       entity_feature_id: z.optional(z.nullable(types.string())),
-      display: z.optional(z.nullable(z.lazy(() => CheckDisplay$inboundSchema))),
+      display: z.optional(
+        z.nullable(z.lazy(() => ProductDisplay$inboundSchema)),
+      ),
       quantity: z.optional(z.nullable(types.number())),
       next_cycle_quantity: z.optional(z.nullable(types.number())),
       config: z.optional(z.nullable(z.lazy(() => Config$inboundSchema))),
@@ -856,6 +1072,7 @@ export const CheckResponse$inboundSchema: z.ZodMiniType<
     entity_id: z.optional(z.nullable(types.string())),
     required_balance: types.optional(types.number()),
     balance: types.nullable(Balance$inboundSchema),
+    flag: types.nullable(z.lazy(() => Flag$inboundSchema)),
     preview: types.optional(z.lazy(() => Preview$inboundSchema)),
   }),
   z.transform((v) => {
