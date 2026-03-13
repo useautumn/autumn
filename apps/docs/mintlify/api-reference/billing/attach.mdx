@@ -50,6 +50,15 @@ const response = await autumn.billing.attach({
 });
 ```
 
+```typescript Upgrade with usage carry-over
+// When upgrading, preserve the customer's existing usage
+const response = await autumn.billing.attach({
+  customerId: "cus_123",
+  planId: "premium_plan",
+  carryOverUsages: { enabled: true }
+});
+```
+
 </CodeGroup>
 
 ### Body Parameters
@@ -310,6 +319,34 @@ const response = await autumn.billing.attach({
 
 <DynamicParamField body="processor_subscription_id" type="string">
   The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+</DynamicParamField>
+
+<DynamicParamField body="carry_over_balances" type="object">
+  Carry over remaining feature balances when upgrading plans. Only works with immediate upgrades (not scheduled downgrades). The remaining balance from the old plan is added as a loose entitlement that expires at the next reset.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      Whether to carry over balances from the previous plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_ids" type="string[]">
+      The IDs of the features to carry over balances from. If omitted, all consumable features will be carried over.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="carry_over_usages" type="object">
+  Carry over usage counts when upgrading plans. Only works with immediate upgrades (not scheduled downgrades). The usage from the old plan is deducted from the new plan's balance.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      Whether to carry over usages from the previous plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_ids" type="string[]">
+      The IDs of the features to carry over usages for. If omitted, all consumable features will be carried over.
+    </DynamicParamField>
+
+  </Expandable>
 </DynamicParamField>
 
 
