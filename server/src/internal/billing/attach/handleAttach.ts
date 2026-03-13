@@ -5,6 +5,7 @@ import {
 	applyResponseVersionChanges,
 } from "../../../../../shared/api/versionUtils/versionUtils";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
+import { buildBillingLockKey } from "../../billing/utils/buildBillingLockKey";
 import { checkStripeConnections } from "../../customers/attach/attachRouter";
 import { getAttachParams } from "../../customers/attach/attachUtils/attachParams/getAttachParams";
 import { getAttachBranch } from "../../customers/attach/attachUtils/getAttachBranch";
@@ -28,7 +29,11 @@ export const handleAttach = createRoute({
 					getKey: (c) => {
 						const ctx = c.get("ctx");
 						const attachBody = c.req.valid("json");
-						return `lock:attach:${ctx.org.id}:${ctx.env}:${attachBody.customer_id}`;
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: attachBody.customer_id,
+						});
 					},
 				}
 			: undefined,
@@ -121,8 +126,6 @@ export const handleAttach = createRoute({
 				? attachToInvoiceResponse({ invoice: response.invoice })
 				: undefined,
 		});
-
-		
 
 		return c.json(
 			applyResponseVersionChanges<AttachResponseV1>({

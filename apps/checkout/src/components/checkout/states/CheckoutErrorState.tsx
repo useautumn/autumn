@@ -1,23 +1,32 @@
-import { WarningIcon } from "@phosphor-icons/react";
-import { motion } from "motion/react";
-import { CheckoutBackground } from "@/components/checkout/layout/CheckoutBackground";
-import { STANDARD_TRANSITION } from "@/lib/animations";
+import {
+	CheckIcon,
+	TimerIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
+import { CheckoutTerminalState } from "./CheckoutTerminalState";
 
-export function CheckoutErrorState({ message }: { message: string }) {
+export function CheckoutErrorState({
+	title,
+	message,
+	variant,
+}: {
+	title: string;
+	message: string;
+	variant: "completed" | "expired" | "unavailable" | "generic";
+}) {
+	const Icon =
+		variant === "completed"
+			? CheckIcon
+			: variant === "expired"
+				? TimerIcon
+				: WarningIcon;
+
 	return (
-		<CheckoutBackground>
-			<motion.div
-				className="flex flex-col items-start gap-1"
-				initial={{ opacity: 0, y: 8 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={STANDARD_TRANSITION}
-			>
-				<div className="flex items-center gap-2">
-					<WarningIcon className="h-4 w-4 text-destructive shrink-0" weight="bold" />
-					<span className="text-foreground tracking-tight">Something went wrong</span>
-				</div>
-				<p className="text-xs text-muted-foreground pl-6">{message}</p>
-			</motion.div>
-		</CheckoutBackground>
+		<CheckoutTerminalState
+			title={title}
+			message={message}
+			Icon={Icon}
+			iconClassName={variant === "generic" ? "text-destructive/85" : undefined}
+		/>
 	);
 }

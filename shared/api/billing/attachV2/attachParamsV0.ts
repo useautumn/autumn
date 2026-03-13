@@ -1,4 +1,3 @@
-import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
@@ -15,8 +14,6 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
-	// Checkout behavior
-	redirect_mode: RedirectModeSchema.default("always"),
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),

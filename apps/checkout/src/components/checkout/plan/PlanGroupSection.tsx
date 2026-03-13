@@ -8,13 +8,12 @@ import { formatTrialDuration } from "@/utils/trialUtils";
 type PlanChangeType = "incoming" | "outgoing";
 
 function LineItemAmount({ item, currency }: { item: PreviewLineItem; currency: string }) {
-	const totalDiscount = item.discounts.reduce((sum, d) => sum + d.amountOff, 0);
-	const hasDiscount = totalDiscount > 0;
-	const originalAmount = item.amount + totalDiscount;
+	const hasDiscount = item.subtotal !== item.total;
+	const originalAmount = item.subtotal;
 
 	return (
 		<motion.div
-			key={item.amount}
+			key={item.total}
 			className="flex items-center gap-1.5 shrink-0"
 			initial={{ opacity: 0.5 }}
 			animate={{ opacity: 1 }}
@@ -26,7 +25,7 @@ function LineItemAmount({ item, currency }: { item: PreviewLineItem; currency: s
 				</span>
 			)}
 			<span className="text-sm tabular-nums text-foreground">
-				{formatAmount(item.amount, currency)}
+				{formatAmount(item.total, currency)}
 			</span>
 		</motion.div>
 	);
@@ -59,31 +58,31 @@ export function PlanGroupSection({
 }: PlanGroupSectionProps) {
 	// Sort items so base price appears first
 	const sortedItems = [...items].sort((a, b) => {
-		if (a.is_base && !b.is_base) return -1;
-		if (!a.is_base && b.is_base) return 1;
+		if (!a.feature_id && b.feature_id) return -1;
+		if (a.feature_id && !b.feature_id) return 1;
 		return 0;
 	});
 
-	// Format line item title with quantity
+	// Format line item label with quantity
 	const formatItemTitle = (item: PreviewLineItem): string => {
-		if (item.is_base) return "Base price";
-		const title = item.title;
-		if (!item.is_base && item.total_quantity > 1) {
-			return `${title} x${item.total_quantity}`;
+		if (!item.feature_id) return "Base price";
+		const title = item.display_name;
+		if (item.quantity > 1) {
+			return `${title} x${item.quantity}`;
 		}
 		return title;
 	};
 
-	// Check if all items share the same effective period
-	const itemsWithPeriod = sortedItems.filter((item) => item.effective_period);
+	// Check if all items share the same period
+	const itemsWithPeriod = sortedItems.filter((item) => item.period);
 	const allSamePeriod =
 		itemsWithPeriod.length > 0 &&
 		itemsWithPeriod.every(
 			(item) =>
-				item.effective_period?.start === itemsWithPeriod[0].effective_period?.start &&
-				item.effective_period?.end === itemsWithPeriod[0].effective_period?.end,
+				item.period?.start === itemsWithPeriod[0].period?.start &&
+				item.period?.end === itemsWithPeriod[0].period?.end,
 		);
-	const sharedPeriod = allSamePeriod ? itemsWithPeriod[0].effective_period : null;
+	const sharedPeriod = allSamePeriod ? itemsWithPeriod[0].period : null;
 
 	const headerRightText = (() => {
 		if (type === "outgoing" && cancelledAt) {
@@ -122,17 +121,20 @@ export function PlanGroupSection({
 				// Show next cycle line items for trial plans (what they'll pay after trial)
 				[...nextCycleItems]
 					.sort((a, b) => {
-						if (a.is_base && !b.is_base) return -1;
-						if (!a.is_base && b.is_base) return 1;
+						if (!a.feature_id && b.feature_id) return -1;
+						if (a.feature_id && !b.feature_id) return 1;
 						return 0;
 					})
 					.map((item, itemIndex) => (
-						<div key={`next-${item.title}-${itemIndex}`} className="flex items-center justify-between py-0.5">
+						<div
+							key={`next-${item.display_name}-${itemIndex}`}
+							className="flex items-center justify-between py-0.5"
+						>
 							<span className="text-sm text-muted-foreground truncate">
 								{formatItemTitle(item)}
 							</span>
 							<span className="text-sm tabular-nums text-foreground">
-								{formatAmount(item.amount, currency)}
+								{formatAmount(item.total, currency)}
 							</span>
 						</div>
 					))
@@ -147,11 +149,14 @@ export function PlanGroupSection({
 				</div>
 				) : (
 					sortedItems.map((item, itemIndex) => (
-						<div key={`${item.title}-${itemIndex}`} className="flex flex-col">
+						<div
+							key={`${item.display_name}-${itemIndex}`}
+							className="flex flex-col"
+						>
 							<div className="flex items-center justify-between py-0.5">
 								<div className="flex items-center gap-2 min-w-0">
 									<motion.span
-										key={`${item.title}-${item.total_quantity}`}
+										key={`${item.display_name}-${item.quantity}`}
 										className="text-sm text-muted-foreground truncate"
 										initial={{ opacity: 0.5 }}
 										animate={{ opacity: 1 }}
@@ -163,9 +168,9 @@ export function PlanGroupSection({
 								<LineItemAmount item={item} currency={currency} />
 							</div>
 							{/* Only show per-item period if items don't share the same period */}
-							{!sharedPeriod && item.effective_period && (
+							{!sharedPeriod && item.period && (
 								<span className="text-xs text-muted-foreground/60 pl-0">
-									{formatPeriodRange(item.effective_period.start, item.effective_period.end)}
+									{formatPeriodRange(item.period.start, item.period.end)}
 								</span>
 							)}
 						</div>

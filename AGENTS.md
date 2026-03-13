@@ -15,7 +15,7 @@ in the test logs. Use your common sense
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
-- Note, biome does not perform typechecking. In which case you need to, you may run `tsgo --noEmit --skipLibCheck <folder or file path>`
+- Note, biome does not perform typechecking. For typechecks, either `cd` into the relevant workspace and run `bun ts`, or run `tsgo` directly. If you need to install it first, the npm package is `@typescript/native-preview`. Do not use `tsc` for workspace typechecks.
 
 - The `server/src/_luaScriptsV2/` folder contains Lua scripts for Redis atomic operations. Redis uses **Lua 5.1** - there is NO `goto` statement (added in Lua 5.2), so use if/else blocks instead.
 
@@ -45,7 +45,7 @@ in the test logs. Use your common sense
 - This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
-- Do not run "npx tsc" - run "tsc" instead as it is installed globally.
+- If you need the TypeScript CLI directly, run `tsgo` itself (package: `@typescript/native-preview`), not `npx tsc`.
 
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
@@ -98,7 +98,6 @@ in the test logs. Use your common sense
 
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
-- Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
 # Figma MCP guidance
 - When you are using the Figma MCP server, you **must** follow our design system. Below is an example implementation of CVA with out design system

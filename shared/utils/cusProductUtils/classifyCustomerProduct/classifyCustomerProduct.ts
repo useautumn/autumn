@@ -4,7 +4,7 @@ import type {
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels.js";
 import type { Product } from "@models/productModels/productModels";
-import { orgDefaultAppliesToEntities } from "../../..";
+import { isPrepaidPrice, orgDefaultAppliesToEntities } from "../../..";
 import type { SharedContext } from "../../../types/sharedContext";
 import {
 	isFreeProduct,
@@ -268,4 +268,12 @@ export const customerProductEligibleForDefaultProduct = ({
 	if (!isCustomerProductRecurring(customerProduct)) return false;
 
 	return true;
+};
+
+export const customerProductHasPrepaidPrice = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	return prices.some((price) => isPrepaidPrice(price));
 };
