@@ -64,8 +64,8 @@ export const applyPercentOffDiscountToLineItems = ({
 			0,
 		);
 
-		const description = options.skipDescriptionTag
-			? item.description
+		const description = item.context.discountable
+			? item.description // if discountable, stripe applies discount, don't need our own tag
 			: addDiscountTagToDescription({ description: item.description });
 
 		return {

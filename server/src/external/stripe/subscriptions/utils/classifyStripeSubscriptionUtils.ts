@@ -110,3 +110,13 @@ export const wasImmediateStripeCancellation = (
 	// // If false, it was an immediate cancellation
 	// return !stripeSubscription.cancel_at_period_end;
 };
+
+export const isStripeSubscriptionPastDue = (
+	stripeSubscription?: Stripe.Subscription,
+) => {
+	if (!stripeSubscription) {
+		return false;
+	}
+
+	return stripeSubscription.status === "past_due";
+};

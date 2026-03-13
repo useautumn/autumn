@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
+	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -8,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { features } from "../../featureModels/featureTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
+import type { DbSpendLimit } from "../billingControls/customerBillingControls.js";
 import { customers } from "../cusTable.js";
 
 export const entities = pgTable(
@@ -22,6 +26,7 @@ export const entities = pgTable(
 		name: text(),
 		deleted: boolean().default(false).notNull(),
 		internal_feature_id: text("internal_feature_id"),
+		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 
 		// Optional...
 		feature_id: text("feature_id"),
@@ -48,6 +53,14 @@ export const entities = pgTable(
 			table.env,
 			table.internal_customer_id,
 			table.id,
+		),
+		index("idx_entities_internal_customer_id").using(
+			"hash",
+			table.internal_customer_id,
+		),
+		index("idx_entities_customer_internal_desc").on(
+			table.internal_customer_id,
+			sql`${table.internal_id} DESC`,
 		),
 	],
 );

@@ -5,6 +5,7 @@ import {
 	ApiVersionClass,
 	apiPlan,
 	applyResponseVersionChanges,
+	ErrCode,
 	type FreeTrial,
 	mapToProductV2,
 	notNullish,
@@ -54,6 +55,12 @@ export const handleUpdatePlanV1 = createRoute({
 		const { db, org, env, features, logger } = ctx;
 		const query = c.req.valid("query") || {};
 		const { version, upsert, disable_version } = query;
+
+		if (!productId) {
+			throw new RecaseError({
+				message: "Product ID is required",
+			});
+		}
 
 		// Convert to ProductV2 format only if client sent V2 Plan format
 		// V1.2 clients already send ProductV2, no conversion needed

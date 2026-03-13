@@ -2,8 +2,10 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+import type { Redis } from "ioredis";
+import { currentRegion, redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -12,14 +14,13 @@ import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
+import type { MutationLogItem } from "../types/mutationLogItem.js";
 import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
-import type {
-	LuaDeductionResult,
-	RolloverUpdate,
-} from "../types/redisDeductionResult.js";
+import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
+import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
@@ -32,17 +33,20 @@ export const executeRedisDeduction = async ({
 	deductions,
 	fullCustomer,
 	deductionOptions = {},
+	redisInstance,
 }: {
 	ctx: AutumnContext;
 	entityId?: string;
 	deductions: FeatureDeduction[];
 	fullCustomer: FullCustomer;
 	deductionOptions?: DeductionOptions;
+	redisInstance?: Redis;
 }): Promise<{
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	updates: Record<string, DeductionUpdate>;
 	rolloverUpdates: Record<string, RolloverUpdate>;
+	mutationLogs: MutationLogItem[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullCus = structuredClone(fullCustomer);
@@ -60,6 +64,13 @@ export const executeRedisDeduction = async ({
 		});
 	}
 
+	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+		throw new RedisDeductionError({
+			message: "Locks are not supported for paid allocated features",
+			code: RedisDeductionErrorCode.PaidAllocated,
+		});
+	}
+
 	if (ctx.skipCache) {
 		throw new RedisDeductionError({
 			message: `Skipping cache is not supported for Redis`,
@@ -69,6 +80,7 @@ export const executeRedisDeduction = async ({
 
 	let allUpdates: Record<string, DeductionUpdate> = {};
 	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
+	let allMutationLogs: MutationLogItem[] = [];
 
 	// Build cache key
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
@@ -79,13 +91,22 @@ export const executeRedisDeduction = async ({
 	});
 
 	for (const deduction of deductions) {
-		const { feature, deduction: toDeduct, targetBalance } = deduction;
+		const {
+			feature,
+			deduction: toDeduct,
+			targetBalance,
+			unwindValue,
+			lockReceiptKey,
+		} = deduction;
 
 		const {
 			customerEntitlementDeductions,
+			spendLimitByFeatureId,
+			usageBasedCusEntIdsByFeatureId,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
+			lock: preparedLock,
 		} = prepareFeatureDeduction({
 			ctx,
 			fullCustomer,
@@ -100,6 +121,9 @@ export const executeRedisDeduction = async ({
 		// Call Lua script to deduct from FullCustomer in Redis
 		const luaParams = {
 			sorted_entitlements: customerEntitlementDeductions,
+			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+			usage_based_cus_ent_ids_by_feature_id:
+				usageBasedCusEntIdsByFeatureId ?? null,
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
 			target_entity_id: entityId || null,
@@ -108,10 +132,26 @@ export const executeRedisDeduction = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
+			lock: preparedLock
+				? {
+						...preparedLock,
+						region: currentRegion,
+					}
+				: null,
+
+			// For unwinding when finalizing a lock
+			unwind_value: unwindValue ?? null,
+			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
-		const result = await tryRedisWrite(() =>
-			redis.deductFromCustomerEntitlements(cacheKey, JSON.stringify(luaParams)),
+		const targetRedis = redisInstance ?? redis;
+		const result = await tryRedisWrite(
+			() =>
+				targetRedis.deductFromCustomerEntitlements(
+					cacheKey,
+					JSON.stringify(luaParams),
+				),
+			redisInstance,
 		);
 
 		if (!result) {
@@ -137,6 +177,9 @@ export const executeRedisDeduction = async ({
 		}
 
 		const { updates, rollover_updates } = resultJson;
+		const mutation_logs = Array.isArray(resultJson.mutation_logs)
+			? resultJson.mutation_logs
+			: [];
 		logDeductionUpdates({
 			ctx,
 			fullCustomer,
@@ -146,6 +189,7 @@ export const executeRedisDeduction = async ({
 
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
+		allMutationLogs = [...allMutationLogs, ...mutation_logs];
 
 		// Handle paid allocated entitlements and update fullCus in memory
 		try {
@@ -201,6 +245,18 @@ export const executeRedisDeduction = async ({
 				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
 			);
 		});
+
+		if (options.triggerAutoTopUp) {
+			triggerAutoTopUp({
+				ctx,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
+				);
+			});
+		}
 	}
 
 	return {
@@ -208,5 +264,6 @@ export const executeRedisDeduction = async ({
 		fullCus: fullCustomer,
 		updates: allUpdates,
 		rolloverUpdates: allRolloverUpdates,
+		mutationLogs: allMutationLogs,
 	};
 };

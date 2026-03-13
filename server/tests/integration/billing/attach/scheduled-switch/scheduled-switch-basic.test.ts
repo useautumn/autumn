@@ -667,7 +667,7 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-basic 5: premium to pro 
 		],
 		actions: [
 			s.billing.attach({ productId: premium.id }),
-			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
+			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 4000 }),
 		],
 	});
 

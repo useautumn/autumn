@@ -1,8 +1,5 @@
+import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
-import type {
-	AttachBillingContext,
-	AutumnBillingPlan,
-} from "@autumn/shared";
 
 /**
  * Computes the updates to apply to the current customer product during an attach transition.
@@ -23,7 +20,12 @@ export const computeAttachTransitionUpdates = ({
 	if (planTiming === "immediate") {
 		return {
 			customerProduct: currentCustomerProduct,
-			updates: { status: CusProductStatus.Expired },
+			updates: {
+				status: CusProductStatus.Expired,
+				ended_at: currentEpochMs,
+				canceled: true,
+				canceled_at: currentEpochMs,
+			},
 		};
 	}
 

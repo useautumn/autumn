@@ -105,8 +105,8 @@ export type AttachTo = number | string;
 
 export type AttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const AttachTierBehavior = {
@@ -396,6 +396,17 @@ export const AttachPlanSchedule = {
  */
 export type AttachPlanSchedule = ClosedEnum<typeof AttachPlanSchedule>;
 
+export type AttachCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 export type AttachParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -430,6 +441,10 @@ export type AttachParams = {
    */
   prorationBehavior?: AttachProrationBehavior | undefined;
   /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
+  /**
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<AttachAttachDiscount> | undefined;
@@ -449,6 +464,14 @@ export type AttachParams = {
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
+  /**
+   * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+   */
+  customLineItems?: Array<AttachCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
 };
 
 /**
@@ -644,8 +667,8 @@ export function attachToToJSON(attachTo: AttachTo): string {
 /** @internal */
 export type AttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -655,8 +678,8 @@ export const AttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -980,6 +1003,29 @@ export const AttachPlanSchedule$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachPlanSchedule);
 
 /** @internal */
+export type AttachCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const AttachCustomLineItem$outboundSchema: z.ZodMiniType<
+  AttachCustomLineItem$Outbound,
+  AttachCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function attachCustomLineItemToJSON(
+  attachCustomLineItem: AttachCustomLineItem,
+): string {
+  return JSON.stringify(
+    AttachCustomLineItem$outboundSchema.parse(attachCustomLineItem),
+  );
+}
+
+/** @internal */
 export type AttachParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -989,11 +1035,14 @@ export type AttachParams$Outbound = {
   customize?: AttachCustomize$Outbound | undefined;
   invoice_mode?: AttachInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   discounts?: Array<AttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
+  custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -1012,6 +1061,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     customize: z.optional(z.lazy(() => AttachCustomize$outboundSchema)),
     invoiceMode: z.optional(z.lazy(() => AttachInvoiceMode$outboundSchema)),
     prorationBehavior: z.optional(AttachProrationBehavior$outboundSchema),
+    subscriptionId: z.optional(z.string()),
     discounts: z.optional(
       z.array(z.lazy(() => AttachAttachDiscount$outboundSchema)),
     ),
@@ -1019,6 +1069,10 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     newBillingSubscription: z.optional(z.boolean()),
     planSchedule: z.optional(AttachPlanSchedule$outboundSchema),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
+    ),
+    processorSubscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1028,10 +1082,13 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
+      customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
     });
   }),
 );

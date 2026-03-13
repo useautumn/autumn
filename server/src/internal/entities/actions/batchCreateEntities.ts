@@ -10,6 +10,7 @@ import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
 import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
 import { validateAndGetInputEntities } from "../handlers/handleCreateEntity/getInputEntities";
+import { attachDefaultProductsToEntities } from "./batchCreateEntities/attachDefaultProductsToEntities";
 
 export const batchCreateEntities = async ({
 	ctx,
@@ -72,6 +73,9 @@ export const batchCreateEntities = async ({
 			update: {
 				id: inputEntities[0].id,
 				name: inputEntities[0].name,
+				...(inputEntities[0].billing_controls && {
+					spend_limits: inputEntities[0].billing_controls.spend_limits,
+				}),
 			},
 		});
 
@@ -86,18 +90,23 @@ export const batchCreateEntities = async ({
 
 	newEntities.push(...insertedEntities);
 
+	await attachDefaultProductsToEntities({
+		ctx,
+		fullCustomer: fullCus,
+		entities: newEntities,
+		customerData,
+	});
+
 	// Get api entity for each entity...
 	const apiEntities = [];
 	for (const entity of newEntities) {
-		// Cloned fullCus
-
 		const clonedFullCus = structuredClone(fullCus);
 		clonedFullCus.entity = entity;
 
 		const apiEntity = await getApiEntity({
 			ctx,
 			customerId,
-			entityId: entity.id,
+			entityId: entity.id ?? entity.internal_id,
 			fullCus: clonedFullCus,
 			withAutumnId,
 		});

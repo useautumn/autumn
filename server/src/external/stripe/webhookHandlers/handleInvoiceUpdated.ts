@@ -5,18 +5,20 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext";
 
 export const handleInvoiceUpdated = async ({
+	ctx,
 	event,
-	req,
 }: {
+	ctx: StripeWebhookContext;
 	event: Stripe.Event;
-	req: any;
 }) => {
 	const invoiceObject = event.data.object as Stripe.Invoice;
 	const currentInvoice = await InvoiceService.getByStripeId({
-		db: req.db,
+		db: ctx.db,
 		stripeId: invoiceObject.id!,
 	});
 
@@ -44,10 +46,10 @@ export const handleInvoiceUpdated = async ({
 	}
 
 	if (Object.keys(updates).length > 0 && invoiceObject.id) {
-		await InvoiceService.updateByStripeId({
-			db: req.db,
-			stripeId: invoiceObject.id,
-			updates,
+		await invoiceActions.updateFromStripe({
+			ctx,
+			customerId: ctx.customerId ?? "",
+			stripeInvoice: invoiceObject,
 		});
 	}
 };

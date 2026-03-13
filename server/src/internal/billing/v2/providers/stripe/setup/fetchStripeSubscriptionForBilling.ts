@@ -1,8 +1,11 @@
 import {
+	type AttachParamsV1,
 	type FullCustomer,
 	getTargetSubscriptionCusProduct,
 	InternalError,
+	type MultiAttachParamsV0,
 	type Product,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/subscriptions";
@@ -18,6 +21,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 	fullCus,
 	product,
 	targetCusProductId,
+	params,
 	newBillingSubscription,
 }: {
 	ctx: AutumnContext;
@@ -25,10 +29,16 @@ export const fetchStripeSubscriptionForBilling = async ({
 	product?: Product;
 	targetCusProductId?: string;
 	newBillingSubscription?: boolean;
+	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
 }): Promise<StripeSubscriptionWithDiscounts | undefined> => {
 	if (newBillingSubscription) {
 		return undefined;
 	}
+
+	const processorSubscriptionId =
+		params && "processor_subscription_id" in params
+			? params.processor_subscription_id
+			: undefined;
 
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
@@ -40,7 +50,8 @@ export const fetchStripeSubscriptionForBilling = async ({
 		cusProductId: targetCusProductId,
 	});
 
-	const subId = cusProductWithSub?.subscription_ids?.[0];
+	const subId =
+		processorSubscriptionId ?? cusProductWithSub?.subscription_ids?.[0];
 
 	if (!subId) return undefined;
 
@@ -60,6 +71,12 @@ export const fetchStripeSubscriptionForBilling = async ({
 	if (isStripeSubscriptionCanceled(sub)) {
 		throw new InternalError({
 			message: `[Stripe Subscription] Subscription is canceled: ${subId}`,
+		});
+	}
+
+	if (sub.customer !== fullCus.processor.id) {
+		throw new InternalError({
+			message: `[Stripe Subscription] Subscription is not for the current customer: ${subId}`,
 		});
 	}
 

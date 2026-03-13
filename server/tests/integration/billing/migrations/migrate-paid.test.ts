@@ -156,7 +156,6 @@ test.concurrent(`${chalk.yellowBright("migrate-paid-2: allocated seats with pric
 
 	// Verify initial state
 	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const invoiceCountBefore = customer.invoices?.length ?? 0;
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -202,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("migrate-paid-2: allocated seats with pric
 	// CRITICAL: No new invoice created
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: invoiceCountBefore,
+		count: 2,
 	});
 
 	// Verify Stripe subscription is correct

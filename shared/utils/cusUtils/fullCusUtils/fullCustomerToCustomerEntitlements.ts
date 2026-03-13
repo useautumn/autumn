@@ -78,7 +78,7 @@ export const fullCustomerToCustomerEntitlements = ({
 	sortCusEntsForDeduction({
 		cusEnts,
 		reverseOrder,
-		entityId: entity?.id,
+		entityId: entity?.id ?? undefined,
 		customerEntitlementFilters,
 	});
 
@@ -95,6 +95,14 @@ export const fullCustomerToCustomerEntitlements = ({
 		cusEnts = cusEnts.filter(
 			(cusEnt) =>
 				cusEnt.entitlement.interval === customerEntitlementFilters.interval,
+		);
+	}
+
+	if (notNullish(customerEntitlementFilters?.balanceId)) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) =>
+				(cusEnt.external_id ?? cusEnt.id) ===
+				customerEntitlementFilters.balanceId,
 		);
 	}
 

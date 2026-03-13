@@ -33,7 +33,7 @@ export const setupCreateCustomer = async ({
 
 	// 3. Fetch default products
 	const { fullProducts, paidProducts, hasPaidProducts } =
-		await setupDefaultProductsContext({ ctx, customerData });
+		await setupDefaultProductsContext({ ctx, customerData, scope: "customer" });
 
 	const currentEpochMs = Date.now();
 

@@ -20,18 +20,26 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       SELECT 
         cp.*,
         row_to_json(prod) AS product,
-        
-        -- Spread customer_prices fields + add price field
-        COALESCE(
-          json_agg(DISTINCT (
+        cpr_data.customer_prices,
+        ce_data.customer_entitlements,
+        ft_data.free_trial
+
+      FROM customer_products cp
+      JOIN products prod ON cp.internal_product_id = prod.internal_id
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
             to_jsonb(cpr.*) || jsonb_build_object('price', to_jsonb(p.*))
-          )) FILTER (WHERE cpr.id IS NOT NULL),
+          ) FILTER (WHERE cpr.id IS NOT NULL),
           '[]'::json
-        ) AS customer_prices,
-        
-        -- Spread customer_entitlements fields + add entitlement, replaceables, and rollovers
-        COALESCE(
-          json_agg(DISTINCT (
+        ) AS customer_prices
+        FROM customer_prices cpr
+        LEFT JOIN prices p ON cpr.price_id = p.id
+        WHERE cpr.customer_product_id = cp.id
+      ) cpr_data ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
             to_jsonb(ce.*) || jsonb_build_object(
               'entitlement', (
                 SELECT row_to_json(ent_with_feature)
@@ -59,25 +67,19 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
                 WHERE ro.cus_ent_id = ce.id
               )
             )
-          )) FILTER (WHERE ce.id IS NOT NULL),
+          ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
-        ) AS customer_entitlements,
-        
-        -- free_trial
-        (
-          SELECT row_to_json(ft)
-          FROM free_trials ft
-          WHERE ft.id = cp.free_trial_id
-        ) AS free_trial
-
-      FROM customer_products cp
-      JOIN products prod ON cp.internal_product_id = prod.internal_id
-      LEFT JOIN customer_prices cpr ON cpr.customer_product_id = cp.id
-      LEFT JOIN prices p ON cpr.price_id = p.id
-      LEFT JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
+        ) AS customer_entitlements
+        FROM customer_entitlements ce
+        WHERE ce.customer_product_id = cp.id
+      ) ce_data ON true
+      LEFT JOIN LATERAL (
+        SELECT row_to_json(ft) AS free_trial
+        FROM free_trials ft
+        WHERE ft.id = cp.free_trial_id
+      ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
-      GROUP BY cp.id, prod.*
     )
   `;
 };
@@ -154,7 +156,7 @@ const buildTrialsUsedCTE = (
 
 const buildSubscriptionsCTE = (
 	withSubs: boolean,
-	inStatuses?: CusProductStatus[],
+	_inStatuses?: CusProductStatus[],
 ) => {
 	if (!withSubs) {
 		return sql``;
@@ -167,11 +169,12 @@ const buildSubscriptionsCTE = (
           json_agg(row_to_json(s)) FILTER (WHERE s.stripe_id IS NOT NULL),
           '[]'::json
         ) AS subscriptions
-      FROM subscriptions s 
-      WHERE EXISTS (
-        SELECT 1 FROM customer_products_with_prices cpwp
-        WHERE cpwp.subscription_ids @> ARRAY[s.stripe_id]
-      )
+      FROM (
+        SELECT DISTINCT s.*
+        FROM customer_products_with_prices cpwp
+        JOIN LATERAL unnest(cpwp.subscription_ids) AS cpwp_sub(stripe_id) ON true
+        JOIN subscriptions s ON s.stripe_id = cpwp_sub.stripe_id
+      ) s
     )
   `;
 };
@@ -237,10 +240,14 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
           json_agg(row_to_json(i) ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
           '[]'::json
         ) AS invoices
-      FROM invoices i
-      WHERE i.internal_customer_id = (SELECT internal_id FROM customer_record)
-      ${entityFilter}
-      LIMIT 10
+      FROM (
+        SELECT *
+        FROM invoices i
+        WHERE i.internal_customer_id = (SELECT internal_id FROM customer_record)
+        ${entityFilter}
+        ORDER BY i.created_at DESC, i.id DESC
+        LIMIT 10
+      ) i
     )
   `;
 };
@@ -404,7 +411,7 @@ export const getPaginatedFullCusQuery = ({
 	limit = 10,
 	offset = 0,
 	withEvents = false,
-	entityId,
+	entityId: _entityId,
 	internalCustomerIds,
 	plans,
 	search,
@@ -540,18 +547,26 @@ export const getPaginatedFullCusQuery = ({
       SELECT 
         cp.*,
         row_to_json(prod) AS product,
-        
-        -- Customer prices with price details
-        COALESCE(
-          json_agg(DISTINCT (
+        cpr_data.customer_prices,
+        ce_data.customer_entitlements,
+        ft_data.free_trial
+
+      FROM customer_products cp
+      JOIN products prod ON cp.internal_product_id = prod.internal_id
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
             to_jsonb(cpr.*) || jsonb_build_object('price', to_jsonb(p.*))
-          )) FILTER (WHERE cpr.id IS NOT NULL),
+          ) FILTER (WHERE cpr.id IS NOT NULL),
           '[]'::json
-        ) AS customer_prices,
-        
-        -- Customer entitlements with full details including rollovers
-        COALESCE(
-          json_agg(DISTINCT (
+        ) AS customer_prices
+        FROM customer_prices cpr
+        LEFT JOIN prices p ON cpr.price_id = p.id
+        WHERE cpr.customer_product_id = cp.id
+      ) cpr_data ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
             to_jsonb(ce.*) || jsonb_build_object(
               'entitlement', (
                 SELECT row_to_json(ent_with_feature)
@@ -579,25 +594,19 @@ export const getPaginatedFullCusQuery = ({
                 WHERE ro.cus_ent_id = ce.id
               )
             )
-          )) FILTER (WHERE ce.id IS NOT NULL),
+          ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
-        ) AS customer_entitlements,
-        
-        -- Free trial
-        (
-          SELECT row_to_json(ft)
-          FROM free_trials ft
-          WHERE ft.id = cp.free_trial_id
-        ) AS free_trial
-
-      FROM customer_products cp
-      JOIN products prod ON cp.internal_product_id = prod.internal_id
-      LEFT JOIN customer_prices cpr ON cpr.customer_product_id = cp.id
-      LEFT JOIN prices p ON cpr.price_id = p.id
-      LEFT JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
+        ) AS customer_entitlements
+        FROM customer_entitlements ce
+        WHERE ce.customer_product_id = cp.id
+      ) ce_data ON true
+      LEFT JOIN LATERAL (
+        SELECT row_to_json(ft) AS free_trial
+        FROM free_trials ft
+        WHERE ft.id = cp.free_trial_id
+      ) ft_data ON true
       WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records) 
       ${withStatusFilter()}
-      GROUP BY cp.id, prod.*
     ),
     
     customer_products_aggregated AS (
@@ -610,20 +619,52 @@ export const getPaginatedFullCusQuery = ({
     
     ${
 			withSubs
-				? sql`, customer_subscriptions AS (
+			? sql`, customer_subscriptions AS (
       SELECT 
-        cpwp.internal_customer_id,
+        s.internal_customer_id,
         COALESCE(
           json_agg(row_to_json(s)) FILTER (WHERE s.stripe_id IS NOT NULL),
           '[]'::json
         ) AS subscriptions
-      FROM customer_products_with_prices cpwp
-      JOIN subscriptions s ON s.stripe_id = ANY(cpwp.subscription_ids)
-      GROUP BY cpwp.internal_customer_id
+      FROM (
+        SELECT DISTINCT
+          cpwp.internal_customer_id,
+          s.*
+        FROM customer_products_with_prices cpwp
+        JOIN LATERAL unnest(cpwp.subscription_ids) AS cpwp_sub(stripe_id) ON true
+        JOIN subscriptions s ON s.stripe_id = cpwp_sub.stripe_id
+      ) s
+      GROUP BY s.internal_customer_id
     )`
 				: sql``
 		}
-    
+
+    ${
+			withEvents
+				? sql`, customer_events AS (
+      SELECT 
+        e.internal_customer_id,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', e.id,
+              'event_name', e.event_name,
+              'value', e.value,
+              'timestamp', e.timestamp,
+              'properties', e.properties
+            )
+            ORDER BY e.timestamp DESC, e.id DESC
+          ) FILTER (WHERE e.id IS NOT NULL),
+          '[]'::json
+        ) AS events
+      FROM events e
+      WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
+        AND e.set_usage = false
+      GROUP BY e.internal_customer_id
+    )`
+				: sql``
+		}
+     
     ${
 			withEntities
 				? sql`, customer_entities AS (
@@ -642,16 +683,22 @@ export const getPaginatedFullCusQuery = ({
     
     ${
 			includeInvoices
-				? sql`, customer_invoices AS (
+			? sql`, customer_invoices AS (
       SELECT 
-        i.internal_customer_id,
+        cr.internal_id AS internal_customer_id,
         COALESCE(
           json_agg(row_to_json(i) ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
           '[]'::json
         ) AS invoices
-      FROM invoices i
-      WHERE i.internal_customer_id IN (SELECT internal_id FROM customer_records)
-      GROUP BY i.internal_customer_id
+      FROM customer_records cr
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM invoices i
+        WHERE i.internal_customer_id = cr.internal_id
+        ORDER BY i.created_at DESC, i.id DESC
+        LIMIT 10
+      ) i ON true
+      GROUP BY cr.internal_id
     )`
 				: sql``
 		}

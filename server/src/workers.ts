@@ -14,7 +14,7 @@ import cluster from "node:cluster";
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 // Number of worker processes (defaults to CPU cores)
-const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 1 : 4;
+const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;
 
 // Track if we're shutting down
 let isShuttingDown = false;
@@ -24,8 +24,8 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 if (cluster.isPrimary) {
 	await initInfisical();
 
-	const { initHatchetWorker } = await import("./queue/initWorkers.js");
-	await initHatchetWorker();
+	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
+	// await initHatchetWorker();
 
 	// Check if queue is configured before starting workers
 	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {

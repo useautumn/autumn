@@ -14,20 +14,32 @@ export enum ProductItemType {
 	Price = "price",
 }
 
-export const PriceTierSchema = z.object({
-	to: z.number().or(z.literal(TierInfinite)).meta({
-		description: "The maximum amount of usage for this tier.",
-		example: 100,
-	}),
-	amount: z.number().meta({
-		description: "The price of the product item for this tier.",
-		example: 10,
-	}),
-	flat_amount: z.number().nullish().meta({
-		description:
-			"A flat fee charged for this tier, in addition to the per-unit amount.",
-	}),
-});
+export const PriceTierSchema = z
+	.object({
+		to: z.number().or(z.literal(TierInfinite)).meta({
+			description: "The maximum amount of usage for this tier.",
+			example: 100,
+		}),
+		amount: z.number().optional().meta({
+			description: "The price of the product item for this tier.",
+			example: 10,
+		}),
+		flat_amount: z.number().optional().meta({
+			description:
+				"A flat fee charged for this tier, in addition to the per-unit amount.",
+		}),
+	})
+	.refine(
+		(val) => val.amount != null || val.flat_amount != null,
+		{
+			message: "Either amount or flat_amount, or both must be defined",
+			path: ["amount", "flat_amount"],
+		},
+	)
+	.transform((val) => ({
+		...val,
+		amount: val.amount ?? 0,
+	}));
 
 export enum UsageModel {
 	Prepaid = "prepaid",

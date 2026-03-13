@@ -99,6 +99,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: no product → pro")}`, 
 		customer,
 		count: 1,
 		latestTotal: 20,
+		latestInvoiceProductId: pro.id,
 	});
 
 	await expectSubToBeCorrect({
@@ -200,5 +201,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: free → pro")}`, async 
 		customer,
 		count: 1,
 		latestTotal: 20,
+		latestInvoiceProductId: pro.id,
 	});
 });

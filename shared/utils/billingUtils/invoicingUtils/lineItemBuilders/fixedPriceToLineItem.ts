@@ -34,7 +34,7 @@ export const fixedPriceToLineItem = ({
 	// and they are properly stored in the DB (not baked into the amount)
 	const updatedContext: LineItemContext = {
 		...context,
-		discountable: context.discountable ?? false,
+		discountable: context.discountable,
 	};
 
 	return buildLineItem({

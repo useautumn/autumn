@@ -2,6 +2,7 @@ import {
 	type CustomerData,
 	type FullProduct,
 	isFreeProduct,
+	orgDefaultAppliesToEntities,
 	ProductNotFoundError,
 	RecaseError,
 } from "@autumn/shared";
@@ -53,11 +54,21 @@ const getOverrideAutoEnableProduct = async ({
 export const setupDefaultProductsContext = async ({
 	ctx,
 	customerData,
+	scope = "customer",
 }: {
 	ctx: AutumnContext;
 	customerData?: CustomerData;
+	scope?: "customer" | "entity";
 }): Promise<DefaultProductsContext> => {
 	const { db, org, env } = ctx;
+
+	if (scope === "customer" && orgDefaultAppliesToEntities({ ctx })) {
+		return {
+			fullProducts: [],
+			paidProducts: [],
+			hasPaidProducts: false,
+		};
+	}
 
 	const autoEnableProduct = await getOverrideAutoEnableProduct({
 		ctx,

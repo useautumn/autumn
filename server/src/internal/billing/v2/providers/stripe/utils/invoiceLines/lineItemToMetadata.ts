@@ -1,5 +1,6 @@
 import type { LineItem } from "@autumn/shared";
 import type Stripe from "stripe";
+import { lineItemToStripeProductId } from "./lineItemToStripeProductId";
 
 /**
  * Converts a LineItem to Stripe metadata for invoice line items.
@@ -30,7 +31,7 @@ export const lineItemToMetadata = ({
 		metadata.autumn_customer_price_id = customerPrice.id;
 	}
 
-	const stripeProductId = product.processor?.id;
+	const stripeProductId = lineItemToStripeProductId({ lineItem });
 	if (stripeProductId) {
 		metadata.stripe_product_id = stripeProductId;
 	}

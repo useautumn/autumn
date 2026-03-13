@@ -93,14 +93,16 @@ class CreateBalanceParamsTypedDict(TypedDict):
     r"""The ID of the feature."""
     entity_id: NotRequired[str]
     r"""The ID of the entity for entity-scoped balances (e.g., per-seat limits)."""
-    included: NotRequired[float]
+    included_grant: NotRequired[float]
     r"""The initial balance amount to grant. For metered features, this is the number of units the customer can use."""
     unlimited: NotRequired[bool]
-    r"""If true, the balance has unlimited usage. Cannot be combined with 'included'."""
+    r"""If true, the balance has unlimited usage. Cannot be combined with 'included_grant'."""
     reset: NotRequired[CreateBalanceResetTypedDict]
     r"""Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets."""
     expires_at: NotRequired[float]
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
+    balance_id: NotRequired[str]
+    r"""A unique identifier for this balance. Use this to target the balance in future update / delete calls."""
 
 
 class CreateBalanceParams(BaseModel):
@@ -113,11 +115,11 @@ class CreateBalanceParams(BaseModel):
     entity_id: Optional[str] = None
     r"""The ID of the entity for entity-scoped balances (e.g., per-seat limits)."""
 
-    included: Optional[float] = None
+    included_grant: Optional[float] = None
     r"""The initial balance amount to grant. For metered features, this is the number of units the customer can use."""
 
     unlimited: Optional[bool] = None
-    r"""If true, the balance has unlimited usage. Cannot be combined with 'included'."""
+    r"""If true, the balance has unlimited usage. Cannot be combined with 'included_grant'."""
 
     reset: Optional[CreateBalanceReset] = None
     r"""Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets."""
@@ -125,10 +127,20 @@ class CreateBalanceParams(BaseModel):
     expires_at: Optional[float] = None
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
 
+    balance_id: Optional[str] = None
+    r"""A unique identifier for this balance. Use this to target the balance in future update / delete calls."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["entity_id", "included", "unlimited", "reset", "expires_at"]
+            [
+                "entity_id",
+                "included_grant",
+                "unlimited",
+                "reset",
+                "expires_at",
+                "balance_id",
+            ]
         )
         serialized = handler(self)
         m = {}

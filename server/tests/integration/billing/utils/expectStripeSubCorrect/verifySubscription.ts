@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { cp, type FullCusProduct } from "@autumn/shared";
+import { BillingVersion, cp, type FullCusProduct } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { buildStripePhasesUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
@@ -52,6 +52,7 @@ export const verifySubscription = async ({
 	// 1. Build expected phases using production code
 	const billingContext = contexts.createBilling({
 		customerProducts: relatedCusProducts,
+		billingVersion: relatedCusProducts[0]?.billing_version ?? BillingVersion.V2,
 	});
 
 	const rawPhases = buildStripePhasesUpdate({

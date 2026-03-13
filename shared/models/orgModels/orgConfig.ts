@@ -21,6 +21,15 @@ export const OrgConfigSchema = z.object({
 	invoice_memos: z.boolean().default(false),
 	entity_product: z.boolean().default(false),
 	void_invoices_on_subscription_deletion: z.boolean().default(false),
+
+	// default
+	default_applies_to_entities: z.boolean().default(false),
+
+	// skip_overage_submission
+	skip_overage_submission: z.boolean().default(false),
+
+	// disable stripe writes
+	disable_stripe_writes: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

@@ -7,7 +7,7 @@ import { DynamicParamField } from "/components/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
 
-Updates an existing plan. By default, creates a new version of the plan. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
+Updates an existing plan. By default, creates a new version of the plan. See [Plan Items](/documentation/concepts/plan-items) for item configuration.
 
 <Note>
   Updates create a new plan version by default. Existing customers remain on their current version until their subscription renews or they explicitly upgrade.
@@ -150,9 +150,9 @@ await autumn.plans.update({
           <Expandable title="properties">
             <DynamicParamField body="to" type="number" required />
 
-            <DynamicParamField body="amount" type="number" required />
+            <DynamicParamField body="amount" type="number" />
 
-            <DynamicParamField body="flat_amount" type="number | null" />
+            <DynamicParamField body="flat_amount" type="number" />
 
           </Expandable>
         </DynamicParamField>
@@ -392,16 +392,8 @@ await autumn.plans.update({
           Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
         </DynamicResponseField>
 
-        <DynamicResponseField name="tiers" type="object[]">
+        <DynamicResponseField name="tiers" type="any[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-          <Expandable title="properties">
-            <DynamicResponseField name="to" type="number" />
-
-            <DynamicResponseField name="amount" type="number" />
-
-            <DynamicResponseField name="flat_amount" type="number | null" />
-
-          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />

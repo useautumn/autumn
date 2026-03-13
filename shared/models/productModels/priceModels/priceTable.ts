@@ -52,6 +52,7 @@ export const prices = pgTable(
 			.onDelete("cascade"),
 		unique("prices_id_key").on(table.id),
 		index("idx_prices_internal_product_id").on(table.internal_product_id),
+		index("idx_prices_entitlement_id").on(table.entitlement_id),
 	],
 );
 

@@ -92,7 +92,8 @@ export const setupMultiAttachBillingContext = async ({
 		ctx,
 		fullCustomer,
 		targetCustomerProduct: undefined,
-		paramDiscounts: params.discounts,
+		params,
+		// paramDiscounts: params.discounts,
 		newBillingSubscription: params.new_billing_subscription || undefined,
 	});
 

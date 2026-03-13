@@ -20,13 +20,22 @@ export const fetchStripeCustomerForBilling = async ({
 		customer: fullCus,
 	});
 
-	const testClock = stripeCus.test_clock as Stripe.TestHelpers.TestClock | null;
+	if (!stripeCus) {
+		return {
+			stripeCus: undefined,
+			paymentMethod: undefined,
+			testClockFrozenTime: undefined,
+		};
+	}
+
+	const testClock =
+		stripeCus?.test_clock as Stripe.TestHelpers.TestClock | null;
 
 	// let now = testClock ? testClock.frozen_time * 1000 : Date.now();
 	const now = testClock ? testClock.frozen_time * 1000 : undefined;
 
 	const invoiceSettingsPaymentMethod =
-		stripeCus.invoice_settings?.default_payment_method;
+		stripeCus?.invoice_settings?.default_payment_method;
 
 	let paymentMethod: Stripe.PaymentMethod | undefined =
 		invoiceSettingsPaymentMethod &&

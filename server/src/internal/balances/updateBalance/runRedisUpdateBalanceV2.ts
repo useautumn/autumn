@@ -28,7 +28,7 @@ export const runRedisUpdateBalanceV2 = async ({
 }) => {
 	const { org, env } = ctx;
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
-	const entityId = fullCustomer.entity?.id;
+	const entityId = fullCustomer.entity?.id ?? undefined;
 
 	const deductionOptions: DeductionOptions = {
 		overageBehaviour: "allow", // Allow bypasses granted_balance cap for balance updates
@@ -88,4 +88,6 @@ export const runRedisUpdateBalanceV2 = async ({
 			ctx,
 		});
 	}
+
+	return result;
 };

@@ -9,7 +9,7 @@ import {
 	sumValues,
 	type TrackResponseV2,
 } from "@autumn/shared";
-import { getCustomerEvents } from "@tests/balances/testBalanceUtils.js";
+import { getCustomerEvents } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";

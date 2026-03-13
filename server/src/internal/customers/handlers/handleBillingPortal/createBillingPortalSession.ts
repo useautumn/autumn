@@ -25,6 +25,12 @@ export const createBillingPortalSession = async ({
 		customer,
 	});
 
+	if (!stripeCustomer) {
+		throw new InternalError({
+			message: `Failed to create billing portal session for customer ${customer.id}, no stripe customer found`,
+		});
+	}
+
 	const stripeCustomerId = stripeCustomer.id;
 
 	// 1. Try to create billing portal session

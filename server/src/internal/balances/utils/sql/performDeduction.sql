@@ -12,25 +12,58 @@ AS $$
 DECLARE
   -- Extract parameters from JSONB
   sorted_entitlements jsonb := params->'sorted_entitlements';
+  spend_limit_by_feature_id jsonb := params->'spend_limit_by_feature_id';
+  usage_based_cus_ent_ids_by_feature_id jsonb := params->'usage_based_cus_ent_ids_by_feature_id';
   amount_to_deduct numeric := NULLIF((params->>'amount_to_deduct')::numeric, NULL);
   target_balance numeric := NULLIF((params->>'target_balance')::numeric, NULL);
   target_entity_id text := NULLIF(params->>'target_entity_id', '');
-  rollover_ids text[] := CASE 
+  rollover_ids text[] := CASE
     WHEN params->'rollover_ids' IS NULL OR jsonb_typeof(params->'rollover_ids') != 'array' THEN NULL
     ELSE ARRAY(SELECT jsonb_array_elements_text(params->'rollover_ids'))
   END;
   -- New: rollovers array with {id, credit_cost} objects for credit cost support
   rollovers_arr jsonb := params->'rollovers';
-  cus_ent_ids text[] := CASE 
+  lock_receipt jsonb := params->'lock_receipt';
+  cus_ent_ids text[] := CASE
     WHEN params->'cus_ent_ids' IS NULL OR jsonb_typeof(params->'cus_ent_ids') != 'array' THEN NULL
     ELSE ARRAY(SELECT jsonb_array_elements_text(params->'cus_ent_ids'))
+  END;
+  usage_based_cus_ent_ids text[] := CASE
+    WHEN usage_based_cus_ent_ids_by_feature_id IS NULL OR jsonb_typeof(usage_based_cus_ent_ids_by_feature_id) != 'object' THEN NULL
+    ELSE ARRAY(
+      SELECT DISTINCT jsonb_array_elements_text(feature_value)
+      FROM jsonb_each(usage_based_cus_ent_ids_by_feature_id) feature_map(feature_key, feature_value)
+      WHERE jsonb_typeof(feature_value) = 'array'
+    )
+  END;
+  lock_receipt_cus_ent_ids text[] := CASE
+    WHEN lock_receipt IS NULL OR jsonb_typeof(lock_receipt->'items') != 'array' THEN NULL
+    ELSE ARRAY(
+      SELECT DISTINCT item->>'customer_entitlement_id'
+      FROM jsonb_array_elements(lock_receipt->'items') item
+      WHERE NULLIF(item->>'customer_entitlement_id', '') IS NOT NULL
+    )
+  END;
+  all_locked_cus_ent_ids text[];
+  lock_receipt_rollover_ids text[] := CASE
+    WHEN lock_receipt IS NULL OR jsonb_typeof(lock_receipt->'items') != 'array' THEN NULL
+    ELSE ARRAY(
+      SELECT DISTINCT item->>'rollover_id'
+      FROM jsonb_array_elements(lock_receipt->'items') item
+      WHERE NULLIF(item->>'rollover_id', '') IS NOT NULL
+    )
+  END;
+  all_locked_rollover_ids text[];
+  unwind_value numeric := CASE
+    WHEN params->>'unwind_value' IS NULL THEN NULL
+    ELSE (params->>'unwind_value')::numeric
   END;
   skip_additional_balance boolean := COALESCE((params->>'skip_additional_balance')::boolean, false);
   alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
   overage_behaviour text := NULLIF(params->>'overage_behaviour', '');
   overage_behavior_is_allow boolean;
   feature_id text := NULLIF(params->>'feature_id', '');
-  
+
   remaining_amount numeric;
   rollover_deducted numeric := 0;
   ent_obj jsonb;
@@ -38,6 +71,10 @@ DECLARE
   ent_id text;
   credit_cost numeric;
   usage_allowed boolean;
+  ent_feature_id text;
+  spend_limit jsonb;
+  usage_based_cus_ent_ids_for_feature jsonb;
+  available_overage numeric;
   min_balance numeric;
   max_balance numeric;
   has_entity_scope boolean;
@@ -61,37 +98,89 @@ DECLARE
   new_balance numeric;
   new_entities jsonb;
   new_adjustment numeric;
+  step_mutation_logs jsonb := '[]'::jsonb;
+  unwind_updates_json jsonb := '{}'::jsonb;
+  unwind_modified_rollover_ids text[] := ARRAY[]::text[];
+  signed_remaining_unwind_value numeric := 0;
   -- Tracking
   updates_json jsonb := '{}'::jsonb;
   rollover_updates_json jsonb := '[]'::jsonb;
+  mutation_logs_json jsonb := '[]'::jsonb;
   result_json jsonb;
-  
+
   -- For calculating total balance
   total_balance numeric;
+  final_rollover_ids text[] := ARRAY[]::text[];
 BEGIN
   -- Compute overage_behavior_is_allow once (used for cap bypass in deduct_from_main_balance)
   overage_behavior_is_allow := alter_granted_balance OR overage_behaviour = 'allow';
+  all_locked_cus_ent_ids := ARRAY(
+    SELECT DISTINCT id
+    FROM unnest(
+      COALESCE(cus_ent_ids, ARRAY[]::text[])
+      || COALESCE(usage_based_cus_ent_ids, ARRAY[]::text[])
+      || COALESCE(lock_receipt_cus_ent_ids, ARRAY[]::text[])
+    ) id
+    WHERE id IS NOT NULL AND id != ''
+    ORDER BY id
+  );
+
+  all_locked_rollover_ids := ARRAY(
+    SELECT DISTINCT id
+    FROM (
+      SELECT unnest(COALESCE(rollover_ids, ARRAY[]::text[])) AS id
+      UNION
+      SELECT unnest(COALESCE(lock_receipt_rollover_ids, ARRAY[]::text[])) AS id
+      UNION
+      SELECT jsonb_array_elements(rollovers_arr)->>'id' AS id
+      WHERE rollovers_arr IS NOT NULL
+        AND jsonb_typeof(rollovers_arr) = 'array'
+        AND jsonb_array_length(rollovers_arr) > 0
+    ) combined_rollover_ids
+    WHERE id IS NOT NULL AND id != ''
+    ORDER BY id
+  );
 
   -- ============================================================================
   -- STEP 0: Lock all rows upfront to prevent deadlocks
   -- ============================================================================
-  
+
   -- Lock all entitlement rows at once (prevents interleaved locking deadlocks)
-  IF cus_ent_ids IS NOT NULL AND array_length(cus_ent_ids, 1) > 0 THEN
-    PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ANY(cus_ent_ids) FOR UPDATE;
+  IF all_locked_cus_ent_ids IS NOT NULL AND array_length(all_locked_cus_ent_ids, 1) > 0 THEN
+    PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ANY(all_locked_cus_ent_ids) ORDER BY ce.id FOR UPDATE;
   END IF;
-  
+
   -- Lock all rollover rows at once
-  IF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
-    PERFORM 1 FROM rollovers r WHERE r.id = ANY(rollover_ids) FOR UPDATE;
-  ELSIF rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0 THEN
-    PERFORM 1 FROM rollovers r WHERE r.id IN (SELECT jsonb_array_elements(rollovers_arr)->>'id') FOR UPDATE;
+  IF all_locked_rollover_ids IS NOT NULL AND array_length(all_locked_rollover_ids, 1) > 0 THEN
+    PERFORM 1 FROM rollovers r WHERE r.id = ANY(all_locked_rollover_ids) ORDER BY r.id FOR UPDATE;
+  END IF;
+
+  -- ============================================================================
+  -- STEP 0.5: Unwind lock receipt before running the regular deduction flow
+  -- ============================================================================
+  IF lock_receipt IS NOT NULL AND COALESCE(unwind_value, 0) > 0 THEN
+    SELECT *
+    INTO signed_remaining_unwind_value, unwind_updates_json, unwind_modified_rollover_ids, step_mutation_logs
+    FROM unwind_from_lock_receipt(jsonb_build_object(
+      'lock_receipt', lock_receipt,
+      'unwind_value', unwind_value,
+      'cus_ent_ids', to_jsonb(cus_ent_ids)
+    ));
+
+    updates_json := updates_json || COALESCE(unwind_updates_json, '{}'::jsonb);
+    mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
+
+    -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
+    -- so the forward pass compensates against current live entitlements.
+    IF signed_remaining_unwind_value <> 0 THEN
+      amount_to_deduct := COALESCE(amount_to_deduct, 0) + signed_remaining_unwind_value;
+    END IF;
   END IF;
 
   -- ============================================================================
   -- STEP 1: Calculate amount_to_deduct if target_balance is provided
   -- ============================================================================
-  
+
   IF target_balance IS NOT NULL THEN
     -- Get total balance from entitlements and rollovers (including additional_balance)
     total_balance := get_total_balance(jsonb_build_object(
@@ -99,34 +188,35 @@ BEGIN
       'target_entity_id', target_entity_id,
       'rollover_ids', rollover_ids
     ));
-    
+
     -- Calculate amount_to_deduct (negative means we need to add)
     remaining_amount := total_balance - target_balance;
   ELSE
     -- Use provided amount_to_deduct
     remaining_amount := amount_to_deduct;
   END IF;
-  
+
   -- ============================================================================
   -- PASS 1: Deduct all entitlements down to 0 (or add if negative)
   -- ============================================================================
   FOR ent_obj IN SELECT * FROM jsonb_array_elements(sorted_entitlements)
   LOOP
     EXIT WHEN remaining_amount = 0;
-    
+
     -- Extract entitlement properties
     ent_id := ent_obj->>'customer_entitlement_id';
     credit_cost := (ent_obj->>'credit_cost')::numeric;
     usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false);
+    ent_feature_id := NULLIF(ent_obj->>'feature_id', '');
     min_balance := (ent_obj->>'min_balance')::numeric;
     max_balance := (ent_obj->>'max_balance')::numeric;
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
-    
+
     -- STEP 1: Handle rollovers (only on first entitlement)
     -- Use new rollovers array (with credit_cost) if present, otherwise fall back to rollover_ids
-    IF ((rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0) OR 
+    IF ((rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0) OR
         (rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0)) AND rollover_deducted = 0 THEN
-      SELECT * INTO rollover_deducted
+      SELECT * INTO rollover_deducted, step_mutation_logs
       FROM deduct_from_rollovers(jsonb_build_object(
         'rollover_ids', rollover_ids,
         'rollovers', rollovers_arr,
@@ -134,6 +224,7 @@ BEGIN
         'target_entity_id', target_entity_id,
         'has_entity_scope', has_entity_scope
       ));
+      mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
       -- rollover_deducted is returned in feature units, so can subtract directly
       remaining_amount := remaining_amount - rollover_deducted;
     END IF;
@@ -165,29 +256,32 @@ BEGIN
       'skip_additional_balance', skip_additional_balance,
       'alter_granted_balance', alter_granted_balance
     ));
-    
+
     -- Reduce remaining_amount by what was deducted from additional_balance
     remaining_amount := remaining_amount - additional_deducted;
 
     -- STEP 3: Perform deduction from main balance (Pass 1: allow_negative = false)
-    SELECT * INTO deducted, new_balance, new_entities, new_adjustment
+    SELECT * INTO deducted, new_balance, new_entities, new_adjustment, step_mutation_logs
     FROM deduct_from_main_balance(jsonb_build_object(
+      'customer_entitlement_id', ent_id,
       'current_balance', current_balance,
       'current_entities', current_entities,
       'current_adjustment', new_adjustment,
-      'amount_to_deduct', remaining_amount,
-      'credit_cost', credit_cost,
-      'allow_negative', false,
-      'has_entity_scope', has_entity_scope,
-      'target_entity_id', target_entity_id,
-      'min_balance', min_balance,
-      'max_balance', max_balance,
-      'alter_granted_balance', alter_granted_balance,
+        'amount_to_deduct', remaining_amount,
+        'credit_cost', credit_cost,
+        'allow_negative', false,
+        'has_entity_scope', has_entity_scope,
+        'target_entity_id', target_entity_id,
+        'available_overage', NULL,
+        'min_balance', min_balance,
+        'max_balance', max_balance,
+        'alter_granted_balance', alter_granted_balance,
       'overage_behavior_is_allow', overage_behavior_is_allow
     ));
 
     -- STEP 4: Update database if any deduction occurred
     IF deducted != 0 OR additional_deducted != 0 THEN
+      mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
       IF has_entity_scope THEN
         UPDATE customer_entitlements ce
         SET
@@ -206,7 +300,7 @@ BEGIN
         WHERE ce.id = ent_id;
       END IF;
 
-      -- Track in updates_json (deducted is inclusive of additional_deducted)
+      -- Track in updates_json (merge with any unwind-side update already recorded)
       updates_json := jsonb_set(
         updates_json,
         ARRAY[ent_id],
@@ -215,15 +309,15 @@ BEGIN
           'additional_balance', new_additional_balance,
           'adjustment', new_adjustment,
           'entities', new_entities,
-          'deducted', deducted + additional_deducted,
-          'additional_deducted', additional_deducted
+          'deducted', COALESCE((updates_json->ent_id->>'deducted')::numeric, 0) + deducted + additional_deducted,
+          'additional_deducted', COALESCE((updates_json->ent_id->>'additional_deducted')::numeric, 0) + additional_deducted
         )
       );
 
       remaining_amount := remaining_amount - (deducted / credit_cost);
     END IF;
   END LOOP;
-  
+
   -- ============================================================================
   -- PASS 2: Allow usage_allowed=true entitlements to go negative
   -- ============================================================================
@@ -231,20 +325,46 @@ BEGIN
     FOR ent_obj IN SELECT * FROM jsonb_array_elements(sorted_entitlements)
     LOOP
       EXIT WHEN remaining_amount = 0;
-      
+
       -- Extract entitlement properties
       ent_id := ent_obj->>'customer_entitlement_id';
       credit_cost := (ent_obj->>'credit_cost')::numeric;
       usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false) OR overage_behavior_is_allow;
+      ent_feature_id := NULLIF(ent_obj->>'feature_id', '');
       min_balance := (ent_obj->>'min_balance')::numeric;
       max_balance := (ent_obj->>'max_balance')::numeric;
       has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
-      
+
+      spend_limit := CASE
+        WHEN spend_limit_by_feature_id IS NULL
+          OR ent_feature_id IS NULL
+          OR NOT (spend_limit_by_feature_id ? ent_feature_id)
+        THEN NULL
+        ELSE spend_limit_by_feature_id->ent_feature_id
+      END;
+
+      usage_based_cus_ent_ids_for_feature := CASE
+        WHEN usage_based_cus_ent_ids_by_feature_id IS NULL
+          OR ent_feature_id IS NULL
+          OR NOT (usage_based_cus_ent_ids_by_feature_id ? ent_feature_id)
+        THEN NULL
+        ELSE usage_based_cus_ent_ids_by_feature_id->ent_feature_id
+      END;
+
+      available_overage := CASE
+        WHEN spend_limit IS NULL OR usage_based_cus_ent_ids_for_feature IS NULL THEN NULL
+        ELSE get_available_overage_from_spend_limit(jsonb_build_object(
+          'spend_limit', spend_limit,
+          'usage_based_cus_ent_ids', usage_based_cus_ent_ids_for_feature,
+          'target_entity_id', target_entity_id
+        ))
+      END;
+
       -- Skip entitlements without usage_allowed
       IF NOT usage_allowed THEN
         CONTINUE;
       END IF;
-      
+
       -- Fetch current state (rows already locked in STEP 0)
       SELECT
         ce.balance,
@@ -261,10 +381,11 @@ BEGIN
 
       -- Note: additional_balance was already processed in Pass 1, so we don't deduct from it here
       new_additional_balance := current_additional_balance;
-      
+
       -- Perform deduction (Pass 2: allow_negative = true)
-      SELECT * INTO deducted, new_balance, new_entities, new_adjustment
+      SELECT * INTO deducted, new_balance, new_entities, new_adjustment, step_mutation_logs
       FROM deduct_from_main_balance(jsonb_build_object(
+        'customer_entitlement_id', ent_id,
         'current_balance', current_balance,
         'current_entities', current_entities,
         'current_adjustment', current_adjustment,
@@ -273,14 +394,16 @@ BEGIN
         'allow_negative', true,
         'has_entity_scope', has_entity_scope,
         'target_entity_id', target_entity_id,
+        'available_overage', available_overage,
         'min_balance', min_balance,
         'max_balance', max_balance,
         'alter_granted_balance', alter_granted_balance,
         'overage_behavior_is_allow', overage_behavior_is_allow
       ));
-      
+
       -- Update database if deduction occurred (or addition with negative amount)
       IF deducted != 0 THEN
+        mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
         IF has_entity_scope THEN
           UPDATE customer_entitlements ce
           SET
@@ -335,17 +458,24 @@ BEGIN
       END IF;
     END LOOP;
   END IF;
-  
+
   -- Check overage behaviour
   IF remaining_amount > 0 AND overage_behaviour = 'reject' THEN
-    RAISE EXCEPTION 'INSUFFICIENT_BALANCE|featureId:%|value:%|remaining:%', 
+    RAISE EXCEPTION 'INSUFFICIENT_BALANCE|featureId:%|value:%|remaining:%',
       feature_id,
       COALESCE(amount_to_deduct::text, '0'),
       remaining_amount;
   END IF;
-  
+
   -- Read back updated rollovers (if any were involved in this deduction)
+  final_rollover_ids := COALESCE(unwind_modified_rollover_ids, ARRAY[]::text[]);
+
   IF rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0 THEN
+    final_rollover_ids := array_cat(
+      final_rollover_ids,
+      ARRAY(SELECT (jsonb_array_elements(rollovers_arr))->>'id')
+    );
+
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'id', r.id,
       'cus_ent_id', r.cus_ent_id,
@@ -355,8 +485,10 @@ BEGIN
     )), '[]'::jsonb)
     INTO rollover_updates_json
     FROM rollovers r
-    WHERE r.id IN (SELECT (jsonb_array_elements(rollovers_arr))->>'id');
+    WHERE r.id = ANY(final_rollover_ids);
   ELSIF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
+    final_rollover_ids := array_cat(final_rollover_ids, rollover_ids);
+
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'id', r.id,
       'cus_ent_id', r.cus_ent_id,
@@ -366,17 +498,28 @@ BEGIN
     )), '[]'::jsonb)
     INTO rollover_updates_json
     FROM rollovers r
-    WHERE r.id = ANY(rollover_ids);
+    WHERE r.id = ANY(final_rollover_ids);
+  ELSIF array_length(final_rollover_ids, 1) > 0 THEN
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', r.id,
+      'cus_ent_id', r.cus_ent_id,
+      'balance', r.balance,
+      'usage', r.usage,
+      'entities', COALESCE(r.entities, '{}'::jsonb)
+    )), '[]'::jsonb)
+    INTO rollover_updates_json
+    FROM rollovers r
+    WHERE r.id = ANY(final_rollover_ids);
   END IF;
 
   -- Build final result
   result_json := jsonb_build_object(
     'updates', updates_json,
     'remaining', remaining_amount,
-    'rollover_updates', rollover_updates_json
+    'rollover_updates', rollover_updates_json,
+    'mutation_logs', mutation_logs_json
   );
-  
+
   RETURN result_json;
 END;
 $$;
-

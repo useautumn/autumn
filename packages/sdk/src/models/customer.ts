@@ -26,6 +26,90 @@ export const CustomerEnv = {
 export type CustomerEnv = OpenEnum<typeof CustomerEnv>;
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const CustomerInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type CustomerInterval = OpenEnum<typeof CustomerInterval>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type CustomerPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: CustomerInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type CustomerAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: CustomerPurchaseLimit | undefined;
+};
+
+export type CustomerSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the customer (auto top-ups, etc.)
+ */
+export type CustomerBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<CustomerAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CustomerSpendLimit> | undefined;
+};
+
+/**
  * Current status of the subscription.
  */
 export const Status = {
@@ -38,6 +122,10 @@ export const Status = {
 export type Status = OpenEnum<typeof Status>;
 
 export type Subscription = {
+  /**
+   * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+   */
+  id: string;
   plan?: Plan | undefined;
   /**
    * The unique identifier of the subscribed plan.
@@ -153,7 +241,6 @@ export const EntityEnv = {
 export type EntityEnv = OpenEnum<typeof EntityEnv>;
 
 export type Entity = {
-  autumnId?: string | undefined;
   /**
    * The unique identifier of the entity
    */
@@ -318,6 +405,10 @@ export type Customer = {
    */
   sendEmailReceipts: boolean;
   /**
+   * Billing controls for the customer (auto top-ups, etc.)
+   */
+  billingControls: CustomerBillingControls;
+  /**
    * Active and scheduled recurring plans that this customer has attached.
    */
   subscriptions: Array<Subscription>;
@@ -342,6 +433,130 @@ export const CustomerEnv$inboundSchema: z.ZodMiniType<CustomerEnv, unknown> =
   openEnums.inboundSchema(CustomerEnv);
 
 /** @internal */
+export const CustomerInterval$inboundSchema: z.ZodMiniType<
+  CustomerInterval,
+  unknown
+> = openEnums.inboundSchema(CustomerInterval);
+
+/** @internal */
+export const CustomerPurchaseLimit$inboundSchema: z.ZodMiniType<
+  CustomerPurchaseLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: CustomerInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function customerPurchaseLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerPurchaseLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerPurchaseLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerAutoTopup$inboundSchema: z.ZodMiniType<
+  CustomerAutoTopup,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => CustomerPurchaseLimit$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+    });
+  }),
+);
+
+export function customerAutoTopupFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerAutoTopup, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerAutoTopup$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerAutoTopup' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
+  CustomerSpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function customerSpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerSpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerSpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
+  CustomerBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => CustomerAutoTopup$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CustomerSpendLimit$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+    });
+  }),
+);
+
+export function customerBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
 export const Status$inboundSchema: z.ZodMiniType<Status, unknown> = openEnums
   .inboundSchema(Status);
 
@@ -349,6 +564,7 @@ export const Status$inboundSchema: z.ZodMiniType<Status, unknown> = openEnums
 export const Subscription$inboundSchema: z.ZodMiniType<Subscription, unknown> =
   z.pipe(
     z.object({
+      id: types.string(),
       plan: types.optional(Plan$inboundSchema),
       plan_id: types.string(),
       auto_enable: types.boolean(),
@@ -455,7 +671,6 @@ export const EntityEnv$inboundSchema: z.ZodMiniType<EntityEnv, unknown> =
 /** @internal */
 export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
     id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
@@ -465,7 +680,6 @@ export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
       "created_at": "createdAt",
@@ -629,6 +843,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     env: CustomerEnv$inboundSchema,
     metadata: z.record(z.string(), z.any()),
     send_email_receipts: types.boolean(),
+    billing_controls: z.lazy(() => CustomerBillingControls$inboundSchema),
     subscriptions: z.array(z.lazy(() => Subscription$inboundSchema)),
     purchases: z.array(z.lazy(() => Purchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
@@ -646,6 +861,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
       "created_at": "createdAt",
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
+      "billing_controls": "billingControls",
       "trials_used": "trialsUsed",
       "payment_method": "paymentMethod",
     });

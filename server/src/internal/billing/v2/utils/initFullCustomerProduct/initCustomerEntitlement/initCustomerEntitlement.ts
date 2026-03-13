@@ -1,7 +1,7 @@
 import {
 	type CustomerEntitlement,
 	type EntitlementWithFeature,
-	type InitFullCustomerProductContext,
+	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
@@ -18,10 +18,10 @@ export const initCustomerEntitlement = ({
 	entitlement,
 	cusProductId,
 }: {
-	initContext: InitFullCustomerProductContext;
+	initContext: InitCustomerEntitlementContext;
 	initOptions?: InitFullCustomerProductOptions;
 	entitlement: EntitlementWithFeature;
-	cusProductId: string;
+	cusProductId: string | null;
 }): CustomerEntitlement => {
 	const { balance, entities } = initCustomerEntitlementBalance({
 		initContext,
@@ -69,6 +69,7 @@ export const initCustomerEntitlement = ({
 
 		expires_at: null,
 		cache_version: 0,
+		external_id: null,
 	};
 };
 

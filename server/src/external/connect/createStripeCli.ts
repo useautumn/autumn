@@ -1,12 +1,12 @@
 import {
 	AppEnv,
 	ErrCode,
-	InternalError,
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
 import { isStripeConnected } from "@server/internal/orgs/orgUtils.js";
 import { decryptData } from "@server/utils/encryptUtils.js";
+import { instrumentStripe } from "@server/utils/otel/instrumentStripe.js";
 import Stripe from "stripe";
 import { orgToAccountId, shouldUseMaster } from "./connectUtils.js";
 import { initMasterStripe, initPlatformStripe } from "./initStripeCli.js";
@@ -39,8 +39,10 @@ export const createStripeCli = ({
 		}
 
 		const decrypted = decryptData(encrypted);
-		return new Stripe(decrypted, {
-			apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+		return instrumentStripe({
+			client: new Stripe(decrypted, {
+				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+			}),
 		});
 	}
 
@@ -63,7 +65,7 @@ export const createStripeCli = ({
 		return initMasterStripe({ accountId, legacyVersion, env });
 	}
 
-	throw new InternalError({
-		message: `No stripe account linked to organization ${org.id}`,
+	throw new RecaseError({
+		message: `There is no Stripe account linked to this organization. Please connect it here: https://app.useautumn.com${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
 	});
 };

@@ -5,12 +5,10 @@ import {
 	OnIncrease,
 	ProductItemFeatureType,
 } from "@autumn/shared";
+import { calculateProratedDiff } from "@tests/integration/billing/utils/proration/calculateProratedDiff.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
-import {
-	expectSubQuantityCorrect,
-	expectUpcomingItemsCorrect,
-} from "@tests/utils/expectUtils/expectContUseUtils.js";
+import { expectSubQuantityCorrect } from "@tests/utils/expectUtils/expectContUseUtils.js";
 import { getSubsFromCusId } from "@tests/utils/expectUtils/expectSubUtils.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
@@ -211,27 +209,35 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub q
 
 	await timeout(15000);
 
-	let usage = 3;
+	const usage1 = 3;
 
-	const { stripeSubs, fullCus } = await expectSubQuantityCorrect({
+	const { stripeSubs } = await expectSubQuantityCorrect({
 		stripeCli: ctx.stripeCli,
 		productId: pro.id,
 		db: ctx.db,
 		org: ctx.org,
 		env: ctx.env,
 		customerId,
-		usage,
+		usage: usage1,
 	});
 
-	await expectUpcomingItemsCorrect({
-		stripeCli: ctx.stripeCli,
-		fullCus,
-		stripeSubs,
-		curUnix,
-		expectedNumItems: 1,
-		unitPrice: userItem.price!,
-		quantity: 2, // 3 usage - 1 included = 2 overage
+	const stripeCustomerId = stripeSubs[0].customer as string;
+
+	// Step 1: overage went 0 → 2. Credit for $0 old is filtered; 1 deferred invoice item created.
+	const proratedCharge1 = await calculateProratedDiff({
+		customerId,
+		advancedTo: curUnix,
+		oldAmount: 0,
+		newAmount: 2 * userItem.price!,
 	});
+
+	const items1 = await ctx.stripeCli.invoiceItems.list({
+		customer: stripeCustomerId,
+	});
+	expect(items1.data.length).toBe(1);
+	expect(
+		Math.abs(items1.data[0].amount - Math.round(proratedCharge1 * 100)),
+	).toBeLessThanOrEqual(1);
 
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer1.invoices!.length).toBe(1);
@@ -250,7 +256,7 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub q
 		value: 2,
 	});
 
-	const result2 = await expectSubQuantityCorrect({
+	await expectSubQuantityCorrect({
 		stripeCli: ctx.stripeCli,
 		productId: pro.id,
 		db: ctx.db,
@@ -260,15 +266,24 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub q
 		usage: 2,
 	});
 
-	await expectUpcomingItemsCorrect({
-		stripeCli: ctx.stripeCli,
-		fullCus: result2.fullCus,
-		stripeSubs: result2.stripeSubs,
-		unitPrice: userItem.price!,
-		curUnix,
-		expectedNumItems: 2,
-		quantity: -1, // decrease by 1 seat
+	// Step 2: overage went 2 → 1. Two deferred items: credit for old (2 overage) + charge for new (1 overage).
+	// Net of the 2 newest items = prorated diff from 2×$50 → 1×$50.
+	const proratedDiff2 = await calculateProratedDiff({
+		customerId,
+		advancedTo: curUnix,
+		oldAmount: 2 * userItem.price!,
+		newAmount: 1 * userItem.price!,
 	});
+
+	const items2 = await ctx.stripeCli.invoiceItems.list({
+		customer: stripeCustomerId,
+	});
+	expect(items2.data.length).toBe(3);
+
+	const netStep2Cents = items2.data[0].amount + items2.data[1].amount;
+	expect(
+		Math.abs(netStep2Cents - Math.round(proratedDiff2 * 100)),
+	).toBeLessThanOrEqual(1);
 
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer2.invoices!.length).toBe(1);
@@ -280,28 +295,35 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub q
 		value: 4,
 	});
 
-	usage = 4;
-
-	const result3 = await expectSubQuantityCorrect({
+	await expectSubQuantityCorrect({
 		stripeCli: ctx.stripeCli,
 		productId: pro.id,
 		db: ctx.db,
 		org: ctx.org,
 		env: ctx.env,
 		customerId,
-		usage,
+		usage: 4,
 	});
 
-	await expectUpcomingItemsCorrect({
-		stripeCli: ctx.stripeCli,
-		fullCus: result3.fullCus,
-		stripeSubs: result3.stripeSubs,
-		unitPrice: userItem.price!,
-		curUnix,
-		expectedNumItems: 3,
-		quantity: 2, // +2 seats from usage=2 to usage=4
+	// Step 3: overage went 1 → 3. Two deferred items: credit for old (1 overage) + charge for new (3 overage).
+	// Net of the 2 newest items = prorated diff from 1×$50 → 3×$50.
+	const proratedDiff3 = await calculateProratedDiff({
+		customerId,
+		advancedTo: curUnix,
+		oldAmount: 1 * userItem.price!,
+		newAmount: 3 * userItem.price!,
 	});
+
+	const items3 = await ctx.stripeCli.invoiceItems.list({
+		customer: stripeCustomerId,
+	});
+	expect(items3.data.length).toBe(5);
+
+	const netStep3Cents = items3.data[0].amount + items3.data[1].amount;
+	expect(
+		Math.abs(netStep3Cents - Math.round(proratedDiff3 * 100)),
+	).toBeLessThanOrEqual(1);
 
 	const customer3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer3.invoices!.length).toBe(1);
-}, 300_000); // Longer timeout for Stripe test clock operations
+}); // Longer timeout for Stripe test clock operations

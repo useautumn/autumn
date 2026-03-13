@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
+import {
+	AutoTopupSchema,
+	DbSpendLimitSchema,
+} from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
 	id: z.string().nullish(), // given by user
@@ -17,6 +21,8 @@ export const CustomerSchema = z.object({
 	processors: ExternalProcessorsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).nullish().default({}),
 	send_email_receipts: z.boolean().default(false),
+	auto_topups: z.array(AutoTopupSchema).nullish(),
+	spend_limits: z.array(DbSpendLimitSchema).nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;

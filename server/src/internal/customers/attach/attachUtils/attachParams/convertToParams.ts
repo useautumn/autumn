@@ -81,7 +81,8 @@ export const productToInsertParams = ({
 		cusProducts: fullCus.customer_products,
 		freeTrial: null,
 		optionsList: [],
-		internalEntityId: undefined,
+		internalEntityId: fullCus.entity?.internal_id ?? undefined,
+		entityId: fullCus.entity?.id ?? undefined,
 		entities: entities || [],
 		replaceables: [],
 	};

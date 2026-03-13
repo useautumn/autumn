@@ -89,6 +89,35 @@ const monthlyMessages = ({
 };
 
 /**
+ * Hourly messages - resets each hour
+ * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
+ */
+const hourlyMessages = ({
+	includedUsage = 100,
+	entityFeatureId,
+	resetUsageWhenEnabled,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+	resetUsageWhenEnabled?: boolean;
+} = {}): LimitedItem => {
+	const item = constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+		interval: ProductItemInterval.Hour,
+		entityFeatureId,
+	}) as LimitedItem;
+
+	if (resetUsageWhenEnabled !== undefined) {
+		item.reset_usage_when_enabled = resetUsageWhenEnabled;
+	}
+
+	return item;
+};
+
+/**
  * Monthly words - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -209,6 +238,25 @@ const freeAllocatedWorkflows = ({
 	}) as LimitedItem;
 
 /**
+ * Weekly messages - resets each week
+ * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ */
+const weeklyMessages = ({
+	includedUsage = 100,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+		interval: ProductItemInterval.Week,
+		entityFeatureId,
+	}) as LimitedItem;
+
+/**
  * Lifetime messages - never resets (interval: null)
  * @param includedUsage - One-time usage allowance (default: 100)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -258,6 +306,7 @@ const prepaid = ({
 	billingUnits = 100,
 	includedUsage = 0,
 	config,
+	prorationConfig,
 	entityFeatureId,
 }: {
 	featureId: string;
@@ -265,16 +314,34 @@ const prepaid = ({
 	billingUnits?: number;
 	includedUsage?: number;
 	config?: ProductItemConfig;
+	prorationConfig?: {
+		onIncrease?: ProductItemConfig["on_increase"];
+		onDecrease?: ProductItemConfig["on_decrease"];
+	};
 	entityFeatureId?: string;
-}): LimitedItem =>
-	constructPrepaidItem({
+}): LimitedItem => {
+	const mergedConfig =
+		config || prorationConfig
+			? {
+					...config,
+					...(prorationConfig?.onIncrease
+						? { on_increase: prorationConfig.onIncrease }
+						: {}),
+					...(prorationConfig?.onDecrease
+						? { on_decrease: prorationConfig.onDecrease }
+						: {}),
+				}
+			: undefined;
+
+	return constructPrepaidItem({
 		featureId,
 		price,
 		billingUnits,
 		includedUsage,
-		config,
+		config: mergedConfig,
 		entityFeatureId,
 	}) as LimitedItem;
+};
 
 /**
  * Prepaid messages - purchase units upfront ($10/unit)
@@ -286,12 +353,17 @@ const prepaidMessages = ({
 	billingUnits = 100,
 	price = 10,
 	config,
+	prorationConfig,
 	entityFeatureId,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
 	price?: number;
 	config?: ProductItemConfig;
+	prorationConfig?: {
+		onIncrease?: ProductItemConfig["on_increase"];
+		onDecrease?: ProductItemConfig["on_decrease"];
+	};
 	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	prepaid({
@@ -300,6 +372,7 @@ const prepaidMessages = ({
 		billingUnits,
 		includedUsage,
 		config,
+		prorationConfig,
 		entityFeatureId,
 	});
 
@@ -365,7 +438,7 @@ const volumePrepaidMessages = ({
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
-	tiers?: { to: number | "inf"; amount: number; flat_amount?: number | null }[];
+	tiers?: { to: number | "inf"; amount: number; flat_amount?: number }[];
 	config?: ProductItemConfig;
 } = {}): LimitedItem =>
 	constructPrepaidItem({
@@ -373,7 +446,7 @@ const volumePrepaidMessages = ({
 		tiers: tiers as {
 			to: number;
 			amount: number;
-			flat_amount?: number | null;
+			flat_amount?: number;
 		}[],
 		tierBehaviour: TierBehavior.VolumeBased,
 		billingUnits,
@@ -702,6 +775,7 @@ export const items = {
 
 	// Free metered
 	free,
+	hourlyMessages,
 	monthlyMessages,
 	monthlyWords,
 	monthlyCredits,
@@ -710,6 +784,7 @@ export const items = {
 	freeAllocatedUsers,
 	freeAllocatedWorkflows,
 	unlimitedMessages,
+	weeklyMessages,
 	lifetimeMessages,
 	monthlyMessagesWithRollover,
 

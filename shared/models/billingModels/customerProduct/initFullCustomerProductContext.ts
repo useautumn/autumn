@@ -46,6 +46,18 @@ export interface InitFullCustomerProductContext {
 	transitionConfig?: TransitionConfig;
 }
 
+export interface InitCustomerEntitlementContext {
+	fullCustomer: FullCustomer;
+	fullProduct?: FullProduct;
+	featureQuantities: FeatureOptions[];
+	resetCycleAnchor: number | "now";
+	freeTrial: FreeTrial | null;
+	now: number;
+
+	trialEndsAt?: number;
+	transitionConfig?: TransitionConfig;
+}
+
 export interface InitFullCustomerProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;

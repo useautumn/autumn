@@ -249,7 +249,7 @@ test.concurrent(`${chalk.yellowBright("new-billing-sub 3: entities get separate 
 		customer: entity2Final,
 		productId: premium.id,
 	});
-}, 120000);
+});
 
 // =============================================================================
 // TEST 4: Upgrade ignores new_billing_subscription
@@ -451,7 +451,7 @@ test.concurrent(`${chalk.yellowBright("new-billing-sub 6: customer upgrade doesn
 		customer: entityAfter,
 		productId: premium.id,
 	});
-}, 120000);
+});
 
 // =============================================================================
 // TEST 7: Free -> paid main with existing paid cycle honors new_billing_subscription

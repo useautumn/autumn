@@ -14,15 +14,21 @@ import {
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 import {
+	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
+import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -203,6 +209,31 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
+	redisInstance.defineCommand("updateEntityInCustomer", {
+		numberOfKeys: 1,
+		lua: UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("upsertInvoiceInCustomer", {
+		numberOfKeys: 1,
+		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("adjustCustomerEntitlementBalance", {
+		numberOfKeys: 1,
+		lua: ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateCustomerProduct", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	});
+
+	redisInstance.defineCommand("claimLockReceipt", {
+		numberOfKeys: 1,
+		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
+	});
+
 	redisInstance.on("error", (error) => {
 		console.error(`[Redis] Connection error:`, error.message);
 	});
@@ -211,13 +242,23 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 };
 
 /** Create a Redis connection for a specific region */
-const createRedisConnection = (cacheUrl: string): Redis => {
+const createRedisConnection = ({
+	cacheUrl,
+	region,
+}: {
+	cacheUrl: string;
+	region: string;
+}): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
 		family: 4,
 		keepAlive: 10000,
 	});
-	return configureRedisInstance(instance);
+	// instrumentRedis must run first so its defineCommand patch
+	// is in place when configureRedisInstance registers Lua commands.
+	instrumentRedis({ redis: instance, region });
+	configureRedisInstance(instance);
+	return instance;
 };
 
 // Primary Redis instance (current region or default)
@@ -228,7 +269,10 @@ if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const redis = createRedisConnection(primaryCacheUrl!);
+const redis = createRedisConnection({
+	cacheUrl: primaryCacheUrl!,
+	region: currentRegion,
+});
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
@@ -265,7 +309,7 @@ export const getRegionalRedis = (region: string): Redis => {
 
 	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
-	regionalInstance = createRedisConnection(cacheUrl);
+	regionalInstance = createRedisConnection({ cacheUrl, region });
 	regionalRedisInstances.set(region, regionalInstance);
 
 	return regionalInstance;
@@ -385,11 +429,28 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		adjustCustomerEntitlementBalance(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
 		appendEntityToCustomer(
 			cacheKey: string,
 			entityJson: string,
 		): Promise<string>;
+		updateEntityInCustomer(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		upsertInvoiceInCustomer(
+			cacheKey: string,
+			invoiceJson: string,
+		): Promise<string>;
+		updateCustomerProduct(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
 

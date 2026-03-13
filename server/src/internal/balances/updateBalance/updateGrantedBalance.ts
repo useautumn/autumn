@@ -1,7 +1,6 @@
 import type { CustomerEntitlementFilters, FullCustomer } from "@autumn/shared";
 import {
 	cusEntsToAllowance,
-	FeatureNotFoundError,
 	fullCustomerToCustomerEntitlements,
 	InternalError,
 	isEntityScopedCusEnt,
@@ -12,45 +11,38 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { CusEntService } from "../../customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { customerEntitlementActions } from "../../customers/cusProducts/cusEnts/actions/index.js";
 
 export const updateGrantedBalance = async ({
 	ctx,
-	fullCus,
+	fullCustomer,
 	featureId,
 	targetGrantedBalance,
 	customerEntitlementFilters = {},
 }: {
 	ctx: AutumnContext;
-	fullCus: FullCustomer;
-	featureId: string;
+	fullCustomer: FullCustomer;
+	featureId: string | undefined;
 	targetGrantedBalance: number;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
-	const feature = ctx.features.find((f) => f.id === featureId);
-
-	if (!feature) {
-		throw new FeatureNotFoundError({ featureId });
-	}
-
 	const cusEnts = fullCustomerToCustomerEntitlements({
-		fullCustomer: fullCus,
-		featureIds: [featureId],
-		entity: fullCus.entity,
+		fullCustomer,
+		featureIds: featureId ? [featureId] : undefined,
+		entity: fullCustomer.entity,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
 		customerEntitlementFilters,
 	});
 
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
-			message: `[updateGrantedBalance] No balances to update for feature ${featureId}, customer ${fullCus.id}`,
+			message: `[updateGrantedBalance] No balances to update for feature ${featureId}, customer ${fullCustomer.id}`,
 		});
 	}
 
 	const currentAllowance = cusEntsToAllowance({
 		cusEnts,
-		entityId: fullCus.entity?.id,
+		entityId: fullCustomer.entity?.id ?? undefined,
 		withRollovers: false,
 	});
 
@@ -60,19 +52,18 @@ export const updateGrantedBalance = async ({
 
 	const targetCusEnt = cusEnts[0];
 	const isEntityScoped = isEntityScopedCusEnt(targetCusEnt);
-	const entityId = fullCus.entity?.id;
+	const entityId = fullCustomer.entity?.id;
 
 	if (isEntityScoped) {
 		const entityKeys = Object.keys(targetCusEnt.entities ?? {});
 		const targetEntityId = notNullish(entityId) ? entityId : entityKeys[0];
 
-		// Throw error if no entity balance exists
 		if (
 			nullish(targetEntityId) ||
 			nullish(targetCusEnt.entities?.[targetEntityId])
 		) {
 			throw new InternalError({
-				message: `[updateGrantedBalance] No entity balance found for feature ${featureId}, customer ${fullCus.id}`,
+				message: `[updateGrantedBalance] No entity balance found for feature ${featureId}, customer ${fullCustomer.id}`,
 			});
 		}
 
@@ -87,34 +78,22 @@ export const updateGrantedBalance = async ({
 			},
 		};
 
-		await CusEntService.update({
+		await customerEntitlementActions.updateDbAndCache({
 			ctx,
-			id: targetCusEnt.id,
+			customerId: fullCustomer.id ?? "",
+			cusEntId: targetCusEnt.id,
 			updates: { entities: newEntities },
 		});
 
-		// Update the cusEnt in place
 		targetCusEnt.entities = newEntities;
 	} else {
-		await CusEntService.update({
+		await customerEntitlementActions.updateDbAndCache({
 			ctx,
-			id: targetCusEnt.id,
+			customerId: fullCustomer.id ?? "",
+			cusEntId: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
 		});
 
-		// Update the cusEnt in place
 		targetCusEnt.adjustment = requiredAdjustment;
 	}
-
-	await deleteCachedApiCustomer({
-		ctx,
-		customerId: fullCus.id ?? "",
-		source: "updateGrantedBalance",
-	});
-
-	// // Update Redis cache directly (avoids clearing cache which causes race conditions)
-	// await setCachedGrantedBalance({
-	// 	ctx,
-	// 	fullCus,
-	// });
 };

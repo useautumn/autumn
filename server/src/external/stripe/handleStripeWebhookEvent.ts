@@ -5,7 +5,6 @@ import { Stripe } from "stripe";
 import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
 import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -52,8 +51,8 @@ export const handleStripeWebhookEvent = async (
 
 			case "invoice.updated":
 				await handleInvoiceUpdated({
+					ctx,
 					event,
-					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 

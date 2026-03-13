@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
@@ -38,18 +39,17 @@ export const updateCustomerEntitlements = async ({
 			continue;
 		}
 
-		// 2. Handle balance change
-		if (balanceChange > 0) {
-			await CusEntService.increment({
+		// 2. Handle balance change (DB + cache)
+		if (balanceChange !== 0) {
+			const customerId =
+				customerEntitlement.customer_id ??
+				customerEntitlement.internal_customer_id;
+
+			await customerEntitlementActions.adjustBalanceDbAndCache({
 				ctx,
-				id: customerEntitlement.id,
-				amount: balanceChange,
-			});
-		} else if (balanceChange < 0) {
-			await CusEntService.decrement({
-				ctx,
-				id: customerEntitlement.id,
-				amount: Math.abs(balanceChange),
+				customerId,
+				cusEntId: customerEntitlement.id,
+				delta: balanceChange,
 			});
 		}
 

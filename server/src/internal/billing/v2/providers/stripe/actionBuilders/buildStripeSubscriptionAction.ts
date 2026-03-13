@@ -57,6 +57,7 @@ export const buildStripeSubscriptionAction = ({
 			subItemsUpdate,
 			addInvoiceItems,
 			subscriptionCancelAt: subscriptionCancelAt ?? undefined,
+			autumnBillingPlan,
 		});
 	}
 

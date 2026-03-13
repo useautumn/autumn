@@ -1,7 +1,8 @@
-import { context, trace } from "@opentelemetry/api";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 
-const tracer = trace.getTracer("express");
+const tracer = trace.getTracer("autumn");
 
+/** Wraps an async function in an OTel span with automatic error recording. */
 export const withSpan = <T>({
 	name,
 	attributes,
@@ -15,8 +16,17 @@ export const withSpan = <T>({
 	span.setAttributes(attributes);
 
 	return context.with(trace.setSpan(context.active(), span), async () => {
-		const result = await fn();
-		span.end();
-		return result;
+		try {
+			const result = await fn();
+			span.end();
+			return result;
+		} catch (err) {
+			span.setStatus({ code: SpanStatusCode.ERROR });
+			if (err instanceof Error) {
+				span.recordException(err);
+			}
+			span.end();
+			throw err;
+		}
 	});
 };

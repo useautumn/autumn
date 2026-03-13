@@ -13,7 +13,8 @@ export const priceToStripeProductName = ({
 	product: Product;
 }) => {
 	if (isPrepaidPrice(price)) {
-		return `${product.name} - ${price.config.billing_units} ${entitlement.feature.name}`;
+		// return `${product.name} - ${price.config.billing_units} ${entitlement.feature.name}`;
+		return `${product.name} - ${entitlement.feature.name}`;
 	}
 
 	return `${product.name} - ${entitlement.feature.name}`;

@@ -41,7 +41,7 @@ test.concurrent(`${chalk.yellowBright("update: send_email_receipts can be update
 test.concurrent(`${chalk.yellowBright("update: send_email_receipts can be disabled")}`, async () => {
 	const customerId = "update-send-email-receipts-disable";
 	const { autumnV1 } = await initScenario({
-		customerId,
+		// customerId,
 		setup: [s.deleteCustomer({ customerId })],
 		actions: [],
 	});

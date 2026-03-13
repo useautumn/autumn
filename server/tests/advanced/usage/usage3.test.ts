@@ -218,7 +218,7 @@ describe(`${chalk.yellowBright(
 
 		const usagePrice = starterV1.prices[1];
 		const starterAllowance =
-			starterV1.entitlements[TestFeature.Credits]?.allowance!;
+			starterV1.entitlements[TestFeature.Credits]?.allowance ?? 0;
 		const overage = totalCreditsUsed - starterAllowance;
 
 		const overagePrice = priceToInvoiceAmount({

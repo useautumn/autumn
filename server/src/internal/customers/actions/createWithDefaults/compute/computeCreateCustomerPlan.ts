@@ -1,5 +1,5 @@
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
@@ -29,5 +29,5 @@ export const computeCreateCustomerPlan = ({
 
 	context.fullCustomer.customer_products = insertCustomerProducts;
 
-	return { insertCustomerProducts };
+	return { customerId: fullCustomer?.id ?? "", insertCustomerProducts };
 };

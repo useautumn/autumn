@@ -109,8 +109,8 @@ export type BillingUpdateTo = number | string;
 
 export type BillingUpdateTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const BillingUpdateTierBehavior = {
@@ -409,9 +409,9 @@ export type UpdateSubscriptionParams = {
    */
   entityId?: string | undefined;
   /**
-   * The ID of the plan.
+   * The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
    */
-  planId: string;
+  planId?: string | undefined;
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
@@ -433,9 +433,17 @@ export type UpdateSubscriptionParams = {
    */
   prorationBehavior?: BillingUpdateProrationBehavior | undefined;
   /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
+  /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
+  /**
+   * If true, the subscription is updated internally without applying billing changes in Stripe.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -641,8 +649,8 @@ export function billingUpdateToToJSON(
 /** @internal */
 export type BillingUpdateTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -652,8 +660,8 @@ export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -975,13 +983,15 @@ export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 export type UpdateSubscriptionParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
-  plan_id: string;
+  plan_id?: string | undefined;
   feature_quantities?: Array<BillingUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   customize?: BillingUpdateCustomize$Outbound | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   cancel_action?: string | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -992,7 +1002,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
-    planId: z.string(),
+    planId: z.optional(z.string()),
     featureQuantities: z.optional(
       z.array(z.lazy(() => BillingUpdateFeatureQuantity$outboundSchema)),
     ),
@@ -1004,7 +1014,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       BillingUpdateProrationBehavior$outboundSchema,
     ),
+    subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1014,7 +1026,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

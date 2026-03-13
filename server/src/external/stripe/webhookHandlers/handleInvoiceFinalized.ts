@@ -1,8 +1,4 @@
-import {
-	ACTIVE_STATUSES,
-	type FullCustomerPrice,
-	type InvoiceStatus,
-} from "@autumn/shared";
+import { ACTIVE_STATUSES } from "@autumn/shared";
 
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -13,14 +9,11 @@ import {
 import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { stripeInvoiceToStripeSubscriptionId } from "../invoices/utils/convertStripeInvoice";
 import {
 	getFullStripeInvoice,
 	getStripeExpandedInvoice,
-	updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 
@@ -148,34 +141,5 @@ export const handleInvoiceFinalized = async ({
 		if (activeProducts.length === 0) {
 			return;
 		}
-
-		const updated = await updateInvoiceIfExists({
-			db,
-			invoice,
-		});
-
-		if (updated) return;
-
-		const prices = activeProducts.flatMap((cp) =>
-			cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
-		);
-
-		const invoiceItems = await getInvoiceItems({
-			stripeInvoice: invoice,
-			prices: prices,
-			logger,
-		});
-
-		await InvoiceService.createInvoiceFromStripe({
-			db,
-			stripeInvoice: expandedInvoice,
-			internalCustomerId: activeProducts[0].internal_customer_id,
-			productIds: activeProducts.map((p) => p.product.id),
-			internalProductIds: activeProducts.map((p) => p.internal_product_id),
-			internalEntityId: activeProducts[0].internal_entity_id,
-			status: invoice.status as InvoiceStatus,
-			org,
-			items: invoiceItems,
-		});
 	}
 };

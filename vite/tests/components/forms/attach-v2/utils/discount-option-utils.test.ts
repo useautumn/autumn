@@ -259,8 +259,7 @@ describe("buildDiscountOptions", () => {
 		expect(result[1].source).toBe("stripe");
 	});
 
-	test("should deduplicate against all autumn rewards, not just discount-type ones", () => {
-		// A free product reward that shares an ID with a Stripe coupon should still deduplicate
+	test("should keep stripe coupon when matching autumn reward is not a discount", () => {
 		const rewards = [
 			makeReward({
 				id: "free_reward_id",
@@ -280,9 +279,13 @@ describe("buildDiscountOptions", () => {
 			stripeCoupons,
 			productId: undefined,
 		});
-		// Free product reward is filtered from autumn options, AND
-		// the stripe coupon with the same ID is deduped away
-		expect(result).toHaveLength(0);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({
+			id: "free_reward_id",
+			label: "Coupon",
+			sublabel: "5% off",
+			source: "stripe",
+		});
 	});
 
 	test("should filter non-discount reward types from autumn options", () => {
@@ -350,6 +353,81 @@ describe("buildDiscountOptions", () => {
 		// Only the apply_to_all reward should pass; the specific one is linked to prod_other
 		expect(result).toHaveLength(1);
 		expect(result[0].id).toBe("all_products");
+	});
+
+	test("should keep stripe coupon when matching autumn reward is not eligible for the product", () => {
+		const rewards = [
+			makeReward({
+				id: "shared_id",
+				name: "Autumn Discount",
+				type: RewardType.PercentageDiscount,
+				discount_config: {
+					discount_value: 10,
+					duration_type: CouponDurationType.OneOff,
+					duration_value: 0,
+					apply_to_all: false,
+				},
+			}),
+		];
+		const rewardPrograms = [
+			makeRewardProgram({
+				internal_reward_id: "rew_shared_id",
+				product_ids: ["prod_other"],
+			}),
+		];
+		const stripeCoupons = [
+			makeStripeCoupon({
+				id: "shared_id",
+				name: "Stripe Deal",
+				percent_off: 10,
+			}),
+		];
+		const result = buildDiscountOptions({
+			rewards,
+			rewardPrograms,
+			stripeCoupons,
+			productId: "prod_target",
+		});
+		expect(result).toEqual([
+			{
+				id: "shared_id",
+				label: "Stripe Deal",
+				sublabel: "10% off",
+				source: "stripe",
+			},
+		]);
+	});
+
+	test("should filter stripe coupons by applies_to when productId is provided", () => {
+		const stripeCoupons = [
+			makeStripeCoupon({
+				id: "all_products",
+				name: "All Products",
+				percent_off: 10,
+			}),
+			makeStripeCoupon({
+				id: "matching_product",
+				name: "Matching Product",
+				percent_off: 20,
+				applies_to: { products: ["prod_target"] },
+			}),
+			makeStripeCoupon({
+				id: "other_product",
+				name: "Other Product",
+				percent_off: 30,
+				applies_to: { products: ["prod_other"] },
+			}),
+		];
+		const result = buildDiscountOptions({
+			rewards: [],
+			rewardPrograms: [],
+			stripeCoupons,
+			productId: "prod_target",
+		});
+		expect(result.map((option) => option.id)).toEqual([
+			"all_products",
+			"matching_product",
+		]);
 	});
 
 	test("should place autumn options before stripe options", () => {

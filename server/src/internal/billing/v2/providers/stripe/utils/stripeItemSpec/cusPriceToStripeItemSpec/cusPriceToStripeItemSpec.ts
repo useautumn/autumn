@@ -56,7 +56,10 @@ export const cusPriceToStripeItemSpec = ({
 			spec = prepaidToStripeItemSpec({
 				ctx,
 				cusEntWithCusProduct,
-				options,
+				options: {
+					...options,
+					billingVersion: billingContext?.billingVersion,
+				},
 			});
 		}
 

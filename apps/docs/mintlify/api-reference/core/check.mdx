@@ -65,6 +65,24 @@ const { allowed } = await autumn.check({
   If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call.
 </DynamicParamField>
 
+<DynamicParamField body="lock" type="object">
+  Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
+  <Expandable title="properties">
+    <DynamicParamField body="lock_id" type="string" required>
+      A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
+    </DynamicParamField>
+
+    <DynamicParamField body="enabled" type="any" required>
+      Must be true to enable locking.
+    </DynamicParamField>
+
+    <DynamicParamField body="expires_at" type="number">
+      Unix timestamp (ms) when the lock automatically expires and releases the held balance.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="with_preview" type="boolean">
   If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
 </DynamicParamField>
@@ -237,16 +255,8 @@ const { allowed } = await autumn.check({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[]">
+            <DynamicResponseField name="tiers" type="any[]">
               Tiered pricing configuration if applicable.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
-
-                <DynamicResponseField name="amount" type="number" />
-
-                <DynamicResponseField name="flat_amount" type="number | null" />
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
@@ -385,22 +395,8 @@ const { allowed } = await autumn.check({
               The price of the product item. Should be `null` if tiered pricing is set.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[] | null">
+            <DynamicResponseField name="tiers" type="any[] | null">
               Tiered pricing for the product item. Not applicable for fixed price items.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number">
-                  The maximum amount of usage for this tier.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  The price of the product item for this tier.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="flat_amount" type="number | null">
-                  A flat fee charged for this tier, in addition to the per-unit amount.
-                </DynamicResponseField>
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">

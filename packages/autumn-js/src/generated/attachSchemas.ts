@@ -15,8 +15,8 @@ export const attachToSchema = z.union([z.number(), z.string()]);
 
 export const attachTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachInvoiceModeSchema = z.object({
@@ -28,6 +28,11 @@ export const attachInvoiceModeSchema = z.object({
 export const attachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const attachCustomLineItemSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
 });
 
 export const attachInvoiceSchema = z.object({
@@ -59,8 +64,8 @@ export const attachToOutboundSchema = z.union([z.number(), z.string()]);
 
 export const attachTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flat_amount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachPriceOutboundSchema = z.object({
@@ -126,6 +131,11 @@ export const attachAttachDiscountOutboundSchema = z.object({
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const attachCustomLineItemOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+});
+
 export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -139,6 +149,7 @@ export const attachParamsOutboundSchema = z.object({
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
+	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
@@ -148,6 +159,10 @@ export const attachParamsOutboundSchema = z.object({
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
+	custom_line_items: z
+		.union([z.array(attachCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -247,6 +262,7 @@ export const attachParamsSchema = z.object({
 	prorationBehavior: z
 		.union([attachProrationBehaviorSchema, z.undefined()])
 		.optional(),
+	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountSchema), z.undefined()])
 		.optional(),
@@ -256,6 +272,10 @@ export const attachParamsSchema = z.object({
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
+	customLineItems: z
+		.union([z.array(attachCustomLineItemSchema), z.undefined()])
+		.optional(),
+	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;

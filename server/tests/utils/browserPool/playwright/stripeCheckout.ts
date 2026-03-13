@@ -153,6 +153,6 @@ export const stripeCheckout = async ({
 	console.log("[stripeCheckout] Submit clicked");
 
 	// Wait for checkout to process + webhook delivery
-	await page.waitForTimeout(15000);
+	await page.waitForTimeout(20000);
 	console.log("[stripeCheckout] Checkout complete");
 };

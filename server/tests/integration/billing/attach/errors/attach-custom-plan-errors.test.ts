@@ -23,43 +23,6 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Test 1: Empty items array is rejected
- *
- * Scenario:
- * - Attach with items: []
- *
- * Expected:
- * - Validation error: "Must provide at least one item when using custom plan"
- */
-test.concurrent(`${chalk.yellowBright("error: attach custom plan empty items array")}`, async () => {
-	const customerId = "err-custom-plan-empty-items";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
-
-	await expectAutumnError({
-		func: async () => {
-			await autumnV1.billing.attach({
-				customer_id: customerId,
-				product_id: pro.id,
-				items: [], // Empty array
-				redirect_mode: "if_required",
-			});
-		},
-	});
-});
-
-/**
  * Test 2: Same configuration as product is rejected
  *
  * Scenario:

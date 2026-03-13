@@ -1,4 +1,4 @@
-import { type ApiProductItem } from "@api/models";
+import type { ApiProductItem } from "@api/models";
 import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems";
 import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {

@@ -1,8 +1,9 @@
 import {
 	EntInterval,
 	type EntitlementWithFeature,
+	formatMs,
 	getCycleEnd,
-	type InitFullCustomerProductContext,
+	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
 	isLifetimeEntitlement,
@@ -14,7 +15,7 @@ export const initCustomerEntitlementNextResetAt = ({
 	initOptions,
 	entitlement,
 }: {
-	initContext: InitFullCustomerProductContext;
+	initContext: InitCustomerEntitlementContext;
 	initOptions?: InitFullCustomerProductOptions;
 	entitlement: EntitlementWithFeature;
 }) => {
@@ -36,11 +37,13 @@ export const initCustomerEntitlementNextResetAt = ({
 		now = trialEndsAt;
 	}
 
+	const effectiveNow = startsAt ? Math.max(startsAt, now) : now;
+
 	const nextResetAt = getCycleEnd({
 		anchor: resetCycleAnchor,
 		interval: entitlement.interval ?? EntInterval.Month,
 		intervalCount: entitlement.interval_count,
-		now: startsAt ?? now,
+		now: effectiveNow,
 	});
 
 	return nextResetAt;

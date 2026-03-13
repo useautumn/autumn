@@ -192,38 +192,29 @@ BillingUpdateTo = TypeAliasType("BillingUpdateTo", Union[float, str])
 
 class BillingUpdateTierTypedDict(TypedDict):
     to: BillingUpdateToTypedDict
-    amount: float
-    flat_amount: NotRequired[Nullable[float]]
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
 
 
 class BillingUpdateTier(BaseModel):
     to: BillingUpdateTo
 
-    amount: float
+    amount: Optional[float] = None
 
-    flat_amount: OptionalNullable[float] = UNSET
+    flat_amount: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -627,10 +618,10 @@ r"""Action to perform for cancellation. 'cancel_immediately' cancels now with pr
 class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
-    plan_id: str
-    r"""The ID of the plan."""
     entity_id: NotRequired[str]
     r"""The ID of the entity to attach the plan to."""
+    plan_id: NotRequired[str]
+    r"""The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product."""
     feature_quantities: NotRequired[List[BillingUpdateFeatureQuantityTypedDict]]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
@@ -641,19 +632,23 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[BillingUpdateProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     cancel_action: NotRequired[BillingUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
 
 class UpdateSubscriptionParams(BaseModel):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
 
-    plan_id: str
-    r"""The ID of the plan."""
-
     entity_id: Optional[str] = None
     r"""The ID of the entity to attach the plan to."""
+
+    plan_id: Optional[str] = None
+    r"""The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product."""
 
     feature_quantities: Optional[List[BillingUpdateFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
@@ -670,20 +665,29 @@ class UpdateSubscriptionParams(BaseModel):
     proration_behavior: Optional[BillingUpdateProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
+
     cancel_action: Optional[BillingUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
+
+    no_billing_changes: Optional[bool] = None
+    r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "entity_id",
+                "plan_id",
                 "feature_quantities",
                 "version",
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
+                "subscription_id",
                 "cancel_action",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)

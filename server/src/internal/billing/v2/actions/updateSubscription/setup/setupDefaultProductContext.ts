@@ -1,5 +1,5 @@
 import {
-	cp,
+	customerProductEligibleForDefaultProduct,
 	type FullCusProduct,
 	type FullProduct,
 	nullish,
@@ -25,12 +25,18 @@ export const setupDefaultProductContext = async ({
 	if (nullish(params.cancel_action)) return undefined;
 
 	// Add-ons don't trigger default products
-	const { valid: isMainCustomerScopedAndRecurring } = cp(customerProduct)
-		.main()
-		.recurring()
-		.customerScoped();
+	const valid = customerProductEligibleForDefaultProduct({
+		ctx,
+		customerProduct,
+	});
 
-	if (!isMainCustomerScopedAndRecurring) return undefined;
+	if (!valid) return undefined;
+	// const { valid: isMainCustomerScopedAndRecurring } = cp(customerProduct)
+	// 	.main()
+	// 	.recurring()
+	// 	.customerScoped();
+
+	// if (!isMainCustomerScopedAndRecurring) return undefined;
 
 	const defaultProduct = await getFreeDefaultProductByGroup({
 		ctx,

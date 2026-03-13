@@ -508,6 +508,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(newTrialDays),
+		toleranceMs: ms.hours(2),
 	});
 
 	// Usage should be preserved, reset should follow new trial end

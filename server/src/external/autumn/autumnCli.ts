@@ -8,6 +8,7 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
+	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
 	type AttachParamsV0Input,
@@ -22,9 +23,12 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CustomerBillingControlsParams,
 	CustomerExpand,
+	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
+	type FinalizeLockParamsV0,
 	type LegacyVersion,
 	type OrgConfig,
 	type ProductItem,
@@ -100,9 +104,9 @@ export class AutumnInt {
 		}
 	}
 
-	async get(path: string) {
+	async get(path: string, headers?: Record<string, string>) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
-			headers: this.headers,
+			headers: { ...this.headers, ...headers },
 		});
 
 		if (response.status !== 200) {
@@ -381,9 +385,20 @@ export class AutumnInt {
 	}
 
 	customers = {
-		list: async (params?: { limit?: number; offset?: number }) => {
+		list: async (params?: {
+			limit?: number;
+			offset?: number;
+			keepInternalFields?: boolean;
+		}) => {
+			const { keepInternalFields, ...listParams } = params || {};
+			const headers: Record<string, string> = {};
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
 			const data = await this.get(
-				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
+				`/customers?${new URLSearchParams(listParams as Record<string, string>).toString()}`,
+				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 			return data;
 		},
@@ -394,8 +409,19 @@ export class AutumnInt {
 			search?: string;
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
+			keepInternalFields?: boolean;
 		}) => {
-			const data = await this.post(`/customers/list`, params || {});
+			const { keepInternalFields, ...listParams } = params || {};
+			const headers: Record<string, string> = {};
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
+			const data = await this.post(
+				`/customers/list`,
+				listParams,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
 			return data;
 		},
 
@@ -487,6 +513,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsParams;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
@@ -566,6 +593,48 @@ export class AutumnInt {
 				`/customers/${customerId}/entities/${entityId}`,
 			);
 			return data;
+		},
+
+		update: async (
+			customerId: string,
+			entityId: string,
+			updates: {
+				billing_controls?: ApiEntityBillingControlsParams;
+			},
+		) => {
+			const data = await this.post(`/entities.update`, {
+				customer_id: customerId,
+				entity_id: entityId,
+				...updates,
+			});
+			return data;
+		},
+	};
+
+	entitiesV2 = {
+		create: async ({
+			customer_id,
+			entity_id,
+			name,
+			feature_id,
+			billing_controls,
+			customer_data,
+		}: {
+			customer_id: string;
+			entity_id: string;
+			name?: string | null;
+			feature_id: string;
+			billing_controls?: ApiEntityBillingControlsParams;
+			customer_data?: CreateEntityParams["customer_data"];
+		}) => {
+			return await this.post(`/entities.create`, {
+				customer_id,
+				entity_id,
+				name,
+				feature_id,
+				billing_controls,
+				customer_data,
+			});
 		},
 	};
 
@@ -818,6 +887,26 @@ export class AutumnInt {
 		},
 		update: async (params: UpdateBalanceParamsV0) => {
 			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
+		delete: async (params: DeleteBalanceParamsV0) => {
+			const data = await this.post(`/balances.delete`, params);
+			return data;
+		},
+		finalize: async (
+			params: FinalizeLockParamsV0,
+			{
+				skipCache = false,
+				headers,
+			}: {
+				skipCache?: boolean;
+				headers?: Record<string, string>;
+			} = {},
+		) => {
+			const data = await this.post(`/balances.finalize`, params, {
+				...(skipCache ? { "x-skip-cache": "true" } : {}),
+				...headers,
+			});
 			return data;
 		},
 	};

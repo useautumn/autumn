@@ -1,6 +1,10 @@
-import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import {
+	CusProductStatus,
+	enrichFullCustomerWithEntity,
+	type FullCusProduct,
+	type UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 /**
@@ -44,7 +48,10 @@ export const computeDefaultCustomerProduct = ({
 	const newDefaultProduct = initFullCustomerProduct({
 		ctx,
 		initContext: {
-			fullCustomer,
+			fullCustomer: enrichFullCustomerWithEntity({
+				fullCustomer,
+				internalEntityId: customerProduct.internal_entity_id ?? null,
+			}),
 			fullProduct: defaultProduct,
 			featureQuantities: [],
 			resetCycleAnchor: startsAt,

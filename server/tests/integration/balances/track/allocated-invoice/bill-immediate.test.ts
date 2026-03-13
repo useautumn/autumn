@@ -75,6 +75,31 @@ test(`${chalk.yellowBright("bill-imm1: track within included usage creates no in
 	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
+
+	const untrackRes: TrackResponseV2 = await autumnV2.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Users,
+		value: -1,
+	});
+
+	expect(untrackRes.balance).toMatchObject({
+		granted_balance: 1,
+		purchased_balance: 0,
+		current_balance: 1,
+		usage: 0,
+	});
+
+	await expectFeatureCachedAndDb({
+		autumn: autumnV1,
+		customerId,
+		featureId: TestFeature.Users,
+		balance: 1,
+		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // ═══════════════════════════════════════════════════════════════════

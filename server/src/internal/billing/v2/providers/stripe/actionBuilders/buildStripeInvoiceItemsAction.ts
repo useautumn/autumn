@@ -29,7 +29,7 @@ export const buildStripeInvoiceItemsAction = ({
 	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
 
 	const createInvoiceItems = lineItemsToCreateInvoiceItemsParams({
-		stripeCustomerId,
+		stripeCustomerId: stripeCustomerId ?? "none",
 		stripeSubscriptionId,
 		lineItems: deferredLineItems,
 	});

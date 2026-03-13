@@ -301,7 +301,7 @@ test.concurrent(`${chalk.yellowBright("track-negative4: negative caps at granted
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
 		current_balance: 10,
-		granted_balance: 10,
+		included_grant: 10,
 	});
 
 	const customerUpdated = await autumnV2.customers.get<ApiCustomer>(customerId);

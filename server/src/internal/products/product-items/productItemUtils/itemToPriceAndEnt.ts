@@ -22,6 +22,7 @@ import {
 	TierInfinite,
 	UsageModel,
 	type UsagePriceConfig,
+	type UsageTier,
 } from "@autumn/shared";
 import { entsAreSame } from "@server/internal/products/entitlements/entitlementUtils";
 import { pricesAreSame } from "@server/internal/products/prices/priceInitUtils";
@@ -241,7 +242,12 @@ const toFeatureAndPrice = ({
 						to: TierInfinite,
 					},
 				]
-			: (item.tiers as any),
+			: (item.tiers?.map((x) => {
+					return {
+						...x,
+						amount: x.amount ?? 0,
+					};
+				}) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
 	};

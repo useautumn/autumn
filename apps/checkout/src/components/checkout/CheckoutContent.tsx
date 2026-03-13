@@ -1,76 +1,14 @@
-import { motion } from "motion/react";
-import { Separator } from "@/components/ui/separator";
+import { CheckoutAction } from "@autumn/shared";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
-import { STANDARD_TRANSITION, fadeUpVariants, listContainerVariants } from "@/lib/animations";
-import { ConfirmSection } from "./confirm/ConfirmSection";
-import { CheckoutBackground } from "./layout/CheckoutBackground";
-import { CheckoutHeader } from "./layout/CheckoutHeader";
-import { OrderSummarySection } from "./order-summary/OrderSummarySection";
-import { PlanSection } from "./plan/PlanSection";
-import { CheckoutErrorState } from "./states/CheckoutErrorState";
-import { CheckoutSuccessState } from "./states/CheckoutSuccessState";
+import { CheckoutUpdateContent } from "@/components/checkout-update/CheckoutUpdateContent";
+import { CheckoutSharedContent } from "./CheckoutSharedContent";
 
 export function CheckoutContent() {
-	const { confirmResult, status, isSandbox } = useCheckoutContext();
+	const { action } = useCheckoutContext();
 
-	// Handle success state
-	if (confirmResult) {
-		return (
-			<motion.div
-				initial={{ opacity: 0, scale: 0.98 }}
-				animate={{ opacity: 1, scale: 1 }}
-				transition={STANDARD_TRANSITION}
-			>
-				<CheckoutSuccessState result={confirmResult} />
-			</motion.div>
-		);
+	if (action === CheckoutAction.UpdateSubscription) {
+		return <CheckoutUpdateContent />;
 	}
 
-	// Handle error state
-	if (status.error) {
-		return (
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={STANDARD_TRANSITION}
-			>
-				<CheckoutErrorState
-					message={
-						status.error instanceof Error
-							? status.error.message
-							: "Failed to load checkout"
-					}
-				/>
-			</motion.div>
-		);
-	}
-
-	// Main checkout view
-	return (
-		<CheckoutBackground isSandbox={isSandbox}>
-			<motion.div
-				className="flex flex-col gap-6 w-full"
-				initial="initial"
-				animate="animate"
-				variants={listContainerVariants}
-			>
-				{/* Header */}
-				<motion.div variants={fadeUpVariants} transition={STANDARD_TRANSITION}>
-					<CheckoutHeader />
-				</motion.div>
-
-				{/* Main content - single column */}
-				<div className="flex flex-col gap-6 w-full">
-					<Separator />
-					<PlanSection />
-					<Separator />
-					<OrderSummarySection />
-				</div>
-
-				<Separator />
-
-				<ConfirmSection />
-			</motion.div>
-		</CheckoutBackground>
-	);
+	return <CheckoutSharedContent />;
 }

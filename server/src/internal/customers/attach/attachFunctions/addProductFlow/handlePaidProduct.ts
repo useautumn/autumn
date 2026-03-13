@@ -216,7 +216,7 @@ export const handlePaidProduct = async ({
 
 		if (sub?.latest_invoice) {
 			invoice = await insertInvoiceFromAttach({
-				db: ctx.db,
+				ctx,
 				stripeInvoice: sub.latest_invoice as Stripe.Invoice,
 				attachParams,
 				logger,

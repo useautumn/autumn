@@ -151,7 +151,7 @@ export const ProductSheets = () => {
 							},
 						}}
 					>
-						<EditPlanFeatureSheet />
+						<EditPlanFeatureSheet key={itemId} />
 					</ProductItemContext.Provider>
 				);
 			case "new-feature":

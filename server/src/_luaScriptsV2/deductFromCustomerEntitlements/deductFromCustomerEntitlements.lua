@@ -1,14 +1,14 @@
 --[[
   Lua Script: Deduct from Customer Entitlements in Redis
-  
+
   Uses JSON.NUMINCRBY for atomic incremental updates.
   Reads CURRENT balance from Redis before each calculation to avoid stale reads.
-  
+
   Deduction Order (mirrors SQL performDeduction.sql):
     1. Deduct from rollovers first (oldest first by expires_at)
     2. Pass 1: Deduct from main balance (floor at 0)
     3. Pass 2: Allow negative if usage_allowed
-  
+
   Helper functions are prepended via string interpolation from:
     - luaUtils.lua (safe_table, safe_number, find_entitlement, build_entity_path, sorted_keys, is_nil)
     - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
@@ -16,12 +16,14 @@
     - deductFromRollovers.lua (deduct_from_rollovers)
     - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
     - getTotalBalance.lua (get_total_balance)
-  
+
   KEYS[1] = FullCustomer cache key
-  
+
   ARGV[1] = JSON params:
     {
-      sorted_entitlements: [{ customer_entitlement_id, credit_cost, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      sorted_entitlements: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
+      usage_based_cus_ent_ids_by_feature_id: { [feature_id]: string[] } | null,
       amount_to_deduct: number | null,
       target_balance: number | null,
       target_entity_id: string | nil,
@@ -32,7 +34,7 @@
       overage_behaviour: "cap" | "reject" | "allow",
       feature_id: string
     }
-  
+
   Returns JSON:
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
@@ -51,6 +53,8 @@ local params = cjson.decode(ARGV[1])
 
 -- Extract parameters
 local sorted_entitlements = params.sorted_entitlements or {}
+local spend_limit_by_feature_id = params.spend_limit_by_feature_id
+local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
 local amount_to_deduct = params.amount_to_deduct
 local target_balance = params.target_balance
 local target_entity_id = params.target_entity_id
@@ -59,227 +63,131 @@ local skip_additional_balance = params.skip_additional_balance or false
 local alter_granted_balance = params.alter_granted_balance or false
 local overage_behaviour = params.overage_behaviour or 'cap'
 local feature_id = params.feature_id
+local lock = params.lock
+local unwind_value = params.unwind_value
+local lock_receipt_key = params.lock_receipt_key
 
 -- Compute overage_behavior_is_allow once
 local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
 
 -- Check if customer exists (just check the key exists)
+local empty_logs = cjson.decode('[]')
+
 local key_exists = redis.call('EXISTS', cache_key)
 if key_exists == 0 then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, remaining = 0 })
+  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
 -- Get FullCustomer structure (for finding entitlement indices only)
 local full_customer_json = redis.call('JSON.GET', cache_key, '.')
 if not full_customer_json then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, remaining = 0 })
+  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
 local full_customer = cjson.decode(full_customer_json)
 
 if not full_customer.customer_products then
-  return cjson.encode({ 
-    error = 'NO_CUSTOMER_PRODUCTS', 
-    updates = {}, 
+  return cjson.encode({
+    error = 'NO_CUSTOMER_PRODUCTS',
+    updates = {},
+    rollover_updates = {},
+    mutation_logs = empty_logs,
     remaining = 0
   })
 end
 
 -- Track updates for return value
-local updates = {}
-
 -- Initialize context with in-memory state from Redis
+local customer_entitlement_ids = {}
+for _, ent_obj in ipairs(sorted_entitlements) do
+  table.insert(customer_entitlement_ids, ent_obj.customer_entitlement_id)
+end
+
 local context = init_context({
   cache_key = cache_key,
-  sorted_entitlements = sorted_entitlements,
+  customer_entitlement_ids = customer_entitlement_ids,
   full_customer = full_customer,
 })
 
--- Initialize remaining_amount (after context so we can use get_total_balance)
-local remaining_amount
-if not is_nil(target_balance) then
-  -- Calculate amount to deduct based on target_balance
-  local current_total = get_total_balance({
+local unwind_modified_cus_ent_ids = {}
+
+if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
+  local unwind_result = unwind_lock_on_context({
     context = context,
-    sorted_entitlements = sorted_entitlements,
-    target_entity_id = target_entity_id,
+    lock_receipt_key = lock_receipt_key,
+    unwind_value = unwind_value,
   })
-  remaining_amount = current_total - target_balance
-else
-  remaining_amount = amount_to_deduct or 0
-end
 
--- ============================================================================
--- HELPER: Round number to eliminate floating point errors
--- ============================================================================
-local function round_to_precision(num, decimals)
-  local mult = 10 ^ (decimals or 10)
-  return math.floor(num * mult + 0.5) / mult
-end
+  if not is_nil(unwind_result.error) then
+    return cjson.encode({
+      error = unwind_result.error,
+      updates = {},
+      rollover_updates = {},
+      mutation_logs = context.mutation_logs or cjson.decode('[]'),
+      remaining = 0,
+      logs = context.logs,
+    })
+  end
 
--- Determine if this is a refund (negative amount)
-local is_refund = remaining_amount < 0
+  -- Track which entitlements the unwind touched so the caller can sync them.
+  unwind_modified_cus_ent_ids = unwind_result.modified_customer_entitlement_ids or {}
+
+  -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
+  -- so the forward pass compensates against current live entitlements.
+  local skipped = unwind_result.remaining_signed_unwind_value or 0
+  if skipped ~= 0 then
+    amount_to_deduct = safe_number(amount_to_deduct or 0) + skipped
+  end
+end
 
 local logger = context.logger
 logger.log("=== LUA DEDUCTION START ===")
 logger.log("=== PARAMS ===")
 logger.log("  amount_to_deduct: %s", tostring(amount_to_deduct or "nil"))
 logger.log("  target_balance: %s", tostring(target_balance or "nil"))
-logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
-logger.log("  is_refund: %s", tostring(is_refund or false))
 logger.log("  alter_granted_balance: %s", tostring(alter_granted_balance or false))
 logger.log("  target_entity_id: %s", tostring(target_entity_id or "nil"))
 logger.log("  overage_behaviour: %s", tostring(overage_behaviour or "nil"))
-
-
--- ============================================================================
--- HELPER: Process a single pass over customer_entitlements
--- ============================================================================
-local function process_pass(pass_config)
-  local pass_number = pass_config.pass_number
-  local pass_name = "PASS" .. pass_number
-  local skip_if_not_usage_allowed = pass_config.skip_if_not_usage_allowed
-  local context = pass_config.context
-  local logger = context.logger
-  
-  logger.log("=== %s START ===", pass_name)
-  
-  for ent_idx, ent_obj in ipairs(sorted_entitlements) do
-    if remaining_amount == 0 then break end
-    
-    local ent_id = ent_obj.customer_entitlement_id
-    local credit_cost = ent_obj.credit_cost
-    -- Handle cjson.null (truthy in Lua) and zero/nil values
-    if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
-      credit_cost = 1
-    end
-    local min_balance = ent_obj.min_balance
-    local max_balance = ent_obj.max_balance
-    
-    -- Check usage_allowed
-    local usage_allowed = ent_obj.usage_allowed
-    if usage_allowed == cjson.null then usage_allowed = false end
-    usage_allowed = usage_allowed or overage_behavior_is_allow
-    
-    -- Apply filter: only process if usage is allowed (or skip filter is disabled)
-    local should_process = not skip_if_not_usage_allowed or usage_allowed
-    
-    -- Skip if not in context (entitlement wasn't found during init_context)
-    if not context.customer_entitlements[ent_id] then
-      should_process = false
-    end
-    
-    if not should_process then
-      logger.log("%s skipping %s - usage_allowed=false or not in context", pass_name, ent_id)
-    else
-      local deducted = deduct_from_main_balance({
-        context = context,
-        ent_id = ent_id,
-        target_entity_id = target_entity_id,
-        amount = remaining_amount,
-        credit_cost = credit_cost,
-        pass_number = pass_number,
-        min_balance = min_balance,
-        max_balance = max_balance,
-        alter_granted_balance = alter_granted_balance,
-        overage_behavior_is_allow = overage_behavior_is_allow,
-        log_prefix = pass_name,
-      })
-      
-      -- Update remaining_amount
-      remaining_amount = remaining_amount - (deducted / credit_cost)
-      
-      -- Track in updates
-      if deducted ~= 0 then
-        if not updates[ent_id] then
-          updates[ent_id] = { deducted = 0, additional_deducted = 0 }
-        end
-        updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
-      end
-      
-      logger.log("%s ent %s deducted=%s remaining=%s", pass_name, ent_id, deducted, remaining_amount)
-    end
-  end
-  
-  logger.log("=== %s END === remaining=%s", pass_name, remaining_amount)
-end
-
--- ============================================================================
--- HELPER: Process rollovers before main balance deduction
--- ============================================================================
-local function process_rollovers(config)
-  local context = config.context
-  local rollovers = config.rollovers
-  local remaining = config.remaining_amount
-  local target_entity_id = config.target_entity_id
-  local sorted_entitlements = config.sorted_entitlements
-  local logger = context.logger
-  
-  -- Early return if no rollovers or no positive amount
-  if is_nil(rollovers) or #rollovers == 0 or remaining <= 0 then
-    return 0
-  end
-  
-  -- Determine has_entity_scope from first entitlement
-  local first_ent = sorted_entitlements[1]
-  local has_entity_scope = false
-  if first_ent then
-    has_entity_scope = first_ent.entity_feature_id ~= nil and first_ent.entity_feature_id ~= cjson.null
-  end
-  
-  local rollover_deducted = deduct_from_rollovers({
-    context = context,
-    rollovers = rollovers,
-    amount = remaining,
-    target_entity_id = target_entity_id,
-    has_entity_scope = has_entity_scope,
-  })
-  
-  logger.log("Rollover deduction: deducted=%s, remaining=%s", rollover_deducted, remaining - rollover_deducted)
-  
-  return rollover_deducted
-end
-
--- ============================================================================
--- MAIN DEDUCTION/REFUND LOGIC
--- Same two-pass structure for both deductions and refunds (matches SQL)
--- Step 1: Deduct from rollovers first (only for positive deductions)
--- Pass 1: Process all entitlements (floor at 0 for deductions, ceiling at 0 for refunds)
--- Pass 2: Process remaining (deductions: only usage_allowed can go negative; refunds: all can go above 0)
--- ============================================================================
-
--- Step 1: Deduct from rollovers BEFORE main balance deduction (only for track, not update balance)
-if not alter_granted_balance then
-  local rollover_deducted = process_rollovers({
-    context = context,
-    rollovers = rollovers,
-    remaining_amount = remaining_amount,
-    target_entity_id = target_entity_id,
-    sorted_entitlements = sorted_entitlements,
-  })
-  remaining_amount = remaining_amount - rollover_deducted
-end
-
-process_pass({
-  pass_number = 1,
-  skip_if_not_usage_allowed = false,
+local deduction_result = run_deduction_on_context({
   context = context,
+  sorted_entitlements = sorted_entitlements,
+  spend_limit_by_feature_id = spend_limit_by_feature_id,
+  usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
+  rollovers = rollovers,
+  amount_to_deduct = amount_to_deduct,
+  target_balance = target_balance,
+  target_entity_id = target_entity_id,
+  alter_granted_balance = alter_granted_balance,
+  overage_behaviour = overage_behaviour,
 })
 
+local updates = deduction_result.updates
+local rollover_updates = deduction_result.rollover_updates
+local remaining_amount = deduction_result.remaining_amount
 
--- Pass 2: Exceed bounds
--- For deductions: only usage_allowed entitlements can go below 0 (into overage)
--- For refunds: ALL entitlements can go above 0 (up to max_balance)
-if remaining_amount ~= 0 then
-  process_pass({
-    pass_number = 2,
-    skip_if_not_usage_allowed = not is_refund,  -- Only skip for deductions, not refunds
-    context = context,
-  })
-  
+-- Inject unwind-only touched entitlements into updates so TypeScript can
+-- sync their new balances. The forward deduction may not have touched them.
+for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
+  if is_nil(updates[cus_ent_id]) then
+    local ent_data = context.customer_entitlements[cus_ent_id]
+    if ent_data then
+      updates[cus_ent_id] = {
+        balance = ent_data.balance or 0,
+        additional_balance = 0,
+        adjustment = ent_data.adjustment or 0,
+        entities = ent_data.entities or {},
+        deducted = 0,
+      }
+    end
+  end
 end
 
-remaining_amount = round_to_precision(remaining_amount, 10)
+logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
+logger.log("  is_refund: %s", tostring(remaining_amount < 0 or false))
+local mutation_logs = context.mutation_logs
+if type(mutation_logs) ~= 'table' or #mutation_logs == 0 then
+  mutation_logs = cjson.decode('[]')
+end
 -- Throw error and don't apply updates if we're in reject mode and there's still remaining amount
 if remaining_amount > 0 and overage_behaviour == 'reject' then
   return cjson.encode({
@@ -287,53 +195,60 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     feature_id = feature_id,
     remaining = remaining_amount,
     updates = {},
+    mutation_logs = mutation_logs,
     logs = context.logs
   })
-end 
+end
+
+if not is_nil(lock)
+    and not is_nil(lock.enabled)
+    and lock.enabled
+    and not is_nil(lock.redis_receipt_key)
+then
+  -- Check if lock receipt already exists; if so, reject without applying writes
+  local existing_receipt = nil
+  if redis.call('EXISTS', lock.redis_receipt_key) == 1 then
+    existing_receipt = load_lock_receipt(lock.redis_receipt_key)
+  end
+  if not is_nil(existing_receipt) then
+    return cjson.encode({
+      error = 'LOCK_ALREADY_EXISTS',
+      feature_id = feature_id,
+      remaining = 0,
+      updates = {},
+      rollover_updates = rollover_updates,
+      mutation_logs = mutation_logs,
+      logs = context.logs
+    })
+  end
+
+  save_lock_receipt_from_updates({
+    lock_receipt_key = lock.redis_receipt_key,
+    receipt = {
+      lock_id = lock.lock_id or cjson.null,
+      hashed_key = lock.hashed_key or cjson.null,
+      status = 'pending',
+      region = lock.region or cjson.null,
+      customer_id = full_customer.id or cjson.null,
+      feature_id = feature_id or cjson.null,
+      entity_id = target_entity_id or cjson.null,
+      expires_at = lock.expires_at or cjson.null,
+      created_at = lock.created_at or cjson.null,
+    },
+    mutation_logs = mutation_logs,
+    ttl_at = lock.ttl_at or cjson.null,
+  })
+end
 
 -- Apply all pending writes to Redis (only after validation passes)
 apply_pending_writes(cache_key, context)
-
--- ============================================================================
--- BUILD FINAL RETURN VALUE FROM CONTEXT
--- ============================================================================
-for ent_id, update in pairs(updates) do
-  local ent_data = context.customer_entitlements[ent_id]
-  if ent_data then
-    if ent_data.has_entity_scope then
-      update.entities = ent_data.entities
-      update.balance = 0 -- Top-level unchanged for entity-scoped
-    else
-      update.balance = ent_data.balance
-    end
-    update.adjustment = ent_data.adjustment or 0
-    update.additional_balance = 0
-  end
-end
-
--- Build rollover_updates from context.rollovers (only include modified ones)
-local rollover_updates = {}
-if not is_nil(rollovers) and #rollovers > 0 then
-  for rollover_id, rollover_data in pairs(context.rollovers) do
-    -- Include all rollovers that were in the rollovers list (they may have been modified)
-    for _, r in ipairs(rollovers) do
-      if r.id == rollover_id then
-        rollover_updates[rollover_id] = {
-          balance = rollover_data.balance,
-          usage = rollover_data.usage,
-          entities = rollover_data.entities,
-        }
-        break
-      end
-    end
-  end
-end
 
 logger.log("=== LUA DEDUCTION END ===")
 
 return cjson.encode({
   updates = updates,
   rollover_updates = rollover_updates,
+  mutation_logs = mutation_logs,
   remaining = remaining_amount,
   error = cjson.null,
   logs = context.logs

@@ -16,9 +16,10 @@ import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/ut
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
-import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
+import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,
@@ -94,39 +95,12 @@ export const executeStripeSubscriptionAction = async ({
 	let autumnInvoice: Invoice | undefined;
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		autumnInvoice = await upsertInvoiceFromBilling({
+		autumnInvoice = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
-			fullProducts: billingContext.fullProducts,
 			fullCustomer: billingContext.fullCustomer,
+			fullProducts: billingContext.fullProducts,
 		});
-	}
-
-	if (deferBillingPlan) {
-		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
-
-		// Required if we resume after and carry out subscription schedule action
-		const deferredBillingContext = {
-			...billingContext,
-			stripeSubscription,
-		};
-
-		await insertMetadataFromBillingPlan({
-			ctx,
-			billingPlan,
-			billingContext: deferredBillingContext,
-			stripeInvoice: latestStripeInvoice,
-			expiresAt: Date.now() + ms.days(30),
-			resumeAfter: StripeBillingStage.SubscriptionAction,
-		});
-
-		return {
-			stripeInvoice: latestStripeInvoice,
-			stripeSubscription,
-			deferred: true,
-			requiredAction,
-			autumnInvoice,
-		};
 	}
 
 	addStripeSubscriptionIdToBillingPlan({
@@ -140,6 +114,39 @@ export const executeStripeSubscriptionAction = async ({
 		ctx,
 		stripeSubscription,
 	});
+
+	if (deferBillingPlan) {
+		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
+
+		// Required if we resume after and carry out subscription schedule action
+		const deferredBillingContext = {
+			...billingContext,
+			stripeSubscription,
+		};
+
+		const deferredInvoiceMode = isDeferredInvoiceMode({
+			billingContext,
+		});
+
+		await insertMetadataFromBillingPlan({
+			ctx,
+			billingPlan,
+			billingContext: deferredBillingContext,
+			stripeInvoice: latestStripeInvoice,
+			expiresAt: deferredInvoiceMode
+				? Date.now() + ms.days(10)
+				: Date.now() + ms.minutes(10),
+			resumeAfter: StripeBillingStage.SubscriptionAction,
+		});
+
+		return {
+			stripeInvoice: latestStripeInvoice,
+			stripeSubscription,
+			deferred: true,
+			requiredAction,
+			autumnInvoice,
+		};
+	}
 
 	// If the stripe subscription is canceled, remove the subscription from the billing plan
 	if (isStripeSubscriptionCanceled(stripeSubscription)) {

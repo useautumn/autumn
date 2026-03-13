@@ -71,7 +71,7 @@ type ExpectedLineItem = {
 	totalAmount?: number; // Sum of all matching items
 	count?: number; // Exact number of matching items
 	minCount?: number; // At least this many
-	prorated?: boolean;
+	prorated?: boolean; // Accepted but not used as a filter — kept for backward compat
 	productId?: string;
 
 	// Quantity expectations
@@ -257,10 +257,11 @@ const validateExpectedLineItem = (
 		if (disc.hasDiscounts !== undefined) {
 			for (const li of matching) {
 				const discounts = getDiscounts(li);
-				const has = discounts.length > 0;
+				const hasEffectiveDiscounts =
+					discounts.some((d) => d.amount_off !== 0);
 				expect(
-					has,
-					`Expected hasDiscounts=${disc.hasDiscounts} for [${filterDesc}] (li ${li.id}), got ${has} (${discounts.length} discounts)`,
+					hasEffectiveDiscounts,
+					`Expected hasDiscounts=${disc.hasDiscounts} for [${filterDesc}] (li ${li.id}), got ${hasEffectiveDiscounts} (${discounts.length} discounts, effective=${discounts.filter((d) => d.amount_off !== 0).length})`,
 				).toBe(disc.hasDiscounts);
 			}
 		}

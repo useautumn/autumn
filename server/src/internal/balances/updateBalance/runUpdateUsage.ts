@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { runRedisUpdateBalanceV2 } from "./runRedisUpdateBalanceV2.js";
@@ -53,9 +52,11 @@ const getUpdateUsageTargetBalance = ({
 export const runUpdateUsage = async ({
 	ctx,
 	params,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	params: UpdateBalanceParamsV0;
+	fullCustomer: FullCustomer;
 }) => {
 	const { features } = ctx;
 	const { feature_id: featureId, usage } = params;
@@ -67,12 +68,6 @@ export const runUpdateUsage = async ({
 
 	const customerEntitlementFilters = buildCustomerEntitlementFilters({
 		params,
-	});
-
-	const fullCustomer = await getOrCreateCachedFullCustomer({
-		ctx,
-		params,
-		source: "runUpdateUsage",
 	});
 
 	const targetBalance = getUpdateUsageTargetBalance({

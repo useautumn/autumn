@@ -1,11 +1,12 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	InternalError,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewUpdateSubscription = createRoute({
@@ -25,8 +26,14 @@ export const handlePreviewUpdateSubscription = createRoute({
 				preview: true,
 			});
 
+		if (!billingPlan) {
+			throw new InternalError({
+				message: "billingPlan not returned from updateSubscription preview",
+			});
+		}
+
 		// 7. Format response
-		const previewResponse = billingPlanToPreviewResponse({
+		const previewResponse = await billingPlanToUpdateSubscriptionPreview({
 			ctx,
 			billingContext,
 			billingPlan,

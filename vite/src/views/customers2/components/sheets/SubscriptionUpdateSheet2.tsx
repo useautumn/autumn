@@ -8,6 +8,7 @@ import type {
 import { useMemo } from "react";
 import {
 	EditPlanSection,
+	UpdateSubscriptionAdvancedSection,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
@@ -85,6 +86,7 @@ function SheetContent() {
 				</div>
 
 				<EditPlanSection />
+				<UpdateSubscriptionAdvancedSection />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />
 

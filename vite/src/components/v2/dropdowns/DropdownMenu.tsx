@@ -119,7 +119,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
 			ref={ref}
 			data-slot="dropdown-menu-sub-trigger"
 			className={cn(
-				"flex cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm text-t2 outline-hidden hover:bg-accent focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+				"flex cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm text-t2 outline-hidden hover:bg-accent focus:bg-accent data-[state=open]:bg-accent [&>svg]:pointer-events-none [&>svg]:size-4 [&>svg]:shrink-0",
 				inset && "pl-8",
 				className,
 			)}

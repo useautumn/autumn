@@ -9,7 +9,7 @@ import {
 /**
  * Gets unique recurring intervals from line items (excludes one-off prices).
  */
-const getRecurringIntervalsFromLineItems = ({
+const getRecurringIntervalsFromPaidLineItems = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
@@ -22,6 +22,7 @@ const getRecurringIntervalsFromLineItems = ({
 
 		// Skip one-off prices
 		if (interval === BillingInterval.OneOff) continue;
+		if (lineItem.amountAfterDiscounts <= 0) continue;
 
 		// Create a unique key for interval + interval_count
 		const intervalCount = price.config.interval_count ?? 1;
@@ -49,11 +50,9 @@ export const handleStripeCheckoutErrors = ({
 	// Only check for stripe_checkout mode
 	if (billingContext.checkoutMode !== "stripe_checkout") return;
 
-	const recurringIntervals = getRecurringIntervalsFromLineItems({
+	const recurringIntervals = getRecurringIntervalsFromPaidLineItems({
 		autumnBillingPlan,
 	});
-
-	console.log("recurringIntervals", recurringIntervals);
 
 	// If we have more than one unique recurring interval, throw an error
 	if (recurringIntervals.size > 1) {

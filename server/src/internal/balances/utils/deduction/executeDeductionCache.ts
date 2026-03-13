@@ -33,7 +33,21 @@ export const syncCustomerEntitlementUpdatesToCache = async ({
 	rolloverOverwrites: RolloverOverwrite[];
 }): Promise<void> => {
 	try {
-		const cusEntIds = Object.keys(cusEntUpdates);
+		// Group rollover overwrites by cus_ent_id (SQL already provides this)
+		const rolloverOverwritesByCusEnt: Record<string, RolloverOverwrite[]> = {};
+		for (const ro of rolloverOverwrites) {
+			if (!rolloverOverwritesByCusEnt[ro.cus_ent_id]) {
+				rolloverOverwritesByCusEnt[ro.cus_ent_id] = [];
+			}
+			rolloverOverwritesByCusEnt[ro.cus_ent_id].push(ro);
+		}
+
+		const cusEntIds = Array.from(
+			new Set([
+				...Object.keys(cusEntUpdates),
+				...Object.keys(rolloverOverwritesByCusEnt),
+			]),
+		);
 		if (cusEntIds.length === 0) return;
 
 		const { org, env } = ctx;
@@ -56,31 +70,22 @@ export const syncCustomerEntitlementUpdatesToCache = async ({
 			cusEntNextResetAts[ce.id] = ce.next_reset_at ?? null;
 		}
 
-		// Group rollover overwrites by cus_ent_id (SQL already provides this)
-		const rolloverOverwritesByCusEnt: Record<string, RolloverOverwrite[]> = {};
-		for (const ro of rolloverOverwrites) {
-			if (!rolloverOverwritesByCusEnt[ro.cus_ent_id]) {
-				rolloverOverwritesByCusEnt[ro.cus_ent_id] = [];
-			}
-			rolloverOverwritesByCusEnt[ro.cus_ent_id].push(ro);
-		}
-
 		const updates = cusEntIds.map((cusEntId) => {
 			const update = cusEntUpdates[cusEntId];
 			return {
 				cus_ent_id: cusEntId,
-				balance: update.balance,
-				additional_balance: update.additional_balance,
-				adjustment: update.adjustment,
-				entities: update.entities,
+				balance: update?.balance ?? null,
+				additional_balance: update?.additional_balance ?? null,
+				adjustment: update?.adjustment ?? null,
+				entities: update?.entities ?? null,
 				next_reset_at: null,
 				expected_next_reset_at: cusEntNextResetAts[cusEntId] ?? null,
 				rollover_insert: null,
 				rollover_overwrites: rolloverOverwritesByCusEnt[cusEntId] ?? null,
 				rollover_delete_ids: null,
-				new_replaceables: update.newReplaceables ?? null,
+				new_replaceables: update?.newReplaceables ?? null,
 				deleted_replaceable_ids:
-					update.deletedReplaceables?.map((r) => r.id) ?? null,
+					update?.deletedReplaceables?.map((r) => r.id) ?? null,
 			};
 		});
 

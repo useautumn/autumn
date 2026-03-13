@@ -108,8 +108,8 @@ export type SetupPaymentTo = number | string;
 
 export type SetupPaymentTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const SetupPaymentTierBehavior = {
@@ -375,6 +375,17 @@ export type SetupPaymentAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+export type SetupPaymentCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 export type SetupPaymentParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -405,6 +416,10 @@ export type SetupPaymentParams = {
    */
   prorationBehavior?: SetupPaymentProrationBehavior | undefined;
   /**
+   * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+   */
+  subscriptionId?: string | undefined;
+  /**
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<SetupPaymentAttachDiscount> | undefined;
@@ -416,6 +431,14 @@ export type SetupPaymentParams = {
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
+  /**
+   * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+   */
+  customLineItems?: Array<SetupPaymentCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
 };
 
 /**
@@ -558,8 +581,8 @@ export function setupPaymentToToJSON(setupPaymentTo: SetupPaymentTo): string {
 /** @internal */
 export type SetupPaymentTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -569,8 +592,8 @@ export const SetupPaymentTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -883,6 +906,29 @@ export function setupPaymentAttachDiscountToJSON(
 }
 
 /** @internal */
+export type SetupPaymentCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const SetupPaymentCustomLineItem$outboundSchema: z.ZodMiniType<
+  SetupPaymentCustomLineItem$Outbound,
+  SetupPaymentCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function setupPaymentCustomLineItemToJSON(
+  setupPaymentCustomLineItem: SetupPaymentCustomLineItem,
+): string {
+  return JSON.stringify(
+    SetupPaymentCustomLineItem$outboundSchema.parse(setupPaymentCustomLineItem),
+  );
+}
+
+/** @internal */
 export type SetupPaymentParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -891,9 +937,12 @@ export type SetupPaymentParams$Outbound = {
   version?: number | undefined;
   customize?: SetupPaymentCustomize$Outbound | undefined;
   proration_behavior?: string | undefined;
+  subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
+  custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
 };
 
 /** @internal */
@@ -911,11 +960,16 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => SetupPaymentCustomize$outboundSchema)),
     prorationBehavior: z.optional(SetupPaymentProrationBehavior$outboundSchema),
+    subscriptionId: z.optional(z.string()),
     discounts: z.optional(
       z.array(z.lazy(() => SetupPaymentAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
+    ),
+    processorSubscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -924,8 +978,11 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       featureQuantities: "feature_quantities",
       prorationBehavior: "proration_behavior",
+      subscriptionId: "subscription_id",
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
+      customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
     });
   }),
 );
