@@ -36,7 +36,7 @@ jobs:
       
       - name: Run TypeScript type check
         run: |
-          cd server && bun ts
+          bun ts
 
   build-and-push:
     name: Build and Push Docker Image

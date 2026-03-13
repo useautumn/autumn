@@ -8,7 +8,7 @@ const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.entities.create({
+const entity = await autumn.entities.create({
   customerId: "john",
   entityId: "name",
   featureId: "user",
@@ -23,4 +23,4 @@ await autumn.entities.create({
   },
 });
 
-console.log(JSON.stringify(res, null, 2));
+// console.log(JSON.stringify(entity.billingControls, null, 2));

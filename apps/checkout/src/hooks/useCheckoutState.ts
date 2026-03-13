@@ -1,8 +1,8 @@
 import {
-	type BillingPreviewChange,
 	type BillingResponse,
 	CheckoutAction,
 	type ConfirmCheckoutResponse,
+	type GetCheckoutResponse,
 	CheckoutStatus,
 } from "@autumn/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,12 +17,14 @@ import { buildHeaderDescription } from "@/utils/buildHeaderDescription";
 
 const SUCCESS_REDIRECT_DELAY_MS = 2000;
 
+type CheckoutPreviewChange = GetCheckoutResponse["preview"]["incoming"][number];
+
 function haveMatchingQuantities({
 	incoming,
 	outgoing,
 }: {
-	incoming: BillingPreviewChange;
-	outgoing: BillingPreviewChange;
+	incoming: CheckoutPreviewChange;
+	outgoing: CheckoutPreviewChange;
 }) {
 	if (incoming.feature_quantities.length !== outgoing.feature_quantities.length) {
 		return false;
@@ -43,7 +45,7 @@ function haveMatchingQuantities({
 }
 
 function buildFeatureQuantities(
-	incoming: BillingPreviewChange[],
+	incoming: CheckoutPreviewChange[],
 	quantities: Record<string, number>,
 ): { feature_id: string; quantity: number }[] {
 	const featureQuantities: { feature_id: string; quantity: number }[] = [];
@@ -123,18 +125,18 @@ export function useCheckoutState({
 		const isUpdateQuantityIntent =
 			preview?.object === "update_subscription_preview" &&
 			preview.intent === "update_quantity";
-		const matchingOutgoingChange = incoming?.[0]
-			? outgoing?.find((change) => change.plan_id === incoming[0].plan_id)
+		const incomingChange = incoming?.[0];
+		const matchingOutgoingChange = incomingChange
+			? outgoing?.find((change) => change.plan_id === incomingChange.plan_id)
 			: undefined;
 		const isUnchangedQuantityUpdate =
-			isUpdateQuantityIntent &&
-			Boolean(incoming?.[0]) &&
-			Boolean(matchingOutgoingChange) &&
-			haveMatchingQuantities({
-				incoming: incoming[0],
-				outgoing: matchingOutgoingChange,
-			});
-		const incomingPlan = incoming?.[0]?.plan;
+			isUpdateQuantityIntent && incomingChange && matchingOutgoingChange
+				? haveMatchingQuantities({
+						incoming: incomingChange,
+						outgoing: matchingOutgoingChange,
+					})
+				: false;
+		const incomingPlan = incomingChange?.plan;
 		const freeTrial = incomingPlan?.free_trial;
 		const hasActiveTrial = !!freeTrial;
 

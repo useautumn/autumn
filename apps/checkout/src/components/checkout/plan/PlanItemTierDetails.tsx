@@ -127,7 +127,13 @@ function getTierRangeText({
 		}
 
 		const previousTier = tiers[index - 1];
-		if (!previousTier || typeof previousTier.to !== "number") return "";
+		if (
+			!previousTier ||
+			typeof previousTier.to !== "number" ||
+			typeof tier.to !== "number"
+		) {
+			return "";
+		}
 
 		return `for the next ${tier.to - previousTier.to}`;
 	}
@@ -232,8 +238,6 @@ export function PlanItemTierDetails({
 
 	return (
 		<Accordion
-			type="single"
-			collapsible
 			className={cn(
 				"w-auto max-w-full",
 				align === "right" && "items-end text-right",
