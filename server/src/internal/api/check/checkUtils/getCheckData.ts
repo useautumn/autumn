@@ -1,6 +1,7 @@
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
+	ApiVersion,
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
@@ -61,8 +62,8 @@ export const getCheckData = async ({
 	const fullCustomer = await getOrCreateCachedFullCustomer({
 		ctx,
 		params: body,
-
 		source: "getCheckData",
+		skipCreate: ctx.apiVersion.gte(ApiVersion.V2_1), // skip auto creation after v2.1
 	});
 	const { apiCustomer } = await getApiCustomerBase({
 		ctx,
