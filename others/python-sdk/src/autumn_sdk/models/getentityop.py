@@ -256,6 +256,196 @@ class GetEntityPurchase(BaseModel):
         return m
 
 
+GetEntityType = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+
+class GetEntityCreditSchemaTypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class GetEntityCreditSchema(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class GetEntityDisplayTypedDict(TypedDict):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: NotRequired[Nullable[str]]
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+    plural: NotRequired[Nullable[str]]
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+
+class GetEntityDisplay(BaseModel):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: OptionalNullable[str] = UNSET
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+
+    plural: OptionalNullable[str] = UNSET
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class GetEntityFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+    type: GetEntityType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+    event_names: NotRequired[List[str]]
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+    credit_schema: NotRequired[List[GetEntityCreditSchemaTypedDict]]
+    r"""For credit_system features: maps metered features to their credit costs."""
+    display: NotRequired[GetEntityDisplayTypedDict]
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+
+class GetEntityFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+
+    type: GetEntityType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+
+    event_names: Optional[List[str]] = None
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+
+    credit_schema: Optional[List[GetEntityCreditSchema]] = None
+    r"""For credit_system features: maps metered features to their credit costs."""
+
+    display: Optional[GetEntityDisplay] = None
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetEntityFlagsTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this flag."""
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+    feature_id: str
+    r"""The feature ID this flag is for."""
+    feature: NotRequired[GetEntityFeatureTypedDict]
+    r"""The full feature object if expanded."""
+
+
+class GetEntityFlags(BaseModel):
+    id: str
+    r"""The unique identifier for this flag."""
+
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+
+    feature_id: str
+    r"""The feature ID this flag is for."""
+
+    feature: Optional[GetEntityFeature] = None
+    r"""The full feature object if expanded."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature"])
+        nullable_fields = set(["plan_id", "expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class GetEntitySpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
@@ -401,6 +591,7 @@ class GetEntityResponseTypedDict(TypedDict):
     subscriptions: List[GetEntitySubscriptionTypedDict]
     purchases: List[GetEntityPurchaseTypedDict]
     balances: Dict[str, BalanceTypedDict]
+    flags: Dict[str, GetEntityFlagsTypedDict]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
@@ -431,6 +622,8 @@ class GetEntityResponse(BaseModel):
     purchases: List[GetEntityPurchase]
 
     balances: Dict[str, Balance]
+
+    flags: Dict[str, GetEntityFlags]
 
     customer_id: OptionalNullable[str] = UNSET
     r"""The customer ID this entity belongs to"""

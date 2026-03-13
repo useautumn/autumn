@@ -2,7 +2,7 @@ import type {
 	AttachParams,
 	CheckParams,
 	CreateReferralCodeParams,
-	CustomerExpand,
+	// CustomerExpand,
 	EventsAggregateParams,
 	EventsListParams,
 	MultiAttachParams,
@@ -24,7 +24,7 @@ export type ProtectedFields = "customerId" | "customerData";
 /** GetOrCreateCustomer params without protected fields (for frontend use) */
 export type ClientGetOrCreateCustomerParams = {
 	errorOnNotFound?: boolean;
-	expand?: CustomerExpand[];
+	expand?: string[];
 };
 
 /** Check params for local balance check */
