@@ -8,16 +8,18 @@ export const customerToFeatures = ({
 	customer: Customer;
 }): CustomerFeature[] => {
 	const balances = Object.values(customer.balances);
-	if (balances.length === 0) return [];
+	const flags = Object.values(customer.flags);
+	const customerStates = [...balances, ...flags];
+	if (customerStates.length === 0) return [];
 
-	const firstBalance = balances[0];
-	if (!firstBalance.feature) {
+	const firstCustomerState = customerStates[0];
+	if (!firstCustomerState.feature) {
 		throw new Error(
-			"[customerToFeatures] please expand `balances.feature` to get features for the customer",
+			"[customerToFeatures] please expand `balances.feature` or `flags.feature` to get features for the customer",
 		);
 	}
 
-	return balances
-		.map((balance) => balance.feature)
+	return customerStates
+		.map((customerState) => customerState.feature)
 		.filter((feature): feature is CustomerFeature => Boolean(feature));
 };

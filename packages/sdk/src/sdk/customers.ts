@@ -32,7 +32,6 @@ export class Customers extends ClientSDK {
    * @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
    * @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
    * @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
-   * @param expand - Customer expand options (optional)
    */
   async getOrCreate(
     request: models.GetOrCreateCustomerParams,
