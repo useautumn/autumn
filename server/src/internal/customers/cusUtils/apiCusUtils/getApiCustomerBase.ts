@@ -26,7 +26,7 @@ export const getApiCustomerBase = async ({
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
-	const { data: apiBalances } = await getApiBalances({
+	const { balances: apiBalances, flags: apiFlags } = await getApiBalances({
 		ctx,
 		fullCus,
 	});
@@ -63,6 +63,7 @@ export const getApiCustomerBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		balances: apiBalances,
+		flags: apiFlags,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,

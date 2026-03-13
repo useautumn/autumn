@@ -6,6 +6,7 @@ import {
 	ApiPurchaseV0Schema,
 	ApiSubscriptionV1Schema,
 } from "./cusPlans/apiSubscriptionV1";
+import { ApiFlagV0Schema } from "./flags/apiFlagV0";
 
 export const API_CUSTOMER_V5_EXAMPLE = {
 	id: "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", // Example UUID
@@ -66,6 +67,14 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 			],
 		},
 	},
+	flags: {
+		advanced_workflows: {
+			id: "cus_ent_abc123",
+			plan_id: "pro_plan",
+			expires_at: null,
+			feature_id: "advanced_workflows",
+		},
+	},
 };
 
 // V5 base customer - uses V1 subscriptions (single array with status field) and V1 balances
@@ -80,6 +89,10 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	balances: z.record(z.string(), ApiBalanceV1Schema).meta({
 		description:
 			"Feature balances keyed by feature ID, showing usage limits and remaining amounts.",
+	}),
+	flags: z.record(z.string(), ApiFlagV0Schema).meta({
+		description:
+			"Boolean feature flags keyed by feature ID, showing enabled access for on/off features.",
 	}),
 }).meta({
 	examples: [API_CUSTOMER_V5_EXAMPLE],

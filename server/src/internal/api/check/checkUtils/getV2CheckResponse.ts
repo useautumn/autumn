@@ -17,6 +17,7 @@ export const getV2CheckResponse = async ({
 		customerId,
 		entityId,
 		apiBalance,
+		apiFlag,
 		apiSubject,
 		originalFeature,
 		featureToUse,
@@ -34,28 +35,34 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	if (!apiBalance) {
+	if (!apiBalance && !apiFlag) {
 		return CheckResponseV3Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
 			entity_id: entityId,
 			required_balance: requiredBalance,
 			balance: null,
+			flag: null,
 		});
 	}
 
-	const allowed = apiBalanceToAllowed({
-		apiBalance,
-		apiSubject,
-		feature: featureToUse,
-		requiredBalance,
-	});
+	const allowed =
+		Boolean(apiFlag) ??
+		(apiBalance
+			? apiBalanceToAllowed({
+					apiBalance,
+					apiSubject,
+					feature: featureToUse,
+					requiredBalance,
+				})
+			: false);
 
 	return CheckResponseV3Schema.parse({
 		allowed,
 		customer_id: customerId || "",
 		entity_id: entityId,
 		required_balance: requiredBalance,
-		balance: apiBalance,
+		balance: apiBalance ?? null,
+		flag: apiFlag ?? null,
 	});
 };

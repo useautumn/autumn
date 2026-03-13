@@ -56,6 +56,7 @@ export const V1_2_CheckQueryChange = defineVersionChange({
 		const newExpand: CheckExpand[] = [
 			...(existingExpand as CheckExpand[]),
 			CheckExpand.BalanceFeature,
+			CheckExpand.FlagFeature,
 		];
 
 		return {

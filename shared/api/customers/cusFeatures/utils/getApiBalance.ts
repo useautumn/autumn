@@ -20,6 +20,7 @@ import {
 	customerEntitlementToBalancePrice,
 	dbToApiFeatureV1,
 	expandIncludes,
+	expandPathIncludes,
 	type Feature,
 	FeatureType,
 	type FullCusEntWithFullCusProduct,
@@ -28,6 +29,7 @@ import {
 	isUnlimitedCusEnt,
 	nullish,
 	type SharedContext,
+	scopeExpandForCtx,
 	sumValues,
 } from "@autumn/shared";
 import { AllowanceType } from "@models/productModels/entModels/entModels.js";
@@ -64,9 +66,11 @@ const getUnlimitedAndUsageAllowed = ({
 };
 
 const getApiBalanceBreakdownItem = ({
+	ctx,
 	fullCus,
 	customerEntitlement,
 }: {
+	ctx: SharedContext;
 	fullCus: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }): ApiBalanceBreakdownV1 => {
@@ -96,6 +100,11 @@ const getApiBalanceBreakdownItem = ({
 	const overage = cusEntToInvoiceOverage({
 		cusEnt: customerEntitlement,
 		entityId,
+	});
+
+	const includePrice = expandPathIncludes({
+		expand: ctx.expand,
+		includes: ["breakdown.price"],
 	});
 
 	return {
@@ -129,7 +138,11 @@ export const getApiBalance = ({
 
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
-		includes: [CheckExpand.BalanceFeature, CustomerExpand.BalancesFeature],
+		includes: [
+			CheckExpand.BalanceFeature,
+			CustomerExpand.BalancesFeature,
+			"feature",
+		],
 	})
 		? dbToApiFeatureV1({ ctx, dbFeature: feature })
 		: undefined;
@@ -163,7 +176,7 @@ export const getApiBalance = ({
 	);
 
 	const breakdownItems = cusEnts.map((cusEnt) =>
-		getApiBalanceBreakdownItem({ fullCus, customerEntitlement: cusEnt }),
+		getApiBalanceBreakdownItem({ ctx, fullCus, customerEntitlement: cusEnt }),
 	);
 	const totalGranted = sumValues(
 		breakdownItems.map((item) =>
