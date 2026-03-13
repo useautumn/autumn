@@ -20,21 +20,34 @@ export const expectBalanceCorrect = ({
 	customer,
 	featureId,
 	remaining,
+	planId,
+	usage,
 	breakdown,
 	rollovers,
 }: {
 	customer: ApiCustomerV5;
 	featureId: string;
 	remaining: number;
+	planId?: string | null;
+	usage?: number;
 	breakdown?: BreakdownExpectation;
 	/** Expected rollovers in order (oldest first). Only specified fields are checked. */
 	rollovers?: Partial<ApiBalanceRollover>[];
 }) => {
-	expect(customer.balances[featureId]).toBeDefined();
-	expect(customer.balances[featureId].remaining).toBe(remaining);
+	const balance = customer.balances[featureId];
+	expect(balance).toBeDefined();
+	expect(balance.remaining).toBe(remaining);
+
+	if (typeof planId !== "undefined") {
+		expect(balance.breakdown?.[0]?.plan_id ?? null).toBe(planId);
+	}
+
+	if (typeof usage !== "undefined") {
+		expect(balance.usage).toBe(usage);
+	}
 
 	if (breakdown) {
-		const buckets = customer.balances[featureId]?.breakdown;
+		const buckets = balance.breakdown;
 		expect(buckets).toBeDefined();
 
 		for (const [key, expectation] of Object.entries(breakdown)) {
@@ -48,7 +61,7 @@ export const expectBalanceCorrect = ({
 	}
 
 	if (rollovers) {
-		const actual = customer.balances[featureId]?.rollovers;
+		const actual = balance.rollovers;
 		expect(actual?.length).toBe(rollovers.length);
 		for (let i = 0; i < rollovers.length; i++) {
 			expect(actual![i]).toMatchObject(rollovers[i]);

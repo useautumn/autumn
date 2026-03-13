@@ -24,11 +24,12 @@ export const getApiCustomerExpand = async ({
 }): Promise<ApiCusExpand> => {
 	const { org, env, db, expand } = ctx;
 
-	// Filter out balances.feature and subscriptions.plan
+	// Filter out synthetic nested expand paths handled within sub-builders.
 	const filteredExpand = filterExpand({
 		expand,
 		filter: [
 			CustomerExpand.BalancesFeature,
+			CustomerExpand.FlagsFeature,
 			CustomerExpand.SubscriptionsPlan,
 			CustomerExpand.Invoices,
 		],

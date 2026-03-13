@@ -15,6 +15,7 @@ import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/g
 export const handleGetCustomerV2 = createRoute({
 	versionedQuery: {
 		latest: GetCustomerQuerySchema,
+		[ApiVersion.V2_0]: GetCustomerQuerySchema,
 		[ApiVersion.V1_2]: GetCustomerQuerySchema,
 	},
 	resource: AffectedResource.Customer,
