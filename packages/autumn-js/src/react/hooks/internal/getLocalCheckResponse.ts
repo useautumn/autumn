@@ -73,10 +73,28 @@ const getFeatureCheckResponse = ({
 }): CheckResponse => {
 	const { featureId, requiredBalance = 1 } = params;
 
+	if (customer.flags[featureId]) {
+		return {
+			allowed: true,
+			customerId: customer.id ?? "",
+			entityId: params.entityId ?? null,
+			requiredBalance,
+			balance: null,
+			flag: customer.flags[featureId],
+		};
+	}
+
 	const features = customerToFeatures({ customer });
 	const feature = features.find((item) => item.id === featureId);
 	if (!feature) {
-		throw new Error(`Feature ${featureId} not found`);
+		return {
+			allowed: false,
+			customerId: customer.id ?? "",
+			entityId: params.entityId ?? null,
+			requiredBalance,
+			balance: null,
+			flag: null,
+		};
 	}
 
 	const featureToUse = getFeatureToUse({
@@ -95,6 +113,7 @@ const getFeatureCheckResponse = ({
 			entityId: params.entityId ?? null,
 			requiredBalance,
 			balance: null,
+			flag: null,
 		};
 	}
 
@@ -119,6 +138,7 @@ const getFeatureCheckResponse = ({
 		entityId: params.entityId ?? null,
 		requiredBalance: requiredBalanceToUse,
 		balance: balanceToUse as CheckResponse["balance"],
+		flag: null,
 	};
 };
 
@@ -136,6 +156,7 @@ export const getLocalCheckResponse = ({
 			entityId: params.entityId ?? null,
 			requiredBalance: params.requiredBalance ?? 1,
 			balance: null,
+			flag: null,
 		};
 	}
 

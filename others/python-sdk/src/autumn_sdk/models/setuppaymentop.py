@@ -616,6 +616,76 @@ class SetupPaymentCustomLineItem(BaseModel):
     r"""Description for the line item."""
 
 
+class SetupPaymentCarryOverBalancesTypedDict(TypedDict):
+    r"""Whether to carry over balances from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over balances from the previous plan."""
+    feature_ids: NotRequired[List[str]]
+    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
+
+
+class SetupPaymentCarryOverBalances(BaseModel):
+    r"""Whether to carry over balances from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over balances from the previous plan."""
+
+    feature_ids: Optional[List[str]] = None
+    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class SetupPaymentCarryOverUsagesTypedDict(TypedDict):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+    feature_ids: NotRequired[List[str]]
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+
+class SetupPaymentCarryOverUsages(BaseModel):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+
+    feature_ids: Optional[List[str]] = None
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class SetupPaymentParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -643,6 +713,10 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
     processor_subscription_id: NotRequired[str]
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
+    carry_over_balances: NotRequired[SetupPaymentCarryOverBalancesTypedDict]
+    r"""Whether to carry over balances from the previous plan."""
+    carry_over_usages: NotRequired[SetupPaymentCarryOverUsagesTypedDict]
+    r"""Whether to carry over usages from the previous plan."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -685,6 +759,12 @@ class SetupPaymentParams(BaseModel):
     processor_subscription_id: Optional[str] = None
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
 
+    carry_over_balances: Optional[SetupPaymentCarryOverBalances] = None
+    r"""Whether to carry over balances from the previous plan."""
+
+    carry_over_usages: Optional[SetupPaymentCarryOverUsages] = None
+    r"""Whether to carry over usages from the previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -701,6 +781,8 @@ class SetupPaymentParams(BaseModel):
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
+                "carry_over_balances",
+                "carry_over_usages",
             ]
         )
         serialized = handler(self)

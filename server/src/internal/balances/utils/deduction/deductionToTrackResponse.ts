@@ -1,5 +1,8 @@
-import type { ApiBalanceV1, Feature, FullCustomer } from "@autumn/shared";
 import {
+	type ApiBalanceV1,
+	type Feature,
+	FeatureType,
+	type FullCustomer,
 	findCustomerEntitlementById,
 	fullCustomerToCustomerEntitlements,
 	getRelevantFeatures,
@@ -109,8 +112,23 @@ const getFeatureToUseForBalance = ({
 	const relevantFeatures = getRelevantFeatures({
 		features: ctx.features,
 		featureId: featureDeduction.feature.id,
-	});
+	}).sort((a, b) => {
+		if (
+			a.type === FeatureType.CreditSystem &&
+			b.type !== FeatureType.CreditSystem
+		) {
+			return 1;
+		}
 
+		if (
+			a.type !== FeatureType.CreditSystem &&
+			b.type === FeatureType.CreditSystem
+		) {
+			return -1;
+		}
+
+		return 0;
+	});
 	// Find first feature that had an actual deduction
 	const featureWithDeduction = relevantFeatures.find(
 		(f) => (actualDeductions[f.id] ?? 0) > 0,
