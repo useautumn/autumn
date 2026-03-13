@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from .customerdata import CustomerData, CustomerDataTypedDict
+from .plan import Plan, PlanTypedDict
 from autumn_sdk.types import (
     BaseModel,
     Nullable,
@@ -469,7 +470,7 @@ class PreviewMultiAttachCustomize(BaseModel):
         return m
 
 
-class PreviewMultiAttachFeatureQuantityTypedDict(TypedDict):
+class PreviewMultiAttachPlanFeatureQuantityTypedDict(TypedDict):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -480,7 +481,7 @@ class PreviewMultiAttachFeatureQuantityTypedDict(TypedDict):
     r"""Whether the customer can adjust the quantity."""
 
 
-class PreviewMultiAttachFeatureQuantity(BaseModel):
+class PreviewMultiAttachPlanFeatureQuantity(BaseModel):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -514,7 +515,9 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     r"""The ID of the plan to attach."""
     customize: NotRequired[PreviewMultiAttachCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price or items."""
-    feature_quantities: NotRequired[List[PreviewMultiAttachFeatureQuantityTypedDict]]
+    feature_quantities: NotRequired[
+        List[PreviewMultiAttachPlanFeatureQuantityTypedDict]
+    ]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
@@ -529,7 +532,7 @@ class PreviewMultiAttachPlan(BaseModel):
     customize: Optional[PreviewMultiAttachCustomize] = None
     r"""Customize the plan to attach. Can override the price or items."""
 
-    feature_quantities: Optional[List[PreviewMultiAttachFeatureQuantity]] = None
+    feature_quantities: Optional[List[PreviewMultiAttachPlanFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
 
     version: Optional[float] = None
@@ -894,24 +897,22 @@ class PreviewMultiAttachParams(BaseModel):
 class PreviewMultiAttachDiscountTypedDict(TypedDict):
     amount_off: float
     percent_off: NotRequired[float]
-    stripe_coupon_id: NotRequired[str]
-    coupon_name: NotRequired[str]
+    reward_id: NotRequired[str]
+    reward_name: NotRequired[str]
 
 
 class PreviewMultiAttachDiscount(BaseModel):
-    amount_off: Annotated[float, pydantic.Field(alias="amountOff")]
+    amount_off: float
 
-    percent_off: Annotated[Optional[float], pydantic.Field(alias="percentOff")] = None
+    percent_off: Optional[float] = None
 
-    stripe_coupon_id: Annotated[
-        Optional[str], pydantic.Field(alias="stripeCouponId")
-    ] = None
+    reward_id: Optional[str] = None
 
-    coupon_name: Annotated[Optional[str], pydantic.Field(alias="couponName")] = None
+    reward_name: Optional[str] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["percentOff", "stripeCouponId", "couponName"])
+        optional_fields = set(["percent_off", "reward_id", "reward_name"])
         serialized = handler(self)
         m = {}
 
@@ -926,33 +927,119 @@ class PreviewMultiAttachDiscount(BaseModel):
         return m
 
 
+class PreviewMultiAttachLineItemPeriodTypedDict(TypedDict):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class PreviewMultiAttachLineItemPeriod(BaseModel):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
 class PreviewMultiAttachLineItemTypedDict(TypedDict):
-    title: str
-    r"""The title of the line item."""
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
     description: str
     r"""A detailed description of the line item."""
-    amount: float
-    r"""The amount in cents for this line item."""
+    subtotal: float
+    r"""The amount in cents before discounts for this line item."""
+    total: float
+    r"""The final amount in cents after discounts for this line item."""
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+    quantity: float
+    r"""The quantity of the line item."""
     discounts: NotRequired[List[PreviewMultiAttachDiscountTypedDict]]
     r"""List of discounts applied to this line item."""
+    period: NotRequired[PreviewMultiAttachLineItemPeriodTypedDict]
+    r"""The period of time that this line item is being charged for."""
 
 
 class PreviewMultiAttachLineItem(BaseModel):
-    title: str
-    r"""The title of the line item."""
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
 
     description: str
     r"""A detailed description of the line item."""
 
-    amount: float
-    r"""The amount in cents for this line item."""
+    subtotal: float
+    r"""The amount in cents before discounts for this line item."""
+
+    total: float
+    r"""The final amount in cents after discounts for this line item."""
+
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+
+    quantity: float
+    r"""The quantity of the line item."""
 
     discounts: Optional[List[PreviewMultiAttachDiscount]] = None
     r"""List of discounts applied to this line item."""
 
+    period: Optional[PreviewMultiAttachLineItemPeriod] = None
+    r"""The period of time that this line item is being charged for."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["discounts"])
+        optional_fields = set(["discounts", "period"])
+        nullable_fields = set(["feature_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachNextCycleDiscountTypedDict(TypedDict):
+    amount_off: float
+    percent_off: NotRequired[float]
+    reward_id: NotRequired[str]
+    reward_name: NotRequired[str]
+
+
+class PreviewMultiAttachNextCycleDiscount(BaseModel):
+    amount_off: float
+
+    percent_off: Optional[float] = None
+
+    reward_id: Optional[str] = None
+
+    reward_name: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["percent_off", "reward_id", "reward_name"])
         serialized = handler(self)
         m = {}
 
@@ -962,6 +1049,169 @@ class PreviewMultiAttachLineItem(BaseModel):
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachNextCycleLineItemPeriodTypedDict(TypedDict):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class PreviewMultiAttachNextCycleLineItemPeriod(BaseModel):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class PreviewMultiAttachNextCycleLineItemTypedDict(TypedDict):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+    description: str
+    r"""A detailed description of the line item."""
+    subtotal: float
+    r"""The amount in cents before discounts for this line item."""
+    total: float
+    r"""The final amount in cents after discounts for this line item."""
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+    quantity: float
+    r"""The quantity of the line item."""
+    discounts: NotRequired[List[PreviewMultiAttachNextCycleDiscountTypedDict]]
+    r"""List of discounts applied to this line item."""
+    period: NotRequired[PreviewMultiAttachNextCycleLineItemPeriodTypedDict]
+    r"""The period of time that this line item is being charged for."""
+
+
+class PreviewMultiAttachNextCycleLineItem(BaseModel):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+
+    description: str
+    r"""A detailed description of the line item."""
+
+    subtotal: float
+    r"""The amount in cents before discounts for this line item."""
+
+    total: float
+    r"""The final amount in cents after discounts for this line item."""
+
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+
+    quantity: float
+    r"""The quantity of the line item."""
+
+    discounts: Optional[List[PreviewMultiAttachNextCycleDiscount]] = None
+    r"""List of discounts applied to this line item."""
+
+    period: Optional[PreviewMultiAttachNextCycleLineItemPeriod] = None
+    r"""The period of time that this line item is being charged for."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["discounts", "period"])
+        nullable_fields = set(["feature_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachUsageLineItemPeriodTypedDict(TypedDict):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class PreviewMultiAttachUsageLineItemPeriod(BaseModel):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class PreviewMultiAttachUsageLineItemTypedDict(TypedDict):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+    period: NotRequired[PreviewMultiAttachUsageLineItemPeriodTypedDict]
+    r"""The period of time that this line item is being charged for."""
+
+
+class PreviewMultiAttachUsageLineItem(BaseModel):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+
+    period: Optional[PreviewMultiAttachUsageLineItemPeriod] = None
+    r"""The period of time that this line item is being charged for."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["period"])
+        nullable_fields = set(["feature_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -972,8 +1222,14 @@ class PreviewMultiAttachNextCycleTypedDict(TypedDict):
 
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
+    subtotal: float
+    r"""The total amount in cents before discounts for the next cycle."""
     total: float
-    r"""The total amount in cents for the next cycle."""
+    r"""The final amount in cents after discounts for the next cycle."""
+    line_items: List[PreviewMultiAttachNextCycleLineItemTypedDict]
+    r"""List of line items for the next billing cycle."""
+    usage_line_items: List[PreviewMultiAttachUsageLineItemTypedDict]
+    r"""List of line items for usage-based features in the next cycle."""
 
 
 class PreviewMultiAttachNextCycle(BaseModel):
@@ -982,8 +1238,123 @@ class PreviewMultiAttachNextCycle(BaseModel):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
+    subtotal: float
+    r"""The total amount in cents before discounts for the next cycle."""
+
     total: float
-    r"""The total amount in cents for the next cycle."""
+    r"""The final amount in cents after discounts for the next cycle."""
+
+    line_items: List[PreviewMultiAttachNextCycleLineItem]
+    r"""List of line items for the next billing cycle."""
+
+    usage_line_items: List[PreviewMultiAttachUsageLineItem]
+    r"""List of line items for usage-based features in the next cycle."""
+
+
+class PreviewMultiAttachIncomingFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    quantity: float
+
+
+class PreviewMultiAttachIncomingFeatureQuantity(BaseModel):
+    feature_id: str
+
+    quantity: float
+
+
+class PreviewMultiAttachIncomingTypedDict(TypedDict):
+    plan_id: str
+    feature_quantities: List[PreviewMultiAttachIncomingFeatureQuantityTypedDict]
+    effective_at: Nullable[float]
+    plan: NotRequired[PlanTypedDict]
+
+
+class PreviewMultiAttachIncoming(BaseModel):
+    plan_id: str
+
+    feature_quantities: List[PreviewMultiAttachIncomingFeatureQuantity]
+
+    effective_at: Nullable[float]
+
+    plan: Optional[Plan] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["plan"])
+        nullable_fields = set(["effective_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachOutgoingFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    quantity: float
+
+
+class PreviewMultiAttachOutgoingFeatureQuantity(BaseModel):
+    feature_id: str
+
+    quantity: float
+
+
+class PreviewMultiAttachOutgoingTypedDict(TypedDict):
+    plan_id: str
+    feature_quantities: List[PreviewMultiAttachOutgoingFeatureQuantityTypedDict]
+    effective_at: Nullable[float]
+    plan: NotRequired[PlanTypedDict]
+
+
+class PreviewMultiAttachOutgoing(BaseModel):
+    plan_id: str
+
+    feature_quantities: List[PreviewMultiAttachOutgoingFeatureQuantity]
+
+    effective_at: Nullable[float]
+
+    plan: Optional[Plan] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["plan"])
+        nullable_fields = set(["effective_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
 
 
 class PreviewMultiAttachResponseTypedDict(TypedDict):
@@ -993,12 +1364,20 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""The ID of the customer."""
     line_items: List[PreviewMultiAttachLineItemTypedDict]
     r"""List of line items for the current billing period."""
+    subtotal: float
+    r"""The total amount in cents before discounts for the current billing period."""
     total: float
-    r"""The total amount in cents for the current billing period."""
+    r"""The final amount in cents after discounts for the current billing period."""
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
+    incoming: List[PreviewMultiAttachIncomingTypedDict]
+    r"""Products or subscription changes being added or updated."""
+    outgoing: List[PreviewMultiAttachOutgoingTypedDict]
+    r"""Products or subscription changes being removed or ended."""
     next_cycle: NotRequired[PreviewMultiAttachNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
+    expand: NotRequired[List[str]]
+    r"""Expand the response with additional data."""
 
 
 class PreviewMultiAttachResponse(BaseModel):
@@ -1010,18 +1389,30 @@ class PreviewMultiAttachResponse(BaseModel):
     line_items: List[PreviewMultiAttachLineItem]
     r"""List of line items for the current billing period."""
 
+    subtotal: float
+    r"""The total amount in cents before discounts for the current billing period."""
+
     total: float
-    r"""The total amount in cents for the current billing period."""
+    r"""The final amount in cents after discounts for the current billing period."""
 
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
 
+    incoming: List[PreviewMultiAttachIncoming]
+    r"""Products or subscription changes being added or updated."""
+
+    outgoing: List[PreviewMultiAttachOutgoing]
+    r"""Products or subscription changes being removed or ended."""
+
     next_cycle: Optional[PreviewMultiAttachNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
+    expand: Optional[List[str]] = None
+    r"""Expand the response with additional data."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle"])
+        optional_fields = set(["next_cycle", "expand"])
         serialized = handler(self)
         m = {}
 
@@ -1034,9 +1425,3 @@ class PreviewMultiAttachResponse(BaseModel):
                     m[k] = val
 
         return m
-
-
-try:
-    PreviewMultiAttachDiscount.model_rebuild()
-except NameError:
-    pass

@@ -66,8 +66,6 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 
 const closedEnumSchema = z.any();
 
-const customerExpandSchema = z.any();
-
 export const getOrCreateCustomerIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerPurchaseLimitSchema = z.object({
@@ -111,5 +109,5 @@ export const getOrCreateCustomerParamsSchema = z.object({
 	billingControls: z
 		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
 		.optional(),
-	expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional(),
+	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });

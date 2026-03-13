@@ -5,10 +5,12 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type PreviewUpdateGlobals = {
@@ -18,7 +20,7 @@ export type PreviewUpdateGlobals = {
 /**
  * Quantity configuration for a prepaid feature.
  */
-export type PreviewUpdateFeatureQuantity = {
+export type PreviewUpdateFeatureQuantityRequest = {
   /**
    * The ID of the feature to set quantity for.
    */
@@ -384,6 +386,21 @@ export type PreviewUpdateProrationBehavior = ClosedEnum<
 >;
 
 /**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export const PreviewUpdateRedirectMode = {
+  Always: "always",
+  IfRequired: "if_required",
+  Never: "never",
+} as const;
+/**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export type PreviewUpdateRedirectMode = ClosedEnum<
+  typeof PreviewUpdateRedirectMode
+>;
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const PreviewUpdateCancelAction = {
@@ -414,7 +431,7 @@ export type PreviewUpdateParams = {
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
-  featureQuantities?: Array<PreviewUpdateFeatureQuantity> | undefined;
+  featureQuantities?: Array<PreviewUpdateFeatureQuantityRequest> | undefined;
   /**
    * The version of the plan to attach.
    */
@@ -432,6 +449,10 @@ export type PreviewUpdateParams = {
    */
   prorationBehavior?: PreviewUpdateProrationBehavior | undefined;
   /**
+   * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+   */
+  redirectMode?: PreviewUpdateRedirectMode | undefined;
+  /**
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
   subscriptionId?: string | undefined;
@@ -448,27 +469,154 @@ export type PreviewUpdateParams = {
 export type PreviewUpdateDiscount = {
   amountOff: number;
   percentOff?: number | undefined;
-  stripeCouponId?: string | undefined;
-  couponName?: string | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewUpdateLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
 };
 
 export type PreviewUpdateLineItem = {
   /**
-   * The title of the line item.
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
    */
-  title: string;
+  displayName: string;
   /**
    * A detailed description of the line item.
    */
   description: string;
   /**
-   * The amount in cents for this line item.
+   * The amount in cents before discounts for this line item.
    */
-  amount: number;
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
   /**
    * List of discounts applied to this line item.
    */
   discounts?: Array<PreviewUpdateDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewUpdateLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+export type PreviewUpdateNextCycleDiscount = {
+  amountOff: number;
+  percentOff?: number | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewUpdateNextCycleLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewUpdateNextCycleLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * A detailed description of the line item.
+   */
+  description: string;
+  /**
+   * The amount in cents before discounts for this line item.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
+  /**
+   * List of discounts applied to this line item.
+   */
+  discounts?: Array<PreviewUpdateNextCycleDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewUpdateNextCycleLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewUpdateUsageLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewUpdateUsageLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewUpdateUsageLineItemPeriod | undefined;
 };
 
 /**
@@ -480,10 +628,56 @@ export type PreviewUpdateNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents for the next cycle.
+   * The total amount in cents before discounts for the next cycle.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the next cycle.
    */
   total: number;
+  /**
+   * List of line items for the next billing cycle.
+   */
+  lineItems: Array<PreviewUpdateNextCycleLineItem>;
+  /**
+   * List of line items for usage-based features in the next cycle.
+   */
+  usageLineItems: Array<PreviewUpdateUsageLineItem>;
 };
+
+export type PreviewUpdateIncomingFeatureQuantity = {
+  featureId: string;
+  quantity: number;
+};
+
+export type PreviewUpdateIncoming = {
+  planId: string;
+  plan?: Plan | undefined;
+  featureQuantities: Array<PreviewUpdateIncomingFeatureQuantity>;
+  effectiveAt: number | null;
+};
+
+export type PreviewUpdateOutgoingFeatureQuantity = {
+  featureId: string;
+  quantity: number;
+};
+
+export type PreviewUpdateOutgoing = {
+  planId: string;
+  plan?: Plan | undefined;
+  featureQuantities: Array<PreviewUpdateOutgoingFeatureQuantity>;
+  effectiveAt: number | null;
+};
+
+export const Intent = {
+  UpdatePlan: "update_plan",
+  UpdateQuantity: "update_quantity",
+  CancelImmediately: "cancel_immediately",
+  CancelEndOfCycle: "cancel_end_of_cycle",
+  Uncancel: "uncancel",
+  None: "none",
+} as const;
+export type Intent = OpenEnum<typeof Intent>;
 
 /**
  * OK
@@ -498,7 +692,11 @@ export type PreviewUpdateResponse = {
    */
   lineItems: Array<PreviewUpdateLineItem>;
   /**
-   * The total amount in cents for the current billing period.
+   * The total amount in cents before discounts for the current billing period.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the current billing period.
    */
   total: number;
   /**
@@ -509,19 +707,32 @@ export type PreviewUpdateResponse = {
    * Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
    */
   nextCycle?: PreviewUpdateNextCycle | undefined;
+  /**
+   * Expand the response with additional data.
+   */
+  expand?: Array<string> | undefined;
+  /**
+   * Products or subscription changes being added or updated.
+   */
+  incoming: Array<PreviewUpdateIncoming>;
+  /**
+   * Products or subscription changes being removed or ended.
+   */
+  outgoing: Array<PreviewUpdateOutgoing>;
+  intent: Intent;
 };
 
 /** @internal */
-export type PreviewUpdateFeatureQuantity$Outbound = {
+export type PreviewUpdateFeatureQuantityRequest$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const PreviewUpdateFeatureQuantity$outboundSchema: z.ZodMiniType<
-  PreviewUpdateFeatureQuantity$Outbound,
-  PreviewUpdateFeatureQuantity
+export const PreviewUpdateFeatureQuantityRequest$outboundSchema: z.ZodMiniType<
+  PreviewUpdateFeatureQuantityRequest$Outbound,
+  PreviewUpdateFeatureQuantityRequest
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -535,12 +746,12 @@ export const PreviewUpdateFeatureQuantity$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateFeatureQuantityToJSON(
-  previewUpdateFeatureQuantity: PreviewUpdateFeatureQuantity,
+export function previewUpdateFeatureQuantityRequestToJSON(
+  previewUpdateFeatureQuantityRequest: PreviewUpdateFeatureQuantityRequest,
 ): string {
   return JSON.stringify(
-    PreviewUpdateFeatureQuantity$outboundSchema.parse(
-      previewUpdateFeatureQuantity,
+    PreviewUpdateFeatureQuantityRequest$outboundSchema.parse(
+      previewUpdateFeatureQuantityRequest,
     ),
   );
 }
@@ -961,6 +1172,11 @@ export const PreviewUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateProrationBehavior);
 
 /** @internal */
+export const PreviewUpdateRedirectMode$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateRedirectMode
+> = z.enum(PreviewUpdateRedirectMode);
+
+/** @internal */
 export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdateCancelAction
 > = z.enum(PreviewUpdateCancelAction);
@@ -970,11 +1186,14 @@ export type PreviewUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
   plan_id?: string | undefined;
-  feature_quantities?: Array<PreviewUpdateFeatureQuantity$Outbound> | undefined;
+  feature_quantities?:
+    | Array<PreviewUpdateFeatureQuantityRequest$Outbound>
+    | undefined;
   version?: number | undefined;
   customize?: PreviewUpdateCustomize$Outbound | undefined;
   invoice_mode?: PreviewUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  redirect_mode: string;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
   no_billing_changes?: boolean | undefined;
@@ -990,7 +1209,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     planId: z.optional(z.string()),
     featureQuantities: z.optional(
-      z.array(z.lazy(() => PreviewUpdateFeatureQuantity$outboundSchema)),
+      z.array(z.lazy(() => PreviewUpdateFeatureQuantityRequest$outboundSchema)),
     ),
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => PreviewUpdateCustomize$outboundSchema)),
@@ -999,6 +1218,10 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     ),
     prorationBehavior: z.optional(
       PreviewUpdateProrationBehavior$outboundSchema,
+    ),
+    redirectMode: z._default(
+      PreviewUpdateRedirectMode$outboundSchema,
+      "if_required",
     ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
@@ -1012,6 +1235,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
       noBillingChanges: "no_billing_changes",
@@ -1031,12 +1255,22 @@ export function previewUpdateParamsToJSON(
 export const PreviewUpdateDiscount$inboundSchema: z.ZodMiniType<
   PreviewUpdateDiscount,
   unknown
-> = z.object({
-  amountOff: types.number(),
-  percentOff: types.optional(types.number()),
-  stripeCouponId: types.optional(types.string()),
-  couponName: types.optional(types.string()),
-});
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
 
 export function previewUpdateDiscountFromJSON(
   jsonString: string,
@@ -1049,17 +1283,52 @@ export function previewUpdateDiscountFromJSON(
 }
 
 /** @internal */
+export const PreviewUpdateLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewUpdateLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewUpdateLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewUpdateLineItem$inboundSchema: z.ZodMiniType<
   PreviewUpdateLineItem,
   unknown
-> = z.object({
-  title: types.string(),
-  description: types.string(),
-  amount: types.number(),
-  discounts: types.optional(
-    z.array(z.lazy(() => PreviewUpdateDiscount$inboundSchema)),
-  ),
-});
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewUpdateDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewUpdateLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
 
 export function previewUpdateLineItemFromJSON(
   jsonString: string,
@@ -1072,17 +1341,167 @@ export function previewUpdateLineItemFromJSON(
 }
 
 /** @internal */
+export const PreviewUpdateNextCycleDiscount$inboundSchema: z.ZodMiniType<
+  PreviewUpdateNextCycleDiscount,
+  unknown
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
+
+export function previewUpdateNextCycleDiscountFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateNextCycleDiscount, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateNextCycleDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateNextCycleDiscount' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateNextCycleLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewUpdateNextCycleLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewUpdateNextCycleLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateNextCycleLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewUpdateNextCycleLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateNextCycleLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateNextCycleLineItem$inboundSchema: z.ZodMiniType<
+  PreviewUpdateNextCycleLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewUpdateNextCycleDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewUpdateNextCycleLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewUpdateNextCycleLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateNextCycleLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateNextCycleLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateNextCycleLineItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateUsageLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewUpdateUsageLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewUpdateUsageLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateUsageLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateUsageLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateUsageLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateUsageLineItem$inboundSchema: z.ZodMiniType<
+  PreviewUpdateUsageLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewUpdateUsageLineItemPeriod$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewUpdateUsageLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateUsageLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateUsageLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateUsageLineItem' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewUpdateNextCycle$inboundSchema: z.ZodMiniType<
   PreviewUpdateNextCycle,
   unknown
 > = z.pipe(
   z.object({
     starts_at: types.number(),
+    subtotal: types.number(),
     total: types.number(),
+    line_items: z.array(
+      z.lazy(() => PreviewUpdateNextCycleLineItem$inboundSchema),
+    ),
+    usage_line_items: z.array(
+      z.lazy(() => PreviewUpdateUsageLineItem$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "starts_at": "startsAt",
+      "line_items": "lineItems",
+      "usage_line_items": "usageLineItems",
     });
   }),
 );
@@ -1098,6 +1517,128 @@ export function previewUpdateNextCycleFromJSON(
 }
 
 /** @internal */
+export const PreviewUpdateIncomingFeatureQuantity$inboundSchema: z.ZodMiniType<
+  PreviewUpdateIncomingFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewUpdateIncomingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateIncomingFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewUpdateIncomingFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateIncomingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateIncoming$inboundSchema: z.ZodMiniType<
+  PreviewUpdateIncoming,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewUpdateIncomingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewUpdateIncomingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateIncoming, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateIncoming$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateIncoming' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateOutgoingFeatureQuantity$inboundSchema: z.ZodMiniType<
+  PreviewUpdateOutgoingFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewUpdateOutgoingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateOutgoingFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewUpdateOutgoingFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateOutgoingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateOutgoing$inboundSchema: z.ZodMiniType<
+  PreviewUpdateOutgoing,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewUpdateOutgoingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewUpdateOutgoingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateOutgoing, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateOutgoing$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateOutgoing' from JSON`,
+  );
+}
+
+/** @internal */
+export const Intent$inboundSchema: z.ZodMiniType<Intent, unknown> = openEnums
+  .inboundSchema(Intent);
+
+/** @internal */
 export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
   PreviewUpdateResponse,
   unknown
@@ -1105,11 +1646,16 @@ export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
   z.object({
     customer_id: types.string(),
     line_items: z.array(z.lazy(() => PreviewUpdateLineItem$inboundSchema)),
+    subtotal: types.number(),
     total: types.number(),
     currency: types.string(),
     next_cycle: types.optional(
       z.lazy(() => PreviewUpdateNextCycle$inboundSchema),
     ),
+    expand: types.optional(z.array(types.string())),
+    incoming: z.array(z.lazy(() => PreviewUpdateIncoming$inboundSchema)),
+    outgoing: z.array(z.lazy(() => PreviewUpdateOutgoing$inboundSchema)),
+    intent: Intent$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {

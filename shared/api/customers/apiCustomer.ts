@@ -14,12 +14,24 @@ export {
 } from "./baseApiCustomer";
 
 export const ApiCusExpandSchema = z.object({
-	invoices: z.array(ApiInvoiceV1Schema).optional(),
-	entities: z.array(ApiBaseEntitySchema).optional(),
-	trials_used: z.array(ApiTrialsUsedV1Schema).optional(),
-	rewards: ApiCusRewardsSchema.nullish(),
-	referrals: z.array(ApiCusReferralSchema).optional(),
-	payment_method: z.any().nullish(),
+	invoices: z.array(ApiInvoiceV1Schema).optional().meta({
+		description: "Invoices for this customer.",
+	}),
+	entities: z.array(ApiBaseEntitySchema).optional().meta({
+		description: "Entities associated with this customer.",
+	}),
+	trials_used: z.array(ApiTrialsUsedV1Schema).optional().meta({
+		description: "Trial usage history for this customer.",
+	}),
+	rewards: ApiCusRewardsSchema.nullish().meta({
+		description: "Rewards earned or applied for this customer.",
+	}),
+	referrals: z.array(ApiCusReferralSchema).optional().meta({
+		description: "Referral records for this customer.",
+	}),
+	payment_method: z.any().nullish().meta({
+		description: "The customer's default payment method.",
+	}),
 });
 
 // V4 base customer - adds V0 subscriptions and balances

@@ -29,6 +29,7 @@ class Billing(BaseSDK):
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
+        redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         discounts: Optional[
             Union[
@@ -47,6 +48,14 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.AttachCarryOverBalances, models.AttachCarryOverBalancesTypedDict
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -64,6 +73,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -72,6 +82,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -102,6 +114,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.AttachAttachDiscount]]
@@ -114,6 +127,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.AttachCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.AttachCarryOverUsages]
+            ),
         )
 
         req = self._build_request(
@@ -195,6 +214,7 @@ class Billing(BaseSDK):
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
+        redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         discounts: Optional[
             Union[
@@ -213,6 +233,14 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.AttachCarryOverBalances, models.AttachCarryOverBalancesTypedDict
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -230,6 +258,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -238,6 +267,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -268,6 +299,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.AttachAttachDiscount]]
@@ -280,6 +312,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.AttachCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.AttachCarryOverUsages]
+            ),
         )
 
         req = self._build_request_async(
@@ -655,8 +693,8 @@ class Billing(BaseSDK):
         entity_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewAttachFeatureQuantity],
-                List[models.PreviewAttachFeatureQuantityTypedDict],
+                List[models.PreviewAttachFeatureQuantityRequest],
+                List[models.PreviewAttachFeatureQuantityRequestTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -670,6 +708,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
+        redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         discounts: Optional[
             Union[
@@ -688,6 +727,18 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.PreviewAttachCarryOverBalances,
+                models.PreviewAttachCarryOverBalancesTypedDict,
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.PreviewAttachCarryOverUsages,
+                models.PreviewAttachCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -705,6 +756,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -713,6 +765,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -733,7 +787,8 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
-                feature_quantities, Optional[List[models.PreviewAttachFeatureQuantity]]
+                feature_quantities,
+                Optional[List[models.PreviewAttachFeatureQuantityRequest]],
             ),
             version=version,
             customize=utils.get_pydantic_model(
@@ -743,6 +798,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewAttachAttachDiscount]]
@@ -755,6 +811,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.PreviewAttachCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
+            ),
         )
 
         req = self._build_request(
@@ -824,8 +886,8 @@ class Billing(BaseSDK):
         entity_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewAttachFeatureQuantity],
-                List[models.PreviewAttachFeatureQuantityTypedDict],
+                List[models.PreviewAttachFeatureQuantityRequest],
+                List[models.PreviewAttachFeatureQuantityRequestTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -839,6 +901,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
+        redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         discounts: Optional[
             Union[
@@ -857,6 +920,18 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.PreviewAttachCarryOverBalances,
+                models.PreviewAttachCarryOverBalancesTypedDict,
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.PreviewAttachCarryOverUsages,
+                models.PreviewAttachCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -874,6 +949,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -882,6 +958,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -902,7 +980,8 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
-                feature_quantities, Optional[List[models.PreviewAttachFeatureQuantity]]
+                feature_quantities,
+                Optional[List[models.PreviewAttachFeatureQuantityRequest]],
             ),
             version=version,
             customize=utils.get_pydantic_model(
@@ -912,6 +991,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewAttachAttachDiscount]]
@@ -924,6 +1004,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.PreviewAttachCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
+            ),
         )
 
         req = self._build_request_async(
@@ -1328,6 +1414,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
+        redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
@@ -1348,6 +1435,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -1381,6 +1469,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
@@ -1468,6 +1557,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
+        redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
@@ -1488,6 +1578,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -1521,6 +1612,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
@@ -1593,8 +1685,8 @@ class Billing(BaseSDK):
         plan_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewUpdateFeatureQuantity],
-                List[models.PreviewUpdateFeatureQuantityTypedDict],
+                List[models.PreviewUpdateFeatureQuantityRequest],
+                List[models.PreviewUpdateFeatureQuantityRequestTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -1608,6 +1700,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
+        redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
@@ -1628,6 +1721,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -1651,7 +1745,8 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
-                feature_quantities, Optional[List[models.PreviewUpdateFeatureQuantity]]
+                feature_quantities,
+                Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
             ),
             version=version,
             customize=utils.get_pydantic_model(
@@ -1661,6 +1756,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
@@ -1733,8 +1829,8 @@ class Billing(BaseSDK):
         plan_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewUpdateFeatureQuantity],
-                List[models.PreviewUpdateFeatureQuantityTypedDict],
+                List[models.PreviewUpdateFeatureQuantityRequest],
+                List[models.PreviewUpdateFeatureQuantityRequestTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -1748,6 +1844,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
+        redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
@@ -1768,6 +1865,7 @@ class Billing(BaseSDK):
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+        :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -1791,7 +1889,8 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
-                feature_quantities, Optional[List[models.PreviewUpdateFeatureQuantity]]
+                feature_quantities,
+                Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
             ),
             version=version,
             customize=utils.get_pydantic_model(
@@ -1801,6 +1900,7 @@ class Billing(BaseSDK):
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
             proration_behavior=proration_behavior,
+            redirect_mode=redirect_mode,
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
@@ -2090,6 +2190,18 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.SetupPaymentCarryOverBalances,
+                models.SetupPaymentCarryOverBalancesTypedDict,
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.SetupPaymentCarryOverUsages,
+                models.SetupPaymentCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2110,6 +2222,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2147,6 +2261,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.SetupPaymentCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
+            ),
         )
 
         req = self._build_request(
@@ -2241,6 +2361,18 @@ class Billing(BaseSDK):
             ]
         ] = None,
         processor_subscription_id: Optional[str] = None,
+        carry_over_balances: Optional[
+            Union[
+                models.SetupPaymentCarryOverBalances,
+                models.SetupPaymentCarryOverBalancesTypedDict,
+            ]
+        ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.SetupPaymentCarryOverUsages,
+                models.SetupPaymentCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2261,6 +2393,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+        :param carry_over_balances: Whether to carry over balances from the previous plan.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2298,6 +2432,12 @@ class Billing(BaseSDK):
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
             ),
             processor_subscription_id=processor_subscription_id,
+            carry_over_balances=utils.get_pydantic_model(
+                carry_over_balances, Optional[models.SetupPaymentCarryOverBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
+            ),
         )
 
         req = self._build_request_async(

@@ -46,16 +46,16 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	const allowed =
-		Boolean(apiFlag) ??
-		(apiBalance
+	const allowed = apiFlag
+		? true
+		: apiBalance
 			? apiBalanceToAllowed({
 					apiBalance,
 					apiSubject,
 					feature: featureToUse,
 					requiredBalance,
 				})
-			: false);
+			: false;
 
 	return CheckResponseV3Schema.parse({
 		allowed,
