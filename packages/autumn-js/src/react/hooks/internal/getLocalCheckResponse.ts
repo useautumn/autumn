@@ -78,7 +78,7 @@ const getFeatureCheckResponse = ({
 			allowed: true,
 			customerId: customer.id ?? "",
 			entityId: params.entityId ?? null,
-			requiredBalance: 1,
+			requiredBalance,
 			balance: null,
 			flag: customer.flags[featureId],
 		};
@@ -87,7 +87,14 @@ const getFeatureCheckResponse = ({
 	const features = customerToFeatures({ customer });
 	const feature = features.find((item) => item.id === featureId);
 	if (!feature) {
-		throw new Error(`Feature ${featureId} not found`);
+		return {
+			allowed: false,
+			customerId: customer.id ?? "",
+			entityId: params.entityId ?? null,
+			requiredBalance,
+			balance: null,
+			flag: null,
+		};
 	}
 
 	const featureToUse = getFeatureToUse({
