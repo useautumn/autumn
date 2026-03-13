@@ -1,6 +1,6 @@
 import {
 	type ApiPlanItemV1,
-	type BillingPreviewChange,
+	type GetCheckoutResponse,
 } from "@autumn/shared";
 import { CheckIcon, WalletIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -43,7 +43,7 @@ function getFeatureName(planItem: ApiPlanItemV1): string {
 }
 
 interface PlanSelectionCardProps {
-	change: BillingPreviewChange;
+	change: GetCheckoutResponse["preview"]["incoming"][number];
 }
 
 export function PlanSelectionCard({ change }: PlanSelectionCardProps) {

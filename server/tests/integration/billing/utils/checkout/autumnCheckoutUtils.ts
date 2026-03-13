@@ -26,15 +26,23 @@ export const confirmAutumnCheckout = async ({
 	checkoutId,
 	customerId,
 	productId,
+	featureQuantities,
 }: {
 	checkoutId: string;
 	customerId: string;
 	productId: string;
+	featureQuantities?: Array<{ feature_id: string; quantity: number }>;
 }): Promise<ConfirmCheckoutResponse> => {
 	const response = await fetch(
 		`${CHECKOUT_BASE_URL}/checkouts/${checkoutId}/confirm`,
 		{
 			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(
+				featureQuantities ? { feature_quantities: featureQuantities } : {},
+			),
 			signal: AbortSignal.timeout(CHECKOUT_TIMEOUT_MS),
 		},
 	);
@@ -56,6 +64,7 @@ export const confirmAutumnCheckoutAndGetCustomer = async ({
 	checkoutId,
 	customerId,
 	productId,
+	featureQuantities,
 }: {
 	autumnV1: {
 		customers: {
@@ -65,11 +74,13 @@ export const confirmAutumnCheckoutAndGetCustomer = async ({
 	checkoutId: string;
 	customerId: string;
 	productId: string;
+	featureQuantities?: Array<{ feature_id: string; quantity: number }>;
 }) => {
 	const confirmData = await confirmAutumnCheckout({
 		checkoutId,
 		customerId,
 		productId,
+		featureQuantities,
 	});
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
