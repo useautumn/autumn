@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiVersion,
+	ApiVersion,
 	ApiVersionClass,
 	applyResponseVersionChanges,
 	ErrCode,
@@ -40,6 +40,7 @@ export const runTrackV2 = async ({
 		ctx,
 		params: body,
 		source: "runTrackV2",
+		skipCreate: ctx.apiVersion.gte(ApiVersion.V2_1),
 	});
 
 	// If idempotency key is provided, insert event first and skip insertion later
