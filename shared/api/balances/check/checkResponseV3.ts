@@ -1,3 +1,4 @@
+import { ApiFlagV0Schema } from "@api/models.js";
 import { z } from "zod/v4";
 import { ApiBalanceV1Schema } from "../../customers/cusFeatures/apiBalanceV1.js";
 import { CheckFeaturePreviewSchema } from "./checkFeaturePreview.js";
@@ -25,6 +26,9 @@ export const CheckResponseV3Schema = z.object({
 	balance: ApiBalanceV1Schema.nullable().meta({
 		description:
 			"The customer's balance for this feature. Null if the customer has no balance for this feature.",
+	}),
+	flag: ApiFlagV0Schema.nullable().meta({
+		description: "The flag associated with this check, if any.",
 	}),
 
 	// lock_id: z.string().optional().meta({

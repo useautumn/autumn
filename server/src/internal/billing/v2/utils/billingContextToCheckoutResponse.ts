@@ -14,7 +14,7 @@ import {
 	getProductResponse,
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse";
 import { notNullish } from "@/utils/genUtils";
-import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
+import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
 
 export const billingContextToCheckoutResponse = async ({
 	ctx,
@@ -81,7 +81,7 @@ export const billingContextToCheckoutResponse = async ({
 		.toNumber();
 
 	// 4. Get next cycle preview
-	const nextCycle = billingPlanToNextCyclePreview({
+	const { nextCycle } = billingPlanToNextCyclePreview({
 		ctx,
 		billingContext,
 		billingPlan,

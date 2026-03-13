@@ -4,6 +4,29 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="March 13th 2026">
+  ## Autumn Checkout
+
+  We've launched Autumn Checkout — a hosted confirm-before-charge flow that gives customers a clear preview before completing their purchase.
+
+  When a customer with a saved payment method subscribes or updates their plan, they're now sent to Autumn Checkout instead of being charged directly. This lets them review exact pricing — including prorations, usage charges, and discounts — before confirming.
+
+  - **Preview before you pay**: Customers see immediate charges and next-cycle estimates before confirming
+  - **Works everywhere**: Supports new subscriptions, plan upgrades, and quantity updates
+  - **Handles edge cases**: Built-in flows for 3DS authentication, payment failures, and action-required states
+  - **No API changes**: Just follow the `paymentUrl` returned by `billing.attach` or `billing.update`
+
+  <AccordionGroup>
+    <Accordion title="How it works">
+      When you call `billing.attach` or `billing.update`, the returned `paymentUrl` routes customers to:
+      - **Stripe Checkout** — if they don't have a saved payment method
+      - **Autumn Checkout** — if they do, so they can review and confirm the charge
+
+      After confirmation, customers are redirected to your `successUrl`.
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="February 25th 2026">
   ## Volume-Based Tiered Pricing
 

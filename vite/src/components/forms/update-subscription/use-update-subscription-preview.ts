@@ -8,6 +8,11 @@ import { useEffect, useState } from "react";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+const UPDATE_PREVIEW_EXPAND = [
+	"incoming.plan.items.feature",
+	"outgoing.plan.items.feature",
+] as const;
+
 /** Debounced preview query for update subscription. Accepts a pre-built request body. */
 export function useUpdateSubscriptionPreview({
 	body,
@@ -47,7 +52,10 @@ export function useUpdateSubscriptionPreview({
 			const response =
 				await axiosInstance.post<PreviewUpdateSubscriptionResponse>(
 					"/v1/billing.preview_update",
-					body,
+					{
+						...body,
+						expand: UPDATE_PREVIEW_EXPAND,
+					},
 				);
 
 			return response.data;

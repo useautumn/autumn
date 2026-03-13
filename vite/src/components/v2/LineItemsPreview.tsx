@@ -70,7 +70,7 @@ export function LineItemsPreview<T extends BillingLineItem>({
 	accordionTitle = "Line Items",
 }: LineItemsPreviewProps<T>) {
 	const filteredItems = filterZeroAmounts
-		? lineItems.filter((item) => item.amount !== 0)
+		? lineItems.filter((item) => item.total !== 0)
 		: lineItems;
 
 	const hasContent = filteredItems.length > 0 || totals.length > 0;
@@ -129,18 +129,34 @@ export function LineItemsPreview<T extends BillingLineItem>({
 														<span className="text-sm truncate max-w-75 text-t3">
 															{item.description}
 														</span>
-														<span className="text-sm text-t1 font-semibold w-24 text-right">
-															{formatAmount({
-																amount: new Decimal(item.amount)
-																	.toDecimalPlaces(2)
-																	.toNumber(),
-																currency,
-																minFractionDigits: 2,
-																amountFormatOptions: {
-																	currencyDisplay: "narrowSymbol",
-																},
-															})}
-														</span>
+														<div className="flex w-24 justify-end gap-1.5">
+															{item.subtotal !== item.total && (
+																<span className="text-sm text-t3 line-through">
+																	{formatAmount({
+																		amount: new Decimal(item.subtotal)
+																			.toDecimalPlaces(2)
+																			.toNumber(),
+																		currency,
+																		minFractionDigits: 2,
+																		amountFormatOptions: {
+																			currencyDisplay: "narrowSymbol",
+																		},
+																	})}
+																</span>
+															)}
+															<span className="text-sm text-t1 font-semibold text-right">
+																{formatAmount({
+																	amount: new Decimal(item.total)
+																		.toDecimalPlaces(2)
+																		.toNumber(),
+																	currency,
+																	minFractionDigits: 2,
+																	amountFormatOptions: {
+																		currencyDisplay: "narrowSymbol",
+																	},
+																})}
+															</span>
+														</div>
 													</div>
 												))}
 											</div>

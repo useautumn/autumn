@@ -89,7 +89,7 @@ const validateBooleanEntitlementConflict = async ({
 			fullCus: fullCustomer,
 		});
 
-		if (apiCustomer.balances?.[feature.id]) {
+		if (apiCustomer.flags?.[feature.id]) {
 			throw new RecaseError({
 				message: `A boolean entitlement ${feature.id} already exists for customer ${fullCustomer.internal_id}`,
 			});

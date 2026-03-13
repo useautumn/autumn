@@ -1,17 +1,13 @@
 import {
-	type AttachParamsV1,
+	AffectedResource,
 	type Checkout,
-	CheckoutAction,
-	CheckoutStatus,
-	type ConfirmCheckoutResponse,
-	ErrCode,
-	RecaseError,
+	type ConfirmCheckoutParams,
+	ConfirmCheckoutParamsSchema,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { attach } from "@/internal/billing/v2/actions/attach/attach";
-import { deleteCheckoutCache } from "../actions/cache";
-import { checkoutRepo } from "../repos/checkoutRepo";
+import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
+import { checkoutActions } from "../actions";
+import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 
 /**
  * POST /checkouts/:checkout_id/confirm
@@ -23,68 +19,39 @@ import { checkoutRepo } from "../repos/checkoutRepo";
  * - Returns success with billing result
  */
 export const handleConfirmCheckout = createRoute({
+	resource: AffectedResource.Attach,
+	body: ConfirmCheckoutParamsSchema,
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"Checkout confirmation already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const checkout = c.get("checkout") as Checkout;
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: checkout.customer_id,
+						});
+					},
+				}
+			: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const checkout = c.get("checkout") as Checkout;
+		const body = c.req.valid("json") as ConfirmCheckoutParams;
+		const params = augmentCheckoutParams({
+			checkout,
+			body,
+		});
+		const response = await checkoutActions.confirm({
+			ctx,
+			checkout,
+			params,
+		});
 
-		if (checkout.action !== CheckoutAction.Attach) {
-			throw new RecaseError({
-				message: "Only attach checkouts are supported",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (checkout.status !== CheckoutStatus.Pending) {
-			throw new RecaseError({
-				message: "Checkout is not pending",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const params = checkout.params as AttachParamsV1;
-
-		try {
-			// Execute attach (not preview mode)
-			const { billingContext, billingResult } = await attach({
-				ctx,
-				params,
-				preview: false,
-				skipAutumnCheckout: true,
-			});
-
-			// Delete from cache (one-time use)
-			await deleteCheckoutCache({ checkoutId: checkout.id });
-
-			// Update DB status to completed (audit)
-			await checkoutRepo.update({
-				db: ctx.db,
-				id: checkout.id,
-				updates: {
-					status: CheckoutStatus.Completed,
-					completed_at: Date.now(),
-				},
-			});
-
-			return c.json({
-				success: true,
-				checkout_id: checkout.id,
-				customer_id: checkout.customer_id,
-				product_id: billingContext.attachProduct.id,
-				invoice_id: billingResult?.stripe?.stripeInvoice?.id ?? null,
-			} satisfies ConfirmCheckoutResponse);
-		} catch (error) {
-			// Don't delete from cache on error - allow retry
-			if (error instanceof RecaseError) {
-				throw error;
-			}
-
-			throw new RecaseError({
-				message: "Failed to process checkout",
-				code: ErrCode.InternalError,
-				statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
+		return c.json(response);
 	},
 });

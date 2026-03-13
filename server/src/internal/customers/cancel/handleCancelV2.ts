@@ -31,6 +31,7 @@ export const handleCancelV2 = createRoute({
 				? "cancel_immediately"
 				: "cancel_end_of_cycle",
 			proration_behavior: bodyProrate ? "prorate_immediately" : "none",
+			redirect_mode: "if_required",
 		};
 
 		ctx.logger.info(

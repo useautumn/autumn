@@ -1,8 +1,8 @@
-import { type AttachBodyV0, ErrCode } from "@autumn/shared";
+import { type AttachBodyV0, ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js";
 import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";

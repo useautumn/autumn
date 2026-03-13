@@ -385,6 +385,21 @@ export type BillingUpdateProrationBehavior = ClosedEnum<
 >;
 
 /**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export const BillingUpdateRedirectMode = {
+  Always: "always",
+  IfRequired: "if_required",
+  Never: "never",
+} as const;
+/**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export type BillingUpdateRedirectMode = ClosedEnum<
+  typeof BillingUpdateRedirectMode
+>;
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const BillingUpdateCancelAction = {
@@ -432,6 +447,10 @@ export type UpdateSubscriptionParams = {
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: BillingUpdateProrationBehavior | undefined;
+  /**
+   * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+   */
+  redirectMode?: BillingUpdateRedirectMode | undefined;
   /**
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
@@ -975,6 +994,11 @@ export const BillingUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateProrationBehavior);
 
 /** @internal */
+export const BillingUpdateRedirectMode$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateRedirectMode
+> = z.enum(BillingUpdateRedirectMode);
+
+/** @internal */
 export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateCancelAction
 > = z.enum(BillingUpdateCancelAction);
@@ -989,6 +1013,7 @@ export type UpdateSubscriptionParams$Outbound = {
   customize?: BillingUpdateCustomize$Outbound | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  redirect_mode: string;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
   no_billing_changes?: boolean | undefined;
@@ -1014,6 +1039,10 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       BillingUpdateProrationBehavior$outboundSchema,
     ),
+    redirectMode: z._default(
+      BillingUpdateRedirectMode$outboundSchema,
+      "if_required",
+    ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
     noBillingChanges: z.optional(z.boolean()),
@@ -1026,6 +1055,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
       noBillingChanges: "no_billing_changes",

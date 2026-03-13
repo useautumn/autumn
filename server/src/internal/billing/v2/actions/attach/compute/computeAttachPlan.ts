@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
@@ -39,10 +40,19 @@ export const computeAttachPlan = ({
 	const newCustomerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
+		params,
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
 		attachBillingContext,
+	});
+
+	const {
+		entitlements: carriedOverEntitlements,
+		customerEntitlements: carriedOverCustomerEntitlements,
+	} = cusProductToExistingBalanceCarryOvers({
+		attachBillingContext,
+		params,
 	});
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
@@ -62,9 +72,13 @@ export const computeAttachPlan = ({
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,
-		customEntitlements: customEnts,
+		customEntitlements: [
+			...(customEnts ?? []),
+			...(carriedOverEntitlements ?? []),
+		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems,
+		insertCustomerEntitlements: [...(carriedOverCustomerEntitlements ?? [])],
 		updateCustomerEntitlements,
 	};
 

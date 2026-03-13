@@ -35,6 +35,16 @@ export const attachCustomLineItemSchema = z.object({
 	description: z.string(),
 });
 
+export const attachCarryOverBalancesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const attachCarryOverUsagesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const attachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -136,6 +146,16 @@ export const attachCustomLineItemOutboundSchema = z.object({
 	description: z.string(),
 });
 
+export const attachCarryOverBalancesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const attachCarryOverUsagesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -149,6 +169,7 @@ export const attachParamsOutboundSchema = z.object({
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
+	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountOutboundSchema), z.undefined()])
@@ -163,6 +184,12 @@ export const attachParamsOutboundSchema = z.object({
 		.union([z.array(attachCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
 	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	carry_over_balances: z
+		.union([attachCarryOverBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([attachCarryOverUsagesOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -247,6 +274,8 @@ export const attachCustomizeSchema = z.object({
 
 export const attachProrationBehaviorSchema = closedEnumSchema;
 
+export const attachRedirectModeSchema = closedEnumSchema;
+
 export const attachPlanScheduleSchema = closedEnumSchema;
 
 export const attachParamsSchema = z.object({
@@ -262,6 +291,7 @@ export const attachParamsSchema = z.object({
 	prorationBehavior: z
 		.union([attachProrationBehaviorSchema, z.undefined()])
 		.optional(),
+	redirectMode: z.union([attachRedirectModeSchema, z.undefined()]).optional(),
 	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountSchema), z.undefined()])
@@ -276,6 +306,12 @@ export const attachParamsSchema = z.object({
 		.union([z.array(attachCustomLineItemSchema), z.undefined()])
 		.optional(),
 	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	carryOverBalances: z
+		.union([attachCarryOverBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([attachCarryOverUsagesSchema, z.undefined()])
+		.optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;

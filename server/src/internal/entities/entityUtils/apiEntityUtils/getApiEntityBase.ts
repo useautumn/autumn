@@ -43,7 +43,7 @@ export const getApiEntityBase = async ({
 	};
 
 	// Reuse existing customer functions with filtered products
-	const { data: apiBalances } = await getApiBalances({
+	const { balances: apiBalances, flags: apiFlags } = await getApiBalances({
 		ctx,
 		fullCus: filteredFullCus,
 	});
@@ -71,6 +71,7 @@ export const getApiEntityBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		balances: apiBalances,
+		flags: apiFlags,
 		billing_controls: { spend_limits: entity.spend_limits ?? undefined },
 	} satisfies ApiEntityV2);
 

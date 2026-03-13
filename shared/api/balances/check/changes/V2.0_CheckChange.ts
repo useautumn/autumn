@@ -1,3 +1,4 @@
+import { flagV0ToBalanceV0 } from "@api/models.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -33,7 +34,11 @@ export const V2_0_CheckChange = defineVersionChange({
 	}): z.infer<typeof CheckResponseV2Schema> => {
 		return {
 			...input,
-			balance: input.balance ? balanceV1ToV0({ input: input.balance }) : null,
+			balance: input.balance
+				? balanceV1ToV0({ input: input.balance })
+				: input.flag
+					? flagV0ToBalanceV0({ input: input.flag })
+					: null,
 		};
 	},
 });

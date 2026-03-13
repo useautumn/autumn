@@ -26,8 +26,9 @@ import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
 
 export function AttachAdvancedSection() {
-	const { form, formValues } = useAttachFormContext();
-	const { discounts, newBillingSubscription } = formValues;
+	const { form, formValues, previewQuery } = useAttachFormContext();
+	const { discounts, newBillingSubscription, redirectMode } = formValues;
+	const checkoutType = previewQuery.data?.checkout_type;
 
 	const {
 		hasActiveSubscription,
@@ -54,7 +55,10 @@ export function AttachAdvancedSection() {
 	const hasCustomSettings =
 		(hasActiveSubscription && (hasCustomSchedule || hasCustomBilling)) ||
 		newBillingSubscription ||
+		redirectMode === "always" ||
 		hasDiscounts;
+	const showRedirectModeRow =
+		checkoutType === "autumn_checkout" || checkoutType === null;
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -86,6 +90,10 @@ export function AttachAdvancedSection() {
 				return false;
 			}).length;
 			parts.push(`${validCount} discount${validCount > 1 ? "s" : ""}`);
+		}
+
+		if (redirectMode === "always") {
+			parts.push("Checkout redirect: Always");
 		}
 
 		return parts.join(" \u2022 ");
@@ -265,6 +273,46 @@ export function AttachAdvancedSection() {
 					)}
 				</div>
 			</motion.div>
+
+			{showRedirectModeRow && (
+				<motion.div variants={ACCORDION_ITEM}>
+					<div className="rounded-xl input-base px-3 py-2">
+						<div className="flex items-center justify-between gap-3">
+							<span className="text-sm text-t2">Checkout Redirect</span>
+							<div className="flex shrink-0">
+								<IconCheckbox
+									variant="secondary"
+									size="sm"
+									checked={redirectMode === "if_required"}
+									onCheckedChange={() =>
+										form.setFieldValue("redirectMode", "if_required")
+									}
+									className={cn(
+										"min-w-[76px] px-2 text-xs rounded-r-none",
+										redirectMode !== "if_required" && "border-r-0",
+									)}
+								>
+									Auto
+								</IconCheckbox>
+								<IconCheckbox
+									variant="secondary"
+									size="sm"
+									checked={redirectMode === "always"}
+									onCheckedChange={() =>
+										form.setFieldValue("redirectMode", "always")
+									}
+									className={cn(
+										"min-w-[76px] px-2 text-xs rounded-l-none",
+										redirectMode !== "always" && "border-l-0",
+									)}
+								>
+									Always
+								</IconCheckbox>
+							</div>
+						</div>
+					</div>
+				</motion.div>
+			)}
 		</AdvancedSection>
 	);
 }

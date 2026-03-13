@@ -58,6 +58,7 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 			CustomerExpand.SubscriptionsPlan,
 			CustomerExpand.PurchasesPlan,
 			CustomerExpand.BalancesFeature,
+			CustomerExpand.FlagsFeature,
 		];
 
 		return {
