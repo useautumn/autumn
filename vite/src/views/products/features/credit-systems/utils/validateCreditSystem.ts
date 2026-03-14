@@ -10,8 +10,14 @@ export const validateCreditSystem = (
 	const isAiCreditSystem = creditSystem.is_ai_credit_system ?? false;
 
 	if (isAiCreditSystem) {
-		for (const [modelId] of Object.entries(creditSystem.model_markups)) {
+		for (const [modelId, entry] of Object.entries(creditSystem.model_markups)) {
 			if (!modelId) return "Select a model for each row";
+			if (modelId.startsWith("custom/")) {
+				const customModelKey = modelId.slice("custom/".length);
+				if (!customModelKey) return "Custom model ID cannot be empty";
+				if (entry.input_cost == null || entry.output_cost == null)
+					return "Custom models require input and output costs";
+			}
 		}
 		return null;
 	}

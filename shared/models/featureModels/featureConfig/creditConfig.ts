@@ -17,13 +17,17 @@ export const CreditSystemConfigSchema = z.object({
 	usage_type: z.nativeEnum(FeatureUsageType),
 });
 
-export const ModelMarkups = z.record(
-	z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
-	z.object({
-		markup: z.number(), // percentage markup, e.g. 20 for 20%
-		humanModelName: z.string().optional(), // e.g. "Claude Opus 4.5" for UI display
-	}),
-).nullish()
+export const ModelMarkups = z
+	.record(
+		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
+		z.object({
+			markup: z.number(), // percentage markup, e.g. 20 for 20%
+			humanModelName: z.string().optional(), // e.g. "Claude Opus 4.5" for UI display
+			input_cost: z.number().optional(), // $/M tokens, required for custom/ models
+			output_cost: z.number().optional(), // $/M tokens, required for custom/ models
+		}),
+	)
+	.nullish();
 
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;

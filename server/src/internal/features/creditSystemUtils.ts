@@ -1,4 +1,3 @@
-import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
 import {
 	type CreditSchemaItem,
 	ErrCode,
@@ -7,6 +6,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -89,6 +89,24 @@ const getModelCreditCost = async ({
 	// Try exact match first (new "providerKey/modelKey" format)
 	const markupEntry = markups[modelName];
 	const { markup } = markupEntry ?? { markup: 0 };
+
+	if (modelName.startsWith("custom/")) {
+		if (!markupEntry?.input_cost || !markupEntry?.output_cost) {
+			throw new RecaseError({
+				message: `Custom model ${modelName} is missing input_cost or output_cost in model_markups`,
+				code: ErrCode.InvalidRequest,
+				data: { modelName },
+			});
+		}
+		const actualInputCost = new Decimal(markupEntry.input_cost);
+		const actualOutputCost = new Decimal(markupEntry.output_cost);
+		const totalCost = actualInputCost
+			.mul(input)
+			.add(actualOutputCost.mul(output))
+			.div(1_000_000);
+		const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
+		return markedUpCost.toNumber();
+	}
 
 	const pricingData = await getModelsDevPricing();
 	if (!pricingData) {
