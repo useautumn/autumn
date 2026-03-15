@@ -1,6 +1,7 @@
 import {
 	boolean,
 	foreignKey,
+	index,
 	numeric,
 	pgTable,
 	text,
@@ -25,5 +26,6 @@ export const freeTrials = pgTable(
 			foreignColumns: [products.internal_id],
 			name: "free_trials_internal_product_id_fkey",
 		}).onDelete("cascade"),
+		index("idx_free_trials_internal_product_id").on(table.internal_product_id),
 	],
 );
