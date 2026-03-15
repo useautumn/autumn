@@ -31,6 +31,7 @@ export const logUpdateSubscriptionContext = ({
 		ctx,
 		extras: {
 			billingContext: {
+				intent: billingContext.intent,
 				product: `${fullProduct?.id ?? "undefined"} (v${fullProduct?.version ?? "undefined"}) ${isCustom ? "custom" : "standard"}`,
 				customerProduct: `${customerProduct.id}`,
 

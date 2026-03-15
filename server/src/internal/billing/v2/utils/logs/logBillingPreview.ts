@@ -6,7 +6,7 @@ import type {
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-import type { NextCyclePreviewDebug } from "../billingPlan/billingPlanToNextCyclePreview";
+import type { NextCyclePreviewDebug } from "../billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
 
 const formatCustomerProduct = (customerProduct: FullCusProduct) =>
 	`${customerProduct.product.name} (${customerProduct.product_id}) [${customerProduct.status}]`;

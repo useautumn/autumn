@@ -113,11 +113,13 @@ export const getCheckData = async ({
 	});
 
 	const apiBalance = apiSubject.balances?.[featureToUse.id];
+	const apiFlag = apiSubject.flags?.[featureToUse.id];
 
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
 		apiBalance,
+		apiFlag,
 		apiSubject,
 		originalFeature: feature,
 		featureToUse,

@@ -12,6 +12,7 @@ import { balanceV1ToV0 } from "../cusFeatures/mappers/balanceV1ToV0";
 import type { ApiSubscription } from "../cusPlans/apiSubscription";
 import { apiPurchasesV0ToSubscriptionsV0 } from "../cusPlans/mappers/apiPurchasesV0ToSubscriptionsV0";
 import { apiSubscriptionsV1ToV0 } from "../cusPlans/mappers/apiSubscriptionsV1ToV0";
+import { flagV0ToBalanceV0 } from "../flags/mappers/flagV0ToBalanceV0";
 
 export const V2_0_CustomerChange = defineVersionChange({
 	name: "V2_0 Customer Change",
@@ -30,11 +31,16 @@ export const V2_0_CustomerChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof ApiCustomerV5Schema>;
 	}): z.infer<typeof ApiCustomerSchema> => {
-		// Transform balances from V1 to V0
 		const transformedBalances: Record<string, ApiBalance> = {};
 		if (input.balances) {
 			for (const [featureId, balance] of Object.entries(input.balances)) {
 				transformedBalances[featureId] = balanceV1ToV0({ input: balance });
+			}
+		}
+
+		if (input.flags) {
+			for (const [featureId, flag] of Object.entries(input.flags)) {
+				transformedBalances[featureId] = flagV0ToBalanceV0({ input: flag });
 			}
 		}
 

@@ -123,18 +123,6 @@ components:
           description: Billing controls for the customer (auto top-ups, etc.)
       title: CustomerData
       description: Customer details to set when creating a customer
-    CustomerExpand:
-      enum:
-        - invoices
-        - trials_used
-        - rewards
-        - entities
-        - referrals
-        - payment_method
-        - subscriptions.plan
-        - purchases.plan
-        - balances.feature
-      title: CustomerExpand
     Customer:
       type: object
       properties:
@@ -357,6 +345,102 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/Balance"
           description: Feature balances keyed by feature ID, showing usage limits and remaining amounts.
+        flags:
+          type: object
+          propertyNames:
+            type: string
+          additionalProperties:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The unique identifier for this flag.
+              plan_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                description: The plan ID this flag originates from, or null for standalone flags.
+              expires_at:
+                anyOf:
+                  - type: number
+                  - type: "null"
+                description: Timestamp when this flag expires, or null for no expiration.
+              feature_id:
+                type: string
+                description: The feature ID this flag is for.
+              feature:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for this feature, used in /check and /track calls.
+                  name:
+                    type: string
+                    description: Human-readable name displayed in the dashboard and billing UI.
+                  type:
+                    enum:
+                      - boolean
+                      - metered
+                      - credit_system
+                    description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                  consumable:
+                    type: boolean
+                    description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                  event_names:
+                    type: array
+                    items:
+                      type: string
+                    description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                  credit_schema:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metered_feature_id:
+                          type: string
+                          description: ID of the metered feature that draws from this credit system.
+                        credit_cost:
+                          type: number
+                          description: Credits consumed per unit of the metered feature.
+                      required:
+                        - metered_feature_id
+                        - credit_cost
+                    description: "For credit_system features: maps metered features to their credit costs."
+                  display:
+                    type: object
+                    properties:
+                      singular:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Singular form for UI display (e.g., 'API call', 'seat').
+                      plural:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Plural form for UI display (e.g., 'API calls', 'seats').
+                    description: Display names for the feature in billing UI and customer-facing components.
+                  archived:
+                    type: boolean
+                    description: Whether the feature is archived and hidden from the dashboard.
+                required:
+                  - id
+                  - name
+                  - type
+                  - consumable
+                  - archived
+                description: The full feature object if expanded.
+            required:
+              - id
+              - plan_id
+              - expires_at
+              - feature_id
+            examples:
+              - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                plan_id: pro_plan
+                expires_at: null
+                feature_id: dashboard
+          description: Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
         invoices:
           type: array
           items:
@@ -568,6 +652,7 @@ components:
         - subscriptions
         - purchases
         - balances
+        - flags
       examples:
         - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
           name: Patrick
@@ -617,6 +702,12 @@ components:
                     resetsAt: 1773851121437
                   price: null
                   expiresAt: null
+          flags:
+            advanced_workflows:
+              id: cus_ent_abc123
+              plan_id: pro_plan
+              expires_at: null
+              feature_id: advanced_workflows
     Plan:
       type: object
       properties:
@@ -1237,8 +1328,6 @@ paths:
         @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 
         @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
-
-        @param expand - Customer expand options (optional)
       tags:
         - customers
       requestBody:
@@ -1362,8 +1451,7 @@ paths:
                 expand:
                   type: array
                   items:
-                    $ref: "#/components/schemas/CustomerExpand"
-                  description: Customer expand options
+                    type: string
               required:
                 - customer_id
               title: GetOrCreateCustomerParams
@@ -1671,6 +1759,102 @@ paths:
                           additionalProperties:
                             $ref: "#/components/schemas/Balance"
                           description: Feature balances keyed by feature ID, showing usage limits and remaining amounts.
+                        flags:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: The unique identifier for this flag.
+                              plan_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The plan ID this flag originates from, or null for standalone flags.
+                              expires_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Timestamp when this flag expires, or null for no expiration.
+                              feature_id:
+                                type: string
+                                description: The feature ID this flag is for.
+                              feature:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    description: The unique identifier for this feature, used in /check and /track calls.
+                                  name:
+                                    type: string
+                                    description: Human-readable name displayed in the dashboard and billing UI.
+                                  type:
+                                    enum:
+                                      - boolean
+                                      - metered
+                                      - credit_system
+                                    description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                                  consumable:
+                                    type: boolean
+                                    description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                                  event_names:
+                                    type: array
+                                    items:
+                                      type: string
+                                    description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                                  credit_schema:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          description: ID of the metered feature that draws from this credit system.
+                                        credit_cost:
+                                          type: number
+                                          description: Credits consumed per unit of the metered feature.
+                                      required:
+                                        - metered_feature_id
+                                        - credit_cost
+                                    description: "For credit_system features: maps metered features to their credit costs."
+                                  display:
+                                    type: object
+                                    properties:
+                                      singular:
+                                        anyOf:
+                                          - type: string
+                                          - type: "null"
+                                        description: Singular form for UI display (e.g., 'API call', 'seat').
+                                      plural:
+                                        anyOf:
+                                          - type: string
+                                          - type: "null"
+                                        description: Plural form for UI display (e.g., 'API calls', 'seats').
+                                    description: Display names for the feature in billing UI and customer-facing components.
+                                  archived:
+                                    type: boolean
+                                    description: Whether the feature is archived and hidden from the dashboard.
+                                required:
+                                  - id
+                                  - name
+                                  - type
+                                  - consumable
+                                  - archived
+                                description: The full feature object if expanded.
+                            required:
+                              - id
+                              - plan_id
+                              - expires_at
+                              - feature_id
+                            examples:
+                              - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                                plan_id: pro_plan
+                                expires_at: null
+                                feature_id: dashboard
+                          description: Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
                       required:
                         - id
                         - name
@@ -1685,6 +1869,7 @@ paths:
                         - subscriptions
                         - purchases
                         - balances
+                        - flags
                       examples:
                         - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                           name: Patrick
@@ -1734,6 +1919,12 @@ paths:
                                     resetsAt: 1773851121437
                                   price: null
                                   expiresAt: null
+                          flags:
+                            advanced_workflows:
+                              id: cus_ent_abc123
+                              plan_id: pro_plan
+                              expires_at: null
+                              feature_id: advanced_workflows
                     description: Array of items for current page
                   has_more:
                     type: boolean
@@ -1803,6 +1994,12 @@ paths:
                                   resetsAt: 1773851121437
                                 price: null
                                 expiresAt: null
+                        flags:
+                          advanced_workflows:
+                            id: cus_ent_abc123
+                            plan_id: pro_plan
+                            expires_at: null
+                            feature_id: advanced_workflows
                     has_more: false
                     offset: 0
                     total: 1
@@ -2165,6 +2362,102 @@ paths:
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
                     description: Feature balances keyed by feature ID, showing usage limits and remaining amounts.
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit costs."
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
+                    description: Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
                 required:
                   - id
                   - name
@@ -2179,6 +2472,7 @@ paths:
                   - subscriptions
                   - purchases
                   - balances
+                  - flags
                 examples:
                   - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                     name: Patrick
@@ -2228,6 +2522,12 @@ paths:
                               resetsAt: 1773851121437
                             price: null
                             expiresAt: null
+                    flags:
+                      advanced_workflows:
+                        id: cus_ent_abc123
+                        plan_id: pro_plan
+                        expires_at: null
+                        feature_id: advanced_workflows
       x-speakeasy-name-override: update
       parameters:
         - *a1
@@ -4591,6 +4891,7 @@ paths:
 
         const response = await client.features.create({
 
+
           featureId: "api-calls",
           name: "API Calls",
           type: "metered",
@@ -5314,6 +5615,8 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
+
         @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 
         @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
@@ -5329,6 +5632,10 @@ paths:
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+
+        @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+
+        @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
@@ -5583,6 +5890,13 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+                  default: if_required
                 subscription_id:
                   type: string
                   description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -5635,6 +5949,34 @@ paths:
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+                carry_over_balances:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over balances from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over balances from the previous plan.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
                 - plan_id
@@ -6206,6 +6548,8 @@ paths:
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
+        @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
+
         @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 
         @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
@@ -6221,6 +6565,10 @@ paths:
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+
+        @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+
+        @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 
         @returns A preview response with line items, totals, and effective dates for the proposed changes.
@@ -6475,6 +6823,13 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+                  default: if_required
                 subscription_id:
                   type: string
                   description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -6527,6 +6882,34 @@ paths:
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+                carry_over_balances:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over balances from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over balances from the previous plan.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
                 - plan_id
@@ -6550,40 +6933,74 @@ paths:
                     items:
                       type: object
                       properties:
-                        title:
+                        display_name:
                           type: string
-                          description: The title of the line item.
+                          description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
                         description:
                           type: string
                           description: A detailed description of the line item.
-                        amount:
+                        subtotal:
                           type: number
-                          description: The amount in cents for this line item.
+                          description: The amount in cents before discounts for this line item.
+                        total:
+                          type: number
+                          description: The final amount in cents after discounts for this line item.
                         discounts:
                           type: array
                           items:
                             type: object
                             properties:
-                              amountOff:
+                              amount_off:
                                 type: number
-                              percentOff:
+                              percent_off:
                                 type: number
-                              stripeCouponId:
+                              reward_id:
                                 type: string
-                              couponName:
+                              reward_name:
                                 type: string
                             required:
-                              - amountOff
+                              - amount_off
                           default: []
                           description: List of discounts applied to this line item.
+                        plan_id:
+                          type: string
+                          description: The ID of the plan that this line item belongs to.
+                        feature_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The ID of the feature that this line item belongs to.
+                        period:
+                          type: object
+                          properties:
+                            start:
+                              type: number
+                              description: The start of the period in milliseconds since the Unix epoch.
+                            end:
+                              type: number
+                              description: The end of the period in milliseconds since the Unix epoch.
+                          required:
+                            - start
+                            - end
+                          description: The period of time that this line item is being charged for.
+                        quantity:
+                          type: number
+                          description: The quantity of the line item.
                       required:
-                        - title
+                        - display_name
                         - description
-                        - amount
+                        - subtotal
+                        - total
+                        - plan_id
+                        - feature_id
+                        - quantity
                     description: List of line items for the current billing period.
+                  subtotal:
+                    type: number
+                    description: The total amount in cents before discounts for the current billing period.
                   total:
                     type: number
-                    description: The total amount in cents for the current billing period.
+                    description: The final amount in cents after discounts for the current billing period.
                   currency:
                     type: string
                     description: The three-letter ISO currency code (e.g., 'usd').
@@ -6593,25 +7010,202 @@ paths:
                       starts_at:
                         type: number
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
+                      subtotal:
+                        type: number
+                        description: The total amount in cents before discounts for the next cycle.
                       total:
                         type: number
-                        description: The total amount in cents for the next cycle.
+                        description: The final amount in cents after discounts for the next cycle.
+                      line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            description:
+                              type: string
+                              description: A detailed description of the line item.
+                            subtotal:
+                              type: number
+                              description: The amount in cents before discounts for this line item.
+                            total:
+                              type: number
+                              description: The final amount in cents after discounts for this line item.
+                            discounts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  amount_off:
+                                    type: number
+                                  percent_off:
+                                    type: number
+                                  reward_id:
+                                    type: string
+                                  reward_name:
+                                    type: string
+                                required:
+                                  - amount_off
+                              default: []
+                              description: List of discounts applied to this line item.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                            quantity:
+                              type: number
+                              description: The quantity of the line item.
+                          required:
+                            - display_name
+                            - description
+                            - subtotal
+                            - total
+                            - plan_id
+                            - feature_id
+                            - quantity
+                        description: List of line items for the next billing cycle.
+                      usage_line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                          required:
+                            - display_name
+                            - plan_id
+                            - feature_id
+                        description: List of line items for usage-based features in the next cycle.
                     required:
                       - starts_at
+                      - subtotal
                       - total
+                      - line_items
+                      - usage_line_items
                     description: Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
+                  expand:
+                    type: array
+                    items:
+                      type: string
+                    description: Expand the response with additional data.
+                  incoming:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being added or updated.
+                  outgoing:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being removed or ended.
                 required:
                   - customer_id
                   - line_items
+                  - subtotal
                   - total
                   - currency
+                  - incoming
+                  - outgoing
                 examples:
                   - customerId: charles
                     lineItems:
-                      - title: Pro seed
+                      - display_name: Pro seed
                         description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
-                        amount: 20
+                        subtotal: 20
+                        total: 20
                         discounts: []
+                    subtotal: 20
                     total: 20
                     currency: usd
       x-speakeasy-name-override: previewAttach
@@ -6996,40 +7590,74 @@ paths:
                     items:
                       type: object
                       properties:
-                        title:
+                        display_name:
                           type: string
-                          description: The title of the line item.
+                          description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
                         description:
                           type: string
                           description: A detailed description of the line item.
-                        amount:
+                        subtotal:
                           type: number
-                          description: The amount in cents for this line item.
+                          description: The amount in cents before discounts for this line item.
+                        total:
+                          type: number
+                          description: The final amount in cents after discounts for this line item.
                         discounts:
                           type: array
                           items:
                             type: object
                             properties:
-                              amountOff:
+                              amount_off:
                                 type: number
-                              percentOff:
+                              percent_off:
                                 type: number
-                              stripeCouponId:
+                              reward_id:
                                 type: string
-                              couponName:
+                              reward_name:
                                 type: string
                             required:
-                              - amountOff
+                              - amount_off
                           default: []
                           description: List of discounts applied to this line item.
+                        plan_id:
+                          type: string
+                          description: The ID of the plan that this line item belongs to.
+                        feature_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The ID of the feature that this line item belongs to.
+                        period:
+                          type: object
+                          properties:
+                            start:
+                              type: number
+                              description: The start of the period in milliseconds since the Unix epoch.
+                            end:
+                              type: number
+                              description: The end of the period in milliseconds since the Unix epoch.
+                          required:
+                            - start
+                            - end
+                          description: The period of time that this line item is being charged for.
+                        quantity:
+                          type: number
+                          description: The quantity of the line item.
                       required:
-                        - title
+                        - display_name
                         - description
-                        - amount
+                        - subtotal
+                        - total
+                        - plan_id
+                        - feature_id
+                        - quantity
                     description: List of line items for the current billing period.
+                  subtotal:
+                    type: number
+                    description: The total amount in cents before discounts for the current billing period.
                   total:
                     type: number
-                    description: The total amount in cents for the current billing period.
+                    description: The final amount in cents after discounts for the current billing period.
                   currency:
                     type: string
                     description: The three-letter ISO currency code (e.g., 'usd').
@@ -7039,25 +7667,202 @@ paths:
                       starts_at:
                         type: number
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
+                      subtotal:
+                        type: number
+                        description: The total amount in cents before discounts for the next cycle.
                       total:
                         type: number
-                        description: The total amount in cents for the next cycle.
+                        description: The final amount in cents after discounts for the next cycle.
+                      line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            description:
+                              type: string
+                              description: A detailed description of the line item.
+                            subtotal:
+                              type: number
+                              description: The amount in cents before discounts for this line item.
+                            total:
+                              type: number
+                              description: The final amount in cents after discounts for this line item.
+                            discounts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  amount_off:
+                                    type: number
+                                  percent_off:
+                                    type: number
+                                  reward_id:
+                                    type: string
+                                  reward_name:
+                                    type: string
+                                required:
+                                  - amount_off
+                              default: []
+                              description: List of discounts applied to this line item.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                            quantity:
+                              type: number
+                              description: The quantity of the line item.
+                          required:
+                            - display_name
+                            - description
+                            - subtotal
+                            - total
+                            - plan_id
+                            - feature_id
+                            - quantity
+                        description: List of line items for the next billing cycle.
+                      usage_line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                          required:
+                            - display_name
+                            - plan_id
+                            - feature_id
+                        description: List of line items for usage-based features in the next cycle.
                     required:
                       - starts_at
+                      - subtotal
                       - total
+                      - line_items
+                      - usage_line_items
                     description: Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
+                  expand:
+                    type: array
+                    items:
+                      type: string
+                    description: Expand the response with additional data.
+                  incoming:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being added or updated.
+                  outgoing:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being removed or ended.
                 required:
                   - customer_id
                   - line_items
+                  - subtotal
                   - total
                   - currency
+                  - incoming
+                  - outgoing
                 examples:
                   - customerId: charles
                     lineItems:
-                      - title: Pro seed
+                      - display_name: Pro seed
                         description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
-                        amount: 20
+                        subtotal: 20
+                        total: 20
                         discounts: []
+                    subtotal: 20
                     total: 20
                     currency: usd
       x-speakeasy-name-override: previewMultiAttach
@@ -7121,6 +7926,8 @@ paths:
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+
+        @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 
         @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 
@@ -7381,6 +8188,13 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+                  default: if_required
                 subscription_id:
                   type: string
                   description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -7517,6 +8331,8 @@ paths:
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+
+        @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 
         @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 
@@ -7777,6 +8593,13 @@ paths:
                     - prorate_immediately
                     - none
                   description: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+                redirect_mode:
+                  enum:
+                    - always
+                    - if_required
+                    - never
+                  description: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+                  default: if_required
                 subscription_id:
                   type: string
                   description: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -7814,40 +8637,74 @@ paths:
                     items:
                       type: object
                       properties:
-                        title:
+                        display_name:
                           type: string
-                          description: The title of the line item.
+                          description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
                         description:
                           type: string
                           description: A detailed description of the line item.
-                        amount:
+                        subtotal:
                           type: number
-                          description: The amount in cents for this line item.
+                          description: The amount in cents before discounts for this line item.
+                        total:
+                          type: number
+                          description: The final amount in cents after discounts for this line item.
                         discounts:
                           type: array
                           items:
                             type: object
                             properties:
-                              amountOff:
+                              amount_off:
                                 type: number
-                              percentOff:
+                              percent_off:
                                 type: number
-                              stripeCouponId:
+                              reward_id:
                                 type: string
-                              couponName:
+                              reward_name:
                                 type: string
                             required:
-                              - amountOff
+                              - amount_off
                           default: []
                           description: List of discounts applied to this line item.
+                        plan_id:
+                          type: string
+                          description: The ID of the plan that this line item belongs to.
+                        feature_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The ID of the feature that this line item belongs to.
+                        period:
+                          type: object
+                          properties:
+                            start:
+                              type: number
+                              description: The start of the period in milliseconds since the Unix epoch.
+                            end:
+                              type: number
+                              description: The end of the period in milliseconds since the Unix epoch.
+                          required:
+                            - start
+                            - end
+                          description: The period of time that this line item is being charged for.
+                        quantity:
+                          type: number
+                          description: The quantity of the line item.
                       required:
-                        - title
+                        - display_name
                         - description
-                        - amount
+                        - subtotal
+                        - total
+                        - plan_id
+                        - feature_id
+                        - quantity
                     description: List of line items for the current billing period.
+                  subtotal:
+                    type: number
+                    description: The total amount in cents before discounts for the current billing period.
                   total:
                     type: number
-                    description: The total amount in cents for the current billing period.
+                    description: The final amount in cents after discounts for the current billing period.
                   currency:
                     type: string
                     description: The three-letter ISO currency code (e.g., 'usd').
@@ -7857,25 +8714,211 @@ paths:
                       starts_at:
                         type: number
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
+                      subtotal:
+                        type: number
+                        description: The total amount in cents before discounts for the next cycle.
                       total:
                         type: number
-                        description: The total amount in cents for the next cycle.
+                        description: The final amount in cents after discounts for the next cycle.
+                      line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            description:
+                              type: string
+                              description: A detailed description of the line item.
+                            subtotal:
+                              type: number
+                              description: The amount in cents before discounts for this line item.
+                            total:
+                              type: number
+                              description: The final amount in cents after discounts for this line item.
+                            discounts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  amount_off:
+                                    type: number
+                                  percent_off:
+                                    type: number
+                                  reward_id:
+                                    type: string
+                                  reward_name:
+                                    type: string
+                                required:
+                                  - amount_off
+                              default: []
+                              description: List of discounts applied to this line item.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                            quantity:
+                              type: number
+                              description: The quantity of the line item.
+                          required:
+                            - display_name
+                            - description
+                            - subtotal
+                            - total
+                            - plan_id
+                            - feature_id
+                            - quantity
+                        description: List of line items for the next billing cycle.
+                      usage_line_items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              description: The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+                            plan_id:
+                              type: string
+                              description: The ID of the plan that this line item belongs to.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature that this line item belongs to.
+                            period:
+                              type: object
+                              properties:
+                                start:
+                                  type: number
+                                  description: The start of the period in milliseconds since the Unix epoch.
+                                end:
+                                  type: number
+                                  description: The end of the period in milliseconds since the Unix epoch.
+                              required:
+                                - start
+                                - end
+                              description: The period of time that this line item is being charged for.
+                          required:
+                            - display_name
+                            - plan_id
+                            - feature_id
+                        description: List of line items for usage-based features in the next cycle.
                     required:
                       - starts_at
+                      - subtotal
                       - total
+                      - line_items
+                      - usage_line_items
                     description: Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
+                  expand:
+                    type: array
+                    items:
+                      type: string
+                    description: Expand the response with additional data.
+                  incoming:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being added or updated.
+                  outgoing:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                        feature_quantities:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              quantity:
+                                type: number
+                            required:
+                              - feature_id
+                              - quantity
+                        effective_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                      required:
+                        - plan_id
+                        - feature_quantities
+                        - effective_at
+                    description: Products or subscription changes being removed or ended.
+                  intent:
+                    enum:
+                      - update_plan
+                      - update_quantity
+                      - cancel_immediately
+                      - cancel_end_of_cycle
+                      - uncancel
+                      - none
                 required:
                   - customer_id
                   - line_items
+                  - subtotal
                   - total
                   - currency
+                  - incoming
+                  - outgoing
+                  - intent
                 examples:
                   - customerId: charles
                     lineItems:
-                      - title: Pro seed
+                      - display_name: Pro seed
                         description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
-                        amount: 20
+                        subtotal: 20
+                        total: 20
                         discounts: []
+                    subtotal: 20
                     total: 20
                     currency: usd
       x-speakeasy-name-override: previewUpdate
@@ -8214,6 +9257,34 @@ paths:
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+                carry_over_balances:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over balances from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over balances from the previous plan.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -8546,6 +9617,7 @@ paths:
 
         const response = await client.check({
 
+
           customerId: "cus_123",
           featureId: "messages",
           requiredBalance: 3,
@@ -8659,6 +9731,100 @@ paths:
                       - $ref: "#/components/schemas/Balance"
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has no balance for this feature.
+                  flag:
+                    anyOf:
+                      - type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The unique identifier for this flag.
+                          plan_id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            description: The plan ID this flag originates from, or null for standalone flags.
+                          expires_at:
+                            anyOf:
+                              - type: number
+                              - type: "null"
+                            description: Timestamp when this flag expires, or null for no expiration.
+                          feature_id:
+                            type: string
+                            description: The feature ID this flag is for.
+                          feature:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: The unique identifier for this feature, used in /check and /track calls.
+                              name:
+                                type: string
+                                description: Human-readable name displayed in the dashboard and billing UI.
+                              type:
+                                enum:
+                                  - boolean
+                                  - metered
+                                  - credit_system
+                                description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                              consumable:
+                                type: boolean
+                                description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                              event_names:
+                                type: array
+                                items:
+                                  type: string
+                                description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                              credit_schema:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    metered_feature_id:
+                                      type: string
+                                      description: ID of the metered feature that draws from this credit system.
+                                    credit_cost:
+                                      type: number
+                                      description: Credits consumed per unit of the metered feature.
+                                  required:
+                                    - metered_feature_id
+                                    - credit_cost
+                                description: "For credit_system features: maps metered features to their credit costs."
+                              display:
+                                type: object
+                                properties:
+                                  singular:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: Singular form for UI display (e.g., 'API call', 'seat').
+                                  plural:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: Plural form for UI display (e.g., 'API calls', 'seats').
+                                description: Display names for the feature in billing UI and customer-facing components.
+                              archived:
+                                type: boolean
+                                description: Whether the feature is archived and hidden from the dashboard.
+                            required:
+                              - id
+                              - name
+                              - type
+                              - consumable
+                              - archived
+                            description: The full feature object if expanded.
+                        required:
+                          - id
+                          - plan_id
+                          - expires_at
+                          - feature_id
+                        examples:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            expires_at: null
+                            feature_id: dashboard
+                      - type: "null"
+                    description: The flag associated with this check, if any.
                   preview:
                     type: object
                     properties:
@@ -8980,6 +10146,7 @@ paths:
                   - allowed
                   - customer_id
                   - balance
+                  - flag
                 examples:
                   - allowed: true
                     customer_id: cus_123
@@ -9504,6 +10671,7 @@ paths:
 
         const response = await client.entities.create({
 
+
           customerId: "cus_123",
           entityId: "seat_42",
           featureId: "seats",
@@ -9726,6 +10894,101 @@ paths:
                       type: string
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit costs."
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
                   billing_controls:
                     type: object
                     properties:
@@ -9793,6 +11056,7 @@ paths:
                   - subscriptions
                   - purchases
                   - balances
+                  - flags
                 examples:
                   - id: seat_42
                     name: Seat 42
@@ -10043,6 +11307,101 @@ paths:
                       type: string
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit costs."
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
                   billing_controls:
                     type: object
                     properties:
@@ -10110,6 +11469,7 @@ paths:
                   - subscriptions
                   - purchases
                   - balances
+                  - flags
                 examples:
                   - id: seat_42
                     name: Seat 42
@@ -10366,6 +11726,101 @@ paths:
                       type: string
                     additionalProperties:
                       $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit costs."
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
                   billing_controls:
                     type: object
                     properties:
@@ -10433,6 +11888,7 @@ paths:
                   - subscriptions
                   - purchases
                   - balances
+                  - flags
                 examples:
                   - id: seat_42
                     name: Seat 42

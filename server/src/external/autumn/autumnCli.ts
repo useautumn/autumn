@@ -437,14 +437,21 @@ export class AutumnInt {
 				expand?: CustomerExpand[];
 				skip_cache?: string;
 				with_autumn_id?: boolean;
+				keepInternalFields?: boolean;
 			},
 		): Promise<T> => {
+			const { keepInternalFields, ...queryParamsInput } = params || {};
 			const queryParams = new URLSearchParams();
+			const headers: Record<string, string> = {};
 			const defaultParams = {
 				expand: [CustomerExpand.Invoices],
 			};
 
-			const finalParams = { ...defaultParams, ...params };
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
+			const finalParams = { ...defaultParams, ...queryParamsInput };
 			if (finalParams.expand) {
 				queryParams.append("expand", finalParams.expand.join(","));
 			}
@@ -459,6 +466,7 @@ export class AutumnInt {
 			}
 			const data = await this.get(
 				`/customers/${customerId}?${queryParams.toString()}`,
+				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 			return data;
 		},
@@ -549,14 +557,21 @@ export class AutumnInt {
 			params?: {
 				expand?: EntityExpand[];
 				skip_cache?: string;
+				keepInternalFields?: boolean;
 			},
 		): Promise<T> => {
+			const { keepInternalFields, ...queryParamsInput } = params || {};
 			const queryParams = new URLSearchParams();
+			const headers: Record<string, string> = {};
 			const defaultParams = {
 				expand: [EntityExpand.Invoices],
 			};
 
-			const finalParams = { ...defaultParams, ...params };
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
+			const finalParams = { ...defaultParams, ...queryParamsInput };
 			if (finalParams.expand) {
 				queryParams.append("expand", finalParams.expand.join(","));
 			}
@@ -566,6 +581,7 @@ export class AutumnInt {
 
 			const data = await this.get(
 				`/customers/${customerId}/entities/${entityId}?${queryParams.toString()}`,
+				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 			return data as T;
 		},

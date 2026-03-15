@@ -111,21 +111,7 @@ export function createRoute<
 }): [H, ...H[]] {
 	const middlewares: H[] = [];
 
-	// Use versioned validator if versionedBody provided
-	if (opts.versionedBody && opts.resource) {
-		middlewares.push(
-			versionedValidator({
-				target: "json",
-				schemas: opts.versionedBody,
-				resource: opts.resource,
-			}),
-		);
-	} else if (opts.body) {
-		// Fallback to regular validator for single-version endpoints
-		middlewares.push(validator("json", opts.body));
-	}
-
-	// Same for query
+	// Query validation runs before expand so ctx.expand can keep using validated query data.
 	if (opts.versionedQuery && opts.resource) {
 		middlewares.push(
 			versionedValidator({
@@ -143,9 +129,22 @@ export function createRoute<
 		middlewares.push(validator("param", opts.params));
 	}
 
-	// Add expand middleware after validation (handles both query and body expand)
+	// Expand reads query from validated data and body from raw JSON before body validation.
 	if (opts.query || opts.versionedQuery || opts.body || opts.versionedBody) {
 		middlewares.push(expandMiddleware());
+	}
+
+	// Body validation runs after expand so body-based expand does not depend on Zod parsing.
+	if (opts.versionedBody && opts.resource) {
+		middlewares.push(
+			versionedValidator({
+				target: "json",
+				schemas: opts.versionedBody,
+				resource: opts.resource,
+			}),
+		);
+	} else if (opts.body) {
+		middlewares.push(validator("json", opts.body));
 	}
 
 	const wrappedHandler = async (

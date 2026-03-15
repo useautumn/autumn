@@ -24,6 +24,11 @@
 			"url": "https://mcp.tinybird.co?token={env:TINYBIRD_READ_TOKEN}",
 			"oauth": false,
 			"enabled": true
+		},
+		"vercel": {
+			"type": "remote",
+			"url": "https://mcp.vercel.com",
+			"enabled": true
 		}
 	},
 

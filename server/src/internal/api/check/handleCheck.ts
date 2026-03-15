@@ -91,7 +91,8 @@ export const handleCheck = createRoute({
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,
 			legacyData: {
-				noCusEnts: checkData.apiBalance === undefined,
+				noCusEnts:
+					checkData.apiBalance === undefined && checkData.apiFlag === undefined,
 				featureToUse: checkData.featureToUse,
 			},
 			ctx,

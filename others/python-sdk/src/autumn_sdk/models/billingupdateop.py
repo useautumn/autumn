@@ -607,6 +607,14 @@ BillingUpdateProrationBehavior = Literal[
 r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
+BillingUpdateRedirectMode = Literal[
+    "always",
+    "if_required",
+    "never",
+]
+r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
+
+
 BillingUpdateCancelAction = Literal[
     "cancel_immediately",
     "cancel_end_of_cycle",
@@ -632,6 +640,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[BillingUpdateProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    redirect_mode: NotRequired[BillingUpdateRedirectMode]
+    r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     cancel_action: NotRequired[BillingUpdateCancelAction]
@@ -665,6 +675,9 @@ class UpdateSubscriptionParams(BaseModel):
     proration_behavior: Optional[BillingUpdateProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    redirect_mode: Optional[BillingUpdateRedirectMode] = "if_required"
+    r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
+
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
 
@@ -685,6 +698,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
+                "redirect_mode",
                 "subscription_id",
                 "cancel_action",
                 "no_billing_changes",

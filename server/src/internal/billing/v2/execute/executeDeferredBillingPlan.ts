@@ -1,9 +1,14 @@
-import type { DeferredAutumnBillingPlanData, Metadata } from "@autumn/shared";
+import {
+	CheckoutStatus,
+	type DeferredAutumnBillingPlanData,
+	type Metadata,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { checkoutActions, checkoutRepo } from "@/internal/checkouts";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
@@ -57,6 +62,23 @@ export const executeDeferredBillingPlan = async ({
 	});
 
 	await MetadataService.delete({ db, id: metadata.id });
+
+	const finalStripeInvoice = stripeBillingResult.stripeInvoice ?? stripeInvoice;
+	const checkout = await checkoutRepo.getByStripeInvoiceId({
+		db,
+		stripeInvoiceId: finalStripeInvoice?.id ?? "",
+	});
+
+	if (finalStripeInvoice?.id && checkout) {
+		await checkoutActions.updateDbAndCache({
+			ctx,
+			oldCheckout: checkout,
+			updates: {
+				status: CheckoutStatus.Completed,
+				completed_at: Date.now(),
+			},
+		});
+	}
 
 	await deleteCachedFullCustomer({
 		ctx,

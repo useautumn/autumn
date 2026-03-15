@@ -2,10 +2,12 @@ import { motion } from "motion/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { GENTLE_SPRING, STANDARD_TRANSITION } from "@/lib/animations";
+import { checkoutRouteTitle } from "@/utils/checkoutRouteMode";
 
 export function CheckoutHeader() {
-	const { org, status, headerDescription } = useCheckoutContext();
+	const { org, routeMode, status, headerDescription } = useCheckoutContext();
 	const isLoading = status.isLoading;
+	const title = checkoutRouteTitle({ routeMode });
 	return (
 		<div className="flex flex-col gap-4">
 			{/* Org branding */}
@@ -37,9 +39,7 @@ export function CheckoutHeader() {
 
 			{/* Title and description */}
 			<div className="flex flex-col gap-2">
-				<h1 className="text-2xl text-foreground tracking-tight">
-					Confirm your order
-				</h1>
+				<h1 className="text-2xl text-foreground tracking-tight">{title}</h1>
 				{isLoading ? (
 					<div className="flex flex-col gap-1.5">
 						<Skeleton className="h-3.5 w-full" />

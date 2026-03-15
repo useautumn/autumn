@@ -1,4 +1,4 @@
-import type { FinalizeLockParamsV0 } from "@autumn/shared";
+import { type FinalizeLockParamsV0, notNullish } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cancelLockExpiry } from "@/internal/balances/utils/lock/cancelLockExpiry.js";
@@ -25,12 +25,13 @@ export const runFinalizeLock = async ({
 	});
 
 	try {
-		// Cancel any pending EventBridge expiry schedule for this lock
-		await cancelLockExpiry({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			hashedKey: Bun.hash(params.lock_id).toString(),
-		});
+		if (notNullish(receipt.expires_at)) {
+			await cancelLockExpiry({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				hashedKey: Bun.hash(params.lock_id).toString(),
+			});
+		}
 	} catch (error) {
 		ctx.logger.error(`Failed to cancel lock expiry: ${error}`);
 	}

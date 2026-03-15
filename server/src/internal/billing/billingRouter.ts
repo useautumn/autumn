@@ -5,7 +5,7 @@ import { handleCancelV2 } from "@/internal/customers/cancel/handleCancelV2.js";
 import { handleOpenCustomerPortalV2 } from "@/internal/customers/handlers/handleBillingPortal/handleOpenCustomerPortalV2.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
-import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
+import { handleLegacyApiCheckout } from "./checkout/handleLegacyApiCheckout.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
 import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
@@ -21,7 +21,7 @@ billingRouter.post("/attach/preview", ...handleAttachPreview);
 billingRouter.post("/cancel", ...handleCancelV2);
 
 billingRouter.post("/setup_payment", ...handleSetupPayment);
-billingRouter.post("/checkout", ...handleCheckoutV2);
+billingRouter.post("/checkout", ...handleLegacyApiCheckout);
 billingRouter.post("/attach", ...handleAttach);
 
 export const billingRpcRouter = new Hono<HonoEnv>();
