@@ -78,7 +78,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
         FROM free_trials ft
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
-      WHERE cp.internal_customer_id = (SELECT internal_id COLLATE "default" FROM customer_record)
+      WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
     )
   `;
@@ -217,7 +217,7 @@ const buildExtraEntitlementsCTE = () => {
           '[]'::json
         ) AS extra_customer_entitlements
       FROM customer_entitlements ce
-      WHERE ce.internal_customer_id = (SELECT internal_id COLLATE "default" FROM customer_record)
+      WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
         AND ce.customer_product_id IS NULL
         AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
     )
