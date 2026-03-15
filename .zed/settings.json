@@ -52,5 +52,13 @@
 			"language_servers": ["biome", "..."],
 			"formatter": { "language_server": { "name": "biome" } }
 		}
+	},
+	"context_servers": {
+		"vercel": {
+			"source": "custom",
+			"type": "http",
+			"url": "https://mcp.vercel.com",
+			"headers": {}
+		}
 	}
 }

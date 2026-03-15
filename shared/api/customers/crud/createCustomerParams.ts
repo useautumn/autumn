@@ -5,10 +5,7 @@ import {
 import { CustomerIdSchema } from "@api/common/customerId";
 import { EntityDataSchema } from "@api/common/entityData";
 import { queryStringArray } from "@api/common/queryHelpers";
-import {
-	CustomerExpandArraySchema,
-	CustomerExpandEnum,
-} from "@api/customers/components/customerExpand/customerExpand";
+import { CustomerExpandEnum } from "@api/customers/components/customerExpand/customerExpand";
 import { z } from "zod/v4";
 
 export const CreateCustomerQuerySchema = z.object({
@@ -25,7 +22,11 @@ export const CreateCustomerParamsV0Schema = z
 		...CustomerDataSchema.shape,
 	})
 	.extend({
-		expand: CustomerExpandArraySchema.optional(),
+		// expand: CustomerExpandArraySchema.optional(),
+		expand: z.array(z.string()).optional().meta({
+			description:
+				"Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.",
+		}),
 
 		entity_id: z.string().optional().meta({
 			internal: true,

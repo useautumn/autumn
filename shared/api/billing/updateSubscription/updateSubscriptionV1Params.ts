@@ -2,6 +2,7 @@ import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
+import { RedirectModeSchema } from "../common/redirectMode";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
@@ -44,6 +45,7 @@ const UPDATE_FIELDS = [
 	"processor_subscription_id",
 	"no_billing_changes",
 	"status",
+	"redirect_mode",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
@@ -53,6 +55,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 		customer_product_id: z.string().optional().meta({
 			internal: true,
 		}),
+		redirect_mode: RedirectModeSchema.optional(),
 	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 		message:
 			"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",

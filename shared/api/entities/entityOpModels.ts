@@ -12,6 +12,7 @@ export const GetEntityQuerySchema = z.object({
 			CustomerExpand.SubscriptionsPlan,
 			CustomerExpand.PurchasesPlan,
 			CustomerExpand.BalancesFeature,
+			CustomerExpand.FlagsFeature,
 		]),
 	).default([]),
 	skip_cache: z.boolean().optional(),

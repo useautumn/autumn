@@ -8,7 +8,9 @@ import { CheckExpand } from "./enums/CheckExpand";
 
 export const CheckQuerySchema = z.object({
 	skip_cache: z.boolean().optional(),
-	expand: queryStringArray(z.enum([CheckExpand.BalanceFeature])).optional(),
+	expand: queryStringArray(
+		z.enum([CheckExpand.BalanceFeature, CheckExpand.FlagFeature]),
+	).optional(),
 });
 
 // Check Feature Schemas

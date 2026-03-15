@@ -1,5 +1,4 @@
 import {
-	type ApiPlanV1,
 	type ApiSubscriptionV1,
 	ApiSubscriptionV1Schema,
 	type CusProductLegacyData,
@@ -8,38 +7,65 @@ import {
 	cusProductToPlanStatus,
 	cusProductToProduct,
 	expandIncludes,
+	expandPathIncludes,
 	type FullCusProduct,
 	type FullCustomer,
 	isCustomerProductOneOff,
 	isCustomerProductTrialing,
 	type Subscription,
+	scopeExpandForCtx,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
-type SubscriptionExpandParams = { plan?: boolean };
-
-type ApiSubscriptionResult<T extends SubscriptionExpandParams> = {
-	data: T["plan"] extends true
-		? ApiSubscriptionV1 & { plan: ApiPlanV1 }
-		: ApiSubscriptionV1;
+type ApiSubscriptionResult = {
+	data: ApiSubscriptionV1;
 	legacyData: CusProductLegacyData;
 };
 
-export const getApiSubscription = async <
-	// biome-ignore lint/complexity/noBannedTypes: required for type inference
-	T extends SubscriptionExpandParams = {},
->({
+const handlePlanExpand = ({
+	ctx,
+	cusProduct,
+}: {
+	ctx: AutumnContext;
+	cusProduct: FullCusProduct;
+}): { planCtx: AutumnContext; shouldExpandPlan: boolean } => {
+	const planCtx = scopeExpandForCtx({
+		ctx,
+		prefix: "plan",
+	});
+
+	// Check if we should expand the plan object.
+	// Prefer scoped relative expand paths, but keep the legacy customer expand fallback.
+	const shouldExpandPlanFromScopedCtx = expandPathIncludes({
+		expand: ctx.expand,
+		includes: ["plan"],
+	});
+	const shouldExpandPlanFromLegacyCtx = isCustomerProductOneOff(cusProduct)
+		? expandIncludes({
+				expand: ctx.expand,
+				includes: [CustomerExpand.PurchasesPlan],
+			})
+		: expandIncludes({
+				expand: ctx.expand,
+				includes: [CustomerExpand.SubscriptionsPlan],
+			});
+
+	const shouldExpandPlan =
+		shouldExpandPlanFromScopedCtx || shouldExpandPlanFromLegacyCtx;
+
+	return { planCtx, shouldExpandPlan };
+};
+
+export const getApiSubscription = async ({
 	ctx,
 	fullCus,
 	cusProduct,
-	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
-	expandParams?: T;
-}): Promise<ApiSubscriptionResult<T>> => {
+}): Promise<ApiSubscriptionResult> => {
 	const trialing =
 		cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
@@ -78,24 +104,13 @@ export const getApiSubscription = async <
 
 	const status = cusProductToPlanStatus({ status: cusProduct.status });
 
-	// Check if we should expand the plan object
-	// Use expandParams.plan if provided, otherwise fall back to ctx.expand
-	const shouldExpandPlan =
-		expandParams?.plan ??
-		(isCustomerProductOneOff(cusProduct)
-			? expandIncludes({
-					expand: ctx.expand,
-					includes: [CustomerExpand.PurchasesPlan],
-				})
-			: expandIncludes({
-					expand: ctx.expand,
-					includes: [CustomerExpand.SubscriptionsPlan],
-				}));
+	const { planCtx, shouldExpandPlan } = handlePlanExpand({ ctx, cusProduct });
 
 	const apiPlan = shouldExpandPlan
 		? await getPlanResponse({
 				product: fullProduct,
 				features: ctx.features,
+				expand: planCtx.expand.filter((entry) => entry.length > 0),
 			})
 		: undefined;
 
@@ -127,5 +142,5 @@ export const getApiSubscription = async <
 			subscription_id: subId || undefined,
 			options: cusProduct.options,
 		} satisfies CusProductLegacyData,
-	} as ApiSubscriptionResult<T>;
+	};
 };

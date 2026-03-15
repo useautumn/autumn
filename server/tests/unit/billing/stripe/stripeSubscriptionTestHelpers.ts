@@ -216,11 +216,19 @@ export const getPhaseItemPriceIds = (items: { price?: string }[]): string[] => {
  * Verifies phase items contain exactly the expected price IDs
  */
 export const expectPhaseItems = (
-	items: { price?: string }[],
+	items: { price?: string; metadata?: { autumn_price_id?: string } }[],
 	expectedPriceIds: string[],
 ) => {
-	const actualPriceIds = getPhaseItemPriceIds(items);
-	expect(actualPriceIds).toEqual(expectedPriceIds.sort());
+	const normalizePriceId = (priceId: string) =>
+		priceId.startsWith("stripe_") ? priceId.replace("stripe_", "") : priceId;
+
+	const actualPriceIds = items
+		.map((item) => item.metadata?.autumn_price_id ?? item.price)
+		.filter((priceId): priceId is string => Boolean(priceId))
+		.map(normalizePriceId)
+		.sort();
+
+	expect(actualPriceIds).toEqual(expectedPriceIds.map(normalizePriceId).sort());
 };
 
 /**
@@ -340,6 +348,13 @@ export const expectSubscriptionItemsUpdate = (
 	actual: ExpectedSubscriptionItemUpdate[],
 	expected: ExpectedSubscriptionItemUpdate[],
 ) => {
+	const stripMetadata = (item: ExpectedSubscriptionItemUpdate) => ({
+		id: item.id,
+		price: item.price,
+		quantity: item.quantity,
+		deleted: item.deleted,
+	});
+
 	// Sort by price for new items, by id for updates
 	const sortItems = (
 		a: ExpectedSubscriptionItemUpdate,
@@ -350,8 +365,8 @@ export const expectSubscriptionItemsUpdate = (
 		return (a.price ?? a.id ?? "").localeCompare(b.price ?? b.id ?? "");
 	};
 
-	const actualSorted = [...actual].sort(sortItems);
-	const expectedSorted = [...expected].sort(sortItems);
+	const actualSorted = actual.map(stripMetadata).sort(sortItems);
+	const expectedSorted = expected.map(stripMetadata).sort(sortItems);
 
 	expect(actualSorted).toEqual(expectedSorted);
 };

@@ -34,14 +34,18 @@ function getButtonText({
 
 export function ConfirmSection() {
 	const {
+		hasActionRequiredState,
 		status,
 		total,
 		currency,
 		preview,
 		isSubscription,
 		hasActiveTrial,
+		isUnchangedQuantityUpdate,
 		handleConfirm,
 	} = useCheckoutContext();
+	const hasNextCycleUsage =
+		(preview?.next_cycle?.usage_line_items?.length ?? 0) > 0;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -77,14 +81,9 @@ export function ConfirmSection() {
 									</span>
 									<span className="tabular-nums">
 										{formatAmount(preview.next_cycle.total, currency)}
+										{hasNextCycleUsage ? " + usage" : ""}
 									</span>
 								</div>
-								{/* Credit note explaining reduced next cycle amount */}
-								{preview.credit && (
-									<span className="text-xs text-muted-foreground/60 text-right">
-										Includes {formatAmount(preview.credit.amount, currency)} credit from unused plan
-									</span>
-								)}
 							</div>
 						)}
 					</div>
@@ -98,7 +97,12 @@ export function ConfirmSection() {
 						<Button
 							className="w-full h-11 text-sm font-medium rounded-lg"
 							onClick={handleConfirm}
-							disabled={status.isConfirming || status.isUpdating}
+							disabled={
+								hasActionRequiredState ||
+								status.isConfirming ||
+								status.isUpdating ||
+								isUnchangedQuantityUpdate
+							}
 						>
 							{getButtonText({
 								isPending: status.isConfirming,

@@ -5,6 +5,7 @@ import {
 	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
+	scopeExpandForCtx,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -20,16 +21,19 @@ export const getApiCustomerBase = async ({
 	ctx,
 	fullCus,
 	withAutumnId = true,
-	expandParams,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-	expandParams?: { plan?: boolean };
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
-	const { data: apiBalances } = await getApiBalances({
+	const { balances: apiBalances, flags: apiFlags } = await getApiBalances({
 		ctx,
 		fullCus,
+	});
+
+	const subscriptionsScopedCtx = scopeExpandForCtx({
+		ctx,
+		prefix: "subscriptions",
 	});
 
 	const {
@@ -37,9 +41,8 @@ export const getApiCustomerBase = async ({
 		purchases: apiPurchases,
 		legacyData: cusProductLegacyData,
 	} = await getApiSubscriptions({
-		ctx,
+		ctx: subscriptionsScopedCtx,
 		fullCus,
-		expandParams,
 	});
 
 	const apiCustomer = ApiCustomerV5Schema.extend({
@@ -60,6 +63,7 @@ export const getApiCustomerBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		balances: apiBalances,
+		flags: apiFlags,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,

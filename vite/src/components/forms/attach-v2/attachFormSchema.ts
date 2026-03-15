@@ -3,6 +3,7 @@ import {
 	FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
+	RedirectModeSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { FormDiscount } from "./utils/discountUtils";
@@ -18,6 +19,7 @@ export const AttachFormSchema = z.object({
 	trialCardRequired: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	billingBehavior: z.custom<BillingBehavior>().nullable(),
+	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 });
