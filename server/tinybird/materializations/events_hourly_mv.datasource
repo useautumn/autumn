@@ -1,6 +1,9 @@
 DESCRIPTION >
     Hourly aggregates with native JSON data type for properties.
     Allows multi-property GROUP BY at query time via properties.field syntax.
+    Uses MergeTree (not AggregatingMergeTree) to preserve distinct property
+    combinations — the MV pipe's GROUP BY handles pre-aggregation at insert
+    time, and query-time sum() in the pipes handles the final rollup.
 
 SCHEMA >
     `org_id` String,
@@ -9,9 +12,9 @@ SCHEMA >
     `event_name` String,
     `hour` DateTime,
     `properties` JSON,
-    `total_value` SimpleAggregateFunction(sum, Float64),
-    `event_count` SimpleAggregateFunction(sum, UInt64)
+    `total_value` Float64,
+    `event_count` UInt64
 
-ENGINE "AggregatingMergeTree"
+ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
 ENGINE_SORTING_KEY "org_id, env, event_name, hour, customer_id"
