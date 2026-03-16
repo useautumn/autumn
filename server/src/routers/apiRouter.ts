@@ -5,6 +5,7 @@ import { componentsRouter } from "@/internal/misc/components/componentsRouter.js
 import { configsRouter } from "@/internal/misc/configs/configsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
+import { criticalDbMiddleware } from "../honoMiddlewares/criticalDbMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
@@ -37,6 +38,7 @@ import { rpcRouter } from "./rpcRouter.js";
 
 export const apiRouter = new Hono<HonoEnv>();
 
+apiRouter.use("*", criticalDbMiddleware);
 apiRouter.use("*", responseFilterMiddleware);
 apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
