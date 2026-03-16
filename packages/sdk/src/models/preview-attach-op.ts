@@ -725,26 +725,56 @@ export type PreviewAttachNextCycle = {
 };
 
 export type PreviewAttachIncomingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
   featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
   quantity: number;
 };
 
 export type PreviewAttachIncoming = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
   planId: string;
   plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
   featureQuantities: Array<PreviewAttachIncomingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
   effectiveAt: number | null;
 };
 
 export type PreviewAttachOutgoingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
   featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
   quantity: number;
 };
 
 export type PreviewAttachOutgoing = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
   planId: string;
   plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
   featureQuantities: Array<PreviewAttachOutgoingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
   effectiveAt: number | null;
 };
 
