@@ -8,6 +8,7 @@ import {
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
@@ -36,12 +37,19 @@ export const runTrackV2 = async ({
 	}
 
 	// 1. Get full customer from cache or DB
-	const fullCustomer = await getOrCreateCachedFullCustomer({
-		ctx,
-		params: body,
-		source: "runTrackV2",
-		skipCreate: ctx.apiVersion.gte(ApiVersion.V2_1),
-	});
+	const { customer_id, entity_id } = body;
+	const fullCustomer = ctx.apiVersion.gte(ApiVersion.V2_1)
+		? await getOrSetCachedFullCustomer({
+				ctx,
+				customerId: customer_id,
+				entityId: entity_id,
+				source: "getCheckData",
+			})
+		: await getOrCreateCachedFullCustomer({
+				ctx,
+				params: body,
+				source: "runTrackV2",
+			});
 
 	// If idempotency key is provided, insert event first and skip insertion later
 	if (body.idempotency_key) {
