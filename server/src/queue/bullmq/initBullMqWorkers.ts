@@ -9,6 +9,7 @@ import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
+import { propagateVariants } from "@/internal/products/productUtils/propagateVariants.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { createWorkerContext } from "../createWorkerContext.js";
@@ -71,11 +72,20 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 					return;
 				}
 
-				if (actionHandlers.includes(job.name as JobName)) {
-					await runActionHandlerTask({
-						jobName: job.name as JobName,
+			if (actionHandlers.includes(job.name as JobName)) {
+				await runActionHandlerTask({
+					jobName: job.name as JobName,
+					payload: job.data,
+					ctx,
+				});
+				return;
+			}
+
+				if (job.name === JobName.PropagateVariants) {
+					await propagateVariants({
+						db,
 						payload: job.data,
-						ctx,
+						logger: workerLogger,
 					});
 					return;
 				}

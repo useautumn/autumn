@@ -301,7 +301,12 @@ export function match<T, E>(
         "Response validation failed",
         { request, response, body },
       );
-      return [result.ok ? { ok: false, error: result.value } : result, raw];
+
+		if (result.ok) {
+			return [ERR(result.value), raw];
+		}
+
+		return [ERR(result.error), raw];
     } else {
       return [
         safeParseResponse(
@@ -324,9 +329,9 @@ const headerValRE = /, */;
 export function unpackHeaders(headers: Headers): Record<string, string[]> {
   const out: Record<string, string[]> = {};
 
-  for (const [k, v] of headers.entries()) {
+  headers.forEach((v, k) => {
     out[k] = v.split(headerValRE);
-  }
+  });
 
   return out;
 }

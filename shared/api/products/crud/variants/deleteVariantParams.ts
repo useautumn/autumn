@@ -10,4 +10,6 @@ export const DeleteVariantParamsSchema = z.object({
 });
 
 export type DeleteVariantParams = z.infer<typeof DeleteVariantParamsSchema>;
-export type DeleteVariantParamsInput = z.input<typeof DeleteVariantParamsSchema>;
+export type DeleteVariantParamsInput = z.input<
+	typeof DeleteVariantParamsSchema
+>;

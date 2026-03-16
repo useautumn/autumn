@@ -14,4 +14,6 @@ export const CreateVariantParamsSchema = z.object({
 });
 
 export type CreateVariantParams = z.infer<typeof CreateVariantParamsSchema>;
-export type CreateVariantParamsInput = z.input<typeof CreateVariantParamsSchema>;
+export type CreateVariantParamsInput = z.input<
+	typeof CreateVariantParamsSchema
+>;

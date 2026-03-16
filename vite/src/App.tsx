@@ -95,7 +95,23 @@ export default function App() {
 						}
 					/>
 					<Route
+						path="/products/:product_id/variants/:variant_id"
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
+					/>
+					<Route
 						path="/sandbox/products/:product_id"
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
+					/>
+					<Route
+						path="/sandbox/products/:product_id/variants/:variant_id"
 						element={
 							<SquircleProvider>
 								<PlanEditorView />

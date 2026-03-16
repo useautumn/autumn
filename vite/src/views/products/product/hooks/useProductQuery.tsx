@@ -17,6 +17,7 @@ export const useProductQueryState = () => {
 		{
 			version: parseAsInteger,
 			productId: parseAsString,
+			minorVersion: parseAsInteger,
 		},
 		{
 			history: "push",
@@ -27,7 +28,7 @@ export const useProductQueryState = () => {
 };
 
 export const useProductQuery = () => {
-	const { product_id } = useParams();
+	const { product_id, variant_id } = useParams();
 	const { queryStates } = useProductQueryState();
 	const productId = queryStates.productId || product_id;
 
@@ -40,19 +41,26 @@ export const useProductQuery = () => {
 	const fetcher = async () => {
 		if (!productId) return null;
 
-		const url = `/products/${productId}/data2`;
-		const queryParams: { version?: number } = {};
-
-		// Only include version if it's explicitly set, otherwise fetch latest
-		if (queryStates.version) {
-			queryParams.version = queryStates.version;
-		}
-
 		try {
 			const url = `/products/${productId}/data`;
-			const queryParams = {
-				version: queryStates.version,
-			};
+			const queryParams: {
+				version?: number;
+				minorVersion?: number;
+				variant_id?: string;
+			} = {};
+
+			// Only include version if it's explicitly set, otherwise fetch latest
+			if (queryStates.version) {
+				queryParams.version = queryStates.version;
+			}
+
+			if (queryStates.minorVersion) {
+				queryParams.minorVersion = queryStates.minorVersion;
+			}
+
+			if (variant_id) {
+				queryParams.variant_id = variant_id;
+			}
 
 			const { data } = await axiosInstance.get(url, { params: queryParams });
 			return data;
@@ -62,7 +70,13 @@ export const useProductQuery = () => {
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
-		queryKey: ["product", productId, queryStates.version],
+		queryKey: [
+			"product",
+			productId,
+			variant_id,
+			queryStates.version,
+			queryStates.minorVersion,
+		],
 		queryFn: fetcher,
 		retry: false, // Don't retry on error (e.g., product not found)
 		enabled: !!productId, // Only run query if productId exists
@@ -88,6 +102,9 @@ export const useProductQuery = () => {
 	return {
 		product,
 		numVersions: data?.numVersions || cachedProduct?.version || 1,
+		variantVersions: (data?.variantVersions ?? null) as
+			| { version: number; minor_version: number }[]
+			| null,
 		isLoading: isLoadingWithCache,
 		refetch: async () => {
 			await refetch();

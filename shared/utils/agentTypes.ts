@@ -161,6 +161,7 @@ export function agentProductToProductV2(product: AgentProduct): ProductV2 {
 		is_add_on: product.is_add_on ?? false,
 		is_default: product.is_default ?? false,
 		version: 1,
+		minor_version: 1,
 		group: product.group ?? null,
 		env: AppEnv.Sandbox,
 		free_trial: null, // Handled separately in preview transformations

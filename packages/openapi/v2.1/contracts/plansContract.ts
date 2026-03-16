@@ -10,6 +10,7 @@ import {
 	getListResponseSchema,
 	ListPlanParamsSchema,
 	UpdatePlanParamsV2Schema,
+	UpdateVariantParamsSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import {
@@ -18,6 +19,7 @@ import {
 	getPlanJsDoc,
 	listPlansJsDoc,
 	updatePlanJsDoc,
+	updateVariantJsDoc,
 } from "../jsDocs/planJsDocs.js";
 
 export const listPlansContract = oc
@@ -209,3 +211,45 @@ export const deletePlanContract = oc
 		}),
 	)
 	.output(SuccessResponseSchema);
+
+export const updateVariantContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/plans.updateVariant",
+		operationId: "updateVariant",
+		summary: "Update a variant",
+		description: updateVariantJsDoc,
+		tags: ["plans"],
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "updateVariant",
+		}),
+	})
+	.input(
+		UpdateVariantParamsSchema.meta({
+			title: "UpdateVariantParams",
+			examples: [
+				{
+					plan_id: "pro_plan",
+					variant_id: "monthly",
+					price: { amount: 15, interval: "month" },
+				},
+				{
+					plan_id: "pro_plan",
+					variant_id: "annual",
+					items: [
+						{
+							feature_id: "messages",
+							included: 2000,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		ApiPlanV1WithMeta.meta({
+			examples: [API_PLAN_V1_EXAMPLE],
+		}),
+	);

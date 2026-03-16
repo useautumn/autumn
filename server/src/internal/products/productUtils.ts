@@ -50,8 +50,15 @@ export const getLatestProducts = (products: FullProduct[]) => {
 		const key = `${product.id}|${product.variant_id ?? ""}`;
 		if (!acc[key]) {
 			acc[key] = product;
-		} else if (product.version > acc[key].version) {
-			acc[key] = product;
+		} else {
+			const cur = acc[key];
+			if (
+				product.version > cur.version ||
+				(product.version === cur.version &&
+					(product.minor_version ?? 1) > (cur.minor_version ?? 1))
+			) {
+				acc[key] = product;
+			}
 		}
 		return acc;
 	}, {});
@@ -96,6 +103,7 @@ export const constructProduct = ({
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: version,
+		minor_version: 1,
 		group: productData.group || "",
 
 		env,

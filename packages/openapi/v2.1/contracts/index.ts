@@ -46,6 +46,7 @@ import {
 	getPlanContract,
 	listPlansContract,
 	updatePlanContract,
+	updateVariantContract,
 } from "./plansContract.js";
 import {
 	referralsCreateCodeContract,
@@ -64,6 +65,7 @@ export const v2_1ContractRouter = oc.router({
 	plansGet: getPlanContract,
 	plansList: listPlansContract,
 	plansUpdate: updatePlanContract,
+	plansUpdateVariant: updateVariantContract,
 	plansDelete: deletePlanContract,
 
 	// Features

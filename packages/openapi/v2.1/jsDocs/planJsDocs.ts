@@ -3,6 +3,7 @@ import {
 	DeletePlanParamsV2Schema,
 	GetPlanParamsV0Schema,
 	UpdatePlanParamsV2Schema,
+	UpdateVariantParamsSchema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
 
@@ -167,9 +168,9 @@ export const createPlanJsDoc = createJSDocDescription({
 
 export const updatePlanJsDoc = createJSDocDescription({
 	description:
-		"Updates an existing plan. Creates a new version unless `disableVersion` is set.",
+		"Updates an existing base plan. Creates a new version unless `disableVersion` is set.",
 	whenToUse:
-		"Use this to modify plan properties, pricing, or feature configurations. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.",
+		"Use this to modify base plan properties, pricing, or feature configurations. Variant updates should use `plans.updateVariant` instead.",
 	body: UpdatePlanParamsV2Schema,
 	examples: [
 		example({
@@ -231,6 +232,43 @@ export const updatePlanJsDoc = createJSDocDescription({
 	],
 	methodName: "plans.update",
 	returns: "The updated plan object.",
+});
+
+export const updateVariantJsDoc = createJSDocDescription({
+	description:
+		"Updates an existing plan variant. Variant updates currently support overrides and net-new additions.",
+	whenToUse:
+		"Use this to modify variant-specific pricing or feature configuration without calling `plans.update`.",
+	body: UpdateVariantParamsSchema,
+	examples: [
+		example({
+			description: "Update variant base price",
+			values: {
+				planId: "pro_plan",
+				variantId: "monthly",
+				price: {
+					amount: 15,
+					interval: "month",
+				},
+			},
+		}),
+		example({
+			description: "Override a variant feature item",
+			values: {
+				planId: "pro_plan",
+				variantId: "annual",
+				items: [
+					{
+						featureId: "messages",
+						included: 2000,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		}),
+	],
+	methodName: "plans.updateVariant",
+	returns: "The updated variant object.",
 });
 
 export const deletePlanJsDoc = createJSDocDescription({

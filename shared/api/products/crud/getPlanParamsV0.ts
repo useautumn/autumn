@@ -9,7 +9,15 @@ export const GetPlanParamsV0Schema = z.object({
 	}),
 	version: z.number().optional().meta({
 		description:
-			"The version of the plan to get. Defaults to the latest version.",
+			"The major version of the plan to get. Defaults to the latest version.",
+	}),
+	minor_version: z.number().optional().meta({
+		description:
+			"The minor version of the plan to get. Used together with version for exact variant lookups.",
+	}),
+	semver: z.string().optional().meta({
+		description:
+			"Semver-style version string (e.g. '2.10'). Shorthand for specifying both version and minor_version together.",
 	}),
 });
 

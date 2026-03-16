@@ -52,6 +52,10 @@ export const ApiPlanV1Schema = z.object({
 		description:
 			"Version number of the plan. Incremented when plan configuration changes.",
 	}),
+	minor_version: z.number().meta({
+		description:
+			"Minor version number. Incremented for variant version bumps. Always 0 for base plans.",
+	}),
 	add_on: z.boolean().meta({
 		description:
 			"Whether this is an add-on plan that can be attached alongside a main plan.",
@@ -104,6 +108,10 @@ export const ApiPlanV1Schema = z.object({
 	variant_id: z.string().nullable().meta({
 		description:
 			"The variant ID for this plan. Null for base plans, set for variants.",
+	}),
+	semver: z.string().optional().meta({
+		description:
+			"Semver-style version string (e.g. '2.10'). Only present for variant plans. Combines version and minor_version for display.",
 	}),
 
 	customer_eligibility: z

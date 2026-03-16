@@ -30,6 +30,9 @@ export enum JobName {
 	/** Stores deferred invoice line items (ProrateNextCycle pending items) before an invoice exists */
 	StoreDeferredInvoiceLineItems = "store-deferred-invoice-line-items",
 
+	/** Propagates base plan version bump to all variant versions */
+	PropagateVariants = "propagate-variants",
+
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 

@@ -19,6 +19,7 @@ import {
 } from "@server/internal/products/productUtils.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
+import { generateId } from "@server/utils/genUtils.js";
 
 export const handleVersionProductV2 = async ({
 	ctx,
@@ -143,5 +144,91 @@ export const handleVersionProductV2 = async ({
 		},
 	});
 
+	if (!latestProduct.internal_parent_product_id) {
+		await addTaskToQueue({
+			jobName: JobName.PropagateVariants,
+			payload: {
+				baseProductInternalId: latestProduct.internal_id,
+				newBaseProductInternalId: newProduct.internal_id,
+				orgId: org.id,
+				env,
+				baseWasVersioned: true,
+			},
+		});
+	}
+
 	return newProduct;
+};
+
+export const handleVersionVariantMinor = async ({
+	ctx,
+	newProductV2,
+	latestVariant,
+}: {
+	ctx: AutumnContext;
+	newProductV2: ProductV2;
+	latestVariant: FullProduct;
+}) => {
+	const { db, features } = ctx;
+
+	const newVariant = {
+		id: latestVariant.id,
+		name: latestVariant.name,
+		description: latestVariant.description ?? null,
+		group: latestVariant.group ?? "",
+		is_add_on: latestVariant.is_add_on,
+		is_default: latestVariant.is_default,
+		version: latestVariant.version,
+		minor_version: (latestVariant.minor_version ?? 1) + 1,
+		env: latestVariant.env as AppEnv,
+		internal_id: generateId("prod"),
+		org_id: latestVariant.org_id,
+		created_at: Date.now(),
+		processor: latestVariant.processor ?? undefined,
+		internal_parent_product_id: latestVariant.internal_id,
+		variant_id: latestVariant.variant_id,
+		archived: false,
+	};
+
+	validateProductItems({
+		newItems: newProductV2.items,
+		features,
+		orgId: latestVariant.org_id,
+		env: latestVariant.env as AppEnv,
+	});
+
+	await ProductService.insert({ db, product: newVariant });
+
+	const { customPrices, customEnts } = await handleNewProductItems({
+		db,
+		curPrices: latestVariant.prices,
+		curEnts: latestVariant.entitlements,
+		newItems: newProductV2.items,
+		features,
+		product: newVariant,
+		logger: console,
+		isCustom: false,
+		newVersion: true,
+	});
+
+	await EntitlementService.insert({
+		db,
+		data: customEnts,
+	});
+
+	await PriceService.insert({
+		db,
+		data: customPrices,
+	});
+
+	await initProductInStripe({
+		ctx,
+		product: {
+			...newVariant,
+			prices: customPrices,
+			entitlements: getEntsWithFeature({ ents: customEnts, features }),
+		} as FullProduct,
+	});
+
+	return newVariant;
 };

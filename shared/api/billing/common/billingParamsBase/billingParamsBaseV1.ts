@@ -18,6 +18,10 @@ export const BillingParamsBaseV1Schema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan.",
 	}),
+	variant_id: z.string().optional().meta({
+		description: "The ID of the variant of the plan to attach.",
+		internal: true,
+	}),
 
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:

@@ -61,7 +61,7 @@ export function EditPlanFeatureSheet({
 			if (newItem.tiers) {
 				newItem.tiers = newItem.tiers.map((tier) => ({
 					...tier,
-					flat_amount: null,
+					flat_amount: undefined,
 				}));
 			}
 		}
@@ -192,7 +192,7 @@ export function EditPlanFeatureSheet({
 											volumePricingMode={volumePricingMode}
 											showVolumePricingToggle={showVolumePricingToggle}
 											onTierBehaviorChange={handleTierBehaviorChange}
-											onVolumePricingModeChange={handleVolumePricingModeChange}
+											onVolumePricingModeChange={setVolumePricingMode}
 										/>
 									) : (
 										"Price"

@@ -136,12 +136,22 @@ export class AutumnRpcCli {
 		update: async <TResponse = any, TInput = any>(
 			planId: string,
 			updates: TInput,
-			{ variantId }: { variantId?: string } = {},
 		): Promise<TResponse> => {
 			return await this.post("/plans.update", {
 				...(updates as Record<string, unknown>),
 				plan_id: planId,
-				...(variantId ? { variant_id: variantId } : {}),
+			});
+		},
+
+		updateVariant: async <TResponse = any, TInput = any>(
+			planId: string,
+			variantId: string,
+			updates: TInput,
+		): Promise<TResponse> => {
+			return await this.post("/plans.updateVariant", {
+				...(updates as Record<string, unknown>),
+				plan_id: planId,
+				variant_id: variantId,
 			});
 		},
 

@@ -1,7 +1,8 @@
-import type {
-	AttachParamsV1,
-	BillingContextOverride,
-	MultiAttachParamsV0,
+import {
+	type AttachParamsV1,
+	type BillingContextOverride,
+	type MultiAttachParamsV0,
+	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
@@ -25,13 +26,22 @@ export const setupAttachProductContext = async ({
 	const { db, org, env } = ctx;
 
 	// 1. Fetch the product being attached
-	const fullProduct = await ProductService.getFull({
-		db,
-		idOrInternalId: params.plan_id,
-		orgId: org.id,
-		env,
-		version: params.version,
-	});
+	const fullProduct = !notNullish(params.variant_id)
+		? await ProductService.getFull({
+				db,
+				idOrInternalId: params.plan_id,
+				orgId: org.id,
+				env,
+				version: params.version,
+			})
+		: await ProductService.getVariant({
+				db,
+				orgId: org.id,
+				env,
+				planId: params.plan_id,
+				variantId: params.variant_id,
+				version: params.version,
+			});
 
 	// 2. Handle custom items if provided
 	const {
