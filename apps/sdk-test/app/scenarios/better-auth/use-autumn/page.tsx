@@ -14,6 +14,8 @@ import { HookStatePanel } from "@/components/debug/HookStatePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient, useSession } from "@/lib/auth-client";
+import { AuthControls, OrgControls } from "../use-customer/components";
 
 type ActionTab =
   | "attach"
@@ -52,10 +54,13 @@ const toErrorPayload = ({ error }: { error: unknown }) => {
   };
 };
 
-export default function UseAutumnScenarioPage() {
+export default function BetterAuthUseAutumnPage() {
+  const { data: session } = useSession();
+  const activeOrg = authClient.useActiveOrganization();
+  const [error, setError] = useState<unknown>(null);
   const {
     isLoading,
-    error,
+    error: hookError,
     refetch,
     attach,
     multiAttach,
@@ -69,11 +74,7 @@ export default function UseAutumnScenarioPage() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [lastAction, setLastAction] = useState<LastActionState>(null);
-
-  // Tab state
   const [activeTab, setActiveTab] = useState<ActionTab>("attach");
-
-  // Input state
   const [planId, setPlanId] = useState("");
   const [featureId, setFeatureId] = useState("");
   const [requiredBalance, setRequiredBalance] = useState("");
@@ -86,7 +87,6 @@ export default function UseAutumnScenarioPage() {
     '{\n  "billing_address_collection": "required",\n  "automatic_tax": { "enabled": true }\n}',
   );
 
-  // Form element IDs
   const planIdInputId = useId();
   const featureIdInputId = useId();
   const requiredBalanceInputId = useId();
@@ -149,6 +149,11 @@ export default function UseAutumnScenarioPage() {
   const onRefetch = async () => {
     await refetch();
     setLastUpdatedAt(new Date().toISOString());
+  };
+
+  const handleSignOut = () => {
+    setError(null);
+    setLastAction(null);
   };
 
   const handleAttach = () => {
@@ -247,8 +252,13 @@ export default function UseAutumnScenarioPage() {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AuthControls onError={setError} onSignOut={handleSignOut} />
+        {session && <OrgControls onError={setError} />}
+      </div>
+
       <DebugCard
-        title="Hook State"
+        title="Hook: useAutumn"
         actions={
           <Button variant="outline" size="sm" onClick={onRefetch}>
             Refetch
@@ -257,13 +267,12 @@ export default function UseAutumnScenarioPage() {
       >
         <HookStatePanel
           isLoading={isLoading}
-          error={error}
+          error={hookError}
           lastUpdatedAt={lastUpdatedAt}
         />
       </DebugCard>
 
       <DebugCard title="Actions">
-        {/* Tabs */}
         <div className="mb-4 flex gap-1 border-b border-zinc-200">
           <button
             type="button"
@@ -322,7 +331,6 @@ export default function UseAutumnScenarioPage() {
           </button>
         </div>
 
-        {/* Tab content */}
         {activeTab === "attach" && (
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -544,6 +552,15 @@ export default function UseAutumnScenarioPage() {
       </DebugCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <DataViewer title="Session" value={session} defaultExpandedDepth={2} />
+        <DataViewer
+          title="Active Organization"
+          value={activeOrg.data}
+          defaultExpandedDepth={2}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <DataViewer
           title="Last Action Request"
           value={
@@ -562,6 +579,23 @@ export default function UseAutumnScenarioPage() {
           value={lastAction?.result ?? null}
           defaultExpandedDepth={3}
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataViewer
+          title="Hook Error"
+          value={
+            hookError
+              ? {
+                  message: hookError.message,
+                  code: hookError.code,
+                  statusCode: hookError.statusCode,
+                }
+              : null
+          }
+          defaultExpandedDepth={2}
+        />
+        <DataViewer title="UI Error" value={error} defaultExpandedDepth={2} />
       </div>
 
       <DataViewer

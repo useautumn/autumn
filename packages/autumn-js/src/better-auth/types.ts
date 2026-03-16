@@ -13,6 +13,8 @@ export type AutumnOptions = {
 	secretKey?: string;
 	/** Base URL for Autumn API */
 	baseURL?: string;
+	/** Autumn API URL (alias for baseURL) */
+	autumnURL?: string;
 	/** How to resolve customer identity from session */
 	customerScope?: CustomerScope;
 	/** Custom identity resolver (overrides customerScope) */

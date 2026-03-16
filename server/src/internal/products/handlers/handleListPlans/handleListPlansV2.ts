@@ -20,8 +20,6 @@ export const handleListPlansV2 = createRoute({
 
 		const startedAt = Date.now();
 
-		console.log("Customer ID:", customer_id);
-
 		const [products, customer] = await Promise.all([
 			ProductService.listFull({
 				db,
