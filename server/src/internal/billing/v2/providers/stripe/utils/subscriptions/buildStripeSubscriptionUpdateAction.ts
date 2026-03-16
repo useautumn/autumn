@@ -59,6 +59,12 @@ export const buildStripeSubscriptionUpdateAction = ({
 		typeof subscriptionCancelAt === "number" &&
 		subscriptionCancelAt !== currentCancelAt;
 
+	// Configure trial settings off
+	const shouldUpdateEndBehavior =
+		shouldUnsetTrialEnd &&
+		stripeSubscription.trial_settings?.end_behavior.missing_payment_method !==
+			"create_invoice";
+
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd
@@ -75,6 +81,14 @@ export const buildStripeSubscriptionUpdateAction = ({
 
 		...(stripeDiscounts?.length && {
 			discounts: stripeDiscountsToParams({ stripeDiscounts }),
+		}),
+
+		...(shouldUpdateEndBehavior && {
+			trial_settings: {
+				end_behavior: {
+					missing_payment_method: "create_invoice",
+				},
+			},
 		}),
 	};
 

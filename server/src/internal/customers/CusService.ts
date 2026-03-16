@@ -44,6 +44,7 @@ export class CusService {
 		withSubs = false,
 		allowNotFound = false,
 		withEvents = false,
+		explain = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -54,6 +55,7 @@ export class CusService {
 		withSubs?: boolean;
 		allowNotFound?: boolean;
 		withEvents?: boolean;
+		explain?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -85,6 +87,12 @@ export class CusService {
 					withEvents,
 					entityId,
 				);
+
+				if (explain) {
+					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
+					const result = await db.execute(explainQuery);
+					return result as unknown as FullCustomer;
+				}
 
 				const result = await db.execute(query);
 
@@ -452,13 +460,15 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db.delete(customers).where(
-				and(
-					inArray(customers.internal_id, ids),
-					eq(customers.org_id, orgId),
-					eq(customers.env, env),
-				),
-			);
+			await db
+				.delete(customers)
+				.where(
+					and(
+						inArray(customers.internal_id, ids),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				);
 		}
 	}
 
