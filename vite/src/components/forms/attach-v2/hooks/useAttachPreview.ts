@@ -4,6 +4,11 @@ import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+const ATTACH_PREVIEW_EXPAND = [
+	"incoming.plan.items.feature",
+	"outgoing.plan.items.feature",
+] as const;
+
 interface UseAttachPreviewParams {
 	requestBody: AttachParamsV0 | null;
 	enabled?: boolean;
@@ -42,7 +47,10 @@ export function useAttachPreview({
 
 			const response = await axiosInstance.post<AttachPreviewResponse>(
 				"/v1/billing.preview_attach",
-				requestBody,
+				{
+					...requestBody,
+					expand: ATTACH_PREVIEW_EXPAND,
+				},
 			);
 
 			return response.data;

@@ -14,6 +14,10 @@
 	"contextual": {
 		"options": ["copy", "cursor", "view"]
 	},
+	"banner": {
+		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
+		"dismissible": true
+	},
 	"favicon": "/favicon.png",
 	"interaction": {
 		"drilldown": true

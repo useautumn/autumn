@@ -5,6 +5,7 @@ export type {
 	ClientCreateReferralCodeParams as CreateReferralCodeParams,
 	ClientGetOrCreateCustomerParams as GetOrCreateCustomerClientParams,
 	ClientListEventsParams as ListEventsParams,
+	ClientListPlansParams as ListPlansParams,
 	ClientMultiAttachParams as MultiAttachParams,
 	ClientOpenCustomerPortalParams as OpenCustomerPortalParams,
 	ClientPreviewAttachParams as PreviewAttachParams,

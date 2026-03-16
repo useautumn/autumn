@@ -2,9 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/autumn-logo-bg.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vite-app</title>
+    <title>Checkout</title>
+    <script>
+      if (window.location.hostname === 'localhost') {
+        document.title = 'Checkout (Local)';
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

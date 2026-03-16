@@ -1,4 +1,4 @@
-import { tryCatch } from "@autumn/shared";
+import { RecaseError, tryCatch } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -65,7 +65,10 @@ export const runInsertEventBatch = async ({
 				logger.error(
 					`❌ Failed to insert ${customerEvents.length} events for customer ${customerId}: ${error.message}`,
 				);
-				Sentry.captureException(error);
+
+				if (!(error instanceof RecaseError)) {
+					Sentry.captureException(error);
+				}
 				return {
 					success: false,
 					customerId,

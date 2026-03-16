@@ -1,10 +1,13 @@
+import crypto from "node:crypto";
 import { type ApiKey, AppEnv } from "@autumn/shared";
-import crypto from "crypto";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
-import { buildSecretKeyCacheKey } from "./cacheApiKeyUtils.js";
+import {
+	getCachedSecretKeyVerification,
+	SECRET_KEY_CACHE_TTL_SECONDS,
+	setCachedSecretKeyVerification,
+} from "./cacheApiKeyUtils.js";
 
 export enum ApiKeyPrefix {
 	Sandbox = "am_sk_test",
@@ -130,15 +133,23 @@ export const verifyKey = async ({
 		? AppEnv.Sandbox
 		: AppEnv.Live;
 
-	const data = await queryWithCache({
-		ttl: 3600,
-		key: buildSecretKeyCacheKey(hashedKey),
-		fn: async () =>
-			ApiKeyService.verifyAndFetch({
-				db,
-				hashedKey,
-				env,
-			}),
+	const cached = await getCachedSecretKeyVerification<
+		Awaited<ReturnType<typeof ApiKeyService.verifyAndFetch>>
+	>({
+		hashedKey,
+	});
+
+	if (cached) {
+		return {
+			valid: true,
+			data: cached,
+		};
+	}
+
+	const data = await ApiKeyService.verifyAndFetch({
+		db,
+		hashedKey,
+		env,
 	});
 
 	if (!data) {
@@ -147,6 +158,12 @@ export const verifyKey = async ({
 			data: null,
 		};
 	}
+
+	await setCachedSecretKeyVerification({
+		hashedKey,
+		data,
+		ttl: SECRET_KEY_CACHE_TTL_SECONDS,
+	});
 
 	return {
 		valid: true,

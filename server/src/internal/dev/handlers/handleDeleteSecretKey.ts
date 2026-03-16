@@ -1,7 +1,6 @@
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { CacheManager } from "../../../utils/cacheUtils/CacheManager";
-import { CacheType } from "../../../utils/cacheUtils/CacheType";
 import { ApiKeyService } from "../ApiKeyService";
+import { clearSecretKeyCache } from "../api-keys/cacheApiKeyUtils";
 
 export const handleDeleteSecretKey = createRoute({
 	handler: async (c) => {
@@ -23,10 +22,7 @@ export const handleDeleteSecretKey = createRoute({
 		const batchInvalidate = [];
 		for (const apiKey of data) {
 			batchInvalidate.push(
-				CacheManager.invalidate({
-					action: CacheType.SecretKey,
-					value: apiKey.hashed_key!,
-				}),
+				clearSecretKeyCache({ hashedKey: apiKey.hashed_key! }),
 			);
 		}
 		await Promise.all(batchInvalidate);

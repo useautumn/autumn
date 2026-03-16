@@ -182,9 +182,14 @@ test.concurrent(`${chalk.yellowBright("custom-line-items 2: preview with custom 
 	expect(descriptions).toContain("Prorated base");
 	expect(descriptions).toContain("Prorated feature");
 
-	const amounts = preview.line_items.map((li: { amount: number }) => li.amount);
-	expect(amounts).toContain(10);
-	expect(amounts).toContain(3.5);
+	const subtotals = preview.line_items.map(
+		(li: { subtotal: number }) => li.subtotal,
+	);
+	const totals = preview.line_items.map((li: { total: number }) => li.total);
+	expect(subtotals).toContain(10);
+	expect(subtotals).toContain(3.5);
+	expect(totals).toContain(10);
+	expect(totals).toContain(3.5);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

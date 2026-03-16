@@ -509,23 +509,29 @@ describe(
 				const entity1CancelMs = nowMs + ONE_MONTH_MS;
 				const entity2CancelMs = nowMs + 2 * ONE_MONTH_MS;
 
-				const premium = createProductWithAllPriceTypes({
+				const premiumEntity1 = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
 					customerProductId: "cus_prod_premium_entity1",
+				});
+
+				const premiumEntity2 = createProductWithAllPriceTypes({
+					productId: "premium",
+					productName: "Premium",
+					customerProductId: "cus_prod_premium_entity2",
 				});
 
 				// Entity 1 Premium - cancels first
 				const entity1PremiumProduct = customerProducts.create({
 					id: "cus_prod_premium_entity1",
 					productId: "premium",
-					product: premium.product,
+					product: premiumEntity1.product,
 					customerPrices: createCustomerPricesForProduct({
-						prices: premium.allPrices,
+						prices: premiumEntity1.allPrices,
 						customerProductId: "cus_prod_premium_entity1",
 					}),
-					customerEntitlements: premium.allEntitlements,
-					options: premium.allOptions,
+					customerEntitlements: premiumEntity1.allEntitlements,
+					options: premiumEntity1.allOptions,
 					status: CusProductStatus.Active,
 					startsAt: nowMs,
 					endedAt: entity1CancelMs,
@@ -537,13 +543,13 @@ describe(
 				const entity2PremiumProduct = customerProducts.create({
 					id: "cus_prod_premium_entity2",
 					productId: "premium",
-					product: premium.product,
+					product: premiumEntity2.product,
 					customerPrices: createCustomerPricesForProduct({
-						prices: premium.allPrices,
+						prices: premiumEntity2.allPrices,
 						customerProductId: "cus_prod_premium_entity2",
 					}),
-					customerEntitlements: premium.allEntitlements,
-					options: premium.allOptions,
+					customerEntitlements: premiumEntity2.allEntitlements,
+					options: premiumEntity2.allOptions,
 					status: CusProductStatus.Active,
 					startsAt: nowMs,
 					endedAt: entity2CancelMs,
@@ -554,7 +560,7 @@ describe(
 				const ctx = contexts.create({ features: [] });
 				const billingContext = contexts.createBilling({
 					customerProducts: [entity1PremiumProduct, entity2PremiumProduct],
-					fullProducts: [premium.product],
+					fullProducts: [premiumEntity1.product],
 					currentEpochMs: nowMs,
 				});
 
@@ -572,7 +578,7 @@ describe(
 				expect(phases[0].end_date).toBe(msToSeconds(entity1CancelMs));
 				expectPhaseItems(
 					phases[0].items!,
-					getStripePriceIds(premium, { isEntityLevel: true }),
+					getStripePriceIds(premiumEntity1, { isEntityLevel: true }),
 				);
 
 				// Phase 2: Only Entity 2 active (entity uses empty price)
@@ -580,7 +586,7 @@ describe(
 				expect(phases[1].end_date).toBe(msToSeconds(entity2CancelMs));
 				expectPhaseItems(
 					phases[1].items!,
-					getStripePriceIds(premium, { isEntityLevel: true }),
+					getStripePriceIds(premiumEntity2, { isEntityLevel: true }),
 				);
 
 				// Phase 3: Empty (both canceled)

@@ -179,6 +179,7 @@ Each client version (`autumnV1`, `autumnV2`, `autumnV2_1`) expects different inp
 |--------|------------|--------------|---------------|--------------------------|
 | `autumnV1` | V1 (`/attach`, `/billing.attach`) | `AttachParamsV0Input` | `ApiCustomerV3` | `UpdateSubscriptionV0Params` |
 | `autumnV2` | V2 (`/billing.attach`) | `AttachParamsV1Input` | `ApiCustomer` | `UpdateSubscriptionV1Params` |
+| `autumnV2_1` | V2.1 (`/attach`, `/update_subscription`) | `AttachParamsV1Input` | `ApiCustomerV5` | `UpdateSubscriptionV1ParamsInput` |
 
 Key differences between `AttachParamsV0Input` and `AttachParamsV1Input`:
 - V0 (`autumnV1`): uses `product_id` + `options: [{ feature_id, quantity }]`
@@ -201,6 +202,21 @@ const params: AttachParamsV1Input = {
 };
 await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
+// ✅ CORRECT — autumnV2_1 uses V1-style attach/update-subscription params
+await autumnV2_1.billing.attach<AttachParamsV1Input>({
+  customer_id: customerId,
+  plan_id: pro.id,
+  feature_quantities: [{ feature_id: "messages", quantity: 200 }],
+});
+
+await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+  customer_id: customerId,
+  plan_id: pro.id,
+  redirect_mode: "always",
+});
+
 // ❌ WRONG — mixing V1 param names with autumnV1 client
 await autumnV1.billing.attach({ customer_id, plan_id: pro.id, feature_quantities: [...] });
 ```
+
+Gotcha: if a test uses V1-style `attach` / `update_subscription` params like `plan_id`, `feature_quantities`, or `redirect_mode`, use `autumnV2_1`, not `autumnV2`.

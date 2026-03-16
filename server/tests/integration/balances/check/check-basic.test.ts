@@ -5,6 +5,7 @@ import {
 	type CheckResponseV0,
 	type CheckResponseV1,
 	type CheckResponseV2,
+	type CheckResponseV3,
 	EntInterval,
 	type LimitedItem,
 	ResetInterval,
@@ -93,10 +94,27 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 
-	const { customerId, autumnV1, autumnV2 } = await initScenario({
+	const { customerId, autumnV1, autumnV2, autumnV2_1 } = await initScenario({
 		customerId: "check-boolean",
 		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
 		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	const resV2_1 = (await autumnV2_1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Dashboard,
+	})) as unknown as CheckResponseV3;
+
+	expect(resV2_1).toMatchObject({
+		allowed: true,
+		customer_id: customerId,
+		required_balance: 1,
+		balance: null,
+		flag: {
+			plan_id: freeProd.id,
+			feature_id: TestFeature.Dashboard,
+			expires_at: null,
+		},
 	});
 
 	// v2 response

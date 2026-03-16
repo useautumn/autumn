@@ -2,6 +2,7 @@ import type { ApiBalance } from "@api/customers/cusFeatures/apiBalance";
 import { balanceV1ToV0 } from "@api/customers/cusFeatures/mappers/balanceV1ToV0";
 import { apiPurchasesV0ToSubscriptionsV0 } from "@api/customers/cusPlans/mappers/apiPurchasesV0ToSubscriptionsV0";
 import { apiSubscriptionsV1ToV0 } from "@api/customers/cusPlans/mappers/apiSubscriptionsV1ToV0";
+import { flagV0ToBalanceV0 } from "@api/customers/flags/mappers/flagV0ToBalanceV0";
 import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
@@ -74,6 +75,12 @@ export const V2_0_EntityChange = defineVersionChange({
 		if (input.balances) {
 			for (const [featureId, balance] of Object.entries(input.balances)) {
 				balancesV0[featureId] = balanceV1ToV0({ input: balance });
+			}
+		}
+
+		if (input.flags) {
+			for (const [featureId, flag] of Object.entries(input.flags)) {
+				balancesV0[featureId] = flagV0ToBalanceV0({ input: flag });
 			}
 		}
 

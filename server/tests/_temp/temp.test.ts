@@ -1,85 +1,68 @@
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
+import { type ApiCustomerV3, tryCatch } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import {
+	calculateTrialEndMs,
+	expectProductTrialing,
+} from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { sql } from "drizzle-orm";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
-import { getFullCusQuery } from "@/internal/customers/getFullCusQuery";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils";
 
-const getPlanText = ({ rows }: { rows: Record<string, unknown>[] }) => {
-	return rows
-		.map((row) => {
-			const queryPlan = row["QUERY PLAN"];
+test("temp: paid default trial customer can upgrade to premium", async () => {
+	const customerId = `temp-default-trial-upgrade`;
 
-			if (typeof queryPlan === "string") {
-				return queryPlan;
-			}
-
-			const firstValue = Object.values(row)[0];
-			return typeof firstValue === "string"
-				? firstValue
-				: JSON.stringify(firstValue);
-		})
-		.join("\n");
-};
-
-test("temp: EXPLAIN ANALYZE getFullCusQuery", async () => {
-	const customerId = `temp-explain-full-cus-${Date.now()}`;
-	const explainPlanId = "explain-plan";
-
-	const product = products.proWithTrial({
-		id: explainPlanId,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
+	const defaultTrial = products.defaultTrial({
+		id: "default-trial",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
 		trialDays: 7,
+		cardRequired: false,
 	});
 
-	const { ctx, entities } = await initScenario({
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
+
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [product] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
+			s.customer({ testClock: true, withDefault: true }),
+			s.products({ list: [defaultTrial, premium] }),
 		],
-		actions: [
-			s.billing.attach({ productId: product.id }),
-			s.track({ featureId: TestFeature.Messages, value: 1 }),
-		],
+		actions: [],
 	});
 
-	const entityId = entities[0]?.id;
-	if (!entityId) {
-		throw new Error("Expected scenario to create an entity");
-	}
+	const customerBeforeUpgrade =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	const fullCustomerQuery = getFullCusQuery(
-		customerId,
-		ctx.org.id,
-		ctx.env,
-		RELEVANT_STATUSES,
-		true,
-		true,
-		true,
-		true,
-		false,
-		entityId,
-	);
+	await expectProductTrialing({
+		customer: customerBeforeUpgrade,
+		productId: defaultTrial.id,
+		trialEndsAt: calculateTrialEndMs({ trialDays: 7 }),
+	});
 
-	const explainQuery = sql`
-		EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT TEXT)
-		${fullCustomerQuery}
-	`;
+	expectCustomerFeatureCorrect({
+		customer: customerBeforeUpgrade,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500,
+		usage: 0,
+	});
 
-	const explainRows = (await ctx.db.execute(explainQuery)) as Record<
-		string,
-		unknown
-	>[];
-	const planText = getPlanText({ rows: explainRows });
+	try {
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+			// redirect_mode: "redirect_mode",
+		});
+	} catch (error) {}
 
-	console.log("\n=== getFullCusQuery EXPLAIN ANALYZE ===\n");
-	console.log(planText);
-	console.log("\n=== /getFullCusQuery EXPLAIN ANALYZE ===\n");
-
-	expect(explainRows.length).toBeGreaterThan(0);
-	expect(planText).toContain("Execution Time");
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		numberOfDays: 12,
+	});
 });

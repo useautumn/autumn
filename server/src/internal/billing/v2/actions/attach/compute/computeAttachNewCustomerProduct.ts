@@ -1,10 +1,12 @@
-import type { AttachBillingContext } from "@autumn/shared";
+import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
 	CusProductStatus,
 	deduplicateArray,
+	type ExistingUsagesConfig,
 	type FullCusProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 /**
@@ -16,9 +18,11 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 export const computeAttachNewCustomerProduct = ({
 	ctx,
 	attachBillingContext,
+	params = {} as AttachParamsV1,
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
+	params?: AttachParamsV1;
 }): FullCusProduct => {
 	const {
 		attachProduct,
@@ -40,7 +44,9 @@ export const computeAttachNewCustomerProduct = ({
 
 	const currentCustomerEntitlements =
 		currentCustomerProduct?.customer_entitlements ?? [];
+	const carryOverUsages = params.carry_over_usages;
 
+	// LEGACY: carry_from_previous flag on entitlements
 	const featuresToCarryUsagesFor = deduplicateArray(
 		currentCustomerEntitlements
 			.filter((ce) => {
@@ -49,10 +55,9 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	// Determine if this is a scheduled product (downgrade)
 	const isScheduled = planTiming === "end_of_cycle";
 
-	const existingUsagesConfig =
+	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
 			? {
 					fromCustomerProduct: currentCustomerProduct,
@@ -66,6 +71,14 @@ export const computeAttachNewCustomerProduct = ({
 					fromCustomerProduct: currentCustomerProduct,
 				}
 			: undefined;
+
+	if (!isScheduled && currentCustomerProduct && carryOverUsages?.enabled) {
+		existingUsagesConfig = carryOverUsagesToExistingUsagesConfig({
+			ctx,
+			params,
+			currentCustomerProduct,
+		});
+	}
 
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,

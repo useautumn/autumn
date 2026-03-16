@@ -22,7 +22,10 @@ export const billingResultToResponse = ({
 
 	// Autumn checkout URL takes priority, then Stripe checkout session, then invoice hosted URL
 	const paymentUrl = autumnCheckout
-		? checkoutToUrl({ checkoutId: autumnCheckout.id })
+		? checkoutToUrl({
+				action: autumnCheckout.action,
+				checkoutId: autumnCheckout.id,
+			})
 		: stripeCheckoutSession?.url
 			? stripeCheckoutSession.url
 			: stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url

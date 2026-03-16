@@ -3,7 +3,10 @@ import { queryStringArray } from "../common/queryHelpers";
 import { CustomerExpandEnum } from "./components/customerExpand/customerExpand";
 
 export const GetCustomerQuerySchema = z.object({
-	expand: queryStringArray(CustomerExpandEnum).optional(),
+	expand: queryStringArray(CustomerExpandEnum).optional().meta({
+		description:
+			"Expand related customer data like invoices or entities, or expand nested objects like balances.feature, flags.feature, subscriptions.plan, and purchases.plan.",
+	}),
 
 	skip_cache: z.boolean().optional().meta({
 		internal: true,

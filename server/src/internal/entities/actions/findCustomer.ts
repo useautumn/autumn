@@ -23,7 +23,13 @@ export const findCustomerForEntity = async ({
 		});
 	}
 
-	if (!entities[0].customer) {
+	if (entities.length === 0) {
+		throw new InternalError({
+			message: `No entities found for entityId ${entityId}`,
+		});
+	}
+
+	if (!entities?.[0].customer) {
 		throw new InternalError({
 			message: `[findCustomerForEntity] entities[0].customer doesn't exist`,
 		});

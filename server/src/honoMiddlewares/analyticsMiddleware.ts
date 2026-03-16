@@ -37,7 +37,8 @@ const extractCustomerIdFromBody = ({
 	method: string;
 }): string | undefined => {
 	const isCreateCustomerPath =
-		path.startsWith("/v1/customers") && method === "POST";
+		(path.startsWith("/v1/customers") && method === "POST") ||
+		path.includes("customers.get_or_create");
 	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
 		| string
 		| undefined;
@@ -114,11 +115,14 @@ const logResponse = async ({
 		const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
 		const statusColor = c.res.status === 200 ? chalk.green : chalk.yellow;
 
-		log(`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`, {
-			statusCode: c.res.status,
-			durationMs,
-			res: responseBody,
-		});
+		log(
+			`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`,
+			{
+				statusCode: c.res.status,
+				durationMs,
+				res: responseBody,
+			},
+		);
 
 		if (
 			Object.keys(ctx.extraLogs).length > 0 &&

@@ -1,5 +1,6 @@
 import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
+import type { InsertCustomerEntitlement } from "@autumn/shared";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -76,6 +77,9 @@ export const AutumnBillingPlanSchema = z.object({
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),
 
+	insertCustomerEntitlements: z
+		.array(z.custom<InsertCustomerEntitlement>())
+		.optional(),
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),

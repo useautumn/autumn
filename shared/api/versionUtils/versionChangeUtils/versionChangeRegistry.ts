@@ -11,6 +11,7 @@ import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/c
 
 import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange";
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange";
+import { V2_0_CustomerQueryChange } from "@api/customers/requestChanges/V2.0_CustomerQueryChange";
 // Import entity changes
 import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange";
 import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange";
@@ -46,6 +47,7 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_PlanChanges, // Transforms Plan TO V2.0 format from V2.1 format
 	V2_0_CustomerChange, // Transforms Customer TO V2.0 format from V2.1 format
+	V2_0_CustomerQueryChange, // Transforms Customer Query TO V2.1 format (adds flags.feature)
 	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
 	V2_0_CheckChange, // Transforms Check TO V2.0 format from V2.1 format
 	V2_0_TrackChange, // Transforms Track TO V2.0 format from V2.1 format

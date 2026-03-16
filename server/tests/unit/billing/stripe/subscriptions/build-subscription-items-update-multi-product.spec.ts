@@ -945,10 +945,18 @@ describe(
 					allocatedUsage: 10,
 				});
 
-				const pro = createProductWithAllPriceTypes({
+				const proEntity1 = createProductWithAllPriceTypes({
 					productId: "pro",
 					productName: "Pro",
 					customerProductId: "cus_prod_pro_entity1",
+					prepaidQuantity: 50,
+					allocatedUsage: 3,
+				});
+
+				const proEntity2 = createProductWithAllPriceTypes({
+					productId: "pro",
+					productName: "Pro",
+					customerProductId: "cus_prod_pro_entity2",
 					prepaidQuantity: 50,
 					allocatedUsage: 3,
 				});
@@ -971,13 +979,13 @@ describe(
 				const entity1ProProduct = customerProducts.create({
 					id: "cus_prod_pro_entity1",
 					productId: "pro",
-					product: pro.product,
+					product: proEntity1.product,
 					customerPrices: createCustomerPricesForProduct({
-						prices: pro.allPrices,
+						prices: proEntity1.allPrices,
 						customerProductId: "cus_prod_pro_entity1",
 					}),
-					customerEntitlements: pro.allEntitlements,
-					options: pro.allOptions,
+					customerEntitlements: proEntity1.allEntitlements,
+					options: proEntity1.allOptions,
 					status: CusProductStatus.Active,
 					internalEntityId: "internal_entity_1",
 					entityId: "entity_1",
@@ -987,13 +995,13 @@ describe(
 				const entity2ProProduct = customerProducts.create({
 					id: "cus_prod_pro_entity2",
 					productId: "pro",
-					product: pro.product,
+					product: proEntity2.product,
 					customerPrices: createCustomerPricesForProduct({
-						prices: pro.allPrices,
+						prices: proEntity2.allPrices,
 						customerProductId: "cus_prod_pro_entity2",
 					}),
-					customerEntitlements: pro.allEntitlements,
-					options: pro.allOptions,
+					customerEntitlements: proEntity2.allEntitlements,
+					options: proEntity2.allOptions,
 					status: CusProductStatus.Active,
 					internalEntityId: "internal_entity_2",
 					entityId: "entity_2",

@@ -5,6 +5,7 @@ import { EntityDataSchema } from "../../../common/entityData";
 import { BillingBehaviorSchema } from "../billingBehavior";
 import { CustomizePlanV1Schema } from "../customizePlan/customizePlanV1";
 import { InvoiceModeParamsSchema } from "../invoiceModeParams";
+import { RedirectModeSchema } from "../redirectMode";
 import { TransitionRulesSchema } from "../transitionRules";
 
 export const BillingParamsBaseV1Schema = z.object({
@@ -22,6 +23,7 @@ export const BillingParamsBaseV1Schema = z.object({
 		description:
 			"If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.",
 	}),
+
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
 	}),
@@ -41,6 +43,11 @@ export const BillingParamsBaseV1Schema = z.object({
 
 	transition_rules: TransitionRulesSchema.optional().meta({
 		internal: true,
+	}),
+
+	redirect_mode: RedirectModeSchema.default("if_required").meta({
+		description:
+			"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
 	}),
 
 	subscription_id: z.string().optional().meta({
