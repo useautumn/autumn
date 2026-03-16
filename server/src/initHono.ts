@@ -140,7 +140,7 @@ export const createHonoApp = () => {
 	// Public routes (no auth required)
 	app.route("", publicRouter);
 	// Debug routes (auth handled internally)
-	app.route("/v1/debug", debugRouter);
+	// app.route("/v1/debug", debugRouter);
 
 	// API Middleware
 	app.route("/v1", apiRouter);
