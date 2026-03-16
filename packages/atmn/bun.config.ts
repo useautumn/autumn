@@ -1,3 +1,5 @@
+import * as Bun from "bun";
+
 async function getVersion(): Promise<string> {
 	const packageJson = await Bun.file("./package.json").json();
 	return packageJson.version;
