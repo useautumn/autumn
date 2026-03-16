@@ -1,9 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { CheckoutBackground } from "./components/checkout/layout/CheckoutBackground";
 import { ThemeProvider } from "./components/theme-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { useDevThemeToggle } from "./hooks/useDevThemeToggle";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import "./index.css";
@@ -28,7 +26,14 @@ createRoot(document.getElementById("root")!).render(
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter>
 				<Routes>
-					<Route path="/c/:checkoutId" element={<CheckoutPage />} />
+					<Route
+						path="/c/:checkoutId"
+						element={<CheckoutPage routeMode="attach" />}
+					/>
+					<Route
+						path="/u/:checkoutId"
+						element={<CheckoutPage routeMode="update_subscription" />}
+					/>
 					<Route path="*" element={<NotFound />} />
 				</Routes>
 			</BrowserRouter>
@@ -37,20 +42,6 @@ createRoot(document.getElementById("root")!).render(
 );
 
 function NotFound() {
-	return (
-		<CheckoutBackground>
-			<div className="min-h-screen flex items-center justify-center p-4">
-				<Card className="w-full max-w-md">
-					<CardHeader>
-						<CardTitle>Page not found</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="text-muted-foreground">
-							The checkout page you're looking for doesn't exist.
-						</p>
-					</CardContent>
-				</Card>
-			</div>
-		</CheckoutBackground>
-	);
+	window.location.href = "https://useautumn.com";
+	return null;
 }

@@ -78,6 +78,7 @@ export const renew = async ({
 
 		// feature_quantities: attachParams.optionsList,
 		cancel_action: "uncancel",
+		redirect_mode: "if_required",
 	};
 
 	return await billingActions.updateSubscription({

@@ -1,5 +1,6 @@
 import type {
 	CancelAction,
+	CheckoutMode,
 	Entitlement,
 	FeatureOptions,
 	FreeTrial,
@@ -68,6 +69,9 @@ export interface BillingContext {
 
 	billingVersion: BillingVersion;
 	successUrl?: string;
+	checkoutSessionParams?: Record<string, unknown>;
 
 	skipBillingChanges?: boolean;
+
+	checkoutMode?: CheckoutMode;
 }

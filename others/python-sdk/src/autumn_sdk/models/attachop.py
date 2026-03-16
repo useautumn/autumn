@@ -607,6 +607,14 @@ AttachProrationBehavior = Literal[
 r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
+AttachRedirectMode = Literal[
+    "always",
+    "if_required",
+    "never",
+]
+r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
+
+
 class AttachAttachDiscountTypedDict(TypedDict):
     r"""A discount to apply. Can be either a reward ID or a promotion code."""
 
@@ -664,6 +672,76 @@ class AttachCustomLineItem(BaseModel):
     r"""Description for the line item."""
 
 
+class AttachCarryOverBalancesTypedDict(TypedDict):
+    r"""Whether to carry over balances from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over balances from the previous plan."""
+    feature_ids: NotRequired[List[str]]
+    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
+
+
+class AttachCarryOverBalances(BaseModel):
+    r"""Whether to carry over balances from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over balances from the previous plan."""
+
+    feature_ids: Optional[List[str]] = None
+    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AttachCarryOverUsagesTypedDict(TypedDict):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+    feature_ids: NotRequired[List[str]]
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+
+class AttachCarryOverUsages(BaseModel):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+
+    feature_ids: Optional[List[str]] = None
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class AttachParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -681,6 +759,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[AttachProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    redirect_mode: NotRequired[AttachRedirectMode]
+    r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[AttachAttachDiscountTypedDict]]
@@ -697,6 +777,10 @@ class AttachParamsTypedDict(TypedDict):
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
     processor_subscription_id: NotRequired[str]
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
+    carry_over_balances: NotRequired[AttachCarryOverBalancesTypedDict]
+    r"""Whether to carry over balances from the previous plan."""
+    carry_over_usages: NotRequired[AttachCarryOverUsagesTypedDict]
+    r"""Whether to carry over usages from the previous plan."""
 
 
 class AttachParams(BaseModel):
@@ -724,6 +808,9 @@ class AttachParams(BaseModel):
     proration_behavior: Optional[AttachProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    redirect_mode: Optional[AttachRedirectMode] = "if_required"
+    r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
+
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
 
@@ -748,6 +835,12 @@ class AttachParams(BaseModel):
     processor_subscription_id: Optional[str] = None
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
 
+    carry_over_balances: Optional[AttachCarryOverBalances] = None
+    r"""Whether to carry over balances from the previous plan."""
+
+    carry_over_usages: Optional[AttachCarryOverUsages] = None
+    r"""Whether to carry over usages from the previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -758,6 +851,7 @@ class AttachParams(BaseModel):
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
+                "redirect_mode",
                 "subscription_id",
                 "discounts",
                 "success_url",
@@ -766,6 +860,8 @@ class AttachParams(BaseModel):
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
+                "carry_over_balances",
+                "carry_over_usages",
             ]
         )
         serialized = handler(self)

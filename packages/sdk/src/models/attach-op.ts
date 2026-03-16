@@ -371,6 +371,19 @@ export type AttachProrationBehavior = ClosedEnum<
 >;
 
 /**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export const AttachRedirectMode = {
+  Always: "always",
+  IfRequired: "if_required",
+  Never: "never",
+} as const;
+/**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export type AttachRedirectMode = ClosedEnum<typeof AttachRedirectMode>;
+
+/**
  * A discount to apply. Can be either a reward ID or a promotion code.
  */
 export type AttachAttachDiscount = {
@@ -407,6 +420,34 @@ export type AttachCustomLineItem = {
   description: string;
 };
 
+/**
+ * Whether to carry over balances from the previous plan.
+ */
+export type AttachCarryOverBalances = {
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
+/**
+ * Whether to carry over usages from the previous plan.
+ */
+export type AttachCarryOverUsages = {
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
 export type AttachParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -441,6 +482,10 @@ export type AttachParams = {
    */
   prorationBehavior?: AttachProrationBehavior | undefined;
   /**
+   * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+   */
+  redirectMode?: AttachRedirectMode | undefined;
+  /**
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
   subscriptionId?: string | undefined;
@@ -472,6 +517,14 @@ export type AttachParams = {
    * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
    */
   processorSubscriptionId?: string | undefined;
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  carryOverBalances?: AttachCarryOverBalances | undefined;
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  carryOverUsages?: AttachCarryOverUsages | undefined;
 };
 
 /**
@@ -967,6 +1020,11 @@ export const AttachProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachProrationBehavior);
 
 /** @internal */
+export const AttachRedirectMode$outboundSchema: z.ZodMiniEnum<
+  typeof AttachRedirectMode
+> = z.enum(AttachRedirectMode);
+
+/** @internal */
 export type AttachAttachDiscount$Outbound = {
   reward_id?: string | undefined;
   promotion_code?: string | undefined;
@@ -1026,6 +1084,66 @@ export function attachCustomLineItemToJSON(
 }
 
 /** @internal */
+export type AttachCarryOverBalances$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const AttachCarryOverBalances$outboundSchema: z.ZodMiniType<
+  AttachCarryOverBalances$Outbound,
+  AttachCarryOverBalances
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function attachCarryOverBalancesToJSON(
+  attachCarryOverBalances: AttachCarryOverBalances,
+): string {
+  return JSON.stringify(
+    AttachCarryOverBalances$outboundSchema.parse(attachCarryOverBalances),
+  );
+}
+
+/** @internal */
+export type AttachCarryOverUsages$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const AttachCarryOverUsages$outboundSchema: z.ZodMiniType<
+  AttachCarryOverUsages$Outbound,
+  AttachCarryOverUsages
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function attachCarryOverUsagesToJSON(
+  attachCarryOverUsages: AttachCarryOverUsages,
+): string {
+  return JSON.stringify(
+    AttachCarryOverUsages$outboundSchema.parse(attachCarryOverUsages),
+  );
+}
+
+/** @internal */
 export type AttachParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -1035,6 +1153,7 @@ export type AttachParams$Outbound = {
   customize?: AttachCustomize$Outbound | undefined;
   invoice_mode?: AttachInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<AttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
@@ -1043,6 +1162,8 @@ export type AttachParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
+  carry_over_balances?: AttachCarryOverBalances$Outbound | undefined;
+  carry_over_usages?: AttachCarryOverUsages$Outbound | undefined;
 };
 
 /** @internal */
@@ -1061,6 +1182,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     customize: z.optional(z.lazy(() => AttachCustomize$outboundSchema)),
     invoiceMode: z.optional(z.lazy(() => AttachInvoiceMode$outboundSchema)),
     prorationBehavior: z.optional(AttachProrationBehavior$outboundSchema),
+    redirectMode: z._default(AttachRedirectMode$outboundSchema, "if_required"),
     subscriptionId: z.optional(z.string()),
     discounts: z.optional(
       z.array(z.lazy(() => AttachAttachDiscount$outboundSchema)),
@@ -1073,6 +1195,12 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
     ),
     processorSubscriptionId: z.optional(z.string()),
+    carryOverBalances: z.optional(
+      z.lazy(() => AttachCarryOverBalances$outboundSchema),
+    ),
+    carryOverUsages: z.optional(
+      z.lazy(() => AttachCarryOverUsages$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1082,6 +1210,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
@@ -1089,6 +1218,8 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
+      carryOverBalances: "carry_over_balances",
+      carryOverUsages: "carry_over_usages",
     });
   }),
 );

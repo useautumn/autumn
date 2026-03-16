@@ -3,7 +3,9 @@ import {
 	ApiVersion,
 	backwardsChangeActive,
 	CustomerExpand,
+	ErrCode,
 	GetCustomerQuerySchema,
+	RecaseError,
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -13,6 +15,7 @@ import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/g
 export const handleGetCustomerV2 = createRoute({
 	versionedQuery: {
 		latest: GetCustomerQuerySchema,
+		[ApiVersion.V2_0]: GetCustomerQuerySchema,
 		[ApiVersion.V1_2]: GetCustomerQuerySchema,
 	},
 	resource: AffectedResource.Customer,
@@ -22,6 +25,12 @@ export const handleGetCustomerV2 = createRoute({
 		const { expand } = ctx;
 		const { with_autumn_id } = c.req.valid("query");
 
+		if (!customerId) {
+			throw new RecaseError({
+				message: "Customer ID is required",
+				code: ErrCode.InvalidRequest,
+			});
+		}
 
 		// SIDE EFFECT
 		// !ctx.org.config.disable_v1_invoices &&

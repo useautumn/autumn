@@ -127,7 +127,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.attach(customer_id="cus_123", plan_id="pro_plan")
+                res = autumn.billing.attach(customer_id="cus_123", plan_id="pro_plan", redirect_mode="if_required")
 
                 # Handle response
                 print(res)
@@ -194,7 +194,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.billing.preview_attach(customer_id="cus_123", plan_id="pro_plan")
+                res = autumn.billing.preview_attach(customer_id="cus_123", plan_id="pro_plan", redirect_mode="if_required")
 
                 # Handle response
                 print(res)
@@ -248,7 +248,7 @@ actions:
                         "feature_id": "seats",
                         "quantity": 15,
                     },
-                ])
+                ], redirect_mode="if_required")
 
                 # Handle response
                 print(res)
@@ -289,7 +289,7 @@ actions:
                         "feature_id": "seats",
                         "quantity": 10,
                     },
-                ])
+                ], redirect_mode="if_required")
 
                 # Handle response
                 print(res)

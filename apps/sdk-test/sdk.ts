@@ -2,25 +2,13 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
   secretKey: process.env.AUTUMN_SECRET_KEY,
+  serverURL: "http://localhost:8080",
 });
 
 const res = await autumn.customers.getOrCreate({
   customerId: "john",
 });
 
-await autumn.entities.create({
-  customerId: "john",
-  entityId: "name",
-  featureId: "user",
-  billingControls: {
-    spendLimits: [
-      {
-        featureId: "test",
-        enabled: true,
-        overageLimit: 10,
-      },
-    ],
-  },
-});
+console.log("Res:", res);
 
-console.log(JSON.stringify(res, null, 2));
+// console.log(JSON.stringify(entity.billingControls, null, 2));

@@ -1,7 +1,7 @@
 import {
 	BillingMethod,
+	type BillingPreviewChange,
 	billingToItemInterval,
-	type CheckoutChange,
 	type ProductItem,
 	resetIntvToItemIntv,
 	UsageModel,
@@ -132,7 +132,7 @@ function normalizeCandidateForIncoming({
 function planItemToProductItem({
 	planItem,
 }: {
-	planItem: CheckoutChange["plan"]["items"][number];
+	planItem: BillingPreviewChange["plan"]["items"][number];
 }): ProductItem {
 	const interval = planItem.reset?.interval
 		? resetIntvToItemIntv(planItem.reset.interval)
@@ -165,7 +165,7 @@ export function outgoingToProductItems({
 	outgoing,
 	incomingItems,
 }: {
-	outgoing: CheckoutChange[] | undefined;
+	outgoing: BillingPreviewChange[] | undefined;
 	incomingItems: ProductItem[] | undefined;
 }): ProductItem[] {
 	if (!outgoing || outgoing.length === 0) {

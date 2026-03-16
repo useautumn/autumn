@@ -1,9 +1,11 @@
-import type { BillingParamsBaseV1 } from "@autumn/shared";
+import type { FeatureQuantityParamsV0 } from "@autumn/shared";
 
 export const setupAdjustableQuantities = ({
 	params,
 }: {
-	params: BillingParamsBaseV1;
+	params: {
+		feature_quantities?: FeatureQuantityParamsV0[];
+	};
 }) => {
 	return (
 		params.feature_quantities
