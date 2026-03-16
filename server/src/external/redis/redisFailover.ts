@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 /** How long primary must be erroring before we switch to failover. */
 const FAILOVER_DELAY_MS = 5_000;
@@ -45,14 +46,22 @@ export const initFailover = ({
 	};
 
 	if (!failover) {
-		console.log(
+		logger.info(
 			"[Redis failover] No failover region configured — failover disabled",
+			{
+				type: "redis_failover_init",
+			},
 		);
 		return;
 	}
 
-	console.log(
+	logger.info(
 		`[Redis failover] Enabled: primary=${currentRegion}, failover=${failoverRegion}`,
+		{
+			type: "redis_failover_init",
+			currentRegion,
+			failoverRegion,
+		},
 	);
 
 	const onPrimaryDown = () => {
@@ -98,16 +107,24 @@ export const initFailover = ({
 const switchToFailover = (): void => {
 	if (!state.failover || state.isUsingFailover) return;
 	if (state.failover.status !== "ready") {
-		console.error(
+		logger.error(
 			"[Redis failover] Cannot switch — failover instance is not ready",
+			{
+				type: "redis_failover_switch",
+				failoverStatus: state.failover.status,
+			},
 		);
 		return;
 	}
 
 	state.active = state.failover;
 	state.isUsingFailover = true;
-	console.log(
+	logger.error(
 		`[Redis failover] SWITCHED to failover region (${state.failoverRegion})`,
+		{
+			type: "redis_failover_switch",
+			failoverRegion: state.failoverRegion,
+		},
 	);
 };
 
@@ -117,7 +134,9 @@ const switchToPrimary = (): void => {
 	state.active = state.primary;
 	state.isUsingFailover = false;
 	primaryErrorSince = null;
-	console.log("[Redis failover] RECOVERED to primary region");
+	logger.info("[Redis failover] RECOVERED to primary region", {
+		type: "redis_failover_recovered",
+	});
 };
 
 /** Get the currently active Redis instance. */

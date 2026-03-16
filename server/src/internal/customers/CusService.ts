@@ -24,6 +24,7 @@ import {
 	type Table,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -86,7 +87,11 @@ export class CusService {
 					entityId,
 				);
 
-				const result = await db.execute(query);
+				const { result, isDegraded } = await executeWithHealthTracking({
+					db,
+					query,
+					useReplica: ctx.testOptions?.useReplica,
+				});
 
 				if (!result || result.length === 0) {
 					if (allowNotFound) {
@@ -113,11 +118,13 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
-				// Lazy reset stale entitlements (mutates fullCus in-memory + writes DB)
-				await resetCustomerEntitlements({
-					fullCus,
-					ctx,
-				});
+				// Skip reset when degraded — it writes to primary, and data from replica is stale anyway
+				if (!isDegraded) {
+					await resetCustomerEntitlements({
+						fullCus,
+						ctx,
+					});
+				}
 
 				return fullCus;
 			},
@@ -452,13 +459,15 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db.delete(customers).where(
-				and(
-					inArray(customers.internal_id, ids),
-					eq(customers.org_id, orgId),
-					eq(customers.env, env),
-				),
-			);
+			await db
+				.delete(customers)
+				.where(
+					and(
+						inArray(customers.internal_id, ids),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				);
 		}
 	}
 

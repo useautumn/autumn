@@ -1,6 +1,11 @@
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbCritical, dbGeneral } from "@/db/initDrizzle.js";
+import {
+	forceDegraded,
+	forceHealthy,
+	getPgHealthState,
+} from "@/db/pgHealthMonitor.js";
 import { redis } from "@/external/redis/initRedis.js";
 import {
 	disconnectPrimary,
@@ -42,6 +47,27 @@ debugRouter.get("/memory", async (c) => {
 			externalMB: +(mem.external / 1024 / 1024).toFixed(1),
 			arrayBuffersMB: +(mem.arrayBuffers / 1024 / 1024).toFixed(1),
 		},
+	});
+});
+
+/** Check what statement_timeout the DB connections actually see. */
+debugRouter.get("/statement-timeout", async (c) => {
+	if (process.env.NODE_ENV === "production") {
+		return c.json({ error: "Not available in production" }, 403);
+	}
+
+	const ctx = c.get("ctx");
+	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
+	const criticalResult = await dbCritical.execute(sql`SHOW statement_timeout`);
+	const generalResult = await dbGeneral.execute(sql`SHOW statement_timeout`);
+
+	return c.json({
+		ok: true,
+		critical: criticalResult[0],
+		general: generalResult[0],
 	});
 });
 
@@ -153,6 +179,48 @@ debugRouter.post("/redis-failover", async (c) => {
 				...getFailoverState(),
 			});
 		}
+	}
+
+	return c.json({ error: "Unknown action" }, 400);
+});
+
+/**
+ * PG health monitor test endpoints. Blocked in production.
+ */
+debugRouter.post("/pg-health", async (c) => {
+	if (process.env.NODE_ENV === "production") {
+		return c.json({ error: "Not available in production" }, 403);
+	}
+
+	const ctx = c.get("ctx");
+	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
+	const body = await c.req.json<{
+		action: "status" | "force-degraded" | "force-healthy";
+	}>();
+
+	if (body.action === "status") {
+		return c.json({ ok: true, ...getPgHealthState() });
+	}
+
+	if (body.action === "force-degraded") {
+		forceDegraded();
+		return c.json({
+			ok: true,
+			message: "Forced DEGRADED",
+			...getPgHealthState(),
+		});
+	}
+
+	if (body.action === "force-healthy") {
+		forceHealthy();
+		return c.json({
+			ok: true,
+			message: "Forced HEALTHY",
+			...getPgHealthState(),
+		});
 	}
 
 	return c.json({ error: "Unknown action" }, 400);
