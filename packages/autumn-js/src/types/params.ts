@@ -69,6 +69,13 @@ export type ClientAggregateEventsParams = Omit<
 	ProtectedFields
 >;
 
+/** List plans params without protected fields (for frontend use) */
+export type ClientListPlansParams = {
+	customerId?: string;
+	entityId?: string;
+	includeArchived?: boolean;
+};
+
 /** Preview attach params without protected fields (for frontend use) */
 export type ClientPreviewAttachParams = Omit<
 	PreviewAttachParams,
