@@ -5,7 +5,7 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import { client } from "./db/initDrizzle.js";
+import { client, clientCritical } from "./db/initDrizzle.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
@@ -14,7 +14,6 @@ import { checkEnvVars } from "./utils/initUtils.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
-// subscribeToOrgUpdates({ db });
 
 const init = async () => {
 	const app = createHonoApp();
@@ -78,7 +77,7 @@ async function gracefulShutdown() {
 		if (otelSdk) {
 			await otelSdk.shutdown();
 		}
-		await client.end();
+		await Promise.all([client.end(), clientCritical.end()]);
 		console.log("Shutdown complete. Exiting process.");
 		process.exit(0);
 	} catch (err) {
