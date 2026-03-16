@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+database_name="autumn"
+if [[ "${1:-}" != "" && "${1:-}" != -* ]]; then
+	database_name="$1"
+	shift
+fi
+
 database_url="${LOCAL_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/autumn}"
+database_base_url="${database_url%%\?*}"
+database_query="${database_url#"$database_base_url"}"
+database_url="${database_base_url%/*}/${database_name}${database_query}"
 cache_url="${LOCAL_CACHE_URL:-redis://localhost:6379}"
 
 echo "dev-local: overriding Infisical DATABASE_URL/CACHE_URL with local values and disabling CACHE_CERT"
