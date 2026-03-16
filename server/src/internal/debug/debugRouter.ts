@@ -63,10 +63,6 @@ debugRouter.post("/pool-test", async (c) => {
 		return c.json({ error: "Not available against production database" }, 403);
 	}
 
-	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
-		return c.json({ error: "Forbidden" }, 403);
-	}
-
 	const body = await c.req.json<{
 		action: "sleep" | "ping" | "cpu";
 		pool: "general" | "critical";
