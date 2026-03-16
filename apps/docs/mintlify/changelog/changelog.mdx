@@ -4,6 +4,42 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="March 16th 2026">
+  ## Balance and usage carry-over on plan upgrades
+
+  You can now preserve a customer's remaining balances and usage when they upgrade plans. Two new parameters on `billing.attach` give you fine-grained control over what happens to consumable features during an immediate upgrade.
+
+  - **`carry_over_balances`**: Unused credits or balances from the old plan are carried forward to the new one — so customers don't lose what they've already paid for
+  - **`carry_over_usages`**: Prior usage is deducted from the new plan's allowance, preventing customers from getting a free reset on upgrade
+  - **Per-feature control**: Optionally scope carry-over to specific features using `feature_ids`
+
+  See the [attach API reference](/api-reference/billing/attach) for details.
+
+  ## Feature flags in customer and entity responses
+
+  Boolean features are now returned as a dedicated `flags` object on customer and entity API responses. This makes it easier to check on/off feature access without calling the `check` endpoint separately.
+
+  - **Separate from balances**: Flags live under `flags` in the response, clearly separated from consumable balances
+  - **Available everywhere**: Returned on customer get, list, entity get, and entity create endpoints
+  - **Includes metadata**: Each flag shows the originating plan, expiration, and feature ID
+
+  See the [check endpoint](/api-reference/core/check) and [customer endpoints](/api-reference/customers/getOrCreateCustomer) for the updated response format.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Balance carry-over on immediate plan upgrades via `carry_over_balances` - [#861](https://github.com/useautumn/autumn/pull/861)
+      - Usage carry-over on immediate plan upgrades via `carry_over_usages` - [#875](https://github.com/useautumn/autumn/pull/875)
+      - Boolean features returned as `flags` in customer and entity objects - [#950](https://github.com/useautumn/autumn/pull/950)
+      - Updated API, SDKs, and frontend with new flag fields - [#951](https://github.com/useautumn/autumn/pull/951)
+    </Accordion>
+
+    <Accordion title="Bug Fixes">
+      - Fixed customer retrieval query causing errors in certain configurations - [#958](https://github.com/useautumn/autumn/pull/958), [#959](https://github.com/useautumn/autumn/pull/959)
+      - Fixed trial upgrade reliability when unsetting trial periods - [#958](https://github.com/useautumn/autumn/pull/958)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 13th 2026">
   ## Autumn Checkout
 
