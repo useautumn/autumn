@@ -6,7 +6,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import { db } from "@/db/initDrizzle.js";
+import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -48,6 +48,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	c.set("ctx", {
 		// Core objects
 		db,
+		dbGeneral,
 		logger: childLogger,
 
 		// Request info
