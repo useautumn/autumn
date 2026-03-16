@@ -21,6 +21,7 @@ export type RequestContext = {
 
 	// Objects
 	db: DrizzleCli;
+	dbGeneral: DrizzleCli;
 	logger: Logger;
 
 	// Info
