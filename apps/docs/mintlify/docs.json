@@ -14,6 +14,10 @@
 	"contextual": {
 		"options": ["copy", "cursor", "view"]
 	},
+	"banner": {
+		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
+		"dismissible": true
+	},
 	"favicon": "/favicon.png",
 	"interaction": {
 		"drilldown": true
@@ -79,7 +83,7 @@
 							"documentation/modelling-pricing/usage-based-pricing",
 							"documentation/modelling-pricing/rollovers",
 							"documentation/modelling-pricing/proration",
-								"documentation/modelling-pricing/spend-limits",
+							"documentation/modelling-pricing/spend-limits",
 							"documentation/modelling-pricing/auto-top-ups",
 							"documentation/modelling-pricing/add-ons",
 							"documentation/modelling-pricing/graduated-pricing",
@@ -89,28 +93,28 @@
 							"documentation/modelling-pricing/rewards"
 						]
 					},
-				{
-					"group": "Billing & Subscriptions",
-					"pages": [
-						"documentation/customers/payment-flow",
-						"documentation/customers/subscription-lifecycle",
-						"documentation/customers/updating-subscriptions",
-						"documentation/customers/custom-plans",
-						"documentation/customers/versioning"
-					]
-				},
-				{
-					"group": "Customers",
-					"pages": [
-						"documentation/customers/creating-customers",
-						"documentation/customers/managing-customers",
-						"documentation/customers/check",
-						"documentation/customers/tracking-usage",
-						"documentation/customers/balance-locking",
-						"documentation/customers/managing-balances",
-						"documentation/customers/feature-entities"
-					]
-				},
+					{
+						"group": "Billing & Subscriptions",
+						"pages": [
+							"documentation/customers/payment-flow",
+							"documentation/customers/subscription-lifecycle",
+							"documentation/customers/updating-subscriptions",
+							"documentation/customers/custom-plans",
+							"documentation/customers/versioning"
+						]
+					},
+					{
+						"group": "Customers",
+						"pages": [
+							"documentation/customers/creating-customers",
+							"documentation/customers/managing-customers",
+							"documentation/customers/check",
+							"documentation/customers/tracking-usage",
+							"documentation/customers/balance-locking",
+							"documentation/customers/managing-balances",
+							"documentation/customers/feature-entities"
+						]
+					},
 					{
 						"group": "Additional Resources",
 						"pages": [
