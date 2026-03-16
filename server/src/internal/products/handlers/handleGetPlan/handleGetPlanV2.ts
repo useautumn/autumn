@@ -7,16 +7,25 @@ export const handleGetPlanV2 = createRoute({
 	body: GetPlanParamsV0Schema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {
-		const { plan_id, version } = c.req.valid("json");
+		const { plan_id, variant_id, version } = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const fullProduct = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: plan_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			version: version,
-		});
+		const fullProduct = variant_id
+			? await ProductService.getVariant({
+					db: ctx.db,
+					planId: plan_id,
+					variantId: variant_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					version,
+				})
+			: await ProductService.getFull({
+					db: ctx.db,
+					idOrInternalId: plan_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					version,
+				});
 
 		const latestPlan = await getPlanResponse({
 			product: fullProduct,

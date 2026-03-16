@@ -179,6 +179,7 @@ export const ApiProductSchema = z.object({
 	base_variant_id: z
 		.string()
 		.nullable()
+		.optional()
 		.describe("ID of the base variant this product is derived from"),
 
 	scenario: z

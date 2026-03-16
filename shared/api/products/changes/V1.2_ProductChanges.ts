@@ -108,7 +108,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 							input.customer_eligibility?.trial_available ?? null,
 					}
 				: null,
-			base_variant_id: input.base_variant_id,
+			base_variant_id: null,
 			scenario: input.customer_eligibility?.scenario ?? undefined,
 		} satisfies ApiProduct;
 

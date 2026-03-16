@@ -47,10 +47,11 @@ import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
 	const latestProducts = products.reduce((acc: any, product: any) => {
-		if (!acc[product.id]) {
-			acc[product.id] = product;
-		} else if (product.version > acc[product.id].version) {
-			acc[product.id] = product;
+		const key = `${product.id}|${product.variant_id ?? ""}`;
+		if (!acc[key]) {
+			acc[key] = product;
+		} else if (product.version > acc[key].version) {
+			acc[key] = product;
 		}
 		return acc;
 	}, {});

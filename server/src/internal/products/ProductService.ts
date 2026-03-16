@@ -388,6 +388,7 @@ export class ProductService {
 				),
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				isNull(products.variant_id),
 				version ? eq(products.version, version) : undefined,
 			),
 			orderBy: [desc(products.version)],
@@ -425,6 +426,65 @@ export class ProductService {
 		}
 
 		return data as FullProduct;
+	}
+
+	static async getVariant({
+		db,
+		planId,
+		variantId,
+		orgId,
+		env,
+		version,
+	}: {
+		db: DrizzleCli;
+		planId: string;
+		variantId: string;
+		orgId: string;
+		env: AppEnv;
+		version?: number;
+	}) {
+		const data = (await db.query.products.findFirst({
+			where: and(
+				eq(products.id, planId),
+				eq(products.variant_id, variantId),
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				version ? eq(products.version, version) : undefined,
+			),
+			orderBy: [desc(products.version)],
+			with: {
+				entitlements: {
+					with: { feature: true },
+					where: and(
+						eq(entitlements.is_custom, false),
+						or(
+							isNull(entitlements.variant_action),
+							ne(entitlements.variant_action, "removed"),
+						),
+					),
+				},
+				prices: {
+					where: and(
+						eq(prices.is_custom, false),
+						or(
+							isNull(prices.variant_action),
+							ne(prices.variant_action, "removed"),
+						),
+					),
+				},
+				free_trials: { where: eq(freeTrials.is_custom, false) },
+			},
+		})) as FullProduct;
+
+		if (!data) {
+			throw new ProductNotFoundError({
+				productId: `${planId}:${variantId}`,
+				version,
+			});
+		}
+
+		parseFreeTrials({ product: data });
+		return data;
 	}
 
 	static async getProductVersionCount({

@@ -105,19 +105,43 @@ export class AutumnRpcCli {
 			return await this.post("/plans.create", plan);
 		},
 
-		get: async <TResponse = any>(planId: string): Promise<TResponse> => {
+		createVariant: async <TResponse = any>(params: {
+			plan_id: string;
+			variant_id: string;
+			variant_name: string;
+		}): Promise<TResponse> => {
+			return await this.post("/plans.createVariant", params);
+		},
+
+		deleteVariant: async (
+			planId: string,
+			variantId: string,
+		): Promise<{ success: boolean }> => {
+			return await this.post("/plans.deleteVariant", {
+				plan_id: planId,
+				variant_id: variantId,
+			});
+		},
+
+		get: async <TResponse = any>(
+			planId: string,
+			{ variantId }: { variantId?: string } = {},
+		): Promise<TResponse> => {
 			return await this.post("/plans.get", {
 				plan_id: planId,
+				...(variantId ? { variant_id: variantId } : {}),
 			});
 		},
 
 		update: async <TResponse = any, TInput = any>(
 			planId: string,
 			updates: TInput,
+			{ variantId }: { variantId?: string } = {},
 		): Promise<TResponse> => {
 			return await this.post("/plans.update", {
 				...(updates as Record<string, unknown>),
 				plan_id: planId,
+				...(variantId ? { variant_id: variantId } : {}),
 			});
 		},
 

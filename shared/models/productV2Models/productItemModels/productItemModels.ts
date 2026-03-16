@@ -179,6 +179,17 @@ export const ProductItemSchema = z.object({
 	price_config: z.any().nullish().meta({
 		internal: true,
 	}),
+
+	// Variant fields
+	base_entitlement_id: z.string().nullable().optional().meta({
+		internal: true,
+	}),
+	base_price_id: z.string().nullable().optional().meta({
+		internal: true,
+	}),
+	variant_action: z.enum(["override", "removed"]).nullable().optional().meta({
+		internal: true,
+	}),
 });
 
 export const LimitedItemSchema = ProductItemSchema.extend({

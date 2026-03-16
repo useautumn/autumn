@@ -101,9 +101,9 @@ export const ApiPlanV1Schema = z.object({
 		description:
 			"Whether the plan is archived. Archived plans cannot be attached to new customers.",
 	}),
-	base_variant_id: z.string().nullable().meta({
+	variant_id: z.string().nullable().meta({
 		description:
-			"If this is a variant, the ID of the base plan it was created from.",
+			"The variant ID for this plan. Null for base plans, set for variants.",
 	}),
 
 	customer_eligibility: z
