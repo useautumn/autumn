@@ -96,7 +96,11 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 
 	const { customerId, autumnV1, autumnV2, autumnV2_1 } = await initScenario({
 		customerId: "check-boolean",
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		setup: [
+			s.customer({ testClock: false }),
+
+			s.products({ list: [freeProd] }),
+		],
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
