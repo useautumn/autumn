@@ -3,8 +3,10 @@ import {
 	type ApiCustomerV3,
 	type CheckResponseV1,
 	CustomerExpand,
+	ErrCode,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -209,4 +211,46 @@ test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached
 	});
 
 	expect(checkRes2.allowed).toBe(true);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// CHECK MISC 5: V2.1 does not auto-create customer via /check
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("check-misc5: v2.1 does not auto-create customer via /check")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const freeProd = products.base({
+		id: "free",
+		items: [messagesItem],
+	});
+
+	const customerId = "check-misc5";
+
+	const { autumnV2_1 } = await initScenario({
+		setup: [s.deleteCustomer({ customerId }), s.products({ list: [freeProd] })],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.CustomerNotFound,
+		func: async () =>
+			await autumnV2_1.check({
+				customer_id: customerId,
+				customer_data: {
+					name: "check-misc5",
+					email: "check-misc5@test.com",
+				},
+				feature_id: TestFeature.Messages,
+				entity_id: `${customerId}-entity-1`,
+				entity_data: {
+					name: "Test Entity",
+					feature_id: TestFeature.Users,
+				},
+			}),
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.CustomerNotFound,
+		func: async () => await autumnV2_1.customers.get(customerId),
+	});
 });
