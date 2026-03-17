@@ -34,6 +34,10 @@ export default defineConfig({
 				__dirname,
 				"../packages/autumn-js/src/sdk/index.ts",
 			),
+			"atmn/skills": path.resolve(
+				__dirname,
+				"../packages/atmn/src/prompts/skills/index.ts",
+			),
 
 			// Hide Radix UI imports with cleaner aliases
 			"@radix/accordion": "@radix-ui/react-accordion",
@@ -56,6 +60,7 @@ export default defineConfig({
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",
+			"atmn/skills",
 			"autumn-js",
 			"autumn-js/react",
 			"better-auth",

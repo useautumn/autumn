@@ -2,13 +2,12 @@
 
 import { AppEnv } from "@autumn/shared";
 import {
-	ChartBar,
+	BatteryHighIcon,
 	CheckCircleIcon,
 	ClockIcon,
-	CreditCard,
 	CubeIcon,
+	PlugsConnectedIcon,
 	SparkleIcon,
-	UserCircle,
 } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -60,7 +59,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		shortTitle: "Plans",
 		icon: <CubeIcon size={16} weight="duotone" />,
 		description:
-			"Create a plan, set pricing, and add the features customers get with it",
+			"Create a plan, set pricing, and add the features customers get with this plan",
 		link: "/quickstart",
 		linkText: "Go to Quickstart",
 		waitingFor: "Waiting for plan",
@@ -68,28 +67,18 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 	{
 		id: "customer",
 		stepId: "customer",
-		title: "Create a customer",
-		shortTitle: "Customer",
-		icon: <UserCircle size={16} weight="duotone" />,
-		description:
-			"Start integrating your pricing by creating a customer from your app",
+		title: "Set up Autumn",
+		shortTitle: "Integration",
+		icon: <PlugsConnectedIcon size={16} weight="duotone" />,
+		description: "Install the SDK, create a customer, and add the payment flow",
 		waitingFor: "Waiting for customer",
-	},
-	{
-		id: "payments",
-		stepId: "payments",
-		title: "Handle payments",
-		shortTitle: "Payments",
-		icon: <CreditCard size={16} weight="duotone" />,
-		description: "Build your billing page and handle payments",
-		waitingFor: "Waiting for checkout",
 	},
 	{
 		id: "usage",
 		stepId: "usage",
-		title: "Limits and gating",
-		shortTitle: "Gating",
-		icon: <ChartBar size={16} weight="duotone" />,
+		title: "Checking and tracking balances",
+		shortTitle: "Balances",
+		icon: <BatteryHighIcon size={16} weight="duotone" />,
 		description:
 			"Give customers access to the features on their plan, and track usage",
 		waitingFor: "Waiting for event",
@@ -157,7 +146,7 @@ function StepCard({
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1, transition: { duration: 0.5 } }}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						className="absolute top-0 left-0 bottom-0 w-[515px] px-4 flex gap-6 shrink-0!"
+						className="absolute top-0 left-0 bottom-0 w-[610px] px-4 flex gap-6 shrink-0!"
 					>
 						<div className="flex flex-col justify-center">
 							<h3 className="font-medium text-sm text-foreground mb-1">
@@ -271,17 +260,17 @@ export function OnboardingGuide() {
 
 	if (isLoading) {
 		return (
-		<div className="relative overflow-x-clip border-dashed border-b pb-4 mb-2">
-			{/* Header skeleton */}
+			<div className="relative overflow-x-clip border-dashed border-b pb-4 mb-2 h-32">
+				{/* Header skeleton */}
 				<div className="pr-8 mb-2.75">
 					<div className="flex items-center gap-2">
 						<Skeleton className="h-3.5 w-36" />
-						<Skeleton className="h-4 w-16 rounded-md" />
+						<Skeleton className="h-3.5 w-16 rounded-md" />
 					</div>
 				</div>
-				{/* Steps skeleton - 4 cards */}
-				<div className="flex gap-3 items-start w-[700px] shrink-0">
-					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
+				{/* Steps skeleton - 3 cards */}
+				<div className="flex gap-3 items-start shrink-0">
+					{["flex-[4]", "flex-1", "flex-1"].map((flexClass, i) => (
 						<Skeleton key={i} className={cn("rounded-xl h-21", flexClass)} />
 					))}
 				</div>

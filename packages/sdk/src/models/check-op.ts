@@ -172,14 +172,14 @@ export type Flag = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const CheckScenario = {
+export const Scenario = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type CheckScenario = OpenEnum<typeof CheckScenario>;
+export type Scenario = OpenEnum<typeof Scenario>;
 
 /**
  * The environment of the product
@@ -489,7 +489,7 @@ export type Preview = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: CheckScenario;
+  scenario: Scenario;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -728,10 +728,8 @@ export function flagFromJSON(
 }
 
 /** @internal */
-export const CheckScenario$inboundSchema: z.ZodMiniType<
-  CheckScenario,
-  unknown
-> = openEnums.inboundSchema(CheckScenario);
+export const Scenario$inboundSchema: z.ZodMiniType<Scenario, unknown> =
+  openEnums.inboundSchema(Scenario);
 
 /** @internal */
 export const CheckEnv$inboundSchema: z.ZodMiniType<CheckEnv, unknown> =
@@ -1036,7 +1034,7 @@ export function productFromJSON(
 /** @internal */
 export const Preview$inboundSchema: z.ZodMiniType<Preview, unknown> = z.pipe(
   z.object({
-    scenario: CheckScenario$inboundSchema,
+    scenario: Scenario$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),

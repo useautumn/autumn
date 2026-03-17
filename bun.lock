@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 1,
   "workspaces": {
     "": {
       "name": "autumn",
@@ -166,7 +165,7 @@
     },
     "packages/autumn-js": {
       "name": "autumn-js",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "dependencies": {
         "query-string": "^9.2.2",
         "rou3": "^0.6.1",
@@ -446,6 +445,7 @@
         "ag-grid-community": "^34.0.2",
         "ag-grid-react": "^34.0.2",
         "ai": "^6.0.5",
+        "atmn": "workspace:*",
         "autumn-js": "workspace:*",
         "axios": "^1.8.3",
         "better-auth": "catalog:",

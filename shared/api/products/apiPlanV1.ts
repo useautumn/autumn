@@ -1,14 +1,21 @@
-import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
+import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
 import {
 	API_PLAN_ITEM_PREPAID_EXAMPLE,
 	API_PLAN_ITEM_USAGE_BASED_EXAMPLE,
 	ApiPlanItemV1Schema,
 } from "./items/apiPlanItemV1.js";
+
+export {
+	AttachAction,
+	type CustomerEligibility,
+	CustomerEligibilitySchema,
+	EligibilityStatus,
+} from "./components/customerEligibility.js";
 
 export const API_PLAN_V1_EXAMPLE = {
 	id: "pro",
@@ -106,17 +113,7 @@ export const ApiPlanV1Schema = z.object({
 			"If this is a variant, the ID of the base plan it was created from.",
 	}),
 
-	customer_eligibility: z
-		.object({
-			trial_available: z.boolean().optional().meta({
-				description: "Whether a free trial is available for this customer.",
-			}),
-			scenario: z.enum(AttachScenario).meta({
-				description:
-					"The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).",
-			}),
-		})
-		.optional(),
+	customer_eligibility: CustomerEligibilitySchema.optional(),
 });
 
 export type ApiPlanV1 = z.infer<typeof ApiPlanV1Schema>;
