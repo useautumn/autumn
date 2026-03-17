@@ -113,7 +113,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="expand" type="string[]" />
+<DynamicParamField body="expand" type="string[]">
+  Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
+</DynamicParamField>
 
 
 ### Response
@@ -1101,6 +1103,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="invoices" type="object[]">
+  Invoices for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan_ids" type="string[]">
       Array of plan IDs included in this invoice
@@ -1134,6 +1137,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="entities" type="object[]">
+  Entities associated with this customer.
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string | null">
       The unique identifier of the entity
@@ -1163,6 +1167,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="trials_used" type="object[]">
+  Trial usage history for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan_id" type="string" />
 
@@ -1174,6 +1179,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="rewards" type="object | null">
+  Rewards earned or applied for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="discounts" type="object[]">
       Array of active discounts applied to the customer
@@ -1229,6 +1235,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="referrals" type="object[]">
+  Referral records for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="program_id" type="string" />
 
@@ -1250,7 +1257,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="payment_method" type="any | null" />
+<DynamicResponseField name="payment_method" type="any | null">
+  The customer's default payment method.
+</DynamicResponseField>
 
 
 <ResponseExample>

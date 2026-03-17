@@ -70,6 +70,7 @@ export const createTestContext = async () => {
 		env,
 		stripeCli,
 		db,
+		dbGeneral: db,
 		features,
 		logger,
 		orgSecretKey,
