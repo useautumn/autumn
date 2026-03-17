@@ -99,6 +99,7 @@ export const getCountAndSum = async ({
 			FROM events
 			WHERE org_id = {org_id:String} AND env = {env:String}
 			${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
+			${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}
 		)
 		SELECT
 			e.event_name,
@@ -125,6 +126,7 @@ export const getCountAndSum = async ({
 			org_id: org.id,
 			env,
 			customer_id: params.customer_id,
+			entity_id: params.entity_id,
 			start_date: startDate,
 			end_date: endDate,
 			event_names: params.event_names,
