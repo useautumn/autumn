@@ -4,8 +4,8 @@ openapi: "openapi POST /v1/balances.trackTokens"
 ---
 
 import { DynamicParamField } from "/components/dynamic-param-field.jsx";
-import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 
 <Note>
   Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using OpenRouter pricing and your configured markup, then deducts from the customer's credit balance.
@@ -37,7 +37,7 @@ await autumn.balances.trackTokens({
 ```typescript Track with properties
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  modelId: "gpt-4o",
+  modelId: "openai/gpt-4o",
   inputTokens: 500,
   outputTokens: 200,
   properties: {
@@ -56,7 +56,7 @@ await autumn.balances.trackTokens({
 </DynamicParamField>
 
 <DynamicParamField body="model" type="string" required>
-  The AI model name (e.g., `claude-opus-4-6`, `gpt-4o`). Must match a model in the OpenRouter pricing data.
+  The AI model name (e.g., `anthropic/claude-opus-4-6`, `openai/gpt-4o`). Must have a provider prefix (ie OpenAI, Anthropic, OpenAI).
 </DynamicParamField>
 
 <DynamicParamField body="input_tokens" type="number" required>
