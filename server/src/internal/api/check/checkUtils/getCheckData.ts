@@ -1,6 +1,7 @@
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
+	ApiVersion,
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
@@ -12,6 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
@@ -58,12 +60,18 @@ export const getCheckData = async ({
 
 	let apiSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
 	const start = performance.now();
-	const fullCustomer = await getOrCreateCachedFullCustomer({
-		ctx,
-		params: body,
-
-		source: "getCheckData",
-	});
+	const fullCustomer = ctx.apiVersion.gte(ApiVersion.V2_1)
+		? await getOrSetCachedFullCustomer({
+				ctx,
+				customerId: customer_id,
+				entityId: entity_id,
+				source: "getCheckData",
+			})
+		: await getOrCreateCachedFullCustomer({
+				ctx,
+				params: body,
+				source: "getCheckData",
+			});
 	const { apiCustomer } = await getApiCustomerBase({
 		ctx,
 		fullCus: fullCustomer,
