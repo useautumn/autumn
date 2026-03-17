@@ -146,7 +146,7 @@ export const cleanTiersForMode = ({
 		if (mode === "flat") {
 			return { ...tier, amount: 0 };
 		}
-		return { ...tier, flat_amount: null };
+		return { ...tier, flat_amount: undefined };
 	});
 
 	return { ...item, tiers: cleanedTiers };

@@ -61,7 +61,7 @@ export function EditPlanFeatureSheet({
 			if (newItem.tiers) {
 				newItem.tiers = newItem.tiers.map((tier) => ({
 					...tier,
-					flat_amount: null,
+					flat_amount: undefined,
 				}));
 			}
 		}
@@ -90,7 +90,7 @@ export function EditPlanFeatureSheet({
 			return {
 				...tier,
 				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
-				flat_amount: null,
+				flat_amount: undefined,
 			};
 		});
 
