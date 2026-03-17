@@ -195,7 +195,7 @@ class CustomerBillingControls(BaseModel):
         return m
 
 
-Status = Union[
+CustomerStatus = Union[
     Literal[
         "active",
         "scheduled",
@@ -214,7 +214,7 @@ class SubscriptionTypedDict(TypedDict):
     r"""Whether the plan was automatically enabled for the customer."""
     add_on: bool
     r"""Whether this is an add-on plan rather than a base subscription."""
-    status: Status
+    status: CustomerStatus
     r"""Current status of the subscription."""
     past_due: bool
     r"""Whether the subscription has overdue payments."""
@@ -248,7 +248,7 @@ class Subscription(BaseModel):
     add_on: bool
     r"""Whether this is an add-on plan rather than a base subscription."""
 
-    status: Status
+    status: CustomerStatus
     r"""Current status of the subscription."""
 
     past_due: bool
