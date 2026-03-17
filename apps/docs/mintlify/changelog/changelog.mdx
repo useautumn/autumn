@@ -4,8 +4,17 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
-<<<<<<< mintlify/changelog-march-16-1773619762
 <Update label="March 17th 2026">
+  ## Express, Elysia, and Web Standard adapters for `autumn-js`
+
+  The `autumn-js` SDK now ships adapters for Express, Elysia, and any framework that uses the Fetch API `Request`/`Response` objects. You can set up the `autumnHandler` in your backend with a single import — no manual request parsing required.
+
+  - **Express**: Import from `autumn-js/express` and mount with `app.use()`. Requires `express.json()` before the handler
+  - **Elysia / Web Standard**: Import from `autumn-js/webStandard` and use with Elysia's `.mount()`, Cloudflare Workers, Deno, or any Fetch-based runtime
+  - **Existing adapters**: Next.js (`autumn-js/next`) and Hono (`autumn-js/hono`) continue to work as before
+
+  See the [setup guide](/documentation/getting-started/setup) for framework-specific code examples.
+
   ## Explicit customer creation required for `check` and `track`
 
   The `/check` and `/track` endpoints no longer auto-create customers. If you call these endpoints with a `customer_id` that doesn't exist, the API now returns a `customer_not_found` error instead of silently creating the customer.
@@ -21,14 +30,14 @@ description: "Some new things we've shipped at Autumn HQ"
 
   <AccordionGroup>
     <Accordion title="Improvements">
+      - Express adapter for `autumnHandler` via `autumn-js/express` - [#979](https://github.com/useautumn/autumn/pull/979)
+      - Web Standard adapter for `autumnHandler` via `autumn-js/webStandard` (Elysia, Cloudflare Workers, Deno) - [#979](https://github.com/useautumn/autumn/pull/979)
       - Explicit customer creation required for `check` and `track` endpoints - [#968](https://github.com/useautumn/autumn/pull/968)
       - `autumn-js` SDK promoted to `1.0.0` stable release - [#968](https://github.com/useautumn/autumn/pull/968)
     </Accordion>
   </AccordionGroup>
 </Update>
 
-=======
->>>>>>> dev
 <Update label="March 16th 2026">
   ## Balance and usage carry-over on plan upgrades
 
