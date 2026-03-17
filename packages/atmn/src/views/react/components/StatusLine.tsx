@@ -3,7 +3,7 @@ import Spinner from "ink-spinner";
 
 interface StatusLineProps {
 	status: "pending" | "loading" | "success" | "error";
-	message: string;
+	message: string | React.JSX.Element;
 	detail?: string;
 }
 
