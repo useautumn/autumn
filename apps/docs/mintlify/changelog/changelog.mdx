@@ -4,7 +4,6 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
-<<<<<<< mintlify/changelog-march-16-1773619762
 <Update label="March 17th 2026">
   ## Explicit customer creation required for `check` and `track`
 
@@ -19,16 +18,29 @@ description: "Some new things we've shipped at Autumn HQ"
 
   The `autumn-js` SDK has been promoted from beta to stable at version `1.0.0`.
 
+  ## New framework adapters
+
+  The `autumn-js` SDK now includes adapters for Express, Elysia, and any Web Standard compatible runtime (Cloudflare Workers, Deno). Import from the adapter that matches your backend:
+
+  | Framework | Import path |
+  | --- | --- |
+  | Next.js | `autumn-js/next` |
+  | Hono | `autumn-js/hono` |
+  | Elysia / Web Standard | `autumn-js/webStandard` |
+  | Express | `autumn-js/express` |
+  | Other | `autumn-js/backend` |
+
+  See the [setup guide](/documentation/getting-started/setup) and the [`autumnHandler` reference](/react/hooks/autumn-handler) for full examples.
+
   <AccordionGroup>
     <Accordion title="Improvements">
       - Explicit customer creation required for `check` and `track` endpoints - [#968](https://github.com/useautumn/autumn/pull/968)
       - `autumn-js` SDK promoted to `1.0.0` stable release - [#968](https://github.com/useautumn/autumn/pull/968)
+      - New Express, Elysia, and Web Standard adapters for `autumnHandler` - [#985](https://github.com/useautumn/autumn/pull/985)
+      - Improved API reference field descriptions for preview endpoints - [#985](https://github.com/useautumn/autumn/pull/985)
     </Accordion>
   </AccordionGroup>
 </Update>
-
-=======
->>>>>>> dev
 <Update label="March 16th 2026">
   ## Balance and usage carry-over on plan upgrades
 
