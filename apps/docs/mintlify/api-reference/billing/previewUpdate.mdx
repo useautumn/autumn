@@ -431,9 +431,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <DynamicResponseField name="incoming" type="object[]">
   Products or subscription changes being added or updated.
   <Expandable title="properties">
-    <DynamicResponseField name="plan_id" type="string" />
+    <DynamicResponseField name="plan_id" type="string">
+      The ID of the plan affected by this preview change.
+    </DynamicResponseField>
 
     <DynamicResponseField name="plan" type="object">
+      The full plan object if it was expanded in the response.
       <Expandable title="properties">
         <DynamicResponseField name="id" type="string">
           Unique identifier for the plan.
@@ -696,15 +699,22 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
     <DynamicResponseField name="feature_quantities" type="object[]">
+      The feature quantity selections associated with this plan change.
       <Expandable title="properties">
-        <DynamicResponseField name="feature_id" type="string" />
+        <DynamicResponseField name="feature_id" type="string">
+          The ID of the adjustable feature included in this change.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="quantity" type="number" />
+        <DynamicResponseField name="quantity" type="number">
+          The quantity that will apply for this feature in the change.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="effective_at" type="number | null" />
+    <DynamicResponseField name="effective_at" type="number | null">
+      When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
 
   </Expandable>
 </DynamicResponseField>
@@ -712,9 +722,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 <DynamicResponseField name="outgoing" type="object[]">
   Products or subscription changes being removed or ended.
   <Expandable title="properties">
-    <DynamicResponseField name="plan_id" type="string" />
+    <DynamicResponseField name="plan_id" type="string">
+      The ID of the plan affected by this preview change.
+    </DynamicResponseField>
 
     <DynamicResponseField name="plan" type="object">
+      The full plan object if it was expanded in the response.
       <Expandable title="properties">
         <DynamicResponseField name="id" type="string">
           Unique identifier for the plan.
@@ -977,15 +990,22 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
     <DynamicResponseField name="feature_quantities" type="object[]">
+      The feature quantity selections associated with this plan change.
       <Expandable title="properties">
-        <DynamicResponseField name="feature_id" type="string" />
+        <DynamicResponseField name="feature_id" type="string">
+          The ID of the adjustable feature included in this change.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="quantity" type="number" />
+        <DynamicResponseField name="quantity" type="number">
+          The quantity that will apply for this feature in the change.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="effective_at" type="number | null" />
+    <DynamicResponseField name="effective_at" type="number | null">
+      When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
 
   </Expandable>
 </DynamicResponseField>

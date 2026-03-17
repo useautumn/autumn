@@ -46,6 +46,7 @@ import { Result } from "../types/fp.js";
  * @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
  * @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
  * @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+ * @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
  */
 export function customersGetOrCreate(
   client: AutumnCore,

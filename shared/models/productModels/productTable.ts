@@ -8,7 +8,7 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { collatePgColumn, sqlNow } from "../../db/utils";
+import { sqlNow } from "../../db/utils";
 import { organizations } from "../orgModels/orgTable";
 
 type ProductProcessor = {
@@ -48,5 +48,3 @@ export const products = pgTable(
 		),
 	],
 );
-
-collatePgColumn(products.internal_id, "C");

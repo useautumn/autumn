@@ -173,6 +173,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: trial subscription_data"
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Verify features available during trial

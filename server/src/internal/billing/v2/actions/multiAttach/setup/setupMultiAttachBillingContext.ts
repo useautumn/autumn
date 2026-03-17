@@ -180,5 +180,6 @@ export const setupMultiAttachBillingContext = async ({
 		billingVersion: BillingVersion.V2,
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
+		checkoutSessionParams: params.checkout_session_params,
 	};
 };

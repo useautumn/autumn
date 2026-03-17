@@ -2,6 +2,7 @@ import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
 	ctx,
@@ -22,6 +23,11 @@ export const executeStripeSubscriptionOperation = async ({
 				days_until_due: 30,
 			}
 		: {};
+
+	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
+		billingContext,
+		stripeSubscriptionAction: subscriptionAction,
+	});
 
 	// default incomplete used so that payment failure / 3ds errors are clearly handled
 	const createPaymentBehavior =
@@ -63,8 +69,8 @@ export const executeStripeSubscriptionOperation = async ({
 				subscriptionAction.stripeSubscriptionId,
 				{
 					...subscriptionAction.params,
-					...invoiceModeParams,
 					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+					...(updateWillCreateInvoice ? invoiceModeParams : {}),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},

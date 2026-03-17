@@ -14,6 +14,7 @@ import type {
 	RedeemReferralCodeResponse,
 	SetupPaymentResponse,
 } from "@useautumn/sdk";
+import type { ListPlansParams } from "../../types";
 import type { IAutumnClient } from "./IAutumnClient";
 import { createHttpClient } from "./internal/httpClient";
 
@@ -89,7 +90,11 @@ export const createAutumnClient = (
 				route: "redeemReferralCode",
 				body: params,
 			}),
-		listPlans: () => http.request<ListPlansResponse>({ route: "listPlans" }),
+		listPlans: (params?: ListPlansParams) =>
+			http.request<ListPlansResponse>({
+				route: "listPlans",
+				body: params ?? {},
+			}),
 		listEvents: (params) =>
 			http.request<ListEventsResponse>({
 				route: "listEvents",

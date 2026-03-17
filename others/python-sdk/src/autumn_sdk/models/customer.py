@@ -950,11 +950,17 @@ class CustomerTypedDict(TypedDict):
     flags: Dict[str, FlagsTypedDict]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
     invoices: NotRequired[List[InvoiceTypedDict]]
+    r"""Invoices for this customer."""
     entities: NotRequired[List[EntityTypedDict]]
+    r"""Entities associated with this customer."""
     trials_used: NotRequired[List[TrialsUsedTypedDict]]
+    r"""Trial usage history for this customer."""
     rewards: NotRequired[Nullable[RewardsTypedDict]]
+    r"""Rewards earned or applied for this customer."""
     referrals: NotRequired[List[ReferralTypedDict]]
+    r"""Referral records for this customer."""
     payment_method: NotRequired[Nullable[Any]]
+    r"""The customer's default payment method."""
 
 
 class Customer(BaseModel):
@@ -1001,16 +1007,22 @@ class Customer(BaseModel):
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
     invoices: Optional[List[Invoice]] = None
+    r"""Invoices for this customer."""
 
     entities: Optional[List[Entity]] = None
+    r"""Entities associated with this customer."""
 
     trials_used: Optional[List[TrialsUsed]] = None
+    r"""Trial usage history for this customer."""
 
     rewards: OptionalNullable[Rewards] = UNSET
+    r"""Rewards earned or applied for this customer."""
 
     referrals: Optional[List[Referral]] = None
+    r"""Referral records for this customer."""
 
     payment_method: OptionalNullable[Any] = UNSET
+    r"""The customer's default payment method."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

@@ -45,6 +45,7 @@ export class CusService {
 		withSubs = false,
 		allowNotFound = false,
 		withEvents = false,
+		explain = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -55,6 +56,7 @@ export class CusService {
 		withSubs?: boolean;
 		allowNotFound?: boolean;
 		withEvents?: boolean;
+		explain?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -87,7 +89,13 @@ export class CusService {
 					entityId,
 				);
 
-				const { result, isDegraded } = await executeWithHealthTracking({
+				if (explain) {
+					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
+					const result = await db.execute(explainQuery);
+					return result as unknown as FullCustomer;
+				}
+
+				const { result, usedReplica } = await executeWithHealthTracking({
 					db,
 					query,
 					useReplica: ctx.testOptions?.useReplica,
@@ -118,8 +126,10 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
-				// Skip reset when degraded — it writes to primary, and data from replica is stale anyway
-				if (!isDegraded) {
+				// Skip reset when reading from replica — it writes to primary,
+				// and replica data is stale anyway. When degraded WITHOUT a replica
+				// (falls back to primary), the reset should still run.
+				if (!usedReplica) {
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,

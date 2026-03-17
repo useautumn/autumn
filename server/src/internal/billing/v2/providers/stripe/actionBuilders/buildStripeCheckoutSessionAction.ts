@@ -19,7 +19,12 @@ export const buildStripeCheckoutSessionAction = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): StripeCheckoutSessionAction => {
 	const { org, env } = ctx;
-	const { trialContext, stripeCustomer, stripeDiscounts } = billingContext;
+	const {
+		trialContext,
+		stripeCustomer,
+		stripeDiscounts,
+		checkoutSessionParams,
+	} = billingContext;
 
 	// 1. Get recurring and one-off items (recurring filtered to largest interval)
 	const { recurringLineItems, oneOffLineItems } =
@@ -77,5 +82,10 @@ export const buildStripeCheckoutSessionAction = ({
 		discounts,
 	};
 
-	return { type: "create", params };
+	return {
+		type: "create",
+		params,
+		checkoutSessionParams:
+			checkoutSessionParams as Partial<Stripe.Checkout.SessionCreateParams>,
+	};
 };
