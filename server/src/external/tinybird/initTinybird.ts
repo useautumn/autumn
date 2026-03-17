@@ -1,5 +1,5 @@
 import { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod"; // zod-bird requires zod v3, not zod/v4
+import { z } from "zod/v4";
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
@@ -57,7 +57,7 @@ export const tinybirdIngest = tinybirdClient
 	? {
 			events: tinybirdClient.buildIngestEndpoint({
 				datasource: "events",
-				event: TinybirdEventSchema,
+				event: TinybirdEventSchema as any, // zod-bird .d.ts has mixed v3/v4 types
 				wait: true,
 			}),
 		}
