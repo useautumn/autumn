@@ -40,10 +40,7 @@ export function AttachUpdatesSection() {
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
 	const outgoing = previewData?.outgoing ?? [];
-	const creditAmount = getPreviewCreditAmount({
-		previewData,
-		includeScheduledFallback: true,
-	});
+	const creditAmount = getPreviewCreditAmount({ previewData });
 	const hasCreditIndicator = creditAmount > 0;
 	const formattedCreditAmount = hasCreditIndicator
 		? formatAmount({
