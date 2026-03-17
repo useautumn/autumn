@@ -5,6 +5,7 @@ import {
 	EntityAlreadyExistsError,
 	ErrCode,
 	FeatureNotFoundError,
+	featureUtils,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -45,6 +46,12 @@ export const validateAndGetInputEntities = async ({
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: entity.feature_id });
 		}
+
+		if (featureUtils.isConsumable(feature)) {
+			throw new RecaseError({
+				message: "Entities cannot be linked to consumable features",
+			});
+		}
 	}
 
 	const cusProducts = customer.customer_products;
@@ -65,7 +72,9 @@ export const validateAndGetInputEntities = async ({
 
 	for (const entity of existingEntities) {
 		if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
-			throw new EntityAlreadyExistsError({ entityId: entity.id });
+			throw new EntityAlreadyExistsError({
+				entityId: entity.id ?? entity.internal_id,
+			});
 		}
 	}
 

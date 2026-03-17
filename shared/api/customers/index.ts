@@ -1,6 +1,7 @@
 // Main customer schemas
 export * from "./apiCustomer";
 export * from "./apiCustomerV5";
+export * from "./apiSubjectV0";
 export * from "./baseApiCustomer";
 // Submodules
 export * from "./components/index";
@@ -10,6 +11,7 @@ export * from "./cusFeatures/index";
 export * from "./cusPlans/index";
 export * from "./customerLegacyData";
 export * from "./customerOpModels";
+export * from "./flags/index";
 export * from "./previousVersions/index";
 
 // NOTE: changes/ and requestChanges/ are NOT exported here to avoid circular imports

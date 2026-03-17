@@ -404,6 +404,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: paid no trial -> paid with tri
 		customer,
 		productId: pro.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Feature should still have correct values with usage preserved
@@ -595,6 +596,7 @@ test.concurrent(`${chalk.yellowBright("p2f-trial: paid no trial -> free with tri
 		customer,
 		productId: pro.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Usage should be preserved, reset should follow new trial end

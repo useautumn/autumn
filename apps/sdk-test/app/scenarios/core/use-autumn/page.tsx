@@ -6,7 +6,7 @@ import type {
   ClientOpenCustomerPortalParams,
   ClientSetupPaymentParams,
 } from "autumn-js/react";
-import { useCustomer } from "autumn-js/react";
+import { useCustomer, useListPlans } from "autumn-js/react";
 import { useId, useState } from "react";
 import { DataViewer } from "@/components/debug/DataViewer";
 import { DebugCard } from "@/components/debug/DebugCard";
@@ -53,6 +53,9 @@ const toErrorPayload = ({ error }: { error: unknown }) => {
 };
 
 export default function UseAutumnScenarioPage() {
+  const customerResult = useCustomer({
+    errorOnNotFound: false,
+  });
   const {
     isLoading,
     error,
@@ -62,10 +65,11 @@ export default function UseAutumnScenarioPage() {
     check,
     setupPayment,
     openCustomerPortal,
-  } = useCustomer({
-    errorOnNotFound: false,
-  });
+  } = customerResult;
 
+  const plansResult = useListPlans();
+
+  const [showDebugData, setShowDebugData] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [lastAction, setLastAction] = useState<LastActionState>(null);
@@ -82,6 +86,9 @@ export default function UseAutumnScenarioPage() {
   const [multiAttachPlanIds, setMultiAttachPlanIds] = useState("");
   const [setupPaymentSuccessUrl, setSetupPaymentSuccessUrl] = useState("");
   const [setupPaymentPlanId, setSetupPaymentPlanId] = useState("");
+  const [checkoutSessionParams, setCheckoutSessionParams] = useState(
+    '{\n  "billing_address_collection": "required"\n}',
+  );
 
   // Form element IDs
   const planIdInputId = useId();
@@ -91,6 +98,25 @@ export default function UseAutumnScenarioPage() {
   const multiAttachPlanIdsInputId = useId();
   const setupPaymentSuccessUrlInputId = useId();
   const setupPaymentPlanIdInputId = useId();
+  const checkoutSessionParamsInputId = useId();
+
+  const parseOptionalJson = ({
+    value,
+    label,
+  }: {
+    value: string;
+    label: string;
+  }) => {
+    if (!value.trim()) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(value) as Record<string, unknown>;
+    } catch {
+      throw new Error(`${label} must be valid JSON.`);
+    }
+  };
 
   const runAction = async ({
     name,
@@ -131,11 +157,35 @@ export default function UseAutumnScenarioPage() {
 
   const handleAttach = () => {
     if (!planId) return;
-    const params: ClientAttachParams = {
-      planId,
-      openInNewTab,
-      newBillingSubscription: true,
-    };
+
+    let params: ClientAttachParams;
+
+    try {
+      params = {
+        planId,
+        openInNewTab,
+        newBillingSubscription: true,
+        checkoutSessionParams: parseOptionalJson({
+          value: checkoutSessionParams,
+          label: "Checkout session params",
+        }),
+      };
+    } catch (err) {
+      setLastAction({
+        name: "attach",
+        params: {
+          planId,
+          openInNewTab,
+          newBillingSubscription: true,
+          checkoutSessionParams,
+        },
+        result: null,
+        error: toErrorPayload({ error: err }),
+        executedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
     runAction({
       name: "attach",
       params,
@@ -300,6 +350,24 @@ export default function UseAutumnScenarioPage() {
               />
               Open in new tab
             </label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={checkoutSessionParamsInputId}
+                className="text-xs text-zinc-500"
+              >
+                Checkout Session Params JSON (optional)
+              </Label>
+              <textarea
+                id={checkoutSessionParamsInputId}
+                placeholder='{"billing_address_collection":"required"}'
+                value={checkoutSessionParams}
+                onChange={(e) => setCheckoutSessionParams(e.target.value)}
+                className="min-h-28 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 font-mono text-xs text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-0"
+              />
+              <p className="text-[11px] leading-tight text-zinc-500">
+                Passed through to Stripe checkout session creation.
+              </p>
+            </div>
             <Button
               size="sm"
               disabled={isRunning || !planId}
@@ -505,6 +573,36 @@ export default function UseAutumnScenarioPage() {
         value={lastAction?.error ?? null}
         defaultExpandedDepth={3}
       />
+
+      <DebugCard
+        title="Hook Data"
+        actions={
+          <label className="flex items-center gap-2 text-sm text-zinc-600">
+            <input
+              type="checkbox"
+              checked={showDebugData}
+              onChange={(e) => setShowDebugData(e.target.checked)}
+              className="rounded border-zinc-300"
+            />
+            Show
+          </label>
+        }
+      >
+        {showDebugData && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DataViewer
+              title="useCustomer"
+              value={customerResult.data ?? null}
+              defaultExpandedDepth={2}
+            />
+            <DataViewer
+              title="useListPlans"
+              value={plansResult.data ?? null}
+              defaultExpandedDepth={2}
+            />
+          </div>
+        )}
+      </DebugCard>
     </div>
   );
 }

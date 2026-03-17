@@ -1,12 +1,15 @@
 import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
+import chalk from "chalk";
 import type { Logger } from "pino";
+import { isRetryableDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
+import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
@@ -59,7 +62,7 @@ export const processMessage = async ({
 		},
 	});
 
-	workerLogger.info(`Processing message: ${job.name}`);
+	workerLogger.info(`${chalk.yellowBright(`Processing message: ${job.name}`)}`);
 
 	let workerCtx: AutumnContext | undefined;
 
@@ -244,11 +247,41 @@ export const processMessage = async ({
 			});
 			return;
 		}
+
+		if (job.name === JobName.ExpireLockReceipt) {
+			if (!ctx) {
+				workerLogger.error("No context found for expire lock receipt job");
+				return;
+			}
+			await expireLock({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
 	};
 
 	try {
 		await executeJob();
 	} catch (error) {
+		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
+		// Application errors (RecaseError, InternalError) are swallowed — they
+		// won't fix on retry. DB errors (connection, timeout) will.
+		if (
+			job.name === JobName.SyncBalanceBatchV3 &&
+			isRetryableDbError({ error })
+		) {
+			Sentry.captureException(error);
+			workerLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
+				jobName: job.name,
+				error:
+					error instanceof Error
+						? { message: error.message, stack: error.stack }
+						: {},
+			});
+			throw error;
+		}
+
 		Sentry.captureException(error);
 		if (error instanceof Error) {
 			workerLogger.error(`Failed to process SQS job: ${job.name}`, {

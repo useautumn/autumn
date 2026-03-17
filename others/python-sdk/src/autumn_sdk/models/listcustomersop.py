@@ -3,7 +3,14 @@
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
 from .plan import Plan, PlanTypedDict
-from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedStr
+from autumn_sdk.types import (
+    BaseModel,
+    Nullable,
+    OptionalNullable,
+    UNSET,
+    UNSET_SENTINEL,
+    UnrecognizedStr,
+)
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
@@ -229,11 +236,49 @@ class ListCustomersAutoTopup(BaseModel):
         return m
 
 
+class ListCustomersSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class ListCustomersSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ListCustomersBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     auto_topups: NotRequired[List[ListCustomersAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[ListCustomersSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature."""
 
 
 class ListCustomersBillingControls(BaseModel):
@@ -242,9 +287,12 @@ class ListCustomersBillingControls(BaseModel):
     auto_topups: Optional[List[ListCustomersAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
 
+    spend_limits: Optional[List[ListCustomersSpendLimit]] = None
+    r"""List of overage spend limits per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups"])
+        optional_fields = set(["auto_topups", "spend_limits"])
         serialized = handler(self)
         m = {}
 
@@ -428,6 +476,196 @@ class ListCustomersPurchase(BaseModel):
         return m
 
 
+ListCustomersType = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+
+class ListCustomersCreditSchemaTypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class ListCustomersCreditSchema(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class ListCustomersDisplayTypedDict(TypedDict):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: NotRequired[Nullable[str]]
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+    plural: NotRequired[Nullable[str]]
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+
+class ListCustomersDisplay(BaseModel):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: OptionalNullable[str] = UNSET
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+
+    plural: OptionalNullable[str] = UNSET
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ListCustomersFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+    type: ListCustomersType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+    event_names: NotRequired[List[str]]
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+    credit_schema: NotRequired[List[ListCustomersCreditSchemaTypedDict]]
+    r"""For credit_system features: maps metered features to their credit costs."""
+    display: NotRequired[ListCustomersDisplayTypedDict]
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+
+class ListCustomersFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+
+    type: ListCustomersType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+
+    event_names: Optional[List[str]] = None
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+
+    credit_schema: Optional[List[ListCustomersCreditSchema]] = None
+    r"""For credit_system features: maps metered features to their credit costs."""
+
+    display: Optional[ListCustomersDisplay] = None
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListCustomersFlagsTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this flag."""
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+    feature_id: str
+    r"""The feature ID this flag is for."""
+    feature: NotRequired[ListCustomersFeatureTypedDict]
+    r"""The full feature object if expanded."""
+
+
+class ListCustomersFlags(BaseModel):
+    id: str
+    r"""The unique identifier for this flag."""
+
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+
+    feature_id: str
+    r"""The feature ID this flag is for."""
+
+    feature: Optional[ListCustomersFeature] = None
+    r"""The full feature object if expanded."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature"])
+        nullable_fields = set(["plan_id", "expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class ListCustomersListTypedDict(TypedDict):
     id: Nullable[str]
     r"""Your unique identifier for the customer."""
@@ -455,6 +693,8 @@ class ListCustomersListTypedDict(TypedDict):
     r"""One-time purchases made by the customer."""
     balances: Dict[str, BalanceTypedDict]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
+    flags: Dict[str, ListCustomersFlagsTypedDict]
+    r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
 
 class ListCustomersList(BaseModel):
@@ -496,6 +736,9 @@ class ListCustomersList(BaseModel):
 
     balances: Dict[str, Balance]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
+
+    flags: Dict[str, ListCustomersFlags]
+    r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

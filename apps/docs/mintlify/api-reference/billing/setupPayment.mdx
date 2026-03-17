@@ -105,9 +105,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicParamField body="to" type="number" required />
 
-                <DynamicParamField body="amount" type="number" required />
+                <DynamicParamField body="amount" type="number" />
 
-                <DynamicParamField body="flat_amount" type="number | null" />
+                <DynamicParamField body="flat_amount" type="number" />
 
               </Expandable>
             </DynamicParamField>
@@ -232,6 +232,38 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicParamField body="description" type="string" required>
       Description for the line item.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="processor_subscription_id" type="string">
+  The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+</DynamicParamField>
+
+<DynamicParamField body="carry_over_balances" type="object">
+  Whether to carry over balances from the previous plan.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      Whether to carry over balances from the previous plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_ids" type="string[]">
+      The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="carry_over_usages" type="object">
+  Whether to carry over usages from the previous plan.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      Whether to carry over usages from the previous plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_ids" type="string[]">
+      The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
     </DynamicParamField>
 
   </Expandable>

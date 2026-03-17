@@ -164,6 +164,7 @@ const response = await client.check({ customerId: "cus_123", featureId: "message
 // Check and consume 3 units in one call
 const response = await client.check({
 
+
   customerId: "cus_123",
   featureId: "messages",
   requiredBalance: 3,
@@ -177,6 +178,7 @@ const response = await client.check({
 @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
 @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
 @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
+@param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 @returns Whether access is allowed, plus the current balance for that feature.
@@ -210,6 +212,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 * [create](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 * [update](docs/sdks/balances/README.md#update) - Update a customer balance.
 * [delete](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+* [finalize](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 
 ### [Billing](docs/sdks/billing/README.md)
 
@@ -243,6 +246,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -250,6 +254,9 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+@param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [multiAttach](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -304,6 +311,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -311,6 +319,9 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+@param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -365,8 +376,10 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 * [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -387,8 +400,10 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
@@ -416,7 +431,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
-@param expand - Customer expand options (optional)
+@param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
@@ -432,6 +447,7 @@ Use entities when usage and access must be scoped to sub-resources (for example 
 // Create a seat entity
 const response = await client.entities.create({
 
+
   customerId: "cus_123",
   entityId: "seat_42",
   featureId: "seats",
@@ -441,6 +457,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -466,6 +483,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+* [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 * [delete](docs/sdks/entities/README.md#delete) - Deletes an entity by entity ID.
 
 Use this when the underlying resource is removed and you no longer want entity-scoped balances or subscriptions tracked for it.
@@ -496,6 +528,7 @@ Use this to programmatically create features for metering usage, managing access
 ```typescript
 // Create a metered feature for API calls
 const response = await client.features.create({
+
 
   featureId: "api-calls",
   name: "API Calls",
@@ -609,6 +642,7 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 
 - [`balancesCreate`](docs/sdks/balances/README.md#create) - Create a balance for a customer feature.
 - [`balancesDelete`](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
+- [`balancesFinalize`](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 - [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
 - [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
@@ -640,6 +674,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -647,6 +682,9 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+@param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -702,6 +740,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -709,6 +748,9 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+@param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+@param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -751,8 +793,10 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 - [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
@@ -786,8 +830,10 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+@param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
@@ -805,6 +851,7 @@ const response = await client.check({ customerId: "cus_123", featureId: "message
 // Check and consume 3 units in one call
 const response = await client.check({
 
+
   customerId: "cus_123",
   featureId: "messages",
   requiredBalance: 3,
@@ -818,6 +865,7 @@ const response = await client.check({
 @param requiredBalance - Minimum balance required for access. Returns allowed: false if the customer's balance is below this value. Defaults to 1. (optional)
 @param properties - Additional properties to attach to the usage event if send_event is true. (optional)
 @param sendEvent - If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call. (optional)
+@param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 @returns Whether access is allowed, plus the current balance for that feature.
@@ -842,7 +890,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
-@param expand - Customer expand options (optional)
+@param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 - [`entitiesCreate`](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
@@ -854,6 +902,7 @@ Use entities when usage and access must be scoped to sub-resources (for example 
 // Create a seat entity
 const response = await client.entities.create({
 
+
   customerId: "cus_123",
   entityId: "seat_42",
   featureId: "seats",
@@ -863,6 +912,7 @@ const response = await client.entities.create({
 
 @param name - The name of the entity (optional)
 @param featureId - The ID of the feature this entity is associated with
+@param billingControls - Billing controls for the entity. (optional)
 @param customerData - Customer attributes used to resolve the customer when customer_id is not provided. (optional)
 @param customerId - The ID of the customer to create the entity for.
 @param entityId - The ID of the entity.
@@ -902,6 +952,21 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+- [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
+
+Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
+
+@example
+```typescript
+// Update a seat entity's billing controls
+const response = await client.entities.update({ customerId: "cus_123", entityId: "seat_42", billingControls: {"spendLimits":[{"featureId":"messages","enabled":true,"overageLimit":25}]} });
+```
+
+@param customerId - The ID of the customer that owns the entity. (optional)
+@param entityId - The ID of the entity.
+@param billingControls - Billing controls to replace on the entity. (optional)
+
+@returns The updated entity object including its current subscriptions, purchases, and balances.
 - [`eventsAggregate`](docs/sdks/events/README.md#aggregate) - Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 - [`eventsList`](docs/sdks/events/README.md#list) - List usage events for your organization. Filter by customer, feature, or time range.
 - [`featuresCreate`](docs/sdks/features/README.md#create) - Creates a new feature.
@@ -912,6 +977,7 @@ Use this to programmatically create features for metering usage, managing access
 ```typescript
 // Create a metered feature for API calls
 const response = await client.features.create({
+
 
   featureId: "api-calls",
   name: "API Calls",

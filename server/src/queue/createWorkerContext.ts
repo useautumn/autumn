@@ -57,6 +57,7 @@ export const createWorkerContext = async ({
 		customerId,
 
 		db,
+		dbGeneral: db,
 		logger: workerLogger,
 
 		id: generateId("job"),

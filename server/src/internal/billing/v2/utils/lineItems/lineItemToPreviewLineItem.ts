@@ -6,20 +6,24 @@ import type { LineItem, PreviewLineItem } from "@autumn/shared";
  */
 export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 	const feature = line.context.feature;
-	const title = feature?.name || line.context.product.name || "Item";
-	const isBase = !feature;
+	const displayName = feature?.name || line.context.product.name || "Item";
 
 	return {
 		object: "billing_preview_line_item" as const,
-		title,
+		display_name: displayName,
 		description: line.description,
-		amount: line.amountAfterDiscounts,
-		discounts: line.discounts,
-		is_base: isBase,
-		total_quantity: line.totalQuantity ?? 1,
-		paid_quantity: line.paidQuantity ?? 1,
+		subtotal: line.amount,
+		total: line.amountAfterDiscounts,
+		discounts: line.discounts.map((discount) => ({
+			amount_off: discount.amountOff,
+			percent_off: discount.percentOff,
+			reward_id: discount.stripeCouponId,
+			reward_name: discount.couponName,
+		})),
 		plan_id: line.context.product.id,
-		deferred_for_trial: line.deferredForTrial,
-		effective_period: line.context.effectivePeriod,
+		feature_id: feature?.id ?? null,
+		custom: false,
+		quantity: line.totalQuantity ?? 1,
+		period: line.context.effectivePeriod,
 	};
 };

@@ -80,6 +80,21 @@ export type CustomerAutoTopup = {
   purchaseLimit?: CustomerPurchaseLimit | undefined;
 };
 
+export type CustomerSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -88,6 +103,10 @@ export type CustomerBillingControls = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<CustomerAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CustomerSpendLimit> | undefined;
 };
 
 /**
@@ -178,6 +197,105 @@ export type Purchase = {
   quantity: number;
 };
 
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const CustomerFlagsType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type CustomerFlagsType = OpenEnum<typeof CustomerFlagsType>;
+
+export type CustomerCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type CustomerDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type CustomerFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: CustomerFlagsType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<CustomerCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: CustomerDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type Flags = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: CustomerFeature | undefined;
+};
+
 export type Invoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -222,7 +340,6 @@ export const EntityEnv = {
 export type EntityEnv = OpenEnum<typeof EntityEnv>;
 
 export type Entity = {
-  autumnId?: string | undefined;
   /**
    * The unique identifier of the entity
    */
@@ -258,7 +375,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const CustomerType = {
+export const RewardsType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -267,7 +384,7 @@ export const CustomerType = {
 /**
  * The type of reward
  */
-export type CustomerType = OpenEnum<typeof CustomerType>;
+export type RewardsType = OpenEnum<typeof RewardsType>;
 
 /**
  * How long the discount lasts
@@ -294,7 +411,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: CustomerType;
+  type: RewardsType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -402,11 +519,33 @@ export type Customer = {
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
   balances: { [k: string]: Balance };
+  /**
+   * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
+   */
+  flags: { [k: string]: Flags };
+  /**
+   * Invoices for this customer.
+   */
   invoices?: Array<Invoice> | undefined;
+  /**
+   * Entities associated with this customer.
+   */
   entities?: Array<Entity> | undefined;
+  /**
+   * Trial usage history for this customer.
+   */
   trialsUsed?: Array<TrialsUsed> | undefined;
+  /**
+   * Rewards earned or applied for this customer.
+   */
   rewards?: Rewards | null | undefined;
+  /**
+   * Referral records for this customer.
+   */
   referrals?: Array<Referral> | undefined;
+  /**
+   * The customer's default payment method.
+   */
   paymentMethod?: any | null | undefined;
 };
 
@@ -480,6 +619,34 @@ export function customerAutoTopupFromJSON(
 }
 
 /** @internal */
+export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
+  CustomerSpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function customerSpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerSpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerSpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
   CustomerBillingControls,
   unknown
@@ -488,10 +655,14 @@ export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
     auto_topups: types.optional(
       z.array(z.lazy(() => CustomerAutoTopup$inboundSchema)),
     ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CustomerSpendLimit$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
     });
   }),
 );
@@ -584,6 +755,121 @@ export function purchaseFromJSON(
 }
 
 /** @internal */
+export const CustomerFlagsType$inboundSchema: z.ZodMiniType<
+  CustomerFlagsType,
+  unknown
+> = openEnums.inboundSchema(CustomerFlagsType);
+
+/** @internal */
+export const CustomerCreditSchema$inboundSchema: z.ZodMiniType<
+  CustomerCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function customerCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerDisplay$inboundSchema: z.ZodMiniType<
+  CustomerDisplay,
+  unknown
+> = z.object({
+  singular: z.optional(z.nullable(types.string())),
+  plural: z.optional(z.nullable(types.string())),
+});
+
+export function customerDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerFeature$inboundSchema: z.ZodMiniType<
+  CustomerFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: CustomerFlagsType$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => CustomerCreditSchema$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => CustomerDisplay$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function customerFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const Flags$inboundSchema: z.ZodMiniType<Flags, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => CustomerFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function flagsFromJSON(
+  jsonString: string,
+): SafeParseResult<Flags, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Flags$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Flags' from JSON`,
+  );
+}
+
+/** @internal */
 export const Invoice$inboundSchema: z.ZodMiniType<Invoice, unknown> = z.pipe(
   z.object({
     plan_ids: z.array(types.string()),
@@ -621,7 +907,6 @@ export const EntityEnv$inboundSchema: z.ZodMiniType<EntityEnv, unknown> =
 /** @internal */
 export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
     id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
@@ -631,7 +916,6 @@ export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
       "created_at": "createdAt",
@@ -676,8 +960,8 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const CustomerType$inboundSchema: z.ZodMiniType<CustomerType, unknown> =
-  openEnums.inboundSchema(CustomerType);
+export const RewardsType$inboundSchema: z.ZodMiniType<RewardsType, unknown> =
+  openEnums.inboundSchema(RewardsType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -690,7 +974,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: CustomerType$inboundSchema,
+    type: RewardsType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),
@@ -799,6 +1083,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     subscriptions: z.array(z.lazy(() => Subscription$inboundSchema)),
     purchases: z.array(z.lazy(() => Purchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    flags: z.record(z.string(), z.lazy(() => Flags$inboundSchema)),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(

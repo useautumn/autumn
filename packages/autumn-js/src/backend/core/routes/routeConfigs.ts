@@ -1,4 +1,4 @@
-import { CustomerExpand } from "@useautumn/sdk";
+// import { CustomerExpand } from "@useautumn/sdk";
 import { z } from "zod/v4";
 import {
 	attachParamsSchema,
@@ -6,8 +6,14 @@ import {
 	eventsAggregateParamsSchema,
 	eventsListParamsSchema,
 	listPlansParamsSchema,
+	multiAttachParamsSchema,
 	openCustomerPortalParamsSchema,
+	previewAttachParamsSchema,
+	previewMultiAttachParamsSchema,
+	previewUpdateParamsSchema,
 	redeemReferralCodeParamsSchema,
+	setupPaymentParamsSchema,
+	updateSubscriptionParamsSchema,
 } from "../../../generated";
 import type { RouteDefinition, RouteName } from "../types";
 import { backendError, backendSuccess, sanitizeBody } from "../utils";
@@ -20,7 +26,8 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 		requireCustomer: false, // customHandler handles auth logic for errorOnNotFound
 		bodySchema: z.object({
 			errorOnNotFound: z.boolean().optional().default(true),
-			expand: z.array(z.enum(CustomerExpand)).optional(),
+			// expand: z.array(z.enum(CustomerExpand)).optional(),
+			expand: z.array(z.string()).optional(),
 		}),
 		customHandler: async ({ autumn, identity, body }) => {
 			const sanitizedBody = sanitizeBody(body);
@@ -60,14 +67,17 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "previewAttach",
 		sdkMethod: (autumn, args) => autumn.billing.previewAttach(args),
+		bodySchema: previewAttachParamsSchema,
 	},
 	{
 		route: "updateSubscription",
 		sdkMethod: (autumn, args) => autumn.billing.update(args),
+		bodySchema: updateSubscriptionParamsSchema,
 	},
 	{
 		route: "previewUpdateSubscription",
 		sdkMethod: (autumn, args) => autumn.billing.previewUpdate(args),
+		bodySchema: previewUpdateParamsSchema,
 	},
 	{
 		route: "openCustomerPortal",
@@ -87,14 +97,17 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "multiAttach",
 		sdkMethod: (autumn, args) => autumn.billing.multiAttach(args),
+		bodySchema: multiAttachParamsSchema,
 	},
 	{
 		route: "previewMultiAttach",
 		sdkMethod: (autumn, args) => autumn.billing.previewMultiAttach(args),
+		bodySchema: previewMultiAttachParamsSchema,
 	},
 	{
 		route: "setupPayment",
 		sdkMethod: (autumn, args) => autumn.billing.setupPayment(args),
+		bodySchema: setupPaymentParamsSchema,
 	},
 	{
 		route: "listPlans",
@@ -110,6 +123,6 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "aggregateEvents",
 		sdkMethod: (autumn, args) => autumn.events.aggregate(args),
-		bodySchema: eventsAggregateParamsSchema.omit({ customerId: true }),
+		bodySchema: eventsAggregateParamsSchema,
 	},
 ];

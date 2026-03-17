@@ -47,6 +47,72 @@ class CreateEntityGlobals(BaseModel):
         return m
 
 
+class CreateEntitySpendLimitRequestTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class CreateEntitySpendLimitRequest(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityBillingControlsRequestTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[CreateEntitySpendLimitRequestTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class CreateEntityBillingControlsRequest(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[CreateEntitySpendLimitRequest]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityParamsTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this entity is associated with"""
@@ -56,6 +122,8 @@ class CreateEntityParamsTypedDict(TypedDict):
     r"""The ID of the entity."""
     name: NotRequired[Nullable[str]]
     r"""The name of the entity"""
+    billing_controls: NotRequired[CreateEntityBillingControlsRequestTypedDict]
+    r"""Billing controls for the entity."""
     customer_data: NotRequired[CustomerDataTypedDict]
     r"""Customer details to set when creating a customer"""
 
@@ -73,12 +141,15 @@ class CreateEntityParams(BaseModel):
     name: OptionalNullable[str] = UNSET
     r"""The name of the entity"""
 
+    billing_controls: Optional[CreateEntityBillingControlsRequest] = None
+    r"""Billing controls for the entity."""
+
     customer_data: Optional[CustomerData] = None
     r"""Customer details to set when creating a customer"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name", "customer_data"])
+        optional_fields = set(["name", "billing_controls", "customer_data"])
         nullable_fields = set(["name"])
         serialized = handler(self)
         m = {}
@@ -281,6 +352,262 @@ class CreateEntityPurchase(BaseModel):
         return m
 
 
+CreateEntityType = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+
+class CreateEntityCreditSchemaTypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class CreateEntityCreditSchema(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class CreateEntityDisplayTypedDict(TypedDict):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: NotRequired[Nullable[str]]
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+    plural: NotRequired[Nullable[str]]
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+
+class CreateEntityDisplay(BaseModel):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: OptionalNullable[str] = UNSET
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+
+    plural: OptionalNullable[str] = UNSET
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+    type: CreateEntityType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+    event_names: NotRequired[List[str]]
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+    credit_schema: NotRequired[List[CreateEntityCreditSchemaTypedDict]]
+    r"""For credit_system features: maps metered features to their credit costs."""
+    display: NotRequired[CreateEntityDisplayTypedDict]
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+
+class CreateEntityFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+
+    type: CreateEntityType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+
+    event_names: Optional[List[str]] = None
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+
+    credit_schema: Optional[List[CreateEntityCreditSchema]] = None
+    r"""For credit_system features: maps metered features to their credit costs."""
+
+    display: Optional[CreateEntityDisplay] = None
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityFlagsTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this flag."""
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+    feature_id: str
+    r"""The feature ID this flag is for."""
+    feature: NotRequired[CreateEntityFeatureTypedDict]
+    r"""The full feature object if expanded."""
+
+
+class CreateEntityFlags(BaseModel):
+    id: str
+    r"""The unique identifier for this flag."""
+
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+
+    feature_id: str
+    r"""The feature ID this flag is for."""
+
+    feature: Optional[CreateEntityFeature] = None
+    r"""The full feature object if expanded."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature"])
+        nullable_fields = set(["plan_id", "expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CreateEntitySpendLimitResponseTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this spend limit is enabled."""
+    overage_limit: NotRequired[float]
+    r"""Maximum allowed overage spend for the target feature."""
+
+
+class CreateEntitySpendLimitResponse(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether this spend limit is enabled."""
+
+    overage_limit: Optional[float] = None
+    r"""Maximum allowed overage spend for the target feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityBillingControlsResponseTypedDict(TypedDict):
+    r"""Billing controls for the entity."""
+
+    spend_limits: NotRequired[List[CreateEntitySpendLimitResponseTypedDict]]
+    r"""List of overage spend limits per feature."""
+
+
+class CreateEntityBillingControlsResponse(BaseModel):
+    r"""Billing controls for the entity."""
+
+    spend_limits: Optional[List[CreateEntitySpendLimitResponse]] = None
+    r"""List of overage spend limits per feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["spend_limits"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityInvoiceTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
@@ -360,11 +687,13 @@ class CreateEntityResponseTypedDict(TypedDict):
     subscriptions: List[CreateEntitySubscriptionTypedDict]
     purchases: List[CreateEntityPurchaseTypedDict]
     balances: Dict[str, BalanceTypedDict]
-    autumn_id: NotRequired[str]
+    flags: Dict[str, CreateEntityFlagsTypedDict]
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID this entity belongs to"""
+    billing_controls: NotRequired[CreateEntityBillingControlsResponseTypedDict]
+    r"""Billing controls for the entity."""
     invoices: NotRequired[List[CreateEntityInvoiceTypedDict]]
     r"""Invoices for this entity (only included when expand=invoices)"""
 
@@ -390,7 +719,7 @@ class CreateEntityResponse(BaseModel):
 
     balances: Dict[str, Balance]
 
-    autumn_id: Optional[str] = None
+    flags: Dict[str, CreateEntityFlags]
 
     customer_id: OptionalNullable[str] = UNSET
     r"""The customer ID this entity belongs to"""
@@ -398,12 +727,17 @@ class CreateEntityResponse(BaseModel):
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID this entity belongs to"""
 
+    billing_controls: Optional[CreateEntityBillingControlsResponse] = None
+    r"""Billing controls for the entity."""
+
     invoices: Optional[List[CreateEntityInvoice]] = None
     r"""Invoices for this entity (only included when expand=invoices)"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["autumn_id", "customer_id", "feature_id", "invoices"])
+        optional_fields = set(
+            ["customer_id", "feature_id", "billing_controls", "invoices"]
+        )
         nullable_fields = set(["id", "name", "customer_id", "feature_id"])
         serialized = handler(self)
         m = {}

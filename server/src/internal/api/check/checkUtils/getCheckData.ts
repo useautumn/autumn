@@ -1,6 +1,7 @@
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
+	ApiVersion,
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
@@ -12,6 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
@@ -56,14 +58,20 @@ export const getCheckData = async ({
 		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
 
-	let apiEntity: ApiCustomerV5 | ApiEntityV2 | undefined;
+	let apiSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
 	const start = performance.now();
-	const fullCustomer = await getOrCreateCachedFullCustomer({
-		ctx,
-		params: body,
-
-		source: "getCheckData",
-	});
+	const fullCustomer = ctx.apiVersion.gte(ApiVersion.V2_1)
+		? await getOrSetCachedFullCustomer({
+				ctx,
+				customerId: customer_id,
+				entityId: entity_id,
+				source: "getCheckData",
+			})
+		: await getOrCreateCachedFullCustomer({
+				ctx,
+				params: body,
+				source: "getCheckData",
+			});
 	const { apiCustomer } = await getApiCustomerBase({
 		ctx,
 		fullCus: fullCustomer,
@@ -73,7 +81,7 @@ export const getCheckData = async ({
 		`[check] getOrCreateCachedFullCustomer took ${performance.now() - start}ms`,
 	);
 
-	apiEntity = apiCustomer;
+	apiSubject = apiCustomer;
 	if (entity_id && fullCustomer.entity) {
 		const { apiEntity: apiEntityResult } = await getApiEntityBase({
 			ctx,
@@ -81,10 +89,10 @@ export const getCheckData = async ({
 			fullCus: fullCustomer,
 		});
 
-		apiEntity = apiEntityResult;
+		apiSubject = apiEntityResult;
 	}
 
-	if (!apiEntity) {
+	if (!apiSubject) {
 		throw new InternalError({
 			message: "failed to get entity object from cache",
 		});
@@ -93,7 +101,7 @@ export const getCheckData = async ({
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
 		feature,
-		apiEntity,
+		apiSubject,
 		requiredBalance,
 	});
 
@@ -112,12 +120,15 @@ export const getCheckData = async ({
 		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
 	});
 
-	const apiBalance = apiEntity.balances?.[featureToUse.id];
+	const apiBalance = apiSubject.balances?.[featureToUse.id];
+	const apiFlag = apiSubject.flags?.[featureToUse.id];
 
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
 		apiBalance,
+		apiFlag,
+		apiSubject,
 		originalFeature: feature,
 		featureToUse,
 	};

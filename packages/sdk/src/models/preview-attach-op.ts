@@ -9,6 +9,7 @@ import { ClosedEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type PreviewAttachGlobals = {
@@ -18,7 +19,7 @@ export type PreviewAttachGlobals = {
 /**
  * Quantity configuration for a prepaid feature.
  */
-export type PreviewAttachFeatureQuantity = {
+export type PreviewAttachFeatureQuantityRequest = {
   /**
    * The ID of the feature to set quantity for.
    */
@@ -108,8 +109,8 @@ export type PreviewAttachTo = number | string;
 
 export type PreviewAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewAttachTierBehavior = {
@@ -384,6 +385,21 @@ export type PreviewAttachProrationBehavior = ClosedEnum<
 >;
 
 /**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export const PreviewAttachRedirectMode = {
+  Always: "always",
+  IfRequired: "if_required",
+  Never: "never",
+} as const;
+/**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export type PreviewAttachRedirectMode = ClosedEnum<
+  typeof PreviewAttachRedirectMode
+>;
+
+/**
  * A discount to apply. Can be either a reward ID or a promotion code.
  */
 export type PreviewAttachAttachDiscount = {
@@ -422,6 +438,34 @@ export type PreviewAttachCustomLineItem = {
   description: string;
 };
 
+/**
+ * Whether to carry over balances from the previous plan.
+ */
+export type PreviewAttachCarryOverBalances = {
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over balances from. If left undefined, all features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
+/**
+ * Whether to carry over usages from the previous plan.
+ */
+export type PreviewAttachCarryOverUsages = {
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
 export type PreviewAttachParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -438,7 +482,7 @@ export type PreviewAttachParams = {
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
    */
-  featureQuantities?: Array<PreviewAttachFeatureQuantity> | undefined;
+  featureQuantities?: Array<PreviewAttachFeatureQuantityRequest> | undefined;
   /**
    * The version of the plan to attach.
    */
@@ -455,6 +499,10 @@ export type PreviewAttachParams = {
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewAttachProrationBehavior | undefined;
+  /**
+   * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+   */
+  redirectMode?: PreviewAttachRedirectMode | undefined;
   /**
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
@@ -483,32 +531,171 @@ export type PreviewAttachParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<PreviewAttachCustomLineItem> | undefined;
+  /**
+   * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+   */
+  processorSubscriptionId?: string | undefined;
+  /**
+   * Whether to carry over balances from the previous plan.
+   */
+  carryOverBalances?: PreviewAttachCarryOverBalances | undefined;
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  carryOverUsages?: PreviewAttachCarryOverUsages | undefined;
 };
 
 export type PreviewAttachDiscount = {
   amountOff: number;
   percentOff?: number | undefined;
-  stripeCouponId?: string | undefined;
-  couponName?: string | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewAttachLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
 };
 
 export type PreviewAttachLineItem = {
   /**
-   * The title of the line item.
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
    */
-  title: string;
+  displayName: string;
   /**
    * A detailed description of the line item.
    */
   description: string;
   /**
-   * The amount in cents for this line item.
+   * The amount in cents before discounts for this line item.
    */
-  amount: number;
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
   /**
    * List of discounts applied to this line item.
    */
   discounts?: Array<PreviewAttachDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewAttachLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+export type PreviewAttachNextCycleDiscount = {
+  amountOff: number;
+  percentOff?: number | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewAttachNextCycleLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewAttachNextCycleLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * A detailed description of the line item.
+   */
+  description: string;
+  /**
+   * The amount in cents before discounts for this line item.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
+  /**
+   * List of discounts applied to this line item.
+   */
+  discounts?: Array<PreviewAttachNextCycleDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewAttachNextCycleLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewAttachUsageLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewAttachUsageLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewAttachUsageLineItemPeriod | undefined;
 };
 
 /**
@@ -520,9 +707,75 @@ export type PreviewAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents for the next cycle.
+   * The total amount in cents before discounts for the next cycle.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the next cycle.
    */
   total: number;
+  /**
+   * List of line items for the next billing cycle.
+   */
+  lineItems: Array<PreviewAttachNextCycleLineItem>;
+  /**
+   * List of line items for usage-based features in the next cycle.
+   */
+  usageLineItems: Array<PreviewAttachUsageLineItem>;
+};
+
+export type PreviewAttachIncomingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
+  featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
+  quantity: number;
+};
+
+export type PreviewAttachIncoming = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
+  planId: string;
+  plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
+  featureQuantities: Array<PreviewAttachIncomingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
+  effectiveAt: number | null;
+};
+
+export type PreviewAttachOutgoingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
+  featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
+  quantity: number;
+};
+
+export type PreviewAttachOutgoing = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
+  planId: string;
+  plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
+  featureQuantities: Array<PreviewAttachOutgoingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
+  effectiveAt: number | null;
 };
 
 /**
@@ -538,7 +791,11 @@ export type PreviewAttachResponse = {
    */
   lineItems: Array<PreviewAttachLineItem>;
   /**
-   * The total amount in cents for the current billing period.
+   * The total amount in cents before discounts for the current billing period.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the current billing period.
    */
   total: number;
   /**
@@ -549,19 +806,31 @@ export type PreviewAttachResponse = {
    * Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
    */
   nextCycle?: PreviewAttachNextCycle | undefined;
+  /**
+   * Expand the response with additional data.
+   */
+  expand?: Array<string> | undefined;
+  /**
+   * Products or subscription changes being added or updated.
+   */
+  incoming: Array<PreviewAttachIncoming>;
+  /**
+   * Products or subscription changes being removed or ended.
+   */
+  outgoing: Array<PreviewAttachOutgoing>;
 };
 
 /** @internal */
-export type PreviewAttachFeatureQuantity$Outbound = {
+export type PreviewAttachFeatureQuantityRequest$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const PreviewAttachFeatureQuantity$outboundSchema: z.ZodMiniType<
-  PreviewAttachFeatureQuantity$Outbound,
-  PreviewAttachFeatureQuantity
+export const PreviewAttachFeatureQuantityRequest$outboundSchema: z.ZodMiniType<
+  PreviewAttachFeatureQuantityRequest$Outbound,
+  PreviewAttachFeatureQuantityRequest
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -575,12 +844,12 @@ export const PreviewAttachFeatureQuantity$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewAttachFeatureQuantityToJSON(
-  previewAttachFeatureQuantity: PreviewAttachFeatureQuantity,
+export function previewAttachFeatureQuantityRequestToJSON(
+  previewAttachFeatureQuantityRequest: PreviewAttachFeatureQuantityRequest,
 ): string {
   return JSON.stringify(
-    PreviewAttachFeatureQuantity$outboundSchema.parse(
-      previewAttachFeatureQuantity,
+    PreviewAttachFeatureQuantityRequest$outboundSchema.parse(
+      previewAttachFeatureQuantityRequest,
     ),
   );
 }
@@ -675,8 +944,8 @@ export function previewAttachToToJSON(
 /** @internal */
 export type PreviewAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -686,8 +955,8 @@ export const PreviewAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1001,6 +1270,11 @@ export const PreviewAttachProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachProrationBehavior);
 
 /** @internal */
+export const PreviewAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachRedirectMode
+> = z.enum(PreviewAttachRedirectMode);
+
+/** @internal */
 export type PreviewAttachAttachDiscount$Outbound = {
   reward_id?: string | undefined;
   promotion_code?: string | undefined;
@@ -1064,15 +1338,82 @@ export function previewAttachCustomLineItemToJSON(
 }
 
 /** @internal */
+export type PreviewAttachCarryOverBalances$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const PreviewAttachCarryOverBalances$outboundSchema: z.ZodMiniType<
+  PreviewAttachCarryOverBalances$Outbound,
+  PreviewAttachCarryOverBalances
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function previewAttachCarryOverBalancesToJSON(
+  previewAttachCarryOverBalances: PreviewAttachCarryOverBalances,
+): string {
+  return JSON.stringify(
+    PreviewAttachCarryOverBalances$outboundSchema.parse(
+      previewAttachCarryOverBalances,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewAttachCarryOverUsages$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const PreviewAttachCarryOverUsages$outboundSchema: z.ZodMiniType<
+  PreviewAttachCarryOverUsages$Outbound,
+  PreviewAttachCarryOverUsages
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function previewAttachCarryOverUsagesToJSON(
+  previewAttachCarryOverUsages: PreviewAttachCarryOverUsages,
+): string {
+  return JSON.stringify(
+    PreviewAttachCarryOverUsages$outboundSchema.parse(
+      previewAttachCarryOverUsages,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
   plan_id: string;
-  feature_quantities?: Array<PreviewAttachFeatureQuantity$Outbound> | undefined;
+  feature_quantities?:
+    | Array<PreviewAttachFeatureQuantityRequest$Outbound>
+    | undefined;
   version?: number | undefined;
   customize?: PreviewAttachCustomize$Outbound | undefined;
   invoice_mode?: PreviewAttachInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<PreviewAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
@@ -1080,6 +1421,9 @@ export type PreviewAttachParams$Outbound = {
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
+  processor_subscription_id?: string | undefined;
+  carry_over_balances?: PreviewAttachCarryOverBalances$Outbound | undefined;
+  carry_over_usages?: PreviewAttachCarryOverUsages$Outbound | undefined;
 };
 
 /** @internal */
@@ -1092,7 +1436,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     planId: z.string(),
     featureQuantities: z.optional(
-      z.array(z.lazy(() => PreviewAttachFeatureQuantity$outboundSchema)),
+      z.array(z.lazy(() => PreviewAttachFeatureQuantityRequest$outboundSchema)),
     ),
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => PreviewAttachCustomize$outboundSchema)),
@@ -1101,6 +1445,10 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     ),
     prorationBehavior: z.optional(
       PreviewAttachProrationBehavior$outboundSchema,
+    ),
+    redirectMode: z._default(
+      PreviewAttachRedirectMode$outboundSchema,
+      "if_required",
     ),
     subscriptionId: z.optional(z.string()),
     discounts: z.optional(
@@ -1113,6 +1461,13 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => PreviewAttachCustomLineItem$outboundSchema)),
     ),
+    processorSubscriptionId: z.optional(z.string()),
+    carryOverBalances: z.optional(
+      z.lazy(() => PreviewAttachCarryOverBalances$outboundSchema),
+    ),
+    carryOverUsages: z.optional(
+      z.lazy(() => PreviewAttachCarryOverUsages$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1122,12 +1477,16 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
+      processorSubscriptionId: "processor_subscription_id",
+      carryOverBalances: "carry_over_balances",
+      carryOverUsages: "carry_over_usages",
     });
   }),
 );
@@ -1144,12 +1503,22 @@ export function previewAttachParamsToJSON(
 export const PreviewAttachDiscount$inboundSchema: z.ZodMiniType<
   PreviewAttachDiscount,
   unknown
-> = z.object({
-  amountOff: types.number(),
-  percentOff: types.optional(types.number()),
-  stripeCouponId: types.optional(types.string()),
-  couponName: types.optional(types.string()),
-});
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
 
 export function previewAttachDiscountFromJSON(
   jsonString: string,
@@ -1162,17 +1531,52 @@ export function previewAttachDiscountFromJSON(
 }
 
 /** @internal */
+export const PreviewAttachLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewAttachLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewAttachLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewAttachLineItem$inboundSchema: z.ZodMiniType<
   PreviewAttachLineItem,
   unknown
-> = z.object({
-  title: types.string(),
-  description: types.string(),
-  amount: types.number(),
-  discounts: types.optional(
-    z.array(z.lazy(() => PreviewAttachDiscount$inboundSchema)),
-  ),
-});
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewAttachDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewAttachLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
 
 export function previewAttachLineItemFromJSON(
   jsonString: string,
@@ -1185,17 +1589,167 @@ export function previewAttachLineItemFromJSON(
 }
 
 /** @internal */
+export const PreviewAttachNextCycleDiscount$inboundSchema: z.ZodMiniType<
+  PreviewAttachNextCycleDiscount,
+  unknown
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
+
+export function previewAttachNextCycleDiscountFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachNextCycleDiscount, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachNextCycleDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachNextCycleDiscount' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachNextCycleLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewAttachNextCycleLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewAttachNextCycleLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachNextCycleLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewAttachNextCycleLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachNextCycleLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachNextCycleLineItem$inboundSchema: z.ZodMiniType<
+  PreviewAttachNextCycleLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewAttachNextCycleDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewAttachNextCycleLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewAttachNextCycleLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachNextCycleLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachNextCycleLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachNextCycleLineItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachUsageLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewAttachUsageLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewAttachUsageLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachUsageLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachUsageLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachUsageLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachUsageLineItem$inboundSchema: z.ZodMiniType<
+  PreviewAttachUsageLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewAttachUsageLineItemPeriod$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewAttachUsageLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachUsageLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachUsageLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachUsageLineItem' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewAttachNextCycle$inboundSchema: z.ZodMiniType<
   PreviewAttachNextCycle,
   unknown
 > = z.pipe(
   z.object({
     starts_at: types.number(),
+    subtotal: types.number(),
     total: types.number(),
+    line_items: z.array(
+      z.lazy(() => PreviewAttachNextCycleLineItem$inboundSchema),
+    ),
+    usage_line_items: z.array(
+      z.lazy(() => PreviewAttachUsageLineItem$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "starts_at": "startsAt",
+      "line_items": "lineItems",
+      "usage_line_items": "usageLineItems",
     });
   }),
 );
@@ -1211,6 +1765,124 @@ export function previewAttachNextCycleFromJSON(
 }
 
 /** @internal */
+export const PreviewAttachIncomingFeatureQuantity$inboundSchema: z.ZodMiniType<
+  PreviewAttachIncomingFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewAttachIncomingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachIncomingFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewAttachIncomingFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachIncomingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachIncoming$inboundSchema: z.ZodMiniType<
+  PreviewAttachIncoming,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewAttachIncomingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewAttachIncomingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachIncoming, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachIncoming$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachIncoming' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachOutgoingFeatureQuantity$inboundSchema: z.ZodMiniType<
+  PreviewAttachOutgoingFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewAttachOutgoingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachOutgoingFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewAttachOutgoingFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachOutgoingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewAttachOutgoing$inboundSchema: z.ZodMiniType<
+  PreviewAttachOutgoing,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewAttachOutgoingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewAttachOutgoingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachOutgoing, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachOutgoing$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachOutgoing' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewAttachResponse,
   unknown
@@ -1218,11 +1890,15 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
   z.object({
     customer_id: types.string(),
     line_items: z.array(z.lazy(() => PreviewAttachLineItem$inboundSchema)),
+    subtotal: types.number(),
     total: types.number(),
     currency: types.string(),
     next_cycle: types.optional(
       z.lazy(() => PreviewAttachNextCycle$inboundSchema),
     ),
+    expand: types.optional(z.array(types.string())),
+    incoming: z.array(z.lazy(() => PreviewAttachIncoming$inboundSchema)),
+    outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

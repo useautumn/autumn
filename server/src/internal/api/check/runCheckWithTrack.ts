@@ -1,11 +1,13 @@
 import {
 	ApiVersion,
-	type CheckParams,
 	type CheckResponseV3,
 	CheckResponseV3Schema,
+	ErrCode,
 	FeatureType,
+	featureUtils,
 	InsufficientBalanceError,
 	InternalError,
+	type ParsedCheckParams,
 	RecaseError,
 	type TrackParams,
 } from "@autumn/shared";
@@ -13,6 +15,8 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { runTrackV2 } from "@server/internal/balances/track/runTrackV2";
 import { getTrackFeatureDeductions } from "@server/internal/balances/track/utils/getFeatureDeductions.js";
 import { featureToCreditSystem } from "@server/internal/features/creditSystemUtils.js";
+import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
+import { workflows } from "@/queue/workflows.js";
 import type { CheckData } from "./checkTypes/CheckData.js";
 
 export const runCheckWithTrack = async ({
@@ -22,7 +26,7 @@ export const runCheckWithTrack = async ({
 	checkData,
 }: {
 	ctx: AutumnContext;
-	body: CheckParams;
+	body: ParsedCheckParams;
 	requiredBalance: number;
 	checkData: CheckData;
 }): Promise<CheckResponseV3> => {
@@ -39,9 +43,26 @@ export const runCheckWithTrack = async ({
 		});
 	}
 
+	if (body.lock && featureUtils.isAllocated(checkData.featureToUse)) {
+		throw new RecaseError({
+			message: "Lock is not supported for allocated features",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	if (checkData.originalFeature.type === FeatureType.Boolean) {
+		throw new RecaseError({
+			message: "Not allowed to pass in send_event: true for a boolean feature",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const featureDeductions = getTrackFeatureDeductions({
 		ctx,
 		featureId: body.feature_id,
+		lock: body.lock,
 		value: requiredBalance,
 	});
 
@@ -53,6 +74,7 @@ export const runCheckWithTrack = async ({
 		properties: body.properties,
 		skip_event: body.skip_event,
 		overage_behavior: "reject",
+		lock: body.lock,
 	};
 
 	let allowed = true;
@@ -87,12 +109,39 @@ export const runCheckWithTrack = async ({
 		});
 	}
 
+	// Schedule lock expiration if it exists
+	if (body.lock?.expires_at && allowed) {
+		try {
+			const scheduleName = buildLockScheduleName({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				hashedKey: body.lock.hashed_key,
+			});
+			await workflows.triggerExpireLockReceipt(
+				{
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId: body.customer_id,
+					lockId: body.lock.lock_id,
+					hashedKey: body.lock.hashed_key,
+				},
+				{
+					scheduleAt: new Date(body.lock.expires_at),
+					scheduleName,
+				},
+			);
+		} catch (error) {
+			ctx.logger.error(`Failed to schedule lock expiration: ${error}`);
+		}
+	}
+
 	const checkResponse = CheckResponseV3Schema.parse({
 		allowed,
 		customer_id: checkData.customerId || "",
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
+		flag: checkData.apiFlag ?? null,
 	});
 
 	return checkResponse;

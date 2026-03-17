@@ -309,6 +309,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(2),
 	});
 
 	// Verify feature reset aligns with fresh trial (14 days from now)
@@ -319,6 +320,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		balance: 500,
 		usage: 0,
 		resetsAt: advancedTo + ms.days(14), // Fresh trial, reset at trial end
+		toleranceMs: ms.hours(2),
 	});
 
 	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)

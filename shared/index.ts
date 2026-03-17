@@ -6,6 +6,7 @@ export * from "./api/apiUtils";
 // Billing common schemas
 export * from "./api/billing/common/attachPreviewResponse";
 export * from "./api/billing/common/billingBehavior";
+export * from "./api/billing/common/billingPreviewChange";
 export * from "./api/billing/common/billingPreviewResponse";
 export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
@@ -46,9 +47,9 @@ export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable";
 export * from "./models/checkModels/checkPreviewModels";
-// 8. Customer Models
-export * from "./models/cusModels/billingControlModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
+// 8. Customer Models
+export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models

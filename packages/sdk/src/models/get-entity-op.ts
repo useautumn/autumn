@@ -128,6 +128,130 @@ export type GetEntityPurchase = {
   quantity: number;
 };
 
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const GetEntityType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type GetEntityType = OpenEnum<typeof GetEntityType>;
+
+export type GetEntityCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type GetEntityDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type GetEntityFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: GetEntityType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<GetEntityCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: GetEntityDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type GetEntityFlags = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: GetEntityFeature | undefined;
+};
+
+export type GetEntitySpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type GetEntityBillingControls = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<GetEntitySpendLimit> | undefined;
+};
+
 export type GetEntityInvoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -163,7 +287,6 @@ export type GetEntityInvoice = {
  * OK
  */
 export type GetEntityResponse = {
-  autumnId?: string | undefined;
   /**
    * The unique identifier of the entity
    */
@@ -191,6 +314,11 @@ export type GetEntityResponse = {
   subscriptions: Array<GetEntitySubscription>;
   purchases: Array<GetEntityPurchase>;
   balances: { [k: string]: Balance };
+  flags: { [k: string]: GetEntityFlags };
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: GetEntityBillingControls | undefined;
   /**
    * Invoices for this entity (only included when expand=invoices)
    */
@@ -315,6 +443,179 @@ export function getEntityPurchaseFromJSON(
 }
 
 /** @internal */
+export const GetEntityType$inboundSchema: z.ZodMiniType<
+  GetEntityType,
+  unknown
+> = openEnums.inboundSchema(GetEntityType);
+
+/** @internal */
+export const GetEntityCreditSchema$inboundSchema: z.ZodMiniType<
+  GetEntityCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function getEntityCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntityDisplay$inboundSchema: z.ZodMiniType<
+  GetEntityDisplay,
+  unknown
+> = z.object({
+  singular: z.optional(z.nullable(types.string())),
+  plural: z.optional(z.nullable(types.string())),
+});
+
+export function getEntityDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntityFeature$inboundSchema: z.ZodMiniType<
+  GetEntityFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: GetEntityType$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => GetEntityCreditSchema$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => GetEntityDisplay$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function getEntityFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntityFlags$inboundSchema: z.ZodMiniType<
+  GetEntityFlags,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => GetEntityFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getEntityFlagsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityFlags, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityFlags$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityFlags' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntitySpendLimit$inboundSchema: z.ZodMiniType<
+  GetEntitySpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function getEntitySpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntitySpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntitySpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntitySpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
+  GetEntityBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    spend_limits: types.optional(
+      z.array(z.lazy(() => GetEntitySpendLimit$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "spend_limits": "spendLimits",
+    });
+  }),
+);
+
+export function getEntityBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
   GetEntityInvoice,
   unknown
@@ -354,7 +655,6 @@ export const GetEntityResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
     id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
@@ -364,16 +664,20 @@ export const GetEntityResponse$inboundSchema: z.ZodMiniType<
     subscriptions: z.array(z.lazy(() => GetEntitySubscription$inboundSchema)),
     purchases: z.array(z.lazy(() => GetEntityPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    flags: z.record(z.string(), z.lazy(() => GetEntityFlags$inboundSchema)),
+    billing_controls: types.optional(
+      z.lazy(() => GetEntityBillingControls$inboundSchema),
+    ),
     invoices: types.optional(
       z.array(z.lazy(() => GetEntityInvoice$inboundSchema)),
     ),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
       "created_at": "createdAt",
+      "billing_controls": "billingControls",
     });
   }),
 );

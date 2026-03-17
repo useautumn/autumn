@@ -5,6 +5,8 @@
 		"lib": ["ES2022"],
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
+		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
+		"types": ["bun", "node"],
 		"allowJs": true,
 		"checkJs": false,
 		"outDir": "./dist",
@@ -13,7 +15,7 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"allowSyntheticDefaultImports": true,
-		"types": ["node"],
+
 		"baseUrl": ".",
 		"paths": {
 			"@server/*": ["../server/src/*"],

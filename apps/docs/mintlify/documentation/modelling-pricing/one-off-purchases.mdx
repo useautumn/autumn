@@ -1,0 +1,192 @@
+---
+title: One-Off Purchases
+description: Configure one-time purchases and lifetime plans
+---
+
+One-off purchases are single-charge plans that don't recur. They're used for one-time top-ups, lifetime access plans, or any plan where the customer pays once.
+
+> **Example** <br />
+> An AI platform lets users buy 500 credits for $10 as a one-time purchase. The credits never expire and can be used at any pace.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Set the plan's `price.interval` to `one_off`, or omit `interval` on the item price for a one-time charge:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const creditTopUp = plan({
+  id: 'credit_top_up',
+  name: 'Credit Top-Up',
+  items: [
+    item({
+      featureId: credits.id,
+      price: {
+        amount: 10,
+        billingUnits: 500,
+        billingMethod: 'prepaid',
+        interval: 'one_off',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and click **Create Plan**
+2. Set the plan name and ID
+3. Under **Price**, select **One-off** as the interval — or leave no base price if pricing is purely feature-based
+4. Add a feature with a **prepaid** price. The customer will select a quantity at checkout
+5. Toggle **Add-on** if this should be purchasable alongside other plans
+6. Click **Create**
+
+</Tab>
+</Tabs>
+
+## How it works
+
+When a customer purchases a one-off plan:
+
+- Autumn creates a Stripe invoice (not a subscription) and charges it immediately
+- The feature balance is provisioned with the purchased quantity
+- The balance has a `one_off` interval — it never resets or expires
+
+<Note>
+One-off purchases don't create Stripe subscriptions. They generate a one-time invoice instead.
+</Note>
+
+## Purchasing a one-off plan
+
+For prepaid one-off plans, pass the desired `quantity` via the `options` array:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.checkout({
+  customer_id: "user_123",
+  plan_id: "credit_top_up",
+  options: [{
+    feature_id: "credits",
+    quantity: 1000,
+  }],
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.checkout(
+    customer_id="user_123",
+    plan_id="credit_top_up",
+    options=[{
+        "feature_id": "credits",
+        "quantity": 1000,
+    }],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "credit_top_up",
+    "options": [{
+      "feature_id": "credits",
+      "quantity": 1000
+    }]
+  }'
+```
+
+</CodeGroup>
+
+## One-off prices within a subscription
+
+A subscription plan can include both recurring and one-off prices. When it does, Autumn splits them at checkout:
+
+- **Recurring prices** bill every cycle as part of the Stripe subscription
+- **One-off prices** are charged once on the first invoice only
+
+This is useful for setup fees, one-time credit grants, or any charge that should happen once when the customer subscribes.
+
+> **Example** <br />
+> A Pro plan charges \$20/month plus a one-time \$50 setup fee. The customer's first invoice is \$70, and subsequent invoices are \$20.
+
+<Tabs>
+<Tab title="CLI">
+
+Add a non-consumable feature for the setup fee, then include it as a separate one-off item alongside the recurring base price:
+
+```ts autumn.config.ts expandable
+import { feature, item, plan } from 'atmn';
+
+export const setupFee = feature({
+  id: 'setup_fee',
+  name: 'Setup Fee',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: setupFee.id,
+      price: {
+        amount: 50,
+        billingMethod: 'prepaid',
+        interval: 'one_off',
+      },
+    }),
+  ],
+});
+```
+
+When you attach the plan, you can select a quantity for the setup fee. The \$20/month base price recurs on every invoice. The setup fee item is charged once on the first invoice only.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Create a **boolean** feature for the setup fee (e.g., `setup_fee`)
+2. Create a plan with a **recurring** base price (e.g., $20/month)
+3. Add the setup fee feature as an item and set its price interval to **One-off**
+4. The recurring charge will bill every cycle; the one-off charge applies to the first invoice only
+
+</Tab>
+</Tabs>
+
+## Balance stacking
+
+One-off balances stack with existing balances from subscriptions. Autumn uses [deduction order](/documentation/concepts/balances#deduction-order) to ensure shorter-interval balances (e.g., monthly) are used before one-off (lifetime) balances.
+
+## Use cases
+
+| Use case | Configuration |
+|----------|---------------|
+| Credit top-up | Prepaid price, add-on, no base price |
+| Lifetime plan | One-off base price, features with no reset |
+| One-time fee | One-off base price, no features |
+| Setup fee + subscription | Recurring base price, one-off item price on same plan |

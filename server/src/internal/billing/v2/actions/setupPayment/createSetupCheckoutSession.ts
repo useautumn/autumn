@@ -8,6 +8,7 @@ import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildCheckoutSessionParams } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
 import { createStripeSessionWithCardFallback } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/createStripeSessionWithCardFallback";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
@@ -64,14 +65,18 @@ export const createSetupCheckoutSession = async ({
 		: null;
 
 	// 2. Build session params
-	const fullParams: Stripe.Checkout.SessionCreateParams = {
-		customer: customer.processor?.id ?? undefined,
-		mode: "setup",
-		success_url: params.success_url || toSuccessUrl({ org, env }),
+	const fullParams = buildCheckoutSessionParams({
+		params: {
+			customer: customer.processor?.id ?? undefined,
+			mode: "setup",
+			success_url: params.success_url || toSuccessUrl({ org, env }),
+		},
+		checkoutSessionParams: params.checkout_session_params as
+			| Partial<Stripe.Checkout.SessionCreateParams>
+			| undefined,
 		currency: org.default_currency || "usd",
-		...params.checkout_session_params,
-		...(metadata ? { metadata: { autumn_metadata_id: metadata.id } } : {}),
-	};
+		autumnMetadataId: metadata?.id,
+	});
 
 	// 3. Create session with card-type fallback
 	const session = await createStripeSessionWithCardFallback({

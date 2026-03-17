@@ -3,6 +3,7 @@ import {
 	oauthProviderAuthServerMetadata,
 	oauthProviderOpenIdConfigMetadata,
 } from "@better-auth/oauth-provider";
+import { httpInstrumentationMiddleware } from "@hono/otel";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -12,10 +13,10 @@ import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
-import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
+import { traceEnrichMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
-import { heapSnapshotRouter } from "./internal/debug/heapSnapshotRoute.js";
+import { debugRouter } from "./internal/debug/debugRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
@@ -81,9 +82,16 @@ export const createHonoApp = () => {
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 
-	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
+	// Step 1: OTel HTTP span + base middleware + span enrichment
+	app.use(
+		"*",
+		httpInstrumentationMiddleware({
+			serviceName: "autumn-server",
+			serviceVersion: "1.0.0",
+		}),
+	);
 	app.use("*", baseMiddleware);
-	app.use("*", traceMiddleware);
+	app.use("*", traceEnrichMiddleware);
 
 	app.get("/", handleHealthCheck);
 
@@ -132,7 +140,7 @@ export const createHonoApp = () => {
 	// Public routes (no auth required)
 	app.route("", publicRouter);
 	// Debug routes (auth handled internally)
-	app.route("/v1/debug", heapSnapshotRouter);
+	// app.route("/v1/debug", debugRouter);
 
 	// API Middleware
 	app.route("/v1", apiRouter);

@@ -1,40 +1,33 @@
 import "dotenv/config";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
-/**
- * Minimal OpenTelemetry configuration optimized for low memory footprint.
- * Auto-instrumentations disabled to reduce overhead - only manual spans are traced.
- */
+// Surface OTel internal warnings/errors so export failures are visible
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
+
+let sdk: NodeSDK | null = null;
 
 if (process.env.AXIOM_TOKEN) {
+	// NodeSDK reads OTEL_SERVICE_NAME to set the service resource attribute
+	process.env.OTEL_SERVICE_NAME = "autumn-server";
+
 	const traceExporter = new OTLPTraceExporter({
 		url: "https://api.axiom.co/v1/traces",
 		headers: {
 			Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-			"X-Axiom-Dataset": "express_otel",
+			"X-Axiom-Dataset": "otel",
 		},
 	});
 
-	const resource = resourceFromAttributes({
-		[ATTR_SERVICE_NAME]: "express",
+	// No auto-instrumentations — Bun doesn't support require-in-the-middle.
+	// Stripe, Drizzle, and Redis are instrumented via manual patchers in utils/otel/.
+	sdk = new NodeSDK({
+		traceExporter,
 	});
 
-	const sdk = new NodeSDK({
-		spanProcessor: new BatchSpanProcessor(traceExporter, {
-			maxQueueSize: 512, // Aggressive limit - drop spans early to save memory
-			maxExportBatchSize: 128, // Smaller batches = less memory per batch
-			scheduledDelayMillis: 2000, // Flush more frequently to reduce buildup
-			exportTimeoutMillis: 10000, // Fail fast if Axiom is slow
-		}),
-		resource: resource,
-		// No auto-instrumentations - drastically reduces memory and CPU overhead
-		instrumentations: [],
-	});
-
-	console.log("Starting OpenTelemetry (minimal mode)");
+	console.log("Starting OpenTelemetry");
 	sdk.start();
 }
+
+export { sdk as otelSdk };

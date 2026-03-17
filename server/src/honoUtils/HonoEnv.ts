@@ -21,6 +21,7 @@ export type RequestContext = {
 
 	// Objects
 	db: DrizzleCli;
+	dbGeneral: DrizzleCli;
 	logger: Logger;
 
 	// Info
@@ -41,6 +42,7 @@ export type RequestContext = {
 		skipWebhooks?: boolean;
 		eventId?: string;
 		keepInternalFields?: boolean;
+		useReplica?: boolean;
 	};
 };
 

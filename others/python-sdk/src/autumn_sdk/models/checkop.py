@@ -10,9 +10,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -45,6 +46,49 @@ class CheckGlobals(BaseModel):
         return m
 
 
+class CheckLockTypedDict(TypedDict):
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+    enabled: Literal[True]
+    r"""Must be true to enable locking."""
+    expires_at: NotRequired[float]
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+
+class CheckLock(BaseModel):
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
+    lock_id: str
+    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
+
+    enabled: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="enabled"),
+    ] = True
+    r"""Must be true to enable locking."""
+
+    expires_at: Optional[float] = None
+    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CheckParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
@@ -58,6 +102,8 @@ class CheckParamsTypedDict(TypedDict):
     r"""Additional properties to attach to the usage event if send_event is true."""
     send_event: NotRequired[bool]
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
+    lock: NotRequired[CheckLockTypedDict]
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
     with_preview: NotRequired[bool]
     r"""If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls."""
 
@@ -81,6 +127,9 @@ class CheckParams(BaseModel):
     send_event: Optional[bool] = None
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
 
+    lock: Optional[CheckLock] = None
+    r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
+
     with_preview: Optional[bool] = None
     r"""If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls."""
 
@@ -92,6 +141,7 @@ class CheckParams(BaseModel):
                 "required_balance",
                 "properties",
                 "send_event",
+                "lock",
                 "with_preview",
             ]
         )
@@ -104,6 +154,196 @@ class CheckParams(BaseModel):
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+FlagType = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+
+class CheckCreditSchemaTypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class CheckCreditSchema(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class FlagDisplayTypedDict(TypedDict):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: NotRequired[Nullable[str]]
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+    plural: NotRequired[Nullable[str]]
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+
+class FlagDisplay(BaseModel):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: OptionalNullable[str] = UNSET
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+
+    plural: OptionalNullable[str] = UNSET
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CheckFeatureTypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+    type: FlagType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+    event_names: NotRequired[List[str]]
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+    credit_schema: NotRequired[List[CheckCreditSchemaTypedDict]]
+    r"""For credit_system features: maps metered features to their credit costs."""
+    display: NotRequired[FlagDisplayTypedDict]
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+
+class CheckFeature(BaseModel):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+
+    type: FlagType
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+
+    event_names: Optional[List[str]] = None
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+
+    credit_schema: Optional[List[CheckCreditSchema]] = None
+    r"""For credit_system features: maps metered features to their credit costs."""
+
+    display: Optional[FlagDisplay] = None
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class FlagTypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this flag."""
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+    feature_id: str
+    r"""The feature ID this flag is for."""
+    feature: NotRequired[CheckFeatureTypedDict]
+    r"""The full feature object if expanded."""
+
+
+class Flag(BaseModel):
+    id: str
+    r"""The unique identifier for this flag."""
+
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+
+    feature_id: str
+    r"""The feature ID this flag is for."""
+
+    feature: Optional[CheckFeature] = None
+    r"""The full feature object if expanded."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature"])
+        nullable_fields = set(["plan_id", "expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -129,7 +369,7 @@ CheckEnv = Union[
 r"""The environment of the product"""
 
 
-CheckType = Union[
+ProductType = Union[
     Literal[
         "feature",
         "priced_feature",
@@ -171,59 +411,6 @@ CheckInterval = Union[
 ]
 
 
-CheckToTypedDict = TypeAliasType("CheckToTypedDict", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-CheckTo = TypeAliasType("CheckTo", Union[float, str])
-r"""The maximum amount of usage for this tier."""
-
-
-class TiersTypedDict(TypedDict):
-    to: CheckToTypedDict
-    r"""The maximum amount of usage for this tier."""
-    amount: float
-    r"""The price of the product item for this tier."""
-    flat_amount: NotRequired[Nullable[float]]
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-
-class Tiers(BaseModel):
-    to: CheckTo
-    r"""The maximum amount of usage for this tier."""
-
-    amount: float
-    r"""The price of the product item for this tier."""
-
-    flat_amount: OptionalNullable[float] = UNSET
-    r"""A flat fee charged for this tier, in addition to the per-unit amount."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
-        nullable_fields = set(["flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k)
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
 CheckTierBehavior = Union[
     Literal[
         "graduated",
@@ -242,12 +429,12 @@ UsageModel = Union[
 ]
 
 
-class CheckDisplayTypedDict(TypedDict):
+class ProductDisplayTypedDict(TypedDict):
     primary_text: str
     secondary_text: NotRequired[Nullable[str]]
 
 
-class CheckDisplay(BaseModel):
+class ProductDisplay(BaseModel):
     primary_text: str
 
     secondary_text: OptionalNullable[str] = UNSET
@@ -391,7 +578,7 @@ class Config(BaseModel):
 class CheckItemTypedDict(TypedDict):
     r"""Product item defining features and pricing within a product"""
 
-    type: NotRequired[Nullable[CheckType]]
+    type: NotRequired[Nullable[ProductType]]
     r"""The type of the product item"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
@@ -405,7 +592,7 @@ class CheckItemTypedDict(TypedDict):
     r"""The interval count of the product item."""
     price: NotRequired[Nullable[float]]
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
-    tiers: NotRequired[Nullable[List[TiersTypedDict]]]
+    tiers: NotRequired[Nullable[List[Nullable[Any]]]]
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
     tier_behavior: NotRequired[Nullable[CheckTierBehavior]]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
@@ -417,7 +604,7 @@ class CheckItemTypedDict(TypedDict):
     r"""Whether the usage should be reset when the product is enabled."""
     entity_feature_id: NotRequired[Nullable[str]]
     r"""The entity feature ID of the product item if applicable."""
-    display: NotRequired[Nullable[CheckDisplayTypedDict]]
+    display: NotRequired[Nullable[ProductDisplayTypedDict]]
     r"""The display of the product item."""
     quantity: NotRequired[Nullable[float]]
     r"""Used in customer context. Quantity of the feature the customer has prepaid for."""
@@ -430,7 +617,7 @@ class CheckItemTypedDict(TypedDict):
 class CheckItem(BaseModel):
     r"""Product item defining features and pricing within a product"""
 
-    type: OptionalNullable[CheckType] = UNSET
+    type: OptionalNullable[ProductType] = UNSET
     r"""The type of the product item"""
 
     feature_id: OptionalNullable[str] = UNSET
@@ -451,7 +638,7 @@ class CheckItem(BaseModel):
     price: OptionalNullable[float] = UNSET
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
 
-    tiers: OptionalNullable[List[Tiers]] = UNSET
+    tiers: OptionalNullable[List[Nullable[Any]]] = UNSET
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
 
     tier_behavior: OptionalNullable[CheckTierBehavior] = UNSET
@@ -469,7 +656,7 @@ class CheckItem(BaseModel):
     entity_feature_id: OptionalNullable[str] = UNSET
     r"""The entity feature ID of the product item if applicable."""
 
-    display: OptionalNullable[CheckDisplay] = UNSET
+    display: OptionalNullable[ProductDisplay] = UNSET
     r"""The display of the product item."""
 
     quantity: OptionalNullable[float] = UNSET
@@ -831,6 +1018,8 @@ class CheckResponseTypedDict(TypedDict):
     r"""The ID of the customer that was checked."""
     balance: Nullable[BalanceTypedDict]
     r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
+    flag: Nullable[FlagTypedDict]
+    r"""The flag associated with this check, if any."""
     entity_id: NotRequired[Nullable[str]]
     r"""The ID of the entity, if an entity-scoped check was performed."""
     required_balance: NotRequired[float]
@@ -851,6 +1040,9 @@ class CheckResponse(BaseModel):
     balance: Nullable[Balance]
     r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
 
+    flag: Nullable[Flag]
+    r"""The flag associated with this check, if any."""
+
     entity_id: OptionalNullable[str] = UNSET
     r"""The ID of the entity, if an entity-scoped check was performed."""
 
@@ -863,7 +1055,7 @@ class CheckResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["entity_id", "required_balance", "preview"])
-        nullable_fields = set(["entity_id", "balance"])
+        nullable_fields = set(["entity_id", "balance", "flag"])
         serialized = handler(self)
         m = {}
 
@@ -884,3 +1076,9 @@ class CheckResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    CheckLock.model_rebuild()
+except NameError:
+    pass

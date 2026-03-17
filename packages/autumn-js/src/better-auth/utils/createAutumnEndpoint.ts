@@ -2,6 +2,7 @@ import { createAuthEndpoint } from "better-auth/plugins";
 
 import { routeConfigs } from "../../backend/core/routes/routeConfigs";
 import type { RouteName } from "../../backend/core/types";
+import { omitProtectedBodyFields } from "./omitProtectedBodyFields";
 
 /** Type for the handleRoute function used by better-auth endpoints */
 export type HandleBetterAuthRouteFn = (args: {
@@ -29,7 +30,7 @@ export const createAutumnEndpoint = <T extends RouteName>(
 		`/autumn/${routeName}` as `/autumn/${T}`,
 		{
 			method: "POST",
-			body: config.bodySchema,
+			body: omitProtectedBodyFields({ schema: config.bodySchema }),
 		},
 		async (ctx) => {
 			const result = await handleRoute({ ctx, routeName });

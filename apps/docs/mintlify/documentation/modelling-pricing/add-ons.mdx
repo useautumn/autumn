@@ -1,0 +1,187 @@
+---
+title: Add-Ons
+description: Offer additional plans and features customers can purchase alongside their plan
+---
+
+Add-ons are plans that can be purchased alongside a customer's existing plan, rather than replacing it. They're used for top-ups, extra feature packs, or supplementary services.
+
+> **Example** <br />
+> A customer on the Pro plan can purchase a "Storage Add-On" for an extra 100GB/month, or a one-time "Credit Top-Up" of 500 credits.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Set `addOn: true` on the plan:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const storage = feature({
+  id: 'storage',
+  name: 'Storage (GB)',
+  type: 'metered',
+  consumable: false,
+});
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const storageAddOn = plan({
+  id: 'storage_add_on',
+  name: 'Extra Storage',
+  addOn: true,
+  price: { amount: 5, interval: 'month' },
+  items: [
+    item({
+      featureId: storage.id,
+      included: 100,
+    }),
+  ],
+});
+
+export const creditTopUp = plan({
+  id: 'credit_top_up',
+  name: 'Credit Top-Up',
+  addOn: true,
+  items: [
+    item({
+      featureId: credits.id,
+      price: {
+        amount: 10,
+        billingUnits: 500,
+        billingMethod: 'prepaid',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and click **Create Plan**
+2. Set the plan name and ID
+3. Toggle the **Add-on** flag
+4. Configure the price and features as needed
+5. Click **Create**
+
+</Tab>
+</Tabs>
+
+## How add-ons work
+
+Without the add-on flag, attaching a new plan replaces the customer's current plan (within the same [group](/documentation/concepts/plans#plan-properties)). With the add-on flag:
+
+- The plan is **added alongside** the customer's existing plans
+- Multiple add-ons can be active at the same time
+- Add-ons don't participate in upgrade/downgrade logic
+
+## Balance stacking
+
+When an add-on provides the same feature as the customer's main plan, the balances [stack](/documentation/concepts/balances#balance-stacking). Each source is tracked separately in the `breakdown` array.
+
+> **Example** <br />
+> A customer's Pro plan grants 1,000 credits/month. They purchase a one-time top-up of 500 credits. Their total balance is 1,500 credits, tracked as two separate sources.
+
+Autumn uses [deduction order](/documentation/concepts/balances#deduction-order) to consume shorter-interval balances first (monthly before lifetime).
+
+## Purchasing add-ons
+
+Add-ons use the same checkout/attach flow as regular plans:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.checkout({
+  customer_id: "user_123",
+  plan_id: "storage_add_on",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.checkout(
+    customer_id="user_123",
+    plan_id="storage_add_on",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/checkout" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "storage_add_on"
+  }'
+```
+
+</CodeGroup>
+
+For prepaid add-ons (like a credit top-up), pass the quantity:
+
+```typescript TypeScript
+const { data } = await autumn.checkout({
+  customer_id: "user_123",
+  plan_id: "credit_top_up",
+  options: [{
+    feature_id: "credits",
+    quantity: 1000,
+  }],
+});
+```
+
+## Cancelling add-ons
+
+Cancel an add-on using the same [cancel](/documentation/customers/managing-subscriptions#cancellations) flow:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.cancel({
+  customer_id: "user_123",
+  plan_id: "storage_add_on",
+});
+```
+
+```python Python
+await autumn.cancel(
+    customer_id="user_123",
+    plan_id="storage_add_on",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/cancel" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "storage_add_on"
+  }'
+```
+
+</CodeGroup>
+
+## Common add-on patterns
+
+| Pattern | Configuration |
+|---------|---------------|
+| Recurring add-on | `addOn: true`, recurring price (e.g., $5/month for extra storage) |
+| One-time top-up | `addOn: true`, prepaid price, no base price |
+| Feature pack | `addOn: true`, grants boolean or metered features |

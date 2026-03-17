@@ -1,0 +1,55 @@
+---
+title: "Custom Plans"
+description: "Create one-off plan variations for individual customers"
+---
+
+Sometimes a customer needs a plan that doesn't match any of your standard offerings — extra credits, different pricing, or access to features not in their current tier. Custom plans let you create a one-off variation of any product for a specific customer, without changing the product for everyone else.
+
+## When to use custom plans
+
+Custom plans are useful when:
+
+- An enterprise customer negotiates a different price or feature set
+- You want to give a customer extra allowance as a one-time accommodation
+- A customer needs access to a feature that isn't in their current plan
+- You're closing a deal that doesn't fit neatly into your standard tiers
+
+## Creating a custom plan via the dashboard
+
+1. Navigate to the [Customer details page](https://app.useautumn.com/customers) for the customer
+2. Click "Enable Product" (or click the existing product to modify it)
+3. Make changes to the product items before enabling:
+   - Adjust feature allowances (e.g., increase included credits from 100 to 500)
+   - Add or remove features
+   - Change pricing (fixed or usage-based)
+4. Click "Enable"
+
+This creates a custom version of the product — only this customer will have it. The original product remains unchanged for all other customers.
+
+## What happens when you enable a custom plan
+
+The behavior depends on what you changed:
+
+| Change type | Behavior |
+|---|---|
+| **Features only** (allowances, adding/removing features) | Takes effect immediately. New balances are provisioned while keeping existing reset dates. |
+| **Pricing changes** (higher price) | Treated as an upgrade — prorated charges apply for the remainder of the billing cycle. |
+| **Pricing changes** (lower price) | Treated as a downgrade — scheduled for end of current billing cycle. |
+
+## Custom plans vs editing balances
+
+If you just need a temporary adjustment (e.g., granting a customer extra credits this month), you can [edit their balance directly](/documentation/customers/managing-customers#editing-feature-balances) instead. Balance edits reset at the next billing cycle.
+
+Custom plans are better when you want the change to persist across billing cycles.
+
+<Info>
+**Example**
+
+A customer on your Pro plan (100 credits/month, $50/month) needs 250 credits/month at the same price. Create a custom plan with 250 included credits. They'll get 250 credits every month going forward, while all other Pro customers continue getting 100.
+</Info>
+
+## Custom plans and versioning
+
+Custom plans are tracked as separate versions of the product. When you [update the base product](/documentation/customers/versioning), customers on custom plans are not affected — they stay on their custom version.
+
+If you want to migrate a customer off a custom plan and onto the latest standard version, you can do so from the [customer details page](https://app.useautumn.com/customers) by re-enabling the standard product.

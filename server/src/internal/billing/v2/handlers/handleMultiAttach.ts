@@ -3,6 +3,7 @@ import {
 	InternalError,
 	MultiAttachParamsV0Schema,
 } from "@autumn/shared";
+import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
@@ -19,7 +20,11 @@ export const handleMultiAttach = createRoute({
 					getKey: (c) => {
 						const ctx = c.get("ctx");
 						const body = c.req.valid("json");
-						return `lock:attach:${ctx.org.id}:${ctx.env}:${body.customer_id}`;
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: body.customer_id,
+						});
 					},
 				}
 			: undefined,

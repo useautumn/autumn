@@ -61,6 +61,21 @@ export type CustomerDataAutoTopup = {
   purchaseLimit?: CustomerDataPurchaseLimit | undefined;
 };
 
+export type CustomerDataSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -69,6 +84,10 @@ export type CustomerDataBillingControls = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<CustomerDataAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CustomerDataSpendLimit> | undefined;
 };
 
 /**
@@ -190,8 +209,42 @@ export function customerDataAutoTopupToJSON(
 }
 
 /** @internal */
+export type CustomerDataSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const CustomerDataSpendLimit$outboundSchema: z.ZodMiniType<
+  CustomerDataSpendLimit$Outbound,
+  CustomerDataSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function customerDataSpendLimitToJSON(
+  customerDataSpendLimit: CustomerDataSpendLimit,
+): string {
+  return JSON.stringify(
+    CustomerDataSpendLimit$outboundSchema.parse(customerDataSpendLimit),
+  );
+}
+
+/** @internal */
 export type CustomerDataBillingControls$Outbound = {
   auto_topups?: Array<CustomerDataAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<CustomerDataSpendLimit$Outbound> | undefined;
 };
 
 /** @internal */
@@ -203,10 +256,14 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     autoTopups: z.optional(
       z.array(z.lazy(() => CustomerDataAutoTopup$outboundSchema)),
     ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => CustomerDataSpendLimit$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
     });
   }),
 );

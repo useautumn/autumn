@@ -454,6 +454,7 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 4: mid-trial upgrade to pre
 		customer,
 		productId: premiumTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Verify feature balance is premium's balance with resetsAt aligned to new trial end
@@ -464,6 +465,7 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 4: mid-trial upgrade to pre
 		balance: 1000,
 		usage: 0,
 		resetsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Verify NO paid invoice generated - both are $0 trial invoices

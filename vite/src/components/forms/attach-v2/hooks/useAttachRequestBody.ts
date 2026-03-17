@@ -7,6 +7,7 @@ import type {
 	ProductItem,
 	ProductItemInterval,
 	ProductV2,
+	RedirectMode,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
@@ -30,6 +31,7 @@ export interface BuildAttachRequestBodyParams {
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
 	billingBehavior: BillingBehavior | null;
+	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	discounts: FormDiscount[];
 }
@@ -48,6 +50,7 @@ export function buildAttachRequestBody({
 	trialCardRequired,
 	planSchedule,
 	billingBehavior,
+	redirectMode,
 	newBillingSubscription,
 	discounts,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
@@ -63,7 +66,7 @@ export function buildAttachRequestBody({
 	const body: AttachParamsV0Input = {
 		customer_id: customerId,
 		product_id: product.id,
-		redirect_mode: "if_required",
+		redirect_mode: redirectMode,
 	};
 
 	if (entityId) {
@@ -135,6 +138,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialCardRequired,
 		planSchedule,
 		billingBehavior,
+		redirectMode,
 		newBillingSubscription,
 		discounts,
 	} = params;
@@ -154,6 +158,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialCardRequired,
 				planSchedule,
 				billingBehavior,
+				redirectMode,
 				newBillingSubscription,
 				discounts,
 			}),
@@ -170,6 +175,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialCardRequired,
 			planSchedule,
 			billingBehavior,
+			redirectMode,
 			newBillingSubscription,
 			discounts,
 		],

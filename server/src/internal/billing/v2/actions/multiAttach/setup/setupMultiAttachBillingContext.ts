@@ -94,7 +94,7 @@ export const setupMultiAttachBillingContext = async ({
 		targetCustomerProduct: undefined,
 		params,
 		// paramDiscounts: params.discounts,
-		// newBillingSubscription: params.new_billing_subscription || undefined,
+		newBillingSubscription: params.new_billing_subscription || undefined,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({
@@ -180,5 +180,6 @@ export const setupMultiAttachBillingContext = async ({
 		billingVersion: BillingVersion.V2,
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
+		checkoutSessionParams: params.checkout_session_params,
 	};
 };

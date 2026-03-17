@@ -1,3 +1,4 @@
+import { getApiBalance } from "@api/customers/cusFeatures";
 import type {
 	ApiBalanceV1,
 	FullCusEntWithFullCusProduct,
@@ -5,7 +6,6 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiBalance } from "./getApiBalance.js";
 
 /**
  * Extract balances from a FullCusProduct's customer_entitlements.

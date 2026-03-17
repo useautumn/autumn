@@ -1,28 +1,28 @@
-// Suppress BullMQ eviction policy warnings BEFORE any imports
-
-// Skip OpenTelemetry instrumentation in development for faster startup
+// Sentry + OpenTelemetry must be imported before any application code
 await import("./sentry.js");
-if (process.env.NODE_ENV !== "development") {
-	await import("./instrumentation.js");
-}
 
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import { client } from "./db/initDrizzle.js";
+import { client, clientCritical, clientReplica } from "./db/initDrizzle.js";
+import {
+	initPgHealthMonitor,
+	shutdownPgHealthMonitor,
+} from "./db/pgHealthMonitor.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
+import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
-// subscribeToOrgUpdates({ db });
 
 const init = async () => {
 	const app = createHonoApp();
 
+	initPgHealthMonitor({ client: clientCritical });
 	await Promise.all([warmupRegionalRedis()]);
 
 	const PORT = process.env.SERVER_PORT
@@ -76,13 +76,22 @@ function registerShutdownHandlers() {
 }
 
 async function gracefulShutdown() {
-	console.log("Shutting down worker, closing DB connections...");
+	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await client.end();
-		console.log("DB connection closed. Exiting process.");
+		// Flush any buffered OTel spans before shutting down
+		if (otelSdk) {
+			await otelSdk.shutdown();
+		}
+		shutdownPgHealthMonitor();
+		await Promise.all([
+			client.end(),
+			clientCritical.end(),
+			clientReplica?.end(),
+		]);
+		console.log("Shutdown complete. Exiting process.");
 		process.exit(0);
 	} catch (err) {
-		console.error("Error closing DB connection:", err);
+		console.error("Error during graceful shutdown:", err);
 		process.exit(1);
 	}
 }

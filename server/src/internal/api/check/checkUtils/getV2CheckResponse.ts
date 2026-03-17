@@ -13,8 +13,15 @@ export const getV2CheckResponse = async ({
 	checkData: CheckData;
 	requiredBalance: number;
 }) => {
-	const { customerId, entityId, apiBalance, originalFeature, featureToUse } =
-		checkData;
+	const {
+		customerId,
+		entityId,
+		apiBalance,
+		apiFlag,
+		apiSubject,
+		originalFeature,
+		featureToUse,
+	} = checkData;
 
 	// If credit system used, need to convert required balance to credit system required balance
 	if (
@@ -28,27 +35,34 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	if (!apiBalance) {
+	if (!apiBalance && !apiFlag) {
 		return CheckResponseV3Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
 			entity_id: entityId,
 			required_balance: requiredBalance,
 			balance: null,
+			flag: null,
 		});
 	}
 
-	const allowed = apiBalanceToAllowed({
-		apiBalance,
-		feature: featureToUse,
-		requiredBalance,
-	});
+	const allowed = apiFlag
+		? true
+		: apiBalance
+			? apiBalanceToAllowed({
+					apiBalance,
+					apiSubject,
+					feature: featureToUse,
+					requiredBalance,
+				})
+			: false;
 
 	return CheckResponseV3Schema.parse({
 		allowed,
 		customer_id: customerId || "",
 		entity_id: entityId,
 		required_balance: requiredBalance,
-		balance: apiBalance,
+		balance: apiBalance ?? null,
+		flag: apiFlag ?? null,
 	});
 };

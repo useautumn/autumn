@@ -1,6 +1,7 @@
 import {
 	BillingVersion,
 	hasCustomItems,
+	orgDisableStripeWrites,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -9,12 +10,15 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
+import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
 const FIELDS_WITH_BILLING_CHANGES = [
@@ -122,7 +126,28 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		),
 	);
 
+	let checkoutMode = setupAttachCheckoutMode({
+		paymentMethod,
+		redirectMode: params.redirect_mode ?? "if_required",
+		attachProduct: fullProduct,
+		stripeSubscription,
+		trialContext,
+		invoiceMode,
+	});
+
+	checkoutMode =
+		params.redirect_mode === "always" && Boolean(checkoutMode)
+			? checkoutMode
+			: null; // For update subscription, always use autumn_checkout for now
+
+	const intent = setupUpdateSubscriptionIntent({
+		params,
+		checkoutMode,
+		customerProduct,
+	});
+
 	return {
+		intent,
 		fullCustomer,
 		fullProducts: [fullProduct],
 		customerProduct,
@@ -140,6 +165,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		invoiceMode,
 		featureQuantities,
+		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		customPrices,
 		customEnts,
@@ -151,8 +177,11 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			: (customerProduct.billing_version ?? BillingVersion.V2),
 
 		skipBillingChanges:
+			orgDisableStripeWrites({ ctx }) ||
 			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined ||
 			billingRelatedFields.length === 0,
+
+		checkoutMode,
 	};
 };

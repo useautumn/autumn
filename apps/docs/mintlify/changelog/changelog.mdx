@@ -4,6 +4,115 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="March 17th 2026">
+  ## Express, Elysia, and Web Standard adapters for `autumn-js`
+
+  The `autumn-js` SDK now ships adapters for Express, Elysia, and any framework that uses the Fetch API `Request`/`Response` objects. You can set up the `autumnHandler` in your backend with a single import — no manual request parsing required.
+
+  - **Express**: Import from `autumn-js/express` and mount with `app.use()`. Requires `express.json()` before the handler
+  - **Elysia / Web Standard**: Import from `autumn-js/webStandard` and use with Elysia's `.mount()`, Cloudflare Workers, Deno, or any Fetch-based runtime
+  - **Existing adapters**: Next.js (`autumn-js/next`) and Hono (`autumn-js/hono`) continue to work as before
+
+  See the [setup guide](/documentation/getting-started/setup) for framework-specific code examples.
+
+  ## Explicit customer creation required for `check` and `track`
+
+  The `/check` and `/track` endpoints no longer auto-create customers. If you call these endpoints with a `customer_id` that doesn't exist, the API now returns a `customer_not_found` error instead of silently creating the customer.
+
+  This change encourages explicit customer lifecycle management and prevents accidental customer creation from typos or stale IDs.
+
+  - **Create customers first**: Call [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login before using `check` or `track`
+  - **Handle the error**: If a customer doesn't exist, the API returns error code `customer_not_found`
+
+  ## `autumn-js` SDK 1.0.0
+
+  The `autumn-js` SDK has been promoted from beta to stable at version `1.0.0`.
+
+  ## New framework adapters
+
+  The `autumn-js` SDK now includes adapters for Express, Elysia, and any Web Standard compatible runtime (Cloudflare Workers, Deno). Import from the adapter that matches your backend:
+
+  | Framework | Import path |
+  | --- | --- |
+  | Next.js | `autumn-js/next` |
+  | Hono | `autumn-js/hono` |
+  | Elysia / Web Standard | `autumn-js/webStandard` |
+  | Express | `autumn-js/express` |
+  | Other | `autumn-js/backend` |
+
+  See the [setup guide](/documentation/getting-started/setup) and the [`autumnHandler` reference](/react/hooks/autumn-handler) for full examples.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Express adapter for `autumnHandler` via `autumn-js/express` - [#979](https://github.com/useautumn/autumn/pull/979)
+      - Web Standard adapter for `autumnHandler` via `autumn-js/webStandard` (Elysia, Cloudflare Workers, Deno) - [#979](https://github.com/useautumn/autumn/pull/979)
+      - Explicit customer creation required for `check` and `track` endpoints - [#968](https://github.com/useautumn/autumn/pull/968)
+      - `autumn-js` SDK promoted to `1.0.0` stable release - [#968](https://github.com/useautumn/autumn/pull/968)
+      - New Express, Elysia, and Web Standard adapters for `autumnHandler` - [#985](https://github.com/useautumn/autumn/pull/985)
+      - Improved API reference field descriptions for preview endpoints - [#985](https://github.com/useautumn/autumn/pull/985)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="March 16th 2026">
+  ## Balance and usage carry-over on plan upgrades
+
+  You can now preserve a customer's remaining balances and usage when they upgrade plans. Two new parameters on `billing.attach` give you fine-grained control over what happens to consumable features during an immediate upgrade.
+
+  - **`carry_over_balances`**: Unused credits or balances from the old plan are carried forward to the new one — so customers don't lose what they've already paid for
+  - **`carry_over_usages`**: Prior usage is deducted from the new plan's allowance, preventing customers from getting a free reset on upgrade
+  - **Per-feature control**: Optionally scope carry-over to specific features using `feature_ids`
+
+  See the [attach API reference](/api-reference/billing/attach) for details.
+
+  ## Feature flags in customer and entity responses
+
+  Boolean features are now returned as a dedicated `flags` object on customer and entity API responses. This makes it easier to check on/off feature access without calling the `check` endpoint separately.
+
+  - **Separate from balances**: Flags live under `flags` in the response, clearly separated from consumable balances
+  - **Available everywhere**: Returned on customer get, list, entity get, and entity create endpoints
+  - **Includes metadata**: Each flag shows the originating plan, expiration, and feature ID
+
+  See the [check endpoint](/api-reference/core/check) and [customer endpoints](/api-reference/customers/getOrCreateCustomer) for the updated response format.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Balance carry-over on immediate plan upgrades via `carry_over_balances` - [#861](https://github.com/useautumn/autumn/pull/861)
+      - Usage carry-over on immediate plan upgrades via `carry_over_usages` - [#875](https://github.com/useautumn/autumn/pull/875)
+      - Boolean features returned as `flags` in customer and entity objects - [#950](https://github.com/useautumn/autumn/pull/950)
+      - Updated API, SDKs, and frontend with new flag fields - [#951](https://github.com/useautumn/autumn/pull/951)
+    </Accordion>
+
+    <Accordion title="Bug Fixes">
+      - Fixed customer retrieval query causing errors in certain configurations - [#958](https://github.com/useautumn/autumn/pull/958), [#959](https://github.com/useautumn/autumn/pull/959)
+      - Fixed trial upgrade reliability when unsetting trial periods - [#958](https://github.com/useautumn/autumn/pull/958)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="March 13th 2026">
+  ## Autumn Checkout
+
+  We've launched Autumn Checkout — a hosted confirm-before-charge flow that gives customers a clear preview before completing their purchase.
+
+  When a customer with a saved payment method subscribes or updates their plan, they're now sent to Autumn Checkout instead of being charged directly. This lets them review exact pricing — including prorations, usage charges, and discounts — before confirming.
+
+  - **Preview before you pay**: Customers see immediate charges and next-cycle estimates before confirming
+  - **Works everywhere**: Supports new subscriptions, plan upgrades, and quantity updates
+  - **Handles edge cases**: Built-in flows for 3DS authentication, payment failures, and action-required states
+  - **No API changes**: Just follow the `paymentUrl` returned by `billing.attach` or `billing.update`
+
+  <AccordionGroup>
+    <Accordion title="How it works">
+      When you call `billing.attach` or `billing.update`, the returned `paymentUrl` routes customers to:
+      - **Stripe Checkout** — if they don't have a saved payment method
+      - **Autumn Checkout** — if they do, so they can review and confirm the charge
+
+      After confirmation, customers are redirected to your `successUrl`.
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="February 25th 2026">
   ## Volume-Based Tiered Pricing
 

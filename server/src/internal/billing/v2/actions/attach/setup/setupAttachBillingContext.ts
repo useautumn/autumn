@@ -10,6 +10,7 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 	notNullish,
+	orgDisableStripeWrites,
 	orgToReturnUrl,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -227,10 +228,12 @@ export const setupAttachBillingContext = async ({
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
+		checkoutSessionParams: params.checkout_session_params,
 
 		externalId: params.subscription_id,
 
 		skipBillingChanges:
+			orgDisableStripeWrites({ ctx }) ||
 			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined,
 	};

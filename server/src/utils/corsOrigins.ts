@@ -13,6 +13,7 @@ export const ALLOWED_ORIGINS = [
 	"https://staging.useautumn.com",
 	"https://dev.useautumn.com",
 	"https://api.staging.useautumn.com",
+	"https://checkout.useautumn.com",
 	"https://localhost:8080",
 ];
 

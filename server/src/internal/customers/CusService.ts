@@ -24,6 +24,7 @@ import {
 	type Table,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -44,6 +45,7 @@ export class CusService {
 		withSubs = false,
 		allowNotFound = false,
 		withEvents = false,
+		explain = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -54,6 +56,7 @@ export class CusService {
 		withSubs?: boolean;
 		allowNotFound?: boolean;
 		withEvents?: boolean;
+		explain?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -86,7 +89,17 @@ export class CusService {
 					entityId,
 				);
 
-				const result = await db.execute(query);
+				if (explain) {
+					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
+					const result = await db.execute(explainQuery);
+					return result as unknown as FullCustomer;
+				}
+
+				const { result, usedReplica } = await executeWithHealthTracking({
+					db,
+					query,
+					useReplica: ctx.testOptions?.useReplica,
+				});
 
 				if (!result || result.length === 0) {
 					if (allowNotFound) {
@@ -113,11 +126,15 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
-				// Lazy reset stale entitlements (mutates fullCus in-memory + writes DB)
-				await resetCustomerEntitlements({
-					fullCus,
-					ctx,
-				});
+				// Skip reset when reading from replica — it writes to primary,
+				// and replica data is stale anyway. When degraded WITHOUT a replica
+				// (falls back to primary), the reset should still run.
+				if (!usedReplica) {
+					await resetCustomerEntitlements({
+						fullCus,
+						ctx,
+					});
+				}
 
 				return fullCus;
 			},
@@ -452,13 +469,15 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db.delete(customers).where(
-				and(
-					inArray(customers.internal_id, ids),
-					eq(customers.org_id, orgId),
-					eq(customers.env, env),
-				),
-			);
+			await db
+				.delete(customers)
+				.where(
+					and(
+						inArray(customers.internal_id, ids),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				);
 		}
 	}
 

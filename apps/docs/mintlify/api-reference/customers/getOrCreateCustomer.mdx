@@ -92,11 +92,29 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicParamField>
 
+    <DynamicParamField body="spend_limits" type="object[]">
+      List of overage spend limits per feature.
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string">
+          Optional feature ID this spend limit applies to.
+        </DynamicParamField>
+
+        <DynamicParamField body="enabled" type="boolean">
+          Whether this spend limit is enabled.
+        </DynamicParamField>
+
+        <DynamicParamField body="overage_limit" type="number">
+          Maximum allowed overage spend for the target feature.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="expand" type="('invoices' | 'trials_used' | 'rewards' | 'entities' | 'referrals' | 'payment_method' | 'subscriptions.plan' | 'purchases.plan' | 'balances.feature')[]">
-  Customer expand options
+<DynamicParamField body="expand" type="string[]">
+  Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
 </DynamicParamField>
 
 
@@ -176,6 +194,24 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
             </DynamicResponseField>
 
           </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="spend_limits" type="object[]">
+      List of overage spend limits per feature.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          Optional feature ID this spend limit applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="enabled" type="boolean">
+          Whether this spend limit is enabled.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="overage_limit" type="number">
+          Maximum allowed overage spend for the target feature.
         </DynamicResponseField>
 
       </Expandable>
@@ -340,16 +376,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="tiers" type="object[]">
+                <DynamicResponseField name="tiers" type="any[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="to" type="number" />
-
-                    <DynamicResponseField name="amount" type="number" />
-
-                    <DynamicResponseField name="flat_amount" type="number | null" />
-
-                  </Expandable>
                 </DynamicResponseField>
 
                 <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
@@ -665,16 +693,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="tiers" type="object[]">
+                <DynamicResponseField name="tiers" type="any[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="to" type="number" />
-
-                    <DynamicResponseField name="amount" type="number" />
-
-                    <DynamicResponseField name="flat_amount" type="number | null" />
-
-                  </Expandable>
                 </DynamicResponseField>
 
                 <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
@@ -955,16 +975,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="object[]">
+            <DynamicResponseField name="tiers" type="any[]">
               Tiered pricing configuration if applicable.
-              <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
-
-                <DynamicResponseField name="amount" type="number" />
-
-                <DynamicResponseField name="flat_amount" type="number | null" />
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
@@ -1010,7 +1022,88 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="flags.{key}" type="object">
+  Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for this flag.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_id" type="string | null">
+      The plan ID this flag originates from, or null for standalone flags.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when this flag expires, or null for no expiration.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this flag is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature" type="object">
+      The full feature object if expanded.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The unique identifier for this feature, used in /check and /track calls.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="name" type="string">
+          Human-readable name displayed in the dashboard and billing UI.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
+          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="consumable" type="boolean">
+          For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="event_names" type="string[]">
+          Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="credit_schema" type="object[]">
+          For credit_system features: maps metered features to their credit costs.
+          <Expandable title="properties">
+            <DynamicResponseField name="metered_feature_id" type="string">
+              ID of the metered feature that draws from this credit system.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="credit_cost" type="number">
+              Credits consumed per unit of the metered feature.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="display" type="object">
+          Display names for the feature in billing UI and customer-facing components.
+          <Expandable title="properties">
+            <DynamicResponseField name="singular" type="string | null">
+              Singular form for UI display (e.g., 'API call', 'seat').
+            </DynamicResponseField>
+
+            <DynamicResponseField name="plural" type="string | null">
+              Plural form for UI display (e.g., 'API calls', 'seats').
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="archived" type="boolean">
+          Whether the feature is archived and hidden from the dashboard.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="invoices" type="object[]">
+  Invoices for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan_ids" type="string[]">
       Array of plan IDs included in this invoice
@@ -1044,9 +1137,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="entities" type="object[]">
+  Entities associated with this customer.
   <Expandable title="properties">
-    <DynamicResponseField name="autumn_id" type="string" />
-
     <DynamicResponseField name="id" type="string | null">
       The unique identifier of the entity
     </DynamicResponseField>
@@ -1075,6 +1167,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="trials_used" type="object[]">
+  Trial usage history for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="plan_id" type="string" />
 
@@ -1086,6 +1179,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="rewards" type="object | null">
+  Rewards earned or applied for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="discounts" type="object[]">
       Array of active discounts applied to the customer
@@ -1141,6 +1235,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="referrals" type="object[]">
+  Referral records for this customer.
   <Expandable title="properties">
     <DynamicResponseField name="program_id" type="string" />
 
@@ -1162,7 +1257,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="payment_method" type="any | null" />
+<DynamicResponseField name="payment_method" type="any | null">
+  The customer's default payment method.
+</DynamicResponseField>
 
 
 <ResponseExample>
@@ -1224,6 +1321,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           "expiresAt": null
         }
       ]
+    }
+  },
+  "flags": {
+    "advanced_workflows": {
+      "id": "cus_ent_abc123",
+      "plan_id": "pro_plan",
+      "expires_at": null,
+      "feature_id": "advanced_workflows"
     }
   }
 }

@@ -1,20 +1,19 @@
 ---
 title: "Creating Customers"
-description: "Learn about customers in Autumn and how to create them"
+description: "Create customers via API or dashboard, link to Stripe, and pre-create for enterprise deals"
 ---
 
-Customers represent the entities, usually users or organizations, of your application that can use and pay for your products.
+Customers represent the entities — usually users or organizations — of your application that can use and pay for your products.
 
 For each customer, Autumn will:
 
 - Keep record of the products they've purchased
-- Track the features they've used
-- Track the features they have access to
+- Track the features they've used and have access to
 - Bill them through Stripe for the prices you've set
 
 ## Creating a customer via API
 
-You can create a customer with the `customers.getOrCreate` method. This will create the customer if they don't exist, or return the existing customer if they do.
+Use the `customers.getOrCreate` method to create a customer. This is idempotent — it creates the customer if they don't exist, or returns the existing one if they do.
 
 <CodeGroup>
 
@@ -55,40 +54,46 @@ curl -X POST "https://api.useautumn.com/v1/customers" \
 
 </CodeGroup>
 
-Only the `customerId` field is required - this should be your unique identifier for the customer that you'll use to reference them in future API calls.
+Only the `customerId` field is required — this should be your unique identifier for the customer that you'll use in all future API calls.
 
-<Note>
-  An Autumn customer does not map to a Stripe customer by default. A Stripe
-  customer will only be created when an `attach` request is made.
-</Note>
-
-## Creating a customer via the Autumn dashboard
-
-You can also create a customer via the Autumn dashboard. This is useful if you want to "pre-create" a customer for a user who hasn't interacted with your application yet.
-
-1. Navigate to the [Customers page](https://app.useautumn.com/customers)
-2. Click the "Create Customer" button
-3. Fill in the customer's details, such as name and email. <br/>
-   **Leave the `id` field blank**, as this will come from your application.
-4. Click "Create Customer"
-
-When the customer logs in for the first time, Autumn will match the user's `email` to the customer email you provided above.
+<Tip>
+A common pattern is to call `customers.getOrCreate` on every login or signup in your application, so Autumn always has the latest customer information.
+</Tip>
 
 <Warning>
-  Make sure the email you provide is the same email that the customer will use
-  to log in to your application. You can update this from the customer details
-  page.
+Customers must be created before calling the [`check`](/documentation/customers/check) or [`track`](/documentation/customers/tracking-usage) endpoints. If you call these endpoints with a `customer_id` that doesn't exist, the API will return a `customer_not_found` error. Make sure to call `customers.getOrCreate` during signup or login before checking access or tracking usage.
 </Warning>
 
-You can enable a product and set their properties in advance, so that when they do interact with your application, they're already have the right features available.
+## Pre-creating customers via the dashboard
 
-This is especially useful for larger or enterprise deals where payment happens separately via invoice.
+You can create a customer in the Autumn dashboard before they've ever interacted with your application. This is useful for enterprise or sales-led deals where you want to provision access before the customer signs up.
 
-## Customer Properties
+1. Navigate to the [Customers page](https://app.useautumn.com/customers)
+2. Click "Create Customer"
+3. Fill in the customer's details (name, email). **Leave the `id` field blank** — it will be assigned when the customer first logs in.
+4. Click "Create Customer"
+
+Once the customer is created, you can enable products and configure their features from the customer details page. When the customer eventually signs up in your application, Autumn will match them by email and link the pre-created customer record.
+
+<Warning>
+The email you provide must match the email the customer will use to sign up or log in. You can update the email from the customer details page if needed.
+</Warning>
+
+<Info>
+**Example: Enterprise onboarding**
+
+You've closed an enterprise deal with Acme Corp. Before their team starts using your product:
+
+1. Create a customer in the dashboard with the billing contact's email
+2. Enable a custom Enterprise plan with negotiated pricing
+3. When the Acme team signs up, Autumn matches the email and they immediately have their plan active — no checkout needed
+</Info>
+
+## Customer properties
 
 #### Customer ID
 
-This is your unique identifier for the customer. You'll use this ID in all future API calls to reference this customer. It could be:
+Your unique identifier for the customer. This is the only required field. It could be:
 
 - Your database ID for the user
 - Their email address
@@ -96,19 +101,27 @@ This is your unique identifier for the customer. You'll use this ID in all futur
 
 #### Name and Email
 
-Optional fields to help identify the customer in the Autumn dashboard and on invoices.
+Optional fields that help identify the customer in the Autumn dashboard and on Stripe invoices.
 
-## Stripe Integration
+## Stripe integration
 
-By default, Autumn does not create a Stripe customer when you create an Autumn customer. A Stripe customer is only created on the first billing call (like `billing.attach` or `billing.openCustomerPortal`).
+By default, Autumn does **not** create a Stripe customer when you create an Autumn customer. A Stripe customer is created lazily — only when the first billing operation needs one (like `billing.attach`, `billing.openCustomerPortal`, or `billing.setupPayment`).
 
-You can change this behavior with the following options:
+```mermaid
+flowchart LR
+    A["Your app<br/><code>user_123</code>"] -->|customers.getOrCreate| B["Autumn Customer<br/><code>user_123</code>"]
+    B -->|on first billing call| C["Stripe Customer<br/><code>cus_abc123</code>"]
+```
+
+You can change this behavior:
 
 #### Create in Stripe immediately
 
-Pass `createInStripe: true` to create the Stripe customer at the same time as the Autumn customer:
+Pass `createInStripe: true` to create the Stripe customer at the same time as the Autumn customer. This is useful if you need the Stripe customer ID upfront (e.g., for your own Stripe integration).
 
-```typescript
+<CodeGroup>
+
+```typescript TypeScript
 await autumn.customers.getOrCreate({
   customerId: "user_123",
   name: "John Doe",
@@ -117,13 +130,63 @@ await autumn.customers.getOrCreate({
 });
 ```
 
+```python Python
+await autumn.customers.get_or_create(
+    customer_id="user_123",
+    name="John Doe",
+    email="john@example.com",
+    create_in_stripe=True,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "create_in_stripe": true
+  }'
+```
+
+</CodeGroup>
+
 #### Link to an existing Stripe customer
 
-If you already have a Stripe customer, pass `stripeId` to link it to the Autumn customer:
+If you already have a Stripe customer (e.g., you're migrating to Autumn), pass `stripeId` to link it instead of creating a new one:
 
-```typescript
+<CodeGroup>
+
+```typescript TypeScript
 await autumn.customers.getOrCreate({
   customerId: "user_123",
-  stripeId: "cus_abc123", // Your existing Stripe customer ID
+  stripeId: "cus_abc123",
 });
 ```
+
+```python Python
+await autumn.customers.get_or_create(
+    customer_id="user_123",
+    stripe_id="cus_abc123",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "stripe_id": "cus_abc123"
+  }'
+```
+
+</CodeGroup>
+
+Once linked, the mapping is bidirectional — the Stripe customer ID is stored on the Autumn customer, and the Autumn customer ID is stored in the Stripe customer's metadata.
+
+<Note>
+For more details on how Autumn and Stripe work together, see [Stripe Sync](/documentation/concepts/stripe).
+</Note>

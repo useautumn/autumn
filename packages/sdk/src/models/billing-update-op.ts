@@ -109,8 +109,8 @@ export type BillingUpdateTo = number | string;
 
 export type BillingUpdateTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const BillingUpdateTierBehavior = {
@@ -385,6 +385,21 @@ export type BillingUpdateProrationBehavior = ClosedEnum<
 >;
 
 /**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export const BillingUpdateRedirectMode = {
+  Always: "always",
+  IfRequired: "if_required",
+  Never: "never",
+} as const;
+/**
+ * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+ */
+export type BillingUpdateRedirectMode = ClosedEnum<
+  typeof BillingUpdateRedirectMode
+>;
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const BillingUpdateCancelAction = {
@@ -433,6 +448,10 @@ export type UpdateSubscriptionParams = {
    */
   prorationBehavior?: BillingUpdateProrationBehavior | undefined;
   /**
+   * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+   */
+  redirectMode?: BillingUpdateRedirectMode | undefined;
+  /**
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
   subscriptionId?: string | undefined;
@@ -440,6 +459,10 @@ export type UpdateSubscriptionParams = {
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
+  /**
+   * If true, the subscription is updated internally without applying billing changes in Stripe.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -645,8 +668,8 @@ export function billingUpdateToToJSON(
 /** @internal */
 export type BillingUpdateTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -656,8 +679,8 @@ export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -971,6 +994,11 @@ export const BillingUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateProrationBehavior);
 
 /** @internal */
+export const BillingUpdateRedirectMode$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateRedirectMode
+> = z.enum(BillingUpdateRedirectMode);
+
+/** @internal */
 export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateCancelAction
 > = z.enum(BillingUpdateCancelAction);
@@ -985,8 +1013,10 @@ export type UpdateSubscriptionParams$Outbound = {
   customize?: BillingUpdateCustomize$Outbound | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
+  redirect_mode: string;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1009,8 +1039,13 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       BillingUpdateProrationBehavior$outboundSchema,
     ),
+    redirectMode: z._default(
+      BillingUpdateRedirectMode$outboundSchema,
+      "if_required",
+    ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1020,8 +1055,10 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
+      redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

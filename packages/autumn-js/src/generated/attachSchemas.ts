@@ -15,8 +15,8 @@ export const attachToSchema = z.union([z.number(), z.string()]);
 
 export const attachTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachInvoiceModeSchema = z.object({
@@ -33,6 +33,16 @@ export const attachAttachDiscountSchema = z.object({
 export const attachCustomLineItemSchema = z.object({
 	amount: z.number(),
 	description: z.string(),
+});
+
+export const attachCarryOverBalancesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const attachCarryOverUsagesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const attachInvoiceSchema = z.object({
@@ -64,8 +74,8 @@ export const attachToOutboundSchema = z.union([z.number(), z.string()]);
 
 export const attachTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
-	amount: z.number(),
-	flat_amount: z.union([z.number(), z.undefined()]).optional().nullable(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachPriceOutboundSchema = z.object({
@@ -136,6 +146,16 @@ export const attachCustomLineItemOutboundSchema = z.object({
 	description: z.string(),
 });
 
+export const attachCarryOverBalancesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const attachCarryOverUsagesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const attachParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -149,6 +169,7 @@ export const attachParamsOutboundSchema = z.object({
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
+	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountOutboundSchema), z.undefined()])
@@ -161,6 +182,13 @@ export const attachParamsOutboundSchema = z.object({
 		.optional(),
 	custom_line_items: z
 		.union([z.array(attachCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	carry_over_balances: z
+		.union([attachCarryOverBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([attachCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -246,6 +274,8 @@ export const attachCustomizeSchema = z.object({
 
 export const attachProrationBehaviorSchema = closedEnumSchema;
 
+export const attachRedirectModeSchema = closedEnumSchema;
+
 export const attachPlanScheduleSchema = closedEnumSchema;
 
 export const attachParamsSchema = z.object({
@@ -261,6 +291,7 @@ export const attachParamsSchema = z.object({
 	prorationBehavior: z
 		.union([attachProrationBehaviorSchema, z.undefined()])
 		.optional(),
+	redirectMode: z.union([attachRedirectModeSchema, z.undefined()]).optional(),
 	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(attachAttachDiscountSchema), z.undefined()])
@@ -273,6 +304,13 @@ export const attachParamsSchema = z.object({
 		.optional(),
 	customLineItems: z
 		.union([z.array(attachCustomLineItemSchema), z.undefined()])
+		.optional(),
+	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	carryOverBalances: z
+		.union([attachCarryOverBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([attachCarryOverUsagesSchema, z.undefined()])
 		.optional(),
 });
 

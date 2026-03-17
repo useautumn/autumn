@@ -22,6 +22,31 @@ export type CreateEntityGlobals = {
   xApiVersion?: string | undefined;
 };
 
+export type CreateEntitySpendLimitRequest = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type CreateEntityBillingControlsRequest = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CreateEntitySpendLimitRequest> | undefined;
+};
+
 export type CreateEntityParams = {
   /**
    * The name of the entity
@@ -31,6 +56,10 @@ export type CreateEntityParams = {
    * The ID of the feature this entity is associated with
    */
   featureId: string;
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: CreateEntityBillingControlsRequest | undefined;
   /**
    * Customer details to set when creating a customer
    */
@@ -145,6 +174,130 @@ export type CreateEntityPurchase = {
   quantity: number;
 };
 
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const CreateEntityType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type CreateEntityType = OpenEnum<typeof CreateEntityType>;
+
+export type CreateEntityCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type CreateEntityDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type CreateEntityFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: CreateEntityType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<CreateEntityCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: CreateEntityDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type CreateEntityFlags = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: CreateEntityFeature | undefined;
+};
+
+export type CreateEntitySpendLimitResponse = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type CreateEntityBillingControlsResponse = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<CreateEntitySpendLimitResponse> | undefined;
+};
+
 export type CreateEntityInvoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -180,7 +333,6 @@ export type CreateEntityInvoice = {
  * OK
  */
 export type CreateEntityResponse = {
-  autumnId?: string | undefined;
   /**
    * The unique identifier of the entity
    */
@@ -208,6 +360,11 @@ export type CreateEntityResponse = {
   subscriptions: Array<CreateEntitySubscription>;
   purchases: Array<CreateEntityPurchase>;
   balances: { [k: string]: Balance };
+  flags: { [k: string]: CreateEntityFlags };
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: CreateEntityBillingControlsResponse | undefined;
   /**
    * Invoices for this entity (only included when expand=invoices)
    */
@@ -215,9 +372,77 @@ export type CreateEntityResponse = {
 };
 
 /** @internal */
+export type CreateEntitySpendLimitRequest$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const CreateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
+  CreateEntitySpendLimitRequest$Outbound,
+  CreateEntitySpendLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function createEntitySpendLimitRequestToJSON(
+  createEntitySpendLimitRequest: CreateEntitySpendLimitRequest,
+): string {
+  return JSON.stringify(
+    CreateEntitySpendLimitRequest$outboundSchema.parse(
+      createEntitySpendLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateEntityBillingControlsRequest$Outbound = {
+  spend_limits?: Array<CreateEntitySpendLimitRequest$Outbound> | undefined;
+};
+
+/** @internal */
+export const CreateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
+  CreateEntityBillingControlsRequest$Outbound,
+  CreateEntityBillingControlsRequest
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => CreateEntitySpendLimitRequest$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function createEntityBillingControlsRequestToJSON(
+  createEntityBillingControlsRequest: CreateEntityBillingControlsRequest,
+): string {
+  return JSON.stringify(
+    CreateEntityBillingControlsRequest$outboundSchema.parse(
+      createEntityBillingControlsRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateEntityParams$Outbound = {
   name?: string | null | undefined;
   feature_id: string;
+  billing_controls?: CreateEntityBillingControlsRequest$Outbound | undefined;
   customer_data?: CustomerData$Outbound | undefined;
   customer_id: string;
   entity_id: string;
@@ -231,6 +456,9 @@ export const CreateEntityParams$outboundSchema: z.ZodMiniType<
   z.object({
     name: z.optional(z.nullable(z.string())),
     featureId: z.string(),
+    billingControls: z.optional(
+      z.lazy(() => CreateEntityBillingControlsRequest$outboundSchema),
+    ),
     customerData: z.optional(CustomerData$outboundSchema),
     customerId: z.string(),
     entityId: z.string(),
@@ -238,6 +466,7 @@ export const CreateEntityParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      billingControls: "billing_controls",
       customerData: "customer_data",
       customerId: "customer_id",
       entityId: "entity_id",
@@ -344,6 +573,180 @@ export function createEntityPurchaseFromJSON(
 }
 
 /** @internal */
+export const CreateEntityType$inboundSchema: z.ZodMiniType<
+  CreateEntityType,
+  unknown
+> = openEnums.inboundSchema(CreateEntityType);
+
+/** @internal */
+export const CreateEntityCreditSchema$inboundSchema: z.ZodMiniType<
+  CreateEntityCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDisplay$inboundSchema: z.ZodMiniType<
+  CreateEntityDisplay,
+  unknown
+> = z.object({
+  singular: z.optional(z.nullable(types.string())),
+  plural: z.optional(z.nullable(types.string())),
+});
+
+export function createEntityDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityFeature$inboundSchema: z.ZodMiniType<
+  CreateEntityFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: CreateEntityType$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => CreateEntityCreditSchema$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => CreateEntityDisplay$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function createEntityFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityFlags$inboundSchema: z.ZodMiniType<
+  CreateEntityFlags,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => CreateEntityFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function createEntityFlagsFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityFlags, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityFlags$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityFlags' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
+  CreateEntitySpendLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function createEntitySpendLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntitySpendLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntitySpendLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntitySpendLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityBillingControlsResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CreateEntitySpendLimitResponse$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "spend_limits": "spendLimits",
+    });
+  }),
+);
+
+export function createEntityBillingControlsResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityBillingControlsResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateEntityBillingControlsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityBillingControlsResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityInvoice$inboundSchema: z.ZodMiniType<
   CreateEntityInvoice,
   unknown
@@ -383,7 +786,6 @@ export const CreateEntityResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    autumn_id: types.optional(types.string()),
     id: types.nullable(types.string()),
     name: types.nullable(types.string()),
     customer_id: z.optional(z.nullable(types.string())),
@@ -395,16 +797,20 @@ export const CreateEntityResponse$inboundSchema: z.ZodMiniType<
     ),
     purchases: z.array(z.lazy(() => CreateEntityPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    flags: z.record(z.string(), z.lazy(() => CreateEntityFlags$inboundSchema)),
+    billing_controls: types.optional(
+      z.lazy(() => CreateEntityBillingControlsResponse$inboundSchema),
+    ),
     invoices: types.optional(
       z.array(z.lazy(() => CreateEntityInvoice$inboundSchema)),
     ),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "autumn_id": "autumnId",
       "customer_id": "customerId",
       "feature_id": "featureId",
       "created_at": "createdAt",
+      "billing_controls": "billingControls",
     });
   }),
 );

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { handleConfirmCheckout } from "./handlers/handleConfirmCheckout";
 import { handleGetCheckout } from "./handlers/handleGetCheckout";
@@ -18,6 +19,10 @@ publicCheckoutRouter.use("/:checkout_id/*", checkoutRateLimiter);
 // Apply checkout middleware to fetch from cache
 publicCheckoutRouter.use("/:checkout_id", checkoutMiddleware);
 publicCheckoutRouter.use("/:checkout_id/*", checkoutMiddleware);
+
+// Apply analytics middleware
+// publicCheckoutRouter.use("/:checkout_id", analyticsMiddleware);
+publicCheckoutRouter.use("/:checkout_id/*", analyticsMiddleware);
 
 // Routes
 publicCheckoutRouter.get("/:checkout_id", ...handleGetCheckout);

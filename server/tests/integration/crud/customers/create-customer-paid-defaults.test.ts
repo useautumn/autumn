@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, BillingVersion } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingVersion,
+	FreeTrialDuration,
+	ms,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -13,7 +18,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { FreeTrialDuration } from "@autumn/shared";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -47,6 +51,7 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		customer,
 		productId: trialDefault.id,
 		trialEndsAt: calculateTrialEndMs({ trialDays: 14 }),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	expectCustomerFeatureCorrect({

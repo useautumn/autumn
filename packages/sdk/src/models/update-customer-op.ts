@@ -74,6 +74,21 @@ export type UpdateCustomerAutoTopupRequest = {
   purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
 };
 
+export type UpdateCustomerSpendLimitRequest = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -82,6 +97,10 @@ export type UpdateCustomerBillingControlsRequest = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<UpdateCustomerAutoTopupRequest> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<UpdateCustomerSpendLimitRequest> | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -192,6 +211,21 @@ export type UpdateCustomerAutoTopupResponse = {
   purchaseLimit?: UpdateCustomerPurchaseLimitResponse | undefined;
 };
 
+export type UpdateCustomerSpendLimitResponse = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -200,6 +234,10 @@ export type UpdateCustomerBillingControlsResponse = {
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<UpdateCustomerAutoTopupResponse> | undefined;
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<UpdateCustomerSpendLimitResponse> | undefined;
 };
 
 /**
@@ -291,6 +329,105 @@ export type UpdateCustomerPurchase = {
 };
 
 /**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const UpdateCustomerType = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type UpdateCustomerType = OpenEnum<typeof UpdateCustomerType>;
+
+export type UpdateCustomerCreditSchema = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type UpdateCustomerDisplay = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type UpdateCustomerFeature = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: UpdateCustomerType;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<UpdateCustomerCreditSchema> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: UpdateCustomerDisplay | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type UpdateCustomerFlags = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: UpdateCustomerFeature | undefined;
+};
+
+/**
  * OK
  */
 export type UpdateCustomerResponse = {
@@ -346,6 +483,10 @@ export type UpdateCustomerResponse = {
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
   balances: { [k: string]: Balance };
+  /**
+   * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
+   */
+  flags: { [k: string]: UpdateCustomerFlags };
 };
 
 /** @internal */
@@ -429,8 +570,44 @@ export function updateCustomerAutoTopupRequestToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerSpendLimitRequest$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitRequest$Outbound,
+  UpdateCustomerSpendLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function updateCustomerSpendLimitRequestToJSON(
+  updateCustomerSpendLimitRequest: UpdateCustomerSpendLimitRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerSpendLimitRequest$outboundSchema.parse(
+      updateCustomerSpendLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerBillingControlsRequest$Outbound = {
   auto_topups?: Array<UpdateCustomerAutoTopupRequest$Outbound> | undefined;
+  spend_limits?: Array<UpdateCustomerSpendLimitRequest$Outbound> | undefined;
 };
 
 /** @internal */
@@ -442,10 +619,14 @@ export const UpdateCustomerBillingControlsRequest$outboundSchema: z.ZodMiniType<
     autoTopups: z.optional(
       z.array(z.lazy(() => UpdateCustomerAutoTopupRequest$outboundSchema)),
     ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => UpdateCustomerSpendLimitRequest$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
     });
   }),
 );
@@ -583,6 +764,34 @@ export function updateCustomerAutoTopupResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function updateCustomerSpendLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerSpendLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerSpendLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerSpendLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerBillingControlsResponse,
   unknown
@@ -591,10 +800,14 @@ export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
     auto_topups: types.optional(
       z.array(z.lazy(() => UpdateCustomerAutoTopupResponse$inboundSchema)),
     ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => UpdateCustomerSpendLimitResponse$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
     });
   }),
 );
@@ -695,6 +908,124 @@ export function updateCustomerPurchaseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerType$inboundSchema: z.ZodMiniType<
+  UpdateCustomerType,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerType);
+
+/** @internal */
+export const UpdateCustomerCreditSchema$inboundSchema: z.ZodMiniType<
+  UpdateCustomerCreditSchema,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerCreditSchemaFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerCreditSchema, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerCreditSchema' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDisplay$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDisplay,
+  unknown
+> = z.object({
+  singular: z.optional(z.nullable(types.string())),
+  plural: z.optional(z.nullable(types.string())),
+});
+
+export function updateCustomerDisplayFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDisplay, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDisplay$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDisplay' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerFeature$inboundSchema: z.ZodMiniType<
+  UpdateCustomerFeature,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: UpdateCustomerType$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => UpdateCustomerCreditSchema$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => UpdateCustomerDisplay$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function updateCustomerFeatureFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerFeature, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerFeature$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerFeature' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerFlags$inboundSchema: z.ZodMiniType<
+  UpdateCustomerFlags,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => UpdateCustomerFeature$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function updateCustomerFlagsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerFlags, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerFlags$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerFlags' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerResponse,
   unknown
@@ -717,6 +1048,10 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     ),
     purchases: z.array(z.lazy(() => UpdateCustomerPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
+    flags: z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerFlags$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

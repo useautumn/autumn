@@ -14,6 +14,10 @@
 	"contextual": {
 		"options": ["copy", "cursor", "view"]
 	},
+	"banner": {
+		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
+		"dismissible": true
+	},
 	"favicon": "/favicon.png",
 	"interaction": {
 		"drilldown": true
@@ -45,50 +49,81 @@
 				"groups": [
 					{
 						"group": " ",
-						"pages": ["welcome"]
+						"pages": ["welcome", "documentation/getting-started/migration"]
 					},
 					{
 						"group": "Getting Started",
 						"pages": [
-							{
-								"group": "Setup and payments",
-								"pages": [
-									"documentation/getting-started/setup/react",
-									"documentation/getting-started/setup/sdk",
-									"documentation/getting-started/setup/convex"
-								]
-							},
+							"documentation/getting-started/setup",
 							"documentation/getting-started/gating",
 							"documentation/getting-started/display-billing"
 						]
 					},
 					{
-						"group": "Configure Pricing",
+						"group": "Concepts",
 						"pages": [
-							"documentation/pricing/plans",
-							"documentation/pricing/features",
-							"documentation/pricing/plan-features",
-							"documentation/pricing/credits",
-							"documentation/pricing/versioning",
-							"documentation/pricing/rewards"
+							"documentation/concepts/overview",
+							"documentation/concepts/plans",
+							"documentation/concepts/features",
+							"documentation/concepts/plan-items",
+							"documentation/concepts/subscriptions",
+							"documentation/concepts/balances",
+							"documentation/concepts/stripe"
 						]
 					},
 					{
-						"group": "Manage Customers",
+						"group": "Modelling Pricing",
 						"pages": [
+							"documentation/modelling-pricing/recurring",
+							"documentation/modelling-pricing/one-off-purchases",
+							"documentation/modelling-pricing/free-plans",
+							"documentation/modelling-pricing/trials",
+							"documentation/modelling-pricing/credit-systems",
+							"documentation/modelling-pricing/per-unit-pricing",
+							"documentation/modelling-pricing/usage-based-pricing",
+							"documentation/modelling-pricing/rollovers",
+							"documentation/modelling-pricing/proration",
+							"documentation/modelling-pricing/spend-limits",
+							"documentation/modelling-pricing/auto-top-ups",
+							"documentation/modelling-pricing/add-ons",
+							"documentation/modelling-pricing/graduated-pricing",
+							"documentation/modelling-pricing/volume-based-tiers",
+							"documentation/modelling-pricing/sub-entity-balances",
+							"documentation/modelling-pricing/sub-entity-plans",
+							"documentation/modelling-pricing/rewards"
+						]
+					},
+					{
+						"group": "Billing & Subscriptions",
+						"pages": [
+							"documentation/customers/payment-flow",
+							"documentation/customers/subscription-lifecycle",
+							"documentation/customers/updating-subscriptions",
+							"documentation/customers/custom-plans",
+							"documentation/customers/versioning"
+						]
+					},
+					{
+						"group": "Customers",
+						"pages": [
+							"documentation/customers/creating-customers",
+							"documentation/customers/managing-customers",
 							"documentation/customers/check",
 							"documentation/customers/tracking-usage",
-							"documentation/customers/balances",
-							"documentation/customers/feature-entities",
-							"documentation/customers/attaching-plans",
-							"documentation/customers/updating-subscriptions",
-							"documentation/customers/creating-customers",
-							"documentation/customers/managing-customers"
+							"documentation/customers/balance-locking",
+							"documentation/customers/managing-balances",
+							"documentation/customers/feature-entities"
 						]
 					},
 					{
 						"group": "Additional Resources",
-						"pages": ["documentation/external-providers/revenuecat"]
+						"pages": [
+							"documentation/edge-cases",
+							"documentation/webhooks",
+							"documentation/external-providers/convex",
+							"documentation/external-providers/revenuecat",
+							"documentation/external-providers/vercel-marketplace"
+						]
 					}
 				]
 			},
@@ -96,15 +131,18 @@
 				"tab": "Examples",
 				"icon": "graduation-cap",
 				"pages": [
-					"examples/credits",
+					"examples/monetary-credits",
 					"examples/prepaid",
+					"examples/per-seat",
+					"examples/pay-as-you-go-overages",
+					"examples/entity-balances",
 					"examples/trial-card-required",
 					"examples/trial-card-not-required"
 				]
 			},
 			{
 				"tab": "React",
-				"icon": "image",
+				"icon": "react",
 				"groups": [
 					{
 						"group": "React Hooks",
@@ -123,8 +161,13 @@
 				]
 			},
 			{
+				"tab": "CLI",
+				"icon": "square-terminal",
+				"pages": ["cli/getting-started", "cli/config", "cli/commands"]
+			},
+			{
 				"tab": "API Reference",
-				"icon": "rectangle-terminal",
+				"icon": "display-code",
 				"groups": [
 					{
 						"group": "Billing",
@@ -147,7 +190,8 @@
 							"api-reference/balances/trackTokens",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
-							"api-reference/balances/deleteBalance"
+							"api-reference/balances/deleteBalance",
+							"api-reference/balances/finalizeLock"
 						]
 					},
 					{
@@ -171,6 +215,7 @@
 						"pages": [
 							"api-reference/entities/getEntity",
 							"api-reference/entities/createEntity",
+							"api-reference/entities/updateEntity",
 							"api-reference/entities/deleteEntity"
 						]
 					},

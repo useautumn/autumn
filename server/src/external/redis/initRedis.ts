@@ -17,6 +17,7 @@ import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
@@ -24,8 +25,11 @@ import {
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
+import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
+import { getActiveRedis, initFailover } from "./redisFailover.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -206,6 +210,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	});
 
+	redisInstance.defineCommand("updateEntityInCustomer", {
+		numberOfKeys: 1,
+		lua: UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	});
+
 	redisInstance.defineCommand("upsertInvoiceInCustomer", {
 		numberOfKeys: 1,
 		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
@@ -221,6 +230,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	});
 
+	redisInstance.defineCommand("claimLockReceipt", {
+		numberOfKeys: 1,
+		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
+	});
+
 	redisInstance.on("error", (error) => {
 		console.error(`[Redis] Connection error:`, error.message);
 	});
@@ -229,13 +243,23 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 };
 
 /** Create a Redis connection for a specific region */
-const createRedisConnection = (cacheUrl: string): Redis => {
+const createRedisConnection = ({
+	cacheUrl,
+	region,
+}: {
+	cacheUrl: string;
+	region: string;
+}): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
 		family: 4,
 		keepAlive: 10000,
 	});
-	return configureRedisInstance(instance);
+	// instrumentRedis must run first so its defineCommand patch
+	// is in place when configureRedisInstance registers Lua commands.
+	instrumentRedis({ redis: instance, region });
+	configureRedisInstance(instance);
+	return instance;
 };
 
 // Primary Redis instance (current region or default)
@@ -246,16 +270,78 @@ if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const redis = createRedisConnection(primaryCacheUrl!);
+const primaryRedis = createRedisConnection({
+	cacheUrl: primaryCacheUrl!,
+	region: currentRegion,
+});
+
+// Eagerly create failover instance (other region) for automatic failover
+const failoverRegion =
+	ALL_REGIONS.find((r) => r !== currentRegion && regionToCacheUrl[r]) ?? null;
+
+let failoverRedis: Redis | null = null;
+if (failoverRegion) {
+	const failoverUrl = regionToCacheUrl[failoverRegion]!;
+	// Only create a separate instance if it's actually a different server
+	if (failoverUrl !== primaryCacheUrl) {
+		failoverRedis = createRedisConnection({
+			cacheUrl: failoverUrl,
+			region: failoverRegion,
+		});
+	}
+}
+
+// Initialize failover — monitors primary health and swaps `redis` automatically
+initFailover({
+	primary: primaryRedis,
+	failover: failoverRedis,
+	failoverRegion,
+	currentRegion,
+});
+
+/**
+ * The active Redis instance. All consumer code imports this.
+ * Normally points to the primary (current region). During a primary outage,
+ * the failover module swaps this to the other region's instance automatically.
+ *
+ * This is a `let` so it's a live ES module binding — reassignments here
+ * are visible to all importers on their next access.
+ */
+export let redis: Redis = primaryRedis;
+
+// Subscribe to failover state changes — keep the `redis` export in sync.
+// We do this here (not in redisFailover.ts) because the module binding
+// can only be reassigned in the module that declares it.
+const syncRedisBinding = () => {
+	const active = getActiveRedis();
+	if (redis !== active) {
+		redis = active;
+	}
+};
+
+primaryRedis.on("error", syncRedisBinding);
+primaryRedis.on("ready", syncRedisBinding);
+if (failoverRedis) {
+	failoverRedis.on("error", syncRedisBinding);
+	failoverRedis.on("ready", syncRedisBinding);
+}
+// Also poll periodically to catch any edge cases with event timing
+setInterval(syncRedisBinding, 2000);
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
 
+// Pre-populate with eagerly created instances
+if (failoverRedis && failoverRegion) {
+	regionalRedisInstances.set(failoverRegion, failoverRedis);
+}
+
 /** Get Redis instance for a specific region (lazy-loaded) */
 export const getRegionalRedis = (region: string): Redis => {
-	// If requesting current region, return primary instance
+	// Always return the actual primary for the current region (not the active/failover)
+	// so cross-region sync logic isn't affected by failover state.
 	if (region === currentRegion) {
-		return redis;
+		return primaryRedis;
 	}
 
 	// Get the cache URL for the requested region
@@ -266,13 +352,12 @@ export const getRegionalRedis = (region: string): Redis => {
 		console.warn(
 			`No cache URL configured for region ${region}, falling back to primary`,
 		);
-		return redis;
+		return primaryRedis;
 	}
 
 	// If the cache URL is the same as primary, return primary instance
-	// (avoids creating duplicate connections to the same server)
 	if (cacheUrl === primaryCacheUrl) {
-		return redis;
+		return primaryRedis;
 	}
 
 	// Check if we already have a connection for this region
@@ -283,7 +368,7 @@ export const getRegionalRedis = (region: string): Redis => {
 
 	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
-	regionalInstance = createRedisConnection(cacheUrl);
+	regionalInstance = createRedisConnection({ cacheUrl, region });
 	regionalRedisInstances.set(region, regionalInstance);
 
 	return regionalInstance;
@@ -412,6 +497,10 @@ declare module "ioredis" {
 			cacheKey: string,
 			entityJson: string,
 		): Promise<string>;
+		updateEntityInCustomer(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		upsertInvoiceInCustomer(
 			cacheKey: string,
 			invoiceJson: string,
@@ -420,10 +509,9 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
 
 /** Get the primary Redis instance (us-west-2) to avoid replication lag issues */
 export const getPrimaryRedis = () => getRegionalRedis(REGION_US_WEST_2);
-
-export { redis };

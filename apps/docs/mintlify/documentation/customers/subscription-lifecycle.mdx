@@ -1,0 +1,398 @@
+---
+title: "Subscription Lifecycle"
+description: "Handle upgrades, downgrades, and cancellations"
+---
+
+## Upgrades
+
+Upgrades happen when you attach a plan with a higher price than the customer's current plan. Use `billing.attach` — Autumn handles the rest.
+
+<Warning>
+If a payment method exists, attaching the plan will immediately charge the customer. If upgrading from a free to a paid plan, a checkout URL is generated instead.
+</Warning>
+
+**Pricing behavior:**
+
+- **Fixed prices** are prorated based on time remaining in the billing period
+- **Usage-based prices** bill outstanding usage at the old rate immediately, then apply the new rate going forward
+
+## Downgrades
+
+Downgrades happen when you attach a plan with a lower price. Unlike upgrades, downgrades are **scheduled** to take effect at the end of the current billing period.
+
+The new plan will have status `scheduled` until it activates. Customers can cancel a scheduled downgrade by re-attaching their current plan.
+
+<Note>
+If you've set a [`group`](/documentation/concepts/plans#plan-properties) when creating plans, upgrades and downgrades only apply between plans in the same group. Attaching a plan from a different group adds it alongside the existing plan.
+</Note>
+
+## Cancellations
+
+Cancel a subscription using `billing.update` with the `cancelAction` parameter. By default, cancellations take effect at the end of the billing period.
+
+### Cancel at end of billing period
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+await updateSubscription({
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```typescript TypeScript
+const response = await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```python Python
+response = await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>
+
+The subscription remains active until the end of the current billing period. If you have a default plan (with `is_default` set), it will be activated after the cancellation takes effect.
+
+### Cancel immediately
+
+To cancel a subscription right away with a prorated refund:
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+await updateSubscription({
+  planId: "pro",
+  cancelAction: "cancel_immediately",
+});
+```
+
+```typescript TypeScript
+const response = await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_immediately",
+});
+```
+
+```python Python
+response = await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_immediately",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_immediately"
+  }'
+```
+
+</CodeGroup>
+
+This ends the subscription immediately and issues a prorated refund for the remaining time in the billing period.
+
+## Uncanceling
+
+If a subscription was scheduled for cancellation (via `cancel_end_of_cycle`), you can reverse it before the period ends using `uncancel`:
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+await updateSubscription({
+  planId: "pro",
+  cancelAction: "uncancel",
+});
+```
+
+```typescript TypeScript
+const response = await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "uncancel",
+});
+```
+
+```python Python
+response = await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="uncancel",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "uncancel"
+  }'
+```
+
+</CodeGroup>
+
+This clears the pending cancellation and the subscription continues as normal. Any default plan that was scheduled to activate after cancellation is also removed.
+
+<Note>
+You cannot uncancel a subscription that was already canceled immediately — only pending cancellations (scheduled for end of cycle) can be reversed.
+</Note>
+
+## Canceling a scheduled plan change
+
+When a downgrade or other plan change is **scheduled** for the end of the billing period, canceling it works the same way as uncanceling. Call `billing.update` with `cancelAction: "uncancel"` on the customer's **active** plan:
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { updateSubscription } = useCustomer();
+
+// Customer is on Pro with a scheduled downgrade to Basic.
+// Cancel the scheduled change and keep Pro.
+await updateSubscription({
+  planId: "pro",
+  cancelAction: "uncancel",
+});
+```
+
+```typescript TypeScript
+// Customer is on Pro with a scheduled downgrade to Basic.
+// Cancel the scheduled change and keep Pro.
+const response = await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "uncancel",
+});
+```
+
+```python Python
+# Customer is on Pro with a scheduled downgrade to Basic.
+# Cancel the scheduled change and keep Pro.
+response = await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="uncancel",
+)
+```
+
+```bash cURL
+# Customer is on Pro with a scheduled downgrade to Basic.
+# Cancel the scheduled change and keep Pro.
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "uncancel"
+  }'
+```
+
+</CodeGroup>
+
+This removes the scheduled replacement plan and keeps the customer on their current plan.
+
+## `cancel_action` reference
+
+| Value | Behavior |
+|---|---|
+| `cancel_end_of_cycle` | Schedules cancellation at the end of the current billing period. Subscription stays active until then. |
+| `cancel_immediately` | Cancels immediately with a prorated refund for remaining time. |
+| `uncancel` | Reverses a pending cancellation or removes a scheduled plan change. |
+
+## Usage reset behavior
+
+When a new plan is enabled, you can control what happens to existing feature usage with the `reset_usage_when_enabled` property on the plan item:
+
+- `true`: Usage resets to 0 (typical for consumable features like credits)
+- `false`: Usage carries over to the new plan (typical for continuous features like seats)
+
+<Info>
+**Example:** A customer on Free has used 20 of their 100 credits. They upgrade to Pro which includes 500 credits.
+
+- If `reset_usage_when_enabled = true`: They get 500 credits
+- If `reset_usage_when_enabled = false`: They get 480 credits (500 - 20 used)
+</Info>
+
+## Carry-over on plan upgrades
+
+When a customer upgrades plans, you can preserve their unused balances or account for their existing usage. Two parameters on [`billing.attach`](/api-reference/billing/attach) give you fine-grained control over what happens to consumable features during an immediate upgrade.
+
+<Note>
+Carry-over only works with **immediate** upgrades (`planSchedule: "immediate"` or default upgrade behavior). Scheduled plan changes and downgrades do not support carry-over.
+</Note>
+
+### Carrying over unused balances
+
+Use `carryOverBalances` to preserve a customer's remaining balance from the old plan. The unused credits are added as a one-off balance on the new plan, so the customer doesn't lose what they've already paid for.
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+  },
+});
+```
+
+```tsx React
+const { attach } = useCustomer();
+
+await attach({
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+  },
+});
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="enterprise",
+    carry_over_balances={
+        "enabled": True,
+    },
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "enterprise",
+    "carry_over_balances": {
+      "enabled": true
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Info>
+**Example:** A customer on Pro has 300 of 1,000 credits remaining. They upgrade to Enterprise (2,000 credits/month). With `carryOverBalances` enabled, the 300 unused credits carry forward — giving them 2,300 credits on the new plan. The carried-over balance expires at the next reset or end of cycle.
+</Info>
+
+### Carrying over prior usage
+
+Use `carryOverUsages` to deduct prior usage from the new plan's allowance, preventing customers from getting a free reset on upgrade.
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverUsages: {
+    enabled: true,
+  },
+});
+```
+
+```tsx React
+const { attach } = useCustomer();
+
+await attach({
+  planId: "enterprise",
+  carryOverUsages: {
+    enabled: true,
+  },
+});
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="enterprise",
+    carry_over_usages={
+        "enabled": True,
+    },
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "enterprise",
+    "carry_over_usages": {
+      "enabled": true
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Info>
+**Example:** A customer on Pro has used 700 of 1,000 credits this month. They upgrade to Enterprise (2,000 credits/month). With `carryOverUsages` enabled, 700 usage is deducted from the new allowance — giving them 1,300 remaining instead of a full 2,000.
+</Info>
+
+### Scoping to specific features
+
+Both parameters accept an optional `featureIds` array to limit carry-over to specific features:
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+    featureIds: ["credits", "api_calls"],
+  },
+  carryOverUsages: {
+    enabled: true,
+    featureIds: ["credits"],
+  },
+});
+```
+
+<Note>
+Only consumable metered features support carry-over. Boolean features, unlimited features, and allocated (non-consumable) features are not eligible.
+</Note>

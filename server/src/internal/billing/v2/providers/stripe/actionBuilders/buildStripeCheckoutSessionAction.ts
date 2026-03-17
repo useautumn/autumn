@@ -4,6 +4,7 @@ import type {
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
 import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
@@ -19,7 +20,12 @@ export const buildStripeCheckoutSessionAction = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): StripeCheckoutSessionAction => {
 	const { org, env } = ctx;
-	const { trialContext, stripeCustomer, stripeDiscounts } = billingContext;
+	const {
+		trialContext,
+		stripeCustomer,
+		stripeDiscounts,
+		checkoutSessionParams,
+	} = billingContext;
 
 	// 1. Get recurring and one-off items (recurring filtered to largest interval)
 	const { recurringLineItems, oneOffLineItems } =
@@ -44,7 +50,7 @@ export const buildStripeCheckoutSessionAction = ({
 	// 4. Trial handling (only for subscription mode)
 	const trialEnd =
 		mode === "subscription" && trialContext?.trialEndsAt
-			? msToSeconds(trialContext.trialEndsAt)
+			? msToSeconds(addMinutes(trialContext.trialEndsAt, 10).getTime())
 			: undefined;
 
 	// 5. Build subscription_data (only for subscription mode)
@@ -69,7 +75,7 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 7. Build params (only variable params - static params added in execute)
 	const params: Stripe.Checkout.SessionCreateParams = {
-		customer: stripeCustomer.id,
+		customer: stripeCustomer?.id ?? "none",
 		mode,
 		line_items: lineItems,
 		subscription_data: subscriptionData,
@@ -77,5 +83,10 @@ export const buildStripeCheckoutSessionAction = ({
 		discounts,
 	};
 
-	return { type: "create", params };
+	return {
+		type: "create",
+		params,
+		checkoutSessionParams:
+			checkoutSessionParams as Partial<Stripe.Checkout.SessionCreateParams>,
+	};
 };

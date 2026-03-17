@@ -2,6 +2,7 @@ import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
 	ctx,
@@ -23,6 +24,11 @@ export const executeStripeSubscriptionOperation = async ({
 			}
 		: {};
 
+	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
+		billingContext,
+		stripeSubscriptionAction: subscriptionAction,
+	});
+
 	// default incomplete used so that payment failure / 3ds errors are clearly handled
 	const createPaymentBehavior =
 		nullish(paymentMethod) || paymentMethod?.type === "custom"
@@ -33,7 +39,7 @@ export const executeStripeSubscriptionOperation = async ({
 	// resolved a payment method from the customer's attached PMs, pass it
 	// explicitly so Stripe knows which PM to charge.
 	const customerHasDefaultPm =
-		billingContext.stripeCustomer.invoice_settings?.default_payment_method;
+		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
 
 	const fallbackPaymentMethodParams =
 		paymentMethod && !customerHasDefaultPm
@@ -63,10 +69,8 @@ export const executeStripeSubscriptionOperation = async ({
 				subscriptionAction.stripeSubscriptionId,
 				{
 					...subscriptionAction.params,
-					...invoiceModeParams,
-					...(subscriptionHasDefaultPm
-						? {}
-						: fallbackPaymentMethodParams),
+					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+					...(updateWillCreateInvoice ? invoiceModeParams : {}),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},

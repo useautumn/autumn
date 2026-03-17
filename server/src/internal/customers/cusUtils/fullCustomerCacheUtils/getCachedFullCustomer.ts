@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { Redis } from "ioredis";
+import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
@@ -150,7 +151,6 @@ export const getCachedFullCustomer = async ({
 
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
-		if (!fullCustomer.entity) return undefined; // might need to create?
 	} else {
 		fullCustomer.entity = undefined;
 	}
@@ -169,7 +169,11 @@ export const getCachedFullCustomer = async ({
 	fullCustomer.customer_products = filterExpiredCustomerProducts(fullCustomer);
 
 	// Lazy reset stale entitlements (DB + in-memory + cache via Lua)
-	await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });
+	// Skip when degraded — reset writes to primary, and we don't want cache-hit
+	// path to fail because the primary is down.
+	if (getDbHealth() !== PgHealth.Degraded) {
+		await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });
+	}
 
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY
 	return roundFullCustomerBalances(fullCustomer);

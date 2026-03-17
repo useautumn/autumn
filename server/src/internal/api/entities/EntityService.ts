@@ -1,5 +1,11 @@
-import { type Entity, ErrCode, entities } from "@autumn/shared";
+import {
+	type Entity,
+	EntityErrorCode,
+	ErrCode,
+	entities,
+} from "@autumn/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import RecaseError from "@/utils/errorUtils.js";
@@ -70,17 +76,25 @@ export class EntityService {
 				),
 		});
 	}
-	static async insert({ db, data }: { db: DrizzleCli; data: any }) {
+	static async insert({ db, data }: { db: DrizzleCli; data: Entity[] }) {
 		if (data.length === 0) {
 			return [];
 		}
 
-		const results = await db
-			.insert(entities)
-			.values(data as any)
-			.returning();
+		try {
+			const results = await db.insert(entities).values(data).returning();
 
-		return results as Entity[];
+			return results as Entity[];
+		} catch (error) {
+			if (isUniqueConstraintError(error)) {
+				throw new RecaseError({
+					message: `Entity with ID ${data?.[0]?.id} already exists`,
+					code: EntityErrorCode.EntityAlreadyExists,
+					statusCode: 409,
+				});
+			}
+			throw error;
+		}
 	}
 
 	static async getByInternalId({
@@ -135,7 +149,7 @@ export class EntityService {
 	}: {
 		db: DrizzleCli;
 		internalId: string;
-		update: any;
+		update: Partial<Entity>;
 	}) {
 		const results = await db
 			.update(entities)

@@ -1,5 +1,7 @@
 import { ApiBalanceV1Schema } from "@api/customers/cusFeatures/apiBalanceV1.js";
+import { ApiFlagV0Schema } from "@api/customers/flags/apiFlagV0.js";
 import { z } from "zod/v4";
+import { ApiEntityBillingControlsSchema } from "../billingControls/entityBillingControls.js";
 import {
 	ApiPurchaseV0Schema,
 	ApiSubscriptionV1Schema,
@@ -12,6 +14,10 @@ export const BaseApiEntityV2Schema = ApiBaseEntitySchema.extend({
 	subscriptions: z.array(ApiSubscriptionV1Schema),
 	purchases: z.array(ApiPurchaseV0Schema),
 	balances: z.record(z.string(), ApiBalanceV1Schema),
+	flags: z.record(z.string(), ApiFlagV0Schema),
+	billing_controls: ApiEntityBillingControlsSchema.optional().meta({
+		description: "Billing controls for the entity.",
+	}),
 });
 
 export const ApiEntityExpandSchema = z.object({

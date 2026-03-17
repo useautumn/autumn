@@ -61,34 +61,15 @@ export interface Payloads {
 		env: string;
 		source: string;
 	};
+	[JobName.ExpireLockReceipt]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		lockId: string;
+		hashedKey: string;
+	};
 	[key: string]: unknown;
 }
-
-// Lazy load queue implementations based on environment
-let queueImplementation: "sqs" | "bullmq" | null = null;
-let sqsClient: any = null;
-let sqsQueueUrl: string | null = null;
-let bullmqQueue: any = null;
-
-const initializeQueue = async () => {
-	if (queueImplementation) return;
-
-	// Check which queue to use based on environment
-	if (process.env.SQS_QUEUE_URL) {
-		queueImplementation = "sqs";
-		const { sqs, QUEUE_URL } = await import("./initSqs.js");
-		sqsClient = sqs;
-		sqsQueueUrl = QUEUE_URL;
-	} else if (process.env.QUEUE_URL) {
-		queueImplementation = "bullmq";
-		const { queue } = await import("./bullmq/initBullMq.js");
-		bullmqQueue = queue;
-	} else {
-		throw new Error(
-			"No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL",
-		);
-	}
-};
 
 /**
  * Add a task to the queue (auto-detects SQS or BullMQ)
@@ -97,21 +78,25 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	jobName,
 	payload,
 	messageGroupId,
-	messageDeduplicationId,
+	generateDeduplicationId,
 	delayMs,
 }: {
 	jobName: T;
 	payload: Payloads[T];
 	messageGroupId?: string;
-	messageDeduplicationId?: string;
+	generateDeduplicationId?: boolean;
 	delayMs?: number;
 }) => {
-	await initializeQueue();
+	if (process.env.SQS_QUEUE_URL) {
+		const { getSqsClient, QUEUE_URL } = await import("./initSqs.js");
+		const sqsClient = getSqsClient();
 
-	if (queueImplementation === "sqs") {
 		// SQS implementation
-		const isFifoQueue = sqsQueueUrl?.endsWith(".fifo");
+		const isFifoQueue = QUEUE_URL.endsWith(".fifo");
+		const messageId =
+			generateDeduplicationId === false ? undefined : generateId("job");
 		const message = {
+			...(messageId && { id: messageId }),
 			name: jobName as string,
 			data: payload,
 		};
@@ -121,25 +106,36 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			? Math.min(Math.floor(delayMs / 1000), 900)
 			: undefined;
 
+		const messageDeduplicationId = Bun.hash(
+			messageId ?? generateId("dedup"),
+		).toString();
+
 		const command = new SendMessageCommand({
-			QueueUrl: sqsQueueUrl!,
+			QueueUrl: QUEUE_URL,
 			MessageBody: JSON.stringify(message),
 			...(delaySeconds && { DelaySeconds: delaySeconds }),
-			// FIFO queues require MessageGroupId and MessageDeduplicationId
+			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
-				// Use provided deduplication ID or generate random (fallback)
-				MessageDeduplicationId: messageDeduplicationId || generateId("dedup"),
+				MessageDeduplicationId: messageDeduplicationId,
 			}),
 		});
 
 		await sqsClient.send(command);
-	} else {
+		return;
+	}
+
+	if (process.env.QUEUE_URL) {
+		const { queue } = await import("./bullmq/initBullMq.js");
+
 		// BullMQ implementation (ignores messageGroupId)
-		await bullmqQueue.add(jobName as string, payload, {
+		await queue.add(jobName as string, payload, {
 			delay: delayMs,
 		});
+		return;
 	}
+
+	throw new Error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
 };
 
 // Hatchet workflow payloads

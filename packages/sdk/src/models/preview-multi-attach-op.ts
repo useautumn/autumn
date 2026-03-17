@@ -14,6 +14,7 @@ import {
   CustomerData$Outbound,
   CustomerData$outboundSchema,
 } from "./customer-data.js";
+import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type PreviewMultiAttachGlobals = {
@@ -95,8 +96,8 @@ export type PreviewMultiAttachTo = number | string;
 
 export type PreviewMultiAttachTier = {
   to: number | string;
-  amount: number;
-  flatAmount?: number | null | undefined;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
 };
 
 export const PreviewMultiAttachTierBehavior = {
@@ -304,7 +305,7 @@ export type PreviewMultiAttachCustomize = {
 /**
  * Quantity configuration for a prepaid feature.
  */
-export type PreviewMultiAttachFeatureQuantity = {
+export type PreviewMultiAttachPlanFeatureQuantity = {
   /**
    * The ID of the feature to set quantity for.
    */
@@ -331,7 +332,7 @@ export type PreviewMultiAttachPlan = {
   /**
    * If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature.
    */
-  featureQuantities?: Array<PreviewMultiAttachFeatureQuantity> | undefined;
+  featureQuantities?: Array<PreviewMultiAttachPlanFeatureQuantity> | undefined;
   /**
    * The version of the plan to attach.
    */
@@ -422,6 +423,31 @@ export type PreviewMultiAttachRedirectMode = ClosedEnum<
   typeof PreviewMultiAttachRedirectMode
 >;
 
+export type PreviewMultiAttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum allowed overage spend for the target feature.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Billing controls for the entity.
+ */
+export type PreviewMultiAttachBillingControls = {
+  /**
+   * List of overage spend limits per feature.
+   */
+  spendLimits?: Array<PreviewMultiAttachSpendLimit> | undefined;
+};
+
 export type PreviewMultiAttachEntityData = {
   /**
    * The feature ID that this entity is associated with
@@ -431,6 +457,10 @@ export type PreviewMultiAttachEntityData = {
    * Name of the entity
    */
   name?: string | undefined;
+  /**
+   * Billing controls for the entity.
+   */
+  billingControls?: PreviewMultiAttachBillingControls | undefined;
 };
 
 export type PreviewMultiAttachParams = {
@@ -484,27 +514,154 @@ export type PreviewMultiAttachParams = {
 export type PreviewMultiAttachDiscount = {
   amountOff: number;
   percentOff?: number | undefined;
-  stripeCouponId?: string | undefined;
-  couponName?: string | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewMultiAttachLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
 };
 
 export type PreviewMultiAttachLineItem = {
   /**
-   * The title of the line item.
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
    */
-  title: string;
+  displayName: string;
   /**
    * A detailed description of the line item.
    */
   description: string;
   /**
-   * The amount in cents for this line item.
+   * The amount in cents before discounts for this line item.
    */
-  amount: number;
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
   /**
    * List of discounts applied to this line item.
    */
   discounts?: Array<PreviewMultiAttachDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewMultiAttachLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+export type PreviewMultiAttachNextCycleDiscount = {
+  amountOff: number;
+  percentOff?: number | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewMultiAttachNextCycleLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewMultiAttachNextCycleLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * A detailed description of the line item.
+   */
+  description: string;
+  /**
+   * The amount in cents before discounts for this line item.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for this line item.
+   */
+  total: number;
+  /**
+   * List of discounts applied to this line item.
+   */
+  discounts?: Array<PreviewMultiAttachNextCycleDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewMultiAttachNextCycleLineItemPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type PreviewMultiAttachUsageLineItemPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type PreviewMultiAttachUsageLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: PreviewMultiAttachUsageLineItemPeriod | undefined;
 };
 
 /**
@@ -516,9 +673,75 @@ export type PreviewMultiAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents for the next cycle.
+   * The total amount in cents before discounts for the next cycle.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the next cycle.
    */
   total: number;
+  /**
+   * List of line items for the next billing cycle.
+   */
+  lineItems: Array<PreviewMultiAttachNextCycleLineItem>;
+  /**
+   * List of line items for usage-based features in the next cycle.
+   */
+  usageLineItems: Array<PreviewMultiAttachUsageLineItem>;
+};
+
+export type PreviewMultiAttachIncomingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
+  featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
+  quantity: number;
+};
+
+export type PreviewMultiAttachIncoming = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
+  planId: string;
+  plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
+  featureQuantities: Array<PreviewMultiAttachIncomingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
+  effectiveAt: number | null;
+};
+
+export type PreviewMultiAttachOutgoingFeatureQuantity = {
+  /**
+   * The ID of the adjustable feature included in this change.
+   */
+  featureId: string;
+  /**
+   * The quantity that will apply for this feature in the change.
+   */
+  quantity: number;
+};
+
+export type PreviewMultiAttachOutgoing = {
+  /**
+   * The ID of the plan affected by this preview change.
+   */
+  planId: string;
+  plan?: Plan | undefined;
+  /**
+   * The feature quantity selections associated with this plan change.
+   */
+  featureQuantities: Array<PreviewMultiAttachOutgoingFeatureQuantity>;
+  /**
+   * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+   */
+  effectiveAt: number | null;
 };
 
 /**
@@ -534,7 +757,11 @@ export type PreviewMultiAttachResponse = {
    */
   lineItems: Array<PreviewMultiAttachLineItem>;
   /**
-   * The total amount in cents for the current billing period.
+   * The total amount in cents before discounts for the current billing period.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts for the current billing period.
    */
   total: number;
   /**
@@ -545,6 +772,18 @@ export type PreviewMultiAttachResponse = {
    * Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
    */
   nextCycle?: PreviewMultiAttachNextCycle | undefined;
+  /**
+   * Expand the response with additional data.
+   */
+  expand?: Array<string> | undefined;
+  /**
+   * Products or subscription changes being added or updated.
+   */
+  incoming: Array<PreviewMultiAttachIncoming>;
+  /**
+   * Products or subscription changes being removed or ended.
+   */
+  outgoing: Array<PreviewMultiAttachOutgoing>;
 };
 
 /** @internal */
@@ -641,8 +880,8 @@ export function previewMultiAttachToToJSON(
 /** @internal */
 export type PreviewMultiAttachTier$Outbound = {
   to: number | string;
-  amount: number;
-  flat_amount?: number | null | undefined;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -652,8 +891,8 @@ export const PreviewMultiAttachTier$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
-    amount: z.number(),
-    flatAmount: z.optional(z.nullable(z.number())),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -888,35 +1127,36 @@ export function previewMultiAttachCustomizeToJSON(
 }
 
 /** @internal */
-export type PreviewMultiAttachFeatureQuantity$Outbound = {
+export type PreviewMultiAttachPlanFeatureQuantity$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const PreviewMultiAttachFeatureQuantity$outboundSchema: z.ZodMiniType<
-  PreviewMultiAttachFeatureQuantity$Outbound,
-  PreviewMultiAttachFeatureQuantity
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    quantity: z.optional(z.number()),
-    adjustable: z.optional(z.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
+export const PreviewMultiAttachPlanFeatureQuantity$outboundSchema:
+  z.ZodMiniType<
+    PreviewMultiAttachPlanFeatureQuantity$Outbound,
+    PreviewMultiAttachPlanFeatureQuantity
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      quantity: z.optional(z.number()),
+      adjustable: z.optional(z.boolean()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+      });
+    }),
+  );
 
-export function previewMultiAttachFeatureQuantityToJSON(
-  previewMultiAttachFeatureQuantity: PreviewMultiAttachFeatureQuantity,
+export function previewMultiAttachPlanFeatureQuantityToJSON(
+  previewMultiAttachPlanFeatureQuantity: PreviewMultiAttachPlanFeatureQuantity,
 ): string {
   return JSON.stringify(
-    PreviewMultiAttachFeatureQuantity$outboundSchema.parse(
-      previewMultiAttachFeatureQuantity,
+    PreviewMultiAttachPlanFeatureQuantity$outboundSchema.parse(
+      previewMultiAttachPlanFeatureQuantity,
     ),
   );
 }
@@ -926,7 +1166,7 @@ export type PreviewMultiAttachPlan$Outbound = {
   plan_id: string;
   customize?: PreviewMultiAttachCustomize$Outbound | undefined;
   feature_quantities?:
-    | Array<PreviewMultiAttachFeatureQuantity$Outbound>
+    | Array<PreviewMultiAttachPlanFeatureQuantity$Outbound>
     | undefined;
   version?: number | undefined;
   subscription_id?: string | undefined;
@@ -943,7 +1183,9 @@ export const PreviewMultiAttachPlan$outboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewMultiAttachCustomize$outboundSchema),
     ),
     featureQuantities: z.optional(
-      z.array(z.lazy(() => PreviewMultiAttachFeatureQuantity$outboundSchema)),
+      z.array(
+        z.lazy(() => PreviewMultiAttachPlanFeatureQuantity$outboundSchema),
+      ),
     ),
     version: z.optional(z.number()),
     subscriptionId: z.optional(z.string()),
@@ -1082,9 +1324,77 @@ export const PreviewMultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachRedirectMode);
 
 /** @internal */
+export type PreviewMultiAttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachSpendLimit$Outbound,
+  PreviewMultiAttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function previewMultiAttachSpendLimitToJSON(
+  previewMultiAttachSpendLimit: PreviewMultiAttachSpendLimit,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachSpendLimit$outboundSchema.parse(
+      previewMultiAttachSpendLimit,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachBillingControls$Outbound = {
+  spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachBillingControls$Outbound,
+  PreviewMultiAttachBillingControls
+> = z.pipe(
+  z.object({
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachSpendLimit$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      spendLimits: "spend_limits",
+    });
+  }),
+);
+
+export function previewMultiAttachBillingControlsToJSON(
+  previewMultiAttachBillingControls: PreviewMultiAttachBillingControls,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachBillingControls$outboundSchema.parse(
+      previewMultiAttachBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachEntityData$Outbound = {
   feature_id: string;
   name?: string | undefined;
+  billing_controls?: PreviewMultiAttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1095,10 +1405,14 @@ export const PreviewMultiAttachEntityData$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     name: z.optional(z.string()),
+    billingControls: z.optional(
+      z.lazy(() => PreviewMultiAttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      billingControls: "billing_controls",
     });
   }),
 );
@@ -1189,12 +1503,22 @@ export function previewMultiAttachParamsToJSON(
 export const PreviewMultiAttachDiscount$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachDiscount,
   unknown
-> = z.object({
-  amountOff: types.number(),
-  percentOff: types.optional(types.number()),
-  stripeCouponId: types.optional(types.string()),
-  couponName: types.optional(types.string()),
-});
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
 
 export function previewMultiAttachDiscountFromJSON(
   jsonString: string,
@@ -1207,17 +1531,52 @@ export function previewMultiAttachDiscountFromJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewMultiAttachLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachLineItem$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachLineItem,
   unknown
-> = z.object({
-  title: types.string(),
-  description: types.string(),
-  amount: types.number(),
-  discounts: types.optional(
-    z.array(z.lazy(() => PreviewMultiAttachDiscount$inboundSchema)),
-  ),
-});
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewMultiAttachDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewMultiAttachLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
 
 export function previewMultiAttachLineItemFromJSON(
   jsonString: string,
@@ -1230,17 +1589,173 @@ export function previewMultiAttachLineItemFromJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachNextCycleDiscount$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachNextCycleDiscount,
+  unknown
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
+
+export function previewMultiAttachNextCycleDiscountFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachNextCycleDiscount, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachNextCycleDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachNextCycleDiscount' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachNextCycleLineItemPeriod$inboundSchema:
+  z.ZodMiniType<PreviewMultiAttachNextCycleLineItemPeriod, unknown> = z.object({
+    start: types.number(),
+    end: types.number(),
+  });
+
+export function previewMultiAttachNextCycleLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  PreviewMultiAttachNextCycleLineItemPeriod,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachNextCycleLineItemPeriod$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'PreviewMultiAttachNextCycleLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachNextCycleLineItem$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachNextCycleLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => PreviewMultiAttachNextCycleDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewMultiAttachNextCycleLineItemPeriod$inboundSchema),
+    ),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewMultiAttachNextCycleLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachNextCycleLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachNextCycleLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachNextCycleLineItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachUsageLineItemPeriod$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageLineItemPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function previewMultiAttachUsageLineItemPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachUsageLineItemPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachUsageLineItemPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachUsageLineItemPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachUsageLineItem$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(
+      z.lazy(() => PreviewMultiAttachUsageLineItemPeriod$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function previewMultiAttachUsageLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachUsageLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachUsageLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachUsageLineItem' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachNextCycle$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachNextCycle,
   unknown
 > = z.pipe(
   z.object({
     starts_at: types.number(),
+    subtotal: types.number(),
     total: types.number(),
+    line_items: z.array(
+      z.lazy(() => PreviewMultiAttachNextCycleLineItem$inboundSchema),
+    ),
+    usage_line_items: z.array(
+      z.lazy(() => PreviewMultiAttachUsageLineItem$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "starts_at": "startsAt",
+      "line_items": "lineItems",
+      "usage_line_items": "usageLineItems",
     });
   }),
 );
@@ -1256,6 +1771,130 @@ export function previewMultiAttachNextCycleFromJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachIncomingFeatureQuantity$inboundSchema:
+  z.ZodMiniType<PreviewMultiAttachIncomingFeatureQuantity, unknown> = z.pipe(
+    z.object({
+      feature_id: types.string(),
+      quantity: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "feature_id": "featureId",
+      });
+    }),
+  );
+
+export function previewMultiAttachIncomingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  PreviewMultiAttachIncomingFeatureQuantity,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachIncomingFeatureQuantity$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'PreviewMultiAttachIncomingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachIncoming$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachIncoming,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewMultiAttachIncomingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewMultiAttachIncomingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachIncoming, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachIncoming$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachIncoming' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachOutgoingFeatureQuantity$inboundSchema:
+  z.ZodMiniType<PreviewMultiAttachOutgoingFeatureQuantity, unknown> = z.pipe(
+    z.object({
+      feature_id: types.string(),
+      quantity: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "feature_id": "featureId",
+      });
+    }),
+  );
+
+export function previewMultiAttachOutgoingFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  PreviewMultiAttachOutgoingFeatureQuantity,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PreviewMultiAttachOutgoingFeatureQuantity$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'PreviewMultiAttachOutgoingFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachOutgoing$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachOutgoing,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.string(),
+    plan: types.optional(Plan$inboundSchema),
+    feature_quantities: z.array(
+      z.lazy(() => PreviewMultiAttachOutgoingFeatureQuantity$inboundSchema),
+    ),
+    effective_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_quantities": "featureQuantities",
+      "effective_at": "effectiveAt",
+    });
+  }),
+);
+
+export function previewMultiAttachOutgoingFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachOutgoing, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachOutgoing$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachOutgoing' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachResponse,
   unknown
@@ -1263,11 +1902,15 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
   z.object({
     customer_id: types.string(),
     line_items: z.array(z.lazy(() => PreviewMultiAttachLineItem$inboundSchema)),
+    subtotal: types.number(),
     total: types.number(),
     currency: types.string(),
     next_cycle: types.optional(
       z.lazy(() => PreviewMultiAttachNextCycle$inboundSchema),
     ),
+    expand: types.optional(z.array(types.string())),
+    incoming: z.array(z.lazy(() => PreviewMultiAttachIncoming$inboundSchema)),
+    outgoing: z.array(z.lazy(() => PreviewMultiAttachOutgoing$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

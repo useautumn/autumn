@@ -11,11 +11,14 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
+import { saveLockReceipt } from "../../utils/lock/saveLockReceipt.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
+import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import {
 	type RolloverOverwrite,
 	syncCustomerEntitlementUpdatesToCache,
@@ -43,6 +46,7 @@ export const executePostgresDeduction = async ({
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	updates: Record<string, DeductionUpdate>;
+	mutationLogs: MutationLogItem[];
 }> => {
 	const { db, org, env } = ctx;
 
@@ -74,22 +78,39 @@ export const executePostgresDeduction = async ({
 		deductions,
 	});
 
-	const executeDeduction = async (): Promise<
-		Record<string, DeductionUpdate>
-	> => {
+	if (resolvedOptions.paidAllocated && deductions.some((d) => d.lock)) {
+		throw new InternalError({
+			message: "Locks are not supported for paid allocated features",
+		});
+	}
+
+	const executeDeduction = async (): Promise<{
+		updates: Record<string, DeductionUpdate>;
+		mutationLogs: MutationLogItem[];
+	}> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
+		let allMutationLogs: MutationLogItem[] = [];
 
 		// Need to deduct from customer entitlement...
 		for (const deduction of deductions) {
-			const { feature, deduction: toDeduct, targetBalance } = deduction;
+			const {
+				feature,
+				deduction: toDeduct,
+				targetBalance,
+				lockReceipt,
+				unwindValue,
+			} = deduction;
 
 			const {
 				customerEntitlementDeductions,
+				spendLimitByFeatureId,
+				usageBasedCusEntIdsByFeatureId,
 				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
-			} = await prepareFeatureDeduction({
+				lock: preparedLock,
+			} = prepareFeatureDeduction({
 				ctx,
 				fullCustomer,
 				deduction,
@@ -104,8 +125,13 @@ export const executePostgresDeduction = async ({
 				sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
+					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+					usage_based_cus_ent_ids_by_feature_id:
+						usageBasedCusEntIdsByFeatureId ?? null,
 					amount_to_deduct: toDeduct ?? null,
 					target_balance: targetBalance ?? null,
+					lock_receipt: lockReceipt ?? null,
+					unwind_value: unwindValue ?? null,
 					target_entity_id: entityId || null,
 					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
@@ -122,6 +148,7 @@ export const executePostgresDeduction = async ({
 				updates: Record<string, DeductionUpdate>;
 				remaining: number;
 				rollover_updates: RolloverOverwrite[];
+				mutation_logs: MutationLogItem[];
 			};
 
 			if (!resultJson) {
@@ -130,7 +157,7 @@ export const executePostgresDeduction = async ({
 				});
 			}
 
-			const { updates, rollover_updates } = resultJson;
+			const { updates, rollover_updates, mutation_logs } = resultJson;
 			logDeductionUpdates({
 				ctx,
 				fullCustomer,
@@ -138,11 +165,26 @@ export const executePostgresDeduction = async ({
 				source: "executePostgresDeduction",
 			});
 			allUpdates = { ...allUpdates, ...updates };
+			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
 			if (rollover_updates?.length > 0) {
 				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
 			}
 
 			try {
+				applyRolloverUpdatesToFullCustomer({
+					fullCus: fullCustomer,
+					rolloverUpdates: Object.fromEntries(
+						(rollover_updates ?? []).map((rollover) => [
+							rollover.id,
+							{
+								balance: rollover.balance,
+								usage: rollover.usage,
+								entities: rollover.entities,
+							},
+						]),
+					),
+				});
+
 				for (const cusEntId of Object.keys(updates)) {
 					const update = updates[cusEntId];
 					const cusEnt = customerEntitlements.find((ce) => ce.id === cusEntId);
@@ -156,17 +198,20 @@ export const executePostgresDeduction = async ({
 						update,
 					});
 
-					// await handlePaidAllocatedCusEnt({
-					// 	ctx,
-					// 	cusEnt,
-					// 	fullCus: fullCustomer,
-					// 	updates,
-					// });
-
 					applyDeductionUpdateToFullCustomer({
 						fullCus: fullCustomer,
 						cusEntId,
 						update,
+					});
+				}
+
+				if (preparedLock?.enabled) {
+					await saveLockReceipt({
+						lock: preparedLock,
+						customerId: fullCustomer.id || customerId,
+						featureId: feature.id,
+						entityId,
+						items: mutation_logs ?? [],
 					});
 				}
 			} catch (error) {
@@ -210,6 +255,7 @@ export const executePostgresDeduction = async ({
 		// Atomically update the Redis cache with the deduction results.
 		// Uses the old fullCustomer's next_reset_at as an optimistic guard
 		// to prevent stale writes if a concurrent reset occurred.
+
 		await syncCustomerEntitlementUpdatesToCache({
 			ctx,
 			customerId,
@@ -218,10 +264,13 @@ export const executePostgresDeduction = async ({
 			rolloverOverwrites: allRolloverOverwrites,
 		});
 
-		return allUpdates;
+		return {
+			updates: allUpdates,
+			mutationLogs: allMutationLogs,
+		};
 	};
 
-	const allUpdates = resolvedOptions.paidAllocated
+	const deductionResult = resolvedOptions.paidAllocated
 		? await withLock({
 				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
 				ttlMs: 60000,
@@ -233,6 +282,7 @@ export const executePostgresDeduction = async ({
 	return {
 		oldFullCus,
 		fullCus: fullCustomer,
-		updates: allUpdates,
+		updates: deductionResult.updates,
+		mutationLogs: deductionResult.mutationLogs,
 	};
 };

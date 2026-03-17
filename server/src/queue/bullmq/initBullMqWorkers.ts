@@ -191,6 +191,9 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 };
 
 export const initWorkers = async () => {
+	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
+	await warmupRegionalRedis();
+
 	const workers = [];
 
 	for (let i = 0; i < NUM_WORKERS; i++) {

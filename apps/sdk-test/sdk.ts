@@ -1,14 +1,14 @@
 import { Autumn } from "autumn-js";
 
-const autumn = new Autumn();
-
-const res = await autumn.plans.create({
-  planId: "pro_plan",
-  name: "Pro Plan",
-  price: {
-    amount: 10,
-    interval: "month",
-  },
+const autumn = new Autumn({
+  secretKey: process.env.AUTUMN_SECRET_KEY,
+  serverURL: "http://localhost:8080",
 });
 
-console.log(JSON.stringify(res, null, 2));
+const res = await autumn.customers.getOrCreate({
+  customerId: "john",
+});
+
+console.log("Res:", res);
+
+// console.log(JSON.stringify(entity.billingControls, null, 2));

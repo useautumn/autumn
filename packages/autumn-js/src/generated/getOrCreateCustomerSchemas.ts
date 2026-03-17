@@ -5,6 +5,12 @@ export const getOrCreateCustomerGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
@@ -21,9 +27,21 @@ export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
 		.optional(),
 });
 
+export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	auto_topups: z
 		.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+	spend_limits: z
+		.union([
+			z.array(getOrCreateCustomerSpendLimitOutboundSchema),
+			z.undefined(),
+		])
 		.optional(),
 });
 
@@ -48,8 +66,6 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 
 const closedEnumSchema = z.any();
 
-const customerExpandSchema = z.any();
-
 export const getOrCreateCustomerIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerPurchaseLimitSchema = z.object({
@@ -72,6 +88,9 @@ export const getOrCreateCustomerBillingControlsSchema = z.object({
 	autoTopups: z
 		.union([z.array(getOrCreateCustomerAutoTopupSchema), z.undefined()])
 		.optional(),
+	spendLimits: z
+		.union([z.array(getOrCreateCustomerSpendLimitSchema), z.undefined()])
+		.optional(),
 });
 
 export const getOrCreateCustomerParamsSchema = z.object({
@@ -90,5 +109,5 @@ export const getOrCreateCustomerParamsSchema = z.object({
 	billingControls: z
 		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
 		.optional(),
-	expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional(),
+	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });

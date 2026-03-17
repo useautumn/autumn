@@ -3,13 +3,14 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomer,
 	type ApiCustomerV3,
+	type ApiCustomerV5,
 	type ApiEntityV0,
 	CustomerExpand,
 	ErrCode,
 	sumValues,
 	type TrackResponseV2,
 } from "@autumn/shared";
-import { getCustomerEvents } from "@tests/balances/testBalanceUtils.js";
+import { getCustomerEvents } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -430,6 +431,50 @@ test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents dup
 	expect(customerAfterSecond.features[TestFeature.Messages].balance).toEqual(
 		expectedBalance2,
 	);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-MISC6: V2.1 does not auto-create customer via track
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("track-misc6: v2.1 does not auto-create customer via track")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const freeProd = products.base({
+		id: "free",
+		items: [messagesItem],
+	});
+
+	const customerId = "track-misc6";
+	const entityId = `${customerId}-entity-1`;
+
+	const { autumnV2_1 } = await initScenario({
+		setup: [s.deleteCustomer({ customerId }), s.products({ list: [freeProd] })],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.CustomerNotFound,
+		func: async () =>
+			await autumnV2_1.track({
+				customer_id: customerId,
+				customer_data: {
+					name: "Test Customer",
+					email: "test@test.com",
+				},
+				feature_id: TestFeature.Messages,
+				entity_id: entityId,
+				entity_data: {
+					name: "Test Entity",
+					feature_id: TestFeature.Users,
+				},
+				value: 5,
+			}),
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.CustomerNotFound,
+		func: async () => await autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════
