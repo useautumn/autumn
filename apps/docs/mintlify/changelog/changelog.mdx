@@ -4,6 +4,28 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="March 17th 2026">
+  ## Explicit customer creation required for `check` and `track`
+
+  The `/check` and `/track` endpoints no longer auto-create customers. If you call these endpoints with a `customer_id` that doesn't exist, the API now returns a `customer_not_found` error instead of silently creating the customer.
+
+  This change encourages explicit customer lifecycle management and prevents accidental customer creation from typos or stale IDs.
+
+  - **Create customers first**: Call [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login before using `check` or `track`
+  - **Handle the error**: If a customer doesn't exist, the API returns error code `customer_not_found`
+
+  ## `autumn-js` SDK 1.0.0
+
+  The `autumn-js` SDK has been promoted from beta to stable at version `1.0.0`.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Explicit customer creation required for `check` and `track` endpoints - [#968](https://github.com/useautumn/autumn/pull/968)
+      - `autumn-js` SDK promoted to `1.0.0` stable release - [#968](https://github.com/useautumn/autumn/pull/968)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 16th 2026">
   ## Balance and usage carry-over on plan upgrades
 
