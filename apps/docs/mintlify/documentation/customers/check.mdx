@@ -18,6 +18,10 @@ The `allowed` field will return `true` for a given feature if:
 
 Under these conditions, you should allow your customer to use the feature. You can then [record the usage event](/documentation/customers/tracking-usage/) so Autumn can update the `allowed` field as necessary.
 
+<Note>
+The customer must already exist before calling `check`. If the `customer_id` doesn't match an existing customer, the API returns a `customer_not_found` error. Create customers using [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login.
+</Note>
+
 ## Checking metered features
 
 Before your customer uses a feature, you can check if the customer is allowed to use it and their current usage.
