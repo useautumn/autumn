@@ -140,17 +140,19 @@ export const createEntityForCusProduct = async ({
 				const originalBalance = mainCusEntWithCusProduct.balance || 0;
 				const newBalance = originalBalance - inputEntities.length;
 
+				// Pre-compute reps only for the usage limit check —
+				// handleProratedUpgrade applies reps itself, so we must NOT
+				// pass an already-adjusted balance to adjustAllowance.
 				const repsLength = getReps({
 					cusEnt: mainCusEntWithCusProduct,
 					prevBalance: originalBalance,
 					newBalance,
 				}).length;
-				const innerNewBalance = newBalance + repsLength;
+				const balanceAfterReps = newBalance + repsLength;
 
-				// Check if new balance would exceed usage limit
 				if (
 					notNullish(mainCusEntWithCusProduct.entitlement.usage_limit) &&
-					innerNewBalance < -mainCusEntWithCusProduct.entitlement.usage_limit!
+					balanceAfterReps < -mainCusEntWithCusProduct.entitlement.usage_limit!
 				) {
 					throw new RecaseError({
 						message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
@@ -166,7 +168,7 @@ export const createEntityForCusProduct = async ({
 						affectedFeature: feature!,
 						cusEnt: mainCusEntWithCusProduct,
 						originalBalance,
-						newBalance: innerNewBalance,
+						newBalance,
 						errorIfIncomplete: true,
 					});
 

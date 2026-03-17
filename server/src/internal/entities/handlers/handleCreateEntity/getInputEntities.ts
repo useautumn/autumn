@@ -5,6 +5,7 @@ import {
 	EntityAlreadyExistsError,
 	ErrCode,
 	FeatureNotFoundError,
+	featureUtils,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -44,6 +45,12 @@ export const validateAndGetInputEntities = async ({
 		const feature = features.find((f: any) => f.id === entity.feature_id);
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: entity.feature_id });
+		}
+
+		if (featureUtils.isConsumable(feature)) {
+			throw new RecaseError({
+				message: "Entities cannot be linked to consumable features",
+			});
 		}
 	}
 

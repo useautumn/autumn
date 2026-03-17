@@ -136,6 +136,10 @@ export const handleProratedUpgrade = async ({
 		logger,
 	});
 
+	logger.info(
+		`PREV BALANCE: ${prevBalance}, NEW BALANCE: ${newBalance}, NEW USAGE: ${newUsage}, NUM REPS USED: ${reps.length}`,
+	);
+
 	const config = cusPrice.price.config as UsagePriceConfig;
 	const product = cusEnt.customer_product.product;
 	const feature = cusEnt.entitlement.feature;
