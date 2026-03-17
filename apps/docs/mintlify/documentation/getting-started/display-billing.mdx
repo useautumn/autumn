@@ -126,7 +126,10 @@ When building a pricing page, you need to know what each plan means for the curr
 
 Pass a `customerId` when listing plans and each plan will include a `customerEligibility` object:
 
-- **`scenario`** — The attach scenario for this customer: `new`, `upgrade`, `downgrade`, `active`, `scheduled`, `cancel`, `expired`, `past_due`, or `renew`
+- **`attachAction`** — The action that would occur if this plan were attached: `activate`, `upgrade`, `downgrade`, `none`, or `purchase`
+- **`status`** — The customer's current status with this plan: `active` or `scheduled`
+- **`canceling`** — Whether the customer's active instance of this plan is set to cancel
+- **`trialing`** — Whether the customer is currently on a free trial of this plan
 - **`trialAvailable`** — Whether the customer is eligible for the plan's free trial
 
 <CodeGroup>
@@ -135,10 +138,11 @@ Pass a `customerId` when listing plans and each plan will include a `customerEli
 import { useListPlans, useCustomer } from "autumn-js/react";
 
 const buttonText = {
-  new: "Get started",
+  activate: "Get started",
   upgrade: "Upgrade",
   downgrade: "Downgrade",
-  active: "Current plan",
+  none: "Current plan",
+  purchase: "Buy now",
 };
 
 export default function PricingPage() {
@@ -148,10 +152,10 @@ export default function PricingPage() {
   return plans?.map((plan) => (
     <button
       key={plan.id}
-      disabled={plan.customerEligibility?.scenario === "active"}
+      disabled={plan.customerEligibility?.attachAction === "none"}
       onClick={() => attach({ planId: plan.id })}
     >
-      {buttonText[plan.customerEligibility?.scenario] ?? "Get started"}
+      {buttonText[plan.customerEligibility?.attachAction] ?? "Get started"}
     </button>
   ));
 }
@@ -166,10 +170,10 @@ const { list: plans } = await autumn.plans.list({
   customerId: "user_123",
 });
 
-// Each plan includes customerEligibility.scenario and customerEligibility.trialAvailable
+// Each plan includes customerEligibility with attachAction, status, and trialAvailable
 for (const plan of plans) {
-  console.log(plan.name, plan.customerEligibility?.scenario);
-  // e.g. "Free" "downgrade", "Pro" "active", "Enterprise" "upgrade"
+  console.log(plan.name, plan.customerEligibility?.attachAction);
+  // e.g. "Free" "downgrade", "Pro" "none", "Enterprise" "upgrade"
 }
 ```
 
@@ -180,9 +184,9 @@ autumn = Autumn("am_sk_test_1234")
 
 plans = await autumn.plans.list(customer_id="user_123")
 
-# Each plan includes customer_eligibility.scenario and customer_eligibility.trial_available
+# Each plan includes customer_eligibility with attach_action, status, and trial_available
 for plan in plans.list:
-    print(plan.name, plan.customer_eligibility.scenario)
+    print(plan.name, plan.customer_eligibility.attach_action)
 ```
 
 ```bash cURL

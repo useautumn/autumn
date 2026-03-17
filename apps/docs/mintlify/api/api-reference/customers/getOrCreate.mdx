@@ -192,9 +192,15 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
-            <DynamicResponseField name="trial_available" type="boolean" />
+            <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'" />
 
-            <DynamicResponseField name="scenario" type="enum" />
+            <DynamicResponseField name="status" type="'active' | 'scheduled'" />
+
+            <DynamicResponseField name="canceling" type="boolean" />
+
+            <DynamicResponseField name="trialing" type="boolean" />
+
+            <DynamicResponseField name="trial_available" type="boolean" />
 
           </Expandable>
         </DynamicResponseField>
@@ -341,9 +347,15 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
-            <DynamicResponseField name="trial_available" type="boolean" />
+            <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'" />
 
-            <DynamicResponseField name="scenario" type="enum" />
+            <DynamicResponseField name="status" type="'active' | 'scheduled'" />
+
+            <DynamicResponseField name="canceling" type="boolean" />
+
+            <DynamicResponseField name="trialing" type="boolean" />
+
+            <DynamicResponseField name="trial_available" type="boolean" />
 
           </Expandable>
         </DynamicResponseField>
