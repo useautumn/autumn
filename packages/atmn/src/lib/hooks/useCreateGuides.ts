@@ -1,10 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { useState } from "react";
-import { customerPrompt } from "../../prompts/customer.js";
-import { paymentsPrompt } from "../../prompts/payments.js";
-import { pricingPrompt } from "../../prompts/pricing.js";
-import { usagePrompt } from "../../prompts/usage.js";
+import {
+	autumnBillingPageContent,
+	autumnGatingContent,
+	autumnModellingPricingPlansContent,
+	autumnSetupContent,
+} from "../../prompts/skills/index.js";
 
 const GUIDES_DIR = "autumn-guides";
 
@@ -27,33 +29,31 @@ export function useCreateGuides() {
 
 			const created: string[] = [];
 
-			// Always write customer, payments, usage guides
 			await fs.writeFile(
-				path.join(guidesPath, "1_Customer_Creation.md"),
-				customerPrompt,
+				path.join(guidesPath, "1_Setup.md"),
+				autumnSetupContent,
 				"utf-8",
 			);
-			created.push("1_Customer_Creation.md");
+			created.push("1_Setup.md");
 
 			await fs.writeFile(
-				path.join(guidesPath, "2_Accepting_Payments.md"),
-				paymentsPrompt,
+				path.join(guidesPath, "2_Gating.md"),
+				autumnGatingContent,
 				"utf-8",
 			);
-			created.push("2_Accepting_Payments.md");
+			created.push("2_Gating.md");
 
 			await fs.writeFile(
-				path.join(guidesPath, "3_Tracking_Usage.md"),
-				usagePrompt,
+				path.join(guidesPath, "3_Billing_Page.md"),
+				autumnBillingPageContent,
 				"utf-8",
 			);
-			created.push("3_Tracking_Usage.md");
+			created.push("3_Billing_Page.md");
 
-			// Only write pricing guide if user doesn't have pricing yet (or saveAll is true)
 			if (options?.saveAll || !hasPricing) {
 				await fs.writeFile(
 					path.join(guidesPath, "0_Designing_Pricing.md"),
-					pricingPrompt,
+					autumnModellingPricingPlansContent,
 					"utf-8",
 				);
 				created.unshift("0_Designing_Pricing.md");

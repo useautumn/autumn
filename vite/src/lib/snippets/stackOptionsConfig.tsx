@@ -25,10 +25,7 @@ const FRONTEND_OPTIONS: StackOption[] = [
 
 const BACKEND_OPTIONS: StackOption[] = [
 	{ value: "nextjs", label: "Next.js", asset: "/frameworks/nextjs.png" },
-	{ value: "rr7", label: "RR7", asset: "/frameworks/react-router.svg" },
 	{ value: "hono", label: "Hono", asset: "/frameworks/hono.png" },
-	{ value: "express", label: "Express", asset: "/frameworks/express.png" },
-	{ value: "elysia", label: "Elysia", asset: "/frameworks/elysia.png" },
 	{ value: "general", label: "Other", asset: "/frameworks/nodejs.svg" },
 ];
 

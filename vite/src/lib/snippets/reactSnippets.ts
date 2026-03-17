@@ -22,13 +22,13 @@ const REACT_SNIPPETS: Record<string, Snippet> = {
 			"Generate a secret key in the Autumn dashboard and add it to your environment variables.",
 		filename: ".env",
 		language: "bash",
-		code: "AUTUMN_SECRET_KEY=am_sk_42424242",
+		code: "AUTUMN_SECRET_KEY=am_sk_test_42424242...",
 	},
 	"add-provider": {
 		id: "add-provider",
 		title: "Add Autumn provider",
 		description:
-			"Wrap your app with the AutumnProvider to enable the React hooks. If your server URL is different to your client, you will pass in the backend URL as a prop.",
+			"Wrap your app with the AutumnProvider to enable the React hooks.",
 		filename: "layout.tsx",
 		language: "tsx",
 		code: `import { AutumnProvider } from "autumn-js/react";
@@ -41,9 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AutumnProvider 
-          backendUrl="http://localhost:8000"
-          >
+        <AutumnProvider>
           {children}
         </AutumnProvider>
       </body>
@@ -61,38 +59,37 @@ export default function RootLayout({
 		code: `import { useCustomer } from "autumn-js/react";
 
 function MyComponent() {
-  const { customer, isLoading } = useCustomer();
-
-  if (isLoading) return <div>Loading...</div>;
+  const { data } = useCustomer();
 
   return (
     <div>
-      <p>Customer ID: {customer?.id}</p>
+      <p>Customer: {data?.name}</p>
     </div>
   );
 }`,
 	},
 	attach: {
 		id: "attach",
-		title: "Attach a product",
-		description: "Subscribe a customer to a product/plan.",
+		title: "Attach a plan",
+		description:
+			"Subscribe a customer to a plan. Handles upgrades, downgrades, and new subscriptions.",
 		filename: "billing.tsx",
 		language: "tsx",
 		code: `import { useCustomer } from "autumn-js/react";
 
-function UpgradeButton() {
+export default function PurchaseButton() {
   const { attach } = useCustomer();
 
-  const handleUpgrade = async () => {
-    await attach({
-      productId: "pro_plan",
-      successUrl: "http://localhost:3000",
-    });
-  };
-
   return (
-    <button onClick={handleUpgrade}>
-      Upgrade to Pro
+    <button
+      onClick={async () => {
+        await attach({
+          planId: "pro_plan",
+          redirectMode: "always",
+        });
+      }}
+    >
+      Select Pro Plan
     </button>
   );
 }`,
@@ -101,29 +98,32 @@ function UpgradeButton() {
 		id: "billing-state",
 		title: "Get billing state",
 		description:
-			"Use usePricingTable to get products with their billing scenario for the current customer.",
+			"Use useListPlans to get plans with their billing scenario for the current customer.",
 		filename: "billing-page.tsx",
 		language: "tsx",
-		code: `import { usePricingTable } from "autumn-js/react";
+		code: `import { useListPlans, useCustomer } from "autumn-js/react";
 
 const buttonText: Record<string, string> = {
-  active: "Current Plan",
+  active: "Current plan",
   upgrade: "Upgrade",
   downgrade: "Downgrade",
-  scheduled: "Scheduled",
+  new: "Get started",
 };
 
-function PricingPage() {
-  const { products } = usePricingTable();
+export default function PricingPage() {
+  const { data: plans } = useListPlans();
+  const { attach } = useCustomer();
 
   return (
     <>
-      {products.map((product) => (
-        <PricingCard
-          key={product.id}
-          name={product.name}
-          buttonText={buttonText[product.scenario] ?? "Subscribe"}
-        />
+      {plans?.map((plan) => (
+        <button
+          key={plan.id}
+          disabled={plan.customerEligibility?.scenario === "active"}
+          onClick={() => attach({ planId: plan.id })}
+        >
+          {buttonText[plan.customerEligibility?.scenario] ?? "Get started"}
+        </button>
       ))}
     </>
   );
@@ -133,66 +133,66 @@ function PricingPage() {
 		id: "checkout",
 		title: "Handle checkout",
 		description:
-			"Use checkout to initiate payment. It auto-redirects new customers to Stripe. For returning customers, it returns preview data.",
+			"Use attach with redirectMode to handle payments. New customers go to Stripe Checkout, returning customers see a confirmation page.",
 		filename: "pricing-card.tsx",
 		language: "tsx",
 		code: `import { useCustomer } from "autumn-js/react";
 
-const { checkout, attach } = useCustomer();
+export default function UpgradeButton() {
+  const { attach } = useCustomer();
 
-const handleSelect = async (productId: string) => {
-  const data = await checkout({ productId });
-
-  if (!data.url) {
-    // Returning customer → show confirmation dialog
-    console.log("Preview:", data.product, data.total, data.currency);
-    // Then call attach() to confirm the change
-    await attach({ productId });
-  }
-};`,
-	},
-	"attach-pricing-table": {
-		id: "attach-pricing-table",
-		title: "Attach a product",
-		description:
-			"Drop in a pre-built pricing table that displays your products and handles checkout.",
-		filename: "pricing.tsx",
-		language: "tsx",
-		code: `import { PricingTable } from "autumn-js/react";
-
-export default function PricingPage() {
   return (
-    <div className="w-full max-w-4xl mx-auto p-8">
-      <PricingTable
-        checkoutParams={{
-          successUrl: "http://localhost:3000",
-        }}
-      />
-    </div>
+    <button
+      onClick={async () => {
+        await attach({
+          planId: "pro_plan",
+          redirectMode: "always",
+        });
+      }}
+    >
+      Upgrade to Pro
+    </button>
   );
 }`,
 	},
+	// "attach-pricing-table": {
+	// 	id: "attach-pricing-table",
+	// 	title: "Attach a plan",
+	// 	description:
+	// 		"Drop in a pre-built pricing table that displays your plans and handles checkout.",
+	// 	filename: "pricing.tsx",
+	// 	language: "tsx",
+	// 	code: `import { PricingTable } from "autumn-js/react";
+	//
+	// export default function PricingPage() {
+	//   return (
+	//     <div className="w-full max-w-4xl mx-auto p-8">
+	//       <PricingTable />
+	//     </div>
+	//   );
+	// }`,
+	// },
 	"attach-custom": {
 		id: "attach-custom",
-		title: "Attach a product",
+		title: "Attach a plan",
 		description:
-			"Build your own UI and use the attach function to subscribe customers to products.",
+			"Build your own UI and use the attach function to subscribe customers to plans.",
 		filename: "billing.tsx",
 		language: "tsx",
 		code: `import { useCustomer } from "autumn-js/react";
 
-function UpgradeButton() {
+export default function UpgradeButton() {
   const { attach } = useCustomer();
 
-  const handleUpgrade = async () => {
-    await attach({
-      productId: "pro_plan",
-      successUrl: "http://localhost:3000",
-    });
-  };
-
   return (
-    <button onClick={handleUpgrade}>
+    <button
+      onClick={async () => {
+        await attach({
+          planId: "pro_plan",
+          redirectMode: "always",
+        });
+      }}
+    >
       Upgrade to Pro
     </button>
   );
@@ -200,29 +200,28 @@ function UpgradeButton() {
 	},
 	"attach-custom-prepaid": {
 		id: "attach-custom-prepaid",
-		title: "Attach a product",
+		title: "Attach a plan",
 		description:
-			"Build your own UI and use the attach function to subscribe customers to products.",
+			"Build your own UI and use attach with options for prepaid purchases.",
 		filename: "billing.tsx",
 		language: "tsx",
 		code: `import { useCustomer } from "autumn-js/react";
 
-function UpgradeButton() {
+export default function TopUpButton() {
   const { attach } = useCustomer();
 
-  const handleUpgrade = async () => {
-    await attach({
-      productId: "pro_plan",
-      successUrl: "http://localhost:3000",
-      options: [
-        { feature_id: "prepaid_feature", quantity: 10 }
-      ],
-    });
-  };
-
   return (
-    <button onClick={handleUpgrade}>
-      Upgrade to Pro
+    <button
+      onClick={async () => {
+        await attach({
+          planId: "pro_plan",
+          options: [
+            { featureId: "prepaid_feature", quantity: 10 }
+          ],
+        });
+      }}
+    >
+      Buy More
     </button>
   );
 }`,
@@ -231,25 +230,26 @@ function UpgradeButton() {
 		id: "check",
 		title: "Check feature access",
 		description:
-			"Verify if a customer can use a feature before allowing access.",
+			"Verify if a customer can use a feature before allowing access. Client-side checks are for UX only.",
 		filename: "access.tsx",
 		language: "tsx",
 		code: `import { useCustomer } from "autumn-js/react";
 
 function FeatureButton() {
-  const { check } = useCustomer();
+  const { check, refetch } = useCustomer();
 
   const handleAction = async () => {
-    const { data } = await check({
+    const { allowed } = check({
       featureId: "api_calls",
     });
 
-    if (!data?.allowed) {
+    if (!allowed) {
       alert("You've reached your limit!");
       return;
     }
 
-    // Proceed with the action
+    // Proceed with the action, then refresh usage data
+    await refetch();
   };
 
   return <button onClick={handleAction}>Use Feature</button>;
@@ -311,14 +311,8 @@ function getBackendFilename(backend: BackendStack): string {
 	switch (backend) {
 		case "nextjs":
 			return "app/api/autumn/[...all]/route.ts";
-		case "rr7":
-			return "app/routes/api.autumn.$.tsx";
-		case "express":
-			return "server.js";
 		case "hono":
 			return "app.ts";
-		case "elysia":
-			return "index.ts";
 		default:
 			return "handler.ts";
 	}
@@ -332,16 +326,10 @@ function getBackendSetupCode(
 	switch (backend) {
 		case "nextjs":
 			return getNextjsSnippet(auth, customerType);
-		case "express":
-			return getExpressSnippet(customerType);
 		case "hono":
-			return getHonoSnippet(customerType);
-		case "elysia":
-			return getElysiaSnippet(customerType);
-		case "rr7":
-			return getRR7Snippet(customerType);
+			return getHonoSnippet(auth, customerType);
 		default:
-			return getGeneralSnippet();
+			return getGenericSnippet(customerType);
 	}
 }
 
@@ -363,133 +351,26 @@ function getNextjsSnippet(
 	}
 }
 
-const getExpressSnippet = (customerType: CustomerType): string => {
-	return `import express from "express";
-import { autumnHandler } from "autumn-js/backend";
+function getHonoSnippet(
+	auth: AuthProvider,
+	customerType: CustomerType,
+): string {
+	switch (auth) {
+		case "betterauth":
+			return customerType === "user" ? honoBetterAuthUser : honoBetterAuthOrg;
+		default:
+			return honoOther(customerType);
+	}
+}
 
-const app = express();
-app.use(express.json());
-
-app.use("/api/autumn/*", async (req, res) => {
-  // Your authentication logic here
-  const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
-
-  const { statusCode, response } = await autumnHandler({
-    customerId,
-    customerData: { name: "", email: "" },
-    request: {
-      url: req.url,
-      method: req.method,
-      body: req.body,
-    },
-  });
-
-  res.status(statusCode).json(response);
-});`;
-};
-
-const getHonoSnippet = (customerType: CustomerType): string => {
-	return `import { Hono } from "hono";
-import { autumnHandler } from "autumn-js/backend";
-
-const app = new Hono();
-
-app.use("/api/autumn/*", async (c) => {
-  // Your authentication logic here
-  const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
-
-  let body = null;
-  if (c.req.method !== "GET") {
-    body = await c.req.json();
-  }
-
-  const { statusCode, response } = await autumnHandler({
-    customerId,
-    customerData: { name: "", email: "" },
-    request: {
-      url: c.req.url,
-      method: c.req.method,
-      body: body,
-    },
-  });
-
-  return c.json(response, statusCode);
-});`;
-};
-
-const getElysiaSnippet = (customerType: CustomerType): string => {
-	return `import { Elysia } from "elysia";
-import { autumnHandler } from "autumn-js/backend";
-
-new Elysia()
-  .all("/api/autumn/*", async ({ request }) => {
-    // Your authentication logic here
-    const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
-
-    let body = null;
-    if (request.method !== "GET") {
-      body = await request.json();
-    }
-
-    const { statusCode, response } = await autumnHandler({
-      customerId,
-      customerData: { name: "", email: "" },
-      request: {
-        url: request.url,
-        method: request.method,
-        body: body,
-      },
-    });
-
-    return new Response(JSON.stringify(response), {
-      status: statusCode,
-      headers: { "Content-Type": "application/json" }
-    });
-  })
-  .listen(3000);`;
-};
-
-const getRR7Snippet = (customerType: CustomerType): string => {
-	return `import { autumnHandler } from "autumn-js/backend";
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
-
-const handler = async (request: Request) => {
-  // Your authentication logic here
-  const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
-
-  let body = null;
-  if (request.method !== "GET") {
-    body = await request.json();
-  }
-
-  const { statusCode, response } = await autumnHandler({
-    customerId,
-    customerData: { name: "", email: "" },
-    request: {
-      url: request.url,
-      method: request.method,
-      body: body,
-    },
-  });
-
-  return new Response(JSON.stringify(response), {
-    status: statusCode,
-    headers: { "Content-Type": "application/json" },
-  });
-};
-
-export const loader: LoaderFunction = ({ request }) => handler(request);
-export const action: ActionFunction = ({ request }) => handler(request);`;
-};
-
-const getGeneralSnippet = (): string => {
+const getGenericSnippet = (customerType: CustomerType): string => {
 	return `import { autumnHandler } from "autumn-js/backend";
 
 // Mount this handler onto the /api/autumn/* path in your backend
 
 const handleRequest = async (request) => {
   // Your authentication logic here
-  const customerId = "user_id_or_org_id";
+  const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
 
   let body = null;
   if (request.method !== "GET") {
@@ -513,7 +394,7 @@ const handleRequest = async (request) => {
 };`;
 };
 
-// Next.js specific snippets
+// Next.js specific snippets (using autumn-js/next adapter)
 const nextjsBetterAuthUser = `import { autumnHandler } from "autumn-js/next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -645,3 +526,58 @@ export const { GET, POST } = autumnHandler({
     };
   },
 });`;
+
+// Hono specific snippets (using autumn-js/hono adapter)
+const honoBetterAuthUser = `import { autumnHandler } from "autumn-js/hono";
+import { auth } from "./lib/auth";
+
+app.use("/api/autumn/*", autumnHandler({
+  identify: async (c) => {
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+    });
+
+    return {
+      customerId: session?.user.id,
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+}));`;
+
+const honoBetterAuthOrg = `import { autumnHandler } from "autumn-js/hono";
+import { auth } from "./lib/auth";
+
+app.use("/api/autumn/*", autumnHandler({
+  identify: async (c) => {
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+    });
+
+    return {
+      customerId: session?.session.activeOrganizationId,
+      customerData: {
+        name: session?.user.name,
+        email: session?.user.email,
+      },
+    };
+  },
+}));`;
+
+const honoOther = (customerType: CustomerType): string => {
+	return `import { autumnHandler } from "autumn-js/hono";
+
+app.use("/api/autumn/*", autumnHandler({
+  identify: async (c) => {
+    // Your authentication logic here
+    const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
+
+    return {
+      customerId,
+      customerData: { name: "", email: "" },
+    };
+  },
+}));`;
+};

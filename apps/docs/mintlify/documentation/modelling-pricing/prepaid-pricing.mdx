@@ -1,0 +1,286 @@
+---
+title: Prepaid Pricing
+description: Charge customers upfront for a quantity of a feature, and draw from it as usage occurs
+---
+
+Prepaid pricing lets customers pay for a fixed quantity of a feature upfront. They select how many units they want at purchase time, pay immediately, and their balance is decremented as they use it.
+
+This is in contrast to [usage-based pricing](/documentation/modelling-pricing/usage-based-pricing), where customers are billed for actual usage at the end of a billing cycle.
+
+> **Example** <br />
+> An AI platform has a Pro plan at \$20/month that includes:
+> - **API Credits**: 500 included for free, then \$10 per 1,000 credits per month (consumable)
+> - **Seats**: 3 included for free, then \$5 per seat per month (non-consumable)
+>
+> A customer selects 3,000 credits and 10 seats. They pay \$20 base + \$25 for 2,500 extra credits + \$35 for 7 extra seats = \$80/month.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create your features and add them to a plan with `prepaid` prices:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const apiCredits = feature({
+  id: 'api_credits',
+  name: 'API Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: apiCredits.id,
+      included: 500,
+      price: {
+        amount: 10,
+        billingUnits: 1000,
+        billingMethod: 'prepaid',
+        interval: 'month',
+      },
+    }),
+    item({
+      featureId: seats.id,
+      included: 3,
+      price: {
+        amount: 5,
+        billingMethod: 'prepaid',
+        interval: 'month',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add your features:
+   - A `metered`, `consumable` feature for credits (e.g., "API Credits") — set an **included** amount (500), a **price** ($10 per 1,000 per month), and billing method **Prepaid**
+   - A `metered`, `non-consumable` feature for seats (e.g., "Seats") — set an **included** amount (3), a **price** ($5 per seat per month), and billing method **Prepaid**
+3. Save the plan
+
+</Tab>
+</Tabs>
+
+## How it works
+
+When a plan has prepaid features, customers select a **quantity** at purchase time. This quantity determines:
+
+- **How many units are granted** as their balance
+- **How much they're charged**, based on the price and billing units
+
+The `quantity` is the **total** number of feature units the customer will receive, including any included amount.
+
+Using our example plan:
+- A customer selects **3,000 API credits**. 500 are included, so they pay for 2,500 → \$10 × (2,500 / 1,000) = **\$25/month** for credits.
+- The same customer selects **10 seats**. 3 are included, so they pay for 7 → \$5 × 7 = **\$35/month** for seats.
+
+<Note>
+If you pass a `quantity` equal to or less than the included amount, the customer gets the included amount and pays nothing extra for that feature.
+</Note>
+
+## Passing `feature_quantities`
+
+When attaching a plan or updating a subscription that contains prepaid features, use the `feature_quantities` parameter to specify how many units the customer wants.
+
+### Attaching a plan
+
+Pass a `feature_quantities` entry for each prepaid feature on the plan:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  featureQuantities: [
+    { featureId: "api_credits", quantity: 3000 },
+    { featureId: "seats", quantity: 10 },
+  ],
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    feature_quantities=[
+        { "feature_id": "api_credits", "quantity": 3000 },
+        { "feature_id": "seats", "quantity": 10 },
+    ],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "feature_quantities": [
+      { "feature_id": "api_credits", "quantity": 3000 },
+      { "feature_id": "seats", "quantity": 10 }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+### Updating a subscription
+
+To change prepaid quantities on an existing subscription, use `billing.update`. For example, to add more seats mid-cycle:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  featureQuantities: [
+    { featureId: "api_credits", quantity: 3000 },
+    { featureId: "seats", quantity: 15 },
+  ],
+});
+```
+
+```python Python
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    feature_quantities=[
+        { "feature_id": "api_credits", "quantity": 3000 },
+        { "feature_id": "seats", "quantity": 15 },
+    ],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "feature_quantities": [
+      { "feature_id": "api_credits", "quantity": 3000 },
+      { "feature_id": "seats", "quantity": 15 }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+See [Updating Subscriptions](/documentation/customers/updating-subscriptions) for more on previewing changes. When quantities change mid-cycle, Autumn can prorate the charge — see [Proration](/documentation/modelling-pricing/proration) for configuration options.
+
+
+## Understanding prepaid balances
+
+Once a customer is attached to a plan with prepaid features, their balance `breakdown` distinguishes between what was included for free and what was purchased.
+
+| Field | Description |
+|-------|-------------|
+| `included_grant` | The amount granted by the plan for free — the "included" amount configured on the plan item. |
+| `prepaid_grant` | The amount purchased via `feature_quantities` — the quantity minus the included amount. |
+| `granted` | Top-level total: `included_grant + prepaid_grant` summed across all breakdown items. |
+| `remaining` | How much is left to use. |
+| `usage` | How much has been consumed. |
+
+
+Using the plan from our setup, a customer who attaches with 3,000 credits and 10 seats will have:
+
+```json expandable
+{
+  "api_credits": {
+    "feature_id": "api_credits",
+    "granted": 3000,
+    "remaining": 3000,
+    "usage": 0,
+    "unlimited": false,
+    "overage_allowed": false,
+    "breakdown": [
+      {
+        "id": "cus_ent_abc123",
+        "plan_id": "pro",
+        "included_grant": 500,
+        "prepaid_grant": 2500,
+        "remaining": 3000,
+        "usage": 0,
+        "reset": {
+          "interval": "month",
+          "resets_at": 1773851121437
+        },
+        "price": {
+          "amount": 10,
+          "billing_units": 1000,
+          "billing_method": "prepaid"
+        },
+        "expires_at": null
+      }
+    ]
+  },
+  "seats": {
+    "feature_id": "seats",
+    "granted": 10,
+    "remaining": 10,
+    "usage": 0,
+    "unlimited": false,
+    "overage_allowed": false,
+    "breakdown": [
+      {
+        "id": "cus_ent_def456",
+        "plan_id": "pro",
+        "included_grant": 3,
+        "prepaid_grant": 7,
+        "remaining": 10,
+        "usage": 0,
+        "reset": null,
+        "price": {
+          "amount": 5,
+          "billing_units": 1,
+          "billing_method": "prepaid"
+        },
+        "expires_at": null
+      }
+    ]
+  }
+}
+```
+
+Use the [check](/documentation/customers/check) endpoint before allowing a customer to use a prepaid feature, and [track](/documentation/customers/tracking-usage) usage afterwards to decrement their balance.
+
+## Prepaid vs usage-based
+
+| | Prepaid | Usage-based |
+|---|---|---|
+| **When charged** | Upfront at purchase | End of billing cycle |
+| **Customer selects quantity** | Yes, via `feature_quantities` | No |
+| **Balance behavior** | Decremented as usage occurs | Accumulated and billed |
+| **Best for** | Credits, top-ups, seat licenses | Metered APIs, storage, bandwidth |
+
