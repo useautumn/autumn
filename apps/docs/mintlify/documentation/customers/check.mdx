@@ -18,6 +18,10 @@ The `allowed` field will return `true` for a given feature if:
 
 Under these conditions, you should allow your customer to use the feature. You can then [record the usage event](/documentation/customers/tracking-usage/) so Autumn can update the `allowed` field as necessary.
 
+<Note>
+The customer must already exist before calling `check`. If the `customer_id` doesn't match an existing customer, the API returns a `customer_not_found` error. Create customers using [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login.
+</Note>
+
 ## Checking metered features
 
 Before your customer uses a feature, you can check if the customer is allowed to use it and their current usage.
@@ -260,3 +264,53 @@ if (allowed) {
   // Show premium dashboard
 }
 ```
+
+### Feature flags in customer responses
+
+Boolean features are also returned as a `flags` object on customer and entity API responses. This lets you check on/off feature access directly from the customer object without calling the `check` endpoint separately.
+
+```json
+{
+  "balances": {
+    "credits": { "featureId": "credits", "granted": 1000, "remaining": 800, "usage": 200 }
+  },
+  "flags": {
+    "premiumDashboard": {
+      "id": "cus_ent_abc123",
+      "planId": "pro_plan",
+      "expiresAt": null,
+      "featureId": "premiumDashboard"
+    }
+  }
+}
+```
+
+- **Flags** are separate from **balances** — boolean features appear under `flags`, while metered and credit system features remain under `balances`
+- Each flag shows which `planId` it originates from and when it expires
+- Use `expand: ["flags.feature"]` to include the full feature object on each flag
+
+<CodeGroup>
+
+```typescript TypeScript
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  expand: ["flags.feature"],
+});
+
+if (customer.flags?.["premiumDashboard"]) {
+  // Customer has the premium dashboard feature
+}
+```
+
+```python Python
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    expand=["flags.feature"],
+)
+
+if customer.flags and "premium_dashboard" in customer.flags:
+    # Customer has the premium dashboard feature
+    pass
+```
+
+</CodeGroup>
