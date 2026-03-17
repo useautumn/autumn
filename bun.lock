@@ -174,6 +174,7 @@
       },
       "devDependencies": {
         "@tanstack/react-query": "catalog:",
+        "@types/express": "^5.0.6",
         "@types/node": "^22.15.32",
         "@types/react": "^19",
         "@typescript/native-preview": "catalog:",
@@ -188,6 +189,7 @@
       "peerDependencies": {
         "better-auth": "^1.3.17",
         "better-call": "^1.0.12",
+        "express": "^5.2.1",
         "hono": "^4.0.0",
         "next": "^14.0.0 || ^15.0.0",
         "react": "^18.0.0 || ^19.0.0",
@@ -195,6 +197,7 @@
       "optionalPeers": [
         "better-auth",
         "better-call",
+        "express",
         "hono",
         "next",
         "react",
