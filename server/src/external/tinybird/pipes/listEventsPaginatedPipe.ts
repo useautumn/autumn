@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /** Response schema for the list_events_paginated pipe */
 export const listEventsPaginatedPipeResponseSchema = z.object({
@@ -39,6 +39,6 @@ export type ListEventsPaginatedPipeParams = z.infer<
 export const createListEventsPaginatedPipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "list_events_paginated",
-		parameters: listEventsPaginatedPipeParamsSchema,
-		data: listEventsPaginatedPipeResponseSchema,
+		parameters: listEventsPaginatedPipeParamsSchema as any,
+		data: listEventsPaginatedPipeResponseSchema as any,
 	});
