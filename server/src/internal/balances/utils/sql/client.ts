@@ -1,6 +1,5 @@
 import type { EntityBalance, Rollover } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export type ResetCusEntParam = {
@@ -34,7 +33,7 @@ type ResetCusEntsResult = {
 	skipped: string[];
 };
 
-/** Calls the `reset_customer_entitlements` PL/pgSQL function atomically. */
+/** Calls the `reset_customer_entitlements` PL/pgSQL function atomically. Uses dbGeneral to avoid consuming critical pool connections. */
 export const resetCusEnts = async ({
 	ctx,
 	resets,
@@ -42,7 +41,7 @@ export const resetCusEnts = async ({
 	ctx: AutumnContext;
 	resets: ResetCusEntParam[];
 }): Promise<ResetCusEntsResult> => {
-	const { db } = ctx;
+	const db = ctx.dbGeneral;
 	if (resets.length === 0) {
 		return { applied: {}, skipped: [] };
 	}

@@ -364,6 +364,8 @@ const startPollingLoop = async ({
  */
 export const initWorkers = async () => {
 	const { db } = initDrizzle({ maxConnections: 10 });
+	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
+	await warmupRegionalRedis();
 
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
