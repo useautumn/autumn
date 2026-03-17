@@ -14,7 +14,6 @@ import {
 	stepNeedsStackConfig,
 } from "@/lib/snippets";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { AttachStep } from "./steps/AttachStep";
 import { BackendSetupStep } from "./steps/BackendSetupStep";
 import { EnvSetupStep } from "./steps/EnvSetupStep";
 import { SnippetStep } from "./steps/SnippetStep";
@@ -108,13 +107,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 					/>
 				);
 			case "attach":
-				return selectedSDK === "react" ? (
-					<AttachStep
-						key={snippet.id}
-						snippet={snippet}
-						stepNumber={stepNumber}
-					/>
-				) : (
+				return (
 					<SnippetStep
 						key={snippet.id}
 						snippet={snippet}
@@ -167,7 +160,9 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 					<div className="p-4 pb-0">
 						<div className="flex items-center justify-between gap-4">
 							<h2 className="text-main">{title}</h2>
-							<SDKSelector />
+							<SDKSelector
+								excludeSDKs={stepId === "usage" ? ["react"] : undefined}
+							/>
 						</div>
 						<p className="text-t3 text-sm mt-1.5">{description}</p>
 					</div>

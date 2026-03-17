@@ -142,51 +142,53 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const { messages, sendMessage, status, addToolOutput, setMessages } = useChat({
-		transport: new DefaultChatTransport({
-			api: `${import.meta.env.VITE_BACKEND_URL}/pricing-agent/chat`,
-			credentials: "include",
-			headers: {
-				"x-client-type": "dashboard",
+	const { messages, sendMessage, status, addToolOutput, setMessages } = useChat(
+		{
+			transport: new DefaultChatTransport({
+				api: `${import.meta.env.VITE_BACKEND_URL}/pricing-agent/chat`,
+				credentials: "include",
+				headers: {
+					"x-client-type": "dashboard",
+				},
+				body: {
+					sessionId: chatSessionIdRef.current,
+					initialConfig: options?.initialConfig ?? null,
+				},
+			}),
+
+			// Auto-submit when all tool results are available (for multi-step if needed)
+			sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+
+			// Handle client-side tool execution
+			onToolCall: async ({ toolCall }) => {
+				// Check for dynamic tools first
+				if (toolCall.dynamic) {
+					return;
+				}
+
+				if (toolCall.toolName === "build_pricing") {
+					const config = toolCall.input as AgentPricingConfig;
+
+					// Update the pricing preview
+					setPricingConfig(config);
+
+					// Sync to preview org (fire and forget)
+					syncPreviewPricing(config);
+
+					// Return the tool result (no await to avoid deadlocks)
+					addToolOutput({
+						tool: "build_pricing",
+						toolCallId: toolCall.toolCallId,
+						output: {
+							success: true,
+							productsCount: config.products.length,
+							featuresCount: config.features.length,
+						},
+					});
+				}
 			},
-			body: {
-				sessionId: chatSessionIdRef.current,
-				initialConfig: options?.initialConfig ?? null,
-			},
-		}),
-
-		// Auto-submit when all tool results are available (for multi-step if needed)
-		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-
-		// Handle client-side tool execution
-		onToolCall: async ({ toolCall }) => {
-			// Check for dynamic tools first
-			if (toolCall.dynamic) {
-				return;
-			}
-
-			if (toolCall.toolName === "build_pricing") {
-				const config = toolCall.input as AgentPricingConfig;
-
-				// Update the pricing preview
-				setPricingConfig(config);
-
-				// Sync to preview org (fire and forget)
-				syncPreviewPricing(config);
-
-				// Return the tool result (no await to avoid deadlocks)
-				addToolOutput({
-					tool: "build_pricing",
-					toolCallId: toolCall.toolCallId,
-					output: {
-						success: true,
-						productsCount: config.products.length,
-						featuresCount: config.features.length,
-					},
-				});
-			}
 		},
-	});
+	);
 
 	const handleSubmit = useCallback(
 		(message: PromptInputMessage) => {
