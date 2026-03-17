@@ -3,21 +3,7 @@ import {
 	type LanguageModelV1Middleware,
 	wrapLanguageModel,
 } from "ai";
-
-interface AutumnClient {
-	balances: {
-		trackTokens(params: {
-			customerId: string;
-			model: string;
-			inputTokens: number;
-			outputTokens: number;
-			featureId?: string;
-			entityId?: string;
-			properties?: Record<string, unknown>;
-		}): Promise<unknown>;
-	};
-}
-
+import  type { Autumn } from "autumn-js"
 /**
  * Wraps an AI SDK model with automatic Autumn token tracking.
  * Every generate or stream call will report usage to Autumn.
@@ -30,7 +16,7 @@ export const withTokenTracking = ({
 	entityId,
 	properties,
 }: {
-	autumn: AutumnClient;
+	autumn: Autumn;
 	model: LanguageModel;
 	customerId: string;
 	featureId?: string;
@@ -46,6 +32,7 @@ export const withTokenTracking = ({
 		promptTokens: number;
 		completionTokens: number;
 	}) =>
+		// @ts-ignore Not pushed to prod yet, so this isn't found. remove once in sdk
 		autumn.balances.trackTokens({
 			customerId,
 			model: modelName,
