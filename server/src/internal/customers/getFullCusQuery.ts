@@ -619,7 +619,7 @@ export const getPaginatedFullCusQuery = ({
     
     ${
 			withSubs
-			? sql`, customer_subscriptions AS (
+				? sql`, customer_subscriptions AS (
       SELECT 
         s.internal_customer_id,
         COALESCE(
@@ -683,7 +683,7 @@ export const getPaginatedFullCusQuery = ({
     
     ${
 			includeInvoices
-			? sql`, customer_invoices AS (
+				? sql`, customer_invoices AS (
       SELECT 
         cr.internal_id AS internal_customer_id,
         COALESCE(

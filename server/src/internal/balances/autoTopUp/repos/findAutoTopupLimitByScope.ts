@@ -1,6 +1,6 @@
 import { autoTopupLimitStates } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db/initDrizzle.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const findAutoTopupLimitByScope = async ({
@@ -12,7 +12,7 @@ export const findAutoTopupLimitByScope = async ({
 	internalCustomerId: string;
 	featureId: string;
 }) => {
-	const { org, env } = ctx;
+	const { org, env, db } = ctx;
 
 	return await db.query.autoTopupLimits.findFirst({
 		where: and(

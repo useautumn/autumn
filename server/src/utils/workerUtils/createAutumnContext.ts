@@ -52,6 +52,7 @@ export const createWorkerAutumnContext = async ({
 		features,
 
 		db,
+		dbGeneral: db,
 		logger,
 		expand: [],
 

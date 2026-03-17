@@ -47,7 +47,7 @@ class Customers(BaseSDK):
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
-        :param expand:
+        :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -176,7 +176,7 @@ class Customers(BaseSDK):
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
-        :param expand:
+        :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds

@@ -20,11 +20,17 @@ export type AutumnPlugin = {
 
 export function autumn(options?: AutumnOptions): AutumnPlugin;
 export function autumn(options: AutumnOptions = {}): AutumnPlugin {
-	const { secretKey, baseURL, customerScope = "user", identify } = options;
+	const {
+		secretKey,
+		baseURL,
+		autumnURL,
+		customerScope = "user",
+		identify,
+	} = options;
 
 	const handleRoute = createHandleBetterAuthRoute({
 		secretKey,
-		baseURL,
+		baseURL: autumnURL ?? baseURL,
 		customerScope,
 		identify,
 	});
