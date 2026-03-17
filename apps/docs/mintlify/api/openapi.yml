@@ -509,10 +509,14 @@ components:
                   - type: "null"
                 description: The unique identifier of the entity
               name:
-                type: string
-                description: The display name of the entity
+                anyOf:
+                  - type: string
+                  - type: "null"
+                description: The name of the entity
               customer_id:
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
                 description: The customer ID this entity belongs to
               feature_id:
                 anyOf:
@@ -1049,22 +1053,33 @@ components:
           properties:
             trial_available:
               type: boolean
-              description: Whether a free trial is available for this customer.
-            scenario:
+              description: Whether the trial on this plan is available to this customer. For
+                example, if the customer used the trial in the past, this will
+                be false.
+            status:
               enum:
-                - scheduled
                 - active
-                - new
-                - renew
+                - scheduled
+              description: The customer's current status with this plan. 'active' if attached,
+                'scheduled' if pending activation.
+            canceling:
+              type: boolean
+              description: Whether the customer's active instance of this plan is set to
+                cancel.
+            trialing:
+              type: boolean
+              description: Whether the customer is currently on a free trial of this plan.
+            attach_action:
+              enum:
+                - activate
                 - upgrade
                 - downgrade
-                - cancel
-                - expired
-                - past_due
-              description: The attach scenario for this customer (e.g. new_subscription,
-                upgrade, downgrade).
+                - none
+                - purchase
+              description: The action that would occur if this plan were attached to the
+                customer.
           required:
-            - scenario
+            - attach_action
       required:
         - id
         - name
@@ -3383,22 +3398,33 @@ paths:
                     properties:
                       trial_available:
                         type: boolean
-                        description: Whether a free trial is available for this customer.
-                      scenario:
+                        description: Whether the trial on this plan is available to this customer. For
+                          example, if the customer used the trial in the past,
+                          this will be false.
+                      status:
                         enum:
-                          - scheduled
                           - active
-                          - new
-                          - renew
+                          - scheduled
+                        description: The customer's current status with this plan. 'active' if attached,
+                          'scheduled' if pending activation.
+                      canceling:
+                        type: boolean
+                        description: Whether the customer's active instance of this plan is set to
+                          cancel.
+                      trialing:
+                        type: boolean
+                        description: Whether the customer is currently on a free trial of this plan.
+                      attach_action:
+                        enum:
+                          - activate
                           - upgrade
                           - downgrade
-                          - cancel
-                          - expired
-                          - past_due
-                        description: The attach scenario for this customer (e.g. new_subscription,
-                          upgrade, downgrade).
+                          - none
+                          - purchase
+                        description: The action that would occur if this plan were attached to the
+                          customer.
                     required:
-                      - scenario
+                      - attach_action
                 required:
                   - id
                   - name
@@ -3876,22 +3902,33 @@ paths:
                     properties:
                       trial_available:
                         type: boolean
-                        description: Whether a free trial is available for this customer.
-                      scenario:
+                        description: Whether the trial on this plan is available to this customer. For
+                          example, if the customer used the trial in the past,
+                          this will be false.
+                      status:
                         enum:
-                          - scheduled
                           - active
-                          - new
-                          - renew
+                          - scheduled
+                        description: The customer's current status with this plan. 'active' if attached,
+                          'scheduled' if pending activation.
+                      canceling:
+                        type: boolean
+                        description: Whether the customer's active instance of this plan is set to
+                          cancel.
+                      trialing:
+                        type: boolean
+                        description: Whether the customer is currently on a free trial of this plan.
+                      attach_action:
+                        enum:
+                          - activate
                           - upgrade
                           - downgrade
-                          - cancel
-                          - expired
-                          - past_due
-                        description: The attach scenario for this customer (e.g. new_subscription,
-                          upgrade, downgrade).
+                          - none
+                          - purchase
+                        description: The action that would occur if this plan were attached to the
+                          customer.
                     required:
-                      - scenario
+                      - attach_action
                 required:
                   - id
                   - name
@@ -4351,22 +4388,33 @@ paths:
                           properties:
                             trial_available:
                               type: boolean
-                              description: Whether a free trial is available for this customer.
-                            scenario:
+                              description: Whether the trial on this plan is available to this customer. For
+                                example, if the customer used the trial in the
+                                past, this will be false.
+                            status:
                               enum:
-                                - scheduled
                                 - active
-                                - new
-                                - renew
+                                - scheduled
+                              description: The customer's current status with this plan. 'active' if attached,
+                                'scheduled' if pending activation.
+                            canceling:
+                              type: boolean
+                              description: Whether the customer's active instance of this plan is set to
+                                cancel.
+                            trialing:
+                              type: boolean
+                              description: Whether the customer is currently on a free trial of this plan.
+                            attach_action:
+                              enum:
+                                - activate
                                 - upgrade
                                 - downgrade
-                                - cancel
-                                - expired
-                                - past_due
-                              description: The attach scenario for this customer (e.g. new_subscription,
-                                upgrade, downgrade).
+                                - none
+                                - purchase
+                              description: The action that would occur if this plan were attached to the
+                                customer.
                           required:
-                            - scenario
+                            - attach_action
                       required:
                         - id
                         - name
@@ -5052,22 +5100,33 @@ paths:
                     properties:
                       trial_available:
                         type: boolean
-                        description: Whether a free trial is available for this customer.
-                      scenario:
+                        description: Whether the trial on this plan is available to this customer. For
+                          example, if the customer used the trial in the past,
+                          this will be false.
+                      status:
                         enum:
-                          - scheduled
                           - active
-                          - new
-                          - renew
+                          - scheduled
+                        description: The customer's current status with this plan. 'active' if attached,
+                          'scheduled' if pending activation.
+                      canceling:
+                        type: boolean
+                        description: Whether the customer's active instance of this plan is set to
+                          cancel.
+                      trialing:
+                        type: boolean
+                        description: Whether the customer is currently on a free trial of this plan.
+                      attach_action:
+                        enum:
+                          - activate
                           - upgrade
                           - downgrade
-                          - cancel
-                          - expired
-                          - past_due
-                        description: The attach scenario for this customer (e.g. new_subscription,
-                          upgrade, downgrade).
+                          - none
+                          - purchase
+                        description: The action that would occur if this plan were attached to the
+                          customer.
                     required:
-                      - scenario
+                      - attach_action
                 required:
                   - id
                   - name

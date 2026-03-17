@@ -673,8 +673,15 @@ export class AutumnInt {
 			return data as T;
 		},
 
-		list: async <T = any[]>(): Promise<{ list: T }> => {
-			const data = await this.get(`/products`);
+		list: async <T = any[]>({
+			customer_id,
+		}: {
+			customer_id?: string;
+		} = {}): Promise<{ list: T }> => {
+			const params = new URLSearchParams();
+			if (customer_id) params.set("customer_id", customer_id);
+			const query = params.toString();
+			const data = await this.get(`/products${query ? `?${query}` : ""}`);
 			return data as { list: T };
 		},
 

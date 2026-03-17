@@ -3,7 +3,6 @@ import {
 	ApiFreeTrialV2Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
-	AttachScenario,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -14,10 +13,9 @@ import {
 	productV2ToFeatureItems,
 	sortProductItems,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mapToProductItems } from "../../productV2Utils.js";
-import { getAttachScenario } from "./getAttachScenario.js";
+import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 
 /**
  * Get free trial response in Plan V2 format
@@ -36,54 +34,21 @@ const getFreeTrialV2Response = ({
 	});
 };
 
-const getTrialAvailable = async ({
-	db,
-	product,
-	fullCus,
-	attachScenario,
-}: {
-	db?: DrizzleCli;
-	product: FullProduct;
-	fullCus?: FullCustomer;
-	attachScenario: AttachScenario;
-}) => {
-	if (!product.free_trial) return undefined;
-
-	// Check trial availability if customer exists
-	if (db && fullCus) {
-		const trial = await getFreeTrialAfterFingerprint({
-			db,
-			freeTrial: product.free_trial,
-			fingerprint: fullCus.fingerprint,
-			internalCustomerId: fullCus.internal_id,
-			multipleAllowed: false,
-			productId: product.id,
-		});
-
-		// No trial for downgrades
-		if (attachScenario === AttachScenario.Downgrade || !trial) {
-			return false;
-		}
-	}
-
-	return true;
-};
-
 /**
  * Convert FullProduct (DB format) to Plan API response format (V1/latest)
  */
 export const getPlanResponse = async ({
+	ctx,
 	product,
 	features,
 	fullCus,
-	db,
 	expand = [],
 	currency = "usd",
 }: {
+	ctx?: AutumnContext;
 	product: FullProduct;
 	features: Feature[];
 	fullCus?: FullCustomer;
-	db?: DrizzleCli;
 	expand?: string[];
 	currency?: string;
 }): Promise<ApiPlanV1> => {
@@ -134,58 +99,38 @@ export const getPlanResponse = async ({
 
 	planItems = planItems.map((item) => ({ ...item, proration: undefined }));
 
-	// 7. Get attach scenario for customer context
-	const attachScenario = getAttachScenario({
-		fullCus,
-		fullProduct: product,
-	});
-
-	// 8. Get free trial in V2 format
+	// 7. Get free trial in V2 format
 	const freeTrial = getFreeTrialV2Response({
 		product,
 	});
 
-	const trialAvailable = await getTrialAvailable({
-		db,
-		product,
+	// 8. Build customer eligibility
+	const customerEligibility = await buildCustomerEligibility({
+		ctx,
 		fullCus,
-		attachScenario,
+		fullProduct: product,
 	});
 
 	// 9. Build Plan response
 	return ApiPlanV1Schema.parse({
-		// Basic fields
 		id: product.id,
 		name: product.name || "",
 		description: product.description || null,
 		group: product.group || null,
 		version: product.version,
 
-		// Boolean flags
 		add_on: product.is_add_on,
 		auto_enable: product.is_default,
 
-		// Price field (optional - only for products with base price)
 		price: basePrice,
-
-		// Items array (V1 uses "items" not "features")
 		items: planItems ?? [],
-
-		// Free trial
 		free_trial: freeTrial,
 
-		// Metadata fields
 		created_at: product.created_at,
 		env: product.env,
 		archived: product.archived,
 		base_variant_id: product.base_variant_id,
 
-		// Customer context (optional)
-		customer_eligibility: fullCus
-			? {
-					trial_available: trialAvailable,
-					scenario: attachScenario,
-				}
-			: undefined,
+		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);
 };

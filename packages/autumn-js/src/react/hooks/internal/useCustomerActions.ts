@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type {
 	AttachResponse,
 	BillingUpdateResponse,
@@ -48,6 +49,7 @@ export const useCustomerActions = ({
 	client: IAutumnClient;
 	customer: Customer | null;
 }) => {
+	const queryClient = useQueryClient();
 	const attach = useCallback(
 		async (params: AttachParams): Promise<AttachResponse> => {
 			const response = await client.attach({
@@ -60,10 +62,12 @@ export const useCustomerActions = ({
 					url: response.paymentUrl,
 					openInNewTab: params.openInNewTab,
 				});
+			} else {
+				queryClient.invalidateQueries({ queryKey: ["autumn"] });
 			}
 			return response;
 		},
-		[client],
+		[client, queryClient],
 	);
 
 	const previewAttach = useCallback(
@@ -84,10 +88,12 @@ export const useCustomerActions = ({
 					url: response.paymentUrl,
 					openInNewTab: params.openInNewTab,
 				});
+			} else {
+				queryClient.invalidateQueries({ queryKey: ["autumn"] });
 			}
 			return response;
 		},
-		[client],
+		[client, queryClient],
 	);
 
 	const previewUpdateSubscription = useCallback(
@@ -140,10 +146,12 @@ export const useCustomerActions = ({
 					url: response.paymentUrl,
 					openInNewTab: params.openInNewTab,
 				});
+			} else {
+				queryClient.invalidateQueries({ queryKey: ["autumn"] });
 			}
 			return response;
 		},
-		[client],
+		[client, queryClient],
 	);
 
 	const previewMultiAttach = useCallback(

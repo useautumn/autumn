@@ -112,14 +112,14 @@ export type CustomerBillingControls = {
 /**
  * Current status of the subscription.
  */
-export const Status = {
+export const CustomerStatus = {
   Active: "active",
   Scheduled: "scheduled",
 } as const;
 /**
  * Current status of the subscription.
  */
-export type Status = OpenEnum<typeof Status>;
+export type CustomerStatus = OpenEnum<typeof CustomerStatus>;
 
 export type Subscription = {
   /**
@@ -142,7 +142,7 @@ export type Subscription = {
   /**
    * Current status of the subscription.
    */
-  status: Status;
+  status: CustomerStatus;
   /**
    * Whether the subscription has overdue payments.
    */
@@ -678,8 +678,10 @@ export function customerBillingControlsFromJSON(
 }
 
 /** @internal */
-export const Status$inboundSchema: z.ZodMiniType<Status, unknown> = openEnums
-  .inboundSchema(Status);
+export const CustomerStatus$inboundSchema: z.ZodMiniType<
+  CustomerStatus,
+  unknown
+> = openEnums.inboundSchema(CustomerStatus);
 
 /** @internal */
 export const Subscription$inboundSchema: z.ZodMiniType<Subscription, unknown> =
@@ -690,7 +692,7 @@ export const Subscription$inboundSchema: z.ZodMiniType<Subscription, unknown> =
       plan_id: types.string(),
       auto_enable: types.boolean(),
       add_on: types.boolean(),
-      status: Status$inboundSchema,
+      status: CustomerStatus$inboundSchema,
       past_due: types.boolean(),
       canceled_at: types.nullable(types.number()),
       expires_at: types.nullable(types.number()),

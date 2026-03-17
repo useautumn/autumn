@@ -4,6 +4,7 @@ import {
 	isCusProductOnEntity,
 	isCustomerProductMain,
 } from "../classifyCustomerProduct/classifyCustomerProduct";
+import { cp } from "../classifyCustomerProduct/cpBuilder";
 
 /**
  * Finds the scheduled main customer product in a given group for a customer.
@@ -41,5 +42,29 @@ export const findMainScheduledCustomerProductByGroup = ({
 		return (
 			productGroupMatches && statusMatches && entityMatches && isMainProduct
 		);
+	});
+};
+
+/** Finds a scheduled customer product by product ID and entity. */
+export const findScheduledCustomerProductById = ({
+	fullCustomer,
+	productId,
+	internalEntityId,
+}: {
+	fullCustomer: FullCustomer;
+	productId: string;
+	internalEntityId?: string | null;
+}) => {
+	if (!internalEntityId) {
+		internalEntityId = fullCustomer.entity?.internal_id;
+	}
+
+	return fullCustomer.customer_products.find((customerProduct) => {
+		const { valid } = cp(customerProduct)
+			.scheduled()
+			.hasProductId({ productId })
+			.onEntity({ internalEntityId: internalEntityId ?? undefined });
+
+		return valid;
 	});
 };

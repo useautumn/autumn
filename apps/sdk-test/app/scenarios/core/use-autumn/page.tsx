@@ -6,7 +6,7 @@ import type {
   ClientOpenCustomerPortalParams,
   ClientSetupPaymentParams,
 } from "autumn-js/react";
-import { useCustomer } from "autumn-js/react";
+import { useCustomer, useListPlans } from "autumn-js/react";
 import { useId, useState } from "react";
 import { DataViewer } from "@/components/debug/DataViewer";
 import { DebugCard } from "@/components/debug/DebugCard";
@@ -53,6 +53,9 @@ const toErrorPayload = ({ error }: { error: unknown }) => {
 };
 
 export default function UseAutumnScenarioPage() {
+  const customerResult = useCustomer({
+    errorOnNotFound: false,
+  });
   const {
     isLoading,
     error,
@@ -62,10 +65,11 @@ export default function UseAutumnScenarioPage() {
     check,
     setupPayment,
     openCustomerPortal,
-  } = useCustomer({
-    errorOnNotFound: false,
-  });
+  } = customerResult;
 
+  const plansResult = useListPlans();
+
+  const [showDebugData, setShowDebugData] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [lastAction, setLastAction] = useState<LastActionState>(null);
@@ -83,7 +87,7 @@ export default function UseAutumnScenarioPage() {
   const [setupPaymentSuccessUrl, setSetupPaymentSuccessUrl] = useState("");
   const [setupPaymentPlanId, setSetupPaymentPlanId] = useState("");
   const [checkoutSessionParams, setCheckoutSessionParams] = useState(
-    '{\n  "billing_address_collection": "required",\n  "automatic_tax": { "enabled": true }\n}',
+    '{\n  "billing_address_collection": "required"\n}',
   );
 
   // Form element IDs
@@ -569,6 +573,36 @@ export default function UseAutumnScenarioPage() {
         value={lastAction?.error ?? null}
         defaultExpandedDepth={3}
       />
+
+      <DebugCard
+        title="Hook Data"
+        actions={
+          <label className="flex items-center gap-2 text-sm text-zinc-600">
+            <input
+              type="checkbox"
+              checked={showDebugData}
+              onChange={(e) => setShowDebugData(e.target.checked)}
+              className="rounded border-zinc-300"
+            />
+            Show
+          </label>
+        }
+      >
+        {showDebugData && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DataViewer
+              title="useCustomer"
+              value={customerResult.data ?? null}
+              defaultExpandedDepth={2}
+            />
+            <DataViewer
+              title="useListPlans"
+              value={plansResult.data ?? null}
+              defaultExpandedDepth={2}
+            />
+          </div>
+        )}
+      </DebugCard>
     </div>
   );
 }
