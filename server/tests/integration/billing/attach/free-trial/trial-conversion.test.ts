@@ -282,6 +282,7 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 5: scheduled downgrade a
 		balance: 500,
 		usage: 0,
 		resetsAt: addMonths(Date.now() + ms.days(14), 1).getTime(),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	// Verify Stripe subscription state

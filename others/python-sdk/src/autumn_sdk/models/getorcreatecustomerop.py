@@ -230,6 +230,7 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     billing_controls: NotRequired[GetOrCreateCustomerBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     expand: NotRequired[List[str]]
+    r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
 
 class GetOrCreateCustomerParams(BaseModel):
@@ -263,6 +264,7 @@ class GetOrCreateCustomerParams(BaseModel):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     expand: Optional[List[str]] = None
+    r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
