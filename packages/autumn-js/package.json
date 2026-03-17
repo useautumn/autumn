@@ -33,6 +33,16 @@
 			"require": "./dist/backend/index.js",
 			"import": "./dist/backend/index.mjs"
 		},
+		"./express": {
+			"types": "./dist/backend/adapters/express.d.ts",
+			"require": "./dist/backend/adapters/express.js",
+			"import": "./dist/backend/adapters/express.mjs"
+		},
+		"./webStandard": {
+			"types": "./dist/backend/adapters/webStandard.d.ts",
+			"require": "./dist/backend/adapters/webStandard.js",
+			"import": "./dist/backend/adapters/webStandard.mjs"
+		},
 		"./hono": {
 			"types": "./dist/backend/adapters/hono.d.ts",
 			"require": "./dist/backend/adapters/hono.js",
@@ -65,6 +75,12 @@
 			],
 			"better-auth": [
 				"./dist/better-auth/index.d.ts"
+			],
+			"express": [
+				"./dist/backend/adapters/express.d.ts"
+			],
+			"webStandard": [
+				"./dist/backend/adapters/webStandard.d.ts"
 			]
 		}
 	},
