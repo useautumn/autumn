@@ -240,7 +240,9 @@ export function AiCreditSchema({
 				{activeProviderKeys.map((providerKey) => {
 					const provider = providers[providerKey];
 					const modelFullIds = providerGroups[providerKey] ?? [];
-					const providerName = provider?.name ?? providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
+					const providerName =
+						provider?.name ??
+						providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
 
 					return (
 						<div
@@ -269,19 +271,12 @@ export function AiCreditSchema({
 							<div className="p-3 flex flex-col gap-2">
 								{providerKey === "custom" && (
 									<p className="text-xs text-t-tertiary mb-1">
-										In your API tracking, use the format <code className="bg-muted px-1 py-0.5 rounded">custom/{"modelId"}</code>
+										In your API tracking, use the format{" "}
+										<code className="bg-muted px-1 py-0.5 rounded">
+											custom/{"modelId"}
+										</code>
 									</p>
 								)}
-								<div className="hidden lg:grid lg:grid-cols-[minmax(0,2fr)_auto_auto_auto_auto_auto_auto] gap-2 mb-1">
-									<FormLabel className="truncate">Model</FormLabel>
-									<FormLabel className="w-24">Actual In</FormLabel>
-									<FormLabel className="w-24">Actual Out</FormLabel>
-									<FormLabel className="w-20">Markup %</FormLabel>
-									<FormLabel className="w-24">User In</FormLabel>
-									<FormLabel className="w-24">User Out</FormLabel>
-									<div className="w-8" />
-								</div>
-
 								{modelFullIds.map((fullId) => {
 									const [, ...parts] = fullId.split("/");
 									const modelKey = parts.join("/");
@@ -331,9 +326,7 @@ export function AiCreditSchema({
 				})}
 			</div>
 
-			<p className="hidden lg:block text-xs text-t-tertiary my-2">
-				All prices are in $/M tokens
-			</p>
+			<p className="text-xs text-t-tertiary my-2">All prices in $/M tokens</p>
 
 			<div className="mt-3 w-64" onWheel={(e) => e.stopPropagation()}>
 				<SearchableSelect

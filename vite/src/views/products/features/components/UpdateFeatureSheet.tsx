@@ -1,7 +1,6 @@
 import {
 	type CreditSchemaItem,
 	type Feature,
-	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
@@ -100,19 +99,9 @@ function UpdateFeatureSheet({
 		setOpen(false);
 	};
 
-	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
-
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent
-				className="flex flex-col overflow-hidden"
-				style={{
-					maxWidth: isAiCreditSystem
-						? "min(calc(100vw - 2rem), 56rem)"
-						: "28rem",
-					transition: "max-width 300ms ease-in-out",
-				}}
-			>
+			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Update Feature"
 					description="Modify how this feature is used in your app"

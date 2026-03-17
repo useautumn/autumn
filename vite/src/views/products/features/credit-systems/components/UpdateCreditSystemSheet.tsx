@@ -124,19 +124,9 @@ function UpdateCreditSystemSheet({
 		setOpen(false);
 	};
 
-	const isAiCreditSystem = creditSystem.model_markups != null;
-
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent
-				className="flex flex-col overflow-hidden"
-				style={{
-					maxWidth: isAiCreditSystem
-						? "min(calc(100vw - 2rem), 56rem)"
-						: "28rem",
-					transition: "max-width 300ms ease-in-out",
-				}}
-			>
+			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Update Credit System"
 					description="Modify how this credit system is configured"

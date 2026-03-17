@@ -120,28 +120,9 @@ function CreateFeatureSheet({
 		}
 	}, [open, reset, setFeature]);
 
-	const isAiCreditSystem =
-		feature.type === FeatureType.CreditSystem &&
-		(feature.is_ai_credit_system ?? false);
-
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			{/* {!isControlled && (
-				<SheetTrigger asChild>
-					<Button variant="add" className="w-full">
-						Feature
-					</Button>
-				</SheetTrigger>
-			)} */}
-			<SheetContent
-				className="flex flex-col overflow-hidden"
-				style={{
-					maxWidth: isAiCreditSystem
-						? "min(calc(100vw - 2rem), 56rem)"
-						: "28rem",
-					transition: "max-width 300ms ease-in-out",
-				}}
-			>
+			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create a feature"
 					description="Create a feature to control based on a customer's plan."

@@ -62,156 +62,138 @@ export function AiCreditSchemaRow({
 	const [localModelName, setLocalModelName] = useState(modelKey);
 
 	return (
-		<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_auto_auto_auto_auto_auto_auto] gap-3 lg:gap-2 items-start lg:items-center p-3 lg:p-0 bg-muted/20 lg:bg-transparent rounded-md lg:rounded-none border lg:border-0 border-border/30">
-			<div className="min-w-0 max-w-xs">
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					Model
-				</div>
-				{isCustom ? (
-					<Input
-						value={localModelName}
-						onChange={(e) => setLocalModelName(e.target.value)}
-						onBlur={() => {
-							if (localModelName !== modelKey) {
-								onModelChange(modelKey, localModelName);
+		<div className="flex flex-col gap-2 p-3 bg-muted/20 rounded-md border border-border/30">
+			<div className="flex items-center gap-2">
+				<div className="min-w-0 flex-1">
+					{isCustom ? (
+						<Input
+							value={localModelName}
+							onChange={(e) => setLocalModelName(e.target.value)}
+							onBlur={() => {
+								if (localModelName !== modelKey) {
+									onModelChange(modelKey, localModelName);
+								}
+							}}
+							placeholder="my-model-id"
+							className="w-full"
+						/>
+					) : (
+						<AiModelSelectDropdown
+							value={modelKey}
+							onValueChange={(newModelKey) =>
+								onModelChange(modelKey, newModelKey)
 							}
-						}}
-						placeholder="my-model-id"
-						className="w-full"
-					/>
-				) : (
-					<AiModelSelectDropdown
-						value={modelKey}
-						onValueChange={(newModelKey) =>
-							onModelChange(modelKey, newModelKey)
-						}
-						provider={provider}
-						isLoading={isLoading}
-						humanModelName={humanModelName}
-					/>
-				)}
-			</div>
-			<div>
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					Input
+							provider={provider}
+							isLoading={isLoading}
+							humanModelName={humanModelName}
+						/>
+					)}
 				</div>
-				{isCustom ? (
-					<Input
-						type="number"
-						lang="en"
-						value={inputCost ?? 0}
-						onChange={(e) =>
-							onCostChange?.(
-								modelKey,
-								"input_cost",
-								Number(e.target.value) || 0,
-							)
-						}
-						onBlur={(e) =>
-							onCostChange?.(
-								modelKey,
-								"input_cost",
-								Number(e.target.value) || 0,
-							)
-						}
-						placeholder="0"
-						className="w-full lg:w-24"
-					/>
-				) : (
-					<Input
-						readOnly
-						value={formatCost(actualInput)}
-						className="w-full lg:w-24 bg-background lg:bg-muted/30 text-t-secondary cursor-default"
-						tabIndex={-1}
-					/>
-				)}
-			</div>
-
-			<div>
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					Output
-				</div>
-				{isCustom ? (
-					<Input
-						type="number"
-						lang="en"
-						value={outputCost ?? 0}
-						onChange={(e) =>
-							onCostChange?.(
-								modelKey,
-								"output_cost",
-								Number(e.target.value) || 0,
-							)
-						}
-						onBlur={(e) =>
-							onCostChange?.(
-								modelKey,
-								"output_cost",
-								Number(e.target.value) || 0,
-							)
-						}
-						placeholder="0"
-						className="w-full lg:w-24"
-					/>
-				) : (
-					<Input
-						readOnly
-						value={formatCost(actualOutput)}
-						className="w-full lg:w-24 bg-background lg:bg-muted/30 text-t-secondary cursor-default"
-						tabIndex={-1}
-					/>
-				)}
-			</div>
-
-			<div>
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					Markup
-				</div>
-				<Input
-					type="number"
-					lang="en"
-					value={markup}
-					onChange={(e) =>
-						onMarkupChange(modelKey, Number(e.target.value) || 0)
-					}
-					onBlur={(e) => onMarkupChange(modelKey, Number(e.target.value) || 0)}
-					placeholder="0"
-					className="w-full lg:w-20"
-				/>
-			</div>
-
-			<div>
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					User Input
-				</div>
-				<Input
-					readOnly
-					value={formatCost(userInput)}
-					className="w-full lg:w-24 bg-background lg:bg-muted/30 text-t-secondary cursor-default"
-					tabIndex={-1}
-				/>
-			</div>
-
-			<div>
-				<div className="text-xs font-medium text-t-tertiary mb-1 lg:hidden">
-					User Output
-				</div>
-				<Input
-					readOnly
-					value={formatCost(userOutput)}
-					className="w-full lg:w-24 bg-background lg:bg-muted/30 text-t-secondary cursor-default"
-					tabIndex={-1}
-				/>
-			</div>
-
-			<div className="flex justify-end lg:justify-center lg:items-center pt-6 lg:pt-0">
 				<IconButton
 					variant="skeleton"
 					iconOrientation="center"
-					icon={<X />}
+					icon={<X className="h-3.5 w-3.5" />}
 					onClick={() => onRemove(modelKey)}
 				/>
 			</div>
+
+			<div className="grid grid-cols-3 gap-2">
+				<div>
+					<div className="text-xs font-medium text-t-tertiary mb-1">
+						{isCustom ? "Input $/M" : "Cost In"}
+					</div>
+					{isCustom ? (
+						<Input
+							type="number"
+							lang="en"
+							value={inputCost ?? 0}
+							onChange={(e) =>
+								onCostChange?.(
+									modelKey,
+									"input_cost",
+									Number(e.target.value) || 0,
+								)
+							}
+							onBlur={(e) =>
+								onCostChange?.(
+									modelKey,
+									"input_cost",
+									Number(e.target.value) || 0,
+								)
+							}
+							placeholder="0"
+							className="w-full"
+						/>
+					) : (
+						<Input
+							readOnly
+							value={formatCost(actualInput)}
+							className="w-full bg-muted/30 text-t-secondary cursor-default"
+							tabIndex={-1}
+						/>
+					)}
+				</div>
+				<div>
+					<div className="text-xs font-medium text-t-tertiary mb-1">
+						{isCustom ? "Output $/M" : "Cost Out"}
+					</div>
+					{isCustom ? (
+						<Input
+							type="number"
+							lang="en"
+							value={outputCost ?? 0}
+							onChange={(e) =>
+								onCostChange?.(
+									modelKey,
+									"output_cost",
+									Number(e.target.value) || 0,
+								)
+							}
+							onBlur={(e) =>
+								onCostChange?.(
+									modelKey,
+									"output_cost",
+									Number(e.target.value) || 0,
+								)
+							}
+							placeholder="0"
+							className="w-full"
+						/>
+					) : (
+						<Input
+							readOnly
+							value={formatCost(actualOutput)}
+							className="w-full bg-muted/30 text-t-secondary cursor-default"
+							tabIndex={-1}
+						/>
+					)}
+				</div>
+				<div>
+					<div className="text-xs font-medium text-t-tertiary mb-1">
+						Markup %
+					</div>
+					<Input
+						type="number"
+						lang="en"
+						value={markup}
+						onChange={(e) =>
+							onMarkupChange(modelKey, Number(e.target.value) || 0)
+						}
+						onBlur={(e) =>
+							onMarkupChange(modelKey, Number(e.target.value) || 0)
+						}
+						placeholder="0"
+						className="w-full"
+					/>
+				</div>
+			</div>
+
+			{(userInput != null || userOutput != null) && (
+				<div className="text-xs text-t-tertiary">
+					User pays: ${formatCost(userInput)} in / ${formatCost(userOutput)} out
+					$/M
+				</div>
+			)}
 		</div>
 	);
 }

@@ -172,11 +172,9 @@ export function EditPlanFeatureSheet({
 
 				{feature?.type !== FeatureType.Boolean && (
 					<>
-						{!isAiCreditSystem && (
-							<SheetSection title="Feature Type">
-								<BillingType />
-							</SheetSection>
-						)}
+						<SheetSection title="Feature Type">
+							<BillingType />
+						</SheetSection>
 
 						<SheetSection
 							title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
