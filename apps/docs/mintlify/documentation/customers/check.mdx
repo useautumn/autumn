@@ -7,6 +7,10 @@ When you create a plan in Autumn, you define what features your customers on tha
 
 The `check` method returns the `allowed` field in real-time to check if a customer should have access to a feature. You can use this to block access and prompt an upsell.
 
+<Warning>
+The customer must exist before calling `check`. If the customer hasn't been created yet, this endpoint returns a `customer_not_found` error. Use [`customers.getOrCreate`](/documentation/customers/creating-customers) to create customers first.
+</Warning>
+
 ## The `allowed` field
 
 The `allowed` field will return `true` for a given feature if:

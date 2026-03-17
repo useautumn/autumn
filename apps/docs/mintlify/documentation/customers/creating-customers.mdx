@@ -60,6 +60,10 @@ Only the `customerId` field is required — this should be your unique identifie
 A common pattern is to call `customers.getOrCreate` on every login or signup in your application, so Autumn always has the latest customer information.
 </Tip>
 
+<Warning>
+You must create customers before calling `check` or `track`. These endpoints do not auto-create customers — if the customer doesn't exist, they return a `customer_not_found` error.
+</Warning>
+
 ## Pre-creating customers via the dashboard
 
 You can create a customer in the Autumn dashboard before they've ever interacted with your application. This is useful for enterprise or sales-led deals where you want to provision access before the customer signs up.

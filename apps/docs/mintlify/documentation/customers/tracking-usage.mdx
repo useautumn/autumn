@@ -5,6 +5,10 @@ description: "Keep track of your customer's feature usage with the `track` route
 
 When customers use features in your product, you'll need to record their usage so Autumn can track it against their limits or bill them for usage.
 
+<Warning>
+The customer must exist before calling `track`. If the customer hasn't been created yet, this endpoint returns a `customer_not_found` error. Use [`customers.getOrCreate`](/documentation/customers/creating-customers) to create customers first.
+</Warning>
+
 There are two ways to record usage: sending events or setting usage directly.
 
 ## Sending Events
