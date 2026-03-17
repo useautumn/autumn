@@ -9,6 +9,24 @@ The `autumnHandler` creates server-side endpoints that handle communication betw
 
 <LearnHooksTip />
 
+## Framework adapters
+
+Import the handler from the adapter that matches your backend framework:
+
+| Framework | Import path |
+| --- | --- |
+| Next.js | `autumn-js/next` |
+| Hono | `autumn-js/hono` |
+| Elysia / Web Standard | `autumn-js/webStandard` |
+| Express | `autumn-js/express` |
+| Other | `autumn-js/backend` |
+
+The Web Standard adapter (`autumn-js/webStandard`) works with any runtime that uses the Fetch API `Request`/`Response` objects, including Elysia, Cloudflare Workers, and Deno.
+
+<Note>
+The Express adapter requires `express.json()` body-parser middleware before the Autumn handler. See the [setup guide](/documentation/getting-started/setup) for full examples.
+</Note>
+
 ## Usage
 
 ```ts

@@ -510,6 +510,7 @@ components:
               - total
               - currency
               - created_at
+          description: Invoices for this customer.
         entities:
           type: array
           items:
@@ -548,6 +549,7 @@ components:
               - name
               - created_at
               - env
+          description: Entities associated with this customer.
         trials_used:
           type: array
           items:
@@ -564,6 +566,7 @@ components:
             required:
               - plan_id
               - customer_id
+          description: Trial usage history for this customer.
         rewards:
           anyOf:
             - type: object
@@ -636,6 +639,7 @@ components:
               required:
                 - discounts
             - type: "null"
+          description: Rewards earned or applied for this customer.
         referrals:
           type: array
           items:
@@ -667,10 +671,12 @@ components:
               - customer
               - reward_applied
               - created_at
+          description: Referral records for this customer.
         payment_method:
           anyOf:
             - {}
             - type: "null"
+          description: The customer's default payment method.
       required:
         - id
         - name
@@ -1411,6 +1417,10 @@ paths:
 
         @param billingControls - Billing controls for the customer (auto
         top-ups, etc.) (optional)
+
+        @param expand - Fields to expand in the returned customer response, such
+        as subscriptions.plan, purchases.plan, balances.feature, or
+        flags.feature. (optional)
       tags:
         - customers
       requestBody:
@@ -1537,6 +1547,9 @@ paths:
                   type: array
                   items:
                     type: string
+                  description: Fields to expand in the returned customer response, such as
+                    subscriptions.plan, purchases.plan, balances.feature, or
+                    flags.feature.
               required:
                 - customer_id
               title: GetOrCreateCustomerParams
@@ -7706,8 +7719,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -7715,15 +7730,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities
@@ -7736,8 +7756,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -7745,15 +7767,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities
@@ -8400,8 +8427,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -8409,15 +8438,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities
@@ -8430,8 +8464,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -8439,15 +8475,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities
@@ -9576,8 +9617,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -9585,15 +9628,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities
@@ -9606,8 +9654,10 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                          description: The ID of the plan affected by this preview change.
                         plan:
                           $ref: "#/components/schemas/Plan"
+                          description: The full plan object if it was expanded in the response.
                         feature_quantities:
                           type: array
                           items:
@@ -9615,15 +9665,20 @@ paths:
                             properties:
                               feature_id:
                                 type: string
+                                description: The ID of the adjustable feature included in this change.
                               quantity:
                                 type: number
+                                description: The quantity that will apply for this feature in the change.
                             required:
                               - feature_id
                               - quantity
+                          description: The feature quantity selections associated with this plan change.
                         effective_at:
                           anyOf:
                             - type: number
                             - type: "null"
+                          description: When this change takes effect, in milliseconds since the Unix
+                            epoch, or null if it applies immediately.
                       required:
                         - plan_id
                         - feature_quantities

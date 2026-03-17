@@ -84,7 +84,7 @@ export default function BetterAuthUseAutumnPage() {
   const [setupPaymentSuccessUrl, setSetupPaymentSuccessUrl] = useState("");
   const [setupPaymentPlanId, setSetupPaymentPlanId] = useState("");
   const [checkoutSessionParams, setCheckoutSessionParams] = useState(
-    '{\n  "billing_address_collection": "required",\n  "automatic_tax": { "enabled": true }\n}',
+    '{\n  "billing_address_collection": "required"}',
   );
 
   const planIdInputId = useId();

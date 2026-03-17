@@ -1,7 +1,7 @@
 {
 	"name": "autumn-js",
 	"description": "Autumn JS Library",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"repository": "github:useautumn/autumn",
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
@@ -32,6 +32,16 @@
 			"types": "./dist/backend/index.d.ts",
 			"require": "./dist/backend/index.js",
 			"import": "./dist/backend/index.mjs"
+		},
+		"./express": {
+			"types": "./dist/backend/adapters/express.d.ts",
+			"require": "./dist/backend/adapters/express.js",
+			"import": "./dist/backend/adapters/express.mjs"
+		},
+		"./webStandard": {
+			"types": "./dist/backend/adapters/webStandard.d.ts",
+			"require": "./dist/backend/adapters/webStandard.js",
+			"import": "./dist/backend/adapters/webStandard.mjs"
 		},
 		"./hono": {
 			"types": "./dist/backend/adapters/hono.d.ts",
@@ -65,6 +75,12 @@
 			],
 			"better-auth": [
 				"./dist/better-auth/index.d.ts"
+			],
+			"express": [
+				"./dist/backend/adapters/express.d.ts"
+			],
+			"webStandard": [
+				"./dist/backend/adapters/webStandard.d.ts"
 			]
 		}
 	},
@@ -84,21 +100,23 @@
 		"zod": "^4.0.0"
 	},
 	"devDependencies": {
-		"@useautumn/sdk": "workspace:*",
 		"@tanstack/react-query": "catalog:",
+		"@types/express": "^5.0.6",
 		"@types/node": "^22.15.32",
 		"@types/react": "^19",
+		"@typescript/native-preview": "catalog:",
+		"@useautumn/sdk": "workspace:*",
 		"esbuild-plugin-path-alias": "^1.0.7",
 		"hono": "^4.7.9",
 		"next": "^15.2.3",
 		"react-dom": "^19.1.0",
 		"tsup": "^8.4.0",
-		"typescript": "^5.8.3",
-		"@typescript/native-preview": "catalog:"
+		"typescript": "^5.8.3"
 	},
 	"peerDependencies": {
 		"better-auth": "^1.3.17",
 		"better-call": "^1.0.12",
+		"express": "^5.2.1",
 		"hono": "^4.0.0",
 		"next": "^14.0.0 || ^15.0.0",
 		"react": "^18.0.0 || ^19.0.0"
@@ -117,6 +135,9 @@
 			"optional": true
 		},
 		"next": {
+			"optional": true
+		},
+		"express": {
 			"optional": true
 		}
 	}

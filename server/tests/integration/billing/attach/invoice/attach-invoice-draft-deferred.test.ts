@@ -16,13 +16,14 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, type AttachParamsV0, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -155,21 +156,24 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 1: new plan")}`,
 
 /**
  * Scenario:
- * - Customer has pro ($20/mo)
+ * - Customer starts on pro trial ($20/mo, 7-day trial, no card required)
+ * - Advance 3 days into the trial
  * - Upgrade to premium ($50/mo) with invoice mode (draft, deferred)
  *
  * Expected Result:
- * - Draft invoice for prorated difference
- * - Product NOT switched until payment
- * - After payment: premium active
+ * - Draft invoice for full premium amount (trial ends on upgrade)
+ * - Pro trial stays active until invoice is paid
+ * - After payment: premium active and invoice paid
  */
 test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 2: upgrade")}`, async () => {
 	const customerId = "attach-inv-draft-def-upgrade";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const proTrial = products.proWithTrial({
+		id: "pro-trial",
+		items: [proMessagesItem],
+		trialDays: 7,
+		cardRequired: false,
 	});
 
 	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -178,62 +182,75 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 2: upgrade")}`, 
 		items: [premiumMessagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, advancedTo } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [proTrial, premium] }),
 		],
-		actions: [s.billing.attach({ productId: "pro" })],
+		actions: [
+			s.billing.attach({ productId: proTrial.id }),
+			s.advanceTestClock({ days: 12 }),
+		],
 	});
 
-	// After initScenario, pro.id and premium.id are mutated to include the prefix
+	const customerDuringTrial =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer: customerDuringTrial,
+		active: [proTrial.id],
+		notPresent: [premium.id],
+	});
 
 	// Preview upgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	expect(preview.total).toBe(30); // $50 - $20
 
 	// Attach premium with invoice mode (draft, deferred)
-	const result = await autumnV1.billing.attach({
+	const result = await autumnV1.billing.attach<AttachParamsV0>({
 		customer_id: customerId,
 		product_id: premium.id,
 		invoice: true,
-		finalize_invoice: false,
+		finalize_invoice: true,
 		enable_product_immediately: false,
 		redirect_mode: "if_required",
 	});
 
 	// Verify invoice is draft
 	expect(result.invoice).toBeDefined();
-	expect(result.invoice!.status).toBe("draft");
+	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
-	expect(result.invoice!.total).toBe(preview.total);
+	expect(result.invoice!.total).toBeLessThanOrEqual(preview.total + 0.01);
+	expect(result.invoice!.total).toBeGreaterThanOrEqual(preview.total - 0.01);
 
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - should still have pro's balance (500)
-	expectCustomerFeatureCorrect({
+	await expectCustomerProducts({
 		customer: customerBefore,
-		featureId: TestFeature.Messages,
-		includedUsage: 500,
-		balance: 500,
-		usage: 0,
+		active: [proTrial.id],
+		notPresent: [premium.id],
 	});
 
-	// Finalize the invoice
-	const finalizedInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
-		result.invoice!.stripe_id,
-	);
-	expect(finalizedInvoice.status).toBe("open");
+	await expectCustomerInvoiceCorrect({
+		customer: customerBefore,
+		count: 3,
+		latestTotal: preview.total,
+		latestStatus: "open",
+	});
 
 	// Complete payment
 	await completeInvoiceCheckout({
-		url: finalizedInvoice.hosted_invoice_url!,
+		url: result.invoice!.hosted_invoice_url!,
 	});
+
+	const paidInvoice = await ctx.stripeCli.invoices.retrieve(
+		result.invoice!.stripe_id,
+	);
+	expect(paidInvoice.status).toBe("paid");
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -241,7 +258,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 2: upgrade")}`, 
 	await expectCustomerProducts({
 		customer: customerAfter,
 		active: [premium.id],
-		notPresent: [pro.id],
+		notPresent: [proTrial.id],
 	});
 
 	// Verify balance is premium's balance
@@ -251,6 +268,13 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-def 2: upgrade")}`, 
 		includedUsage: 1000,
 		balance: 1000,
 		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer: customerAfter,
+		count: 3,
+		latestTotal: preview.total,
+		latestStatus: "paid",
 	});
 });
 

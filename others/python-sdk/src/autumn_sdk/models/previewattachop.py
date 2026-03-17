@@ -1237,28 +1237,38 @@ class PreviewAttachNextCycle(BaseModel):
 
 class PreviewAttachIncomingFeatureQuantityTypedDict(TypedDict):
     feature_id: str
+    r"""The ID of the adjustable feature included in this change."""
     quantity: float
+    r"""The quantity that will apply for this feature in the change."""
 
 
 class PreviewAttachIncomingFeatureQuantity(BaseModel):
     feature_id: str
+    r"""The ID of the adjustable feature included in this change."""
 
     quantity: float
+    r"""The quantity that will apply for this feature in the change."""
 
 
 class PreviewAttachIncomingTypedDict(TypedDict):
     plan_id: str
+    r"""The ID of the plan affected by this preview change."""
     feature_quantities: List[PreviewAttachIncomingFeatureQuantityTypedDict]
+    r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
+    r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
     plan: NotRequired[PlanTypedDict]
 
 
 class PreviewAttachIncoming(BaseModel):
     plan_id: str
+    r"""The ID of the plan affected by this preview change."""
 
     feature_quantities: List[PreviewAttachIncomingFeatureQuantity]
+    r"""The feature quantity selections associated with this plan change."""
 
     effective_at: Nullable[float]
+    r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
     plan: Optional[Plan] = None
 
@@ -1290,28 +1300,38 @@ class PreviewAttachIncoming(BaseModel):
 
 class PreviewAttachOutgoingFeatureQuantityTypedDict(TypedDict):
     feature_id: str
+    r"""The ID of the adjustable feature included in this change."""
     quantity: float
+    r"""The quantity that will apply for this feature in the change."""
 
 
 class PreviewAttachOutgoingFeatureQuantity(BaseModel):
     feature_id: str
+    r"""The ID of the adjustable feature included in this change."""
 
     quantity: float
+    r"""The quantity that will apply for this feature in the change."""
 
 
 class PreviewAttachOutgoingTypedDict(TypedDict):
     plan_id: str
+    r"""The ID of the plan affected by this preview change."""
     feature_quantities: List[PreviewAttachOutgoingFeatureQuantityTypedDict]
+    r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
+    r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
     plan: NotRequired[PlanTypedDict]
 
 
 class PreviewAttachOutgoing(BaseModel):
     plan_id: str
+    r"""The ID of the plan affected by this preview change."""
 
     feature_quantities: List[PreviewAttachOutgoingFeatureQuantity]
+    r"""The feature quantity selections associated with this plan change."""
 
     effective_at: Nullable[float]
+    r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
     plan: Optional[Plan] = None
 
