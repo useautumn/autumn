@@ -267,6 +267,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach trial 3: explicit free_trial
 		customer,
 		productId: pro.id,
 		trialEndsAt: advancedTo + ms.days(14),
+		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
 	expectCustomerFeatureCorrect({

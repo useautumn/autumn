@@ -4,6 +4,7 @@ import type {
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
 import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
@@ -49,7 +50,7 @@ export const buildStripeCheckoutSessionAction = ({
 	// 4. Trial handling (only for subscription mode)
 	const trialEnd =
 		mode === "subscription" && trialContext?.trialEndsAt
-			? msToSeconds(trialContext.trialEndsAt)
+			? msToSeconds(addMinutes(trialContext.trialEndsAt, 10).getTime())
 			: undefined;
 
 	// 5. Build subscription_data (only for subscription mode)
