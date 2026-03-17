@@ -74,6 +74,20 @@ export const scenarioSections: Array<ScenarioSection> = [
         description: "Validate better-auth plugin routing.",
         status: "ready",
       },
+      {
+        id: "better-auth-use-list-plans",
+        title: "useListPlans",
+        href: "/scenarios/better-auth/use-list-plans",
+        description: "Inspect plans list through better-auth routes.",
+        status: "ready",
+      },
+      {
+        id: "better-auth-use-autumn",
+        title: "useAutumn",
+        href: "/scenarios/better-auth/use-autumn",
+        description: "Test attach/check helpers with better-auth routing.",
+        status: "ready",
+      },
     ],
   },
   {

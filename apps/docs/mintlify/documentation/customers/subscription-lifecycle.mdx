@@ -253,3 +253,146 @@ When a new plan is enabled, you can control what happens to existing feature usa
 - If `reset_usage_when_enabled = true`: They get 500 credits
 - If `reset_usage_when_enabled = false`: They get 480 credits (500 - 20 used)
 </Info>
+
+## Carry-over on plan upgrades
+
+When a customer upgrades plans, you can preserve their unused balances or account for their existing usage. Two parameters on [`billing.attach`](/api-reference/billing/attach) give you fine-grained control over what happens to consumable features during an immediate upgrade.
+
+<Note>
+Carry-over only works with **immediate** upgrades (`planSchedule: "immediate"` or default upgrade behavior). Scheduled plan changes and downgrades do not support carry-over.
+</Note>
+
+### Carrying over unused balances
+
+Use `carryOverBalances` to preserve a customer's remaining balance from the old plan. The unused credits are added as a one-off balance on the new plan, so the customer doesn't lose what they've already paid for.
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+  },
+});
+```
+
+```tsx React
+const { attach } = useCustomer();
+
+await attach({
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+  },
+});
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="enterprise",
+    carry_over_balances={
+        "enabled": True,
+    },
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "enterprise",
+    "carry_over_balances": {
+      "enabled": true
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Info>
+**Example:** A customer on Pro has 300 of 1,000 credits remaining. They upgrade to Enterprise (2,000 credits/month). With `carryOverBalances` enabled, the 300 unused credits carry forward — giving them 2,300 credits on the new plan. The carried-over balance expires at the next reset or end of cycle.
+</Info>
+
+### Carrying over prior usage
+
+Use `carryOverUsages` to deduct prior usage from the new plan's allowance, preventing customers from getting a free reset on upgrade.
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverUsages: {
+    enabled: true,
+  },
+});
+```
+
+```tsx React
+const { attach } = useCustomer();
+
+await attach({
+  planId: "enterprise",
+  carryOverUsages: {
+    enabled: true,
+  },
+});
+```
+
+```python Python
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="enterprise",
+    carry_over_usages={
+        "enabled": True,
+    },
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "enterprise",
+    "carry_over_usages": {
+      "enabled": true
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Info>
+**Example:** A customer on Pro has used 700 of 1,000 credits this month. They upgrade to Enterprise (2,000 credits/month). With `carryOverUsages` enabled, 700 usage is deducted from the new allowance — giving them 1,300 remaining instead of a full 2,000.
+</Info>
+
+### Scoping to specific features
+
+Both parameters accept an optional `featureIds` array to limit carry-over to specific features:
+
+```typescript TypeScript
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  carryOverBalances: {
+    enabled: true,
+    featureIds: ["credits", "api_calls"],
+  },
+  carryOverUsages: {
+    enabled: true,
+    featureIds: ["credits"],
+  },
+});
+```
+
+<Note>
+Only consumable metered features support carry-over. Boolean features, unlimited features, and allocated (non-consumable) features are not eligible.
+</Note>

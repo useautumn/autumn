@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "atmn": "bunx atmn",
     "dev": "infisical run --env=dev -- next dev -p 3002",
     "build": "next build",
     "start": "next start",
@@ -11,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.check.json --noEmit --skipLibCheck"
   },
   "dependencies": {
+    "atmn": "workspace:*",
     "autumn-js": "workspace:*",
     "better-auth": "^1.4.12",
     "kysely": "^0.28.11",

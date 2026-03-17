@@ -6,8 +6,14 @@ import {
 	eventsAggregateParamsSchema,
 	eventsListParamsSchema,
 	listPlansParamsSchema,
+	multiAttachParamsSchema,
 	openCustomerPortalParamsSchema,
+	previewAttachParamsSchema,
+	previewMultiAttachParamsSchema,
+	previewUpdateParamsSchema,
 	redeemReferralCodeParamsSchema,
+	setupPaymentParamsSchema,
+	updateSubscriptionParamsSchema,
 } from "../../../generated";
 import type { RouteDefinition, RouteName } from "../types";
 import { backendError, backendSuccess, sanitizeBody } from "../utils";
@@ -61,14 +67,17 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "previewAttach",
 		sdkMethod: (autumn, args) => autumn.billing.previewAttach(args),
+		bodySchema: previewAttachParamsSchema,
 	},
 	{
 		route: "updateSubscription",
 		sdkMethod: (autumn, args) => autumn.billing.update(args),
+		bodySchema: updateSubscriptionParamsSchema,
 	},
 	{
 		route: "previewUpdateSubscription",
 		sdkMethod: (autumn, args) => autumn.billing.previewUpdate(args),
+		bodySchema: previewUpdateParamsSchema,
 	},
 	{
 		route: "openCustomerPortal",
@@ -88,14 +97,17 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "multiAttach",
 		sdkMethod: (autumn, args) => autumn.billing.multiAttach(args),
+		bodySchema: multiAttachParamsSchema,
 	},
 	{
 		route: "previewMultiAttach",
 		sdkMethod: (autumn, args) => autumn.billing.previewMultiAttach(args),
+		bodySchema: previewMultiAttachParamsSchema,
 	},
 	{
 		route: "setupPayment",
 		sdkMethod: (autumn, args) => autumn.billing.setupPayment(args),
+		bodySchema: setupPaymentParamsSchema,
 	},
 	{
 		route: "listPlans",
@@ -111,6 +123,6 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "aggregateEvents",
 		sdkMethod: (autumn, args) => autumn.events.aggregate(args),
-		bodySchema: eventsAggregateParamsSchema.omit({ customerId: true }),
+		bodySchema: eventsAggregateParamsSchema,
 	},
 ];

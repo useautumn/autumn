@@ -121,15 +121,16 @@ const startProbe = (): void => {
 	probeInterval = setInterval(async () => {
 		if (!probeClient) return;
 
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		try {
 			await Promise.race([
 				probeClient`SELECT 1`,
-				new Promise<never>((_, reject) =>
-					setTimeout(
+				new Promise<never>((_, reject) => {
+					timeoutId = setTimeout(
 						() => reject(new Error("probe timeout")),
 						PROBE_TIMEOUT_MS,
-					),
-				),
+					);
+				}),
 			]);
 
 			const now = Date.now();
@@ -157,6 +158,8 @@ const startProbe = (): void => {
 				);
 			}
 			firstProbeSuccessAt = null;
+		} finally {
+			clearTimeout(timeoutId);
 		}
 	}, PROBE_INTERVAL_MS);
 };
@@ -187,12 +190,13 @@ export const executeWithHealthTracking = async ({
 	useReplica?: boolean;
 }): Promise<{
 	result: Record<string, unknown>[];
-	isDegraded: boolean;
+	usedReplica: boolean;
 }> => {
 	const isDegraded = state === PgHealth.Degraded;
-	const forceReplica = useReplica && dbReplica;
-	const effectiveDb =
-		forceReplica || (isDegraded && dbReplica) ? dbReplica! : db;
+	const usedReplica =
+		(isDegraded && dbReplica !== null) ||
+		(useReplica === true && dbReplica !== null);
+	const effectiveDb = usedReplica ? dbReplica! : db;
 
 	// Only track health for critical pool queries — prevents general pool
 	// saturation from falsely triggering degradation while critical pool is fine.
@@ -211,7 +215,7 @@ export const executeWithHealthTracking = async ({
 			}
 		}
 
-		return { result, isDegraded };
+		return { result, usedReplica };
 	} catch (error) {
 		if (shouldTrackHealth) {
 			recordDbFailure();
