@@ -1,5 +1,6 @@
 import { Text } from "ink";
 import Spinner from "ink-spinner";
+import type React from "react";
 
 interface StatusLineProps {
 	status: "pending" | "loading" | "success" | "error";
