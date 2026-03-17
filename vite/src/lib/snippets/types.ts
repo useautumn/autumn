@@ -16,13 +16,7 @@ export type SnippetId =
 	| "track";
 
 export type FrontendStack = "nextjs" | "rr7" | "vite" | "general";
-export type BackendStack =
-	| "nextjs"
-	| "express"
-	| "hono"
-	| "elysia"
-	| "rr7"
-	| "general";
+export type BackendStack = "nextjs" | "hono" | "general";
 export type AuthProvider = "betterauth" | "supabase" | "clerk" | "other";
 export type CustomerType = "user" | "org";
 
@@ -56,7 +50,7 @@ export interface GetSnippetParams {
 	dynamicParams?: DynamicSnippetParams;
 }
 
-export type StepId = "customer" | "payments" | "usage";
+export type StepId = "customer" | "usage";
 
 export const STEP_SNIPPETS: Record<
 	StepId,
@@ -69,14 +63,10 @@ export const STEP_SNIPPETS: Record<
 			"backend-setup",
 			"add-provider",
 			"create-customer",
+			"attach",
 		],
-		other: ["install", "env-setup", "create-customer"],
-		curl: ["env-setup", "create-customer"],
-	},
-	payments: {
-		react: ["attach"],
-		other: ["billing-state", "checkout"],
-		curl: ["billing-state", "checkout"],
+		other: ["install", "env-setup", "create-customer", "attach"],
+		curl: ["env-setup", "create-customer", "attach"],
 	},
 	usage: {
 		react: ["check", "track"],

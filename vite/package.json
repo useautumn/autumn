@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@ai-sdk/react": "^3.0.25",
 		"@autumn/shared": "workspace:*",
+		"atmn": "workspace:*",
 		"@better-auth/dash": "catalog:",
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",

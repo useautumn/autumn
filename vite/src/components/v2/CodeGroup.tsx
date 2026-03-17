@@ -109,7 +109,7 @@ interface CodeGroupContentProps
 const CodeGroupContent = React.forwardRef<
 	React.ElementRef<typeof TabsPrimitive.Content>,
 	CodeGroupContentProps
->(({ className, children, ...props }, ref) => {
+>(({ className, children, copyText: _copyText, ...props }, ref) => {
 	return (
 		<TabsPrimitive.Content
 			ref={ref}

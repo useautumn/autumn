@@ -1,12 +1,12 @@
 ---
 title: Recurring Plans
-description: Set up recurring subscription plans for your customers
+description: Grant customers a recurring allowance of consumable features like messages, credits, or API calls
 ---
 
-Subscriptions are the most common way to charge customers on a recurring basis. A subscription plan has a fixed base price that customers pay at a regular interval (monthly, quarterly, annually), and can include features with usage limits or additional usage-based charges.
+Recurring plans let you grant customers a fixed allowance of consumable features -- like messages, credits, or API calls -- that resets each billing period. Customers pay a base price at a regular interval (monthly, quarterly, annually), and receive a fresh grant of their included features at the start of each cycle.
 
 > **Example** <br />
-> A project management tool offers a Pro plan at $20/month that includes 10 seats, 50GB storage, and SSO access.
+> An AI writing tool offers a Pro plan at $20/month that grants 1,000 messages per month. When the billing period resets, the customer's message balance is reset back to 1,000.
 
 ## Setting up
 
@@ -25,12 +25,6 @@ export const messages = feature({
   consumable: true,
 });
 
-export const sso = feature({
-  id: 'sso',
-  name: 'SSO',
-  type: 'boolean',
-});
-
 export const pro = plan({
   id: 'pro',
   name: 'Pro',
@@ -40,9 +34,6 @@ export const pro = plan({
       featureId: messages.id,
       included: 1000,
       reset: { interval: 'month' },
-    }),
-    item({
-      featureId: sso.id,
     }),
   ],
 });
@@ -57,7 +48,7 @@ Push changes with `atmn push`.
 2. Click **Create Plan**
 3. Set a **name** and **ID** for the plan (e.g., "Pro", `pro`)
 4. Under **Price**, set the amount and select a billing interval (`month`, `quarter`, `semi_annual`, or `year`)
-5. Add features to the plan — set grant amounts, reset intervals, and prices as needed. These will be granted to the customer once they purchase the plan.
+5. Add consumable features to the plan -- set grant amounts and reset intervals. These will be granted to the customer each billing period once they subscribe.
 6. Save your changes
 
 </Tab>
@@ -182,30 +173,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
           "expiresAt": null
         }
       ]
-    },
-    "sso": {
-      "featureId": "sso",
-      "granted": 1,
-      "remaining": 1,
-      "usage": 0,
-      "unlimited": false,
-      "overageAllowed": false,
-      "maxPurchase": null,
-      "nextResetAt": null,
-      "breakdown": [
-        {
-          "id": "cus_ent_def456",
-          "planId": "pro",
-          "includedGrant": 1,
-          "prepaidGrant": 0,
-          "remaining": 1,
-          "usage": 0,
-          "unlimited": false,
-          "reset": null,
-          "price": null,
-          "expiresAt": null
-        }
-      ]
     }
   }
 }
@@ -215,8 +182,8 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 When a subscription is created, Autumn:
 
 1. Creates a Stripe subscription with the plan's prices
-2. Provisions [balances](/documentation/concepts/balances) for each feature in the plan
-3. Starts the billing cycle based on the plan's interval
+2. Grants the customer their included [balances](/documentation/concepts/balances) for each consumable feature
+3. Starts the billing cycle -- balances reset automatically at the start of each period
 
 ## Billing intervals
 
@@ -233,6 +200,15 @@ Plans support the following billing intervals:
 You can create a separate plan for each interval you want to support. For example, if you want to support monthly and annual plans, you can create a `pro_monthly` plan and a `pro_annual` plan.
 
 You can also configure a custom `interval_count` to charge at non-standard intervals (e.g., every 2 months).
+
+### Billing interval vs reset interval
+
+The billing interval (how often the customer is charged) and the reset interval (how often their feature balance replenishes) are configured independently. They don't have to match.
+
+> **Example** <br />
+> A plan billed at $200/year could grant 100 messages/month. The customer pays once a year, but their message balance resets to 100 every month.
+
+This is useful when you want to offer an annual discount while still metering usage on a shorter cycle.
 
 ## Managing subscriptions
 

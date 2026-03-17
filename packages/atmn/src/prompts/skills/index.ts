@@ -1,10 +1,10 @@
 // Skills are YAML-frontmatter markdown files that follow the SKILLS standard
 // for AI coding assistants (Claude, Cursor, OpenCode, etc.)
 
-import autumnCreatingCustomersContent from "./autumn-creating-customers.js";
-import autumnAcceptingPaymentsContent from "./autumn-accepting-payments.js";
+import autumnBillingPageContent from "./autumn-billing-page.js";
+import autumnGatingContent from "./autumn-gating.js";
 import autumnModellingPricingPlansContent from "./autumn-modelling-pricing-plans.js";
-import autumnTrackingMeteredUsageContent from "./autumn-tracking-metered-usage.js";
+import autumnSetupContent from "./autumn-setup.js";
 
 export interface Skill {
 	id: string;
@@ -15,16 +15,22 @@ export interface Skill {
 
 export const skills: Skill[] = [
 	{
-		id: "autumn-creating-customers",
-		name: "Creating Customers",
-		description: "Set up Autumn billing integration",
-		content: autumnCreatingCustomersContent,
+		id: "autumn-setup",
+		name: "Setup and Payments",
+		description: "Install SDK, create customers, and add payment flow",
+		content: autumnSetupContent,
 	},
 	{
-		id: "autumn-accepting-payments",
-		name: "Accepting Payments",
-		description: "Add checkout, plan changes, and billing UI",
-		content: autumnAcceptingPaymentsContent,
+		id: "autumn-gating",
+		name: "Checking and Tracking",
+		description: "Add usage tracking and feature gating",
+		content: autumnGatingContent,
+	},
+	{
+		id: "autumn-billing-page",
+		name: "Build Your Billing Page",
+		description: "Display billing state, plan switching, and subscriptions",
+		content: autumnBillingPageContent,
 	},
 	{
 		id: "autumn-modelling-pricing-plans",
@@ -32,12 +38,11 @@ export const skills: Skill[] = [
 		description: "Design pricing models with autumn.config.ts",
 		content: autumnModellingPricingPlansContent,
 	},
-	{
-		id: "autumn-tracking-metered-usage",
-		name: "Tracking Metered Usage",
-		description: "Add usage tracking and feature gating",
-		content: autumnTrackingMeteredUsageContent,
-	},
 ];
 
-export { autumnCreatingCustomersContent, autumnAcceptingPaymentsContent, autumnModellingPricingPlansContent, autumnTrackingMeteredUsageContent };
+export {
+	autumnSetupContent,
+	autumnGatingContent,
+	autumnBillingPageContent,
+	autumnModellingPricingPlansContent,
+};
