@@ -43,7 +43,7 @@ describe("cleanTiersForMode", () => {
 		expect(result.tiers![1].flat_amount).toBe(100);
 	});
 
-	test("per_unit mode nulls out flat_amount and preserves amount", () => {
+	test("per_unit mode clears flat_amount and preserves amount", () => {
 		const item = makeItem({
 			tiers: [
 				makeTier({ to: 100, amount: 1.5, flat_amount: 50 }),
@@ -55,9 +55,9 @@ describe("cleanTiersForMode", () => {
 
 		expect(result.tiers).toHaveLength(2);
 		expect(result.tiers![0].amount).toBe(1.5);
-		expect(result.tiers![0].flat_amount).toBeNull();
+		expect(result.tiers![0].flat_amount).toBeUndefined();
 		expect(result.tiers![1].amount).toBe(2);
-		expect(result.tiers![1].flat_amount).toBeNull();
+		expect(result.tiers![1].flat_amount).toBeUndefined();
 	});
 
 	test("returns item unchanged when tiers is null", () => {
@@ -69,8 +69,8 @@ describe("cleanTiersForMode", () => {
 	test("flat mode handles tiers where flat_amount is null/undefined", () => {
 		const item = makeItem({
 			tiers: [
-				makeTier({ to: 100, amount: 3, flat_amount: null }),
-				makeTier({ to: Infinite, amount: 0, flat_amount: null }),
+				makeTier({ to: 100, amount: 3 }),
+				makeTier({ to: Infinite, amount: 0 }),
 			],
 		});
 

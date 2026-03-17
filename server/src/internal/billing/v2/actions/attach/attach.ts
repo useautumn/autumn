@@ -76,10 +76,6 @@ export async function attach({
 		params,
 	});
 
-	console.log(
-		"[attach.ts] BILLING CONTEXT CHECKOUT MODE:",
-		billingContext.checkoutMode,
-	);
 	if (preview) {
 		return {
 			billingContext,
