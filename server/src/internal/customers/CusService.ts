@@ -24,6 +24,7 @@ import {
 	type Table,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -94,7 +95,11 @@ export class CusService {
 					return result as unknown as FullCustomer;
 				}
 
-				const result = await db.execute(query);
+				const { result, usedReplica } = await executeWithHealthTracking({
+					db,
+					query,
+					useReplica: ctx.testOptions?.useReplica,
+				});
 
 				if (!result || result.length === 0) {
 					if (allowNotFound) {
@@ -121,11 +126,15 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
-				// Lazy reset stale entitlements (mutates fullCus in-memory + writes DB)
-				await resetCustomerEntitlements({
-					fullCus,
-					ctx,
-				});
+				// Skip reset when reading from replica — it writes to primary,
+				// and replica data is stale anyway. When degraded WITHOUT a replica
+				// (falls back to primary), the reset should still run.
+				if (!usedReplica) {
+					await resetCustomerEntitlements({
+						fullCus,
+						ctx,
+					});
+				}
 
 				return fullCus;
 			},
