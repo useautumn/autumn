@@ -52,6 +52,10 @@ export const applyResetResults = async ({
 	const skippedSet = new Set(skipped);
 	const clearingMap: Record<string, RolloverClearingInfo> = {};
 
+	// Use the general pool for rollover DB operations to avoid consuming
+	// critical pool connections during lazy resets.
+	const generalCtx = { ...ctx, db: ctx.dbGeneral };
+
 	for (const { cusEntId, result } of computed) {
 		const original = findCusEnt({ fullCus, cusEntId });
 		if (!original) continue;
@@ -71,7 +75,7 @@ export const applyResetResults = async ({
 			// update the in-memory array to include the new rollovers.
 			const { rollovers, deletedIds, overwrites } =
 				await RolloverService.clearExcessRollovers({
-					ctx,
+					ctx: generalCtx,
 					newRows: result.rolloverInsert.rows,
 					fullCusEnt: original,
 				});
@@ -84,7 +88,7 @@ export const applyResetResults = async ({
 			// Loser: the winning request already inserted the rollover and
 			// cleared excess. Re-read from DB to get the authoritative state.
 			original.rollovers = await RolloverService.getCurrentRollovers({
-				ctx,
+				ctx: generalCtx,
 				cusEntID: cusEntId,
 			});
 		}
