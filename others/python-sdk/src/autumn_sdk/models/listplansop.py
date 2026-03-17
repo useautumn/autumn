@@ -635,40 +635,61 @@ ListPlansEnv = Union[
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
-ListPlansScenario = Union[
+ListPlansStatus = Union[
     Literal[
-        "scheduled",
         "active",
-        "new",
-        "renew",
-        "upgrade",
-        "downgrade",
-        "cancel",
-        "expired",
-        "past_due",
+        "scheduled",
     ],
     UnrecognizedStr,
 ]
-r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+r"""The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation."""
+
+
+ListPlansAttachAction = Union[
+    Literal[
+        "activate",
+        "upgrade",
+        "downgrade",
+        "none",
+        "purchase",
+    ],
+    UnrecognizedStr,
+]
+r"""The action that would occur if this plan were attached to the customer."""
 
 
 class ListPlansCustomerEligibilityTypedDict(TypedDict):
-    scenario: ListPlansScenario
-    r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+    attach_action: ListPlansAttachAction
+    r"""The action that would occur if this plan were attached to the customer."""
     trial_available: NotRequired[bool]
-    r"""Whether a free trial is available for this customer."""
+    r"""Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false."""
+    status: NotRequired[ListPlansStatus]
+    r"""The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation."""
+    canceling: NotRequired[bool]
+    r"""Whether the customer's active instance of this plan is set to cancel."""
+    trialing: NotRequired[bool]
+    r"""Whether the customer is currently on a free trial of this plan."""
 
 
 class ListPlansCustomerEligibility(BaseModel):
-    scenario: ListPlansScenario
-    r"""The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade)."""
+    attach_action: ListPlansAttachAction
+    r"""The action that would occur if this plan were attached to the customer."""
 
     trial_available: Optional[bool] = None
-    r"""Whether a free trial is available for this customer."""
+    r"""Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false."""
+
+    status: Optional[ListPlansStatus] = None
+    r"""The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation."""
+
+    canceling: Optional[bool] = None
+    r"""Whether the customer's active instance of this plan is set to cancel."""
+
+    trialing: Optional[bool] = None
+    r"""Whether the customer is currently on a free trial of this plan."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["trial_available"])
+        optional_fields = set(["trial_available", "status", "canceling", "trialing"])
         serialized = handler(self)
         m = {}
 

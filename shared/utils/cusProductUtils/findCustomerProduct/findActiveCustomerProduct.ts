@@ -48,13 +48,14 @@ export const findActiveCustomerProductById = ({
 
 	const cusProducts = fullCus.customer_products;
 
-	const activeMainCusProduct = cusProducts.find((customerProduct) => {
+	const activeCusProduct = cusProducts.find((customerProduct) => {
 		const { valid } = cp(customerProduct)
+			.hasActiveStatus()
 			.hasProductId({ productId })
 			.onEntity({ internalEntityId });
 
 		return valid;
 	});
 
-	return activeMainCusProduct;
+	return activeCusProduct;
 };

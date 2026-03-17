@@ -120,11 +120,16 @@ export const listPlansFreeTrialSchema = z.object({
 
 export const listPlansEnvSchema = openEnumSchema;
 
-export const listPlansScenarioSchema = openEnumSchema;
+export const listPlansStatusSchema = openEnumSchema;
+
+export const listPlansAttachActionSchema = openEnumSchema;
 
 export const listPlansCustomerEligibilitySchema = z.object({
 	trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
-	scenario: listPlansScenarioSchema,
+	status: z.union([listPlansStatusSchema, z.undefined()]).optional(),
+	canceling: z.union([z.boolean(), z.undefined()]).optional(),
+	trialing: z.union([z.boolean(), z.undefined()]).optional(),
+	attachAction: listPlansAttachActionSchema,
 });
 
 export const listPlansListSchema = z.object({

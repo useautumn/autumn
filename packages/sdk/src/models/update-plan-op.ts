@@ -703,33 +703,53 @@ export const UpdatePlanEnv = {
 export type UpdatePlanEnv = OpenEnum<typeof UpdatePlanEnv>;
 
 /**
- * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
-export const UpdatePlanScenario = {
-  Scheduled: "scheduled",
+export const UpdatePlanStatus = {
   Active: "active",
-  New: "new",
-  Renew: "renew",
-  Upgrade: "upgrade",
-  Downgrade: "downgrade",
-  Cancel: "cancel",
-  Expired: "expired",
-  PastDue: "past_due",
+  Scheduled: "scheduled",
 } as const;
 /**
- * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
-export type UpdatePlanScenario = OpenEnum<typeof UpdatePlanScenario>;
+export type UpdatePlanStatus = OpenEnum<typeof UpdatePlanStatus>;
+
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export const UpdatePlanAttachAction = {
+  Activate: "activate",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  None: "none",
+  Purchase: "purchase",
+} as const;
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export type UpdatePlanAttachAction = OpenEnum<typeof UpdatePlanAttachAction>;
 
 export type UpdatePlanCustomerEligibility = {
   /**
-   * Whether a free trial is available for this customer.
+   * Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
    */
   trialAvailable?: boolean | undefined;
   /**
-   * The attach scenario for this customer (e.g. new_subscription, upgrade, downgrade).
+   * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
    */
-  scenario: UpdatePlanScenario;
+  status?: UpdatePlanStatus | undefined;
+  /**
+   * Whether the customer's active instance of this plan is set to cancel.
+   */
+  canceling?: boolean | undefined;
+  /**
+   * Whether the customer is currently on a free trial of this plan.
+   */
+  trialing?: boolean | undefined;
+  /**
+   * The action that would occur if this plan were attached to the customer.
+   */
+  attachAction: UpdatePlanAttachAction;
 };
 
 /**
@@ -1562,10 +1582,16 @@ export const UpdatePlanEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanEnv);
 
 /** @internal */
-export const UpdatePlanScenario$inboundSchema: z.ZodMiniType<
-  UpdatePlanScenario,
+export const UpdatePlanStatus$inboundSchema: z.ZodMiniType<
+  UpdatePlanStatus,
   unknown
-> = openEnums.inboundSchema(UpdatePlanScenario);
+> = openEnums.inboundSchema(UpdatePlanStatus);
+
+/** @internal */
+export const UpdatePlanAttachAction$inboundSchema: z.ZodMiniType<
+  UpdatePlanAttachAction,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanAttachAction);
 
 /** @internal */
 export const UpdatePlanCustomerEligibility$inboundSchema: z.ZodMiniType<
@@ -1574,11 +1600,15 @@ export const UpdatePlanCustomerEligibility$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     trial_available: types.optional(types.boolean()),
-    scenario: UpdatePlanScenario$inboundSchema,
+    status: types.optional(UpdatePlanStatus$inboundSchema),
+    canceling: types.optional(types.boolean()),
+    trialing: types.optional(types.boolean()),
+    attach_action: UpdatePlanAttachAction$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
       "trial_available": "trialAvailable",
+      "attach_action": "attachAction",
     });
   }),
 );

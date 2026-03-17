@@ -49,7 +49,7 @@ export const handleListPlansV2 = createRoute({
 					product: p,
 					features,
 					fullCus: customer ? customer : undefined,
-					db,
+					ctx,
 					currency: org.default_currency || undefined,
 				}),
 			);

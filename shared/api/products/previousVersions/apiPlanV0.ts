@@ -35,7 +35,7 @@ export const ApiPlanV0Schema = z.object({
 	customer_eligibility: z
 		.object({
 			trial_available: z.boolean().optional(),
-			scenario: z.enum(AttachScenario),
+			scenario: z.enum(AttachScenario).optional(),
 		})
 		.optional(),
 });
