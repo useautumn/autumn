@@ -83,13 +83,13 @@ describe("cleanTiersForMode", () => {
 
 	test("per_unit mode handles tiers that already have no flat_amount", () => {
 		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 5, flat_amount: null })],
+			tiers: [makeTier({ to: 100, amount: 5 })],
 		});
 
 		const result = cleanTiersForMode({ item, mode: "per_unit" });
 
 		expect(result.tiers![0].amount).toBe(5);
-		expect(result.tiers![0].flat_amount).toBeNull();
+		expect(result.tiers![0].flat_amount).toBeUndefined();
 	});
 
 	test("does not mutate the original item", () => {
