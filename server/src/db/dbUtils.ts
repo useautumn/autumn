@@ -69,6 +69,37 @@ export const isRetryableDbError = ({ error }: { error: unknown }): boolean => {
 	return false;
 };
 
+/**
+ * Connection-drop errors — transient errors from the server closing the connection.
+ * These happen during planned maintenance (DB upgrades, restarts) and resolve
+ * automatically when postgres.js reconnects on the next query.
+ * These should NOT count toward the health monitor's failure threshold.
+ */
+const CONNECTION_DROP_CODES = new Set([
+	"CONNECTION_CLOSED",
+	"CONNECTION_ENDED",
+	"CONNECTION_DESTROYED",
+	"ECONNRESET",
+	"ECONNREFUSED",
+	"57P01", // admin_shutdown
+	"57P02", // crash_shutdown
+]);
+
+/**
+ * Returns true if the error is a transient connection drop (server closed the
+ * connection, DB restarting, etc.). These are excluded from health monitor
+ * tracking because they resolve on reconnect and don't indicate sustained overload.
+ */
+export const isConnectionDropError = ({
+	error,
+}: {
+	error: unknown;
+}): boolean => {
+	const code = getErrorCode({ error });
+	if (!code) return false;
+	return CONNECTION_DROP_CODES.has(code);
+};
+
 /** Throws if DATABASE_URL looks like a production database. Single source of truth for this check. */
 export const assertNotProductionDb = () => {
 	const url = process.env.DATABASE_URL || "";

@@ -1,6 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type postgres from "postgres";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { isConnectionDropError } from "./dbUtils.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
 
 export enum PgHealth {
@@ -217,7 +218,9 @@ export const executeWithHealthTracking = async ({
 
 		return { result, usedReplica };
 	} catch (error) {
-		if (shouldTrackHealth) {
+		// Connection drops (DB restart, upgrade) are transient — don't count
+		// toward degradation. They resolve on reconnect automatically.
+		if (shouldTrackHealth && !isConnectionDropError({ error })) {
 			recordDbFailure();
 		}
 		throw error;
