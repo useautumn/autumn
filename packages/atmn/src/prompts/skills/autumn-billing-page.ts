@@ -138,7 +138,8 @@ When building a pricing page, you need to know what each plan means for the curr
 
 Pass a \`customerId\` when listing plans and each plan will include a \`customerEligibility\` object:
 
-- **\`scenario\`** -- The attach scenario: \`new\`, \`upgrade\`, \`downgrade\`, \`active\`, \`scheduled\`, \`cancel\`, \`expired\`, \`past_due\`, or \`renew\`
+- **\`attachAction\`** -- What happens when this plan is attached: \`"activate"\`, \`"upgrade"\`, \`"downgrade"\`, \`"purchase"\`, or \`"none"\`
+- **\`status\`** -- The customer's current relationship to this plan: \`"active"\`, \`"scheduled"\`, or undefined if none
 - **\`trialAvailable\`** -- Whether the customer is eligible for the plan's free trial
 
 ### React
@@ -146,11 +147,24 @@ Pass a \`customerId\` when listing plans and each plan will include a \`customer
 \`\`\`tsx
 import { useListPlans, useCustomer } from "autumn-js/react";
 
-const buttonText = {
-  new: "Get started",
+const labels = {
+  activate: "Subscribe",
   upgrade: "Upgrade",
   downgrade: "Downgrade",
-  active: "Current plan",
+  purchase: "Purchase",
+};
+
+const getLabel = (eligibility) => {
+
+  if (eligibility?.attachAction === "none") {
+    return eligibility.status === "scheduled" ? "Plan Scheduled" : "Current plan";
+  }
+
+  if (labels[eligibility?.attachAction]) {
+    return labels[eligibility.attachAction];
+  }
+
+  return "Get started";
 };
 
 export default function PricingPage() {
@@ -160,10 +174,10 @@ export default function PricingPage() {
   return plans?.map((plan) => (
     <button
       key={plan.id}
-      disabled={plan.customerEligibility?.scenario === "active"}
-      onClick={() => attach({ planId: plan.id })}
+      disabled={plan.customerEligibility?.attachAction === "none"}
+      onClick={() => attach({ planId: plan.id, redirectMode: "always" })}
     >
-      {buttonText[plan.customerEligibility?.scenario] ?? "Get started"}
+      {getLabel(plan.customerEligibility)}
     </button>
   ));
 }
@@ -179,8 +193,8 @@ const { list: plans } = await autumn.plans.list({
 });
 
 for (const plan of plans) {
-  console.log(plan.name, plan.customerEligibility?.scenario);
-  // e.g. "Free" "downgrade", "Pro" "active", "Enterprise" "upgrade"
+  console.log(plan.name, plan.customerEligibility?.attachAction);
+  // e.g. "Free" "downgrade", "Pro" "none", "Enterprise" "upgrade"
 }
 \`\`\`
 
@@ -190,7 +204,7 @@ for (const plan of plans) {
 plans = await autumn.plans.list(customer_id="user_123")
 
 for plan in plans.list:
-    print(plan.name, plan.customer_eligibility.scenario)
+    print(plan.name, plan.customer_eligibility.attach_action)
 \`\`\`
 
 ---
