@@ -1,6 +1,7 @@
 import {
 	type CheckParams,
 	CustomerExpand,
+	CustomerNotFoundError,
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
@@ -19,12 +20,14 @@ export const getOrCreateCachedFullCustomer = async ({
 	ctx,
 	params,
 	source,
+	skipCreate = false,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
 	source?: string;
+	skipCreate?: boolean;
 }): Promise<FullCustomer> => {
 	const { skipCache, logger } = ctx;
 	const {
@@ -49,6 +52,10 @@ export const getOrCreateCachedFullCustomer = async ({
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
 			setCache = false;
+		}
+
+		if (skipCreate && !fullCustomer) {
+			throw new CustomerNotFoundError({ customerId });
 		}
 	}
 
