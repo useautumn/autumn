@@ -125,17 +125,16 @@ app.use(
 ```
 
 ```typescript Elysia
-import { cors } from "@elysiajs/cors";
 import { autumnHandler } from "autumn-js/webStandard";
 import { Elysia } from "elysia";
 
 const app = new Elysia()
     .mount(
         autumnHandler({
-            identify() {
+            identify: async (request) => {
                 // get the user from your auth provider (example: better-auth)
                 const session = await auth.api.getSession({
-                    headers: c.req.raw.headers,
+                    headers: request.headers,
                 });
 
                 return {
@@ -157,12 +156,12 @@ import { autumnHandler } from "autumn-js/express";
 
 const app = express();
 
-// Body-parser is expected to be used before the autumn handler.
+// Body parser is required before the Autumn handler
 app.use(express.json());
 app.use(
     "/api/autumn",
     autumnHandler({
-        identify() {
+        identify: async (req) => {
             // get the user from your auth provider (example: better-auth)
             const session = await auth.api.getSession({
                 headers: req.headers,
