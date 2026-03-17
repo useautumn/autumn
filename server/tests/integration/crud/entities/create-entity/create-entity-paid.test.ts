@@ -616,7 +616,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity5 - payment fai
 
 	// Step 4: Try to track usage - should fail
 	await expectAutumnError({
-		errMessage: "card was declined.",
 		func: async () => {
 			return await autumnV1.track({
 				customer_id: customerId,

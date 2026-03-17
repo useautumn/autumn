@@ -2,17 +2,11 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Default product behavior verification tests",
+	description: "Entity create/delete seat billing tests",
 	tier: "domain",
 	paths: [
-		"integration/billing/attach/params/carry-over-balances",
-		"integration/billing/attach/params/carry-over-usages",
-		// "integration/billing/attach/checkout/autumn-checkout/autumn-checkout-basic.test.ts",
-		// "integration/billing/attach/immediate-switch/paid-features/immediate-switch-prepaid-no-options-basic.test.ts",
-		// "integration/billing/attach/immediate-switch/paid-features/immediate-switch-prepaid-no-options-advanced.test.ts",
-		// "integration/billing/attach/free-trial/override/trial-override-basic.test.ts",
-		// "integration/billing/attach/free-trial/override/trial-override-merge.test.ts",
-		// "integration/billing/attach/free-trial/trial-upgrade.test.ts",
-		// "integration/billing/attach/free-trial/trial-entity-upgrade.test.ts",
+		"integration/crud/entities/create-entity/create-entity-paid.test.ts",
+		"integration/crud/entities/create-entity/create-entity-race.test.ts",
+		"advanced/usageLimit/usageLimit1.test.ts",
 	],
 };
