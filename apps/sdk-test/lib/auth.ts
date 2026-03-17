@@ -15,7 +15,7 @@ export const auth = betterAuth({
     organization(),
     autumn({
       secretKey: process.env.AUTUMN_SECRET_KEY,
-      baseURL: process.env.NEXT_PUBLIC_URL,
+      autumnURL: "http://localhost:8080",
       customerScope: "user_and_organization",
     }),
   ],

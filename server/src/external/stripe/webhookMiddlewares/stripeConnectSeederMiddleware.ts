@@ -65,6 +65,7 @@ export const stripeConnectSeederMiddleware = async (
 		}
 		return c.json({ error: message }, 400);
 	}
+	// const event = (await c.req.json()) as Stripe.Event;
 
 	// Step 4: Get org from account ID
 	const accountId = event.account;

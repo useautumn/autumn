@@ -17,8 +17,26 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 	{ sdkFile: "attach-op.ts", outputFile: "attachSchemas.ts" },
 	{
+		sdkFile: "preview-attach-op.ts",
+		outputFile: "previewAttachSchemas.ts",
+	},
+	{
+		sdkFile: "billing-update-op.ts",
+		outputFile: "updateSubscriptionSchemas.ts",
+	},
+	{
+		sdkFile: "preview-update-op.ts",
+		outputFile: "previewUpdateSubscriptionSchemas.ts",
+	},
+	{
 		sdkFile: "open-customer-portal-op.ts",
 		outputFile: "openCustomerPortalSchemas.ts",
+	},
+	{ sdkFile: "setup-payment-op.ts", outputFile: "setupPaymentSchemas.ts" },
+	{ sdkFile: "multi-attach-op.ts", outputFile: "multiAttachSchemas.ts" },
+	{
+		sdkFile: "preview-multi-attach-op.ts",
+		outputFile: "previewMultiAttachSchemas.ts",
 	},
 	{ sdkFile: "list-plans-op.ts", outputFile: "listPlansSchemas.ts" },
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },

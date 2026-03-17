@@ -133,7 +133,7 @@ export type RateLimitConfig = {
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.General]: {
 		name: "general",
-		limit: 1000,
+		limit: 100,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
