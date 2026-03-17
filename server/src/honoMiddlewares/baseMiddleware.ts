@@ -76,6 +76,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
 			skipWebhooks: c.req.header("x-skip-webhooks") === "true",
 			keepInternalFields: c.req.header("x-strip-internal") === "false",
+			useReplica: c.req.header("x-use-replica") === "true",
 		},
 	});
 

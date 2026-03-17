@@ -42,6 +42,7 @@ export type RequestContext = {
 		skipWebhooks?: boolean;
 		eventId?: string;
 		keepInternalFields?: boolean;
+		useReplica?: boolean;
 	};
 };
 

@@ -48,6 +48,14 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	connectTimeout: 5,
 });
 
+// -- Replica pool: used as fallback when primary is degraded --
+// Only created if DATABASE_REPLICA_URL is configured.
+const replicaResult = process.env.DATABASE_REPLICA_URL
+	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: 2 })
+	: null;
+export const dbReplica = replicaResult?.db ?? null;
+export const clientReplica = replicaResult?.client ?? null;
+
 // Backward-compatible exports — existing code that imports `db` or `client`
 // gets the general pool automatically.
 export const client = clientGeneral;
