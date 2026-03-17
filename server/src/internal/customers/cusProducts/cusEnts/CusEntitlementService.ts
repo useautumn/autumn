@@ -175,7 +175,7 @@ export class CusEntService {
 				)
 				.leftJoin(
 					customerProducts,
-					eq(customerEntitlements.customer_product_id, customerProducts.id),
+					sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
 				)
 				.where(
 					and(

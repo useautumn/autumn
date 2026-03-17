@@ -1,6 +1,7 @@
 import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { type Metadata, MetadataType, metadata } from "@autumn/shared";
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
+import type { Stripe } from "stripe";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
@@ -55,7 +56,14 @@ export const handleVoidInvoiceCron = async ({
 
 	if (!metadata.stripe_invoice_id) return;
 
-	const invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
+	let invoice: Stripe.Invoice | undefined;
+	try {
+		invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
+	} catch {
+		logger.warn(`Failed to retrieve invoice ${metadata.stripe_invoice_id}`);
+		return;
+	}
+
 	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
 
@@ -84,6 +92,17 @@ export const handleVoidInvoiceCron = async ({
 				id: metadata.id,
 			});
 		} catch (error) {
+			logger.error(`Error voiding invoice: ${error}`);
+			if (
+				error instanceof Error &&
+				error.message.includes("cannot be voided")
+			) {
+				await MetadataService.delete({
+					db,
+					id: metadata.id,
+				});
+				return;
+			}
 			logger.error(`Error voiding invoice: ${error}`);
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
