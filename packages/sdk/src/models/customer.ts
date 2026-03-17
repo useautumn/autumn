@@ -523,11 +523,29 @@ export type Customer = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: Flags };
+  /**
+   * Invoices for this customer.
+   */
   invoices?: Array<Invoice> | undefined;
+  /**
+   * Entities associated with this customer.
+   */
   entities?: Array<Entity> | undefined;
+  /**
+   * Trial usage history for this customer.
+   */
   trialsUsed?: Array<TrialsUsed> | undefined;
+  /**
+   * Rewards earned or applied for this customer.
+   */
   rewards?: Rewards | null | undefined;
+  /**
+   * Referral records for this customer.
+   */
   referrals?: Array<Referral> | undefined;
+  /**
+   * The customer's default payment method.
+   */
   paymentMethod?: any | null | undefined;
 };
 
