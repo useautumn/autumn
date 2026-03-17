@@ -27,6 +27,7 @@ import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceC
 import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange";
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges";
 import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges";
+import { V2_1_PlanChanges } from "@api/products/changes/V2.1_PlanChanges";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange";
@@ -43,6 +44,10 @@ import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
+
+export const V2_2_CHANGES: VersionChangeConstructor[] = [
+	V2_1_PlanChanges, // Transforms Plan TO V2.1 format from V2.2 format
+];
 
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_PlanChanges, // Transforms Plan TO V2.0 format from V2.1 format
@@ -95,6 +100,10 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_2,
+		changes: V2_2_CHANGES,
+	});
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_1,
 		changes: V2_1_CHANGES,
