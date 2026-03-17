@@ -1,6 +1,31 @@
 import type Stripe from "stripe";
 import { buildCheckoutSessionMetadata } from "./buildCheckoutSessionMetadata";
 
+/**
+ * Deep-merges subscription_data so user-provided fields (e.g. metadata)
+ * are preserved alongside Autumn-internal fields (e.g. trial_end).
+ */
+const mergeSubscriptionData = ({
+	paramsSubscriptionData,
+	userSubscriptionData,
+}: {
+	paramsSubscriptionData?: Stripe.Checkout.SessionCreateParams.SubscriptionData;
+	userSubscriptionData?: Stripe.Checkout.SessionCreateParams.SubscriptionData;
+}): Stripe.Checkout.SessionCreateParams.SubscriptionData | undefined => {
+	if (!paramsSubscriptionData && !userSubscriptionData) {
+		return undefined;
+	}
+
+	return {
+		...(userSubscriptionData ?? {}),
+		...(paramsSubscriptionData ?? {}),
+		metadata: {
+			...(userSubscriptionData?.metadata ?? {}),
+			...(paramsSubscriptionData?.metadata ?? {}),
+		},
+	};
+};
+
 export const buildCheckoutSessionParams = ({
 	params,
 	checkoutSessionParams,
@@ -43,6 +68,14 @@ export const buildCheckoutSessionParams = ({
 			paramsMetadata: params.metadata,
 			checkoutSessionMetadata: checkoutSessionParams?.metadata,
 			autumnMetadataId,
+		}),
+		subscription_data: mergeSubscriptionData({
+			paramsSubscriptionData: params.subscription_data as
+				| Stripe.Checkout.SessionCreateParams.SubscriptionData
+				| undefined,
+			userSubscriptionData: checkoutSessionParams?.subscription_data as
+				| Stripe.Checkout.SessionCreateParams.SubscriptionData
+				| undefined,
 		}),
 	};
 };
