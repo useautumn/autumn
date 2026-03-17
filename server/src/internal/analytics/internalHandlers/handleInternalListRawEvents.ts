@@ -8,6 +8,7 @@ import { eventActions } from "../actions/eventActions.js";
 const InternalListRawEventsSchema = z.object({
 	interval: z.string().nullish(),
 	customer_id: z.string().nullish(),
+	entity_id: z.string().optional(),
 });
 
 /**
@@ -18,7 +19,7 @@ export const handleInternalListRawEvents = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { interval, customer_id } = c.req.valid("json");
+		const { interval, customer_id, entity_id } = c.req.valid("json");
 
 		let aggregateAll = false;
 		let customer: FullCustomer | undefined;
@@ -32,6 +33,7 @@ export const handleInternalListRawEvents = createRoute({
 				ctx,
 				idOrInternalId: customer_id,
 				withSubs: true,
+				withEntities: true,
 			});
 
 			if (!customer) {
@@ -47,6 +49,7 @@ export const handleInternalListRawEvents = createRoute({
 			ctx,
 			params: {
 				customer_id: customer?.id ?? undefined,
+				entity_id: entity_id,
 				interval: interval ?? undefined,
 				customer,
 				aggregateAll,
