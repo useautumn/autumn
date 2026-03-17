@@ -5,9 +5,9 @@ import type {
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
 import { addDays } from "date-fns";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildCheckoutSessionParams } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
 import { createStripeSessionWithCardFallback } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/createStripeSessionWithCardFallback";
 import {
 	insertMetadataFromBillingPlan,
@@ -41,25 +41,18 @@ export const executeStripeCheckoutSessionAction = async ({
 	});
 
 	// 2. Build full checkout params (merge variable + static params)
-	// Stripe doesn't allow both `discounts` and `allow_promotion_codes` simultaneously
-	const hasPreAppliedDiscounts =
-		!!checkoutSessionAction.params.discounts?.length;
-
-	const fullParams: Stripe.Checkout.SessionCreateParams = {
-		...checkoutSessionAction.params,
-
-		// Static params
+	const fullParams = buildCheckoutSessionParams({
+		params: checkoutSessionAction.params,
+		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,
 		currency: orgToCurrency({ org }),
-		allow_promotion_codes: hasPreAppliedDiscounts ? undefined : true,
-		saved_payment_method_options: { payment_method_save: "enabled" },
-		invoice_creation:
+		defaultAllowPromotionCodes: true,
+		defaultSavedPaymentMethodOptions: { payment_method_save: "enabled" },
+		defaultInvoiceCreation:
 			checkoutSessionAction.params.mode === "payment"
 				? { enabled: true }
 				: undefined,
-
-		// Link to metadata
-		metadata: { autumn_metadata_id: metadata.id },
-	};
+		autumnMetadataId: metadata.id,
+	});
 
 	// 3. Create checkout session with card-type fallback
 	const stripeCheckoutSession = await createStripeSessionWithCardFallback({

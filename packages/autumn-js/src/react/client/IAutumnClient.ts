@@ -1,12 +1,12 @@
 import type {
 	AggregateEventsResponse,
 	AttachResponse,
-	MultiAttachResponse,
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
 	ListEventsResponse,
 	ListPlansResponse,
+	MultiAttachResponse,
 	OpenCustomerPortalResponse,
 	PreviewAttachResponse,
 	PreviewMultiAttachResponse,
@@ -20,6 +20,7 @@ import type {
 	CreateReferralCodeParams,
 	GetOrCreateCustomerClientParams,
 	ListEventsParams,
+	ListPlansParams,
 	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
@@ -45,9 +46,7 @@ export interface IAutumnClient {
 	previewUpdateSubscription: (
 		params: PreviewUpdateSubscriptionParams,
 	) => Promise<PreviewUpdateResponse>;
-	multiAttach: (
-		params: MultiAttachParams,
-	) => Promise<MultiAttachResponse>;
+	multiAttach: (params: MultiAttachParams) => Promise<MultiAttachResponse>;
 	previewMultiAttach: (
 		params: PreviewMultiAttachParams,
 	) => Promise<PreviewMultiAttachResponse>;
@@ -61,7 +60,7 @@ export interface IAutumnClient {
 	redeemReferralCode: (
 		params: RedeemReferralCodeParams,
 	) => Promise<RedeemReferralCodeResponse>;
-	listPlans: () => Promise<ListPlansResponse>;
+	listPlans: (params?: ListPlansParams) => Promise<ListPlansResponse>;
 	listEvents: (params: ListEventsParams) => Promise<ListEventsResponse>;
 	aggregateEvents: (
 		params: AggregateEventsParams,

@@ -134,6 +134,9 @@ export type GetOrCreateCustomerParams = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: GetOrCreateCustomerBillingControls | undefined;
+  /**
+   * Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
+   */
   expand?: Array<string> | undefined;
 };
 
