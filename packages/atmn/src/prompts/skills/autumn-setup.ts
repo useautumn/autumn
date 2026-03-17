@@ -24,21 +24,22 @@ Before making changes, detect:
 - **Language**: TypeScript/JavaScript, Python, or other
 - **If TS/JS - Framework**: Next.js, Hono, or other
 - **If TS/JS - React frontend?**: Check for React in package.json
+- **Customer model**: Look at the auth setup to determine whether customers map to individual users or organizations. Check for org/team/workspace models in the codebase.
 
-Then ask the user:
+If it's clear from the codebase (e.g., there's an org model and team-based auth), state your assumption. If it's ambiguous, ask the user:
 
-1. **Should Autumn customers be individual users, or organizations?**
-   - **Users (B2C)**: Each user has their own plan and limits
-   - **Organizations (B2B)**: Plans and limits are shared across an org
-
-Tell the user what you detected, which path you'll follow, and what you'll be adding Autumn to.
+> **Should Autumn customers be individual users, or organizations?**
+> - **Users (B2C)**: Each user has their own plan and limits
+> - **Organizations (B2B)**: Plans and limits are shared across an org
 
 ## Step 2: Create a Plan and Confirm
 
-Before writing any integration code, create a short plan summarizing what you'll do and present it to the user. For example:
+Before writing any integration code, present a short plan to the user covering:
 
-- Which files you'll create or modify
+- What stack/framework you detected
+- Whether customers are users or orgs (and why you think so)
 - Which path you're following (React fullstack vs backend-only)
+- Which files you'll create or modify
 - Where the handler / provider / customer creation will go
 - Where the payment flow will be wired up
 
