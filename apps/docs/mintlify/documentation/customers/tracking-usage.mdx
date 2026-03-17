@@ -7,6 +7,10 @@ When customers use features in your product, you'll need to record their usage s
 
 There are two ways to record usage: sending events or setting usage directly.
 
+<Note>
+**API version `2026-04-01` and later:** The customer must be [created](/documentation/customers/creating-customers) before calling `track`. If the customer doesn't exist, the endpoint returns a `customer_not_found` error instead of auto-creating one. Earlier API versions auto-create customers on first `track` call.
+</Note>
+
 ## Sending Events
 
 The track route is recommended for tracking consumable features, like AI messages, credits or API calls. Each time a customer uses a feature, send an event to count their usage.
