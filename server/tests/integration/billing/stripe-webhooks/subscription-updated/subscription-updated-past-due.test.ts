@@ -112,8 +112,8 @@ test.concurrent(`${chalk.yellowBright("sub.updated 2: invoice mode upgrade, prod
 				enableProductImmediately: true,
 				finalizeInvoice: true,
 			}),
-			// s.removePaymentMethod(),
-			// s.attachPaymentMethod({ type: "fail" }),
+			s.removePaymentMethod(),
+			s.attachPaymentMethod({ type: "fail" }),
 			s.advanceTestClock({ weeks: 6 }),
 		],
 	});
