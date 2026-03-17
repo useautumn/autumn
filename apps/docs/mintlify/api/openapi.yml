@@ -509,14 +509,10 @@ components:
                   - type: "null"
                 description: The unique identifier of the entity
               name:
-                anyOf:
-                  - type: string
-                  - type: "null"
-                description: The name of the entity
+                type: string
+                description: The display name of the entity
               customer_id:
-                anyOf:
-                  - type: string
-                  - type: "null"
+                type: string
                 description: The customer ID this entity belongs to
               feature_id:
                 anyOf:
