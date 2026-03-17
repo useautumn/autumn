@@ -2,6 +2,7 @@ import {
 	type LanguageModel,
 	type LanguageModelV1Middleware,
 	wrapLanguageModel,
+	LanguageModelUsage
 } from "ai";
 import type { Autumn } from "autumn-js";
 
@@ -27,12 +28,7 @@ export const withTokenTracking = ({
 	const modelName =
 		typeof model === "string" ? model : `${model.provider}/${model.modelId}`;
 
-	const trackUsage = async (usage?: {
-		promptTokens?: number;
-		completionTokens?: number;
-	}) => {
-		if (!usage) return;
-
+	const trackUsage = async (usage: Omit<LanguageModelUsage, "totalTokens">) => {
 		try {
 			// @ts-ignore Not pushed to prod yet, so this isn't found. remove once in sdk
 			await autumn.balances.trackTokens({
