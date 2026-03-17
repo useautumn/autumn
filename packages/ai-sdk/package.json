@@ -1,0 +1,35 @@
+{
+  "name": "@useautumn/ai-sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "AI SDK for Autumn",
+  "main": "./dist/sdk/index.js",
+  "module": "./dist/sdk/index.mjs",
+  "types": "./dist/sdk/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/sdk/index.d.ts",
+      "require": "./dist/sdk/index.js",
+      "import": "./dist/sdk/index.mjs"
+    }
+  },
+  "scripts": {
+    "ts": "tsgo --noEmit --skipLibCheck",
+    "build": "rm -rf dist && tsup",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "ai": "^4.0.0"
+  },
+  "devDependencies": {
+    "@openrouter/ai-sdk-provider": "^2.3.0",
+    "@types/node": "^24.9.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
+  }
+}
