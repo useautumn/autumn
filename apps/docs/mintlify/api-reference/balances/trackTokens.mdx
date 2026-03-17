@@ -18,7 +18,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ```typescript Track AI token usage
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  model: "claude-opus-4-6",
+  modelId: "claude-opus-4-6",
   inputTokens: 1000,
   outputTokens: 500
 });
@@ -28,7 +28,7 @@ await autumn.balances.trackTokens({
 await autumn.balances.trackTokens({
   customerId: "cus_123",
   featureId: "ai_credits",
-  model: "claude-haiku-4-5",
+  modelId: "claude-haiku-4-5",
   inputTokens: 2000,
   outputTokens: 1000
 });
@@ -37,7 +37,7 @@ await autumn.balances.trackTokens({
 ```typescript Track with properties
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  model: "gpt-4o",
+  modelId: "gpt-4o",
   inputTokens: 500,
   outputTokens: 200,
   properties: {

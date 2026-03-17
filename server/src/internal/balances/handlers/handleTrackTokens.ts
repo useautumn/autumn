@@ -41,7 +41,7 @@ export const handleTrackTokens = createRoute({
 				statusCode: 400,
 			});
 		}
-		const rawModelName = body.model;
+		const rawModelName = body.model_id;
 
 		const featureDeductions: FeatureDeduction[] = [
 			{

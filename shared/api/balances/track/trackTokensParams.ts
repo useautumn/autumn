@@ -13,7 +13,7 @@ export const TrackTokensParamsSchema = z.object({
 		description:
 			"The ID of the AI credit system feature. Auto-detected if omitted.",
 	}),
-	model: z.string().meta({
+	model_id: z.string().meta({
 		description: "The AI model name (e.g., 'claude-opus-4-6').",
 	}),
 	input_tokens: z.number().int().nonnegative().meta({
