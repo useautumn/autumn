@@ -16,108 +16,91 @@ const NODE_SNIPPETS: Record<string, Snippet> = {
 			"Generate a secret key in the Autumn dashboard and add it to your environment variables.",
 		filename: ".env",
 		language: "bash",
-		code: "AUTUMN_SECRET_KEY=am_sk_...",
+		code: "AUTUMN_SECRET_KEY=am_sk_test_42424242...",
 	},
 	"create-customer": {
 		id: "create-customer",
 		title: "Create a customer",
 		description:
-			"Use the SDK to create a customer when a user signs up or when needed.",
+			"Use the SDK to create a customer when a user signs up or when needed. Autumn will auto-enable any free plan.",
 		filename: "customers.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
-		
-// Create a customer
-await autumn.customers.create({
-  id: "user_or_org_id_from_auth",
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_or_org_id_from_auth",
   name: "John Doe",
   email: "john@example.com",
 });`,
 	},
 	attach: {
 		id: "attach",
-		title: "Attach a product",
-		description: "Subscribe a customer to a product/plan.",
+		title: "Attach a plan",
+		description:
+			"Subscribe a customer to a plan. Returns a payment URL to redirect to.",
 		filename: "billing.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-// Attach a product to a customer
-await autumn.attach({
+const response = await autumn.billing.attach({
   customerId: "user_or_org_id_from_auth",
-  productId: "pro_plan",
-  successUrl: "http://localhost:3000",
-});`,
+  planId: "pro_plan",
+  redirectMode: "always",
+});
+
+redirect(response.paymentUrl);`,
 	},
 	"billing-state": {
 		id: "billing-state",
 		title: "Get billing state",
 		description:
-			"Use products.list with a customer_id to get products with their billing scenario.",
+			"Use plans.list with a customerId to get plans with their billing scenario.",
 		filename: "billing.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-const buttonText: Record<string, string> = {
-  active: "Current Plan",
-  upgrade: "Upgrade",
-  downgrade: "Downgrade",
-  scheduled: "Scheduled",
-};
-
-const { data } = await autumn.products.list({
+const { list: plans } = await autumn.plans.list({
   customerId: "user_or_org_id_from_auth",
 });
 
-const products = data.list.map((product) => ({
-  id: product.id,
-  name: product.name,
-  buttonText: buttonText[product.scenario] ?? "Subscribe",
-}));`,
+for (const plan of plans) {
+  console.log(plan.name, plan.customerEligibility?.scenario);
+  // e.g. "Free" "downgrade", "Pro" "active", "Enterprise" "upgrade"
+}`,
 	},
 	checkout: {
 		id: "checkout",
 		title: "Handle checkout",
 		description:
-			"Use checkout to initiate payment. Returns a Stripe URL for new customers, or preview data for returning customers.",
+			"Use attach with redirectMode to handle payments. Returns a Stripe URL for new customers, or a confirmation page for returning customers.",
 		filename: "billing.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-const { data } = await autumn.checkout({
+const response = await autumn.billing.attach({
   customerId: "user_or_org_id_from_auth",
-  productId: "pro_plan",
+  planId: "pro_plan",
+  redirectMode: "always",
 });
 
-if (data.url) {
-  // New customer → redirect to Stripe
-  return redirect(data.url);
-}
-
-// Returning customer → return preview for confirmation UI
-console.log("Preview:", data.product, data.total, data.currency);
-
-// After user confirms:
-await autumn.attach({
-  customerId: "user_or_org_id_from_auth",
-  productId: "pro_plan",
-});`,
+// Redirect customer to complete payment or confirm plan change
+redirect(response.paymentUrl);`,
 	},
 	check: {
 		id: "check",
@@ -126,21 +109,24 @@ await autumn.attach({
 			"Verify if a customer can use a feature before allowing access.",
 		filename: "access.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-// Check if customer can use a feature
-const { data } = await autumn.check({
+const { allowed } = await autumn.check({
   customerId: "user_or_org_id_from_auth",
   featureId: "api_calls",
+  requiredBalance: 1,
 });
 
-if (data.allowed) {
-  // Allow the action
-}`,
+if (!allowed) {
+  console.log("Usage limit reached");
+  return;
+}
+
+// Safe to proceed`,
 	},
 	track: {
 		id: "track",
@@ -148,13 +134,12 @@ if (data.allowed) {
 		description: "Record usage events to enforce limits and track consumption.",
 		filename: "usage.ts",
 		language: "typescript",
-		code: `import Autumn from "autumn-js";
+		code: `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "am_sk_test_42424242",
+  secretKey: process.env.AUTUMN_SECRET_KEY,
 });
 
-// Track usage of a feature
 await autumn.track({
   customerId: "user_or_org_id_from_auth",
   featureId: "api_calls",
