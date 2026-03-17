@@ -98,11 +98,14 @@ Metered features have \`granted\`, \`usage\`, and \`remaining\` fields. Use thes
 \`\`\`tsx
 import { useCustomer } from "autumn-js/react";
 
-const { data: customer } = useCustomer();
+const { data: customer, refetch } = useCustomer();
 
 const messages = customer?.balances.messages;
 
 console.log(\\\`\\\${messages?.remaining} / \\\${messages?.granted}\\\`);
+
+// After tracking usage or changing plans, call refetch() to update balances
+await refetch();
 \`\`\`
 
 ### TypeScript
