@@ -166,7 +166,7 @@
     },
     "packages/autumn-js": {
       "name": "autumn-js",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "query-string": "^9.2.2",
         "rou3": "^0.6.1",
