@@ -88,7 +88,7 @@ export const prepareFeatureDeduction = async ({
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
-		await Promise.all(
+		await Promise.all		(
 			cusEnts.map(async (ce) => {
 				const creditCost = await getCreditCost({
 					featureId: feature.id,
@@ -112,16 +112,17 @@ export const prepareFeatureDeduction = async ({
 				const isFreeAllocatedUsageAllowed =
 					isFreeAllocated && overageBehaviour !== "reject";
 
-			return {
-				customer_entitlement_id: ce.id,
-				credit_cost: creditCost,
-				feature_id: ce.entitlement.feature.id,
-				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
-				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
-				max_balance: resetBalance,
-			};
-		});
+				return {
+					customer_entitlement_id: ce.id,
+					credit_cost: creditCost,
+					feature_id: ce.entitlement.feature.id,
+					entity_feature_id: ce.entitlement.entity_feature_id ?? null,
+					usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+					min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
+					max_balance: resetBalance,
+				};
+			}),
+		);
 
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = (
