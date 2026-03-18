@@ -3,6 +3,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 interface CustomerBatchContext {
 	customerId: string;
@@ -222,7 +223,7 @@ class SyncBatchingManagerV2 {
 					cusEntIds,
 					rolloverIds,
 				},
-				messageGroupId: context.customerId,
+				messageGroupId: generateId("msg"),
 				messageDeduplicationId,
 				generateDeduplicationId: false,
 			});
