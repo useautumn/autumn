@@ -25,10 +25,18 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
-		backfill_prepaid_update: z.boolean().optional().meta({
-			description:
-				"If true, rebalances same-feature prepaid balances against existing usage during quantity updates.",
-		}),
+		recalculate_balances: z
+			.object({
+				enabled: z.boolean().meta({
+					description:
+						"If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.",
+				}),
+			})
+			.optional()
+			.meta({
+				description:
+					"Controls whether balances should be recalculated during the subscription update.",
+			}),
 
 		status: z
 			.enum([
@@ -49,6 +57,7 @@ const UPDATE_FIELDS = [
 	"cancel_action",
 	"processor_subscription_id",
 	"no_billing_changes",
+	"recalculate_balances",
 	"status",
 	"redirect_mode",
 ] as const satisfies (keyof z.input<
@@ -63,7 +72,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 		redirect_mode: RedirectModeSchema.optional(),
 	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 		message:
-			"At least one update parameter must be provided (feature_quantities, version, customize, or cancel_action)",
+			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, or recalculate_balances)",
 	});
 
 export type UpdateSubscriptionV1Params = z.infer<

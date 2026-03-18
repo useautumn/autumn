@@ -1,4 +1,4 @@
-import { customerProducts } from "@autumn/shared";
+import { ACTIVE_STATUSES, customerProducts } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
@@ -24,6 +24,7 @@ export const getByExternalIds = async ({
 			and(
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				inArray(customerProducts.external_id, externalIds),
+				inArray(customerProducts.status, ACTIVE_STATUSES),
 			),
 		);
 };

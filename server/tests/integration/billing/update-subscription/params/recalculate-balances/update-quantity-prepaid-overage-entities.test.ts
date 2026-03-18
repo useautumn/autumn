@@ -93,7 +93,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		id: "per-entity-prepaid-overage-increase",
 	});
 
-	const { autumnV2, autumnV2_1, ctx, entities } = await initScenario({
+	const { autumnV2_1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -131,14 +131,16 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 				quantity: increasedQuantity,
 			},
 		],
-		backfill_prepaid_update: true,
+		recalculate_balances: {
+			enabled: true,
+		},
 	});
 
-	const entity1 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[0].id,
 	);
-	const entity2 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity2 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[1].id,
 	);
@@ -175,7 +177,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		id: "per-entity-prepaid-overage-decrease",
 	});
 
-	const { autumnV2, autumnV2_1, ctx, entities } = await initScenario({
+	const { autumnV2_1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -213,14 +215,16 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 				quantity: decreasedQuantity,
 			},
 		],
-		backfill_prepaid_update: true,
+		recalculate_balances: {
+			enabled: true,
+		},
 	});
 
-	const entity1 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[0].id,
 	);
-	const entity2 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity2 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[1].id,
 	);
@@ -257,7 +261,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		id: "entity-product-prepaid-overage-increase",
 	});
 
-	const { autumnV2, autumnV2_1, ctx, entities } = await initScenario({
+	const { autumnV2_1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -304,14 +308,16 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 				quantity: increasedQuantity,
 			},
 		],
-		backfill_prepaid_update: true,
+		recalculate_balances: {
+			enabled: true,
+		},
 	});
 
-	const entity1 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[0].id,
 	);
-	const entity2 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity2 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[1].id,
 	);
@@ -331,11 +337,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		usageBasedUsage: 100,
 	});
 
-	await expectStripeSubscriptionCorrect({
-		ctx,
-		customerId,
-		options: { subCount: 2 },
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities: entity product decrease only adjusts targeted entity")}`, async () => {
@@ -344,7 +346,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		id: "entity-product-prepaid-overage-decrease",
 	});
 
-	const { autumnV2, autumnV2_1, ctx, entities } = await initScenario({
+	const { autumnV2_1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -391,14 +393,16 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 				quantity: decreasedQuantity,
 			},
 		],
-		backfill_prepaid_update: true,
+		recalculate_balances: {
+			enabled: true,
+		},
 	});
 
-	const entity1 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[0].id,
 	);
-	const entity2 = await autumnV2.entities.get<ApiEntityV2>(
+	const entity2 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entities[1].id,
 	);
@@ -418,9 +422,5 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage-entities:
 		usageBasedUsage: 200,
 	});
 
-	await expectStripeSubscriptionCorrect({
-		ctx,
-		customerId,
-		options: { subCount: 2 },
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

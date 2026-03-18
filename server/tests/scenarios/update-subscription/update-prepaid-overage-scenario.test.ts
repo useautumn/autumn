@@ -14,13 +14,13 @@ import chalk from "chalk";
 /**
  * Update Subscription - Prepaid Overage Scenario
  *
- * Baseline scenario for inspecting `backfill_prepaid_update`.
+ * Baseline scenario for inspecting `recalculate_balances`.
  * Starts with a prepaid messages plan, tracks the customer into overage,
- * then updates prepaid quantity with backfill enabled so we can inspect the
+ * then updates prepaid quantity with balance recalculation enabled so we can inspect the
  * before/after customer feature shape.
  */
 
-test(`${chalk.yellowBright("update-subscription: prepaid overage backfill")}`, async () => {
+test(`${chalk.yellowBright("update-subscription: prepaid overage recalculate balances")}`, async () => {
 	const customerId = "update-prepaid-overage";
 	const prepaidMessagesItem = items.prepaidMessages({
 		includedUsage: 100,
@@ -80,7 +80,9 @@ test(`${chalk.yellowBright("update-subscription: prepaid overage backfill")}`, a
 				quantity: 500,
 			},
 		],
-		backfill_prepaid_update: true,
+		recalculate_balances: {
+			enabled: true,
+		},
 	} satisfies UpdateSubscriptionV1ParamsInput;
 
 	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>(

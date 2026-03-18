@@ -18,7 +18,7 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	customerProduct: FullCusProduct; // target customer product
 	defaultProduct?: FullProduct; // for cancel flows
 	cancelAction?: CancelAction; // for cancel flows
-	backfillPrepaidUpdate?: boolean;
+	recalculateBalances?: boolean;
 
 	intent: UpdateSubscriptionIntent;
 }
