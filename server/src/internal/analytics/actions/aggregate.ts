@@ -367,6 +367,7 @@ export const aggregate = async ({
 			bin_size: binSize,
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
 		};
@@ -392,7 +393,6 @@ export const aggregate = async ({
 			endDate,
 			binSize,
 		});
-
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
 		const pipeParams = {
@@ -404,6 +404,7 @@ export const aggregate = async ({
 			bin_size: binSize,
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			entity_id: params.entity_id,
 		};
 
 		const result = await pipes.aggregateSimple(pipeParams);

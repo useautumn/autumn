@@ -10447,6 +10447,10 @@ paths:
                 customer_id:
                   type: string
                   description: Filter events by customer ID
+                entity_id:
+                  type: string
+                  minLength: 1
+                  description: Filter events by entity ID (e.g., per-seat or per-resource)
                 feature_id:
                   anyOf:
                     - type: string
@@ -10569,6 +10573,10 @@ paths:
                   type: string
                   minLength: 1
                   description: Customer ID to aggregate events for
+                entity_id:
+                  type: string
+                  minLength: 1
+                  description: Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
                 feature_id:
                   anyOf:
                     - type: string

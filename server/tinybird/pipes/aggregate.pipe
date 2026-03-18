@@ -27,6 +27,9 @@ SQL >
         {% if defined(customer_id) %}
         AND customer_id = {{ String(customer_id) }}
         {% end %}
+        {% if defined(entity_id) %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
 
 NODE aggregate_by_period
 TYPE endpoint

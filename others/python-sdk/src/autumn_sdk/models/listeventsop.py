@@ -89,6 +89,8 @@ class EventsListParamsTypedDict(TypedDict):
     r"""Number of items to return. Default 100, max 1000."""
     customer_id: NotRequired[str]
     r"""Filter events by customer ID"""
+    entity_id: NotRequired[str]
+    r"""Filter events by entity ID (e.g., per-seat or per-resource)"""
     feature_id: NotRequired[ListEventsFeatureIDTypedDict]
     r"""Filter by specific feature ID(s)"""
     custom_range: NotRequired[ListEventsCustomRangeTypedDict]
@@ -105,6 +107,9 @@ class EventsListParams(BaseModel):
     customer_id: Optional[str] = None
     r"""Filter events by customer ID"""
 
+    entity_id: Optional[str] = None
+    r"""Filter events by entity ID (e.g., per-seat or per-resource)"""
+
     feature_id: Optional[ListEventsFeatureID] = None
     r"""Filter by specific feature ID(s)"""
 
@@ -114,7 +119,14 @@ class EventsListParams(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["offset", "limit", "customer_id", "feature_id", "custom_range"]
+            [
+                "offset",
+                "limit",
+                "customer_id",
+                "entity_id",
+                "feature_id",
+                "custom_range",
+            ]
         )
         serialized = handler(self)
         m = {}

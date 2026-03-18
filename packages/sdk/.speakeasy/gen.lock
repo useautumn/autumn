@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 6b62b7501f08747084a03766dae685ad
+  docChecksum: 905b4053fdfc87c6bb1b7d9768d68413
   docVersion: 2.2.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
   releaseVersion: 0.10.17
   configChecksum: b4221f58c44175fb3ae2ca4ec9e8db6f
 persistentEdits:
-  generation_id: 3a5a41d2-751c-46e2-a969-b140e71ece9f
-  pristine_commit_hash: cd0a938804808b853986d513e551e4c525ddc45f
-  pristine_tree_hash: 3c8eff12e942dcea6a4ff863e0e540d4eb04bb49
+  generation_id: 61d94a85-1a28-4155-80b4-dfb6d724e441
+  pristine_commit_hash: 344db0a088f9c471814e12315bee0851cef630ff
+  pristine_tree_hash: 046b055c68b8369d3860f00f2b07ac267baf9928
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -932,12 +932,12 @@ trackedFiles:
     pristine_git_object: e934594068751ae479bd067c0e9f4533776642e5
   docs/models/events-aggregate-params.md:
     id: 081dcd1094d6
-    last_write_checksum: sha1:8b233f7cbc8b41551b2a6fee6ea970bb69c38f2a
-    pristine_git_object: 5a208edf63e7771c6fed16f614fa16d0f3267af5
+    last_write_checksum: sha1:01544308bf304025332f8c66d3d1c7d94521b82e
+    pristine_git_object: 11516f073b08bf41a470ea3de91da032e6b37fae
   docs/models/events-list-params.md:
     id: b743a4817767
-    last_write_checksum: sha1:ce78329b5fa5e47a5902953216b6342c5828cdb9
-    pristine_git_object: 2386a615094cde13c26394cf4ed00fd1c066cdfc
+    last_write_checksum: sha1:5398e590e9563862ff7aea3056fd8f9218f17b6b
+    pristine_git_object: 032d2464b6ff1e4b2f1a35591a2014edf4ed21e6
   docs/models/expiry-duration-type.md:
     id: 3a927f275515
     last_write_checksum: sha1:c3248609945783ebe4b18bff68bec64bb1699694
@@ -3084,8 +3084,8 @@ trackedFiles:
     pristine_git_object: f3a8de6c021de59c991707946cd294596cae954d
   src/models/aggregate-events-op.ts:
     id: 4b7c98b18e2b
-    last_write_checksum: sha1:f4fac86a8eaa22de6ee94d139021b6160e09c543
-    pristine_git_object: 112c7189b409fcf39b701080bd77772cc8b324f8
+    last_write_checksum: sha1:d556605ed1e327cd5cc2ac47a84d4afa75b2aa67
+    pristine_git_object: 5f22a7b1faad7424d2844aad9231b9c4dc568501
   src/models/attach-op.ts:
     id: 83ed65c26ab4
     last_write_checksum: sha1:e8536a781d7c257fe11f1e1901746919fcd07346
@@ -3192,8 +3192,8 @@ trackedFiles:
     pristine_git_object: ffe79c5317c42623b35792a1466c59fbdc82c2e3
   src/models/list-events-op.ts:
     id: 82a9f364bb21
-    last_write_checksum: sha1:dbbceca3a470d8263f50a3b39d313e19c9a213b5
-    pristine_git_object: e0896884a153ad9a340f72825e0efd819c039268
+    last_write_checksum: sha1:2d409806ca68c98d4a9a5a1031d591f831065c75
+    pristine_git_object: 681f141082fcc808701343148048e1bda63d033a
   src/models/list-features-op.ts:
     id: d9fcd707ca8f
     last_write_checksum: sha1:1b631462ea2042d3b2cf3db4c584d7538411667d

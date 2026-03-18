@@ -64,6 +64,10 @@ export type EventsAggregateParams = {
    */
   customerId: string;
   /**
+   * Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
+   */
+  entityId?: string | undefined;
+  /**
    * Feature ID(s) to aggregate events for
    */
   featureId: string | Array<string>;
@@ -176,6 +180,7 @@ export function aggregateEventsCustomRangeToJSON(
 /** @internal */
 export type EventsAggregateParams$Outbound = {
   customer_id: string;
+  entity_id?: string | undefined;
   feature_id: string | Array<string>;
   group_by?: string | undefined;
   range?: string | undefined;
@@ -190,6 +195,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     customerId: z.string(),
+    entityId: z.optional(z.string()),
     featureId: smartUnion([z.string(), z.array(z.string())]),
     groupBy: z.optional(z.string()),
     range: z.optional(Range$outboundSchema),
@@ -201,6 +207,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
+      entityId: "entity_id",
       featureId: "feature_id",
       groupBy: "group_by",
       binSize: "bin_size",

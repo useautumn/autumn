@@ -35,6 +35,9 @@ SQL >
         {% if defined(event_names) %}
         AND event_name IN {{ Array(event_names, 'String') }}
         {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
     ORDER BY timestamp DESC, id DESC
     LIMIT {{ Int32(limit, 101) }}
     OFFSET {{ Int32(offset, 0) }}
