@@ -15,6 +15,7 @@ class Events(BaseSDK):
         offset: Optional[int] = 0,
         limit: Optional[int] = 100,
         customer_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
         feature_id: Optional[
             Union[models.ListEventsFeatureID, models.ListEventsFeatureIDTypedDict]
         ] = None,
@@ -31,6 +32,7 @@ class Events(BaseSDK):
         :param offset: Number of items to skip
         :param limit: Number of items to return. Default 100, max 1000.
         :param customer_id: Filter events by customer ID
+        :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
         :param retries: Override the default retry configuration for this method
@@ -52,6 +54,7 @@ class Events(BaseSDK):
             offset=offset,
             limit=limit,
             customer_id=customer_id,
+            entity_id=entity_id,
             feature_id=feature_id,
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
@@ -123,6 +126,7 @@ class Events(BaseSDK):
         offset: Optional[int] = 0,
         limit: Optional[int] = 100,
         customer_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
         feature_id: Optional[
             Union[models.ListEventsFeatureID, models.ListEventsFeatureIDTypedDict]
         ] = None,
@@ -139,6 +143,7 @@ class Events(BaseSDK):
         :param offset: Number of items to skip
         :param limit: Number of items to return. Default 100, max 1000.
         :param customer_id: Filter events by customer ID
+        :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
         :param retries: Override the default retry configuration for this method
@@ -160,6 +165,7 @@ class Events(BaseSDK):
             offset=offset,
             limit=limit,
             customer_id=customer_id,
+            entity_id=entity_id,
             feature_id=feature_id,
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
@@ -232,6 +238,7 @@ class Events(BaseSDK):
         feature_id: Union[
             models.AggregateEventsFeatureID, models.AggregateEventsFeatureIDTypedDict
         ],
+        entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
         range: Optional[models.Range] = None,
         bin_size: Optional[models.BinSize] = "day",
@@ -250,6 +257,7 @@ class Events(BaseSDK):
 
         :param customer_id: Customer ID to aggregate events for
         :param feature_id: Feature ID(s) to aggregate events for
+        :param entity_id: Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
         :param group_by: Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
@@ -271,6 +279,7 @@ class Events(BaseSDK):
 
         request = models.EventsAggregateParams(
             customer_id=customer_id,
+            entity_id=entity_id,
             feature_id=feature_id,
             group_by=group_by,
             range=range,
@@ -346,6 +355,7 @@ class Events(BaseSDK):
         feature_id: Union[
             models.AggregateEventsFeatureID, models.AggregateEventsFeatureIDTypedDict
         ],
+        entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
         range: Optional[models.Range] = None,
         bin_size: Optional[models.BinSize] = "day",
@@ -364,6 +374,7 @@ class Events(BaseSDK):
 
         :param customer_id: Customer ID to aggregate events for
         :param feature_id: Feature ID(s) to aggregate events for
+        :param entity_id: Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
         :param group_by: Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
@@ -385,6 +396,7 @@ class Events(BaseSDK):
 
         request = models.EventsAggregateParams(
             customer_id=customer_id,
+            entity_id=entity_id,
             feature_id=feature_id,
             group_by=group_by,
             range=range,

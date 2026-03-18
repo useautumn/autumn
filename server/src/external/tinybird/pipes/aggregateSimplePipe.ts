@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod";
+import { z } from "../tinybirdZod.js";
 
 /** Response schema for the aggregate_simple pipe */
 export const aggregateSimplePipeResponseSchema = z.object({
@@ -33,6 +33,6 @@ export type AggregateSimplePipeParams = z.infer<
 export const createAggregateSimplePipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_simple",
-		parameters: aggregateSimplePipeParamsSchema,
-		data: aggregateSimplePipeResponseSchema,
+		parameters: aggregateSimplePipeParamsSchema as any,
+		data: aggregateSimplePipeResponseSchema as any,
 	});
