@@ -1,4 +1,4 @@
- import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * A wrapper around Mintlify's ParamField that dynamically switches
