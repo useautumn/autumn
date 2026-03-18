@@ -13,17 +13,19 @@ export const updateCusEntDbAndCache = async ({
 	customerId,
 	cusEntId,
 	updates,
+	incrementCacheVersion = false,
 }: {
 	ctx: RepoContext;
 	customerId: string;
 	cusEntId: string;
 	updates: Partial<InsertCustomerEntitlement>;
+	incrementCacheVersion?: boolean;
 }) => {
 	await CusEntService.update({
 		ctx,
 		id: cusEntId,
 		updates,
-		incrementCacheVersion: false,
+		incrementCacheVersion,
 	});
 
 	const cacheKey = buildFullCustomerCacheKey({

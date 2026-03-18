@@ -106,6 +106,7 @@ export const deductFromMainBalance = ({
 		}
 
 		// CASE 2: ENTITY SCOPED, ALL ENTITIES
+		const originalAmountToDeduct = amountToDeduct;
 		const newEntities: Record<string, EntityBalance> = { ...currentEntities };
 		for (const entityId in currentEntities) {
 			if (amountToDeduct === 0) break;
@@ -136,8 +137,12 @@ export const deductFromMainBalance = ({
 			};
 		}
 
+		const deducted = new Decimal(originalAmountToDeduct)
+			.sub(amountToDeduct)
+			.toNumber();
+
 		return {
-			deducted: amountToDeduct,
+			deducted,
 			newBalance: currentTopLevelBalance,
 			newAdjustment: currentTopLevelAdjustment,
 			newEntities,
