@@ -220,7 +220,9 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary"> {display.secondary_text}</span>
+					{!isAiCreditSystem && display.secondary_text && (
+						<span className="text-body-secondary"> {display.secondary_text}</span>
+					)}
 				</p>
 
 				<div
