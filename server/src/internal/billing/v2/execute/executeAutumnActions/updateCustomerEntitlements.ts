@@ -8,9 +8,11 @@ import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService"
  */
 export const updateCustomerEntitlements = async ({
 	ctx,
+	customerId,
 	updates,
 }: {
 	ctx: AutumnContext;
+	customerId: string;
 	updates: AutumnBillingPlan["updateCustomerEntitlements"];
 }) => {
 	const { logger } = ctx;
@@ -32,9 +34,7 @@ export const updateCustomerEntitlements = async ({
 		if (updates) {
 			await customerEntitlementActions.updateDbAndCache({
 				ctx,
-				customerId:
-					customerEntitlement.customer_id ??
-					customerEntitlement.internal_customer_id,
+				customerId,
 				cusEntId: customerEntitlement.id,
 				updates,
 			});
@@ -43,10 +43,6 @@ export const updateCustomerEntitlements = async ({
 
 		// 2. Handle balance change (DB + cache)
 		if (balanceChange !== 0) {
-			const customerId =
-				customerEntitlement.customer_id ??
-				customerEntitlement.internal_customer_id;
-
 			await customerEntitlementActions.adjustBalanceDbAndCache({
 				ctx,
 				customerId,
