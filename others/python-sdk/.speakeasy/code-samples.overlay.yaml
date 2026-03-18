@@ -459,7 +459,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.events.aggregate(customer_id="cus_123", feature_id="api_calls", range="30d", bin_size="day")
+                res = autumn.events.aggregate(feature_id="api_calls", customer_id="cus_123", range="30d", bin_size="day")
 
                 # Handle response
                 print(res)
