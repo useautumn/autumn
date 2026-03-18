@@ -47,6 +47,10 @@ export type EventsListParams = {
    */
   customerId?: string | undefined;
   /**
+   * Filter events by entity ID (e.g., per-seat or per-resource)
+   */
+  entityId?: string | undefined;
+  /**
    * Filter by specific feature ID(s)
    */
   featureId?: string | Array<string> | undefined;
@@ -159,6 +163,7 @@ export type EventsListParams$Outbound = {
   offset: number;
   limit: number;
   customer_id?: string | undefined;
+  entity_id?: string | undefined;
   feature_id?: string | Array<string> | undefined;
   custom_range?: ListEventsCustomRange$Outbound | undefined;
 };
@@ -172,12 +177,14 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
     offset: z._default(z.int(), 0),
     limit: z._default(z.int(), 100),
     customerId: z.optional(z.string()),
+    entityId: z.optional(z.string()),
     featureId: z.optional(smartUnion([z.string(), z.array(z.string())])),
     customRange: z.optional(z.lazy(() => ListEventsCustomRange$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
+      entityId: "entity_id",
       featureId: "feature_id",
       customRange: "custom_range",
     });

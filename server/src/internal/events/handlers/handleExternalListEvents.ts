@@ -21,6 +21,7 @@ export const handleExternalListEvents = createRoute({
 			ctx,
 			params: {
 				customer_id: validatedParams.customer_id,
+				entity_id: validatedParams.entity_id,
 				feature_ids: featureIds,
 				custom_range: validatedParams.custom_range,
 				offset: validatedParams.offset,

@@ -7,6 +7,10 @@ export const ExtEventsAggregateParamsSchema = z.object({
 		.string()
 		.min(1)
 		.meta({ description: "Customer ID to aggregate events for" }),
+	entity_id: z.string().min(1).optional().meta({
+		description:
+			"Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)",
+	}),
 	feature_id: z
 		.string()
 		.min(1)

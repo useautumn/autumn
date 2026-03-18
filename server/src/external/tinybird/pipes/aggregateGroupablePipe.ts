@@ -27,6 +27,7 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 	bin_size: z.string(),
 	timezone: z.string(),
 	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 	group_column: z.enum(["property", "customer_id"]).default("property"),
 	property_key: z.string().optional(), // the property name without 'properties.' prefix (not needed when group_column is "customer_id")
 });

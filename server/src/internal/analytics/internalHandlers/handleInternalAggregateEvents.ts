@@ -16,6 +16,7 @@ const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),
 	event_names: z.array(z.string()),
 	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 	group_by: z.string().optional(),
 	bin_size: z.enum(["day", "hour", "month"]).optional(),
 	timezone: z.string().optional(),
@@ -30,7 +31,7 @@ export const handleInternalAggregateEvents = createRoute({
 		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
 		const { db, org, env, features } = ctx;
-		const { interval, customer_id, group_by, bin_size, timezone } =
+		const { interval, customer_id, entity_id, group_by, bin_size, timezone } =
 			c.req.valid("json");
 		let { event_names } = c.req.valid("json");
 
@@ -47,6 +48,7 @@ export const handleInternalAggregateEvents = createRoute({
 				ctx,
 				idOrInternalId: customer_id,
 				withSubs: true,
+				withEntities: true,
 			});
 
 			if (!customer) {
@@ -77,6 +79,7 @@ export const handleInternalAggregateEvents = createRoute({
 			ctx,
 			params: {
 				customer_id: customer_id,
+				entity_id: entity_id,
 				interval: interval as RangeEnum,
 				event_names,
 				bin_size: binSize,

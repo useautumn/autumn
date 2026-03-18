@@ -11,6 +11,7 @@ export const listEvents = async ({
 	ctx: AutumnContext;
 	params: {
 		customer_id?: string;
+		entity_id?: string;
 		feature_ids?: string[];
 		custom_range?: { start?: number; end?: number };
 		offset: number;
@@ -47,6 +48,7 @@ export const listEvents = async ({
 		start_date: startDate,
 		end_date: endDate,
 		customer_id: params.customer_id,
+		entity_id: params.entity_id,
 		event_names: params.feature_ids,
 		limit: fetchLimit,
 		offset: params.offset,

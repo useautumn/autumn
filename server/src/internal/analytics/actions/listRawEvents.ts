@@ -64,6 +64,7 @@ const convertPipeRowToClickHouseFormat = (
 
 export type ListRawEventsParams = {
 	customer_id?: string;
+	entity_id?: string;
 	interval?: string;
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
@@ -114,6 +115,7 @@ export const listRawEvents = async ({
 		start_date: finalStartDate,
 		end_date: finalEndDate,
 		customer_id: params.aggregateAll ? undefined : params.customer_id,
+		entity_id: params.entity_id,
 		event_names: params.event_name ? [params.event_name] : undefined,
 		limit: params.limit ?? DEFAULT_LIMIT,
 		offset: 0,

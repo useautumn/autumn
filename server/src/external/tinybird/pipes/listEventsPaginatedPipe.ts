@@ -26,6 +26,7 @@ export const listEventsPaginatedPipeParamsSchema = z.object({
 	start_date: z.string().optional(),
 	end_date: z.string().optional(),
 	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 	event_names: z.array(z.string()).optional(),
 	limit: z.number().optional(),
 	offset: z.number().optional(),
