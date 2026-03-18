@@ -62,7 +62,7 @@ export type EventsAggregateParams = {
   /**
    * Customer ID to aggregate events for
    */
-  customerId: string;
+  customerId?: string | undefined;
   /**
    * Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
    */
@@ -72,7 +72,7 @@ export type EventsAggregateParams = {
    */
   featureId: string | Array<string>;
   /**
-   * Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
+   * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
    */
   groupBy?: string | undefined;
   /**
@@ -179,7 +179,7 @@ export function aggregateEventsCustomRangeToJSON(
 
 /** @internal */
 export type EventsAggregateParams$Outbound = {
-  customer_id: string;
+  customer_id?: string | undefined;
   entity_id?: string | undefined;
   feature_id: string | Array<string>;
   group_by?: string | undefined;
@@ -194,7 +194,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
   EventsAggregateParams
 > = z.pipe(
   z.object({
-    customerId: z.string(),
+    customerId: z.optional(z.string()),
     entityId: z.optional(z.string()),
     featureId: smartUnion([z.string(), z.array(z.string())]),
     groupBy: z.optional(z.string()),
