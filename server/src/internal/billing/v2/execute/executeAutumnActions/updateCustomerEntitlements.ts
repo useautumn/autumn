@@ -1,7 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
 /**
@@ -31,9 +30,12 @@ export const updateCustomerEntitlements = async ({
 
 		// 1. Handle field-level updates (e.g. next_reset_at, adjustment, entities)
 		if (updates) {
-			await CusEntService.update({
+			await customerEntitlementActions.updateDbAndCache({
 				ctx,
-				id: customerEntitlement.id,
+				customerId:
+					customerEntitlement.customer_id ??
+					customerEntitlement.internal_customer_id,
+				cusEntId: customerEntitlement.id,
 				updates,
 			});
 			continue;

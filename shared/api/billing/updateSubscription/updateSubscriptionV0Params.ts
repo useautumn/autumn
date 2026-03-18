@@ -27,6 +27,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 
 		processor_subscription_id: z.string().nullable().optional(),
 		no_billing_changes: z.boolean().optional(),
+		backfill_prepaid_update: z.boolean().optional(),
 		status: z
 			.enum([
 				CusProductStatus.Active,
