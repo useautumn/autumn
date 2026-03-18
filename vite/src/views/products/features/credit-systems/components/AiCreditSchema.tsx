@@ -5,7 +5,7 @@ import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
 import type { CreateFeature } from "@autumn/shared";
 import { PlusIcon, X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiCreditSchemaRow } from "./AiCreditSchemaRow";
 
 interface AiCreditSchemaProps {
@@ -43,6 +43,11 @@ export function AiCreditSchema({
 
 	const [defaultMarkup, setDefaultMarkup] = useState<number>(0);
 	const manuallyEditedModels = useRef<Set<string>>(new Set());
+
+	useEffect(() => {
+		setDefaultMarkup(0);
+		manuallyEditedModels.current = new Set();
+	}, [creditSystem.id]);
 
 	const providerGroups = useMemo(
 		() => groupByProvider(modelMarkups),
