@@ -1,11 +1,11 @@
-import type { CreateFeature } from "@autumn/shared";
-import { PlusIcon, X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useModelsDevPricing } from "@/hooks/queries/useOpenRouterModels";
+import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import type { CreateFeature } from "@autumn/shared";
+import { PlusIcon, X } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { AiCreditSchemaRow } from "./AiCreditSchemaRow";
 
 interface AiCreditSchemaProps {

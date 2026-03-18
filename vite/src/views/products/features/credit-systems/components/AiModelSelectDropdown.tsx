@@ -1,9 +1,9 @@
-import { useMemo } from "react";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import type {
 	ModelsDevModel,
 	ModelsDevProvider,
-} from "@/hooks/queries/useOpenRouterModels";
+} from "@/hooks/queries/useAiModelsQuery";
+import { useMemo } from "react";
 
 interface AiModelSelectDropdownProps {
 	value: string;

@@ -1,9 +1,9 @@
-import type { CreateFeature } from "@autumn/shared";
-import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import type { ModelsDevProvider } from "@/hooks/queries/useOpenRouterModels";
-import { useModelsDevPricing } from "@/hooks/queries/useOpenRouterModels";
+import type { ModelsDevProvider } from "@/hooks/queries/useAiModelsQuery";
+import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import type { CreateFeature } from "@autumn/shared";
+import { useMemo } from "react";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
