@@ -21,7 +21,7 @@ export function CreditSystemDetails({
 
 	return (
 		<SheetSection title="Credit Details">
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+			<div className="grid grid-cols-1 gap-2">
 				<div>
 					<FormLabel>Name</FormLabel>
 					<Input
