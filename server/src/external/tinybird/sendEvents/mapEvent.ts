@@ -1,23 +1,5 @@
 import type { EventInsert } from "@autumn/shared";
-
-/** Tinybird event schema (matches events.datasource) */
-export interface TinybirdEvent {
-	id: string;
-	org_id: string;
-	org_slug: string | null;
-	internal_customer_id: string | null;
-	env: string;
-	created_at: number | null;
-	timestamp: string;
-	event_name: string;
-	idempotency_key: string | null;
-	value: number | null;
-	set_usage: number | null;
-	entity_id: string | null;
-	internal_entity_id: string | null;
-	customer_id: string;
-	properties: string | null;
-}
+import type { TinybirdEvent } from "../initTinybird.js";
 
 /** Convert EventInsert to Tinybird schema */
 export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
@@ -45,6 +27,6 @@ export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
 		entity_id: event.entity_id ?? null,
 		internal_entity_id: event.internal_entity_id ?? null,
 		customer_id: event.customer_id,
-		properties: event.properties ? JSON.stringify(event.properties) : null,
+		properties: event.properties ?? null,
 	};
 };

@@ -70,6 +70,7 @@ export const AnalyticsView = () => {
 
 	// Clear the filter when groupBy changes
 	useEffect(() => {
+		void groupBy;
 		setGroupFilter(null);
 	}, [groupBy]);
 

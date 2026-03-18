@@ -392,7 +392,6 @@ export const aggregate = async ({
 			endDate,
 			binSize,
 		});
-
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
 		const pipeParams = {

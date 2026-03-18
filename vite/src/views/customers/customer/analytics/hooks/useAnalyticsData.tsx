@@ -54,9 +54,12 @@ export const useAnalyticsData = ({
 		: undefined;
 
 	// Use selected event names, or fall back to top 3 cached event names
-	const selectedEventNames = eventNames || featureIds
-		? [...(eventNames || []), ...(featureIds || [])]
-		: cachedEventNames.slice(0, 3).map((e) => e.event_name);
+	const selectedEventNames =
+		eventNames || featureIds
+			? [...(eventNames || []), ...(featureIds || [])]
+			: cachedEventNames
+					.slice(0, 3)
+					.map((e: { event_name: string }) => e.event_name);
 
 	// Create a simple queryKey with the actual values that change
 	const queryKey = [

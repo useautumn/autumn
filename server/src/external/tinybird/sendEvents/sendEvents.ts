@@ -11,8 +11,8 @@ const generateErrorId = (): string => {
 };
 
 /**
- * Send EventInsert[] to Tinybird using zod-bird client.
- * The zod-bird client has built-in retry logic (10 retries with exponential backoff).
+ * Send EventInsert[] to Tinybird using the official Tinybird SDK.
+ * The SDK client is configured with 10 retries and exponential backoff.
  * Does not throw - logs and captures errors in Sentry instead.
  */
 export const sendEventsToTinybird = async ({
