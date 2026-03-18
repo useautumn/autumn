@@ -6,7 +6,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getModelsDevPricing } from "@/internal/features/utils/getOpenrouterPricing";
+import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
