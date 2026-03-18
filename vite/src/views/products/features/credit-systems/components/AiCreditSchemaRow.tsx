@@ -62,9 +62,10 @@ export function AiCreditSchemaRow({
 	const [localModelName, setLocalModelName] = useState(modelKey);
 
 	return (
-		<div className="flex flex-col gap-2 p-3 bg-muted/20 rounded-md border border-border/30">
-			<div className="flex items-center gap-2">
-				<div className="min-w-0 flex-1">
+		<div className="flex flex-col gap-0.5 py-0.5 border-b border-border/20 last:border-b-0">
+			<div className="grid grid-cols-[minmax(0,2.7fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] items-center gap-1 px-0.5">
+				{/* Model Name */}
+				<div className="min-w-0">
 					{isCustom ? (
 						<Input
 							value={localModelName}
@@ -89,19 +90,9 @@ export function AiCreditSchemaRow({
 						/>
 					)}
 				</div>
-				<IconButton
-					variant="skeleton"
-					iconOrientation="center"
-					icon={<X className="h-3.5 w-3.5" />}
-					onClick={() => onRemove(modelKey)}
-				/>
-			</div>
 
-			<div className="grid grid-cols-3 gap-2">
-				<div>
-					<div className="text-xs font-medium text-t-tertiary mb-1">
-						{isCustom ? "Input $/M" : "Cost In"}
-					</div>
+				{/* Input Cost */}
+				<div className="min-w-0">
 					{isCustom ? (
 						<Input
 							type="number"
@@ -114,29 +105,18 @@ export function AiCreditSchemaRow({
 									Number(e.target.value) || 0,
 								)
 							}
-							onBlur={(e) =>
-								onCostChange?.(
-									modelKey,
-									"input_cost",
-									Number(e.target.value) || 0,
-								)
-							}
 							placeholder="0"
 							className="w-full"
 						/>
 					) : (
-						<Input
-							readOnly
-							value={formatCost(actualInput)}
-							className="w-full bg-muted/30 text-t-secondary cursor-default"
-							tabIndex={-1}
-						/>
+						<div className="h-9 flex items-center text-sm text-t-secondary px-1">
+							{formatCost(actualInput)}
+						</div>
 					)}
 				</div>
-				<div>
-					<div className="text-xs font-medium text-t-tertiary mb-1">
-						{isCustom ? "Output $/M" : "Cost Out"}
-					</div>
+
+				{/* Output Cost */}
+				<div className="min-w-0">
 					{isCustom ? (
 						<Input
 							type="number"
@@ -149,29 +129,18 @@ export function AiCreditSchemaRow({
 									Number(e.target.value) || 0,
 								)
 							}
-							onBlur={(e) =>
-								onCostChange?.(
-									modelKey,
-									"output_cost",
-									Number(e.target.value) || 0,
-								)
-							}
 							placeholder="0"
 							className="w-full"
 						/>
 					) : (
-						<Input
-							readOnly
-							value={formatCost(actualOutput)}
-							className="w-full bg-muted/30 text-t-secondary cursor-default"
-							tabIndex={-1}
-						/>
+						<div className="h-9 flex items-center text-sm text-t-secondary px-1">
+							{formatCost(actualOutput)}
+						</div>
 					)}
 				</div>
-				<div>
-					<div className="text-xs font-medium text-t-tertiary mb-1">
-						Markup %
-					</div>
+
+				{/* Markup % */}
+				<div className="min-w-0">
 					<Input
 						type="number"
 						lang="en"
@@ -179,17 +148,24 @@ export function AiCreditSchemaRow({
 						onChange={(e) =>
 							onMarkupChange(modelKey, Number(e.target.value) || 0)
 						}
-						onBlur={(e) =>
-							onMarkupChange(modelKey, Number(e.target.value) || 0)
-						}
 						placeholder="0"
 						className="w-full"
 					/>
 				</div>
+
+				{/* Remove Button */}
+				<IconButton
+					variant="skeleton"
+					iconOrientation="center"
+					icon={<X className="h-3.5 w-3.5" />}
+					onClick={() => onRemove(modelKey)}
+					className="shrink-0"
+				/>
 			</div>
 
+			{/* User Pays Info */}
 			{(userInput != null || userOutput != null) && (
-				<div className="text-xs text-t-tertiary">
+				<div className="text-[11px] leading-4 text-t-tertiary px-0.5">
 					User pays: ${formatCost(userInput)} in / ${formatCost(userOutput)} out
 					$/M
 				</div>

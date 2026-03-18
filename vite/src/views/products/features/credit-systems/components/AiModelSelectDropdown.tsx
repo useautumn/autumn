@@ -28,6 +28,7 @@ export function AiModelSelectDropdown({
 	return (
 		<div onWheel={(e) => e.stopPropagation()}>
 			<SearchableSelect
+				contentClassName="w-full"
 				value={value || null}
 				onValueChange={onValueChange}
 				options={models}
