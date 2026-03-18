@@ -5,7 +5,7 @@ from autumn_sdk import Autumn
 
 
 with Autumn(
-    x_api_version="2.1",
+    x_api_version="2.2.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -27,7 +27,7 @@ from autumn_sdk import Autumn
 async def main():
 
     async with Autumn(
-        x_api_version="2.1",
+        x_api_version="2.2.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
