@@ -192,14 +192,17 @@ export const updateFeature = async ({
 
 	// Queue cache clear for credit system if schema or model markups changed
 	if (feature.type === FeatureType.CreditSystem && updatedFeature) {
-		const schemaChanged = hasCreditSchemaChanged({
-			oldSchema: feature.config?.schema,
-			newSchema: updates.config?.schema,
-		});
+		const schemaChanged =
+			updates.config != null &&
+			hasCreditSchemaChanged({
+				oldSchema: feature.config?.schema,
+				newSchema: updates.config.schema,
+			});
 
 		const markupsChanged =
+			updates.model_markups !== undefined &&
 			JSON.stringify(updates.model_markups ?? null) !==
-			JSON.stringify(feature.model_markups ?? null);
+				JSON.stringify(feature.model_markups ?? null);
 
 		if (schemaChanged || markupsChanged) {
 			await addTaskToQueue({
