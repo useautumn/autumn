@@ -88,7 +88,7 @@ export const prepareFeatureDeduction = async ({
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
-		await Promise.all		(
+		await Promise.all(
 			cusEnts.map(async (ce) => {
 				const creditCost = await getCreditCost({
 					featureId: feature.id,
