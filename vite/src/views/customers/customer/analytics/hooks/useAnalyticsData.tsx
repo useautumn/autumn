@@ -47,10 +47,10 @@ export const useAnalyticsData = ({
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 
-	// Format group_by for API (must be prefixed with "properties." except for customer_id)
+	// Format group_by for API (must be prefixed with "properties." except for column-based operators)
 	const formattedGroupBy = groupBy
-		? groupBy === "customer_id"
-			? "customer_id"
+		? groupBy === "customer_id" || groupBy === "entity_id"
+			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
 

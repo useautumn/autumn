@@ -33,6 +33,6 @@ export type AggregateSimplePipeParams = z.infer<
 export const createAggregateSimplePipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_simple",
-		parameters: aggregateSimplePipeParamsSchema as any,
-		data: aggregateSimplePipeResponseSchema as any,
+		parameters: aggregateSimplePipeParamsSchema,
+		data: aggregateSimplePipeResponseSchema,
 	});

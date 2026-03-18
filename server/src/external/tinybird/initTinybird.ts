@@ -57,7 +57,7 @@ export const tinybirdIngest = tinybirdClient
 	? {
 			events: tinybirdClient.buildIngestEndpoint({
 				datasource: "events",
-				event: TinybirdEventSchema as any,
+				event: TinybirdEventSchema,
 				wait: true,
 			}),
 		}
