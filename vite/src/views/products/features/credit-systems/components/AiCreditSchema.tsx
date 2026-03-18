@@ -317,6 +317,13 @@ export function AiCreditSchema({
 									onClick={() => addModelToProvider(providerKey)}
 									className="w-fit mt-1"
 									icon={<PlusIcon className="h-3.5 w-3.5" />}
+									disabled={
+										// If all models for this provider are already added, disable the button
+										providerKey === "custom"
+											? false
+											: Object.keys(provider?.models ?? {}).length ===
+											  modelFullIds.length
+									}
 								>
 									Add model
 								</IconButton>
