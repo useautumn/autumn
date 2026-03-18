@@ -20,6 +20,7 @@ export interface RawEventFromClickHouse {
 export type TotalEventsParams = {
 	event_names: string[];
 	customer_id?: string;
+	entity_id?: string;
 	aggregateAll?: boolean;
 	custom_range?: { start: number; end: number };
 	interval?: RangeEnum;
