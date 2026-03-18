@@ -91,7 +91,7 @@ const getModelCreditCost = async ({
 	const { markup } = markupEntry ?? { markup: 0 };
 
 	if (modelName.startsWith("custom/")) {
-		if (!markupEntry?.input_cost || !markupEntry?.output_cost) {
+		if (markupEntry?.input_cost == null || markupEntry?.output_cost == null) {
 			throw new RecaseError({
 				message: `Custom model ${modelName} is missing input_cost or output_cost in model_markups`,
 				code: ErrCode.InvalidRequest,
