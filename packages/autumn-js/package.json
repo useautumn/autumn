@@ -14,7 +14,7 @@
 	],
 	"scripts": {
 		"ts": "tsgo --noEmit --skipLibCheck",
-		"build": "rm -rf dist && tsup",
+		"build": "rm -rf dist && bun run bun.build.ts",
 		"prepublishOnly": "bun run build"
 	},
 	"exports": {
@@ -106,11 +106,9 @@
 		"@types/react": "^19",
 		"@typescript/native-preview": "catalog:",
 		"@useautumn/sdk": "workspace:*",
-		"esbuild-plugin-path-alias": "^1.0.7",
 		"hono": "^4.7.9",
 		"next": "^15.2.3",
 		"react-dom": "^19.1.0",
-		"tsup": "^8.4.0",
 		"typescript": "^5.8.3"
 	},
 	"peerDependencies": {

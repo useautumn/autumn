@@ -1,0 +1,24 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist",
+		"noEmit": false,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"declarationMap": false,
+		"paths": {
+			"@useautumn/sdk": ["../sdk/dist/esm/index.d.ts"],
+			"@useautumn/sdk/*": ["../sdk/dist/esm/*"],
+			"@utils/*": ["./src/utils/*"]
+		}
+	},
+	"include": [
+		"src/sdk/index.ts",
+		"src/react/**/*.ts",
+		"src/react/**/*.tsx",
+		"src/backend/**/*.ts",
+		"src/better-auth/**/*.ts"
+	],
+	"exclude": ["node_modules", "dist"]
+}

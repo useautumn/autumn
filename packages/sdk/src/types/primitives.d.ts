@@ -1,0 +1,10 @@
+import * as z from "zod/v4-mini";
+export declare function string(): z.ZodMiniType<string>;
+export declare function boolean(): z.ZodMiniType<boolean>;
+export declare function number(): z.ZodMiniType<number>;
+export declare function bigint(): z.ZodMiniType<bigint>;
+export declare function date(): z.ZodMiniType<Date>;
+export declare function literal<T extends string | number | boolean>(value: T): z.ZodMiniType<T>;
+export declare function literalBigInt<T extends bigint>(value: T): z.ZodMiniType<T>;
+export declare function optional<T extends z.ZodMiniType>(t: T): z.ZodMiniUnion<readonly [z.ZodMiniUndefined, z.ZodMiniPipe<z.ZodMiniNull, z.ZodMiniTransform<never, null>>, T]>;
+export declare function nullable<T extends z.ZodMiniType>(t: T): z.ZodMiniUnion<readonly [z.ZodMiniNull, z.ZodMiniPipe<z.ZodMiniUndefined, z.ZodMiniTransform<never, undefined>>, T]>;

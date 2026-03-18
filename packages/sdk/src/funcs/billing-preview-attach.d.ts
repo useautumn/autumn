@@ -1,0 +1,43 @@
+import { AutumnCore } from "../core.js";
+import { RequestOptions } from "../lib/sdks.js";
+import { AutumnError } from "../models/autumn-error.js";
+import { ConnectionError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, UnexpectedClientError } from "../models/http-client-errors.js";
+import * as models from "../models/index.js";
+import { ResponseValidationError } from "../models/response-validation-error.js";
+import { SDKValidationError } from "../models/sdk-validation-error.js";
+import { APIPromise } from "../types/async.js";
+import { Result } from "../types/fp.js";
+/**
+ * Previews the billing changes that would occur when attaching a plan, without actually making any changes.
+ *
+ * Use this endpoint to show customers what they will be charged before confirming a subscription change.
+ *
+ * @example
+ * ```typescript
+ * // Preview attaching a plan
+ * const response = await client.billing.previewAttach({ customerId: "cus_123", planId: "pro_plan" });
+ * ```
+ *
+ * @param customerId - The ID of the customer to attach the plan to.
+ * @param entityId - The ID of the entity to attach the plan to. (optional)
+ * @param planId - The ID of the plan.
+ * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
+ * @param version - The version of the plan to attach. (optional)
+ * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+ * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+ * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
+ * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
+ * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+ * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+ * @param successUrl - URL to redirect to after successful checkout. (optional)
+ * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+ * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+ * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+ * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+ * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
+ * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
+ * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+ *
+ * @returns A preview response with line items, totals, and effective dates for the proposed changes.
+ */
+export declare function billingPreviewAttach(client: AutumnCore, request: models.PreviewAttachParams, options?: RequestOptions): APIPromise<Result<models.PreviewAttachResponse, AutumnError | ResponseValidationError | ConnectionError | RequestAbortedError | RequestTimeoutError | InvalidRequestError | UnexpectedClientError | SDKValidationError>>;
