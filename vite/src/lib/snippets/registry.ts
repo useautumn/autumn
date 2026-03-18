@@ -65,15 +65,19 @@ export function getSnippetsForStep({
 	dynamicParams?: DynamicSnippetParams;
 }): Snippet[] {
 	const stepSnippets = STEP_SNIPPETS[stepId];
+
+	// Check/track should always show server-side snippets, even for React users
+	const effectiveSDK = sdk === "react" && stepId === "usage" ? "node" : sdk;
+
 	const snippetIds: SnippetId[] =
-		sdk === "react"
+		effectiveSDK === "react"
 			? stepSnippets.react
-			: sdk === "curl"
+			: effectiveSDK === "curl"
 				? stepSnippets.curl
 				: stepSnippets.other;
 
 	return snippetIds.map((id) =>
-		getSnippet({ id, sdk, stackConfig, dynamicParams }),
+		getSnippet({ id, sdk: effectiveSDK, stackConfig, dynamicParams }),
 	);
 }
 

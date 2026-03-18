@@ -7,7 +7,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 const REFETCH_INTERVAL = 5000;
 const DISMISSED_STORAGE_KEY = "autumn_products_onboarding_dismissed";
 
-export type OnboardingStepId = "plans" | "customer" | "payments" | "usage";
+export type OnboardingStepId = "plans" | "customer" | "usage";
 
 interface OnboardingStepStatus {
 	complete: boolean;
@@ -94,26 +94,6 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 		},
 	});
 
-	// Payments query (checking for Stripe ID)
-	const { data: paymentsData, isLoading: paymentsLoading } = useQuery<{
-		fullCustomers: FullCustomer[];
-	}>({
-		queryKey: ["onboarding-payments"],
-		queryFn: async () => {
-			const { data } = await axiosInstance.post(
-				"/customers/all/full_customers",
-				{ page_size: 50 },
-			);
-			return data;
-		},
-		refetchInterval: (query) => {
-			const hasStripeCustomer = query.state.data?.fullCustomers?.some(
-				(c) => c.processor?.id,
-			);
-			return hasStripeCustomer ? false : REFETCH_INTERVAL;
-		},
-	});
-
 	// Events query
 	const { data: eventsData, isLoading: eventsLoading } = useQuery<{
 		rawEvents: { data: unknown[] };
@@ -145,29 +125,24 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 					return hasPrice && hasFeature;
 				}) ?? false,
 			customer: (customersData?.fullCustomers?.length ?? 0) > 0,
-			payments:
-				paymentsData?.fullCustomers?.some((c) => c.processor?.id) ?? false,
 			usage: (eventsData?.rawEvents?.data?.length ?? 0) > 0,
 		}),
-		[productsData, customersData, paymentsData, eventsData],
+		[productsData, customersData, eventsData],
 	);
 
 	const currentStep = useMemo((): OnboardingStepId => {
 		if (!completedSteps.plans) return "plans";
 		if (!completedSteps.customer) return "customer";
-		if (!completedSteps.payments) return "payments";
 		if (!completedSteps.usage) return "usage";
 		return "plans";
 	}, [completedSteps]);
 
-	const isLoading =
-		productsLoading || customersLoading || paymentsLoading || eventsLoading;
+	const isLoading = productsLoading || customersLoading || eventsLoading;
 
 	return {
 		steps: {
 			plans: { complete: completedSteps.plans },
 			customer: { complete: completedSteps.customer },
-			payments: { complete: completedSteps.payments },
 			usage: { complete: completedSteps.usage },
 		},
 		currentStep,

@@ -328,7 +328,10 @@ const entities = ({
 	featureId: string;
 	defaultGroup?: string;
 }): ConfigFn => {
-	return (config) => ({ ...config, entityConfig: { count, featureId, defaultGroup } });
+	return (config) => ({
+		...config,
+		entityConfig: { count, featureId, defaultGroup },
+	});
 };
 
 /**
@@ -763,19 +766,19 @@ const billingAttach = ({
 		actions: [
 			...config.actions,
 			{
-			type: "billingAttach" as const,
-			productId,
-			customerId,
-			entityIndex,
-			options,
-			newBillingSubscription,
-			planSchedule,
-			timeout: timeout ?? defaultTimeout,
-			items,
-			subscriptionId,
-			invoice,
-			enableProductImmediately,
-			finalizeInvoice,
+				type: "billingAttach" as const,
+				productId,
+				customerId,
+				entityIndex,
+				options,
+				newBillingSubscription,
+				planSchedule,
+				timeout: timeout ?? defaultTimeout,
+				items,
+				subscriptionId,
+				invoice,
+				enableProductImmediately,
+				finalizeInvoice,
 			},
 		],
 	});
@@ -1010,6 +1013,7 @@ export async function initScenario(params: {
 	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
 	autumnV2_1: AutumnInt;
+	autumnV2_2: AutumnInt;
 	testClockId: string | undefined;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 	ctx: TestContext;
@@ -1033,6 +1037,7 @@ export async function initScenario(params: {
 	autumnV1Beta: AutumnInt;
 	autumnV2: AutumnInt;
 	autumnV2_1: AutumnInt;
+	autumnV2_2: AutumnInt;
 	testClockId: undefined;
 	customer: null;
 	ctx: TestContext;
@@ -1229,6 +1234,10 @@ export async function initScenario({
 
 	const autumnV2_1 = new AutumnInt({
 		version: ApiVersion.V2_1,
+		secretKey: ctx.orgSecretKey,
+	});
+	const autumnV2_2 = new AutumnInt({
+		version: ApiVersion.V2_2,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -1478,22 +1487,22 @@ export async function initScenario({
 				entityId = generatedEntities[action.entityIndex].id;
 			}
 
-		await autumnV1.billing.attach(
-			{
-				customer_id: targetCustomerId,
-				product_id: prefixedProductId,
-				entity_id: entityId,
-				options: action.options,
-				new_billing_subscription: action.newBillingSubscription,
-				plan_schedule: action.planSchedule,
-				items: action.items,
-				subscription_id: action.subscriptionId,
-				invoice: action.invoice,
-				enable_product_immediately: action.enableProductImmediately,
-				finalize_invoice: action.finalizeInvoice,
-			},
-			{ timeout: action.timeout },
-		);
+			await autumnV1.billing.attach(
+				{
+					customer_id: targetCustomerId,
+					product_id: prefixedProductId,
+					entity_id: entityId,
+					options: action.options,
+					new_billing_subscription: action.newBillingSubscription,
+					plan_schedule: action.planSchedule,
+					items: action.items,
+					subscription_id: action.subscriptionId,
+					invoice: action.invoice,
+					enable_product_immediately: action.enableProductImmediately,
+					finalize_invoice: action.finalizeInvoice,
+				},
+				{ timeout: action.timeout },
+			);
 		} else if (action.type === "billingMultiAttach") {
 			if (!customerId) {
 				throw new Error(
@@ -1611,6 +1620,7 @@ export async function initScenario({
 		autumnV1Beta,
 		autumnV2,
 		autumnV2_1,
+		autumnV2_2,
 		testClockId,
 		customer,
 		ctx,

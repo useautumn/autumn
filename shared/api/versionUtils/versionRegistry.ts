@@ -14,16 +14,22 @@ export interface VersionMetadata {
  * SemVer ↔ CalVer mappings and metadata
  */
 export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
+	[ApiVersion.V2_2]: {
+		semver: ApiVersion.V2_2,
+		calver: "2026-03-18",
+		releasedAt: new Date("2026-03-18").getTime(),
+		description: "Customer eligibility with attach_action and status",
+	},
 	[ApiVersion.V2_1]: {
 		semver: ApiVersion.V2_1,
-		calver: "2026-04-01",
-		releasedAt: new Date("2026-04-01").getTime(),
+		calver: "2026-03-17",
+		releasedAt: new Date("2026-03-17").getTime(),
 		description: "Plan items with max_purchase",
 	},
 	[ApiVersion.V2_0]: {
 		semver: ApiVersion.V2_0,
-		calver: "2026-03-31",
-		releasedAt: new Date("2026-03-31").getTime(),
+		calver: "2026-03-16",
+		releasedAt: new Date("2026-03-16").getTime(),
 		description: "Plan features with max_purchase",
 	},
 	[ApiVersion.V1_Beta]: {

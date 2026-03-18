@@ -9,12 +9,14 @@ import {
 	AttachPreviewResponseSchema,
 	type BillingPreviewResponse,
 	BillingPreviewResponseSchema,
+	type CustomerEligibility,
+	CustomerEligibilitySchema,
 	type PreviewLineItem,
 	PreviewLineItemSchema,
 	type PreviewUpdateSubscriptionResponse,
 	PreviewUpdateSubscriptionResponseSchema,
 } from "@autumn/shared";
-import type { z } from "zod/v4";
+import { z } from "zod/v4";
 
 /**
  * Extract the object literal type from a schema with an `object` field.
@@ -33,7 +35,7 @@ type FilterConfigEntry<T> = {
  * Creates a strongly-typed filter config entry.
  * Ensures the object type and fields match the schema.
  */
-function createFilterConfig<T extends { object: string }>({
+function createFilterConfig<T extends { object?: string }>({
 	schema,
 	omitFields,
 }: {
@@ -42,8 +44,15 @@ function createFilterConfig<T extends { object: string }>({
 }): FilterConfigEntry<T> {
 	// Parse just to extract the object type from the schema's shape
 	const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
-	const objectField = shape.object as z.ZodLiteral<string>;
-	const objectType = objectField.value as ExtractObjectType<T>;
+	let objectField = shape.object;
+
+	// Unwrap ZodOptional if the object field is optional
+	if (objectField instanceof z.ZodOptional) {
+		objectField = objectField.unwrap();
+	}
+
+	const objectType = (objectField as z.ZodLiteral<string>)
+		.value as ExtractObjectType<T>;
 
 	return {
 		objectType,
@@ -83,6 +92,10 @@ const filterConfigs = [
 	createFilterConfig<ApiFlagV0>({
 		schema: ApiFlagV0Schema,
 		omitFields: ["object"],
+	}),
+	createFilterConfig<CustomerEligibility>({
+		schema: CustomerEligibilitySchema,
+		omitFields: ["object", "scenario"],
 	}),
 ];
 
