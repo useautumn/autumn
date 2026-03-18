@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod";
+import { z } from "../tinybirdZod.js";
 
 /** Response schema for the aggregate_groupable pipe */
 export const aggregateGroupablePipeResponseSchema = z.object({
@@ -40,6 +40,6 @@ export type AggregateGroupablePipeParams = z.infer<
 export const createAggregateGroupablePipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_groupable",
-		parameters: aggregateGroupablePipeParamsSchema,
-		data: aggregateGroupablePipeResponseSchema,
+		parameters: aggregateGroupablePipeParamsSchema as any,
+		data: aggregateGroupablePipeResponseSchema as any,
 	});

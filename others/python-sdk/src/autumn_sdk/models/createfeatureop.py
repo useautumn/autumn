@@ -25,7 +25,7 @@ class CreateFeatureGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

@@ -1,9 +1,10 @@
 import { Text } from "ink";
 import Spinner from "ink-spinner";
+import type React from "react";
 
 interface StatusLineProps {
 	status: "pending" | "loading" | "success" | "error";
-	message: string;
+	message: string | React.JSX.Element;
 	detail?: string;
 }
 
