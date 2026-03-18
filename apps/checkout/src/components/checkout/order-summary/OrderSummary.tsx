@@ -76,9 +76,31 @@ export function OrderSummary() {
 		}
 
 		// Convert to array, with outgoing plans first (credits), then incoming plans
-		const incomingIds = new Set<string>(incoming.map((c) => c.plan_id));
+		const outgoingByPlanId = new Map(
+			outgoing.map((change) => [change.plan_id, change]),
+		);
+		const scheduledCancelIds = new Set<string>();
+
+		for (const change of incoming) {
+			const outgoingChange = outgoingByPlanId.get(change.plan_id);
+
+			if (
+				outgoingChange &&
+				outgoingChange.canceled_at == null &&
+				change.canceled_at != null
+			) {
+				scheduledCancelIds.add(change.plan_id);
+			}
+		}
+
+		const visibleIncoming = incoming.filter(
+			(change) => !scheduledCancelIds.has(change.plan_id),
+		);
+		const visibleIncomingIds = new Set(
+			visibleIncoming.map((change) => change.plan_id),
+		);
 		const visibleOutgoing = outgoing.filter(
-			(change) => !incomingIds.has(change.plan_id),
+			(change) => !visibleIncomingIds.has(change.plan_id),
 		);
 		const outgoingIds = new Set<string>(visibleOutgoing.map((c) => c.plan_id));
 		const groups: PlanGroup[] = [];
@@ -97,7 +119,7 @@ export function OrderSummary() {
 		}
 
 		// Add incoming plan groups (including those with no line items)
-		for (const change of incoming) {
+		for (const change of visibleIncoming) {
 			const planId = change.plan_id;
 			const items = groupMap.get(planId) || [];
 			groups.push({
@@ -110,7 +132,7 @@ export function OrderSummary() {
 
 		// Add any remaining line item groups that weren't in incoming/outgoing
 		for (const [planId, items] of groupMap) {
-			if (!outgoingIds.has(planId) && !incomingIds.has(planId)) {
+			if (!outgoingIds.has(planId) && !visibleIncomingIds.has(planId)) {
 				groups.push({
 					planId,
 					planName: planNameMap.get(planId) || planId,
