@@ -41,15 +41,25 @@ const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 // ============ Helper Functions ============
 
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
-	Promise.race([
-		promise,
-		new Promise<never>((_, reject) =>
-			setTimeout(
-				() => reject(new Error(`Processing timed out after ${timeoutMs}ms`)),
-				timeoutMs,
-			),
-		),
-	]);
+	new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			reject(new Error(`Processing timed out after ${timeoutMs}ms`));
+		}, timeoutMs);
+
+		if (timeout.unref) {
+			timeout.unref();
+		}
+
+		promise
+			.then((result) => {
+				clearTimeout(timeout);
+				resolve(result);
+			})
+			.catch((error) => {
+				clearTimeout(timeout);
+				reject(error);
+			});
+	});
 
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
@@ -374,7 +384,10 @@ export const initWorkers = async () => {
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
-			setTimeout(() => process.exit(0), 5000);
+			const shutdownTimeout = setTimeout(() => process.exit(0), 5000);
+			if (shutdownTimeout.unref) {
+				shutdownTimeout.unref();
+			}
 		} else {
 			process.exit(0);
 		}
