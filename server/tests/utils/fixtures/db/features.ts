@@ -17,7 +17,10 @@ const create = ({
 	name: string;
 	type?: FeatureType;
 	config?: Record<string, unknown>;
-	modelMarkups?: Record<string, { markup: number }> | null;
+	modelMarkups?: Record<
+		string,
+		{ markup: number; input_cost?: number; output_cost?: number, humanModelName: string }
+	> | null;
 	isAiCreditSystem?: boolean;
 }) => ({
 	internal_id: internalId ?? `internal_${id}`,

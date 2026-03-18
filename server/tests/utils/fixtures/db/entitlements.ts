@@ -35,7 +35,10 @@ const create = ({
 	intervalCount?: number;
 	entityFeatureId?: string | null;
 	rollover?: RolloverConfig | null;
-	modelMarkups?: Record<string, { markup: number }> | null;
+	modelMarkups?: Record<
+		string,
+		{ markup: number; input_cost?: number; output_cost?: number, humanModelName: string }
+	> | null;
 	isAiCreditSystem?: boolean;
 }) => ({
 	id: id ?? `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,

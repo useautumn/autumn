@@ -186,14 +186,20 @@ export const getFeaturePriceItemDisplay = ({
 	// Build included usage string (e.g., "100 credits")
 	const includedUsage = item.included_usage as number | null;
 	const hasIncludedUsage = notNullish(includedUsage) && includedUsage > 0;
+	const isAiCreditSystem = feature.is_ai_credit_system ?? false;
 
 	const includedFeatureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
-	const includedUsageStr = hasIncludedUsage
-		? `${numberWithCommas(includedUsage)} ${includedFeatureName}`
-		: "";
+	let includedUsageStr = "";
+	if (hasIncludedUsage) {
+		if (isAiCreditSystem) {
+			includedUsageStr = `$${numberWithCommas(includedUsage)} of ${includedFeatureName}`;
+		} else {
+			includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
+		}
+	}
 
 	// Build price string (e.g., "$0.01")
 	const priceStr =
@@ -208,10 +214,18 @@ export const getFeaturePriceItemDisplay = ({
 		feature,
 		units: billingUnits,
 	});
-	const perUnitStr =
-		billingUnits > 1
-			? `${numberWithCommas(billingUnits)} ${billingFeatureName}`
-			: billingFeatureName;
+	let perUnitStr: string;
+	if (isAiCreditSystem) {
+		perUnitStr =
+			billingUnits > 1
+				? `$${numberWithCommas(billingUnits)} of ${billingFeatureName}`
+				: `$1 of ${billingFeatureName}`;
+	} else {
+		perUnitStr =
+			billingUnits > 1
+				? `${numberWithCommas(billingUnits)} ${billingFeatureName}`
+				: billingFeatureName;
+	}
 
 	// Build interval string
 	const showInterval = isMainPrice || fullDisplay;
@@ -226,6 +240,13 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// Format output based on what we have
+	if (isAiCreditSystem) {
+		return {
+			primary_text: includedUsageStr || "$0 included",
+			secondary_text: "then charged based on model usage",
+		};
+	}
+
 	if (hasIncludedUsage) {
 		return {
 			primary_text: includedUsageStr,

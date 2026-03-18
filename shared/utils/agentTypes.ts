@@ -41,7 +41,15 @@ export interface AgentFeature {
 		metered_feature_id: string;
 		credit_cost: number;
 	}> | null;
-	model_markups?: Record<string, { markup: number }> | null;
+	model_markups?: Record<
+		string,
+		{
+			markup: number;
+			input_cost?: number;
+			output_cost?: number;
+			humanModelName?: string;
+		}
+	> | null;
 	is_ai_credit_system?: boolean;
 }
 
@@ -220,6 +228,10 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 				credit_cost: s.credit_amount,
 			}),
 		);
+	}
+	if(feature.is_ai_credit_system) {
+		agentFeature.is_ai_credit_system = true;
+		agentFeature.model_markups = feature.model_markups;
 	}
 
 	return agentFeature;

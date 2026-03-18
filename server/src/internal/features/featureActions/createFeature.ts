@@ -31,7 +31,15 @@ interface CreateFeatureParams {
 		type: string;
 		config?: any;
 		event_names?: string[];
-		model_markups?: Record<string, { markup: number }> | null;
+		model_markups?: Record<
+			string,
+			{
+				markup: number;
+				input_cost?: number;
+				output_cost?: number;
+				humanModelName?: string;
+			}
+		> | null;
 	};
 	skipGenerateDisplay?: boolean;
 }
