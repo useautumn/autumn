@@ -1,3 +1,5 @@
+import { LATEST_VERSION } from "@autumn/shared";
+
 const HTTP_METHODS = [
 	"get",
 	"put",
@@ -16,7 +18,7 @@ const HTTP_METHODS = [
  */
 export function injectGlobalHeaderParameters({
 	openApiDocument,
-	version = "2.1",
+	version = LATEST_VERSION,
 }: {
 	openApiDocument: Record<string, unknown>;
 	version?: string;
