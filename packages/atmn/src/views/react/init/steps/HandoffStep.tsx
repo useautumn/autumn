@@ -13,9 +13,9 @@ If this file is empty, then you should help the user model their pricing structu
 
 Once a pricing model is either decided upon or already found to exist already continue onwards:
 
-- Begin by helping the user create their first customer in Autumn by loading the 'autumn-creating-customer' skill.
-- Then setup accepting payments by loading the 'autumn-accepting-payments' skill.
-- Lastly start tracking usage by loading the 'autumn-tracking-usage' skill.`;
+- Begin by setting up Autumn in the codebase by loading the 'autumn-setup' skill (install SDK, create customer, payment flow).
+- Then build the billing page by loading the 'autumn-billing-page' skill (display plans, switching, cancelling).
+- Lastly add usage gating by loading the 'autumn-gating' skill (check access, track usage).`;
 
 interface HandoffStepProps {
 	step: number;
@@ -167,7 +167,12 @@ export function HandoffStep({
 				<Box flexDirection="column">
 					<StatusLine
 						status="success"
-						message="You're all set - next, run atmn push when you're ready to sync your config."
+						message={
+							<Text>
+								You're all set - next, run <Text color="cyan">atmn push</Text>{" "}
+								when you're ready to sync your config.
+							</Text>
+						}
 					/>
 					<Box marginTop={1} flexDirection="column" gap={0}>
 						<Text dimColor>
@@ -193,7 +198,10 @@ export function HandoffStep({
 						and implement Autumn into your codebase?
 					</Text>
 					<Box marginTop={1}>
-						<SelectMenu items={aiChoiceOptions} onSelect={(item) => handleAiChoice(item.value)} />
+						<SelectMenu
+							items={aiChoiceOptions}
+							onSelect={(item) => handleAiChoice(item.value)}
+						/>
 					</Box>
 				</Box>
 			</Box>
@@ -229,12 +237,12 @@ export function HandoffStep({
 					<Text>Enter the custom path (relative to project root):</Text>
 					<Box marginTop={1}>
 						<Text color="gray">{">"} </Text>
-					<TextInput
-						placeholder={process.cwd()}
-						defaultValue={customPath}
-						onChange={setCustomPath}
-						onSubmit={handleCustomPathSubmit}
-					/>
+						<TextInput
+							placeholder={process.cwd()}
+							defaultValue={customPath}
+							onChange={setCustomPath}
+							onSubmit={handleCustomPathSubmit}
+						/>
 					</Box>
 				</Box>
 			</Box>
@@ -284,10 +292,10 @@ export function HandoffStep({
 						</Box>
 					)}
 					<Box marginTop={1}>
-					<SelectMenu
-						items={nextStepsOptions}
-						onSelect={(item) => handleNextStepsChoice(item.value)}
-					/>
+						<SelectMenu
+							items={nextStepsOptions}
+							onSelect={(item) => handleNextStepsChoice(item.value)}
+						/>
 					</Box>
 				</Box>
 			</Box>
@@ -297,11 +305,16 @@ export function HandoffStep({
 	// Manual exit
 	if (state === "manual_exit") {
 		const finalMessage =
-			lastNextStepChoice === "docs"
-				? "You're all set - we're opening the docs now for you."
-				: lastNextStepChoice === "copy"
-					? "You're all set - paste the prompt we copied into your agent of choice to get started."
-					: "You're all set - next, run atmn push when you're ready to sync your config.";
+			lastNextStepChoice === "docs" ? (
+				"You're all set - we're opening the docs now for you."
+			) : lastNextStepChoice === "copy" ? (
+				"You're all set - paste the prompt we copied into your agent of choice to get started."
+			) : (
+				<Text>
+					You're all set - next, run <Text color="cyan">atmn push</Text> when
+					you're ready to sync your config.
+				</Text>
+			);
 
 		return (
 			<Box flexDirection="column" marginBottom={1}>

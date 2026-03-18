@@ -18,7 +18,7 @@ class AggregateEventsGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -89,6 +89,8 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Customer ID to aggregate events for"""
     feature_id: AggregateEventsFeatureIDTypedDict
     r"""Feature ID(s) to aggregate events for"""
+    entity_id: NotRequired[str]
+    r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
     r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
     range: NotRequired[Range]
@@ -106,6 +108,9 @@ class EventsAggregateParams(BaseModel):
     feature_id: AggregateEventsFeatureID
     r"""Feature ID(s) to aggregate events for"""
 
+    entity_id: Optional[str] = None
+    r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
+
     group_by: Optional[str] = None
     r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
 
@@ -120,7 +125,9 @@ class EventsAggregateParams(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["group_by", "range", "bin_size", "custom_range"])
+        optional_fields = set(
+            ["entity_id", "group_by", "range", "bin_size", "custom_range"]
+        )
         serialized = handler(self)
         m = {}
 

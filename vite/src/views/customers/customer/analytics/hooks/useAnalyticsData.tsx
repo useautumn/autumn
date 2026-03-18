@@ -26,6 +26,7 @@ export const useAnalyticsData = ({
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
+	const entityId = searchParams.get("entity_id");
 	const featureIds = searchParams.get("feature_ids")?.split(",");
 	const eventNames = searchParams.get("event_names")?.split(",");
 	const interval = searchParams.get("interval");
@@ -54,13 +55,15 @@ export const useAnalyticsData = ({
 		: undefined;
 
 	// Use selected event names, or fall back to top 3 cached event names
-	const selectedEventNames = eventNames || featureIds
-		? [...(eventNames || []), ...(featureIds || [])]
-		: cachedEventNames.slice(0, 3).map((e) => e.event_name);
+	const selectedEventNames =
+		eventNames || featureIds
+			? [...(eventNames || []), ...(featureIds || [])]
+			: cachedEventNames.slice(0, 3).map((e) => e.event_name);
 
 	// Create a simple queryKey with the actual values that change
 	const queryKey = [
 		customerId,
+		entityId,
 		interval || "30d",
 		binSize || "day",
 		...selectedEventNames.sort(),
@@ -77,6 +80,7 @@ export const useAnalyticsData = ({
 		url: `/query/events`,
 		data: {
 			customer_id: customerId || undefined,
+			entity_id: entityId || undefined,
 			interval: interval || "30d",
 			event_names: selectedEventNames,
 			group_by: formattedGroupBy,
@@ -113,6 +117,7 @@ export const useRawAnalyticsData = () => {
 
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
+	const entityId = searchParams.get("entity_id");
 	const interval = searchParams.get("interval");
 
 	const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
@@ -127,6 +132,7 @@ export const useRawAnalyticsData = () => {
 	const queryKey = [
 		"query-raw-events",
 		customerId,
+		entityId,
 		interval || "30d",
 		org?.slug,
 		env,
@@ -140,6 +146,7 @@ export const useRawAnalyticsData = () => {
 		url: `/query/raw`,
 		data: {
 			customer_id: customerId || undefined,
+			entity_id: entityId || undefined,
 			interval: interval || "30d",
 		},
 		queryKey,

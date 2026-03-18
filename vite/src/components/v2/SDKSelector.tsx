@@ -11,17 +11,28 @@ import {
 
 interface SDKSelectorProps {
 	className?: string;
+	excludeSDKs?: SDKType[];
 }
 
-export function SDKSelector({ className }: SDKSelectorProps) {
+export function SDKSelector({ className, excludeSDKs }: SDKSelectorProps) {
 	const selectedSDK = useSDKStore((s) => s.selectedSDK);
 	const setSelectedSDK = useSDKStore((s) => s.setSelectedSDK);
 
-	const selectedOption = SDK_OPTIONS.find((opt) => opt.value === selectedSDK);
+	const visibleOptions = excludeSDKs
+		? SDK_OPTIONS.filter((opt) => !excludeSDKs.includes(opt.value))
+		: SDK_OPTIONS;
+
+	const effectiveSDK = excludeSDKs?.includes(selectedSDK)
+		? "node"
+		: selectedSDK;
+
+	const selectedOption = visibleOptions.find(
+		(opt) => opt.value === effectiveSDK,
+	);
 
 	return (
 		<Select
-			value={selectedSDK}
+			value={effectiveSDK}
 			onValueChange={(v) => setSelectedSDK(v as SDKType)}
 		>
 			<SelectTrigger className={cn("min-w-28 h-6", className)}>
@@ -39,7 +50,7 @@ export function SDKSelector({ className }: SDKSelectorProps) {
 				</SelectValue>
 			</SelectTrigger>
 			<SelectContent>
-				{SDK_OPTIONS.map((option) => (
+				{visibleOptions.map((option) => (
 					<SelectItem key={option.value} value={option.value}>
 						<img
 							src={option.icon}

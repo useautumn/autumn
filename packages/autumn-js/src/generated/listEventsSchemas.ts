@@ -19,6 +19,7 @@ export const eventsListParamsSchema = z.object({
 	offset: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.union([z.number(), z.undefined()]).optional(),
 	customerId: z.union([z.string(), z.undefined()]).optional(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
 	featureId: z
 		.union([z.string(), z.array(z.string()), z.undefined()])
 		.optional(),
@@ -58,6 +59,7 @@ export const eventsListParamsOutboundSchema = z.object({
 	offset: z.number(),
 	limit: z.number(),
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
+	entity_id: z.union([z.string(), z.undefined()]).optional(),
 	feature_id: z
 		.union([z.string(), z.array(z.string()), z.undefined()])
 		.optional(),

@@ -5,6 +5,11 @@ export const ApiEventsListParamsSchema = createPaginationParamsSchema({
 	defaultLimit: 100,
 }).extend({
 	customer_id: z.string().optional().describe("Filter events by customer ID"),
+	entity_id: z
+		.string()
+		.min(1)
+		.optional()
+		.describe("Filter events by entity ID (e.g., per-seat or per-resource)"),
 	feature_id: z
 		.string()
 		.min(1)

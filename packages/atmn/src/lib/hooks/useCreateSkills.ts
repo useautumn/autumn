@@ -1,14 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { useState } from "react";
-import { skills, type Skill } from "../../prompts/skills/index.js";
+import { type Skill, skills } from "../../prompts/skills/index.js";
 
 type CreateSkillsState = "idle" | "creating" | "done" | "error";
 
 export type SkillsLocation = ".claude/skills" | ".agents/skills" | "custom";
 
 export interface UseCreateSkillsResult {
-	create: (targetDir: string, options?: { saveAll?: boolean; hasPricing?: boolean }) => Promise<void>;
+	create: (
+		targetDir: string,
+		options?: { saveAll?: boolean; hasPricing?: boolean },
+	) => Promise<void>;
 	state: CreateSkillsState;
 	filesCreated: string[];
 	error: string | null;
@@ -18,12 +21,12 @@ export interface UseCreateSkillsResult {
 /**
  * Hook to create AI skill files in the SKILLS standard format.
  * Skills are saved as SKILL.md files in subdirectories:
- * 
+ *
  * <targetDir>/
- *   autumn-customer/SKILL.md
- *   autumn-payments/SKILL.md
- *   autumn-pricing/SKILL.md
- *   autumn-usage/SKILL.md
+ *   autumn-setup/SKILL.md
+ *   autumn-gating/SKILL.md
+ *   autumn-billing-page/SKILL.md
+ *   autumn-modelling-pricing-plans/SKILL.md
  */
 export function useCreateSkills(): UseCreateSkillsResult {
 	const [state, setState] = useState<CreateSkillsState>("idle");
@@ -41,13 +44,17 @@ export function useCreateSkills(): UseCreateSkillsResult {
 		try {
 			const cwd = process.cwd();
 			const skillsPath = path.join(cwd, targetDir);
-			
+
 			const created: string[] = [];
 
 			// Filter skills based on options
 			const skillsToCreate = skills.filter((skill) => {
 				// Skip pricing skill if user already has pricing (unless saveAll is true)
-				if (skill.id === "autumn-pricing" && !options?.saveAll && options?.hasPricing) {
+				if (
+					skill.id === "autumn-pricing" &&
+					!options?.saveAll &&
+					options?.hasPricing
+				) {
 					return false;
 				}
 				return true;
@@ -57,10 +64,10 @@ export function useCreateSkills(): UseCreateSkillsResult {
 			for (const skill of skillsToCreate) {
 				const skillDir = path.join(skillsPath, skill.id);
 				await fs.mkdir(skillDir, { recursive: true });
-				
+
 				const skillFilePath = path.join(skillDir, "SKILL.md");
 				await fs.writeFile(skillFilePath, skill.content, "utf-8");
-				
+
 				created.push(`${skill.id}/SKILL.md`);
 			}
 

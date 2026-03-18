@@ -7,7 +7,7 @@ const PYTHON_SNIPPETS: Record<string, Snippet> = {
 		description: "Add Autumn to your project using pip.",
 		filename: "terminal",
 		language: "bash",
-		code: "pip install autumn-py",
+		code: "pip install autumn-sdk",
 	},
 	"env-setup": {
 		id: "env-setup",
@@ -16,100 +16,76 @@ const PYTHON_SNIPPETS: Record<string, Snippet> = {
 			"Generate a secret key in the Autumn dashboard and add it to your environment variables.",
 		filename: ".env",
 		language: "bash",
-		code: "AUTUMN_SECRET_KEY=am_sk_...",
+		code: "AUTUMN_SECRET_KEY=am_sk_test_42424242...",
 	},
 	"create-customer": {
 		id: "create-customer",
 		title: "Create a customer",
 		description:
-			"Use the SDK to create a customer when a user signs up or when needed.",
+			"Use the SDK to create a customer when a user signs up or when needed. Autumn will auto-enable any free plan.",
 		filename: "customers.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-# Create a customer
-autumn.customers.create(
-    id="user_or_org_id_from_auth",
+customer = await autumn.customers.get_or_create(
+    customer_id="user_or_org_id_from_auth",
     name="John Doe",
-    email="john@example.com"
+    email="john@example.com",
 )`,
 	},
 	attach: {
 		id: "attach",
-		title: "Attach a product",
-		description: "Subscribe a customer to a product/plan.",
+		title: "Attach a plan",
+		description:
+			"Subscribe a customer to a plan. Returns a payment URL to redirect to.",
 		filename: "billing.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-# Attach a product to a customer
-autumn.attach(
+response = await autumn.billing.attach(
     customer_id="user_or_org_id_from_auth",
-    product_id="pro_plan",
-    success_url="http://localhost:3000"
-)`,
+    plan_id="pro_plan",
+    redirect_mode="always",
+)
+# Redirect to response.payment_url`,
 	},
 	"billing-state": {
 		id: "billing-state",
 		title: "Get billing state",
 		description:
-			"Use products.list with a customer_id to get products with their billing scenario.",
+			"Use plans.list with a customer_id to get plans with their billing scenario.",
 		filename: "billing.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-button_text = {
-    "active": "Current Plan",
-    "upgrade": "Upgrade",
-    "downgrade": "Downgrade",
-    "scheduled": "Scheduled",
-}
+plans = await autumn.plans.list(customer_id="user_or_org_id_from_auth")
 
-response = autumn.products.list(customer_id="user_or_org_id_from_auth")
-
-products = [
-    {
-        "id": p.id,
-        "name": p.name,
-        "button_text": button_text.get(p.scenario, "Subscribe"),
-    }
-    for p in response.list
-]`,
+for plan in plans.list:
+    print(plan.name, plan.customer_eligibility.scenario)`,
 	},
 	checkout: {
 		id: "checkout",
 		title: "Handle checkout",
 		description:
-			"Use checkout to initiate payment. Returns a Stripe URL for new customers, or preview data for returning customers.",
+			"Use attach with redirect_mode to handle payments. Returns a Stripe URL for new customers, or a confirmation page for returning customers.",
 		filename: "billing.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-response = autumn.checkout(
+response = await autumn.billing.attach(
     customer_id="user_or_org_id_from_auth",
-    product_id="pro_plan"
+    plan_id="pro_plan",
+    redirect_mode="always",
 )
-
-if response.url:
-    # New customer → redirect to Stripe
-    return redirect(response.url)
-
-# Returning customer → return preview for confirmation UI
-print("Preview:", response.product, response.total, response.currency)
-
-# After user confirms:
-autumn.attach(
-    customer_id="user_or_org_id_from_auth",
-    product_id="pro_plan"
-)`,
+# Redirect to response.payment_url`,
 	},
 	check: {
 		id: "check",
@@ -118,19 +94,21 @@ autumn.attach(
 			"Verify if a customer can use a feature before allowing access.",
 		filename: "access.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-# Check if customer can use a feature
-result = autumn.check(
+response = await autumn.check(
     customer_id="user_or_org_id_from_auth",
-    feature_id="api_calls"
+    feature_id="api_calls",
+    required_balance=1,
 )
 
-if result.allowed:
-    # Allow the action
-    pass`,
+if not response.allowed:
+    print("Usage limit reached")
+    return
+
+# Safe to proceed`,
 	},
 	track: {
 		id: "track",
@@ -138,15 +116,14 @@ if result.allowed:
 		description: "Record usage events to enforce limits and track consumption.",
 		filename: "usage.py",
 		language: "python",
-		code: `from autumn import Autumn
+		code: `from autumn_sdk import Autumn
 
-autumn = Autumn(secret_key="am_sk_test_42424242")
+autumn = Autumn("am_sk_test_42424242")
 
-# Track usage of a feature
-autumn.track(
+await autumn.track(
     customer_id="user_or_org_id_from_auth",
     feature_id="api_calls",
-    value=1
+    value=1,
 )`,
 	},
 };
