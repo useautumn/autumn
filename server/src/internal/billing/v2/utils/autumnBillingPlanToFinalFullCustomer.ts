@@ -52,6 +52,20 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 			const entitlement = entitlementById.get(update.customerEntitlement.id);
 			if (!entitlement) continue;
 
+			if (update.updates) {
+				if (update.updates.balance !== undefined) {
+					entitlement.balance = update.updates.balance;
+				}
+
+				if (update.updates.adjustment !== undefined) {
+					entitlement.adjustment = update.updates.adjustment;
+				}
+
+				if (update.updates.entities !== undefined) {
+					entitlement.entities = update.updates.entities;
+				}
+			}
+
 			entitlement.balance =
 				(entitlement.balance ?? 0) + (update.balanceChange ?? 0);
 

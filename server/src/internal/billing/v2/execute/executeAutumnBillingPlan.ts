@@ -100,6 +100,7 @@ export const executeAutumnBillingPlan = async ({
 	// 5. Update entitlement balances
 	await updateCustomerEntitlements({
 		ctx,
+		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
 

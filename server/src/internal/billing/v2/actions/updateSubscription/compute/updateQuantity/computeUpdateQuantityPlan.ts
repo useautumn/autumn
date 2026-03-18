@@ -41,10 +41,9 @@ export const computeUpdateQuantityPlan = ({
 			},
 		},
 
-		updateCustomerEntitlements: quantityUpdateDetails.map((detail) => ({
-			customerEntitlement: detail.customerEntitlement,
-			balanceChange: detail.customerEntitlementBalanceChange,
-		})),
+		updateCustomerEntitlements: quantityUpdateDetails.flatMap(
+			(detail) => detail.updateCustomerEntitlements,
+		),
 
 		lineItems,
 	};
