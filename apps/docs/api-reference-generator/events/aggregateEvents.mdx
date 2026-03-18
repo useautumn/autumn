@@ -38,6 +38,30 @@ const result = await autumn.events.aggregate({
 });
 ```
 
+### Special Group By Operators
+
+In addition to custom properties, you can group by built-in columns using `$`-prefixed operators:
+
+- `$customer_id` -- Group results by customer ID. Useful when aggregating across all customers (i.e. no `customer_id` specified).
+- `$entity_id` -- Group results by entity ID. Useful for seeing usage broken down per entity.
+
+```typescript
+// Aggregate across all customers, grouped by customer
+const result = await autumn.events.aggregate({
+  featureId: "api_calls",
+  range: "7d",
+  groupBy: "$customer_id"
+});
+
+// Aggregate for a customer, grouped by entity
+const result = await autumn.events.aggregate({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  range: "7d",
+  groupBy: "$entity_id"
+});
+```
+
 ## Response Format
 
 The response structure changes based on whether `group_by` is provided:

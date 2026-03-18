@@ -47,7 +47,7 @@ export const aggregateEventsCustomRangeOutboundSchema = z.object({
 });
 
 export const eventsAggregateParamsOutboundSchema = z.object({
-	customer_id: z.string(),
+	customer_id: z.union([z.string(), z.undefined()]).optional(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
 	feature_id: z.union([z.string(), z.array(z.string())]),
 	group_by: z.union([z.string(), z.undefined()]).optional(),
@@ -65,7 +65,7 @@ export const rangeSchema = closedEnumSchema;
 export const binSizeSchema = closedEnumSchema;
 
 export const eventsAggregateParamsSchema = z.object({
-	customerId: z.string(),
+	customerId: z.union([z.string(), z.undefined()]).optional(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
 	featureId: z.union([z.string(), z.array(z.string())]),
 	groupBy: z.union([z.string(), z.undefined()]).optional(),

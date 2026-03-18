@@ -234,10 +234,10 @@ class Events(BaseSDK):
     def aggregate(
         self,
         *,
-        customer_id: str,
         feature_id: Union[
             models.AggregateEventsFeatureID, models.AggregateEventsFeatureIDTypedDict
         ],
+        customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
         range: Optional[models.Range] = None,
@@ -255,10 +255,10 @@ class Events(BaseSDK):
     ) -> models.AggregateEventsResponse:
         r"""Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 
-        :param customer_id: Customer ID to aggregate events for
         :param feature_id: Feature ID(s) to aggregate events for
+        :param customer_id: Customer ID to aggregate events for
         :param entity_id: Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
-        :param group_by: Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
+        :param group_by: Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
@@ -351,10 +351,10 @@ class Events(BaseSDK):
     async def aggregate_async(
         self,
         *,
-        customer_id: str,
         feature_id: Union[
             models.AggregateEventsFeatureID, models.AggregateEventsFeatureIDTypedDict
         ],
+        customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
         range: Optional[models.Range] = None,
@@ -372,10 +372,10 @@ class Events(BaseSDK):
     ) -> models.AggregateEventsResponse:
         r"""Aggregate usage events by time period. Returns usage totals grouped by feature and optionally by a custom property.
 
-        :param customer_id: Customer ID to aggregate events for
         :param feature_id: Feature ID(s) to aggregate events for
+        :param customer_id: Customer ID to aggregate events for
         :param entity_id: Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
-        :param group_by: Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
+        :param group_by: Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
