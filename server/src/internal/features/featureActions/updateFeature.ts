@@ -31,6 +31,29 @@ interface UpdateFeatureParams {
  * Checks if the credit schema has changed between old and new config.
  * Returns true if schema changed (different items or different credit amounts).
  */
+const areModelMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: Record<string, { markup: number }> | null | undefined;
+	b: Record<string, { markup: number }> | null | undefined;
+}): boolean => {
+	const aIsAbsent = a == null;
+	const bIsAbsent = b == null;
+	if (aIsAbsent && bIsAbsent) return true;
+	if (aIsAbsent || bIsAbsent) return false;
+
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+
+	for (const key of aKeys) {
+		if (a[key]?.markup !== b[key]?.markup) return false;
+	}
+
+	return true;
+};
+
 const hasCreditSchemaChanged = ({
 	oldSchema,
 	newSchema,
@@ -201,8 +224,10 @@ export const updateFeature = async ({
 
 		const markupsChanged =
 			updates.model_markups !== undefined &&
-			JSON.stringify(updates.model_markups ?? null) !==
-				JSON.stringify(feature.model_markups ?? null);
+			!areModelMarkupsEqual({
+				a: updates.model_markups,
+				b: feature.model_markups,
+			});
 
 		if (schemaChanged || markupsChanged) {
 			await addTaskToQueue({
