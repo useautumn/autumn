@@ -22,6 +22,7 @@ export const aggregateSimplePipeParamsSchema = z.object({
 	bin_size: z.string(),
 	timezone: z.string(),
 	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 });
 
 export type AggregateSimplePipeParams = z.infer<

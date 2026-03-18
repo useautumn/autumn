@@ -14,7 +14,7 @@ SQL >
         value,
         properties,
         idempotency_key,
-        entity_id
+        coalesce(entity_id, '') as entity_id
     FROM events
     ORDER BY timestamp DESC, id DESC
     

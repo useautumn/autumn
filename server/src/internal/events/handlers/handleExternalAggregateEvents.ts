@@ -23,11 +23,19 @@ export const handleExternalAggregateEvents = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { customer_id, feature_id, group_by, range, bin_size, custom_range } =
-			c.req.valid("json");
+		const {
+			customer_id,
+			entity_id,
+			feature_id,
+			group_by,
+			range,
+			bin_size,
+			custom_range,
+		} = c.req.valid("json");
 
 		console.log("handleAggregateEvents", {
 			customer_id,
+			entity_id,
 			feature_id,
 			group_by,
 			range,
@@ -55,6 +63,7 @@ export const handleExternalAggregateEvents = createRoute({
 					interval: range,
 					event_names: featureIds,
 					customer_id: customer_id,
+					entity_id,
 					no_count: true,
 					customer,
 					group_by,
@@ -70,6 +79,7 @@ export const handleExternalAggregateEvents = createRoute({
 					interval: range,
 					event_names: featureIds,
 					customer_id: customer_id,
+					entity_id,
 					customer,
 					custom_range,
 					bin_size: bin_size ?? "day",

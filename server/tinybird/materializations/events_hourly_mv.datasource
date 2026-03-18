@@ -10,6 +10,7 @@ SCHEMA >
     `env` String,
     `customer_id` String,
     `event_name` String,
+    `entity_id` String DEFAULT '',
     `hour` DateTime,
     `properties` JSON,
     `total_value` Float64,
@@ -17,4 +18,4 @@ SCHEMA >
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
-ENGINE_SORTING_KEY "org_id, env, event_name, hour, customer_id"
+ENGINE_SORTING_KEY "org_id, env, hour, customer_id, entity_id, event_name"
