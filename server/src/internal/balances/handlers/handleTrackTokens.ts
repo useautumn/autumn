@@ -19,7 +19,9 @@ export const handleTrackTokens = createRoute({
 
 		// Auto-detect AI credit system feature
 		const aiCreditFeatures = body.feature_id
-			? ctx.features.filter((f) => f.id === body.feature_id)
+			? ctx.features.filter(
+					(f) => f.id === body.feature_id && f.is_ai_credit_system === true,
+				)
 			: ctx.features.filter((f) => f.is_ai_credit_system === true);
 
 		const aiCreditFeature = aiCreditFeatures[0];
@@ -27,7 +29,7 @@ export const handleTrackTokens = createRoute({
 		if (!aiCreditFeature) {
 			throw new RecaseError({
 				message: body.feature_id
-					? `Feature ${body.feature_id} not found`
+					? `Feature ${body.feature_id} is not an AI credit system feature`
 					: "No AI credit system feature found for this organization",
 				code: ErrCode.FeatureNotFound,
 				statusCode: 404,
