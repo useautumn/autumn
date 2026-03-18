@@ -99,8 +99,8 @@ jobs:
             --push \
             --provenance=false \
             --sbom=false \
-            --cache-from type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_BRANCH} \
-            --cache-to type=inline \
+            --cache-from type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:cache-${IMAGE_TAG_BRANCH} \
+            --cache-to type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:cache-${IMAGE_TAG_BRANCH},mode=max \
             --tag ${TAGS//,/ --tag } \
             -f docker/Dockerfile \
             .
