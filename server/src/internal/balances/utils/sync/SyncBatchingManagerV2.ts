@@ -27,7 +27,7 @@ class SyncBatchingManagerV2 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
 	private readonly BATCH_WINDOW_MS =
-		process.env.NODE_ENV === "development" ? 500 : 1000;
+		process.env.NODE_ENV === "development" ? 1000 : 5000;
 	private readonly MAX_BATCH_SIZE = 1000;
 
 	addSyncItem({
@@ -51,17 +51,23 @@ class SyncBatchingManagerV2 {
 		if (!batch) {
 			batch = this.createBatch({ customerId, orgId, env, region });
 			this.customerBatches.set(batchKey, batch);
-			this.scheduleCustomerBatch({ batchKey });
 		}
 
 		this.mergeCusEntIds({ batch, cusEntIds });
 		this.mergeRolloverIds({ batch, rolloverIds: rolloverIds ?? [] });
+		batch.context.timestamp = Date.now();
+		if (region) {
+			batch.context.region = region;
+		}
 
 		const totalSize =
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
 		if (totalSize >= this.MAX_BATCH_SIZE) {
 			this.executeCustomerBatch({ batchKey });
+			return;
 		}
+
+		this.scheduleCustomerBatch({ batchKey });
 	}
 
 	getStats(): {
@@ -154,9 +160,15 @@ class SyncBatchingManagerV2 {
 		const batch = this.customerBatches.get(batchKey);
 		if (!batch) return;
 
+		this.clearBatchTimer({ batch });
+
 		batch.timer = setTimeout(() => {
 			this.executeCustomerBatch({ batchKey });
 		}, this.BATCH_WINDOW_MS);
+
+		if (batch.timer.unref) {
+			batch.timer.unref();
+		}
 	}
 
 	private async executeCustomerBatch({
@@ -188,6 +200,16 @@ class SyncBatchingManagerV2 {
 	}: {
 		context: CustomerBatchContext;
 	}): Promise<void> {
+		const cusEntIds = Array.from(context.cusEntIds).sort();
+		const rolloverIds = Array.from(context.rolloverIds).sort();
+		const timestamp = Date.now();
+		const messageDeduplicationId = this.getMessageDeduplicationId({
+			context,
+			cusEntIds,
+			rolloverIds,
+			timestamp,
+		});
+
 		try {
 			await addTaskToQueue({
 				jobName: JobName.SyncBalanceBatchV3,
@@ -196,22 +218,48 @@ class SyncBatchingManagerV2 {
 					orgId: context.orgId,
 					env: context.env,
 					region: context.region,
-					timestamp: context.timestamp,
-					cusEntIds: Array.from(context.cusEntIds),
-					rolloverIds: Array.from(context.rolloverIds),
+					timestamp,
+					cusEntIds,
+					rolloverIds,
 				},
 				messageGroupId: context.customerId,
+				messageDeduplicationId,
 				generateDeduplicationId: false,
 			});
 
 			logger.info(
-				`[SyncV3] Queued sync for ${context.customerId}, ${context.cusEntIds.size} entitlements, ${context.rolloverIds.size} rollovers`,
+				`[SyncV3] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
 			);
 		} catch (error) {
 			logger.error(
 				`[SyncV3] Failed to queue sync for ${context.customerId}: ${error}`,
 			);
 		}
+	}
+
+	private getMessageDeduplicationId({
+		context,
+		cusEntIds,
+		rolloverIds,
+		timestamp,
+	}: {
+		context: CustomerBatchContext;
+		cusEntIds: string[];
+		rolloverIds: string[];
+		timestamp: number;
+	}): string {
+		const dedupBucket = Math.floor(timestamp / this.BATCH_WINDOW_MS);
+		const dedupKey = JSON.stringify({
+			jobName: JobName.SyncBalanceBatchV3,
+			orgId: context.orgId,
+			env: context.env,
+			customerId: context.customerId,
+			cusEntIds,
+			rolloverIds,
+			dedupBucket,
+		});
+
+		return Bun.hash(dedupKey).toString();
 	}
 }
 
