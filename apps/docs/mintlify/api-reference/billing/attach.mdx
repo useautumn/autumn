@@ -8,7 +8,10 @@ import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
 
 <Note>
-  The attach endpoint subscribes a customer to a plan. It handles new subscriptions, upgrades, and downgrades automatically. For modifying an existing subscription (like changing quantities or canceling), use [update](/api-reference/billing/billingUpdate) instead.
+    The attach endpoint subscribes a customer to a plan. It handles new
+    subscriptions, upgrades, and downgrades automatically. For modifying an
+    existing subscription (like changing quantities or canceling), use
+    [update](/api-reference/billing/billingUpdate) instead.
 </Note>
 
 ### Common Use Cases
@@ -17,51 +20,49 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 ```typescript Subscribe to a plan
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "pro_plan"
+    customerId: "cus_123",
+    planId: "pro_plan",
 });
 
 if (response.paymentUrl) {
-  // Redirect customer to checkout
-  window.location.href = response.paymentUrl;
+    // Redirect customer to checkout
+    window.location.href = response.paymentUrl;
 }
 ```
 
 ```typescript Custom pricing
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "enterprise_plan",
-  customize: {
-    price: {
-      amount: 99900, // $999.00
-      interval: "month"
-    }
-  }
+    customerId: "cus_123",
+    planId: "enterprise_plan",
+    customize: {
+        price: {
+            amount: 999, // $999
+            interval: "month",
+        },
+    },
 });
 ```
 
 ```typescript Attach plan with prepaid quantities
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "team_plan",
-  featureQuantities: [
-    { featureId: "seats", quantity: 5 }
-  ]
+    customerId: "cus_123",
+    planId: "team_plan",
+    featureQuantities: [{ featureId: "seats", quantity: 5 }],
 });
 ```
 
 ```typescript Pass metadata to Stripe subscription
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "pro_plan",
-  checkoutSessionParams: {
-    subscriptionData: {
-      metadata: {
-        userId: "internal-user-id",
-        source: "upgrade-flow",
-      },
+    customerId: "cus_123",
+    planId: "pro_plan",
+    checkoutSessionParams: {
+        subscriptionData: {
+            metadata: {
+                userId: "internal-user-id",
+                source: "upgrade-flow",
+            },
+        },
     },
-  },
 });
 ```
 
@@ -76,15 +77,15 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 ### Body Parameters
 
 <DynamicParamField body="customer_id" type="string" required>
-  The ID of the customer to attach the plan to.
+    The ID of the customer to attach the plan to.
 </DynamicParamField>
 
 <DynamicParamField body="entity_id" type="string">
-  The ID of the entity to attach the plan to.
+    The ID of the entity to attach the plan to.
 </DynamicParamField>
 
 <DynamicParamField body="plan_id" type="string" required>
-  The ID of the plan.
+    The ID of the plan.
 </DynamicParamField>
 
 <DynamicParamField body="feature_quantities" type="object[]">
@@ -106,7 +107,7 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 </DynamicParamField>
 
 <DynamicParamField body="version" type="number">
-  The version of the plan to attach.
+    The version of the plan to attach.
 </DynamicParamField>
 
 <DynamicParamField body="customize" type="object">
@@ -277,16 +278,28 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
-  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+<DynamicParamField
+    body="proration_behavior"
+    type="'prorate_immediately' | 'none'"
+>
+    How to handle proration when updating an existing subscription.
+    'prorate_immediately' charges/credits prorated amounts now, 'none' skips
+    creating any charges.
 </DynamicParamField>
 
-<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'">
-  Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
+<DynamicParamField
+    body="redirect_mode"
+    type="'always' | 'if_required' | 'never'"
+>
+    Controls when to return a checkout URL. 'always' returns a URL even if
+    payment succeeds, 'if_required' only when payment action is needed, 'never'
+    disables redirects.
 </DynamicParamField>
 
 <DynamicParamField body="subscription_id" type="string">
-  A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+    A unique ID to identify this subscription. Can be used to target specific
+    subscriptions in update operations when a customer has multiple products
+    with the same plan.
 </DynamicParamField>
 
 <DynamicParamField body="discounts" type="object[]">
@@ -304,19 +317,24 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 </DynamicParamField>
 
 <DynamicParamField body="success_url" type="string">
-  URL to redirect to after successful checkout.
+    URL to redirect to after successful checkout.
 </DynamicParamField>
 
 <DynamicParamField body="new_billing_subscription" type="boolean">
-  Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+    Only applicable when the customer has an existing Stripe subscription. If
+    true, creates a new separate subscription instead of merging into the
+    existing one.
 </DynamicParamField>
 
 <DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'">
-  When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+    When the plan change should take effect. 'immediate' applies now,
+    'end_of_cycle' schedules for the end of the current billing cycle. By
+    default, upgrades are immediate and downgrades are scheduled.
 </DynamicParamField>
 
 <DynamicParamField body="checkout_session_params" type="object">
-  Additional parameters to pass into the creation of the Stripe checkout session.
+    Additional parameters to pass into the creation of the Stripe checkout
+    session.
 </DynamicParamField>
 
 <DynamicParamField body="custom_line_items" type="object[]">
@@ -334,7 +352,8 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 </DynamicParamField>
 
 <DynamicParamField body="processor_subscription_id" type="string">
-  The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
+    The processor subscription ID to link. Use this to attach an existing Stripe
+    subscription instead of creating a new one.
 </DynamicParamField>
 
 <DynamicParamField body="carry_over_balances" type="object">
@@ -365,15 +384,14 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   </Expandable>
 </DynamicParamField>
 
-
 ### Response
 
 <DynamicResponseField name="customer_id" type="string">
-  The ID of the customer.
+    The ID of the customer.
 </DynamicResponseField>
 
 <DynamicResponseField name="entity_id" type="string">
-  The ID of the entity, if the plan was attached to an entity.
+    The ID of the entity, if the plan was attached to an entity.
 </DynamicResponseField>
 
 <DynamicResponseField name="invoice" type="object">
@@ -403,7 +421,8 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 </DynamicResponseField>
 
 <DynamicResponseField name="payment_url" type="string | null">
-  URL to redirect the customer to complete payment. Null if no payment action is required.
+    URL to redirect the customer to complete payment. Null if no payment action
+    is required.
 </DynamicResponseField>
 
 <DynamicResponseField name="required_action" type="object">
@@ -419,7 +438,6 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 
   </Expandable>
 </DynamicResponseField>
-
 
 <ResponseExample>
 ```json 200
