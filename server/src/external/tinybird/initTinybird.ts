@@ -1,20 +1,91 @@
-import { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod"; // zod-bird requires zod v3, not zod/v4
-import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
-import { createAggregatePipe } from "./pipes/aggregatePipe.js";
-import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
-import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
-import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
+import {
+	createClient,
+	type QueryResult,
+	Tinybird,
+	type TinybirdErrorResponse,
+} from "@tinybirdco/sdk";
+import {
+	type AggregateGroupablePipeParams,
+	type AggregateGroupablePipeRow,
+	type AggregatePipeParams,
+	type AggregatePipeRow,
+	type AggregateSimplePipeParams,
+	type AggregateSimplePipeRow,
+	type ListEventNamesPipeParams,
+	type ListEventNamesPipeRow,
+	type ListEventsPaginatedPipeParams,
+	type ListEventsPaginatedPipeRow,
+	type TinybirdEvent,
+	tinybirdResources,
+} from "./tinybirdResources.js";
 
 const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
 
+const queryTinybirdPipe = async <TData>({
+	pipe,
+	params,
+}: {
+	pipe: string;
+	params: Record<string, string | number | string[] | undefined>;
+}): Promise<QueryResult<TData>> => {
+	if (!TINYBIRD_API_URL || !TINYBIRD_TOKEN) {
+		throw new Error("Tinybird is not configured");
+	}
+
+	const url = new URL(`/v0/pipes/${pipe}.json`, `${TINYBIRD_API_URL}/`);
+
+	for (const [key, value] of Object.entries(params)) {
+		if (value === undefined) {
+			continue;
+		}
+
+		if (Array.isArray(value)) {
+			url.searchParams.set(key, value.join(","));
+			continue;
+		}
+
+		url.searchParams.set(key, String(value));
+	}
+
+	const response = await fetch(url, {
+		headers: {
+			Authorization: `Bearer ${TINYBIRD_TOKEN}`,
+		},
+		method: "GET",
+	});
+
+	if (!response.ok) {
+		const errorBody = (await response
+			.json()
+			.catch(() => null)) as TinybirdErrorResponse | null;
+
+		throw new Error(
+			errorBody?.error ??
+				`Tinybird query failed with status ${response.status}`,
+		);
+	}
+
+	return (await response.json()) as QueryResult<TData>;
+};
+
 /** Tinybird REST API client singleton. Null if not configured. */
-const tinybirdClient: Tinybird | null =
+const tinybirdClient =
 	TINYBIRD_API_URL && TINYBIRD_TOKEN
 		? new Tinybird({
+				...tinybirdResources,
 				baseUrl: TINYBIRD_API_URL,
 				token: TINYBIRD_TOKEN,
+				devMode: false,
+			})
+		: null;
+
+const tinybirdRawClient =
+	TINYBIRD_API_URL && TINYBIRD_TOKEN
+		? createClient({
+				baseUrl: TINYBIRD_API_URL,
+				token: TINYBIRD_TOKEN,
+				devMode: false,
 			})
 		: null;
 
@@ -22,44 +93,42 @@ if (tinybirdClient) {
 	console.log(`[Tinybird] Configured with URL: ${TINYBIRD_API_URL}`);
 }
 
-/** Zod schema for TinybirdEvent (matches events.datasource) */
-const TinybirdEventSchema = z.object({
-	id: z.string(),
-	org_id: z.string(),
-	org_slug: z.string().nullable(),
-	internal_customer_id: z.string().nullable(),
-	env: z.string(),
-	created_at: z.number().nullable(),
-	timestamp: z.string(),
-	event_name: z.string(),
-	idempotency_key: z.string().nullable(),
-	value: z.number().nullable(),
-	set_usage: z.number().nullable(),
-	entity_id: z.string().nullable(),
-	internal_entity_id: z.string().nullable(),
-	customer_id: z.string(),
-	properties: z.string().nullable(),
-});
-
 /** Pre-built pipe callers */
 export const tinybirdPipes = tinybirdClient
 	? {
-			aggregate: createAggregatePipe(tinybirdClient),
-			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
-			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
-			listEventNames: createListEventNamesPipe(tinybirdClient),
-			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
+			aggregate: (params: AggregatePipeParams) =>
+				queryTinybirdPipe<AggregatePipeRow>({ pipe: "aggregate", params }),
+			aggregateSimple: (params: AggregateSimplePipeParams) =>
+				queryTinybirdPipe<AggregateSimplePipeRow>({
+					pipe: "aggregate_simple",
+					params,
+				}),
+			aggregateGroupable: (params: AggregateGroupablePipeParams) =>
+				queryTinybirdPipe<AggregateGroupablePipeRow>({
+					pipe: "aggregate_groupable",
+					params,
+				}),
+			listEventNames: (params: ListEventNamesPipeParams) =>
+				queryTinybirdPipe<ListEventNamesPipeRow>({
+					pipe: "list_event_names",
+					params,
+				}),
+			listEventsPaginated: (params: ListEventsPaginatedPipeParams) =>
+				queryTinybirdPipe<ListEventsPaginatedPipeRow>({
+					pipe: "list_events_paginated",
+					params,
+				}),
 		}
 	: null;
 
 /** Pre-built ingest endpoint for events */
-export const tinybirdIngest = tinybirdClient
+export const tinybirdIngest = tinybirdRawClient
 	? {
-			events: tinybirdClient.buildIngestEndpoint({
-				datasource: "events",
-				event: TinybirdEventSchema,
-				wait: true,
-			}),
+			events: (events: TinybirdEvent[]) =>
+				tinybirdRawClient.ingestBatch("events", events, {
+					wait: true,
+					maxRetries: 10,
+				}),
 		}
 	: null;
 
@@ -96,4 +165,5 @@ export type {
 	ListEventNamesPipeRow,
 	ListEventsPaginatedPipeParams,
 	ListEventsPaginatedPipeRow,
-} from "./pipes/index.js";
+	TinybirdEvent,
+} from "./tinybirdResources.js";

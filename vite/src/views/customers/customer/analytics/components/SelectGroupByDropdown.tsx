@@ -110,7 +110,6 @@ export const SelectGroupByDropdown = ({
 							</DropdownMenuItem>
 						</>
 					)}
-
 					{propertyKeys.length > 0 && <DropdownMenuSeparator />}
 
 					{filteredOptions.length === 0 && propertyKeys.length > 0 && (
@@ -146,7 +145,7 @@ export const SelectGroupByDropdown = ({
 								<span className="text-xs">All values</span>
 								{!groupFilter && <Check className="ml-2 h-3 w-3 text-t3" />}
 							</DropdownMenuItem>
-							{availableGroupValues.map((value) => (
+							{availableGroupValues.map((value: string) => (
 								<DropdownMenuItem
 									key={value}
 									onClick={() => setGroupFilter(value)}
