@@ -1,0 +1,43 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Autumn: Start (Docker)",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "docker compose -f docker-compose.unix.yml up",
+			"preLaunchTask": "Autumn: Install Dependencies",
+			"env": {
+				"PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+			}
+		},
+		{
+			"name": "Autumn: Start (Docker - Rebuild)",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "docker compose -f docker-compose.unix.yml up --build",
+			"env": {
+				"PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+			}
+		},
+		{
+			"name": "Autumn: First Time Setup",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "bun setup && bun db:generate && bun db:migrate",
+			"preLaunchTask": "Autumn: Install Dependencies",
+			"env": {
+				"PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+			}
+		},
+		{
+			"name": "Autumn: DB Migrate",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "bun db:generate && bun db:migrate",
+			"env": {
+				"PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+			}
+		}
+	]
+}

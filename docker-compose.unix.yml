@@ -64,6 +64,7 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - CACHE_URL=redis://valkey:6379
     depends_on:
       - shared
     restart: unless-stopped
@@ -83,6 +84,7 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - CACHE_URL=redis://valkey:6379
     depends_on:
       - shared
     restart: unless-stopped

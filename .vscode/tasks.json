@@ -1,5 +1,10 @@
 {
 	"version": "2.0.0",
+	"options": {
+		"env": {
+			"PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+		}
+	},
 	"tasks": [
 		{
 			"label": "Run Test Pattern",
@@ -17,6 +22,22 @@
 			"label": "Run Current Test File",
 			"type": "shell",
 			"command": "bun test ${relativeFile}",
+			"problemMatcher": []
+		},
+		{
+			"label": "Autumn: Install Dependencies",
+			"type": "shell",
+			"command": "bun install",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem"
+			}
+		},
+		{
+			"label": "Autumn: Docker Compose Down",
+			"type": "shell",
+			"command": "docker compose -f docker-compose.unix.yml down",
 			"problemMatcher": []
 		}
 	],
