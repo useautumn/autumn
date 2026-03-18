@@ -199,14 +199,16 @@ export const deductFromCusEntsTypescript = ({
 		return { updates, mutationLogs, remaining: amountToDeduct };
 	}
 
-	// // Sort usage_allowed entitlements first so overage hits them before regular ones
-	// cusEnts.sort((a, b) => {
-	// 	const leftUsageAllowed = a.usage_allowed ?? false;
-	// 	const rightUsageAllowed = b.usage_allowed ?? false;
+	// Sort usage_allowed entitlements first so overage hits them before regular ones
+	if (amountToDeduct > 0 && allowOverage) {
+		cusEnts.sort((a, b) => {
+			const leftUsageAllowed = a.usage_allowed ?? false;
+			const rightUsageAllowed = b.usage_allowed ?? false;
 
-	// 	if (leftUsageAllowed === rightUsageAllowed) return 0;
-	// 	return leftUsageAllowed ? -1 : 1;
-	// });
+			if (leftUsageAllowed === rightUsageAllowed) return 0;
+			return leftUsageAllowed ? -1 : 1;
+		});
+	}
 
 	// Pass 2:
 	//   Deductions: floor at minBalance (can go below 0 if usage_allowed / allowOverage)

@@ -23,7 +23,7 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	quantityDifference: number;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }): UpdateCustomerEntitlement[] => {
-	const { fullCustomer, backfillPrepaidUpdate } = updateSubscriptionContext;
+	const { fullCustomer, recalculateBalances } = updateSubscriptionContext;
 
 	const customerPrice = cusEntToCusPrice({
 		cusEnt: customerEntitlement,
@@ -48,7 +48,7 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	}
 
 	// 1. Create cloned
-	const cusEnts = backfillPrepaidUpdate
+	const cusEnts = recalculateBalances
 		? fullCustomerToCustomerEntitlements({
 				fullCustomer,
 				featureIds: [customerEntitlement.entitlement.feature.id],
