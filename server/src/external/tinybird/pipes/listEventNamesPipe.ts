@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod/v4";
+import { z } from "../tinybirdZod.js";
 
 /** Response schema for the list_event_names pipe */
 export const listEventNamesPipeResponseSchema = z.object({
