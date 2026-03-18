@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: d10d30586480144e9735035fcb06a284
-  docVersion: 2.1.0
+  docChecksum: 6b62b7501f08747084a03766dae685ad
+  docVersion: 2.2.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
   releaseVersion: 0.10.17
   configChecksum: b4221f58c44175fb3ae2ca4ec9e8db6f
 persistentEdits:
-  generation_id: 6c247ee2-2f80-429d-8af4-91353e9e63b0
-  pristine_commit_hash: d6d9a3f44b2e168484cbe5ae463e09e3d7d89359
-  pristine_tree_hash: e752820ab24b78009bc85bd0f5f0d85da67fbf89
+  generation_id: 3a5a41d2-751c-46e2-a969-b140e71ece9f
+  pristine_commit_hash: cd0a938804808b853986d513e551e4c525ddc45f
+  pristine_tree_hash: 3c8eff12e942dcea6a4ff863e0e540d4eb04bb49
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -56,16 +56,16 @@ trackedFiles:
     pristine_git_object: cf98a6bf092538eb10ff0edc915102682ce9a6e6
   FUNCTIONS.md:
     id: 21b9df02aaeb
-    last_write_checksum: sha1:59eefaff15c9c280ef26fcc563e8d290320a4003
-    pristine_git_object: b3057307d5cce90967702b7636c89322834d1d8f
+    last_write_checksum: sha1:f8b9273977606e6c5bc3abae9354a5186af43ec0
+    pristine_git_object: 02a32efb626ebcf4d4952a9a4e4e7e9e539852f7
   RUNTIMES.md:
     id: 620c490847b6
     last_write_checksum: sha1:e45b854f02c357cbcfdb8c3663000e8339e16505
     pristine_git_object: 27731c3b5ace66bedc454ed5acbe15075aacd3dc
   USAGE.md:
     id: 3aed33ce6e6f
-    last_write_checksum: sha1:b85b3354be20e8d14949292b9ef910bdd31a6def
-    pristine_git_object: 18eb11d41cfedbdf7c5391e0d9b48809fb426077
+    last_write_checksum: sha1:bc07c552940c1ebe00fcc3ed2b6f0760536f4763
+    pristine_git_object: 3dd5ab73f6de2cb60e9e7729749e333df8c8974e
   docs/lib/utils/retryconfig.md:
     id: 0ce9707cb848
     last_write_checksum: sha1:bc4454e196fcd219f5a78da690375a884f5ed07b
@@ -2792,40 +2792,40 @@ trackedFiles:
     pristine_git_object: 56e566eba7aeffa9422da7c6b4bcb80a123e5f14
   docs/sdks/autumn/README.md:
     id: d27c9292a1a3
-    last_write_checksum: sha1:87a654aeafa0198da8f08794a91723dafa8d049e
-    pristine_git_object: f3cab5dc0132eb27d9211334f0baaea5150881ed
+    last_write_checksum: sha1:8b3c26a9a0202d01d704f782172e06caef3a9b64
+    pristine_git_object: e613982bdfa00068af639c756df5ef757e4829b5
   docs/sdks/balances/README.md:
     id: 6ca85866f00d
-    last_write_checksum: sha1:e83e7436f41b102a599b49c746aece5cf506e9af
-    pristine_git_object: ec63baf76cf856053e193a95c0993af4784ee2f7
+    last_write_checksum: sha1:a4e8baf562d105f12dec6e90ac7a38f8a2c8c5b4
+    pristine_git_object: a366694c3e2f4df91e7ae37aa212d8f07cb83c40
   docs/sdks/billing/README.md:
     id: dc915331dd9d
-    last_write_checksum: sha1:25a65b688b297f43fad21c44dbea27e8c242a3b0
-    pristine_git_object: 744da34043e3f130a854d861ebf3ca48b5834e02
+    last_write_checksum: sha1:53dfd365ec6177a94b1406953b4632ad45e556ff
+    pristine_git_object: 5620ab958f6bd99e45cc350d99bf7c53b461a27f
   docs/sdks/customers/README.md:
     id: 9332759cffc2
-    last_write_checksum: sha1:b0cede8a2510238396c8fea9a6c6a02215ed10e0
-    pristine_git_object: 6056578a3a2f1f62e7fbf859d72f1367b9b75d67
+    last_write_checksum: sha1:1eb602635426550359b47163b6f402b6c7b959df
+    pristine_git_object: 0bfd24b321aea0d1531762a937fdb2eca0892d62
   docs/sdks/entities/README.md:
     id: a140ac5181b9
-    last_write_checksum: sha1:cac2ce9e333beef18031828a6e6c45268e1f7a45
-    pristine_git_object: 71d2b21d7bc4bb44e33bbb84ef24b29f552db7fb
+    last_write_checksum: sha1:be3ac6ce88b5e04864308373f8001ea01baf2efc
+    pristine_git_object: 431e006576f53943b2a25905889857d1ec9755ef
   docs/sdks/events/README.md:
     id: cf45a4390b9b
-    last_write_checksum: sha1:62a90a7ab0988e2ef446432a310af8e068fd9948
-    pristine_git_object: 7e53035a1d48d817ca397a5a61632f7dc055e16d
+    last_write_checksum: sha1:31c4754b0cbfea3c38dc4cf672b5015c9c869f36
+    pristine_git_object: 92842a2cc0f1f3092751b10428407d777bf1a183
   docs/sdks/features/README.md:
     id: e885cfb7247b
-    last_write_checksum: sha1:324a475d094aeb0bd4e7c698bad1791a4464aee0
-    pristine_git_object: b4d2ec2d7b12fb786a8f5fefd323434d81b3a500
+    last_write_checksum: sha1:9d6266ecd7c58b344d036592a21a743ad2938d8c
+    pristine_git_object: c93f73a5c5039722cb5799d69e9e4f208ccecfd8
   docs/sdks/plans/README.md:
     id: 2d8c741fff57
-    last_write_checksum: sha1:004893ab53317f43f2f9a4d94ab7b41bb60cb76c
-    pristine_git_object: 0d6bc90b41e2601a6dc3b3bd87fd49a9b89eee9a
+    last_write_checksum: sha1:2cd1f3247a34fc5a32816eff83acbd35e2d0cd8d
+    pristine_git_object: 91259eb35197ab1242d2644e67f67c4e17f80704
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:a9ad9263bdca225c9730d00239a045590ba49e56
-    pristine_git_object: 9ae45ec380010acb4febdac6ace065f6fe565b9b
+    last_write_checksum: sha1:9a541f0191db895e4a8ea17c4b61c725ecc40972
+    pristine_git_object: 2e6c885f74a11db33b28d29be59a3660d670cb86
   eslint.config.mjs:
     id: 461c8d07f6da
     last_write_checksum: sha1:9398f326377fe47f67af2df6eb6370750c0790b4
@@ -2840,8 +2840,8 @@ trackedFiles:
     pristine_git_object: 0928c2ed5c0c739a6fb22e31cdaf11d6bdec9dae
   examples/check.example.ts:
     id: af533e83342b
-    last_write_checksum: sha1:438f516ee9152469d47714ed86beee85feb1fb58
-    pristine_git_object: 9153d3e136463154c2c729a9733c5d77e9a1f522
+    last_write_checksum: sha1:39f370d9c122f556462b2e157fad8c55fcd93ba2
+    pristine_git_object: 8548853c24f7fe1247ce1a36af015f7b695d3af5
   examples/package.json:
     id: c1d7b0ec8e7e
     last_write_checksum: sha1:22cf1a48e1d9bc8ffc9e65280aeaa5600b54f659
@@ -3024,8 +3024,8 @@ trackedFiles:
     pristine_git_object: 44be0eae8246521b230e8e711a88eff738fc015d
   src/lib/config.ts:
     id: 320761608fb3
-    last_write_checksum: sha1:f49c64a7def502aba4bb9ea2129a259afbd9a2d5
-    pristine_git_object: 5f464f88245fbbac3290341925ec7d8514be6b3e
+    last_write_checksum: sha1:ddc74e2d374d3fe2ee1e8a47b0c762259c05c96f
+    pristine_git_object: 468ec0db08775aac0b972b73beb5edce16b9a6f5
   src/lib/dlv.ts:
     id: b1988214835a
     last_write_checksum: sha1:1dd3e3fbb4550c4bf31f5ef997faff355d6f3250
@@ -3036,8 +3036,8 @@ trackedFiles:
     pristine_git_object: 25d1d8032a69f56da1ac1df00a48ecf73457a1ef
   src/lib/env.ts:
     id: c52972a3b198
-    last_write_checksum: sha1:150359e3f12a2ba7eef77567dd8ef2c7ee93de21
-    pristine_git_object: 187f9e15bbb8b2955d0fb89534ebd34a491c5b36
+    last_write_checksum: sha1:e72b6790ba117575d7d0e35a692881989787f388
+    pristine_git_object: 6439826c5dcc6f5b21cad742cb1b24951d912a6a
   src/lib/files.ts:
     id: e5efa54fcb95
     last_write_checksum: sha1:d0f325f445b8d22e7d73baf052c585ec2dd24841
@@ -3634,7 +3634,7 @@ examples:
     speakeasy-default-get-or-create-customer:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "name": "John Doe", "email": "john@example.com"}
       responses:
@@ -3644,7 +3644,7 @@ examples:
     speakeasy-default-list-plans:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {}
       responses:
@@ -3654,7 +3654,7 @@ examples:
     speakeasy-default-attach:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "redirect_mode": "if_required"}
       responses:
@@ -3682,7 +3682,7 @@ examples:
     speakeasy-default-list-customers:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"offset": 0, "limit": 10}
       responses:
@@ -3692,7 +3692,7 @@ examples:
     speakeasy-default-update-customer:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "name": "Jane Doe", "email": "jane@example.com"}
       responses:
@@ -3702,7 +3702,7 @@ examples:
     speakeasy-default-delete-customer:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "delete_in_stripe": false}
       responses:
@@ -3732,7 +3732,7 @@ examples:
     speakeasy-default-billing-update:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "feature_quantities": [{"feature_id": "seats", "quantity": 10}], "redirect_mode": "if_required"}
       responses:
@@ -3802,7 +3802,7 @@ examples:
     speakeasy-default-preview-attach:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "redirect_mode": "if_required"}
       responses:
@@ -3832,7 +3832,7 @@ examples:
     speakeasy-default-setup-payment:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "success_url": "https://example.com/account/billing"}
       responses:
@@ -3862,7 +3862,7 @@ examples:
     speakeasy-default-open-customer-portal:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "return_url": "https://useautumn.com"}
       responses:
@@ -3872,7 +3872,7 @@ examples:
     speakeasy-default-preview-update:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "feature_quantities": [{"feature_id": "seats", "quantity": 15}], "redirect_mode": "if_required"}
       responses:
@@ -3882,7 +3882,7 @@ examples:
     speakeasy-default-create-balance:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "reset": {"interval": "month"}}
       responses:
@@ -3892,7 +3892,7 @@ examples:
     speakeasy-default-update-balance:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "remaining": 5}
       responses:
@@ -3902,7 +3902,7 @@ examples:
     speakeasy-default-check:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "messages"}
       responses:
@@ -3912,7 +3912,7 @@ examples:
     speakeasy-default-track:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "messages", "value": 1}
       responses:
@@ -3942,7 +3942,7 @@ examples:
     speakeasy-default-create-referral-code:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "program_id": "prog_123"}
       responses:
@@ -3952,7 +3952,7 @@ examples:
     speakeasy-default-redeem-referral-code:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"code": "REF123", "customer_id": "cus_456"}
       responses:
@@ -3962,7 +3962,7 @@ examples:
     speakeasy-default-create-entity:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"name": "Seat 42", "feature_id": "seats", "customer_id": "cus_123", "entity_id": "seat_42"}
       responses:
@@ -3972,7 +3972,7 @@ examples:
     speakeasy-default-get-entity:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"entity_id": "seat_42"}
       responses:
@@ -3982,7 +3982,7 @@ examples:
     speakeasy-default-delete-entity:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "entity_id": "seat_42"}
       responses:
@@ -3992,7 +3992,7 @@ examples:
     speakeasy-default-list-events:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"offset": 0, "limit": 50, "customer_id": "cus_123"}
       responses:
@@ -4002,7 +4002,7 @@ examples:
     speakeasy-default-aggregate-events:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "range": "30d", "bin_size": "day"}
       responses:
@@ -4012,7 +4012,7 @@ examples:
     speakeasy-default-create-feature:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"name": "API Calls", "type": "metered", "consumable": true, "feature_id": "api-calls"}
       responses:
@@ -4022,7 +4022,7 @@ examples:
     speakeasy-default-get-feature:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"feature_id": "api-calls"}
       responses:
@@ -4032,7 +4032,7 @@ examples:
     speakeasy-default-list-features:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       responses:
         "200":
           application/json: {"list": [{"id": "api-calls", "name": "API Calls", "type": "metered", "consumable": true, "display": {"singular": "API call", "plural": "API calls"}, "archived": false}, {"id": "credits", "name": "Credits", "type": "credit_system", "consumable": true, "credit_schema": [{"metered_feature_id": "api-calls", "credit_cost": 1}, {"metered_feature_id": "image-generations", "credit_cost": 10}], "display": {"singular": "credit", "plural": "credits"}, "archived": false}]}
@@ -4040,7 +4040,7 @@ examples:
     speakeasy-default-update-feature:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"name": "API Requests", "display": {"singular": "API request", "plural": "API requests"}, "feature_id": "api-calls"}
       responses:
@@ -4050,7 +4050,7 @@ examples:
     speakeasy-default-delete-feature:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"feature_id": "old-feature"}
       responses:
@@ -4060,7 +4060,7 @@ examples:
     speakeasy-default-create-plan:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"plan_id": "free_plan", "group": "", "name": "Free", "add_on": false, "auto_enable": true, "items": [{"feature_id": "messages", "included": 100, "reset": {"interval": "month"}}]}
       responses:
@@ -4070,7 +4070,7 @@ examples:
     speakeasy-default-get-plan:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"plan_id": "pro_plan"}
       responses:
@@ -4080,7 +4080,7 @@ examples:
     speakeasy-default-update-plan:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"plan_id": "pro_plan", "group": "", "name": "Pro Plan (Updated)", "price": {"amount": 15, "interval": "month"}, "archived": false}
       responses:
@@ -4090,7 +4090,7 @@ examples:
     speakeasy-default-delete-plan:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"plan_id": "unused_plan", "all_versions": false}
       responses:
@@ -4110,7 +4110,7 @@ examples:
     speakeasy-default-preview-multi-attach:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro_plan"}, {"plan_id": "addon_seats", "feature_quantities": [{"feature_id": "seats", "quantity": 5}]}], "redirect_mode": "if_required"}
       responses:
@@ -4120,7 +4120,7 @@ examples:
     speakeasy-default-multi-attach:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro_plan"}, {"plan_id": "addon_seats", "feature_quantities": [{"feature_id": "seats", "quantity": 5}]}], "redirect_mode": "if_required"}
       responses:
@@ -4130,7 +4130,7 @@ examples:
     speakeasy-default-delete-balance:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls"}
       responses:
@@ -4150,7 +4150,7 @@ examples:
     speakeasy-default-finalize-lock:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"lock_id": "lock_abc123", "action": "confirm"}
       responses:
@@ -4160,7 +4160,7 @@ examples:
     speakeasy-default-update-entity:
       parameters:
         header:
-          x-api-version: "2.1"
+          x-api-version: "2.2.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "entity_id": "seat_42", "billing_controls": {"spend_limits": [{"feature_id": "messages", "enabled": true, "overage_limit": 25}]}}
       responses:
