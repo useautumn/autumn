@@ -61,6 +61,10 @@ if (cluster.isPrimary) {
 			process.exit(0);
 		}, 10000);
 
+		if (shutdownTimeout.unref) {
+			shutdownTimeout.unref();
+		}
+
 		// Wait for all workers to exit gracefully
 		const checkWorkers = setInterval(() => {
 			const aliveWorkers = Object.keys(cluster.workers || {}).length;
