@@ -1,6 +1,6 @@
 info:
   title: Autumn API
-  version: 2.1.0
+  version: 2.2.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
@@ -1545,7 +1545,7 @@ paths:
           required: true
           schema:
             type: string
-            default: "2.1"
+            default: 2.2.0
           x-speakeasy-globals-hidden: true
   /v1/customers.list:
     post:
@@ -12351,5 +12351,5 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: "2.1"
+        default: 2.2.0
       x-speakeasy-globals-hidden: true

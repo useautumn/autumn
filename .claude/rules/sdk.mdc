@@ -36,6 +36,8 @@ All contracts aggregated in `packages/openapi/v2.1/contracts/index.ts`.
 
 Steps: Register internal schemas → Generate via ORPC → Apply Speakeasy settings → Inject global headers → Remove internal fields.
 
+The generated SDK/OpenAPI `x-api-version` default must come from `LATEST_VERSION` in `shared/api/versionUtils/ApiVersion.ts` and currently resolves to `2.2.0`.
+
 ---
 
 ## 4. SDK Generation

@@ -25,7 +25,7 @@ import { check } from "@useautumn/sdk/funcs/check.js";
 // Use `AutumnCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
 const autumn = new AutumnCore({
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
