@@ -77,7 +77,7 @@ function UpdateCreditSystemSheet({
 
 		setLoading(true);
 		try {
-			const isAiCreditSystem = creditSystem.model_markups != null;
+			const isAiCreditSystem = creditSystem.is_ai_credit_system;
 
 			await FeatureService.updateFeature(
 				axiosInstance,
