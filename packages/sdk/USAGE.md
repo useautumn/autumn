@@ -3,7 +3,7 @@
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

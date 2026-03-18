@@ -28,6 +28,9 @@ SQL >
         {% if defined(customer_id) and String(customer_id, '') != '' %}
         AND customer_id = {{ String(customer_id) }}
         {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
     GROUP BY
         period,
         event_name

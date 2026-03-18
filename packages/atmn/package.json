@@ -1,6 +1,6 @@
 {
 	"name": "atmn",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"license": "MIT",
 	"bin": {
 		"atmn": "dist/cli.js"
@@ -12,6 +12,18 @@
 	"homepage": "https://docs.useautumn.com/api-reference/cli/getting-started",
 	"main": "dist/compose/index.js",
 	"types": "dist/src/compose/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/src/compose/index.d.ts",
+			"import": "./dist/compose/index.js",
+			"default": "./dist/compose/index.js"
+		},
+		"./skills": {
+			"types": "./src/prompts/skills/index.ts",
+			"import": "./src/prompts/skills/index.ts",
+			"default": "./src/prompts/skills/index.ts"
+		}
+	},
 	"type": "module",
 	"engines": {
 		"node": ">=16"
