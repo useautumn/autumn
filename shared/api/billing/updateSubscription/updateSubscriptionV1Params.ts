@@ -25,6 +25,11 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
+		backfill_prepaid_update: z.boolean().optional().meta({
+			description:
+				"If true, rebalances same-feature prepaid balances against existing usage during quantity updates.",
+		}),
+
 		status: z
 			.enum([
 				CusProductStatus.Active,

@@ -153,6 +153,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 		defaultProduct,
 		cancelAction,
+		backfillPrepaidUpdate: params.backfill_prepaid_update === true,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
