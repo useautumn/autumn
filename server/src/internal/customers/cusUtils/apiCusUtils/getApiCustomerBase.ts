@@ -68,6 +68,7 @@ export const getApiCustomerBase = async ({
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,
 			spend_limits: fullCus.spend_limits ?? undefined,
+			usage_alerts: fullCus.usage_alerts ?? undefined,
 		},
 
 		invoices:
