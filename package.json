@@ -7,6 +7,7 @@
 			"shared",
 			"vite",
 			"scripts",
+			"apps/autumn",
 			"apps/checkout",
 			"apps/docs",
 			"apps/sdk-test",
