@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { Badge } from "@/components/ui/badge";
 import {
 	Tooltip,
 	TooltipContent,
@@ -124,19 +123,14 @@ export default function CustomerView2() {
 												<TooltipProvider>
 													<Tooltip delayDuration={0}>
 														<TooltipTrigger>
-															<Badge 
-																variant="outline" 
-																className="bg-black text-white dark:bg-white dark:text-black border-black dark:border-white px-1.5 py-0.5 text-[10px] font-medium"
+															<svg
+																fill="currentColor" 
+																xmlns="http://www.w3.org/2000/svg" 
+																viewBox="0 0 1155 1000"
+																className="w-3 h-3 text-black dark:text-white"
 															>
-																<svg
-																	fill="currentColor" 
-																	xmlns="http://www.w3.org/2000/svg" 
-																	viewBox="0 0 1155 1000"
-																	className="w-2.5 h-2.5"
-																>
-																	<path d="m577.3 0 577.4 1000H0z"/>
-																</svg>
-															</Badge>
+																<path d="m577.3 0 577.4 1000H0z"/>
+															</svg>
 														</TooltipTrigger>
 														<TooltipContent>
 															<span>Vercel Marketplace Customer</span>
