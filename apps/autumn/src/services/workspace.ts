@@ -32,7 +32,9 @@ export async function getWorkspace(workspaceId: string): Promise<WorkspaceConfig
 	const encKey = getEnv().ENCRYPTION_KEY;
 
 	if (workspace.apiKey) {
-		workspace.apiKey = await decrypt(workspace.apiKey, encKey);
+		workspace.apiKey = isEncrypted(workspace.apiKey)
+			? await decrypt(workspace.apiKey, encKey)
+			: workspace.apiKey;
 	}
 	if (workspace.slackBotToken) {
 		workspace.slackBotToken = isEncrypted(workspace.slackBotToken)
@@ -40,7 +42,9 @@ export async function getWorkspace(workspaceId: string): Promise<WorkspaceConfig
 			: workspace.slackBotToken;
 	}
 	if (workspace.webhookSecret) {
-		workspace.webhookSecret = await decrypt(workspace.webhookSecret, encKey);
+		workspace.webhookSecret = isEncrypted(workspace.webhookSecret)
+			? await decrypt(workspace.webhookSecret, encKey)
+			: workspace.webhookSecret;
 	}
 
 	return workspace;
@@ -79,6 +83,16 @@ export async function deleteWorkspace(workspaceId: string): Promise<void> {
 
 export async function listWorkspaces(): Promise<string[]> {
 	const redis = getRedis();
-	const keys = await redis.keys(`${KEY_PREFIX}*`);
-	return keys.map((k) => k.replace(KEY_PREFIX, ""));
+	const ids = new Set<string>();
+	let cursor = "0";
+
+	do {
+		const [next, keys] = await redis.scan(cursor, "MATCH", `${KEY_PREFIX}*`, "COUNT", 100);
+		cursor = next;
+		for (const key of keys) {
+			ids.add(key.replace(KEY_PREFIX, ""));
+		}
+	} while (cursor !== "0");
+
+	return [...ids];
 }
