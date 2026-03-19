@@ -15,26 +15,28 @@ const wasThresholdCrossed = ({
 	alert,
 	oldUsage,
 	newUsage,
-	grantedBalance,
+	oldGrantedBalance,
+	newGrantedBalance,
 }: {
 	alert: DbUsageAlert;
 	oldUsage: number;
 	newUsage: number;
-	grantedBalance: number;
+	oldGrantedBalance: number;
+	newGrantedBalance: number;
 }) => {
 	if (alert.threshold_type === "usage_threshold") {
 		return oldUsage < alert.threshold && newUsage >= alert.threshold;
 	}
 
 	// usage_percentage_threshold
-	if (grantedBalance <= 0) return false;
+	if (oldGrantedBalance <= 0 || newGrantedBalance <= 0) return false;
 
 	const oldPercentage = new Decimal(oldUsage)
-		.div(grantedBalance)
+		.div(oldGrantedBalance)
 		.mul(100)
 		.toNumber();
 	const newPercentage = new Decimal(newUsage)
-		.div(grantedBalance)
+		.div(newGrantedBalance)
 		.mul(100)
 		.toNumber();
 
@@ -75,12 +77,23 @@ export const checkUsageAlerts = async ({
 	const oldUsage = cusEntsToUsage({ cusEnts: oldCustomerEntitlements });
 	const newUsage = cusEntsToUsage({ cusEnts: newCustomerEntitlements });
 
-	const grantedBalance = cusEntsToGrantedBalance({
+	const oldGrantedBalance = cusEntsToGrantedBalance({
+		cusEnts: oldCustomerEntitlements,
+	});
+	const newGrantedBalance = cusEntsToGrantedBalance({
 		cusEnts: newCustomerEntitlements,
 	});
 
 	for (const alert of matchingAlerts) {
-		if (!wasThresholdCrossed({ alert, oldUsage, newUsage, grantedBalance }))
+		if (
+			!wasThresholdCrossed({
+				alert,
+				oldUsage,
+				newUsage,
+				oldGrantedBalance,
+				newGrantedBalance,
+			})
+		)
 			continue;
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
