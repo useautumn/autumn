@@ -10,7 +10,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	generatePlayToken,
+	getPlayHistory,
 	getPlayWebhookUrl,
+	parseEventBody,
 	waitForWebhook,
 } from "@tests/integration/billing/autumn-webhooks/utils/svixPlayClient.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -249,14 +251,19 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 		value: 100,
 	});
 
-	// Wait and check — should NOT find a second webhook
-	// (waitForWebhook returns all history, so we count matching events)
-	await timeout(5000);
+	// Wait briefly, then assert no second webhook arrived
+	await waitForWebhook<BalancesThresholdReachedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.threshold_reached" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.usage_alert?.threshold === 500,
+		timeoutMs: 8000,
+	});
 
+	// waitForWebhook scans all history — if it finds a match it's the same first one.
+	// Count total matches to confirm only 1 exists.
 	let matchCount = 0;
-	const { getPlayHistory, parseEventBody } = await import(
-		"@tests/integration/billing/autumn-webhooks/utils/svixPlayClient.js"
-	);
 	const history = await getPlayHistory({ token: playToken });
 	for (const event of history.data) {
 		try {
@@ -384,10 +391,6 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 
 	// Verify 800 threshold has NOT fired yet
 	await timeout(3000);
-
-	const { getPlayHistory, parseEventBody } = await import(
-		"@tests/integration/billing/autumn-webhooks/utils/svixPlayClient.js"
-	);
 
 	let has800 = false;
 	const historyMid = await getPlayHistory({ token: playToken });

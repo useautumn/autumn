@@ -85,35 +85,36 @@ const handleAllowanceUsed = async ({
 	if (oldAllowed === true && newAllowed === false) {
 		const customerId = newFullCus.id || newFullCus.internal_id;
 
-		await sendSvixEvent({
-			org: ctx.org,
-			env: ctx.env,
-			eventType: WebhookEventType.CustomerThresholdReached,
-			data: {
-				threshold_type: "allowance_used",
-				customer: cleanApiCustomer({
-					ctx,
-					apiCustomer: newApiCustomer,
-					legacyData: newLegacyData,
-				}),
-				feature: dbToApiFeatureV1({
-					ctx,
-					dbFeature: feature,
-					targetVersion: ctx.apiVersion,
-				}),
-			},
-		});
-
-		await sendSvixEvent({
-			org: ctx.org,
-			env: ctx.env,
-			eventType: WebhookEventType.BalancesThresholdReached,
-			data: {
-				customer_id: customerId,
-				feature_id: feature.id,
-				threshold_type: "allowance_used",
-			},
-		});
+		await Promise.all([
+			sendSvixEvent({
+				org: ctx.org,
+				env: ctx.env,
+				eventType: WebhookEventType.CustomerThresholdReached,
+				data: {
+					threshold_type: "allowance_used",
+					customer: cleanApiCustomer({
+						ctx,
+						apiCustomer: newApiCustomer,
+						legacyData: newLegacyData,
+					}),
+					feature: dbToApiFeatureV1({
+						ctx,
+						dbFeature: feature,
+						targetVersion: ctx.apiVersion,
+					}),
+				},
+			}),
+			sendSvixEvent({
+				org: ctx.org,
+				env: ctx.env,
+				eventType: WebhookEventType.BalancesThresholdReached,
+				data: {
+					customer_id: customerId,
+					feature_id: feature.id,
+					threshold_type: "allowance_used",
+				},
+			}),
+		]);
 	}
 };
 
@@ -169,35 +170,36 @@ export const handleThresholdReached = async ({
 		if (oldAllowed === true && newAllowed === false) {
 			const customerId = newFullCus.id || newFullCus.internal_id;
 
-			await sendSvixEvent({
-				org: ctx.org,
-				env: ctx.env,
-				eventType: WebhookEventType.CustomerThresholdReached,
-				data: {
-					threshold_type: "limit_reached",
-					customer: cleanApiCustomer({
-						ctx,
-						apiCustomer: newApiCustomer,
-						legacyData: newLegacyData,
-					}),
-					feature: dbToApiFeatureV1({
-						ctx,
-						dbFeature: feature,
-						targetVersion: ctx.apiVersion,
-					}),
-				},
-			});
-
-			await sendSvixEvent({
-				org: ctx.org,
-				env: ctx.env,
-				eventType: WebhookEventType.BalancesThresholdReached,
-				data: {
-					customer_id: customerId,
-					feature_id: feature.id,
-					threshold_type: "limit_reached",
-				},
-			});
+			await Promise.all([
+				sendSvixEvent({
+					org: ctx.org,
+					env: ctx.env,
+					eventType: WebhookEventType.CustomerThresholdReached,
+					data: {
+						threshold_type: "limit_reached",
+						customer: cleanApiCustomer({
+							ctx,
+							apiCustomer: newApiCustomer,
+							legacyData: newLegacyData,
+						}),
+						feature: dbToApiFeatureV1({
+							ctx,
+							dbFeature: feature,
+							targetVersion: ctx.apiVersion,
+						}),
+					},
+				}),
+				sendSvixEvent({
+					org: ctx.org,
+					env: ctx.env,
+					eventType: WebhookEventType.BalancesThresholdReached,
+					data: {
+						customer_id: customerId,
+						feature_id: feature.id,
+						threshold_type: "limit_reached",
+					},
+				}),
+			]);
 
 			ctx.logger.info(
 				"Sent Svix event for threshold reached (type: limit_reached)",
