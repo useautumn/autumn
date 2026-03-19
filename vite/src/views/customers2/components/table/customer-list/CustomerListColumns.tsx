@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
+import { Badge } from "@/components/ui/badge";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import {
 	Tooltip,
@@ -142,7 +143,38 @@ export const createCustomerListColumns = (): ColumnDef<
 		accessorKey: "name",
 		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			const customer = row.original;
+			const isVercelCustomer = Boolean(customer.processors?.vercel);
+
+			return (
+				<div className="flex items-center gap-2">
+					<div className="font-medium text-t1">{customer.name}</div>
+					{isVercelCustomer && (
+						<TooltipProvider>
+							<Tooltip delayDuration={0}>
+								<TooltipTrigger>
+									<Badge 
+										variant="outline" 
+										className="bg-black text-white dark:bg-white dark:text-black border-black dark:border-white px-1.5 py-0.5 text-[10px] font-medium"
+									>
+										<svg
+											fill="currentColor" 
+											xmlns="http://www.w3.org/2000/svg" 
+											viewBox="0 0 1155 1000"
+											className="w-2.5 h-2.5"
+										>
+											<path d="m577.3 0 577.4 1000H0z"/>
+										</svg>
+									</Badge>
+								</TooltipTrigger>
+								<TooltipContent>
+									<span>Vercel Marketplace Customer</span>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					)}
+				</div>
+			);
 		},
 	},
 	{
