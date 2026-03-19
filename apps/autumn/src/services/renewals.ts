@@ -16,29 +16,36 @@ export async function findUpcomingRenewals(
 	const durationMs = parseDuration(period);
 	if (!durationMs) return { renewals: [], error: `Invalid period: ${period}` };
 
-	const result = await autumn.customers.list({ limit: 100 });
-
 	const now = Date.now();
 	const cutoff = now + durationMs;
 	const renewals: RenewalEntry[] = [];
+	const limit = 100;
+	let offset = 0;
 
-	for (const customer of result.list) {
-		for (const sub of customer.subscriptions) {
-			const periodEnd = sub.currentPeriodEnd;
-			if (!periodEnd) continue;
+	while (true) {
+		const result = await autumn.customers.list({ limit, offset });
 
-			const renewsAt = typeof periodEnd === "number" ? periodEnd : new Date(periodEnd).getTime();
+		for (const customer of result.list) {
+			for (const sub of customer.subscriptions) {
+				const periodEnd = sub.currentPeriodEnd;
+				if (!periodEnd) continue;
 
-			if (renewsAt > now && renewsAt <= cutoff) {
-				renewals.push({
-					customerId: customer.id ?? "",
-					customerName: customer.name || undefined,
-					planName: sub.plan?.name || sub.planId || "Unknown",
-					planId: sub.planId || "",
-					renewsAt,
-				});
+				const renewsAt = typeof periodEnd === "number" ? periodEnd : new Date(periodEnd).getTime();
+
+				if (renewsAt > now && renewsAt <= cutoff) {
+					renewals.push({
+						customerId: customer.id ?? "",
+						customerName: customer.name || undefined,
+						planName: sub.plan?.name || sub.planId || "Unknown",
+						planId: sub.planId || "",
+						renewsAt,
+					});
+				}
 			}
 		}
+
+		if (result.list.length < limit) break;
+		offset += result.list.length;
 	}
 
 	renewals.sort((a, b) => a.renewsAt - b.renewsAt);

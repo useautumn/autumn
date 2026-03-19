@@ -5,6 +5,7 @@ import { handleCancelAction, handleConfirmAction } from "@/agent/confirm";
 import { handleAgentMention, handleAgentMessage } from "@/agent/handler";
 import { handleSlashCommandByName } from "@/commands/router";
 import { getEnv } from "@/config";
+import { getWorkspaceIdFromRaw } from "@/lib/slack";
 import { getWorkspace } from "@/services/workspace";
 
 const env = getEnv();
@@ -33,18 +34,6 @@ adapter.processEventPayload = function (payload: Record<string, unknown>, option
 		}
 	}
 	return origProcess.call(this, payload, options);
-};
-
-const origHandleHome = adapter.handleAppHomeOpened as (
-	event: Record<string, unknown>,
-	options?: unknown,
-) => void;
-
-let appHomeTeamId: string | null = null;
-
-adapter.handleAppHomeOpened = function (event: Record<string, unknown>, options?: unknown) {
-	appHomeTeamId = (event.team_id as string) || null;
-	return origHandleHome.call(this, event, options);
 };
 
 export const bot = new Chat({
@@ -88,8 +77,9 @@ bot.onAssistantThreadStarted(async (event) => {
 
 bot.onAppHomeOpened(async (event) => {
 	try {
-		const workspaceId = appHomeTeamId;
-		appHomeTeamId = null;
+		const eventRaw =
+			((event as unknown as Record<string, unknown>).raw as unknown) ?? (event as unknown);
+		const workspaceId = getWorkspaceIdFromRaw(eventRaw);
 		const workspace = workspaceId ? await getWorkspace(workspaceId) : null;
 		const slack = bot.getAdapter("slack");
 

@@ -40,26 +40,34 @@ autumnWebhookRoutes.post("/", async (c) => {
 		return c.text("Invalid JSON", 400);
 	}
 
-	const workspaces = await loadWorkspaces();
-	const workspace = payload.org_id
-		? workspaces.find((ws) => ws.orgSlug === payload.org_id) || null
-		: null;
-	const secret = payload.org_id
-		? workspace?.webhookSecret || null
-		: workspaces.find((ws) => ws.webhookSecret)?.webhookSecret || null;
+	if (!payload.org_id) {
+		console.warn(`Webhook missing org_id for event type: ${payload.type}`);
+		return c.text("Missing org_id", 400);
+	}
 
-	if (secret) {
-		try {
-			const wh = new Webhook(secret);
-			wh.verify(body, {
-				"svix-id": svixId,
-				"svix-timestamp": svixTimestamp,
-				"svix-signature": svixSignature,
-			});
-		} catch (err) {
-			console.error("Webhook verification failed:", err);
-			return c.text("Webhook verification failed", 400);
-		}
+	const workspaces = await loadWorkspaces();
+	const workspace = workspaces.find((ws) => ws.orgSlug === payload.org_id) || null;
+
+	if (!workspace) {
+		console.warn(`No workspace for webhook org_id=${payload.org_id}`);
+		return c.text("OK", 200);
+	}
+
+	if (!workspace.webhookSecret) {
+		console.warn(`No webhook secret configured for org_id=${payload.org_id}`);
+		return c.text("OK", 200);
+	}
+
+	try {
+		const wh = new Webhook(workspace.webhookSecret);
+		wh.verify(body, {
+			"svix-id": svixId,
+			"svix-timestamp": svixTimestamp,
+			"svix-signature": svixSignature,
+		});
+	} catch (err) {
+		console.error("Webhook verification failed:", err);
+		return c.text("Webhook verification failed", 400);
 	}
 
 	try {
