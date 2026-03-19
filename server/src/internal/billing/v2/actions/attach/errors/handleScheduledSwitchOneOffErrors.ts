@@ -1,43 +1,60 @@
 import {
 	type AttachBillingContext,
+	BillingInterval,
+	BillingType,
 	ErrCode,
-	isOneOffPrice,
+	getBillingType,
+	priceToFeature,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 /**
- * Validates that scheduled switches (downgrades) don't target products with mixed recurring + one-off prices.
+ * Validates one-off prepaid constraints on scheduled switches.
  *
- * Throws error when:
+ * Throws when:
  * - planTiming is "end_of_cycle" (scheduled switch / downgrade)
- * - AND the target product has BOTH recurring prices AND one-off prices
+ * - AND the user passed a non-zero quantity for a one-off prepaid price
  *
- * This is blocked because scheduled switches to mixed products aren't fully supported yet.
+ * Scheduled switches don't add one-off prices to the next invoice,
+ * so we block explicit one-off prepaid quantities until that's supported.
  */
 export const handleScheduledSwitchOneOffErrors = ({
+	ctx,
 	billingContext,
 }: {
+	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 }) => {
-	const { planTiming, attachProduct } = billingContext;
+	const { planTiming, attachProduct, featureQuantities } = billingContext;
 
-	// Only check for scheduled switches (downgrades)
 	if (planTiming !== "end_of_cycle") return;
 
-	const prices = attachProduct.prices;
+	for (const price of attachProduct.prices) {
+		const isOneOffPrepaid =
+			getBillingType(price.config) === BillingType.UsageInAdvance &&
+			price.config.interval === BillingInterval.OneOff;
 
-	// Check if product has mixed recurring + one-off prices
-	const hasOneOffPrices = prices.some(isOneOffPrice);
-	const hasRecurringPrices = prices.some((p) => !isOneOffPrice(p));
-	const isMixedProduct = hasOneOffPrices && hasRecurringPrices;
+		if (!isOneOffPrepaid) continue;
 
-	if (isMixedProduct) {
-		throw new RecaseError({
-			message:
-				"Scheduled switch to products with both recurring and one-off prices is not supported. Use an immediate switch instead.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
+		const feature = priceToFeature({ price, features: ctx.features });
+
+		if (!feature) continue;
+
+		const matchingOption = featureQuantities.find(
+			(fq) =>
+				fq.feature_id === feature.id ||
+				fq.internal_feature_id === feature.internal_id,
+		);
+
+		if (matchingOption && matchingOption.quantity > 0) {
+			throw new RecaseError({
+				message:
+					"Scheduled switch with one-off prepaid quantities is not yet supported. Either use an immediate switch, or omit the one-off prepaid quantity (it will default to 0).",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 };
