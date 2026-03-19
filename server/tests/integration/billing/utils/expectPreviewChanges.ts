@@ -11,6 +11,10 @@ type PreviewChangeExpectation = {
 	featureQuantities?: Array<{ feature_id: string; quantity: number }>;
 	effectiveAt?: number | null;
 	effectiveAtToleranceMs?: number;
+	canceledAt?: number | null;
+	canceledAtDefined?: boolean;
+	expiresAt?: number | null;
+	expiresAtDefined?: boolean;
 };
 
 type ExpectPreviewChangesParams = {
@@ -77,21 +81,36 @@ const expectPreviewChange = ({
 	if (expected.effectiveAt !== undefined) {
 		if (expected.effectiveAt === null) {
 			expect(change.effective_at).toBeNull();
-			return;
+		} else {
+			const actualEffectiveAt = change.effective_at;
+			const toleranceMs = expected.effectiveAtToleranceMs ?? TEN_MINUTES_MS;
+
+			expect(actualEffectiveAt).toBeDefined();
+			expect(actualEffectiveAt).not.toBeNull();
+
+			const diff = Math.abs((actualEffectiveAt ?? 0) - expected.effectiveAt);
+
+			expect(
+				diff,
+				`effectiveAt mismatch for ${expected.planId}: expected ${formatMs(expected.effectiveAt)}, got ${formatMs(actualEffectiveAt ?? 0)}`,
+			).toBeLessThanOrEqual(toleranceMs);
 		}
+	}
 
-		const actualEffectiveAt = change.effective_at;
-		const toleranceMs = expected.effectiveAtToleranceMs ?? TEN_MINUTES_MS;
+	if (expected.canceledAt !== undefined) {
+		expect(change.canceled_at).toEqual(expected.canceledAt);
+	}
 
-		expect(actualEffectiveAt).toBeDefined();
-		expect(actualEffectiveAt).not.toBeNull();
+	if (expected.canceledAtDefined !== undefined) {
+		expect(change.canceled_at != null).toBe(expected.canceledAtDefined);
+	}
 
-		const diff = Math.abs((actualEffectiveAt ?? 0) - expected.effectiveAt);
+	if (expected.expiresAt !== undefined) {
+		expect(change.expires_at).toEqual(expected.expiresAt);
+	}
 
-		expect(
-			diff,
-			`effectiveAt mismatch for ${expected.planId}: expected ${formatMs(expected.effectiveAt)}, got ${formatMs(actualEffectiveAt ?? 0)}`,
-		).toBeLessThanOrEqual(toleranceMs);
+	if (expected.expiresAtDefined !== undefined) {
+		expect(change.expires_at != null).toBe(expected.expiresAtDefined);
 	}
 };
 
