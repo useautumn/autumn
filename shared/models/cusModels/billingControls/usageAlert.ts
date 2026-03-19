@@ -5,7 +5,8 @@ export const UsageAlertThresholdType = z.enum([
 	"usage_percentage_threshold",
 ]);
 
-export const DbUsageAlertSchema = z.object({
+export const DbUsageAlertSchema = z
+	.object({
 	feature_id: z.string().optional().meta({
 		description:
 			"The feature ID this alert applies to. If omitted, the alert applies globally.",
@@ -25,6 +26,19 @@ export const DbUsageAlertSchema = z.object({
 		description:
 			"Optional user-defined label to distinguish multiple alerts on the same feature.",
 	}),
-});
+	})
+	.check((ctx) => {
+		const { threshold_type, threshold } = ctx.value;
+
+		if (threshold_type === "usage_percentage_threshold" && threshold > 100) {
+			ctx.issues.push({
+				code: "custom",
+				input: threshold,
+				path: ["threshold"],
+				message:
+					"Threshold must be between 0 and 100 for usage_percentage_threshold",
+			});
+		}
+	});
 
 export type DbUsageAlert = z.infer<typeof DbUsageAlertSchema>;
