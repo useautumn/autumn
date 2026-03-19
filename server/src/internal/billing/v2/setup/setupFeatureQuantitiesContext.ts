@@ -5,6 +5,7 @@ import {
 	type FeatureQuantityParamsV0,
 	type FullCusProduct,
 	type FullProduct,
+	isOneOffPrice,
 	isPrepaidPrice,
 	priceToEnt,
 } from "@autumn/shared";
@@ -68,8 +69,11 @@ export const setupFeatureQuantitiesContext = ({
 				})
 			: undefined;
 
-		// Prefer new quantity, fall back to current
-		const featureQuantity = newFeatureQuantity ?? currentFeatureQuantity;
+		// One-off prepaid: never carry over previous quantity, default to 0 if not specified
+		// Recurring prepaid: prefer new quantity, fall back to current
+		const featureQuantity = isOneOffPrice(price)
+			? newFeatureQuantity
+			: (newFeatureQuantity ?? currentFeatureQuantity);
 
 		if (featureQuantity) {
 			options.push(featureQuantity);

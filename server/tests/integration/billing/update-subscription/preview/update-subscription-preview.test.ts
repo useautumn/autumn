@@ -202,8 +202,27 @@ test.concurrent(`${chalk.yellowBright("update-subscription preview: cancel end o
 
 	expectPreviewChanges({
 		preview,
-		incoming: [{ planId: free.id, effectiveAt: null }],
-		outgoing: [{ planId: pro.id }],
+		incoming: [
+			{
+				planId: free.id,
+				effectiveAt: null,
+				canceledAt: null,
+				expiresAt: null,
+			},
+			{
+				planId: pro.id,
+				effectiveAt: null,
+				canceledAtDefined: true,
+				expiresAtDefined: true,
+			},
+		],
+		outgoing: [
+			{
+				planId: pro.id,
+				canceledAt: null,
+				expiresAt: null,
+			},
+		],
 	});
 });
 

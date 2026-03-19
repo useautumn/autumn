@@ -106,8 +106,13 @@ const getShouldIncludeIncoming = ({
 	if ("intent" in billingContext) {
 		return (
 			billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
-			billingContext.cancelAction === "uncancel"
+			billingContext.cancelAction === "uncancel" ||
+			billingContext.cancelAction === "cancel_end_of_cycle"
 		);
+	}
+
+	if ("planTiming" in billingContext) {
+		return billingContext.planTiming === "end_of_cycle";
 	}
 
 	return !isOutgoing && incoming.length === 0;
@@ -157,6 +162,8 @@ export const billingPlanToChanges = async ({
 				cusProduct,
 			}),
 			effective_at: null,
+			canceled_at: subscription.canceled_at,
+			expires_at: subscription.expires_at,
 		});
 	}
 
@@ -196,6 +203,8 @@ export const billingPlanToChanges = async ({
 					cusProduct: updatedCustomerProduct,
 				}),
 				effective_at: null,
+				canceled_at: subscription.canceled_at,
+				expires_at: subscription.expires_at,
 			});
 		}
 
@@ -220,6 +229,8 @@ export const billingPlanToChanges = async ({
 					billingContext,
 					autumnBillingPlan: billingPlan.autumn,
 				}),
+				canceled_at: subscription.canceled_at,
+				expires_at: subscription.expires_at,
 			});
 		}
 	}

@@ -32,6 +32,14 @@ export const BillingPreviewChangeSchema = z.object({
 		description:
 			"When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.",
 	}),
+	canceled_at: z.number().nullable().meta({
+		description:
+			"When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.",
+	}),
+	expires_at: z.number().nullable().meta({
+		description:
+			"When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.",
+	}),
 });
 
 export type BillingPreviewChange = z.infer<typeof BillingPreviewChangeSchema>;
