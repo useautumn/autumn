@@ -1,5 +1,6 @@
 import {
 	cusEntsToGrantedBalance,
+	cusEntsToPrepaidQuantity,
 	cusEntsToUsage,
 	type DbUsageAlert,
 	type Feature,
@@ -77,12 +78,17 @@ export const checkUsageAlerts = async ({
 	const oldUsage = cusEntsToUsage({ cusEnts: oldCustomerEntitlements });
 	const newUsage = cusEntsToUsage({ cusEnts: newCustomerEntitlements });
 
-	const oldGrantedBalance = cusEntsToGrantedBalance({
-		cusEnts: oldCustomerEntitlements,
-	});
-	const newGrantedBalance = cusEntsToGrantedBalance({
-		cusEnts: newCustomerEntitlements,
-	});
+	const oldGrantedBalance = new Decimal(
+		cusEntsToGrantedBalance({ cusEnts: oldCustomerEntitlements }),
+	)
+		.add(cusEntsToPrepaidQuantity({ cusEnts: oldCustomerEntitlements }))
+		.toNumber();
+
+	const newGrantedBalance = new Decimal(
+		cusEntsToGrantedBalance({ cusEnts: newCustomerEntitlements }),
+	)
+		.add(cusEntsToPrepaidQuantity({ cusEnts: newCustomerEntitlements }))
+		.toNumber();
 
 	for (const alert of matchingAlerts) {
 		if (
