@@ -12,8 +12,17 @@ export function getRedis(): Redis {
 
 export async function flushStaleLocks(): Promise<number> {
 	const redis = getRedis();
-	const keys = await redis.keys("chat-sdk:lock:*");
-	if (keys.length === 0) return 0;
-	await redis.del(...keys);
-	return keys.length;
+	const pattern = "chat-sdk:lock:*";
+	let cursor = "0";
+	let deleted = 0;
+
+	do {
+		const [next, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+		cursor = next;
+		if (keys.length === 0) continue;
+		await redis.del(...keys);
+		deleted += keys.length;
+	} while (cursor !== "0");
+
+	return deleted;
 }
