@@ -314,7 +314,8 @@ const actions: Record<string, ActionHandler> = {
 				customerId: str(d.customer_id),
 				planId: str(d.plan_id),
 			};
-			if (d.customize) params.customize = d.customize;
+			const customize = mapCustomize(d.customize);
+			if (customize) params.customize = customize;
 			if (d.success_url) params.successUrl = d.success_url;
 			return autumn.billing.attach(params as Parameters<typeof autumn.billing.attach>[0]);
 		},

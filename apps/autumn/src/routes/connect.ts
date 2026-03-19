@@ -1,6 +1,7 @@
 import * as arctic from "arctic";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { html } from "hono/html";
 import { getEnv } from "@/config";
 import { getRedis } from "@/lib/redis";
 import { getWorkspace, saveWorkspace } from "@/services/workspace";
@@ -32,7 +33,7 @@ function getClient(): arctic.OAuth2Client {
 }
 
 export function renderHtml(title: string, message: string): string {
-	return `
+	return html`
 <html>
 <head>
   <meta charset="utf-8">

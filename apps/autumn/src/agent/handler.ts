@@ -269,11 +269,16 @@ async function runAgentLoopInner(
 			);
 
 			let mutatingBlock: Anthropic.ToolUseBlock | null = null;
+			const skippedMutatingIds = new Set<string>();
 			const readBlocks: Anthropic.ToolUseBlock[] = [];
 
 			for (const toolUse of toolUseBlocks) {
 				if (MUTATING_TOOLS.has(toolUse.name)) {
-					mutatingBlock = toolUse;
+					if (!mutatingBlock) {
+						mutatingBlock = toolUse;
+					} else {
+						skippedMutatingIds.add(toolUse.id);
+					}
 				} else {
 					readBlocks.push(toolUse);
 				}
@@ -288,31 +293,29 @@ async function runAgentLoopInner(
 			}
 
 			const readResultsById = new Map(
-				(
-					await Promise.all(
-						readBlocks.map(async (toolUse) => {
-							const params = toolUse.input as Record<string, unknown>;
-							const paramStr = Object.entries(params)
-								.map(([k, v]) => `${k}=${v}`)
-								.join(" ");
-							const toolStart = Date.now();
-							const result = await executeTool(toolUse.name, params, autumn);
-							const toolMs = Date.now() - toolStart;
-							if (result.success) {
-								console.log(`tool rid=${rid} ${toolUse.name} ok ms=${toolMs} ${paramStr}`);
-							} else {
-								console.warn(
-									`tool rid=${rid} ${toolUse.name} err="${result.error}" ms=${toolMs} ${paramStr}`,
-								);
-							}
-							const toolResult = {
-								type: "tool_result" as const,
-								tool_use_id: toolUse.id,
-								content: JSON.stringify(result),
-							};
-							return [toolUse.id, toolResult] as const;
-						}),
-					)
+				await Promise.all(
+					readBlocks.map(async (toolUse) => {
+						const params = toolUse.input as Record<string, unknown>;
+						const paramStr = Object.entries(params)
+							.map(([k, v]) => `${k}=${v}`)
+							.join(" ");
+						const toolStart = Date.now();
+						const result = await executeTool(toolUse.name, params, autumn);
+						const toolMs = Date.now() - toolStart;
+						if (result.success) {
+							console.log(`tool rid=${rid} ${toolUse.name} ok ms=${toolMs} ${paramStr}`);
+						} else {
+							console.warn(
+								`tool rid=${rid} ${toolUse.name} err="${result.error}" ms=${toolMs} ${paramStr}`,
+							);
+						}
+						const toolResult = {
+							type: "tool_result" as const,
+							tool_use_id: toolUse.id,
+							content: JSON.stringify(result),
+						};
+						return [toolUse.id, toolResult] as const;
+					}),
 				),
 			);
 
@@ -341,6 +344,25 @@ async function runAgentLoopInner(
 					});
 					continue;
 				}
+
+				if (skippedMutatingIds.has(toolUse.id)) {
+					console.warn(
+						`mutation rid=${rid} skipped_extra tool=${toolUse.name} reason=multiple_mutations_in_single_turn`,
+					);
+					toolResults.push({
+						type: "tool_result",
+						tool_use_id: toolUse.id,
+						content: JSON.stringify({
+							status: "mutation_deferred",
+							message:
+								"Only one mutating action can be confirmed at a time. Continue with the first mutation and call additional mutating tools after confirmation.",
+							tool_name: toolUse.name,
+							params: toolUse.input,
+						}),
+					});
+					continue;
+				}
+
 				const readResult = readResultsById.get(toolUse.id);
 				if (readResult) toolResults.push(readResult);
 			}
