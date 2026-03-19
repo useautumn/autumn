@@ -30,6 +30,19 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
+		recalculate_balances: z
+			.object({
+				enabled: z.boolean().meta({
+					description:
+						"If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.",
+				}),
+			})
+			.optional()
+			.meta({
+				description:
+					"Controls whether balances should be recalculated during the subscription update.",
+			}),
+
 		status: z
 			.enum([
 				CusProductStatus.Active,
@@ -50,6 +63,7 @@ const UPDATE_FIELDS = [
 	"billing_cycle_anchor",
 	"processor_subscription_id",
 	"no_billing_changes",
+	"recalculate_balances",
 	"status",
 	"redirect_mode",
 ] as const satisfies (keyof z.input<
@@ -64,7 +78,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 		redirect_mode: RedirectModeSchema.optional(),
 	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 		message:
-			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, or billing_cycle_anchor)",
+			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances or billing_cycle_anchor)",
 	});
 
 export type UpdateSubscriptionV1Params = z.infer<

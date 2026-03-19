@@ -5,8 +5,8 @@ import importlib.metadata
 __title__: str = "autumn-sdk"
 __version__: str = "0.4.18"
 __openapi_doc_version__: str = "2.2.0"
-__gen_version__: str = "2.824.1"
-__user_agent__: str = "speakeasy-sdk/python 0.4.18 2.824.1 2.2.0 autumn-sdk"
+__gen_version__: str = "2.866.2"
+__user_agent__: str = "speakeasy-sdk/python 0.4.18 2.866.2 2.2.0 autumn-sdk"
 
 try:
     if __package__ is not None:

@@ -38,6 +38,30 @@ const result = await autumn.events.aggregate({
 });
 ```
 
+### Special Group By Operators
+
+In addition to custom properties, you can group by built-in columns using `$`-prefixed operators:
+
+- `$customer_id` -- Group results by customer ID. Useful when aggregating across all customers (i.e. no `customer_id` specified).
+- `$entity_id` -- Group results by entity ID. Useful for seeing usage broken down per entity.
+
+```typescript
+// Aggregate across all customers, grouped by customer
+const result = await autumn.events.aggregate({
+  featureId: "api_calls",
+  range: "7d",
+  groupBy: "$customer_id"
+});
+
+// Aggregate for a customer, grouped by entity
+const result = await autumn.events.aggregate({
+  customerId: "cus_123",
+  featureId: "api_calls",
+  range: "7d",
+  groupBy: "$entity_id"
+});
+```
+
 ## Response Format
 
 The response structure changes based on whether `group_by` is provided:
@@ -96,7 +120,7 @@ When grouping is specified, `values` contains the total sum while `grouped_value
 
 ### Body Parameters
 
-<DynamicParamField body="customer_id" type="string" required>
+<DynamicParamField body="customer_id" type="string">
   Customer ID to aggregate events for
 </DynamicParamField>
 
@@ -109,7 +133,7 @@ When grouping is specified, `values` contains the total sum while `grouped_value
 </DynamicParamField>
 
 <DynamicParamField body="group_by" type="string">
-  Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
+  Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
 </DynamicParamField>
 
 <DynamicParamField body="range" type="'24h' | '7d' | '30d' | '90d' | 'last_cycle' | '1bc' | '3bc'">

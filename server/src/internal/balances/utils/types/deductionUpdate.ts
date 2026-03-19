@@ -15,3 +15,5 @@ export interface DeductionUpdate {
 	newReplaceables?: InsertReplaceable[];
 	deletedReplaceables?: Replaceable[];
 }
+
+export type DeductionUpdates = Record<string, DeductionUpdate>;

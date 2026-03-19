@@ -1,4 +1,5 @@
 import {
+	type FullCustomerPrice,
 	InternalError,
 	isFixedPrice,
 	type Price,
@@ -12,6 +13,7 @@ type FindCheckoutLineItemParams = {
 	lineItems: Stripe.LineItem[];
 	price: Price;
 	product: Product;
+	customerPrice?: FullCustomerPrice;
 };
 
 // Overload: errorOnNotFound = true → guaranteed LineItem
@@ -30,12 +32,24 @@ export function findCheckoutLineItemByAutumnPrice({
 	price,
 	product,
 	errorOnNotFound,
+	customerPrice,
 }: FindCheckoutLineItemParams & { errorOnNotFound?: boolean }):
 	| Stripe.LineItem
 	| undefined {
 	const stripeProductId = product.processor?.id;
 
 	let result: Stripe.LineItem | undefined;
+
+	// A. Metadata match:
+	const lineItem = lineItems.find((li) => {
+		if (customerPrice) {
+			return customerPrice.id === li.metadata?.autumn_customer_price_id;
+		}
+
+		return price.id === li.metadata?.autumn_price_id;
+	});
+
+	if (lineItem) return lineItem;
 
 	if (isFixedPrice(price)) {
 		const config = price.config;

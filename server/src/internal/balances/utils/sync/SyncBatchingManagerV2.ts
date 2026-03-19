@@ -19,16 +19,55 @@ interface CustomerBatch {
 	timer: NodeJS.Timeout | null;
 }
 
+export type QueueSyncPayload = {
+	jobName: string;
+	payload: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region: string;
+		timestamp: number;
+		cusEntIds: string[];
+		rolloverIds: string[];
+	};
+	messageGroupId?: string;
+	messageDeduplicationId: string;
+};
+
 /**
- * Batching manager for syncing FullCustomer cache to PostgreSQL.
- * Batches by customer, collects modified cusEntIds within a time window.
+ * Batches sync jobs per customer using a fixed tumbling window.
+ * Timer is set once when the batch is created — subsequent items just merge.
+ * Cross-instance dedup is handled via a stable SQS/BullMQ dedup ID
+ * bucketed at DEDUP_BUCKET_MS.
  */
-class SyncBatchingManagerV2 {
+export class SyncBatchingManagerV2 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
-	private readonly BATCH_WINDOW_MS =
-		process.env.NODE_ENV === "development" ? 500 : 1000;
+	/** Fixed window: the batch flushes this long after the first item */
+	private readonly BATCH_WINDOW_MS: number = 1000; // 1 second batch window
 	private readonly MAX_BATCH_SIZE = 1000;
+
+	/** Cross-instance dedup bucket. Messages with the same content in the same bucket share a dedup ID. */
+	private readonly DEDUP_BUCKET_MS: number = 2500; // 2.5 seconds dedup bucket
+
+	/** Injectable queue function — overridable for tests */
+	private readonly _addTaskToQueue: (args: QueueSyncPayload) => Promise<void>;
+
+	constructor({
+		addTaskToQueueFn,
+		batchWindowMs,
+		dedupBucketMs,
+	}: {
+		addTaskToQueueFn?: (args: QueueSyncPayload) => Promise<void>;
+		batchWindowMs?: number;
+		dedupBucketMs?: number;
+	} = {}) {
+		this._addTaskToQueue =
+			addTaskToQueueFn ??
+			(addTaskToQueue as unknown as (args: QueueSyncPayload) => Promise<void>);
+		this.BATCH_WINDOW_MS = batchWindowMs ?? 1000;
+		this.DEDUP_BUCKET_MS = dedupBucketMs ?? 2500;
+	}
 
 	addSyncItem({
 		customerId,
@@ -51,11 +90,17 @@ class SyncBatchingManagerV2 {
 		if (!batch) {
 			batch = this.createBatch({ customerId, orgId, env, region });
 			this.customerBatches.set(batchKey, batch);
+			// Fixed window: schedule ONCE when the batch is created.
+			// Subsequent items just merge — the timer is not reset.
 			this.scheduleCustomerBatch({ batchKey });
 		}
 
 		this.mergeCusEntIds({ batch, cusEntIds });
 		this.mergeRolloverIds({ batch, rolloverIds: rolloverIds ?? [] });
+
+		if (region) {
+			batch.context.region = region;
+		}
 
 		const totalSize =
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
@@ -157,6 +202,10 @@ class SyncBatchingManagerV2 {
 		batch.timer = setTimeout(() => {
 			this.executeCustomerBatch({ batchKey });
 		}, this.BATCH_WINDOW_MS);
+
+		if (batch.timer.unref) {
+			batch.timer.unref();
+		}
 	}
 
 	private async executeCustomerBatch({
@@ -183,29 +232,60 @@ class SyncBatchingManagerV2 {
 		}
 	}
 
+	/** Stable dedup ID from batch content + 5s time bucket */
+	private buildDeduplicationId({
+		context,
+		cusEntIds,
+		rolloverIds,
+	}: {
+		context: CustomerBatchContext;
+		cusEntIds: string[];
+		rolloverIds: string[];
+	}): string {
+		const dedupBucket = Math.floor(Date.now() / this.DEDUP_BUCKET_MS);
+		const dedupKey = JSON.stringify({
+			jobName: JobName.SyncBalanceBatchV3,
+			orgId: context.orgId,
+			env: context.env,
+			customerId: context.customerId,
+			cusEntIds,
+			rolloverIds,
+			dedupBucket,
+		});
+
+		return Bun.hash(dedupKey).toString();
+	}
+
 	private async queueSyncJob({
 		context,
 	}: {
 		context: CustomerBatchContext;
 	}): Promise<void> {
+		const cusEntIds = Array.from(context.cusEntIds).sort();
+		const rolloverIds = Array.from(context.rolloverIds).sort();
+		const messageDeduplicationId = this.buildDeduplicationId({
+			context,
+			cusEntIds,
+			rolloverIds,
+		});
+
 		try {
-			await addTaskToQueue({
+			await this._addTaskToQueue({
 				jobName: JobName.SyncBalanceBatchV3,
 				payload: {
 					customerId: context.customerId,
 					orgId: context.orgId,
 					env: context.env,
 					region: context.region,
-					timestamp: context.timestamp,
-					cusEntIds: Array.from(context.cusEntIds),
-					rolloverIds: Array.from(context.rolloverIds),
+					timestamp: Date.now(),
+					cusEntIds,
+					rolloverIds,
 				},
-				messageGroupId: context.customerId,
-				generateDeduplicationId: false,
+				messageDeduplicationId,
 			});
 
 			logger.info(
-				`[SyncV3] Queued sync for ${context.customerId}, ${context.cusEntIds.size} entitlements, ${context.rolloverIds.size} rollovers`,
+				`[SyncV3] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
 			);
 		} catch (error) {
 			logger.error(
