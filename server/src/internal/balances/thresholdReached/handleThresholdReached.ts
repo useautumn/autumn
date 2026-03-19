@@ -83,6 +83,8 @@ const handleAllowanceUsed = async ({
 	});
 
 	if (oldAllowed === true && newAllowed === false) {
+		const customerId = newFullCus.id || newFullCus.internal_id;
+
 		await sendSvixEvent({
 			org: ctx.org,
 			env: ctx.env,
@@ -99,6 +101,17 @@ const handleAllowanceUsed = async ({
 					dbFeature: feature,
 					targetVersion: ctx.apiVersion,
 				}),
+			},
+		});
+
+		await sendSvixEvent({
+			org: ctx.org,
+			env: ctx.env,
+			eventType: WebhookEventType.BalancesThresholdReached,
+			data: {
+				customer_id: customerId,
+				feature_id: feature.id,
+				threshold_type: "allowance_used",
 			},
 		});
 	}
@@ -154,6 +167,8 @@ export const handleThresholdReached = async ({
 		});
 
 		if (oldAllowed === true && newAllowed === false) {
+			const customerId = newFullCus.id || newFullCus.internal_id;
+
 			await sendSvixEvent({
 				org: ctx.org,
 				env: ctx.env,
@@ -170,6 +185,17 @@ export const handleThresholdReached = async ({
 						dbFeature: feature,
 						targetVersion: ctx.apiVersion,
 					}),
+				},
+			});
+
+			await sendSvixEvent({
+				org: ctx.org,
+				env: ctx.env,
+				eventType: WebhookEventType.BalancesThresholdReached,
+				data: {
+					customer_id: customerId,
+					feature_id: feature.id,
+					threshold_type: "limit_reached",
 				},
 			});
 
