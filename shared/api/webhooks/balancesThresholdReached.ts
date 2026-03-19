@@ -18,9 +18,6 @@ export const BalancesThresholdReachedUsageAlertSchema = z.object({
 		description:
 			"Whether the threshold is an absolute usage count or a percentage.",
 	}),
-	current_usage: z.number().meta({
-		description: "The customer's usage at the time the alert was triggered.",
-	}),
 });
 
 export const BalancesThresholdReachedSchema = z
