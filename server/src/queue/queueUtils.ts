@@ -130,9 +130,11 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	if (process.env.QUEUE_URL) {
 		const { queue } = await import("./bullmq/initBullMq.js");
 
-		// BullMQ implementation (ignores messageGroupId)
+		// BullMQ dedup: if a stable dedup ID is provided, use it as the jobId.
+		// BullMQ ignores jobs whose jobId already exists in the queue (not yet completed).
 		await queue.add(jobName as string, payload, {
 			delay: delayMs,
+			...(messageDeduplicationId && { jobId: messageDeduplicationId }),
 		});
 		return;
 	}
