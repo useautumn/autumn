@@ -28,5 +28,6 @@ export const coreUpdateSubscription: TestGroup = {
 		"billing/update-subscription/discounts/discount-applies-to.test.ts",
 		"billing/update-subscription/billing-behavior/next-cycle-only.test.ts",
 		"billing/update-subscription/billing-behavior/next-cycle-only-cancel.test.ts",
+		"billing/update-subscription/params/recalculate-balances/update-quantity-prepaid-overage.test.ts",
 	],
 };

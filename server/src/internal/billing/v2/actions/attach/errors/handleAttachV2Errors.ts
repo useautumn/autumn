@@ -49,8 +49,8 @@ export const handleAttachV2Errors = async ({
 	// 5. Invoice mode errors (deferred + downgrade)
 	handleAttachInvoiceModeErrors({ billingContext });
 
-	// 6. Scheduled switch to mixed recurring + one-off products
-	handleScheduledSwitchOneOffErrors({ billingContext });
+	// 6. Scheduled switch with one-off prepaid quantities
+	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
