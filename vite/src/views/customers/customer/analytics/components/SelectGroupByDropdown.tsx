@@ -67,7 +67,7 @@ export const SelectGroupByDropdown = ({
 					className={cn(open && "btn-secondary-active")}
 				>
 					{currentGroupBy
-						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy}`
+						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy === "entity_id" ? "Entity ID" : currentGroupBy}`
 						: "Group By"}
 				</IconButton>
 			</DropdownMenuTrigger>
@@ -95,21 +95,28 @@ export const SelectGroupByDropdown = ({
 						{!currentGroupBy && <Check className="ml-2 h-3 w-3 text-t3" />}
 					</DropdownMenuItem>
 
-					{/* Customer ID special option - only shown when not filtering by a specific customer */}
+					{/* Special column options */}
+					<DropdownMenuSeparator />
 					{showCustomerIdOption && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								onClick={() => handleSelect({ property: "customer_id" })}
-								className="flex items-center justify-between"
-							>
-								<span className="text-xs font-medium text-t2">Customer ID</span>
-								{currentGroupBy === "customer_id" && (
-									<Check className="ml-2 h-3 w-3 text-t3" />
-								)}
-							</DropdownMenuItem>
-						</>
+						<DropdownMenuItem
+							onClick={() => handleSelect({ property: "customer_id" })}
+							className="flex items-center justify-between"
+						>
+							<span className="text-xs font-medium text-t2">Customer ID</span>
+							{currentGroupBy === "customer_id" && (
+								<Check className="ml-2 h-3 w-3 text-t3" />
+							)}
+						</DropdownMenuItem>
 					)}
+					<DropdownMenuItem
+						onClick={() => handleSelect({ property: "entity_id" })}
+						className="flex items-center justify-between"
+					>
+						<span className="text-xs font-medium text-t2">Entity ID</span>
+						{currentGroupBy === "entity_id" && (
+							<Check className="ml-2 h-3 w-3 text-t3" />
+						)}
+					</DropdownMenuItem>
 
 					{propertyKeys.length > 0 && <DropdownMenuSeparator />}
 

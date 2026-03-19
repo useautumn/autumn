@@ -28,7 +28,7 @@ class AggregateEventsGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -85,14 +85,14 @@ class AggregateEventsCustomRange(BaseModel):
 
 
 class EventsAggregateParamsTypedDict(TypedDict):
-    customer_id: str
-    r"""Customer ID to aggregate events for"""
     feature_id: AggregateEventsFeatureIDTypedDict
     r"""Feature ID(s) to aggregate events for"""
+    customer_id: NotRequired[str]
+    r"""Customer ID to aggregate events for"""
     entity_id: NotRequired[str]
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
-    r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
     range: NotRequired[Range]
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
     bin_size: NotRequired[BinSize]
@@ -102,17 +102,17 @@ class EventsAggregateParamsTypedDict(TypedDict):
 
 
 class EventsAggregateParams(BaseModel):
-    customer_id: str
-    r"""Customer ID to aggregate events for"""
-
     feature_id: AggregateEventsFeatureID
     r"""Feature ID(s) to aggregate events for"""
+
+    customer_id: Optional[str] = None
+    r"""Customer ID to aggregate events for"""
 
     entity_id: Optional[str] = None
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
 
     group_by: Optional[str] = None
-    r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
 
     range: Optional[Range] = None
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
@@ -126,14 +126,21 @@ class EventsAggregateParams(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["entity_id", "group_by", "range", "bin_size", "custom_range"]
+            [
+                "customer_id",
+                "entity_id",
+                "group_by",
+                "range",
+                "bin_size",
+                "custom_range",
+            ]
         )
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -169,7 +176,7 @@ class AggregateEventsList(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

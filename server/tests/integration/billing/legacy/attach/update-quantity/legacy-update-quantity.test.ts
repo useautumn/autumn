@@ -428,7 +428,7 @@ test.concurrent(`${chalk.yellowBright("attach: quantity upgrade with prorate-nex
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 			}),
-			s.track({ featureId: TestFeature.Messages, value: usage }),
+			s.track({ featureId: TestFeature.Messages, value: usage, timeout: 2000 }),
 			// Upgrade quantity to 400 (prorate_next_cycle - no immediate invoice)
 			s.attach({
 				productId: pro.id,

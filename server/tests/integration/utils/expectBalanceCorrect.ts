@@ -1,20 +1,23 @@
 import { expect } from "bun:test";
-import type {
-	ApiBalanceRollover,
-	ApiCustomerV5,
-	ResetInterval,
+import {
+	type ApiBalanceRollover,
+	type ApiCustomerV5,
+	BillingMethod,
+	type ResetInterval,
 } from "@autumn/shared";
 
 type BucketExpectation = {
 	included_grant?: number;
+	prepaid_grant?: number;
 	remaining?: number;
 	usage?: number;
 };
 
-// Keys are ResetInterval values (eg. "hour", "month") or "lifetime" for null-reset buckets.
-type BreakdownExpectation = Partial<
-	Record<ResetInterval | "lifetime", BucketExpectation>
->;
+type BreakdownKey = ResetInterval | "lifetime" | BillingMethod;
+
+// Keys are ResetInterval values (eg. "hour", "month"), billing methods
+// (`prepaid`, `usage_based`), or "lifetime" for null-reset buckets.
+type BreakdownExpectation = Partial<Record<BreakdownKey, BucketExpectation>>;
 
 export const expectBalanceCorrect = ({
 	customer,
@@ -53,8 +56,16 @@ export const expectBalanceCorrect = ({
 		for (const [key, expectation] of Object.entries(breakdown)) {
 			const bucket =
 				key === "lifetime"
-					? buckets?.find((b) => b.reset === null)
-					: buckets?.find((b) => b.reset?.interval === key);
+					? buckets?.find((candidateBucket) => candidateBucket.reset === null)
+					: key === BillingMethod.Prepaid || key === BillingMethod.UsageBased
+						? buckets?.find(
+								(candidateBucket) =>
+									candidateBucket.price?.billing_method === key,
+							)
+						: buckets?.find(
+								(candidateBucket) => candidateBucket.reset?.interval === key,
+							);
+
 			expect(bucket).toBeDefined();
 			expect(bucket).toMatchObject(expectation as BucketExpectation);
 		}

@@ -1,4 +1,6 @@
 import {
+	addCusProductToCusEnt,
+	cusEntToCusPrice,
 	cusProductToProduct,
 	type DeferredAutumnBillingPlanData,
 	featureOptionUtils,
@@ -34,6 +36,21 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 				product: fullProduct,
 			});
 
+			const customerEntitlement =
+				featureOptionUtils.convert.toCustomerEntitlement({
+					featureOptions,
+					customerEntitlements: newCustomerProduct.customer_entitlements,
+				});
+
+			if (!customerEntitlement) continue;
+
+			const cusEntWithCusProduct = addCusProductToCusEnt({
+				cusEnt: customerEntitlement,
+				cusProduct: newCustomerProduct,
+			});
+
+			const customerPrice = cusEntToCusPrice({ cusEnt: cusEntWithCusProduct });
+
 			if (!price || priceUtils.isTieredOneOff({ price, product: fullProduct }))
 				continue;
 
@@ -45,6 +62,7 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 				lineItems: stripeCheckoutSession.line_items?.data ?? [],
 				price,
 				product: fullProduct,
+				customerPrice,
 			});
 
 			if (lineItem?.metadata?.inline_price) continue;
@@ -58,12 +76,12 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 
 			newCustomerProduct.options[i].quantity = featureOptionsQuantity;
 
-			// Update customer entitlement with the right balance
-			const customerEntitlement =
-				featureOptionUtils.convert.toCustomerEntitlement({
-					featureOptions,
-					customerEntitlements: newCustomerProduct.customer_entitlements,
-				});
+			// // Update customer entitlement with the right balance
+			// const customerEntitlement =
+			// 	featureOptionUtils.convert.toCustomerEntitlement({
+			// 		featureOptions,
+			// 		customerEntitlements: newCustomerProduct.customer_entitlements,
+			// 	});
 
 			if (customerEntitlement) {
 				const startingBalance = getStartingBalance({
@@ -85,5 +103,7 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 				}
 			}
 		}
+
+		
 	}
 };

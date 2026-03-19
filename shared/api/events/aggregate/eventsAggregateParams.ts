@@ -6,6 +6,7 @@ export const ExtEventsAggregateParamsSchema = z.object({
 	customer_id: z
 		.string()
 		.min(1)
+		.optional()
 		.meta({ description: "Customer ID to aggregate events for" }),
 	entity_id: z.string().min(1).optional().meta({
 		description:
@@ -16,10 +17,23 @@ export const ExtEventsAggregateParamsSchema = z.object({
 		.min(1)
 		.or(z.array(z.string().min(1)))
 		.meta({ description: "Feature ID(s) to aggregate events for" }),
-	group_by: z.string().startsWith("properties.").optional().meta({
-		description:
-			"Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys",
-	}),
+	group_by: z
+		.string()
+		.refine(
+			(val) =>
+				val.startsWith("properties.") ||
+				val === "$customer_id" ||
+				val === "$entity_id",
+			{
+				message:
+					'group_by must start with "properties." or be "$customer_id" or "$entity_id"',
+			},
+		)
+		.optional()
+		.meta({
+			description:
+				'Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns',
+		}),
 	range: RangeEnum.optional().meta({
 		description:
 			"Time range to aggregate events for. Either range or custom_range must be provided",

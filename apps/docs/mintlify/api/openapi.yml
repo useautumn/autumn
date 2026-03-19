@@ -11690,9 +11690,8 @@ paths:
                   description: Feature ID(s) to aggregate events for
                 group_by:
                   type: string
-                  pattern: ^properties\..*
-                  description: Property to group events by. If provided, each key in the response
-                    will be an object with distinct groups as the keys
+                  description: Property to group events by (e.g. "properties.region"), or
+                    "$customer_id" / "$entity_id" to group by those columns
                 range:
                   enum:
                     - 24h
@@ -11725,7 +11724,6 @@ paths:
                   description: Custom time range to aggregate events for. If provided, range must
                     not be provided
               required:
-                - customer_id
                 - feature_id
               title: EventsAggregateParams
               examples:
@@ -11880,8 +11878,8 @@ paths:
             autumn = Autumn(secret_key="am_sk_test...")
 
             res = autumn.events.aggregate(
-                customer_id="cus_123",
                 feature_id="api_calls",
+                customer_id="cus_123",
                 range="30d",
                 bin_size="day",
             )
