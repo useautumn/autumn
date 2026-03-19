@@ -104,6 +104,6 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 			}
 		}
 
-		console.log("FEATURE OPTIONS:", newCustomerProduct.options);
+		
 	}
 };
