@@ -89,6 +89,7 @@ export const customerEntitlements = pgTable(
 
 collatePgColumn(customerEntitlements.id, "C");
 collatePgColumn(customerEntitlements.internal_customer_id, "C");
+collatePgColumn(customerEntitlements.customer_product_id, "C");
 
 export type InsertCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;
