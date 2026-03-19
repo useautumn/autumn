@@ -124,55 +124,56 @@ async function startDev() {
 		let shellArgs: string[];
 		if (serverOnly) {
 			// Only start server and workers (for test sandboxes)
-			if (isWindows) {
-				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
-				const workersCmd = `cd server && bun workers`;
-				shellArgs = [
-					"cmd",
-					"/c",
-					`bunx concurrently -n server,workers -c green,yellow "${serverCmd}" "${workersCmd}"`,
-				];
-			} else {
-				shellArgs = [
-					"sh",
-					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
-				];
-			}
+			const serverCmd = isWindows
+				? `cd server && set SERVER_PORT=${SERVER_PORT}&& bun start`
+				: `cd server && SERVER_PORT=${SERVER_PORT} bun start`;
+			const workersCmd = `cd server && bun workers`;
+			shellArgs = [
+				process.execPath,
+				"x",
+				"concurrently",
+				"-n",
+				"server,workers",
+				"-c",
+				"green,yellow",
+				serverCmd,
+				workersCmd,
+			];
 		} else {
 			const names = ["server"];
 			const colors = ["green"];
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+					? `cd server && set SERVER_PORT=${SERVER_PORT}&& bun dev`
+					: `cd server && SERVER_PORT=${SERVER_PORT} bun dev`,
 			];
 
 			if (!skipWorkers) {
 				names.push("workers");
 				colors.push("yellow");
-				cmds.push(
-					isWindows
-						? `"cd server && bun workers:dev"`
-						: `"cd server && bun workers:dev"`,
-				);
+				cmds.push(`cd server && bun workers:dev`);
 			}
 
 			names.push("vite", "checkout");
 			colors.push("blue", "magenta");
 			cmds.push(
 				isWindows
-					? `"cd vite && set VITE_PORT=${VITE_PORT} && bun dev"`
-					: `"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
+					? `cd vite && set VITE_PORT=${VITE_PORT}&& bun dev`
+					: `cd vite && VITE_PORT=${VITE_PORT} bun dev`,
 				isWindows
-					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
-					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
+					? `cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT}&& bun dev`
+					: `cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev`,
 			);
 
 			shellArgs = [
-				isWindows ? "cmd" : "sh",
-				isWindows ? "/c" : "-c",
-				`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.join(" ")}`,
+				process.execPath,
+				"x",
+				"concurrently",
+				"-n",
+				names.join(","),
+				"-c",
+				colors.join(","),
+				...cmds,
 			];
 		}
 
