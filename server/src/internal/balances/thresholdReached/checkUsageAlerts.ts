@@ -116,7 +116,6 @@ export const checkUsageAlerts = async ({
 					name: alert.name,
 					threshold: alert.threshold,
 					threshold_type: alert.threshold_type,
-					current_usage: newUsage,
 				},
 			},
 		});
