@@ -68,6 +68,10 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			method: "POST",
 			url: "/v1/customers.get_or_create",
 		},
+		{
+			method: "POST",
+			url: "/v1/entities.get",
+		},
 	];
 
 	const eventsPatterns = [
