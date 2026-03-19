@@ -2,15 +2,18 @@ import {
 	type AttachBillingContext,
 	type BillingPlan,
 	type BillingResult,
+	type CustomizePlanV1,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
 	featureUtils,
+	hasCustomItems,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { TransitionRules } from "@shared/api/billing/common/transitionRules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { setupCustomFullProduct } from "@/internal/billing/v2/setup/setupCustomFullProduct";
 
 export interface AttachResult {
 	billingContext: AttachBillingContext;
@@ -24,34 +27,57 @@ export async function migrate({
 	fullCustomer,
 	currentCustomerProduct,
 	newProduct,
+	overrides,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	currentCustomerProduct: FullCusProduct;
 	newProduct: FullProduct;
+	overrides?: {
+		customize?: CustomizePlanV1;
+		noBillingChanges?: boolean;
+	};
 }) {
-	// 1. Build update subscription params
 	const entity = fullCustomer.entities.find(
 		(e) => e.internal_id === currentCustomerProduct.internal_entity_id,
 	);
 
 	const features = newProduct.entitlements.map((e) => e.feature);
 
-	// Reset all features after trial ends
 	const transitionRules: TransitionRules = {
 		reset_after_trial_end: features
 			.filter((f) => !featureUtils.isAllocated(f))
 			.map((f) => f.id),
 	};
 
+	// Build the product context: if customize is provided, pre-build custom
+	// prices/ents from the target product so updateSubscription receives a
+	// fully-resolved productContext pointing at the *target* product (not the
+	// source). Without this, updateSubscription would resolve the product from
+	// the source customer_product_id and ignore the target product entirely.
+	let resolvedFullProduct = newProduct;
+	let customPrices: any[] = [];
+	let customEnts: any[] = [];
+
+	if (hasCustomItems(overrides?.customize)) {
+		const customResult = await setupCustomFullProduct({
+			ctx,
+			currentFullProduct: newProduct,
+			customizePlan: overrides!.customize,
+		});
+		resolvedFullProduct = customResult.fullProduct;
+		customPrices = customResult.customPrices;
+		customEnts = customResult.customEnts;
+	}
+
 	const updateSubscriptionParams: UpdateSubscriptionV1Params = {
 		customer_id: fullCustomer.id || fullCustomer.internal_id,
 		customer_product_id: currentCustomerProduct.id,
 		entity_id: entity?.id ?? undefined,
-
+		customize: overrides?.customize,
+		no_billing_changes: overrides?.noBillingChanges ?? false,
 		proration_behavior: "none",
-		version: newProduct.version, // to trigger update custom plan intent
-
+		version: newProduct.version,
 		transition_rules: transitionRules,
 		redirect_mode: "if_required",
 	};
@@ -59,18 +85,17 @@ export async function migrate({
 	ctx.logger.info(
 		`----- RUNNING MIGRATION FOR CUSTOMER ${fullCustomer.id}, ENTITY ${entity?.id} -----`,
 	);
+
 	await billingActions.updateSubscription({
 		ctx,
 		params: updateSubscriptionParams,
 		contextOverride: {
 			productContext: {
 				customerProduct: currentCustomerProduct,
-				fullProduct: newProduct,
-
-				customPrices: [],
-				customEnts: [],
+				fullProduct: resolvedFullProduct,
+				customPrices,
+				customEnts,
 			},
-
 			billingVersion: currentCustomerProduct.billing_version,
 		},
 	});
