@@ -339,12 +339,16 @@ export const aggregate = async ({
 	if (params.group_by) {
 		// Use aggregate_groupable pipe for grouped queries
 		// Determine group_column and property_key based on group_by value
-		let groupColumn: "property" | "customer_id";
+		let groupColumn: "property" | "customer_id" | "entity_id";
 		let propertyKey: string;
 
 		if (params.group_by === "customer_id") {
 			// Special case: group by customer_id column directly
 			groupColumn = "customer_id";
+			propertyKey = "";
+		} else if (params.group_by === "entity_id") {
+			// Special case: group by entity_id column directly
+			groupColumn = "entity_id";
 			propertyKey = "";
 		} else if (params.group_by.startsWith("properties.")) {
 			// Standard case: group by a property value
@@ -356,7 +360,9 @@ export const aggregate = async ({
 			propertyKey = params.group_by;
 		}
 
-		validatePropertyPathForJSON({ propertyKey });
+		if (groupColumn === "property") {
+			validatePropertyPathForJSON({ propertyKey });
+		}
 
 		const pipeParams = {
 			org_id: org.id,

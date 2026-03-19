@@ -78,12 +78,14 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	jobName,
 	payload,
 	messageGroupId,
+	messageDeduplicationId,
 	generateDeduplicationId,
 	delayMs,
 }: {
 	jobName: T;
 	payload: Payloads[T];
 	messageGroupId?: string;
+	messageDeduplicationId?: string;
 	generateDeduplicationId?: boolean;
 	delayMs?: number;
 }) => {
@@ -106,9 +108,9 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			? Math.min(Math.floor(delayMs / 1000), 900)
 			: undefined;
 
-		const messageDeduplicationId = Bun.hash(
-			messageId ?? generateId("dedup"),
-		).toString();
+		const resolvedMessageDeduplicationId =
+			messageDeduplicationId ??
+			Bun.hash(messageId ?? generateId("dedup")).toString();
 
 		const command = new SendMessageCommand({
 			QueueUrl: QUEUE_URL,
@@ -117,7 +119,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
-				MessageDeduplicationId: messageDeduplicationId,
+				MessageDeduplicationId: resolvedMessageDeduplicationId,
 			}),
 		});
 
