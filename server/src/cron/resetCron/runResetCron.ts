@@ -21,6 +21,12 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 			return;
 		}
 
+		if (customersToReset.length === 10_000) {
+			console.warn(
+				"Reset cron: hit 10,000-customer limit — some customers may be deferred to the next run",
+			);
+		}
+
 		console.log(
 			`Reset cron: scheduling ${customersToReset.length} customers for reset`,
 		);
@@ -42,6 +48,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				group = { orgId: row.orgId, env: row.env, resets: [] };
 				groupedByOrgEnv.set(key, group);
 			}
+			// cusEntIds left empty — the worker calls CusService.getFull which triggers lazy reset for all entitlements
 			group.resets.push({
 				internalCustomerId: row.internalCustomerId,
 				customerId: row.customerId ?? "",

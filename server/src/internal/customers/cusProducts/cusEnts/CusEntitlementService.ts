@@ -225,7 +225,7 @@ export class CusEntService {
 
 	/**
 	 * Lightweight query: returns unique customers needing a reset, grouped by org/env.
-	 * No heavy joins — just customer_entitlements + customers.
+	 * Only includes loose entitlements (no product) or those attached to active products.
 	 */
 	static async getCustomerIdsForReset({
 		db,
@@ -248,8 +248,16 @@ export class CusEntService {
 				customers,
 				eq(customerEntitlements.internal_customer_id, customers.internal_id),
 			)
+			.leftJoin(
+				customerProducts,
+				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
+			)
 			.where(
 				and(
+					or(
+						isNull(customerEntitlements.customer_product_id),
+						eq(customerProducts.status, CusProductStatus.Active),
+					),
 					lt(customerEntitlements.next_reset_at, now),
 					or(
 						isNull(customerEntitlements.expires_at),
