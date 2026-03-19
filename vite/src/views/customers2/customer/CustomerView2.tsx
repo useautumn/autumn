@@ -5,6 +5,13 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
+import { Badge } from "@/components/ui/badge";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
@@ -101,17 +108,43 @@ export default function CustomerView2() {
 										<CustomerBreadcrumbs />
 									</div>
 									<div className="flex items-center justify-between w-full pt-2 gap-2">
-										<h3
-											className={`text-md font-semibold truncate min-w-0 ${
-												customer.name
-													? "text-t1"
-													: customer.email
-														? "text-t3"
-														: "text-t4 font-mono font-medium!"
-											}`}
-										>
-											{customer.name || customer.email || customer.id}
-										</h3>
+										<div className="flex items-center gap-2 min-w-0">
+											<h3
+												className={`text-md font-semibold truncate min-w-0 ${
+													customer.name
+														? "text-t1"
+														: customer.email
+															? "text-t3"
+															: "text-t4 font-mono font-medium!"
+												}`}
+											>
+												{customer.name || customer.email || customer.id}
+											</h3>
+											{Boolean(customer.processors?.vercel) && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<Badge 
+																variant="outline" 
+																className="bg-black text-white dark:bg-white dark:text-black border-black dark:border-white px-1.5 py-0.5 text-[10px] font-medium"
+															>
+																<svg
+																	fill="currentColor" 
+																	xmlns="http://www.w3.org/2000/svg" 
+																	viewBox="0 0 1155 1000"
+																	className="w-2.5 h-2.5"
+																>
+																	<path d="m577.3 0 577.4 1000H0z"/>
+																</svg>
+															</Badge>
+														</TooltipTrigger>
+														<TooltipContent>
+															<span>Vercel Marketplace Customer</span>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+										</div>
 
 										<CustomerPageDetails />
 									</div>
