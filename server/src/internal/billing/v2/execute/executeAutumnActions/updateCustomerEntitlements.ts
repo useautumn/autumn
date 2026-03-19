@@ -37,6 +37,7 @@ export const updateCustomerEntitlements = async ({
 				customerId,
 				cusEntId: customerEntitlement.id,
 				updates,
+				incrementCacheVersion: true,
 			});
 			continue;
 		}
