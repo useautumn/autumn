@@ -90,9 +90,15 @@ export const handleCopyProductV2 = createRoute({
 			fromFullProduct.is_default = false;
 		}
 
+		const featureIdsToCopy = fromFullProduct.entitlements.map(
+			(e) => e.feature.id,
+		);
+
 		// 3. Sync features between environments if copying across environments
 		if (fromEnv !== toEnv) {
-			for (const fromFeature of fromFeatures) {
+			for (const fromFeature of fromFeatures.filter((f) =>
+				featureIdsToCopy.includes(f.id),
+			)) {
 				const toFeature = toFeatures.find((f) => f.id === fromFeature.id);
 
 				if (toFeature && fromFeature.type !== toFeature.type) {
