@@ -3,6 +3,7 @@ import { logger } from "hono/logger";
 import { bot } from "@/bot";
 import { getEnv } from "@/config";
 import { flushStaleLocks } from "@/lib/redis";
+import { isRedisUnavailable } from "@/lib/slack";
 import { autumnWebhookRoutes } from "@/routes/autumn";
 import { connectRoutes } from "@/routes/connect";
 import { installRoutes } from "@/routes/install";
@@ -36,7 +37,14 @@ bot
 			`Autumn Slack bot running on port ${env.PORT} (${ids.length} workspace${ids.length === 1 ? "" : "s"})`,
 		),
 	)
-	.catch(() => console.log(`Autumn Slack bot running on port ${env.PORT} (no Redis)`));
+	.catch((err) => {
+		if (isRedisUnavailable(err)) {
+			console.error(`Autumn Slack bot failed to start on port ${env.PORT} (Redis unavailable)`);
+			return;
+		}
+
+		console.error(`Autumn Slack bot failed to start on port ${env.PORT}:`, err);
+	});
 
 export default {
 	port: env.PORT,
