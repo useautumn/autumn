@@ -3,127 +3,68 @@ title: "Vercel Marketplace"
 description: "Set up the Vercel Marketplace integration in Autumn"
 ---
 
-Autumn lets you add your product to [Vercel's Marketplace](https://vercel.com/marketplace) without any additional code. This guide walks through connecting the Autumn partner API and webhooks to Vercel, and setting up Stripe's custom payment method for accurate billing.
+When you use Autumn, you can also add your product to [Vercel's Marketplace](https://vercel.com/marketplace) without any additional code. Follow these steps to connect the Autumn partner API and webhooks to Vercel.
 
 <Note>
- This is currently in beta. Reach out on [Discord](https://discord.gg/STqxY92zuS) or email hey@useautumn.com to get access.
+ This is currently in beta, please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at hey@useautumn.com to get access.
 </Note>
-
-## Prerequisites
-
-- An Autumn account with a connected Stripe account
-- A Vercel integration entry in the [Vercel Integration Console](https://vercel.com/dashboard/integrations)
-
-## Setup
 
 <Steps>
     <Step>
-    ### Open the Integration Console
+    ### Step 1: Gather integration credentials and IDs
 
-    Navigate to the Vercel dashboard, then go to **Integrations → Browse Marketplace → Integration Console**.
+        In your Vercel Integration Console, open your integration entry.
 
-    <Frame>
-      <img src="/images/vercel-marketplace/step-1-integrations-console.png" alt="Vercel Integration Console" />
-    </Frame>
+        - Copy the **Client Integration ID**.
+        - Copy the **Client Integration Secret**.
+
+        In Stripe:
+
+        - Open **Settings > Custom payment methods**.
+        - Create a custom payment method named **Vercel Marketplace**.
+        - Upload the Vercel logo.
+        - Copy the resulting **Custom Payment Method ID**.
+
+        In the Autumn Dashboard:
+
+        - Open **Developer > Vercel Webhook**.
+        - Add a new endpoint.
+        - Set the endpoint URL to your production API endpoint plus `/autumn/webhooks/vercel`.
+        - Confirm the router path is current before saving.
     </Step>
 
     <Step>
-    ### Copy your Vercel credentials
+    ### Step 2: Configure values in Autumn
 
-    Scroll to the bottom of the Integration Console page to find your **Client (Integration) ID** and **Client (Integration) Secret**. You'll need both of these for the Autumn dashboard.
+        In the Autumn Dashboard, open **Developer > Vercel** and set:
 
-    <Frame>
-      <img src="/images/vercel-marketplace/step-2-credentials.png" alt="Vercel Client ID and Secret" />
-    </Frame>
+        - `Client Integration ID`
+        - `Client Integration Secret`
+        - `Custom Payment Method ID`
+
+        Also save the **Base URL** shown in this section.
     </Step>
 
     <Step>
-    ### Copy the Base URL from Autumn
+    ### Step 3: Configure values in Vercel
 
-    In the Autumn dashboard, open **Developer → Vercel**. Enter the Client ID and Client Secret from the previous step, then copy the **Base URL** that Autumn generates for you.
+        In the Vercel Integration Console, paste the Autumn **Base URL** into:
 
-    <Frame>
-      <img src="/images/vercel-marketplace/step-3-base-url.png" alt="Autumn Base URL" />
-    </Frame>
+        - **Partner API Base URL**
+        - **Webhooks URL**
+
+        This ensures Vercel can call Autumn when onboarding users and when key lifecycle events occur.
     </Step>
 
     <Step>
-    ### Set the Webhook URL in Vercel
+    ### Step 4: Validate the webhook
 
-    Back in the Vercel Integration Console, paste the Autumn Base URL into the **External Integration Settings → Webhook URL** field.
+        Confirm webhook delivery in both systems:
 
-    <Frame>
-      <img src="/images/vercel-marketplace/step-4-webhook-url.png" alt="Vercel Webhook URL" />
-    </Frame>
-    </Step>
+        - Trigger a test event flow in Vercel.
+        - Verify Vercel receives callback requests for **key create/delete** events.
+        - Verify Autumn logs/receives the payload and updates API keys as expected.
 
-    <Step>
-    ### Set the Marketplace Base URL in Vercel
-
-    Paste the same Autumn Base URL into **Marketplace Integration Settings → Base URL**.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-5-marketplace-base-url.png" alt="Vercel Marketplace Base URL" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Create a Stripe custom payment method
-
-    Autumn uses Stripe's **Custom Payment Methods** system so that Stripe can generate invoices and accurately track billing cycles for Vercel Marketplace purchases. In the Stripe dashboard, go to **Settings → Payments → Custom payment methods**, then click **Create a custom payment method**.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-6-custom-payment-methods.png" alt="Stripe Custom Payment Methods" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Provide a custom name and icon
-
-    Select **Provide a custom name and icon** at the bottom of the payment method selection dialog.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-7-provide-custom-name.png" alt="Provide custom name and icon" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Name the payment method
-
-    Enter **Vercel Marketplace** as the display name and upload the Vercel logo.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-8-vercel-marketplace-name.png" alt="Vercel Marketplace payment method name and logo" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Copy the custom payment method ID
-
-    After creating the payment method, Stripe will display a `custom.type ID` (starting with `cpmt_`). Copy this ID and paste it into the **Custom Payment Method ID** field in the Autumn dashboard.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-9-custom-payment-id.png" alt="Custom payment method ID" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Configure webhook events
-
-    Finally, set up the webhook endpoint for events that Autumn sends to your application. In the Autumn dashboard under **Developer → Vercel**, use the Svix webhook iframe to create a new endpoint. Set your endpoint URL and subscribe to all **Vercel** events. You can ignore the standalone **Webhook URL** field in the Autumn dashboard and leave it empty — the Svix iframe handles delivery instead.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-10-webhook-events.png" alt="Webhook event configuration" />
-    </Frame>
+        If events are not delivered, confirm the exact webhook route in your deployment (for example `.../autumn/webhooks/vercel`) and update both sides if it has changed.
     </Step>
 </Steps>
-
-## Validation
-
-Once everything is configured, trigger a test event flow in Vercel to confirm end-to-end delivery. Verify that:
-
-- Vercel receives callback requests for key lifecycle events
-- Autumn logs the incoming payload and processes it correctly
-- Your application receives the forwarded webhook events
-
-If events aren't being delivered, double-check that the Base URL is identical in both the Webhook URL and Marketplace Base URL fields in Vercel.
