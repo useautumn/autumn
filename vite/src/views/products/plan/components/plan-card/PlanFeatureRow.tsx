@@ -70,18 +70,9 @@ export const PlanFeatureRow = ({
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
-	const getAiCreditDisplayText = () => {
-		const budget = item.included_usage;
-		const featureName = feature?.name || "budget";
-		if (!budget || budget === 0) return `$0.00 of ${featureName}`;
-		return `$${Number(budget).toFixed(2)} of ${featureName}`;
-	};
-
-	const displayText = isAiCreditSystem
-		? getAiCreditDisplayText()
-		: hasFeatureName
-			? display.primary_text
-			: "Name your feature";
+	const displayText = hasFeatureName
+		? display.primary_text
+		: "Name your feature";
 
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;
