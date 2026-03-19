@@ -1,0 +1,30 @@
+# Environment
+.env
+.env.local
+.env.test
+!.env.example
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Docker
+docker/data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Logs
+*.log
