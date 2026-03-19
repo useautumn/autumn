@@ -16,6 +16,7 @@ type DeductFromMainBalanceParams = {
 	alterGrantedBalance?: boolean;
 	minBalance?: number;
 	maxBalance?: number;
+	allowOverage?: boolean;
 };
 
 type DeductFromMainBalanceResult = {
@@ -38,18 +39,21 @@ export const deductFromMainBalance = ({
 	amountToDeduct,
 	targetEntityId,
 	minBalance,
+	maxBalance,
 	alterGrantedBalance = false,
+	allowOverage = false,
 }: DeductFromMainBalanceParams): DeductFromMainBalanceResult => {
-	minBalance = minBalance ?? cusEntToMinBalance({ cusEnt }); // If minBalance is not provided, use the min balance from the cusEnt
-	const usageAllowed = cusEntToUsageAllowed({ cusEnt });
+	if (!allowOverage) {
+		minBalance = minBalance ?? cusEntToMinBalance({ cusEnt });
+		const usageAllowed = cusEntToUsageAllowed({ cusEnt });
+		minBalance = usageAllowed !== true ? 0 : minBalance;
+	}
 
 	const currentTopLevelBalance = cusEnt.balance ?? 0;
 	const currentTopLevelAdjustment = cusEnt.adjustment ?? 0;
 	const currentEntities = cusEnt.entities ?? null;
 
 	const baseMaxBalance = cusEntToStartingBalance({ cusEnt });
-
-	minBalance = usageAllowed !== true ? 0 : minBalance;
 
 	if (targetEntityId || isEntityScopedCusEnt(cusEnt)) {
 		// CASE 1: ENTITY SCOPED, SINGLE ENTITY
@@ -58,9 +62,10 @@ export const deductFromMainBalance = ({
 			if (entity) {
 				const entityBalance = entity.balance ?? 0;
 				const entityAdjustment = entity.adjustment ?? 0;
-				const maxBalance = new Decimal(baseMaxBalance)
-					.add(entityAdjustment)
-					.toNumber();
+				const resolvedMaxBalance = allowOverage
+					? undefined
+					: (maxBalance ??
+						new Decimal(baseMaxBalance).add(entityAdjustment).toNumber());
 
 				const { deducted, newBalance, newAdjustment, remaining } =
 					calculateDeduction({
@@ -69,7 +74,7 @@ export const deductFromMainBalance = ({
 						amountToDeduct,
 						alterGrantedBalance,
 						minBalance,
-						maxBalance,
+						maxBalance: resolvedMaxBalance,
 					});
 
 				const newEntities = {
@@ -98,51 +103,58 @@ export const deductFromMainBalance = ({
 				newAdjustment: currentTopLevelAdjustment,
 				remaining: amountToDeduct,
 			};
-		} else {
-			// CASE 2: ENTITY SCOPED, ALL ENTITIES
-			const newEntities: Record<string, EntityBalance> = { ...currentEntities };
-			for (const entityId in currentEntities) {
-				if (amountToDeduct === 0) break;
+		}
 
-				const entity = currentEntities[entityId];
-				const entityBalance = entity.balance ?? 0;
-				const entityAdjustment = entity.adjustment ?? 0;
-				const maxBalance = new Decimal(baseMaxBalance)
-					.add(entityAdjustment)
-					.toNumber();
+		// CASE 2: ENTITY SCOPED, ALL ENTITIES
+		const originalAmountToDeduct = amountToDeduct;
+		const newEntities: Record<string, EntityBalance> = { ...currentEntities };
+		for (const entityId in currentEntities) {
+			if (amountToDeduct === 0) break;
 
-				const { newBalance, newAdjustment, remaining } = calculateDeduction({
-					currentBalance: entityBalance,
-					currentAdjustment: entityAdjustment,
-					amountToDeduct,
-					alterGrantedBalance,
-					minBalance,
-					maxBalance,
-				});
+			const entity = currentEntities[entityId];
+			const entityBalance = entity.balance ?? 0;
+			const entityAdjustment = entity.adjustment ?? 0;
+			const resolvedMaxBalance = allowOverage
+				? undefined
+				: (maxBalance ??
+					new Decimal(baseMaxBalance).add(entityAdjustment).toNumber());
 
-				amountToDeduct = remaining;
+			const { newBalance, newAdjustment, remaining } = calculateDeduction({
+				currentBalance: entityBalance,
+				currentAdjustment: entityAdjustment,
+				amountToDeduct,
+				alterGrantedBalance,
+				minBalance,
+				maxBalance: resolvedMaxBalance,
+			});
 
-				newEntities[entityId] = {
-					...entity,
-					balance: newBalance,
-					adjustment: newAdjustment,
-				};
-			}
+			amountToDeduct = remaining;
 
-			return {
-				deducted: amountToDeduct,
-				newBalance: currentTopLevelBalance,
-				newAdjustment: currentTopLevelAdjustment,
-				newEntities,
-				remaining: amountToDeduct,
+			newEntities[entityId] = {
+				...entity,
+				balance: newBalance,
+				adjustment: newAdjustment,
 			};
 		}
+
+		const deducted = new Decimal(originalAmountToDeduct)
+			.sub(amountToDeduct)
+			.toNumber();
+
+		return {
+			deducted,
+			newBalance: currentTopLevelBalance,
+			newAdjustment: currentTopLevelAdjustment,
+			newEntities,
+			remaining: amountToDeduct,
+		};
 	}
 
 	// CASE 3: TOP-LEVEL BALANCE
-	const maxBalance = new Decimal(baseMaxBalance)
-		.add(currentTopLevelAdjustment)
-		.toNumber();
+	const resolvedMaxBalance = allowOverage
+		? undefined
+		: (maxBalance ??
+			new Decimal(baseMaxBalance).add(currentTopLevelAdjustment).toNumber());
 
 	const { deducted, newBalance, newAdjustment, remaining } = calculateDeduction(
 		{
@@ -151,7 +163,7 @@ export const deductFromMainBalance = ({
 			amountToDeduct,
 			alterGrantedBalance,
 			minBalance,
-			maxBalance,
+			maxBalance: resolvedMaxBalance,
 		},
 	);
 
