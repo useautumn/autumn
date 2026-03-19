@@ -23,21 +23,46 @@ export const BalancesThresholdReachedUsageAlertSchema = z.object({
 	}),
 });
 
-export const BalancesThresholdReachedSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer whose threshold was reached.",
-	}),
-	feature_id: z.string().meta({
-		description: "The feature ID the threshold applies to.",
-	}),
-	threshold_type: BalancesThresholdType.meta({
-		description: "The type of threshold that was reached.",
-	}),
-	usage_alert: BalancesThresholdReachedUsageAlertSchema.optional().meta({
-		description:
-			"Details of the usage alert that was triggered. Present when threshold_type is usage_alert.",
-	}),
-});
+export const BalancesThresholdReachedSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer whose threshold was reached.",
+		}),
+		feature_id: z.string().meta({
+			description: "The feature ID the threshold applies to.",
+		}),
+		threshold_type: BalancesThresholdType.meta({
+			description: "The type of threshold that was reached.",
+		}),
+		usage_alert: BalancesThresholdReachedUsageAlertSchema.optional().meta({
+			description:
+				"Details of the usage alert that was triggered. Required when threshold_type is usage_alert.",
+		}),
+	})
+	.check((ctx) => {
+		const { threshold_type, usage_alert } = ctx.value;
+
+		if (threshold_type === "usage_alert" && !usage_alert) {
+			ctx.issues.push({
+				code: "custom",
+				input: ctx.value,
+				message:
+					"usage_alert is required when threshold_type is usage_alert",
+				path: ["usage_alert"],
+			});
+			return;
+		}
+
+		if (threshold_type !== "usage_alert" && usage_alert) {
+			ctx.issues.push({
+				code: "custom",
+				input: ctx.value,
+				message:
+					"usage_alert must not be provided when threshold_type is not usage_alert",
+				path: ["usage_alert"],
+			});
+		}
+	});
 
 export type BalancesThresholdReached = z.infer<
 	typeof BalancesThresholdReachedSchema
