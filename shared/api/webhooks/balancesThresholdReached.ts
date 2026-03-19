@@ -21,9 +21,6 @@ export const BalancesThresholdReachedUsageAlertSchema = z.object({
 	current_usage: z.number().meta({
 		description: "The customer's usage at the time the alert was triggered.",
 	}),
-	current_balance: z.number().meta({
-		description: "The customer's balance at the time the alert was triggered.",
-	}),
 });
 
 export const BalancesThresholdReachedSchema = z.object({
