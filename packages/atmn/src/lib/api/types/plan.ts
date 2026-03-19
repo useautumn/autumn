@@ -2,7 +2,7 @@
 // Generated from @autumn/shared API schemas
 // Run typegen to regenerate
 
-import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import type { ApiPlanV1 } from "../../../../../../shared/api/products/apiPlanV1.js";
 
 /**
  * ApiPlan - Raw API response type

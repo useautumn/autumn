@@ -58,33 +58,33 @@ export const plans: Plan[] = [
 		name: "Hobby",
 		price: { amount: 5, interval: "month" },
 		items: [
-			{
-				featureId: "credits",
-				included: 500,
-				reset: { interval: "month" },
-				price: {
-					amount: 0.01,
-					billingMethod: "usage_based",
-					billingUnits: 1,
-				},
+		{
+			featureId: "credits",
+			included: 500,
+			price: {
+				amount: 0.01,
+				billingMethod: "usage_based",
+				billingUnits: 1,
+				interval: "month",
 			},
-		],
-	},
-	{
-		id: "pro",
-		name: "Pro",
-		price: { amount: 20, interval: "month" },
-		items: [
-			{
-				featureId: "credits",
-				included: 2000,
-				reset: { interval: "month" },
-				price: {
-					amount: 0.01,
-					billingMethod: "usage_based",
-					billingUnits: 1,
-				},
+		},
+	],
+},
+{
+	id: "pro",
+	name: "Pro",
+	price: { amount: 20, interval: "month" },
+	items: [
+		{
+			featureId: "credits",
+			included: 2000,
+			price: {
+				amount: 0.01,
+				billingMethod: "usage_based",
+				billingUnits: 1,
+				interval: "month",
 			},
+		},
 		],
 	},
 ];
