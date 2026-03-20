@@ -82,15 +82,13 @@ function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	}
 
 	if (planItem.price) {
-		// Get interval from price.interval if available, otherwise from top-level reset
+		// Get interval from price.interval (reset and price are mutually exclusive)
 		const priceWithInterval = planItem.price as {
 			interval?: string;
 			intervalCount?: number;
 		};
-		const priceInterval = priceWithInterval.interval;
-		const priceIntervalCount = priceWithInterval.intervalCount;
-		const interval = priceInterval ?? planItem.reset?.interval;
-		const intervalCount = priceIntervalCount ?? planItem.reset?.intervalCount;
+		const interval = priceWithInterval.interval;
+		const intervalCount = priceWithInterval.intervalCount;
 
 		const priceWithBilling = planItem.price as {
 			billingUnits?: number;

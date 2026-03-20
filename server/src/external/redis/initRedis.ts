@@ -29,7 +29,6 @@ import {
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
-import { getActiveRedis, initFailover } from "./redisFailover.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -275,71 +274,21 @@ const primaryRedis = createRedisConnection({
 	region: currentRegion,
 });
 
-// Eagerly create failover instance (other region) for automatic failover
-const failoverRegion =
-	ALL_REGIONS.find((r) => r !== currentRegion && regionToCacheUrl[r]) ?? null;
-
-let failoverRedis: Redis | null = null;
-if (failoverRegion) {
-	const failoverUrl = regionToCacheUrl[failoverRegion]!;
-	// Only create a separate instance if it's actually a different server
-	if (failoverUrl !== primaryCacheUrl) {
-		failoverRedis = createRedisConnection({
-			cacheUrl: failoverUrl,
-			region: failoverRegion,
-		});
-	}
-}
-
-// Initialize failover — monitors primary health and swaps `redis` automatically
-initFailover({
-	primary: primaryRedis,
-	failover: failoverRedis,
-	failoverRegion,
-	currentRegion,
-});
-
 /**
  * The active Redis instance. All consumer code imports this.
- * Normally points to the primary (current region). During a primary outage,
- * the failover module swaps this to the other region's instance automatically.
+ * Normally points to the primary (current region).
  *
  * This is a `let` so it's a live ES module binding — reassignments here
  * are visible to all importers on their next access.
  */
-export let redis: Redis = primaryRedis;
-
-// Subscribe to failover state changes — keep the `redis` export in sync.
-// We do this here (not in redisFailover.ts) because the module binding
-// can only be reassigned in the module that declares it.
-const syncRedisBinding = () => {
-	const active = getActiveRedis();
-	if (redis !== active) {
-		redis = active;
-	}
-};
-
-primaryRedis.on("error", syncRedisBinding);
-primaryRedis.on("ready", syncRedisBinding);
-if (failoverRedis) {
-	failoverRedis.on("error", syncRedisBinding);
-	failoverRedis.on("ready", syncRedisBinding);
-}
-// Also poll periodically to catch any edge cases with event timing
-setInterval(syncRedisBinding, 2000);
+export const redis: Redis = primaryRedis;
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
 
-// Pre-populate with eagerly created instances
-if (failoverRedis && failoverRegion) {
-	regionalRedisInstances.set(failoverRegion, failoverRedis);
-}
-
 /** Get Redis instance for a specific region (lazy-loaded) */
 export const getRegionalRedis = (region: string): Redis => {
-	// Always return the actual primary for the current region (not the active/failover)
-	// so cross-region sync logic isn't affected by failover state.
+	// If requesting current region, return primary instance
 	if (region === currentRegion) {
 		return primaryRedis;
 	}
