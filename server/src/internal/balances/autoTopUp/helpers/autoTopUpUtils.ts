@@ -4,7 +4,7 @@ import type {
 	FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 
 /** Build the Redis lock key for auto top-up. Shares the attach lock so auto-topup and attach can't run concurrently. */
 export const buildAutoTopUpLockKey = ({
