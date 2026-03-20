@@ -227,14 +227,13 @@ export const initFailover = ({
 		primaryHasBeenReady = true;
 	});
 
-	// Clear any existing poll timer from a previous init
+	// Clear any existing state from a previous init
 	if (pollTimer) {
 		clearInterval(pollTimer);
 		pollTimer = null;
 	}
 	primaryHasBeenReady = false;
 	blipTimestamps.length = 0;
-	onChangeCallbacks.length = 0;
 
 	// Start the single polling loop
 	pollTimer = setInterval(tick, POLL_INTERVAL_MS);
