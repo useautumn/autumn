@@ -47,7 +47,7 @@ const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			const balance = linkedCusEnt.entitlement.allowance!;
+			const balance = linkedCusEnt.entitlement.allowance ?? 0; // cannot be null, must be 0 in unlimited case.
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,

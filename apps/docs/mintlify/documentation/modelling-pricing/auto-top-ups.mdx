@@ -6,12 +6,12 @@ description: Automatically replenish customer balances when they run low
 Auto top-ups automatically purchase additional balance for a customer when their usage drops below a configured threshold. This prevents service interruptions for customers who don't want to manually manage their balance.
 
 > **Example** <br />
-> A customer has 500 credits. When their balance drops below 100, Autumn automatically purchases 500 more credits using their saved payment method.
+> A customer on the Standard plan gets 5,000 credits per month. When their balance drops below 500, Autumn automatically purchases 1,000 more credits at $10 using the plan's one-off prepaid price.
 
 ## Prerequisites
 
 Auto top-ups require:
-1. A [one-off prepaid plan](/documentation/modelling-pricing/one-off-purchases) (the top-up plan) that the customer has purchased at least once
+1. A plan with a [one-off prepaid](/documentation/modelling-pricing/one-off-purchases) item for the feature you want to auto top-up
 2. The customer must have a saved payment method on file
 
 ## Setting up
@@ -19,7 +19,7 @@ Auto top-ups require:
 <Tabs>
 <Tab title="CLI">
 
-Auto top-ups are configured per customer, not in `autumn.config.ts`. First, create a top-up plan:
+Auto top-ups are configured per customer, not in `autumn.config.ts`. Your plan needs a one-off prepaid item for the feature you want to auto top-up:
 
 ```ts autumn.config.ts
 import { feature, item, plan } from 'atmn';
@@ -31,16 +31,21 @@ export const credits = feature({
   consumable: true,
 });
 
-export const creditTopUp = plan({
-  id: 'credit_top_up',
-  name: 'Credit Top-Up',
-  addOn: true,
+export const standard = plan({
+  id: 'standard',
+  name: 'Standard',
+  price: { amount: 50, interval: 'month' },
   items: [
+    item({
+      featureId: credits.id,
+      included: 5000,
+      reset: { interval: 'month' },
+    }),
     item({
       featureId: credits.id,
       price: {
         amount: 10,
-        billingUnits: 500,
+        billingUnits: 1000,
         interval: 'one_off',
         billingMethod: 'prepaid',
       },
@@ -49,7 +54,7 @@ export const creditTopUp = plan({
 });
 ```
 
-Then configure auto top-ups per customer via the API (see below).
+The one-off prepaid item (`$10 per 1,000 credits`) is what Autumn uses to replenish the balance. Configure auto top-ups per customer via the API (see below).
 
 </Tab>
 <Tab title="Dashboard">
@@ -59,7 +64,7 @@ Then configure auto top-ups per customer via the API (see below).
 3. Under their balance for a feature, configure **Auto Top-Up**:
    - **Threshold**: the balance level that triggers a top-up
    - **Quantity**: how many units to purchase each time
-4. The customer must have a saved payment method and have previously purchased a prepaid top-up plan for that feature
+4. The customer's plan must include a **one-off prepaid item** for the feature. This is what Autumn charges when a top-up is triggered.
 
 </Tab>
 </Tabs>
@@ -81,8 +86,8 @@ await autumn.customers.update({
     autoTopups: [{
       featureId: "credits",
       enabled: true,
-      threshold: 100,
-      quantity: 500,
+      threshold: 500,
+      quantity: 1000,
     }],
   },
 });
@@ -99,8 +104,8 @@ await autumn.customers.update(
         "auto_topups": [{
             "feature_id": "credits",
             "enabled": True,
-            "threshold": 100,
-            "quantity": 500,
+            "threshold": 500,
+            "quantity": 1000,
         }],
     },
 )
@@ -116,8 +121,8 @@ curl -X POST "https://api.useautumn.com/v1/customers/update" \
       "auto_topups": [{
         "feature_id": "credits",
         "enabled": true,
-        "threshold": 100,
-        "quantity": 500
+        "threshold": 500,
+        "quantity": 1000
       }]
     }
   }'
@@ -155,7 +160,7 @@ This limits the customer to 5 auto top-ups per month. Supported intervals: `hour
 
 1. After every usage event (via `track`), Autumn checks the customer's remaining balance
 2. If the balance falls below the configured `threshold`, an auto top-up is triggered
-3. Autumn creates an invoice for the configured `quantity` using the existing prepaid top-up plan
+3. Autumn creates an invoice for the configured `quantity` using the one-off prepaid price from the customer's plan
 4. The invoice is charged to the customer's saved payment method
 5. The balance is replenished with the purchased amount
 
