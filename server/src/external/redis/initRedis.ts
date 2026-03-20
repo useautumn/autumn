@@ -29,7 +29,11 @@ import {
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
-import { getActiveRedis, initFailover } from "./redisFailover.js";
+import {
+	getActiveRedis,
+	initFailover,
+	onActiveChange,
+} from "./redisFailover.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -309,24 +313,12 @@ initFailover({
  */
 export let redis: Redis = primaryRedis;
 
-// Subscribe to failover state changes — keep the `redis` export in sync.
+// Keep the `redis` export in sync with the failover state machine.
 // We do this here (not in redisFailover.ts) because the module binding
 // can only be reassigned in the module that declares it.
-const syncRedisBinding = () => {
-	const active = getActiveRedis();
-	if (redis !== active) {
-		redis = active;
-	}
-};
-
-primaryRedis.on("error", syncRedisBinding);
-primaryRedis.on("ready", syncRedisBinding);
-if (failoverRedis) {
-	failoverRedis.on("error", syncRedisBinding);
-	failoverRedis.on("ready", syncRedisBinding);
-}
-// Also poll periodically to catch any edge cases with event timing
-setInterval(syncRedisBinding, 2000);
+onActiveChange(() => {
+	redis = getActiveRedis();
+});
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();

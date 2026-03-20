@@ -13,16 +13,19 @@ const CUSTOMER_ID = "redis-failover-test-customer";
 const FEATURE_ID = "messages";
 
 // Failover timing (must match redisFailover.ts constants)
-const FAILOVER_DELAY_MS = 5_000;
-const RECOVERY_DELAY_MS = 3_000;
+const FAILOVER_THRESHOLD_MS = 15_000;
+const RECOVERY_THRESHOLD_MS = 5_000;
+const POLL_INTERVAL_MS = 2_000;
 
 type FailoverStatus = {
 	ok: boolean;
+	phase: string;
 	isUsingFailover: boolean;
 	failoverRegion: string | null;
 	primaryStatus: string;
 	failoverStatus: string | null;
-	primaryErrorSince: number | null;
+	msInPhase: number;
+	blipsLastHour: number;
 	durationMs?: number;
 	error?: string;
 };
@@ -90,7 +93,7 @@ test(`${chalk.yellowBright("redis failover: full lifecycle")}`, async () => {
 	// ---- 1. Verify initial state: primary is active ----
 	console.log("\n--- Step 1: Verify primary is active ---");
 	const initialStatus = await redisAction({ action: "status" });
-	console.log(`  Response: ${JSON.stringify(initialStatus)}`);
+	console.log(`  Phase: ${initialStatus.phase}`);
 	console.log(`  Primary: ${initialStatus.primaryStatus}`);
 	console.log(`  Failover: ${initialStatus.failoverStatus}`);
 	console.log(`  Using failover: ${initialStatus.isUsingFailover}`);
@@ -113,12 +116,13 @@ test(`${chalk.yellowBright("redis failover: full lifecycle")}`, async () => {
 	console.log(`  Primary disconnected`);
 
 	// ---- 3. Wait for failover to trigger ----
-	console.log(
-		`\n--- Step 3: Waiting ${FAILOVER_DELAY_MS + 2000}ms for failover ---`,
-	);
-	await wait(FAILOVER_DELAY_MS + 2000);
+	// Must wait: threshold + up to one poll interval + buffer
+	const failoverWait = FAILOVER_THRESHOLD_MS + POLL_INTERVAL_MS + 2000;
+	console.log(`\n--- Step 3: Waiting ${failoverWait}ms for failover ---`);
+	await wait(failoverWait);
 
 	const failoverStatus = await redisAction({ action: "status" });
+	console.log(`  Phase: ${failoverStatus.phase}`);
 	console.log(`  Primary: ${failoverStatus.primaryStatus}`);
 	console.log(`  Failover: ${failoverStatus.failoverStatus}`);
 	console.log(`  Using failover: ${failoverStatus.isUsingFailover}`);
@@ -167,12 +171,14 @@ test(`${chalk.yellowBright("redis failover: full lifecycle")}`, async () => {
 	// ---- 5. Recover primary ----
 	console.log("\n--- Step 5: Recover primary ---");
 	await redisAction({ action: "recover-primary" });
+	const recoveryWait = RECOVERY_THRESHOLD_MS + POLL_INTERVAL_MS + 2000;
 	console.log(
-		`  Reconnect triggered, waiting ${RECOVERY_DELAY_MS + 2000}ms for recovery...`,
+		`  Reconnect triggered, waiting ${recoveryWait}ms for recovery...`,
 	);
-	await wait(RECOVERY_DELAY_MS + 2000);
+	await wait(recoveryWait);
 
 	const recoveredStatus = await redisAction({ action: "status" });
+	console.log(`  Phase: ${recoveredStatus.phase}`);
 	console.log(`  Primary: ${recoveredStatus.primaryStatus}`);
 	console.log(`  Using failover: ${recoveredStatus.isUsingFailover}`);
 
@@ -212,4 +218,56 @@ test(`${chalk.yellowBright("redis failover: full lifecycle")}`, async () => {
 	expect(postTrack.ok).toBe(true);
 
 	console.log("\nRedis failover lifecycle complete.");
-}, 60000);
+}, 90_000);
+
+test(`${chalk.yellowBright("redis failover: blip does NOT trigger failover")}`, async () => {
+	// ---- 1. Verify we start in NORMAL ----
+	console.log("\n--- Step 1: Verify NORMAL state ---");
+	const initial = await redisAction({ action: "status" });
+	console.log(`  Phase: ${initial.phase}, blips: ${initial.blipsLastHour}`);
+	expect(initial.phase).toBe("NORMAL");
+	expect(initial.isUsingFailover).toBe(false);
+	const blipsBefore = initial.blipsLastHour;
+
+	// ---- 2. Kill primary (simulate BGSAVE blip) ----
+	console.log("\n--- Step 2: Kill primary (simulating ~8s BGSAVE blip) ---");
+	await redisAction({ action: "kill-primary" });
+
+	// Wait 4s — should be in DEGRADED but NOT yet FAILOVER (threshold is 15s)
+	await wait(4_000);
+	const degraded = await redisAction({ action: "status" });
+	console.log(
+		`  Phase after 4s: ${degraded.phase} (msInPhase: ${degraded.msInPhase})`,
+	);
+	expect(degraded.phase).toBe("DEGRADED");
+	expect(degraded.isUsingFailover).toBe(false);
+
+	// ---- 3. Recover primary before threshold ----
+	console.log("\n--- Step 3: Recover primary (before 15s threshold) ---");
+	await redisAction({ action: "recover-primary" });
+
+	// Wait for primary to reconnect + next poll tick
+	await wait(POLL_INTERVAL_MS + 2_000);
+
+	const afterBlip = await redisAction({ action: "status" });
+	console.log(`  Phase: ${afterBlip.phase}, blips: ${afterBlip.blipsLastHour}`);
+
+	// Should be back in NORMAL, never hit FAILOVER
+	expect(afterBlip.phase).toBe("NORMAL");
+	expect(afterBlip.isUsingFailover).toBe(false);
+
+	// Blip counter should have incremented
+	expect(afterBlip.blipsLastHour).toBe(blipsBefore + 1);
+
+	// ---- 4. Verify endpoints still work on primary ----
+	console.log("\n--- Step 4: Verify endpoints work ---");
+	const check = await timedFetch({
+		label: "POST /check",
+		url: "/v1/balances.check",
+		body: { customer_id: CUSTOMER_ID, feature_id: FEATURE_ID },
+	});
+	console.log(`  ${check.label}: ${check.durationMs}ms (${check.status})`);
+	expect(check.ok).toBe(true);
+
+	console.log("\nBlip test complete — failover was NOT triggered.");
+}, 30_000);
