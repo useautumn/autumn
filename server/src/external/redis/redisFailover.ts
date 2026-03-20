@@ -3,7 +3,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 
 // ── Config ──────────────────────────────────────────────────────────
 /** How long primary must stay down before we switch to failover. */
-const FAILOVER_THRESHOLD_MS = 15_000;
+const FAILOVER_THRESHOLD_MS = 60_000;
 
 /** How long primary must stay healthy before we switch back. */
 const RECOVERY_THRESHOLD_MS = 5_000;
@@ -50,7 +50,11 @@ const notifyChange = (): void => {
 	for (const cb of onChangeCallbacks) {
 		try {
 			cb();
-		} catch {}
+		} catch (err) {
+			logger.error("[Redis failover] onActiveChange callback threw", {
+				error: err,
+			});
+		}
 	}
 };
 
@@ -222,6 +226,15 @@ export const initFailover = ({
 	primary.on("ready", () => {
 		primaryHasBeenReady = true;
 	});
+
+	// Clear any existing poll timer from a previous init
+	if (pollTimer) {
+		clearInterval(pollTimer);
+		pollTimer = null;
+	}
+	primaryHasBeenReady = false;
+	blipTimestamps.length = 0;
+	onChangeCallbacks.length = 0;
 
 	// Start the single polling loop
 	pollTimer = setInterval(tick, POLL_INTERVAL_MS);

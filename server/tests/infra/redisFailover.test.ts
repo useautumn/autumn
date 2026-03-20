@@ -13,7 +13,7 @@ const CUSTOMER_ID = "redis-failover-test-customer";
 const FEATURE_ID = "messages";
 
 // Failover timing (must match redisFailover.ts constants)
-const FAILOVER_THRESHOLD_MS = 15_000;
+const FAILOVER_THRESHOLD_MS = 60_000;
 const RECOVERY_THRESHOLD_MS = 5_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -218,7 +218,7 @@ test(`${chalk.yellowBright("redis failover: full lifecycle")}`, async () => {
 	expect(postTrack.ok).toBe(true);
 
 	console.log("\nRedis failover lifecycle complete.");
-}, 90_000);
+}, 120_000);
 
 test(`${chalk.yellowBright("redis failover: blip does NOT trigger failover")}`, async () => {
 	// ---- 1. Verify we start in NORMAL ----
