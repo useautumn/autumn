@@ -1,8 +1,8 @@
 import {
+	type generateText,
 	type LanguageModel,
 	type LanguageModelV1Middleware,
 	wrapLanguageModel,
-	LanguageModelUsage
 } from "ai";
 import type { Autumn } from "autumn-js";
 
@@ -14,28 +14,40 @@ export const withTokenTracking = ({
 	autumn,
 	model,
 	customerId,
+	providerId,
 	featureId,
 	entityId,
 	properties,
 }: {
+	/** Autumn SDK client instance. */
 	autumn: Autumn;
+	/** The AI SDK language model to wrap. */
 	model: LanguageModel;
+	/** The Autumn customer ID to attribute usage to. */
 	customerId: string;
+	/** Override the provider prefix used in the model name sent to Autumn. Falls back to `model.provider`. */
+	providerId?: string;
+	/** Target a specific AI credit system feature. Auto-detected if omitted. */
 	featureId?: string;
+	/** Entity ID for entity-scoped balance tracking. */
 	entityId?: string;
+	/** Additional properties to attach to the usage event. */
 	properties?: Record<string, unknown>;
 }) => {
-	const modelName =
-		typeof model === "string" ? model : `${model.provider}/${model.modelId}`;
+	const provider =
+		providerId ?? (typeof model === "string" ? model : model.provider);
+	const modelId = typeof model === "string" ? model : model.modelId;
+	const modelName = `${provider}/${modelId}`;
 
-	const trackUsage = async (usage: Omit<LanguageModelUsage, "totalTokens">) => {
+	const trackUsage = async (
+		usage: Awaited<ReturnType<typeof generateText>>["usage"],
+	) => {
 		try {
-			// @ts-ignore Not pushed to prod yet, so this isn't found. remove once in sdk
 			await autumn.balances.trackTokens({
 				customerId,
-				model: modelName,
-				inputTokens: usage.promptTokens ?? 0,
-				outputTokens: usage.completionTokens ?? 0,
+				modelId: modelName,
+				inputTokens: usage.inputTokens.total ?? 0,
+				outputTokens: usage.outputTokens.total ?? 0,
 				featureId,
 				entityId,
 				properties,

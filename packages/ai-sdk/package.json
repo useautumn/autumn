@@ -25,7 +25,7 @@
 	},
 	"peerDependencies": {
 		"autumn-js": "*",
-		"ai": "^4.0.0"
+		"ai": "^6.0.116"
 	},
 	"devDependencies": {
 		"@types/node": "^24.9.1",
