@@ -229,7 +229,7 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 			}),
 		);
 	}
-	if(feature.is_ai_credit_system) {
+	if (feature.is_ai_credit_system) {
 		agentFeature.is_ai_credit_system = true;
 		agentFeature.model_markups = feature.model_markups;
 	}

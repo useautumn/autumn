@@ -1,3 +1,13 @@
+import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import { Input } from "@/components/v2/inputs/Input";
+import {
+	InputGroup,
+	InputGroupInput,
+	InputGroupText,
+} from "@/components/v2/inputs/InputGroup";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import {
 	BillingInterval,
 	billingToItemInterval,
@@ -8,17 +18,6 @@ import {
 	isContUseItem,
 } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-	InputGroupText,
-} from "@/components/v2/inputs/InputGroup";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { UsageReset } from "./UsageReset";
 
 export function IncludedUsage() {
@@ -72,7 +71,7 @@ export function IncludedUsage() {
 						{isAiCreditSystem ? (
 							// Couldn't find a disabled property but data-disabled is accounted for in CSS
 							<InputGroup data-disabled={includedUsage === Infinite}>
-									<InputGroupText>$</InputGroupText>
+								<InputGroupText>$</InputGroupText>
 								<InputGroupInput
 									key={`included-usage-${item.feature_id || item.price_id || "default"}`}
 									placeholder="eg. 10.00"
