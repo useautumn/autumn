@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	type ModelMarkups,
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -35,8 +36,8 @@ const areModelMarkupsEqual = ({
 	a,
 	b,
 }: {
-	a: Record<string, { markup: number }> | null | undefined;
-	b: Record<string, { markup: number }> | null | undefined;
+	a: ModelMarkups;
+	b: ModelMarkups;
 }): boolean => {
 	const aIsAbsent = a == null;
 	const bIsAbsent = b == null;
@@ -48,7 +49,12 @@ const areModelMarkupsEqual = ({
 	if (aKeys.length !== bKeys.length) return false;
 
 	for (const key of aKeys) {
-		if (a[key]?.markup !== b[key]?.markup) return false;
+		const aEntry = a[key];
+		const bEntry = b[key];
+		if (!bEntry) return false;
+		if (aEntry.markup !== bEntry.markup) return false;
+		if (aEntry.input_cost !== bEntry.input_cost) return false;
+		if (aEntry.output_cost !== bEntry.output_cost) return false;
 	}
 
 	return true;
