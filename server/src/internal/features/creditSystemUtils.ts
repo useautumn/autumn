@@ -105,7 +105,7 @@ const getModelCreditCost = async ({
 			.mul(input)
 			.add(actualOutputCost.mul(output))
 			.div(1_000_000);
-		const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
+		const markedUpCost = totalCost.mul(new Decimal(1).add(new Decimal(markup).div(100)));
 		return markedUpCost.toNumber();
 	}
 
@@ -138,7 +138,7 @@ const getModelCreditCost = async ({
 		.mul(input)
 		.add(actualOutputCost.mul(output))
 		.div(1_000_000);
-	const markedUpCost = totalCost.mul(new Decimal(1).add(markup / 100));
+	const markedUpCost = totalCost.mul(new Decimal(1).add(new Decimal(markup).div(100)));
 	return markedUpCost.toNumber();
 };
 

@@ -111,7 +111,6 @@ function UpdateCreditSystemSheet({
 
 			setOpen(false);
 		} catch (error: unknown) {
-			console.log(error);
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to update credit system"),
 			);
