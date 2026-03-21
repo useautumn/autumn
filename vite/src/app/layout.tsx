@@ -52,16 +52,13 @@ export function MainLayout() {
 
 	// Redirect to sandbox if not deployed
 	useEffect(() => {
-		if (!orgLoading && org && !org.deployed) {
+		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
 			const pathname = window.location.pathname;
-			if (!pathname.startsWith("/sandbox")) {
-				const search = window.location.search;
-				navigate(`/sandbox${pathname}${search}`);
-			}
+			const search = window.location.search;
+			navigate(`/sandbox${pathname}${search}`);
 		}
-	}, [org, orgLoading, navigate]);
+	}, [orgLoading, org, env, navigate]);
 
-	// Show loading screen while data is loading
 	if (isPending || orgLoading) {
 		return (
 			<AutumnProvider

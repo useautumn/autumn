@@ -4,11 +4,13 @@ import { debounce } from "lodash";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCusProductCache } from "./useCusProductCache";
 
 export const useCusProductQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { customer_id, product_id } = useParams();
 	const [queryStates] = useQueryStates({
 		version: parseAsInteger,
@@ -52,14 +54,14 @@ export const useCusProductQuery = () => {
 		cusProduct: FullCusProduct;
 		product: ProductV2;
 	}>({
-		queryKey: [
+		queryKey: buildKey([
 			"customer_product",
 			customer_id,
 			product_id,
 			stableStates.version,
 			stableStates.id,
 			stableStates.entity_id,
-		],
+		]),
 		queryFn: fetcher,
 	});
 

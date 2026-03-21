@@ -1,4 +1,6 @@
+import type { FrontendOrg } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	ChevronDown,
 	Monitor,
@@ -9,7 +11,7 @@ import {
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/ui/button";
@@ -232,40 +234,53 @@ export const OrgDropdown = () => {
 	);
 };
 
-export const handleSwitchOrg = async (
-	orgId: string,
-	setLoading?: (loading: boolean) => void,
-	setSearchParams?: (searchParams: URLSearchParams) => void,
-) => {
-	setLoading?.(true);
+/** Switches the active org via client-side state update (no page reload). */
+export const useOrgSwitch = () => {
+	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 
-	try {
-		setSearchParams?.(new URLSearchParams());
-		window.history.replaceState(null, "", window.location.pathname);
+	return async ({
+		orgId,
+		setLoading,
+	}: {
+		orgId: string;
+		setLoading?: (loading: boolean) => void;
+	}) => {
+		setLoading?.(true);
+		try {
+			await authClient.organization.setActive({
+				organizationId: orgId,
+			});
 
-		await authClient.organization.setActive({
-			organizationId: orgId,
-		});
+			clearOrgCache();
+			await queryClient.invalidateQueries({ queryKey: ["org"] });
 
-		clearOrgCache();
-		window.location.reload();
-	} catch (error: any) {
-		toast.error(error.message);
-	} finally {
-		setLoading?.(false);
-	}
+			const newOrg = queryClient.getQueryData<FrontendOrg>(["org"]);
+			if (newOrg && !newOrg.deployed) {
+				const pathname = window.location.pathname;
+				const search = window.location.search;
+				if (!pathname.startsWith("/sandbox")) {
+					navigate(`/sandbox${pathname}${search}`);
+				}
+			}
+		} catch (error: any) {
+			toast.error(error.message);
+		} finally {
+			setLoading?.(false);
+		}
+	};
 };
 
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
 	const [loading, setLoading] = useState(false);
-	const [_, setSearchParams] = useSearchParams();
+	const switchOrg = useOrgSwitch();
 
 	return (
 		<DropdownMenuItem
 			key={org.id}
 			onClick={async (e) => {
 				e.preventDefault();
-				await handleSwitchOrg(org.id, setLoading, setSearchParams);
+				await switchOrg({ orgId: org.id, setLoading });
 				setDropdownOpen(false);
 			}}
 			shimmer={loading}

@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useCusReferralQuery = () => {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const referralFetcher = async () => {
 		const { data } = await axiosInstance.get(
@@ -20,7 +22,7 @@ export const useCusReferralQuery = () => {
 		error: cusRewardError,
 		refetch: cusRewardRefetch,
 	} = useQuery({
-		queryKey: ["customer_referrals", customer_id],
+		queryKey: buildKey(["customer_referrals", customer_id]),
 		queryFn: referralFetcher,
 		retry: false,
 	});

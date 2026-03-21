@@ -1,5 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Fetches product data for a specific version (or latest if version is omitted). */
@@ -13,8 +14,9 @@ export function useProductVersionQuery({
 	enabled?: boolean;
 }) {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	return useQuery({
-		queryKey: ["product-version", productId, version],
+		queryKey: buildKey(["product-version", productId, version]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(`/products/${productId}/data`, {
 				params: version ? { version } : undefined,
