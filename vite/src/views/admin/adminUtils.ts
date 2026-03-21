@@ -41,8 +41,13 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 	];
 };
 
-export const impersonateUser = async (userId: string) => {
-	console.log("impersonating user", userId);
+export const impersonateUser = async ({
+	userId,
+	organizationId,
+}: {
+	userId: string;
+	organizationId?: string;
+}) => {
 	try {
 		await authClient.admin.stopImpersonating();
 	} catch (error) {
@@ -55,6 +60,10 @@ export const impersonateUser = async (userId: string) => {
 	if (res.error) {
 		toast.error("Something went wrong");
 		return;
+	}
+
+	if (organizationId) {
+		await authClient.organization.setActive({ organizationId });
 	}
 
 	clearOrgCache();

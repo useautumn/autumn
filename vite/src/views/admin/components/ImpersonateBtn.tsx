@@ -16,7 +16,7 @@ export const ImpersonateButton = ({ userId }: { userId?: string }) => {
 			onClick={async () => {
 				setLoading(true);
 				try {
-					await impersonateUser(userId);
+					await impersonateUser({ userId });
 				} catch (error: unknown) {
 					const errorMessage =
 						error instanceof Error ? error.message : "Unknown error";

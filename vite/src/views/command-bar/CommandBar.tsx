@@ -519,7 +519,7 @@ const CommandBar = () => {
 											subtext={org.slug}
 											onSelect={async () => {
 												try {
-													await impersonateUser(firstUser.id);
+													await impersonateUser({ userId: firstUser.id, organizationId: org.id });
 													closeDialog();
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
@@ -548,7 +548,7 @@ const CommandBar = () => {
 											onSelect={async () => {
 												try {
 													closeDialog();
-													await impersonateUser(user.id);
+													await impersonateUser({ userId: user.id });
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}
