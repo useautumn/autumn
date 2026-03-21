@@ -2,6 +2,7 @@ import type { CreateFeature, CreditSchemaItem, Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -20,6 +21,21 @@ export function ClassicCreditSchema({
 }: ClassicCreditSchemaProps) {
 	const { features } = useFeaturesQuery();
 	const schema = creditSystem.config?.schema || [];
+	const schemaKeysRef = useRef<string[]>([]);
+	const schemaKeys = useMemo(() => {
+		const nextKeys = [...schemaKeysRef.current];
+		while (nextKeys.length < schema.length) {
+			nextKeys.push(crypto.randomUUID());
+		}
+		while (nextKeys.length > schema.length) {
+			nextKeys.pop();
+		}
+		return nextKeys;
+	}, [schema.length]);
+
+	useEffect(() => {
+		schemaKeysRef.current = schemaKeys;
+	}, [schemaKeys]);
 
 	const allMeteredFeatures = features.filter(
 		(feature: Feature) => feature.type === FeatureType.Metered,
@@ -39,6 +55,7 @@ export function ClassicCreditSchema({
 	};
 
 	const addSchemaItem = () => {
+		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
 		const newSchema = [
 			...schema,
 			{
@@ -58,6 +75,9 @@ export function ClassicCreditSchema({
 			toast.error("There must be at least one item in the credit system");
 			return;
 		}
+		const nextKeys = [...schemaKeysRef.current];
+		nextKeys.splice(index, 1);
+		schemaKeysRef.current = nextKeys;
 		const newSchema = [...schema];
 		newSchema.splice(index, 1);
 		setCreditSystem({
@@ -85,7 +105,10 @@ export function ClassicCreditSchema({
 					);
 
 					return (
-						<div key={index} className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+						<div
+							key={schemaKeys[index]}
+							className="grid grid-cols-1 lg:grid-cols-2 gap-2"
+						>
 							<FeatureSelectDropdown
 								value={item.metered_feature_id}
 								onValueChange={(featureId) =>
