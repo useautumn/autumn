@@ -171,9 +171,19 @@ export function AiCreditSchema({
 
 	const addProvider = (providerKey: string) => {
 		if (providerKey === "custom") {
+			const existingKeys = (providerGroups.custom ?? []).map((fullId) => {
+				const [, ...parts] = fullId.split("/");
+				return parts.join("/");
+			});
+			let counter = 1;
+			while (existingKeys.includes(`model-${counter}`)) counter++;
 			updateMarkups({
 				...modelMarkups,
-				"custom/": { markup: defaultMarkup, input_cost: 0, output_cost: 0 },
+				[`custom/model-${counter}`]: {
+					markup: defaultMarkup,
+					input_cost: 0,
+					output_cost: 0,
+				},
 			});
 			return;
 		}
