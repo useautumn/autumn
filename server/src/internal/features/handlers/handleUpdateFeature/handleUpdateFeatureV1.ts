@@ -56,7 +56,8 @@ export const handleUpdateFeatureV1 = createRoute({
 				archived: body.archived,
 				event_names: body.event_names,
 				display: body.display,
-				model_markups: body.model_markups ?? undefined,
+				model_markups:
+					body.model_markups === undefined ? undefined : body.model_markups,
 			},
 		});
 
