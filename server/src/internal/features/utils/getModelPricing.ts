@@ -22,30 +22,27 @@ export const getModelsDevPricing = async () => {
 		await CacheManager.getJson<Record<string, ModelsDevProvider>>(
 			MODELS_DEV_CACHE_KEY,
 		);
-	if (cached) {
-		return cached;
-	}
-
-	const redundantCached = await CacheManager.getJson<Record<string, ModelsDevProvider>>(
-		`${MODELS_DEV_CACHE_KEY}_redundant`,
-	);
+	if (cached) return cached;
 
 	try {
 		const response = await fetch("https://models.dev/api.json");
-		if (!response.ok) return redundantCached;
+		if (!response.ok) throw new Error(`models.dev returned ${response.status}`);
 
 		const data: Record<string, ModelsDevProvider> = await response.json();
 		await Promise.all([
-			CacheManager.setJson(MODELS_DEV_CACHE_KEY, data, 60 * 60 * 3), // Cache for 3 hours
+			CacheManager.setJson(MODELS_DEV_CACHE_KEY, data, 60 * 60 * 3),
 			CacheManager.setJson(
-				`${MODELS_DEV_CACHE_KEY}_redundant`,
+				`${MODELS_DEV_CACHE_KEY}_stale`,
 				data,
-				60 * 60 * 72,
-			), // Cache redundant copy for 3 days
+				60 * 60 * 24 * 3,
+			),
 		]);
 		return data;
 	} catch {
-		if (redundantCached) return redundantCached;
+		const stale = await CacheManager.getJson<Record<string, ModelsDevProvider>>(
+			`${MODELS_DEV_CACHE_KEY}_stale`,
+		);
+		if (stale) return stale;
 		throw new Error(
 			"Failed to fetch models.dev pricing and no cache available",
 		);
