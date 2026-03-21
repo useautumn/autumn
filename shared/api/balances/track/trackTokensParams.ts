@@ -14,7 +14,7 @@ export const TrackTokensParamsSchema = z.object({
 			"The ID of the AI credit system feature. Auto-detected if omitted.",
 	}),
 	model_id: z.string().meta({
-		description: "The AI model name (e.g., 'claude-opus-4-6').",
+		description: "The AI model name with provider prefix (e.g., 'anthropic/claude-opus-4-6').",
 	}),
 	input_tokens: z.number().int().nonnegative().meta({
 		description: "Number of input tokens consumed.",
