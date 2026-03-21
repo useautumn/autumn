@@ -52,7 +52,7 @@ const getIncludedUsageText = (item: ProductItem, feature: Feature): string => {
 	if (item.included_usage === Infinite) {
 		return `Unlimited ${featureName}`;
 	}
-	if(feature.is_ai_credit_system) {
+	if (feature.is_ai_credit_system) {
 		return `$${numberWithCommas(item.included_usage ?? 0)} of ${featureName}`;
 	}
 	if (nullish(item.included_usage) || item.included_usage === 0) {
