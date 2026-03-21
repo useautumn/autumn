@@ -1,5 +1,5 @@
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
-import type { ModelsDevProvider } from "@autumn/shared";
+import { ErrCode, InternalError, type ModelsDevProvider } from "@autumn/shared";
 
 const MODELS_DEV_CACHE_KEY = "models_dev_pricing";
 
@@ -12,7 +12,11 @@ export const getModelsDevPricing = async () => {
 
 	try {
 		const response = await fetch("https://models.dev/api.json");
-		if (!response.ok) throw new Error(`models.dev returned ${response.status}`);
+		if (!response.ok)
+			throw new InternalError({
+				message: `models.dev returned ${response.status}`,
+				code: ErrCode.InternalError,
+			});
 
 		const data: Record<string, ModelsDevProvider> = await response.json();
 		await Promise.all([
@@ -29,8 +33,9 @@ export const getModelsDevPricing = async () => {
 			`${MODELS_DEV_CACHE_KEY}_stale`,
 		);
 		if (stale) return stale;
-		throw new Error(
-			"Failed to fetch models.dev pricing and no cache available",
-		);
+		throw new InternalError({
+			message: "Failed to fetch models.dev pricing and no cache available",
+			code: ErrCode.InternalError,
+		});
 	}
 };

@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	InternalError,
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -110,9 +111,9 @@ const getModelCreditCost = async ({
 
 	const pricingData = await getModelsDevPricing();
 	if (!pricingData) {
-		throw new RecaseError({
+		throw new InternalError({
 			message: "Failed to fetch models.dev pricing data",
-			code: ErrCode.FeatureNotFound,
+			code: ErrCode.InternalError,
 		});
 	}
 
@@ -124,7 +125,8 @@ const getModelCreditCost = async ({
 	if (!model) {
 		throw new RecaseError({
 			message: `Model ${modelName} not found in models.dev pricing data ${providerKey} provider config.`,
-			code: ErrCode.FeatureNotFound,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 			data: { modelName },
 		});
 	}
