@@ -1,7 +1,7 @@
+import type { LanguageModelV3, LanguageModelV3Usage } from "@ai-sdk/provider";
 import {
-	type generateText,
-	type LanguageModel,
-	type LanguageModelV1Middleware,
+	type LanguageModelMiddleware,
+	type LanguageModelUsage,
 	wrapLanguageModel,
 } from "ai";
 import type { Autumn } from "autumn-js";
@@ -22,11 +22,11 @@ export const withTokenTracking = ({
 	/** Autumn SDK client instance. */
 	autumn: Autumn;
 	/** The AI SDK language model to wrap. */
-	model: LanguageModel;
+	model: LanguageModelV3;
 	/** The Autumn customer ID to attribute usage to. */
 	customerId: string;
 	/** Override the provider prefix used in the model name sent to Autumn. Falls back to `model.provider`. */
-	providerId?: string;
+	providerId?: "custom" | string;
 	/** Target a specific AI credit system feature. Auto-detected if omitted. */
 	featureId?: string;
 	/** Entity ID for entity-scoped balance tracking. */
@@ -34,20 +34,34 @@ export const withTokenTracking = ({
 	/** Additional properties to attach to the usage event. */
 	properties?: Record<string, unknown>;
 }) => {
-	const provider =
-		providerId ?? (typeof model === "string" ? model : model.provider);
-	const modelId = typeof model === "string" ? model : model.modelId;
-	const modelName = `${provider}/${modelId}`;
+	const provider = providerId ?? model.provider;
+	const modelName = `${provider}/${model.modelId}`;
+
+	const resolveTokens = (
+		tokens: number | { total?: number | undefined } | undefined,
+		label: string,
+	): number => {
+		if (tokens == null)
+			throw new Error(
+				`[Autumn] ${label} token usage was not returned by the model provider (${modelName}). This provider may not support usage tracking.`,
+			);
+		if (typeof tokens === "number") return tokens;
+		if (tokens.total == null)
+			throw new Error(
+				`[Autumn] ${label} token usage total was not returned by the model provider (${modelName}). This provider may not support usage tracking.`,
+			);
+		return tokens.total;
+	};
 
 	const trackUsage = async (
-		usage: Awaited<ReturnType<typeof generateText>>["usage"],
+		usage: LanguageModelV3Usage | LanguageModelUsage,
 	) => {
 		try {
 			await autumn.balances.trackTokens({
 				customerId,
 				modelId: modelName,
-				inputTokens: usage.inputTokens.total ?? 0,
-				outputTokens: usage.outputTokens.total ?? 0,
+				inputTokens: resolveTokens(usage.inputTokens, "Input"),
+				outputTokens: resolveTokens(usage.outputTokens, "Output"),
 				featureId,
 				entityId,
 				properties,
@@ -58,7 +72,8 @@ export const withTokenTracking = ({
 		}
 	};
 
-	const middleware: LanguageModelV1Middleware = {
+	const middleware: LanguageModelMiddleware = {
+		specificationVersion: "v3",
 		wrapGenerate: async ({ doGenerate }) => {
 			const result = await doGenerate();
 			await trackUsage(result.usage);
