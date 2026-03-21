@@ -144,7 +144,7 @@ const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
 await autumn.balances.trackTokens({
   customerId: "user_123",
-  model: "claude-opus-4-6",
+  modelId: "anthropic/claude-opus-4-6",
   inputTokens: 1000,
   outputTokens: 500,
 });
@@ -157,7 +157,7 @@ autumn = Autumn("am_sk_test_1234")
 
 await autumn.balances.track_tokens(
     customer_id="user_123",
-    model="claude-opus-4-6",
+    model_id="anthropic/claude-opus-4-6",
     input_tokens=1000,
     output_tokens=500,
 )
@@ -169,7 +169,7 @@ curl -X POST "https://api.useautumn.com/v1/balances.trackTokens" \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_123",
-    "model": "claude-opus-4-6",
+    "model_id": "anthropic/claude-opus-4-6",
     "input_tokens": 1000,
     "output_tokens": 500
   }'
