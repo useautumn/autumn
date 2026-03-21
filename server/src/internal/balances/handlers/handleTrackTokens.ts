@@ -48,7 +48,7 @@ export const handleTrackTokens = createRoute({
 		const featureDeductions: FeatureDeduction[] = [
 			{
 				feature: aiCreditFeature,
-				deduction: 1,
+				deduction: 1, // 1 unit — actual cost is determined by credit_cost in Lua
 				tokenUsage: {
 					modelName: rawModelName,
 					inputTokens: body.input_tokens,
