@@ -105,7 +105,9 @@ const getModelCreditCost = async ({
 			.mul(input)
 			.add(actualOutputCost.mul(output))
 			.div(1_000_000);
-		const markedUpCost = totalCost.mul(new Decimal(1).add(new Decimal(markup).div(100)));
+		const markedUpCost = totalCost.mul(
+			new Decimal(1).add(new Decimal(markup).div(100)),
+		);
 		return markedUpCost.toNumber();
 	}
 
@@ -138,7 +140,9 @@ const getModelCreditCost = async ({
 		.mul(input)
 		.add(actualOutputCost.mul(output))
 		.div(1_000_000);
-	const markedUpCost = totalCost.mul(new Decimal(1).add(new Decimal(markup).div(100)));
+	const markedUpCost = totalCost.mul(
+		new Decimal(1).add(new Decimal(markup).div(100)),
+	);
 	return markedUpCost.toNumber();
 };
 
@@ -185,5 +189,10 @@ export const getCreditCost = async ({
 		}
 	}
 
-	return 1;
+	throw new RecaseError({
+		message: "Feature is not included in credit system schema",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+		data: { featureId, creditSystemId: creditSystem.id },
+	});
 };
