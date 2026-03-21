@@ -1,16 +1,19 @@
+import type { CreateFeature } from "@autumn/shared";
+import { PlusIcon, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
-import type { CreateFeature } from "@autumn/shared";
-import { PlusIcon, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiCreditSchemaRow } from "./AiCreditSchemaRow";
 
 interface AiCreditSchemaProps {
 	creditSystem: CreateFeature;
-	setCreditSystem: (creditSystem: CreateFeature) => void;
+	setCreditSystem: (
+		creditSystem: CreateFeature | ((prev: CreateFeature) => CreateFeature),
+	) => void;
 }
 
 /** Group model_markups keys by their provider prefix */
@@ -38,7 +41,11 @@ export function AiCreditSchema({
 	creditSystem,
 	setCreditSystem,
 }: AiCreditSchemaProps) {
-	const { providers, isLoading: modelsLoading } = useModelsDevPricing();
+	const {
+		providers,
+		isLoading: modelsLoading,
+		error: modelsError,
+	} = useModelsDevPricing();
 	const modelMarkups = creditSystem.model_markups ?? {};
 
 	const [defaultMarkup, setDefaultMarkup] = useState<number>(0);
@@ -48,6 +55,12 @@ export function AiCreditSchema({
 		setDefaultMarkup(0);
 		manuallyEditedModels.current = new Set();
 	}, [creditSystem.id]);
+
+	useEffect(() => {
+		if (modelsError) {
+			toast.error("Models.dev pricing is unavailable. Try again later.");
+		}
+	}, [modelsError]);
 
 	const providerGroups = useMemo(
 		() => groupByProvider(modelMarkups),
@@ -76,7 +89,10 @@ export function AiCreditSchema({
 			}
 		>,
 	) => {
-		setCreditSystem({ ...creditSystem, model_markups: updatedMarkups });
+		setCreditSystem((prev) => ({
+			...prev,
+			model_markups: updatedMarkups,
+		}));
 	};
 
 	const handleModelChange = (
@@ -136,7 +152,7 @@ export function AiCreditSchema({
 			}
 			updateMarkups(updatedMarkups);
 		},
-		[modelMarkups, creditSystem, setCreditSystem],
+		[modelMarkups],
 	);
 
 	const handleCostChange = (
@@ -250,7 +266,6 @@ export function AiCreditSchema({
 					className="w-24"
 				/>
 			</div>
-
 			<div className="flex flex-col gap-2">
 				{activeProviderKeys.map((providerKey) => {
 					const provider = providers[providerKey];
