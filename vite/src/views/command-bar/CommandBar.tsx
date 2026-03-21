@@ -6,7 +6,6 @@ import {
 	GearIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-
 import {
 	CircleUserRoundIcon,
 	Monitor,
@@ -27,6 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useListOrganizations } from "@/lib/auth-client";
@@ -38,7 +38,7 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
-import { handleSwitchOrg } from "@/views/main-sidebar/components/OrgDropdown";
+import { useOrgSwitch } from "@/views/main-sidebar/components/OrgDropdown";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 type User = {
@@ -74,6 +74,8 @@ const CommandBar = () => {
 	const navigate = useNavigate();
 	const env = useEnv();
 	const handleEnvChange = useEnvChange();
+	const switchOrg = useOrgSwitch();
+	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
@@ -150,7 +152,7 @@ const CommandBar = () => {
 		useQuery<{
 			customers: Customer[];
 		}>({
-			queryKey: ["command-palette-customers-search", debouncedSearch],
+			queryKey: buildKey(["command-palette-customers-search", debouncedSearch]),
 			queryFn: async () => {
 				// Always use the search term in the backend query
 				const { data } = await axiosInstance.post(`/customers/all/search`, {
@@ -174,7 +176,7 @@ const CommandBar = () => {
 	const [orgsQuery, usersQuery] = useQueries({
 		queries: [
 			{
-				queryKey: ["command-palette-orgs-search", debouncedSearch],
+				queryKey: buildKey(["command-palette-orgs-search", debouncedSearch]),
 				queryFn: async () => {
 					const params = new URLSearchParams();
 					if (debouncedSearch) params.append("search", debouncedSearch);
@@ -186,7 +188,7 @@ const CommandBar = () => {
 				enabled: impersonateEnabled,
 			},
 			{
-				queryKey: ["command-palette-users-search", debouncedSearch],
+				queryKey: buildKey(["command-palette-users-search", debouncedSearch]),
 				queryFn: async () => {
 					const params = new URLSearchParams();
 					if (debouncedSearch) params.append("search", debouncedSearch);
@@ -519,7 +521,10 @@ const CommandBar = () => {
 											subtext={org.slug}
 											onSelect={async () => {
 												try {
-													await impersonateUser({ userId: firstUser.id, organizationId: org.id });
+													await impersonateUser({
+														userId: firstUser.id,
+														organizationId: org.id,
+													});
 													closeDialog();
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
@@ -604,7 +609,7 @@ const CommandBar = () => {
 									title={org.name}
 									subtext={org.slug}
 									onSelect={() => {
-										handleSwitchOrg(org.id);
+										switchOrg({ orgId: org.id });
 									}}
 								/>
 							))}

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface RCMapping {
@@ -17,9 +18,10 @@ interface SaveMappingInput {
 export const useRCMappings = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+	const buildKey = useQueryKeyFactory();
 
 	const { data: mappings = [], isLoading } = useQuery({
-		queryKey: ["revenuecat-mappings"],
+		queryKey: buildKey(["revenuecat-mappings"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get<{ mappings: RCMapping[] }>(
 				"/v1/organization/revenuecat/mappings",
