@@ -204,9 +204,7 @@ export const updateFeature = async ({
 			is_ai_credit_system:
 				updates.model_markups === undefined
 					? feature.is_ai_credit_system
-					: updates.model_markups === null
-						? false
-						: isAiCreditSystem,
+					: isAiCreditSystem,
 		},
 	});
 
