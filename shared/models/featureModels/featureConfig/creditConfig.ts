@@ -21,10 +21,10 @@ export const ModelMarkups = z
 	.record(
 		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
 		z.object({
-			markup: z.number(), // percentage markup, e.g. 20 for 20%
+			markup: z.number().min(0), // percentage markup, e.g. 20 for 20%
 			humanModelName: z.string().optional(), // e.g. "Claude Opus 4.5" for UI display
-			input_cost: z.number().optional(), // $/M tokens, required for custom/ models
-			output_cost: z.number().optional(), // $/M tokens, required for custom/ models
+			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
+			output_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
 		}),
 	)
 	.nullish();
