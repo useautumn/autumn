@@ -1,7 +1,7 @@
+import { ModelMarkupsSchema } from "@models/featureModels/featureConfig/creditConfig";
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums";
 import { FeatureType } from "./featureEnums";
-import { ModelMarkups } from "@models/featureModels/featureConfig/creditConfig";
 
 export const FeatureSchema = z.object({
 	internal_id: z.string(),
@@ -23,7 +23,7 @@ export const FeatureSchema = z.object({
 		.nullish(),
 	archived: z.boolean(),
 	event_names: z.array(z.string()).default([]),
-	model_markups: ModelMarkups.nullish(),
+	model_markups: ModelMarkupsSchema.nullish(),
 	is_ai_credit_system: z.boolean().default(false),
 });
 

@@ -17,7 +17,7 @@ export const CreditSystemConfigSchema = z.object({
 	usage_type: z.nativeEnum(FeatureUsageType),
 });
 
-export const ModelMarkups = z
+export const ModelMarkupsSchema = z
 	.record(
 		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
 		z.object({
@@ -31,4 +31,4 @@ export const ModelMarkups = z
 
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
-export type ModelMarkups = z.infer<typeof ModelMarkups>;
+export type ModelMarkups = z.infer<typeof ModelMarkupsSchema>;
