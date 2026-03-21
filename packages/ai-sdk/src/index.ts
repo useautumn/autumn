@@ -38,7 +38,15 @@ export const withTokenTracking = ({
 	const modelName = `${provider}/${model.modelId}`;
 
 	const resolveTokens = (
-		tokens: number | { total?: number | undefined } | undefined,
+		tokens:
+			| (
+					| LanguageModelV3Usage["inputTokens"]
+					| LanguageModelV3Usage["outputTokens"]
+			  )
+			| (
+					| LanguageModelUsage["inputTokens"]
+					| LanguageModelUsage["outputTokens"]
+			  ),
 		label: string,
 	): number => {
 		if (tokens == null)
