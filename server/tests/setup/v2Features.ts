@@ -4,6 +4,7 @@ dotenv.config();
 
 import { AppEnv, FeatureUsageType } from "@autumn/shared";
 import {
+	constructAiCreditSystem,
 	constructBooleanFeature,
 	constructCreditSystem,
 	constructMeteredFeature,
@@ -25,6 +26,9 @@ export enum TestFeature {
 
 	Action3 = "action3", // single use (pay per use)
 	Credits2 = "credits2", // credit system
+
+	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
+	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -120,5 +124,38 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 				credit_cost: 1.4,
 			},
 		],
+	}),
+	[TestFeature.AiCredits]: constructAiCreditSystem({
+		featureId: TestFeature.AiCredits,
+		orgId,
+		env: AppEnv.Sandbox,
+		modelMarkups: {
+			"anthropic/claude-sonnet-4-20250514": {
+				markup: 0,
+			},
+			"anthropic/claude-3-5-haiku-20241022": {
+				markup: 20,
+			},
+			"custom/internal-model": {
+				markup: 0,
+				input_cost: 5,
+				output_cost: 15,
+			},
+			"custom/marked-up-model": {
+				markup: 50,
+				input_cost: 10,
+				output_cost: 30,
+			},
+		},
+	}),
+	[TestFeature.AiCredits2]: constructAiCreditSystem({
+		featureId: TestFeature.AiCredits2,
+		orgId,
+		env: AppEnv.Sandbox,
+		modelMarkups: {
+			"anthropic/claude-sonnet-4-20250514": {
+				markup: 10,
+			},
+		},
 	}),
 });
