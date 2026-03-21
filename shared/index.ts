@@ -177,6 +177,8 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels";
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
+// AI Models
+export * from "./models/aiModels/modelsDevTypes";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";

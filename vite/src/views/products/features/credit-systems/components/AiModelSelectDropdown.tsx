@@ -1,8 +1,5 @@
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import type {
-	ModelsDevModel,
-	ModelsDevProvider,
-} from "@/hooks/queries/useAiModelsQuery";
+import type { ModelsDevModel, ModelsDevProvider } from "@autumn/shared";
 import { useMemo } from "react";
 
 interface AiModelSelectDropdownProps {

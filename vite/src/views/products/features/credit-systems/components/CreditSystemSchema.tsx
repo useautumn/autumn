@@ -1,6 +1,6 @@
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import type { ModelsDevProvider } from "@/hooks/queries/useAiModelsQuery";
+import type { ModelsDevProvider } from "@autumn/shared";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
 import type { CreateFeature } from "@autumn/shared";
 import { useMemo } from "react";

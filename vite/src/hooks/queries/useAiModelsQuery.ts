@@ -1,18 +1,5 @@
+import type { ModelsDevProvider } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-export interface ModelsDevModel {
-	id: string;
-	name: string;
-	cost: {
-		input: number;
-		output: number;
-	};
-}
-
-export interface ModelsDevProvider {
-	id: string;
-	name: string;
-	models: Record<string, ModelsDevModel>;
-}
 
 const getModelsDevPricing = async () => {
 	try {

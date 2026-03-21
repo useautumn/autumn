@@ -1,21 +1,7 @@
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
+import type { ModelsDevProvider } from "@autumn/shared";
 
 const MODELS_DEV_CACHE_KEY = "models_dev_pricing";
-
-interface ModelsDevModel {
-	id: string;
-	name: string;
-	cost: {
-		input: number;
-		output: number;
-	}
-}
-
-interface ModelsDevProvider {
-	id: string;
-	name: string;
-	models: Record<string, ModelsDevModel>;
-}
 
 export const getModelsDevPricing = async () => {
 	const cached =
