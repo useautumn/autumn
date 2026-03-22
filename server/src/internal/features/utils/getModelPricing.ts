@@ -4,13 +4,12 @@ import { ErrCode, InternalError, type ModelsDevProvider } from "@autumn/shared";
 const MODELS_DEV_CACHE_KEY = "models_dev_pricing";
 
 export const getModelsDevPricing = async () => {
-	const cached =
-		await CacheManager.getJson<Record<string, ModelsDevProvider>>(
-			MODELS_DEV_CACHE_KEY,
-		);
-	if (cached) return cached;
-
 	try {
+		const cached =
+			await CacheManager.getJson<Record<string, ModelsDevProvider>>(
+				MODELS_DEV_CACHE_KEY,
+			);
+		if (cached) return cached;
 		const response = await fetch("https://models.dev/api.json");
 		if (!response.ok)
 			throw new InternalError({
