@@ -529,7 +529,7 @@ input[type="number"]::-webkit-inner-spin-button {
 	background: linear-gradient(
 		90deg,
 		transparent,
-		rgba(255, 255, 255, 0.4),
+		rgba(255, 255, 255, 0.7),
 		transparent
 	);
 	pointer-events: none;
@@ -540,6 +540,15 @@ input[type="number"]::-webkit-inner-spin-button {
 .shimmer-hover:hover::after {
 	animation: shimmer-once 0.8s;
 	opacity: 1;
+}
+
+.dark .shimmer-hover::after {
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(25, 25, 25, 0.5),
+		transparent
+	);
 }
 
 @keyframes shimmer-once {

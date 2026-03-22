@@ -1,5 +1,6 @@
 import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 // Stable empty object reference to prevent infinite re-renders
@@ -11,6 +12,7 @@ const EMPTY_COUNTS: Record<string, ProductCounts> = {};
 export const useProductsQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+	const buildKey = useQueryKeyFactory();
 
 	const fetchProducts = async () => {
 		const { data } = await axiosInstance.get("/products/products");
@@ -26,7 +28,7 @@ export const useProductsQuery = () => {
 		products: ProductV2[];
 		groupToDefaults: Record<string, Record<string, FullProduct>>;
 	}>({
-		queryKey: ["products"],
+		queryKey: buildKey(["products"]),
 		queryFn: fetchProducts,
 	});
 
@@ -35,7 +37,7 @@ export const useProductsQuery = () => {
 		isLoading: isCountsLoading,
 		refetch: countsRefetch,
 	} = useQuery<Record<string, ProductCounts>>({
-		queryKey: ["product_counts"],
+		queryKey: buildKey(["product_counts"]),
 		queryFn: fetchProductCounts,
 	});
 

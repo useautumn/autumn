@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const UPDATE_PREVIEW_EXPAND = [
@@ -22,6 +23,7 @@ export function useUpdateSubscriptionPreview({
 	enabled?: boolean;
 }) {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const shouldEnable = enabled !== undefined ? enabled : !!body;
 
@@ -45,7 +47,7 @@ export function useUpdateSubscriptionPreview({
 	}, [queryKeyDeps, debouncedQueryKey]);
 
 	const query = useQuery({
-		queryKey: ["update-subscription-preview", debouncedQueryKey],
+		queryKey: buildKey(["update-subscription-preview", debouncedQueryKey]),
 		queryFn: async () => {
 			if (!body) return null;
 
