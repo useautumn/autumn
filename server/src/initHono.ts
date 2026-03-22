@@ -16,6 +16,7 @@ import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { traceEnrichMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
+import { heapSnapshotRouter } from "./internal/debug/debugRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
@@ -138,7 +139,9 @@ export const createHonoApp = () => {
 
 	// Public routes (no auth required)
 	app.route("", publicRouter);
+	// Debug routes (no auth, dev-only guard is inside the handler)
 	// Debug routes (auth handled internally)
+	app.route("/debug", heapSnapshotRouter);
 	// app.route("/v1/debug", debugRouter);
 
 	// API Middleware
