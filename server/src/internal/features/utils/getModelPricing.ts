@@ -18,14 +18,14 @@ export const getModelsDevPricing = async () => {
 			});
 
 		const data: Record<string, ModelsDevProvider> = await response.json();
-		await Promise.all([
+		Promise.all([
 			CacheManager.setJson(MODELS_DEV_CACHE_KEY, data, 60 * 60 * 3),
 			CacheManager.setJson(
 				`${MODELS_DEV_CACHE_KEY}_stale`,
 				data,
 				60 * 60 * 24 * 3,
 			),
-		]);
+		]).catch(() => {});
 		return data;
 	} catch {
 		const stale = await CacheManager.getJson<Record<string, ModelsDevProvider>>(
