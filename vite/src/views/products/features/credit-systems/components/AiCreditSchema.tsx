@@ -102,6 +102,7 @@ export function AiCreditSchema({
 	) => {
 		const oldFullId = `${providerKey}/${oldModelKey}`;
 		const newFullId = `${providerKey}/${newModelKey}`;
+		if (oldFullId !== newFullId && newFullId in modelMarkups) return;
 		const updatedMarkups = { ...modelMarkups };
 		const oldEntry = updatedMarkups[oldFullId];
 		const markup = oldEntry?.markup ?? 0;
