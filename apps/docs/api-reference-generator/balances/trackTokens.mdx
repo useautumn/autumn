@@ -4,8 +4,8 @@ openapi: "openapi POST /v1/balances.trackTokens"
 ---
 
 import { DynamicParamField } from "/components/dynamic-param-field.jsx";
-import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 
 <Note>
   Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using OpenRouter pricing and your configured markup, then deducts from the customer's credit balance.
@@ -18,7 +18,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ```typescript Track AI token usage
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  modelId: "claude-opus-4-6",
+  modelId: "anthropic/claude-opus-4-6",
   inputTokens: 1000,
   outputTokens: 500
 });
@@ -28,7 +28,7 @@ await autumn.balances.trackTokens({
 await autumn.balances.trackTokens({
   customerId: "cus_123",
   featureId: "ai_credits",
-  modelId: "claude-haiku-4-5",
+  modelId: "anthropic/claude-haiku-4-5",
   inputTokens: 2000,
   outputTokens: 1000
 });
@@ -37,7 +37,7 @@ await autumn.balances.trackTokens({
 ```typescript Track with properties
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  modelId: "gpt-4o",
+  modelId: "openai/gpt-4o",
   inputTokens: 500,
   outputTokens: 200,
   properties: {
