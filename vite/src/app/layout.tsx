@@ -10,7 +10,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
-import { useOrg } from "@/hooks/common/useOrg";
+import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
@@ -53,6 +53,8 @@ export function MainLayout() {
 	// Redirect to sandbox if not deployed
 	useEffect(() => {
 		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
+			const lastSwitchedId = getLastSwitchedOrgId();
+			if (lastSwitchedId && org.id !== lastSwitchedId) return;
 			const pathname = window.location.pathname;
 			const search = window.location.search;
 			navigate(`/sandbox${pathname}${search}`);

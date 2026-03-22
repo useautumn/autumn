@@ -1,4 +1,3 @@
-import type { FrontendOrg } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,13 +27,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { clearOrgCache, useOrg } from "@/hooks/common/useOrg";
+import {
+	clearOrgCache,
+	setLastSwitchedOrgId,
+	useOrg,
+} from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
@@ -72,8 +76,8 @@ export const OrgDropdown = () => {
 			<>
 				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
 				<div className="h-7 w-32 px-4 flex items-center gap-2">
-					<Skeleton className="min-w-5 h-5 bg-stone-200" />
-					<Skeleton className="w-32 h-5 bg-stone-200" />
+					<Skeleton className="min-w-5 h-5" />
+					<Skeleton className="w-32 h-5" />
 				</div>
 			</>
 		);
@@ -99,7 +103,7 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200 cursor-pointer",
+								"bg-transparent! shimmer-hover p-0.5 gap-2 rounded-md justify-start items-center transition-all duration-200 cursor-pointer",
 								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
 							)}
 							variant="ghost"
@@ -238,6 +242,7 @@ export const OrgDropdown = () => {
 export const useOrgSwitch = () => {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
+	const axiosInstance = useAxiosInstance();
 
 	return async ({
 		orgId,
@@ -253,15 +258,22 @@ export const useOrgSwitch = () => {
 			});
 
 			clearOrgCache();
-			await queryClient.invalidateQueries({ queryKey: ["org"] });
 
-			const newOrg = queryClient.getQueryData<FrontendOrg>(["org"]);
-			if (newOrg && !newOrg.deployed) {
+			const { data: newOrg } = await axiosInstance.get("/organization");
+
+			if (newOrg?.id) setLastSwitchedOrgId(newOrg.id);
+
+			queryClient.setQueryData(["org"], newOrg);
+			queryClient.invalidateQueries({ queryKey: ["org"] });
+
+			if (
+				newOrg &&
+				!newOrg.deployed &&
+				!window.location.pathname.includes("/sandbox")
+			) {
 				const pathname = window.location.pathname;
 				const search = window.location.search;
-				if (!pathname.startsWith("/sandbox")) {
-					navigate(`/sandbox${pathname}${search}`);
-				}
+				navigate(`/sandbox${pathname}${search}`);
 			}
 		} catch (error: any) {
 			toast.error(error.message);
