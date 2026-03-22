@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type Stripe from "stripe";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useOrg } from "../common/useOrg";
 
 /** Fetches organization Stripe account information */
 export const useOrgStripeQuery = () => {
 	const axiosInstance = useAxiosInstance();
-	// const orgId = authClient.getSession()?.session.activeOrganizationId;
+	const buildKey = useQueryKeyFactory();
 	const { org } = useOrg();
 
 	const fetchStripeAccount = async () => {
@@ -17,7 +18,7 @@ export const useOrgStripeQuery = () => {
 	};
 
 	const { data, isLoading, error, refetch } = useQuery<Stripe.Account | null>({
-		queryKey: ["org", org?.id, "stripe"],
+		queryKey: buildKey(["org", org?.id, "stripe"]),
 		queryFn: fetchStripeAccount,
 		retry: false,
 		enabled: !!org?.id,

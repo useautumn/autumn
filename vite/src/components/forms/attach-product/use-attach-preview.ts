@@ -1,6 +1,7 @@
 import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useAttachBodyBuilder } from "./use-attach-body-builder";
 
@@ -18,6 +19,7 @@ interface AttachPreviewParams {
 
 export function useAttachPreview(params: AttachPreviewParams = {}) {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	// Build attach body using shared hook with explicit params
 	const { attachBody } = useAttachBodyBuilder({
@@ -51,7 +53,7 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
 
 	const query = useQuery({
-		queryKey: ["attach-checkout", debouncedQueryKey],
+		queryKey: buildKey(["attach-checkout", debouncedQueryKey]),
 		queryFn: async () => {
 			if (!attachBody || !params.customerId) {
 				return null;
