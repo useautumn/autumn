@@ -176,7 +176,8 @@ export const updateFeature = async ({
 	}
 
 	// Validate config based on feature type
-	const isAiCreditSystem = updates.model_markups != null;
+	const effectiveType = updates.type ?? feature.type;
+	const isAiCreditSystem = effectiveType === FeatureType.CreditSystem && updates.model_markups != null;
 
 	const newConfig =
 		updates.config !== undefined

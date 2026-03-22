@@ -63,7 +63,7 @@ export const createFeature = async ({
 		env: ctx.env,
 		...parsedFeature,
 		model_markups: data.model_markups ?? null,
-		is_ai_credit_system: data.model_markups != null,
+		is_ai_credit_system: data.type === FeatureType.CreditSystem && data.model_markups != null,
 	};
 
 	const insertedData = await FeatureService.insert({
