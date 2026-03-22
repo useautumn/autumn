@@ -1,7 +1,9 @@
 import { ErrCode } from "@autumn/shared";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
-import { usePostSWR } from "@/services/useAxiosSwr";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
@@ -26,47 +28,45 @@ export const useCustomerTimeseriesEvents = ({
 	/** External customer ID override. Falls back to the `customer_id` URL param. */
 	customerId?: string;
 }) => {
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { customer_id } = useParams();
-	const customer_id_to_use = providedCustomerId ?? customer_id;
+	const customerIdToUse = providedCustomerId ?? customer_id;
 
-	// Get user's timezone - memoized since it won't change during session
 	const timezone = useMemo(() => getUserTimezone(), []);
 
-	// Use cached event names if none provided
 	const { eventNames: cachedEventNames } = useEventNames();
 	const eventNames = providedEventNames?.length
 		? providedEventNames
 		: cachedEventNames.slice(0, 3).map((e) => e.event_name);
 
-	const { data, isLoading, error } = usePostSWR({
-		url: `/query/events`,
-		enabled,
-		data: {
-			customer_id: customer_id_to_use || null,
-			interval,
-			event_names: eventNames,
-			timezone,
-		},
-		queryKey: [
+	const postBody = {
+		customer_id: customerIdToUse || null,
+		interval,
+		event_names: eventNames,
+		timezone,
+	};
+
+	const { data, isLoading, error } = useQuery({
+		queryKey: buildKey([
 			"customer-timeseries-events",
-			customer_id_to_use,
+			customerIdToUse,
 			interval,
 			timezone,
 			...eventNames.sort(),
-		],
-		options: {
-			refreshInterval: 0,
-			onError: (error) => {
-				if (error.code === ErrCode.ClickHouseDisabled) {
-					return error;
-				}
-			},
+		]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post("/query/events", postBody);
+			return data;
 		},
+		enabled,
 	});
 
 	return {
 		timeseriesEvents: data?.events,
 		isLoading,
-		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
+			? null
+			: error,
 	};
 };

@@ -19,7 +19,7 @@ export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [open, setOpen] = useState(false);
-	const { mutate } = useMemberships();
+	const { refetch } = useMemberships();
 
 	const handleInvite = async () => {
 		if (!email || !emailSchema.safeParse(email).success) {
@@ -40,7 +40,7 @@ export const InvitePopover = () => {
 				return;
 			}
 
-			await mutate();
+			await refetch();
 			toast.success(`Successfully sent invitation to ${email}`);
 			setEmail("");
 			setOpen(false);

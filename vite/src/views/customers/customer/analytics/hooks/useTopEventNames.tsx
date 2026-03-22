@@ -1,22 +1,20 @@
-import { ErrCode } from "@autumn/shared";
-import { usePostSWR } from "@/services/useAxiosSwr.js";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useTopEventNames = () => {
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
+
 	const {
 		data: eventNamesData,
 		isLoading: eventNamesLoading,
 		error: eventNamesError,
-	} = usePostSWR({
-		method: "get",
-		url: `/query/event_names`,
-		queryKey: ["query-event-names"],
-		options: {
-			refreshInterval: 0,
-			onError: (error) => {
-				if (error.code === ErrCode.ClickHouseDisabled) {
-					return error;
-				}
-			},
+	} = useQuery({
+		queryKey: buildKey(["query-event-names"]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/query/event_names");
+			return data;
 		},
 	});
 
