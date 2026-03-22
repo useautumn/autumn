@@ -8,6 +8,8 @@ import { isStripeConnected } from "@server/internal/orgs/orgUtils.js";
 import { decryptData } from "@server/utils/encryptUtils.js";
 import { instrumentStripe } from "@server/utils/otel/instrumentStripe.js";
 import Stripe from "stripe";
+import { buildSecretKeyCacheKey } from "./clientCache/cacheKeyUtils.js";
+import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { orgToAccountId, shouldUseMaster } from "./connectUtils.js";
 import { initMasterStripe, initPlatformStripe } from "./initStripeCli.js";
 
@@ -38,11 +40,26 @@ export const createStripeCli = ({
 			});
 		}
 
-		const decrypted = decryptData(encrypted);
-		return instrumentStripe({
-			client: new Stripe(decrypted, {
-				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
-			}),
+		const cacheKey = buildSecretKeyCacheKey({
+			orgId: org.id,
+			env,
+			legacyVersion,
+			encryptedKey: encrypted,
+		});
+
+		return getOrCreateStripeClient({
+			cacheKey,
+			create: () => {
+				const decrypted = decryptData(encrypted);
+				return instrumentStripe({
+					client: new Stripe(decrypted, {
+						apiVersion: legacyVersion
+							? // biome-ignore lint/suspicious/noExplicitAny: Need to cast to any to avoid type error
+								("2025-02-24.acacia" as any)
+							: undefined,
+					}),
+				});
+			},
 		});
 	}
 

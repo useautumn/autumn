@@ -26,7 +26,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	const timestamp = Date.now();
 
-	const { data: body } = await tryCatch(c.req.json());
+	const { data: body } =
+		c.req.method !== "GET" && c.req.method !== "HEAD"
+			? await tryCatch(c.req.json())
+			: { data: undefined };
+
+	// const { data: body } = await tryCatch(c.req.json());
 
 	const childLogger = addRequestToLogs({
 		logger,
