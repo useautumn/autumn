@@ -11,15 +11,16 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
+import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
 
 export const useEnvChange = () => {
 	const navigate = useNavigate();
 
 	const handleEnvChange = (targetEnv: AppEnv, reset?: boolean) => {
-		// Calculate the new path
 		const newPath = envToPath(targetEnv, location.pathname);
 
 		if (newPath && !reset) {
@@ -38,9 +39,20 @@ export const useEnvChange = () => {
 };
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
+	const { org, isLoading } = useOrg();
+	const canSwitch = !isLoading && !!org?.deployed;
+
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
 	const handleEnvChange = useEnvChange();
+
+	if (!canSwitch) {
+		return (
+			<div className={cn("flex text-t2 text-xs gap-1 px-3")}>
+				<StaticEnvPill />
+			</div>
+		);
+	}
 
 	return (
 		<div
