@@ -3,8 +3,8 @@
 	"version": "0.0.1",
 	"type": "module",
 	"description": "AI SDK for Autumn",
-	"main": "./dist/sdk/index.js",
-	"module": "./dist/sdk/index.mjs",
+	"main": "./dist/sdk/index.cjs",
+	"module": "./dist/sdk/index.js",
 	"types": "./dist/sdk/index.d.ts",
 	"files": [
 		"dist",
@@ -14,8 +14,8 @@
 	"exports": {
 		".": {
 			"types": "./dist/sdk/index.d.ts",
-			"require": "./dist/sdk/index.js",
-			"import": "./dist/sdk/index.mjs"
+			"require": "./dist/sdk/index.cjs",
+			"import": "./dist/sdk/index.js"
 		}
 	},
 	"scripts": {
