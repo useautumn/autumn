@@ -1,26 +1,31 @@
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { type AdminOrg, createAdminOrgColumns } from "./AdminOrgColumns";
 import { useAdminTable } from "./hooks/useAdminTable";
 
 export const AdminOrgTable = () => {
+	const axiosInstance = useAxiosInstance();
 	const [search, setSearch] = useState("");
 	const [after, setAfter] = useState<string | undefined>(undefined);
 	const [before, setBefore] = useState<string | undefined>(undefined);
 	const [page, setPage] = useState(1);
 
-	// Build query string for params
 	const params = new URLSearchParams();
 	if (search) params.append("search", search);
 	if (after) params.append("after", after);
 	if (before) params.append("before", before);
 	const url = `/admin/orgs${params.toString() ? `?${params.toString()}` : ""}`;
 
-	const { data, isLoading } = useAxiosSWR({
-		url,
+	const { data, isLoading } = useQuery({
+		queryKey: ["admin-orgs", search, after, before],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get(url);
+			return data;
+		},
 	});
 
 	const rows: AdminOrg[] = useMemo(() => data?.rows || [], [data?.rows]);

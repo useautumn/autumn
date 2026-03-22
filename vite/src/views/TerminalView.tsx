@@ -19,7 +19,8 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { getBackendErr } from "@/utils/genUtils";
 import LoadingScreen from "./general/LoadingScreen";
 
@@ -37,14 +38,17 @@ export const TerminalView = () => {
 	const [saving, setSaving] = useState(false);
 	const axiosInstance = useAxiosInstance();
 
+	const buildKey = useQueryKeyFactory();
+
 	const {
 		data,
 		isLoading: isLoadingTrmnl,
-		mutate,
-	} = useAxiosSWR({
-		url: "/trmnl/device_id",
-		options: {
-			refreshInterval: 0,
+		refetch,
+	} = useQuery({
+		queryKey: buildKey(["trmnl-device-id"]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/trmnl/device_id");
+			return data;
 		},
 	});
 
@@ -73,7 +77,7 @@ export const TerminalView = () => {
 				...trmnlConfig,
 				deviceId: trimmedDeviceId,
 			});
-			await mutate();
+			await refetch();
 			toast.success("Device ID saved");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to save device ID"));

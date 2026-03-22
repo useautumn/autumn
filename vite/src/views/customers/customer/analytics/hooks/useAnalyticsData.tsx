@@ -1,10 +1,10 @@
 import { ErrCode } from "@autumn/shared";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useSearchParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
-import { useEnv } from "@/utils/envUtils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEventNames } from "./useEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
@@ -21,9 +21,9 @@ export const useAnalyticsData = ({
 }: {
 	hasCleared?: boolean;
 }) => {
-	const { org } = useOrg();
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
-	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const entityId = searchParams.get("entity_id");
@@ -35,66 +35,50 @@ export const useAnalyticsData = ({
 
 	const { eventNames: cachedEventNames } = useEventNames();
 
-	// Get user's timezone - memoized since it won't change during session
 	const timezone = useMemo(() => getUserTimezone(), []);
 
-	// const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
-	// 	url: `/features`,
-	// 	options: {
-	// 		refreshInterval: 0,
-	// 	},
-	// });
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 
-	// Format group_by for API (must be prefixed with "properties." except for column-based operators)
 	const formattedGroupBy = groupBy
 		? groupBy === "customer_id" || groupBy === "entity_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
 
-	// Use selected event names, or fall back to top 3 cached event names
 	const selectedEventNames =
 		eventNames || featureIds
 			? [...(eventNames || []), ...(featureIds || [])]
 			: cachedEventNames.slice(0, 3).map((e) => e.event_name);
 
-	// Create a simple queryKey with the actual values that change
-	const queryKey = [
-		customerId,
-		entityId,
-		interval || "30d",
-		binSize || "day",
-		...selectedEventNames.sort(),
-		org?.slug,
-		groupBy,
+	const postBody = {
+		customer_id: customerId || undefined,
+		entity_id: entityId || undefined,
+		interval: interval || "30d",
+		event_names: selectedEventNames,
+		group_by: formattedGroupBy,
+		bin_size: binSize || undefined,
 		timezone,
-	];
+	};
 
 	const {
 		data,
 		isLoading: queryLoading,
 		error,
-	} = usePostSWR({
-		url: `/query/events`,
-		data: {
-			customer_id: customerId || undefined,
-			entity_id: entityId || undefined,
-			interval: interval || "30d",
-			event_names: selectedEventNames,
-			group_by: formattedGroupBy,
-			bin_size: binSize || undefined,
+	} = useQuery({
+		queryKey: buildKey([
+			"query-events",
+			customerId,
+			entityId,
+			interval || "30d",
+			binSize || "day",
+			...selectedEventNames.sort(),
+			groupBy,
 			timezone,
-		},
-		queryKey: ["query-events", ...queryKey],
-		options: {
-			refreshInterval: 0,
-			onError: (error) => {
-				if (error.code === ErrCode.ClickHouseDisabled) {
-					return error;
-				}
-			},
+		]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post("/query/events", postBody);
+			return data;
 		},
 	});
 
@@ -104,7 +88,9 @@ export const useAnalyticsData = ({
 		featuresLoading,
 		queryLoading,
 		events: data?.events,
-		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
+			? null
+			: error,
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		groupBy,
 		truncated: data?.truncated ?? false,
@@ -112,123 +98,48 @@ export const useAnalyticsData = ({
 };
 
 export const useRawAnalyticsData = () => {
-	const { org } = useOrg();
-	const env = useEnv();
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const entityId = searchParams.get("entity_id");
 	const interval = searchParams.get("interval");
 
-	const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
-		url: `/features`,
-		queryKey: [org?.slug, env],
-		options: {
-			refreshInterval: 0,
-		},
-	});
+	const { features: featuresData, isLoading: featuresLoading } =
+		useFeaturesQuery();
 
-	// Create a simple queryKey with the actual values that change
-	const queryKey = [
-		"query-raw-events",
-		customerId,
-		entityId,
-		interval || "30d",
-		org?.slug,
-		env,
-	];
+	const postBody = {
+		customer_id: customerId || undefined,
+		entity_id: entityId || undefined,
+		interval: interval || "30d",
+	};
 
 	const {
 		data,
 		isLoading: queryLoading,
 		error,
-	} = usePostSWR({
-		url: `/query/raw`,
-		data: {
-			customer_id: customerId || undefined,
-			entity_id: entityId || undefined,
-			interval: interval || "30d",
-		},
-		queryKey,
-		options: {
-			refreshInterval: 0,
-			onError: (error) => {
-				if (error.code === ErrCode.ClickHouseDisabled) {
-					return error;
-				}
-			},
+	} = useQuery({
+		queryKey: buildKey([
+			"query-raw-events",
+			customerId,
+			entityId,
+			interval || "30d",
+		]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post("/query/raw", postBody);
+			return data;
 		},
 	});
 
 	return {
 		customer: data?.customer,
-		features: featuresData?.features || [],
+		features: featuresData || [],
 		featuresLoading,
-
 		queryLoading,
 		rawEvents: data?.rawEvents,
-		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
+			? null
+			: error,
 	};
 };
-
-// const {
-//   data: eventNamesData,
-//   isLoading: eventNamesLoading,
-//   error: eventNamesError,
-// } = usePostSWR({
-//   method: "get",
-//   url: `/query/event_names`,
-//   enabled: nullish(eventNames) && nullish(featureIds),
-//   queryKey: ["query-event-names", ...queryKey],
-//   options: {
-//     refreshInterval: 0,
-//     onError: (error) => {
-//       if (error.code === ErrCode.ClickHouseDisabled) {
-//         return error;
-//       }
-//     },
-//   },
-// });
-
-// useEffect(() => {
-//   if (eventNamesData && !hasCleared) {
-//     searchParams.set("event_names", eventNamesData.eventNames.join(","));
-//     searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
-
-//     navigate(`?${searchParams.toString()}`);
-//   }
-// }, [eventNamesData, searchParams, hasCleared, navigate]);
-
-// const hasSetTopEvents = useRef(false);
-
-// 1. if no eventNames and no featureIds, use topEventsLoading
-
-// useEffect(() => {
-//   if (topEvents && !topEventsLoading) {
-//     console.log("Setting top events:", topEvents);
-//   }
-// }, [topEventsLoading]);
-
-// useEffect(() => {
-//   if (
-//     topEvents &&
-//     !topEventsLoading &&
-//     nullish(eventNames) &&
-//     nullish(featureIds) &&
-//     !hasCleared
-//   ) {
-//     searchParams.set("event_names", topEvents.eventNames.join(","));
-//     searchParams.set("feature_ids", topEvents.featureIds.join(","));
-//     // hasSetTopEvents.current = true;
-
-//     navigate(`?${searchParams.toString()}`);
-//   }
-// }, [
-//   topEventsLoading,
-//   eventNames,
-//   featureIds,
-//   hasCleared,
-//   topEvents,
-//   searchParams,
-//   navigate,
-// ]);
