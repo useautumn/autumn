@@ -1,10 +1,16 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ORG_STORAGE_KEY = "autumn_org";
+
+let lastSwitchedOrgId: string | null = null;
+export const setLastSwitchedOrgId = (id: string) => {
+	lastSwitchedOrgId = id;
+};
+export const getLastSwitchedOrgId = () => lastSwitchedOrgId;
 
 /** Clears all org-related localStorage cache entries. Call before reload on session changes (impersonation start/stop). */
 export const clearOrgCache = () => {
@@ -22,7 +28,6 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 	const fetcher = async () => {
 		try {
 			const { data } = await axiosInstance.get("/organization");
-			// Store in local storage
 			if (data) {
 				const storageKey = params?.env
 					? `${ORG_STORAGE_KEY}_${params.env}`
@@ -47,6 +52,8 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		}
 	};
 
+	const initialDataValue = getInitialData();
+
 	const {
 		data: org,
 		isLoading,
@@ -55,12 +62,12 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 	} = useQuery({
 		queryKey: params?.env ? ["org", params.env] : ["org"],
 		queryFn: fetcher,
-		initialData: getInitialData(),
+		initialData: initialDataValue,
+		placeholderData: keepPreviousData,
 	});
 
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {
-			// 1. If there's existing org, set as active
 			if (orgList && orgList.length > 0) {
 				await authClient.organization.setActive({
 					organizationId: orgList[0].id,
