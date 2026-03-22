@@ -170,6 +170,7 @@ export const getCreditCost = async ({
 			throw new RecaseError({
 				message: "modelName and tokens must be provided for AI credit systems",
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 		const modelPricing = await getModelCreditCost({
