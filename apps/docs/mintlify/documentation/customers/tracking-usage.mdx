@@ -188,6 +188,17 @@ curl -X POST "https://api.useautumn.com/v1/balances.trackTokens" \
   If your organization has only one AI credit system feature, you can omit the `featureId` parameter — it will be auto-detected.
 </Tip>
 
+### Vercel AI SDK integration
+
+If you're using the [Vercel AI SDK](https://sdk.vercel.ai), the `@useautumn/ai-sdk` package can automatically track token usage for every `generateText` or `streamText` call — no manual `trackTokens` calls needed.
+
+<Card
+  title="Vercel AI SDK Integration"
+  horizontal
+  href="/documentation/external-providers/ai-sdk"
+  icon="wand-magic-sparkles"
+/>
+
 ## Using Event Names
 
 In the above examples, we used the `featureId` to identify the feature. You can instead use the `eventName` parameter to link balances to different events in your application. This can be useful when:
