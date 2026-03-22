@@ -8,14 +8,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 
 <Note>
-  Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using Models.dev pricing and your configured markup, then deducts from the customer's credit balance.
+  Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using [Models.dev](https://models.dev) pricing and your configured markup, then deducts from the customer's credit balance.
 </Note>
+
+The `model_id` must use `provider/model` format, matching the provider and model keys from [Models.dev](https://models.dev). For providers with nested model paths (like OpenRouter), include the full path: `openrouter/anthropic/claude-opus-4.6`.
 
 ### Common Use Cases
 
 <CodeGroup>
 
-```typescript Track AI token usage
+```typescript Anthropic
 await autumn.balances.trackTokens({
   customerId: "cus_123",
   modelId: "anthropic/claude-opus-4-6",
@@ -24,17 +26,7 @@ await autumn.balances.trackTokens({
 });
 ```
 
-```typescript Track with explicit feature
-await autumn.balances.trackTokens({
-  customerId: "cus_123",
-  featureId: "ai_credits",
-  modelId: "anthropic/claude-haiku-4-5",
-  inputTokens: 2000,
-  outputTokens: 1000
-});
-```
-
-```typescript Track with properties
+```typescript OpenAI
 await autumn.balances.trackTokens({
   customerId: "cus_123",
   modelId: "openai/gpt-4o",
@@ -44,6 +36,25 @@ await autumn.balances.trackTokens({
     conversation_id: "conv_abc123",
     prompt_type: "summarization"
   }
+});
+```
+
+```typescript OpenRouter (nested path)
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "openrouter/anthropic/claude-opus-4-6",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+```typescript With explicit feature
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  modelId: "anthropic/claude-haiku-4-5",
+  inputTokens: 2000,
+  outputTokens: 1000
 });
 ```
 

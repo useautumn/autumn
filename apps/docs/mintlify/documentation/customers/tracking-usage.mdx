@@ -133,7 +133,14 @@ curl -X POST "https://api.useautumn.com/v1/balances/update" \
 
 ## Tracking AI Token Usage
 
-If you're using an [AI credit system](/examples/monetary-credits), you can track token usage directly with `trackTokens`. This automatically converts token counts to a dollar cost using OpenRouter pricing and your configured markup, then deducts from the customer's credit balance.
+If you're using an [AI credit system](/examples/monetary-credits), you can track token usage directly with `trackTokens`. This automatically converts token counts to a dollar cost using [Models.dev](https://models.dev) pricing and your configured markup, then deducts from the customer's credit balance.
+
+The `modelId` must be in `provider/model` format, matching the provider and model keys from [Models.dev](https://models.dev). For example:
+- `anthropic/claude-sonnet-4-5-20250514`
+- `openai/gpt-4o`
+- `google/gemini-2.5-pro`
+
+For providers with nested model paths (like OpenRouter), include the full path after the provider: `openrouter/anthropic/claude-opus-4.6`.
 
 <CodeGroup>
 
