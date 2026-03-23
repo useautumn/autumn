@@ -6,7 +6,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { rewardProgramRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
 import { generateReferralCode } from "@/internal/rewards/referralUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
@@ -21,7 +21,7 @@ export const handleGetReferralCode = createRoute({
 			c.req.valid("json");
 
 		const [rewardProgram, customer] = await Promise.all([
-			RewardProgramService.get({
+			rewardProgramRepo.get({
 				db,
 				idOrInternalId: rewardProgramId,
 				orgId: org.id,
@@ -50,7 +50,7 @@ export const handleGetReferralCode = createRoute({
 
 		// Get referral code by customer and reward trigger
 		let referralCode =
-			await RewardProgramService.getCodeByCustomerAndRewardProgram({
+			await referralCodeRepo.getByCustomerAndProgram({
 				db,
 				orgId: org.id,
 				env,
@@ -71,7 +71,7 @@ export const handleGetReferralCode = createRoute({
 				created_at: Date.now(),
 			};
 
-			referralCode = await RewardProgramService.createReferralCode({
+			referralCode = await referralCodeRepo.insert({
 				db,
 				data: referralCode,
 			});

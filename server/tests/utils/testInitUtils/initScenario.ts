@@ -53,6 +53,8 @@ type OtherCustomerConfig = {
 	id: string;
 	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
 	data?: CustomerData;
+	/** Create a separate Stripe test clock for this customer instead of sharing the primary customer's clock */
+	distinctTestClock?: boolean;
 };
 
 type ReferralProgramConfig = {
@@ -331,8 +333,13 @@ const entities = ({
 };
 
 /**
- * Additional customers (e.g. referrer/redeemer). Share the primary's test clock.
+ * Define additional customers for this test scenario.
+ * Useful for referral tests where you need a referrer and redeemer.
+ * By default, other customers share the primary customer's test clock.
+ * Use `distinctTestClock: true` to give a customer its own clock (avoids Stripe's 3-customer-per-clock limit).
+ * All test clock IDs are returned in the `testClockIds` dict keyed by customer ID.
  * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success" }])
+ * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success", distinctTestClock: true }])
  */
 const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
 	return (config) => ({ ...config, otherCustomers: customers });
@@ -890,6 +897,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: string | undefined;
+	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 	ctx: TestContext;
 	entities: GeneratedEntity[];
@@ -916,6 +924,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: undefined;
+	testClockIds: Record<string, string>;
 	customer: null;
 	ctx: TestContext;
 	entities: GeneratedEntity[];
@@ -1034,7 +1043,11 @@ export async function initScenario({
 	if (config.referralProgram) {
 		const { reward, program } = config.referralProgram;
 
+		// Suffix reward ID and free_product_id (if set)
 		reward.id = `${reward.id}_${productPrefix}`;
+		if (reward.free_product_id) {
+			reward.free_product_id = `${reward.free_product_id}_${productPrefix}`;
+		}
 
 		program.id = `${program.id}_${productPrefix}`;
 		program.internal_reward_id = reward.id;
@@ -1097,16 +1110,23 @@ export async function initScenario({
 		customer = result.customer;
 	}
 
-	// 2.5. Other customers — share the primary's test clock.
+	// 2.5. Initialize other customers (share test clock with primary customer unless distinctTestClock is set)
 	const otherCustomersMap = new Map<string, OtherCustomerResult>();
+	const testClockIds: Record<string, string> = {};
+	if (testClockId && customerId) {
+		testClockIds[customerId] = testClockId;
+	}
 	for (const otherCusConfig of config.otherCustomers) {
+		const useDistinctClock = otherCusConfig.distinctTestClock === true;
 		const otherResult = await initCustomerV3({
 			ctx,
 			customerId: otherCusConfig.id,
 			customerData: otherCusConfig.data,
 			attachPm: otherCusConfig.paymentMethod,
-			withTestClock: false,
-			...(testClockId ? { existingTestClockId: testClockId } : {}),
+			withTestClock: useDistinctClock,
+			...(!useDistinctClock && testClockId
+				? { existingTestClockId: testClockId }
+				: {}),
 			withDefault: false,
 			defaultGroup: productPrefix,
 			skipWebhooks: config.skipWebhooks,
@@ -1115,6 +1135,9 @@ export async function initScenario({
 			id: otherCusConfig.id,
 			customer: otherResult.customer,
 		});
+		if (otherResult.testClockId) {
+			testClockIds[otherCusConfig.id] = otherResult.testClockId;
+		}
 	}
 
 	// 3. Create autumn clients
@@ -1520,6 +1543,7 @@ export async function initScenario({
 		autumnV2_1,
 		autumnV2_2,
 		testClockId,
+		testClockIds,
 		customer,
 		ctx,
 		entities: generatedEntities,

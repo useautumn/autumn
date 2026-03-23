@@ -7,7 +7,7 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RewardService } from "../../rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { CusService } from "../CusService.js";
 
 export const handleAddCouponToCusV2 = createRoute({
@@ -25,7 +25,7 @@ export const handleAddCouponToCusV2 = createRoute({
 				orgId: org.id,
 				env,
 			}),
-			RewardService.get({
+			rewardRepo.get({
 				db,
 				idOrInternalId: coupon_id,
 				orgId: org.id,
