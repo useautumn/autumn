@@ -1,5 +1,5 @@
-import { Spinner } from "@inkjs/ui";
 import { Box, Text } from "ink";
+import Spinner from "ink-spinner";
 import type { ApiBalance, CustomerSheetProps } from "../types.js";
 import { formatDate } from "../types.js";
 import {
@@ -89,7 +89,9 @@ export function CustomerSheet({
 			{/* Loading state for expanded data */}
 			{isLoadingExpanded && (
 				<Box marginTop={1}>
-					<Spinner label="Loading details..." />
+					<Text>
+						<Spinner type="dots" /> Loading details...
+					</Text>
 				</Box>
 			)}
 
