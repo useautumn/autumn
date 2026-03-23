@@ -5,7 +5,7 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import {
 	TierBehavior,
-	UsageTierSchema,
+	ApiUsageTierOutputSchema,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
@@ -33,7 +33,7 @@ export const ApiPlanItemV0Schema = z
 		price: z
 			.object({
 				amount: z.number().optional(),
-				tiers: z.array(UsageTierSchema).optional(),
+				tiers: z.array(ApiUsageTierOutputSchema).optional(),
 				tier_behavior: z.enum(TierBehavior).optional(),
 
 				interval: z.enum(BillingInterval),
