@@ -36,7 +36,7 @@ class PreviewUpdateGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -76,7 +76,7 @@ class PreviewUpdateFeatureQuantityRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -127,7 +127,7 @@ class PreviewUpdateBasePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -176,7 +176,7 @@ class PreviewUpdateReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -212,7 +212,7 @@ class PreviewUpdateTier(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -308,7 +308,7 @@ class PreviewUpdatePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -393,7 +393,7 @@ class PreviewUpdateRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -455,7 +455,7 @@ class PreviewUpdatePlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -503,7 +503,7 @@ class PreviewUpdateFreeTrialParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -544,7 +544,7 @@ class PreviewUpdateCustomize(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -592,7 +592,7 @@ class PreviewUpdateInvoiceMode(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -624,6 +624,20 @@ PreviewUpdateCancelAction = Literal[
 r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
+class PreviewUpdateRecalculateBalancesTypedDict(TypedDict):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
+class PreviewUpdateRecalculateBalances(BaseModel):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
 class PreviewUpdateParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -649,6 +663,8 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+    recalculate_balances: NotRequired[PreviewUpdateRecalculateBalancesTypedDict]
+    r"""Controls whether balances should be recalculated during the subscription update."""
 
 
 class PreviewUpdateParams(BaseModel):
@@ -688,6 +704,9 @@ class PreviewUpdateParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
+    recalculate_balances: Optional[PreviewUpdateRecalculateBalances] = None
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -703,6 +722,7 @@ class PreviewUpdateParams(BaseModel):
                 "subscription_id",
                 "cancel_action",
                 "no_billing_changes",
+                "recalculate_balances",
             ]
         )
         serialized = handler(self)
@@ -710,7 +730,7 @@ class PreviewUpdateParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -743,7 +763,7 @@ class PreviewUpdateDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -829,7 +849,7 @@ class PreviewUpdateLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -870,7 +890,7 @@ class PreviewUpdateNextCycleDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -956,7 +976,7 @@ class PreviewUpdateNextCycleLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1025,7 +1045,7 @@ class PreviewUpdateUsageLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1098,6 +1118,10 @@ class PreviewUpdateIncomingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1111,18 +1135,24 @@ class PreviewUpdateIncoming(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1161,6 +1191,10 @@ class PreviewUpdateOutgoingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1174,18 +1208,24 @@ class PreviewUpdateOutgoing(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1279,7 +1319,7 @@ class PreviewUpdateResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

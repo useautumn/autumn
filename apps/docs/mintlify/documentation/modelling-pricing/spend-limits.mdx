@@ -1,6 +1,6 @@
 ---
-title: Spend Limits
-description: Cap overage spending per feature for customers and entities
+title: Spend Limits & Usage Alerts
+description: Cap overage spending and get notified when usage crosses thresholds
 ---
 
 Spend limits let you cap how much overage a customer (or entity) can accumulate on a usage-based feature. Without a spend limit, usage-based features allow unlimited overage — the customer is billed for whatever they use. With a spend limit, Autumn blocks usage once the overage reaches the configured cap.
@@ -348,3 +348,239 @@ If you set a spend limit **higher** than the plan's max purchase, the customer w
 | **Dynamic** | Yes — can be changed at any time per-customer | No — applies to all customers on the plan |
 | **Precedence** | Overrides max purchase when set | Used as default when no spend limit is set |
 | **Use case** | Per-customer overage caps (e.g., enterprise spending controls) | Global safety limits for a plan tier |
+
+## Usage Alerts
+
+Usage alerts send a webhook when a customer's usage crosses a threshold you define. You can use this to take an action like sending a warning email, prompting an upgrade, or flagging the account internally.
+
+## Configuring usage alerts
+
+Usage alerts are set per-customer (or per-entity) via the API, using the same `billingControls` field as spend limits. There are two threshold types:
+
+- **`usage`** — fires when absolute usage reaches a specific count
+- **`usage_percentage`** — fires when usage reaches a percentage of the included allowance
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [{
+      featureId: "api_calls",
+      threshold: 800,
+      thresholdType: "usage",
+      enabled: true,
+      name: "Approaching limit",
+    }],
+  },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [{
+            "feature_id": "api_calls",
+            "threshold": 800,
+            "threshold_type": "usage",
+            "enabled": True,
+            "name": "Approaching limit",
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [{
+        "feature_id": "api_calls",
+        "threshold": 800,
+        "threshold_type": "usage",
+        "enabled": true,
+        "name": "Approaching limit"
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+For a percentage-based alert, use `threshold_type: "usage_percentage"` with a value between 0 and 100:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [{
+      featureId: "api_calls",
+      threshold: 80,
+      thresholdType: "usage_percentage",
+      enabled: true,
+      name: "80% usage warning",
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [{
+            "feature_id": "api_calls",
+            "threshold": 80,
+            "threshold_type": "usage_percentage",
+            "enabled": True,
+            "name": "80% usage warning",
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [{
+        "feature_id": "api_calls",
+        "threshold": 80,
+        "threshold_type": "usage_percentage",
+        "enabled": true,
+        "name": "80% usage warning"
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Note>
+The `usage_percentage` threshold is calculated against the **included** allowance only. If the customer has overage enabled with a spend limit or max purchase, the percentage still refers to the included balance — not the total available usage.
+</Note>
+
+### Usage alert fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string (optional) | The feature to monitor. If omitted, applies to all features. |
+| `threshold` | number | The value that triggers the alert. Absolute count for `usage`, percentage (0-100) for `usage_percentage`. |
+| `threshold_type` | string | `"usage"` for an absolute count, `"usage_percentage"` for a percentage of the included allowance. |
+| `enabled` | boolean | Whether the alert is active. Defaults to `true`. |
+| `name` | string (optional) | A label to distinguish multiple alerts on the same feature. |
+
+## How usage alerts work
+
+1. On each `track` call, Autumn compares the customer's old and new usage against each enabled alert
+2. If the usage crosses the threshold (old usage was below, new usage is at or above), Autumn fires a `balances.usage_alert_triggered` webhook
+3. The alert fires **once** per threshold crossing — it won't re-fire on subsequent track calls unless usage drops below the threshold and crosses it again
+
+<Info>
+Alerts also work at the entity level. If you configure alerts on an [entity](/documentation/customers/feature-entities), they fire based on that entity's usage independently.
+</Info>
+
+See the [balances.usage_alert_triggered webhook schema](/api-reference/webhooks/balancesUsageAlertTriggered) for the full payload reference.
+
+## Multiple usage alerts
+
+You can configure multiple alerts on the same feature or across different features. Each alert fires independently when its threshold is crossed.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [
+      {
+        featureId: "api_calls",
+        threshold: 500,
+        thresholdType: "usage",
+        enabled: true,
+        name: "500 calls used",
+      },
+      {
+        featureId: "api_calls",
+        threshold: 90,
+        thresholdType: "usage_percentage",
+        enabled: true,
+        name: "90% allowance used",
+      },
+    ],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [
+            {
+                "feature_id": "api_calls",
+                "threshold": 500,
+                "threshold_type": "usage",
+                "enabled": True,
+                "name": "500 calls used",
+            },
+            {
+                "feature_id": "api_calls",
+                "threshold": 90,
+                "threshold_type": "usage_percentage",
+                "enabled": True,
+                "name": "90% allowance used",
+            },
+        ],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [
+        {
+          "feature_id": "api_calls",
+          "threshold": 500,
+          "threshold_type": "usage",
+          "enabled": true,
+          "name": "500 calls used"
+        },
+        {
+          "feature_id": "api_calls",
+          "threshold": 90,
+          "threshold_type": "usage_percentage",
+          "enabled": true,
+          "name": "90% allowance used"
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+In this example, the customer will receive two separate webhook events as they use their API calls: one when they hit 500 absolute calls, and another when they reach 90% of their included allowance.

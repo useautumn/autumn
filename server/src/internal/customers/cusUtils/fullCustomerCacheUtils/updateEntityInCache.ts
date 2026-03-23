@@ -36,7 +36,7 @@ export const updateEntityInCache = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	idOrInternalId: string;
-	updates: Partial<Pick<Entity, "spend_limits">>;
+	updates: Partial<Pick<Entity, "spend_limits" | "usage_alerts">>;
 }): Promise<UpdateEntityInCacheResult | null> => {
 	try {
 		if (Object.keys(updates).length === 0) {

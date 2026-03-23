@@ -1,0 +1,22 @@
+---
+title: "Limit Reached"
+openapi: "api/openapi.yml webhook balances.limit_reached"
+---
+
+### Payload Fields
+
+<ParamField body="customer_id" type="string" required>
+  The ID of the customer who hit the limit.
+</ParamField>
+
+<ParamField body="entity_id" type="string">
+  The entity ID, if the limit was reached on a specific entity.
+</ParamField>
+
+<ParamField body="feature_id" type="string" required>
+  The feature ID whose limit was reached.
+</ParamField>
+
+<ParamField body="limit_type" type="'included' | 'max_purchase' | 'spend_limit'" required>
+  Which limit was hit: included allowance, max purchase cap, or spend limit.
+</ParamField>

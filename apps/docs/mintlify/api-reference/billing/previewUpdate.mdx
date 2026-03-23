@@ -231,6 +231,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   If true, the subscription is updated internally without applying billing changes in Stripe.
 </DynamicParamField>
 
+<DynamicParamField body="recalculate_balances" type="object">
+  Controls whether balances should be recalculated during the subscription update.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 
@@ -728,6 +738,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
     </DynamicResponseField>
 
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -1029,6 +1047,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="effective_at" type="number | null">
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
     </DynamicResponseField>
 
   </Expandable>

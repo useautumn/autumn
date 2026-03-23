@@ -25,6 +25,10 @@ export const previewUpdateInvoiceModeSchema = z.object({
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewUpdateRecalculateBalancesSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const previewUpdateDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -202,6 +206,10 @@ export const previewUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 });
 
+export const previewUpdateRecalculateBalancesOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const previewUpdateParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -224,6 +232,9 @@ export const previewUpdateParamsOutboundSchema = z.object({
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculate_balances: z
+		.union([previewUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -346,6 +357,9 @@ export const previewUpdateParamsSchema = z.object({
 		.union([previewUpdateCancelActionSchema, z.undefined()])
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculateBalances: z
+		.union([previewUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewUpdateIncomingSchema = z.object({
@@ -353,6 +367,8 @@ export const previewUpdateIncomingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewUpdateIncomingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewUpdateOutgoingSchema = z.object({
@@ -360,6 +376,8 @@ export const previewUpdateOutgoingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewUpdateOutgoingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const intentSchema = openEnumSchema;

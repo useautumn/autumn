@@ -36,20 +36,6 @@ export const multiAttachSpendLimitSchema = z.object({
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const multiAttachBillingControlsSchema = z.object({
-	spendLimits: z
-		.union([z.array(multiAttachSpendLimitSchema), z.undefined()])
-		.optional(),
-});
-
-export const multiAttachEntityDataSchema = z.object({
-	featureId: z.string(),
-	name: z.union([z.string(), z.undefined()]).optional(),
-	billingControls: z
-		.union([multiAttachBillingControlsSchema, z.undefined()])
-		.optional(),
-});
-
 export const multiAttachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -166,9 +152,20 @@ export const multiAttachSpendLimitOutboundSchema = z.object({
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const multiAttachBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([z.array(multiAttachSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_alerts: z
+		.union([z.array(multiAttachUsageAlertOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -280,6 +277,33 @@ export const multiAttachFreeTrialParamsSchema = z.object({
 });
 
 export const multiAttachRedirectModeSchema = closedEnumSchema;
+
+export const multiAttachThresholdTypeSchema = closedEnumSchema;
+
+export const multiAttachUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: multiAttachThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const multiAttachBillingControlsSchema = z.object({
+	spendLimits: z
+		.union([z.array(multiAttachSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(multiAttachUsageAlertSchema), z.undefined()])
+		.optional(),
+});
+
+export const multiAttachEntityDataSchema = z.object({
+	featureId: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+	billingControls: z
+		.union([multiAttachBillingControlsSchema, z.undefined()])
+		.optional(),
+});
 
 export const multiAttachParamsSchema = z.object({
 	customerId: z.string(),
