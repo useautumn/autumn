@@ -307,7 +307,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="line_items" type="object[]">
-  List of line items for the current billing period.
   <Expandable title="properties">
     <DynamicResponseField name="display_name" type="string">
       The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
@@ -1116,6 +1115,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
   </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="redirect_to_checkout" type="boolean">
+  Whether the customer will be redirected to a checkout page if attach is called.
+</DynamicResponseField>
+
+<DynamicResponseField name="checkout_type" type="'stripe_checkout' | 'autumn_checkout'">
+  The type of checkout that will be used if the customer is redirected to a checkout page.
 </DynamicResponseField>
 
 

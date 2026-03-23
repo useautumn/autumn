@@ -7978,7 +7978,6 @@ paths:
                         - plan_id
                         - feature_id
                         - quantity
-                    description: List of line items for the current billing period.
                   subtotal:
                     type: number
                     description: The total amount in cents before discounts for the current billing
@@ -8222,6 +8221,19 @@ paths:
                         - canceled_at
                         - expires_at
                     description: Products or subscription changes being removed or ended.
+                  redirect_to_checkout:
+                    type: boolean
+                    description: Whether the customer will be redirected to a checkout page if
+                      attach is called.
+                  checkout_type:
+                    anyOf:
+                      - enum:
+                          - stripe_checkout
+                          - autumn_checkout
+                        type: string
+                      - type: "null"
+                    description: The type of checkout that will be used if the customer is
+                      redirected to a checkout page.
                 required:
                   - customer_id
                   - line_items
@@ -8230,6 +8242,8 @@ paths:
                   - currency
                   - incoming
                   - outgoing
+                  - redirect_to_checkout
+                  - checkout_type
                 examples:
                   - &a31
                     customerId: charles
@@ -8776,7 +8790,6 @@ paths:
                         - plan_id
                         - feature_id
                         - quantity
-                    description: List of line items for the current billing period.
                   subtotal:
                     type: number
                     description: The total amount in cents before discounts for the current billing
@@ -9020,6 +9033,19 @@ paths:
                         - canceled_at
                         - expires_at
                     description: Products or subscription changes being removed or ended.
+                  redirect_to_checkout:
+                    type: boolean
+                    description: Whether the customer will be redirected to a checkout page if
+                      attach is called.
+                  checkout_type:
+                    anyOf:
+                      - enum:
+                          - stripe_checkout
+                          - autumn_checkout
+                        type: string
+                      - type: "null"
+                    description: The type of checkout that will be used if the customer is
+                      redirected to a checkout page.
                 required:
                   - customer_id
                   - line_items
@@ -9028,6 +9054,8 @@ paths:
                   - currency
                   - incoming
                   - outgoing
+                  - redirect_to_checkout
+                  - checkout_type
                 examples:
                   - &a33
                     customerId: charles

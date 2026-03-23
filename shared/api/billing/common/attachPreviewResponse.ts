@@ -1,10 +1,5 @@
 import { z } from "zod/v4";
-import {
-	BillingPreviewResponseSchema,
-	ExtBillingPreviewResponseSchema,
-} from "./billingPreviewResponse.js";
-
-export const ExtAttachPreviewResponseSchema = ExtBillingPreviewResponseSchema;
+import { BillingPreviewResponseSchema } from "./billingPreviewResponse.js";
 
 export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 	object: z.literal("attach_preview").meta({ internal: true }),
@@ -23,6 +18,7 @@ export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 	// redirect_type: z.enum(["stripe_checkout", "autumn_checkout", "none"]),
 });
 
+export const ExtAttachPreviewResponseSchema = AttachPreviewResponseSchema;
 export type ExtAttachPreviewResponse = z.infer<
 	typeof ExtAttachPreviewResponseSchema
 >;

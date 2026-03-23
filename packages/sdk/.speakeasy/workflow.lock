@@ -9,8 +9,8 @@ sources:
             - 2.2.0
     Autumn API Stripped:
         sourceNamespace: autumn-api-stripped
-        sourceRevisionDigest: sha256:73b97e1e3131f4a268daddbc9107f4e77beaf628f9308078516cb84848a94480
-        sourceBlobDigest: sha256:125b8a9f6111ceb84655b9f7eae781f5a566c8946bee87632a501e382f0a06db
+        sourceRevisionDigest: sha256:07eb8c0e3d2aaadc02c80bcd70002c8f3a2b420766bdbf0583472f111571ad7a
+        sourceBlobDigest: sha256:eb396b615503ccba8356cf7a2addcbc35b14bc388053dff59504e74cf0bdba3d
         tags:
             - latest
             - 2.2.0
@@ -25,8 +25,8 @@ targets:
     autumn-python:
         source: Autumn API Stripped
         sourceNamespace: autumn-api-stripped
-        sourceRevisionDigest: sha256:73b97e1e3131f4a268daddbc9107f4e77beaf628f9308078516cb84848a94480
-        sourceBlobDigest: sha256:125b8a9f6111ceb84655b9f7eae781f5a566c8946bee87632a501e382f0a06db
+        sourceRevisionDigest: sha256:07eb8c0e3d2aaadc02c80bcd70002c8f3a2b420766bdbf0583472f111571ad7a
+        sourceBlobDigest: sha256:eb396b615503ccba8356cf7a2addcbc35b14bc388053dff59504e74cf0bdba3d
         codeSamplesNamespace: autumn-api-python-code-samples
         codeSamplesRevisionDigest: sha256:9804d178e8ccbe6f452890582dfdd15bdcd88c54ad12ffaec9e7b887b5792082
 workflow:

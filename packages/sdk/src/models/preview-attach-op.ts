@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -794,6 +795,14 @@ export type PreviewAttachOutgoing = {
   expiresAt: number | null;
 };
 
+export const PreviewAttachCheckoutType = {
+  StripeCheckout: "stripe_checkout",
+  AutumnCheckout: "autumn_checkout",
+} as const;
+export type PreviewAttachCheckoutType = OpenEnum<
+  typeof PreviewAttachCheckoutType
+>;
+
 /**
  * OK
  */
@@ -802,9 +811,6 @@ export type PreviewAttachResponse = {
    * The ID of the customer.
    */
   customerId: string;
-  /**
-   * List of line items for the current billing period.
-   */
   lineItems: Array<PreviewAttachLineItem>;
   /**
    * The total amount in cents before discounts for the current billing period.
@@ -834,6 +840,14 @@ export type PreviewAttachResponse = {
    * Products or subscription changes being removed or ended.
    */
   outgoing: Array<PreviewAttachOutgoing>;
+  /**
+   * Whether the customer will be redirected to a checkout page if attach is called.
+   */
+  redirectToCheckout: boolean;
+  /**
+   * The type of checkout that will be used if the customer is redirected to a checkout page.
+   */
+  checkoutType: PreviewAttachCheckoutType | null;
 };
 
 /** @internal */
@@ -1907,6 +1921,12 @@ export function previewAttachOutgoingFromJSON(
 }
 
 /** @internal */
+export const PreviewAttachCheckoutType$inboundSchema: z.ZodMiniType<
+  PreviewAttachCheckoutType,
+  unknown
+> = openEnums.inboundSchema(PreviewAttachCheckoutType);
+
+/** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewAttachResponse,
   unknown
@@ -1923,12 +1943,16 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     expand: types.optional(z.array(types.string())),
     incoming: z.array(z.lazy(() => PreviewAttachIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
+    redirect_to_checkout: types.boolean(),
+    checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "redirect_to_checkout": "redirectToCheckout",
+      "checkout_type": "checkoutType",
     });
   }),
 );
