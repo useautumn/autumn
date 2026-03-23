@@ -4,6 +4,14 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="March 23rd 2026">
+  ## Usage alerts and `balances.limit_reached` webhook
+
+  You can now configure **usage alerts** on customers and entities to get notified when usage crosses a threshold. Alerts are set via `billingControls.usageAlerts` and fire a `balances.usage_alert_triggered` webhook. Supports both absolute usage counts and percentage-of-allowance thresholds.
+
+  A new **`balances.limit_reached`** webhook fires when a customer hits a usage limit — whether it's the included allowance, a max purchase cap, or a spend limit. See the [webhooks reference](/documentation/webhooks) and [spend limits & usage alerts guide](/documentation/modelling-pricing/spend-limits) for details.
+</Update>
+
 <Update label="March 17th 2026">
   ## Express, Elysia, and Web Standard adapters for `autumn-js`
 
