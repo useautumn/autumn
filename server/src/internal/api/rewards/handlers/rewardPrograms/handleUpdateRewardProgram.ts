@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 const UpdateRewardProgramParamsSchema = z.object({
 	id: z.string(),
@@ -31,7 +31,7 @@ export const handleUpdateRewardProgram = createRoute({
 			});
 		}
 
-		const existingProgram = await RewardProgramService.get({
+		const existingProgram = await rewardProgramRepo.get({
 			db,
 			idOrInternalId: id,
 			orgId: org.id,
@@ -58,7 +58,7 @@ export const handleUpdateRewardProgram = createRoute({
 			});
 		}
 
-		const updatedRewardProgram = await RewardProgramService.update({
+		const updatedRewardProgram = await rewardProgramRepo.update({
 			db,
 			idOrInternalId: id,
 			orgId: org.id,

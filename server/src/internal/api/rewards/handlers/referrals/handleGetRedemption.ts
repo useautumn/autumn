@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 export const handleGetRedemption = createRoute({
 	params: z.object({ redemption_id: z.string() }),
@@ -7,7 +7,7 @@ export const handleGetRedemption = createRoute({
 		const { db } = c.get("ctx");
 		const { redemption_id } = c.req.param();
 
-		const redemption = await RewardRedemptionService.getById({
+		const redemption = await redemptionRepo.getById({
 			db,
 			id: redemption_id,
 		});

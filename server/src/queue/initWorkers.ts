@@ -138,7 +138,8 @@ const startPollingLoop = async ({
 				shouldIdleSelfKill &&
 				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
 				totalMessagesProcessed > 0 &&
-				activeMigrationJobs === 0
+				activeMigrationJobs === 0 &&
+				process.env.NODE_ENV !== "development"
 			) {
 				console.log(
 					`${prefix} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,

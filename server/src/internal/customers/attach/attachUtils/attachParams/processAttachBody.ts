@@ -1,7 +1,7 @@
 import { type AttachBodyV0, ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js";
@@ -30,7 +30,7 @@ const getRewards = async ({
 	}
 
 	// 1. Get reward by id or promo code
-	const rewards = await RewardService.getByIdOrCode({
+	const rewards = await rewardRepo.getByIdOrCode({
 		db: ctx.db,
 		codes: rewardArray,
 		orgId: ctx.org.id,

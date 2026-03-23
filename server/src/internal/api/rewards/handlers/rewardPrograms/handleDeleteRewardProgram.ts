@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 const DeleteRewardProgramParamsSchema = z.object({
 	id: z.string(),
@@ -13,7 +13,7 @@ export const handleDeleteRewardProgram = createRoute({
 		const { org, env, db } = ctx;
 		const { id } = c.req.param();
 
-		const rewardProgram = await RewardProgramService.delete({
+		const rewardProgram = await rewardProgramRepo.delete({
 			db,
 			idOrInternalId: id,
 			orgId: org.id,
