@@ -6,6 +6,7 @@ import type { BackendResult } from "./responseTypes";
 /** All supported route names as const for type safety */
 export const ROUTE_NAMES = {
 	getOrCreateCustomer: "getOrCreateCustomer",
+	getEntity: "getEntity",
 	attach: "attach",
 	previewAttach: "previewAttach",
 	updateSubscription: "updateSubscription",

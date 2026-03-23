@@ -4,6 +4,7 @@ import type {
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
+	GetEntityResponse,
 	ListEventsResponse,
 	ListPlansResponse,
 	MultiAttachResponse,
@@ -18,6 +19,7 @@ import type {
 	AggregateEventsParams,
 	AttachParams,
 	CreateReferralCodeParams,
+	GetEntityClientParams,
 	GetOrCreateCustomerClientParams,
 	ListEventsParams,
 	ListPlansParams,
@@ -65,4 +67,5 @@ export interface IAutumnClient {
 	aggregateEvents: (
 		params: AggregateEventsParams,
 	) => Promise<AggregateEventsResponse>;
+	getEntity: (params: GetEntityClientParams) => Promise<GetEntityResponse>;
 }
