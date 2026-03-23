@@ -11,6 +11,7 @@
 			"apps/docs",
 			"apps/sdk-test",
 			"packages/atmn",
+			"packages/atmn-tests",
 			"packages/sdk",
 			"packages/autumn-js",
 			"packages/openapi",
