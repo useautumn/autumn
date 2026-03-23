@@ -22,7 +22,7 @@ import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { RewardRedemptionService } from "../RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
 
 export const receivedByReferrer = (received_by: RewardReceivedBy) => {
@@ -158,7 +158,7 @@ export const triggerFreePaidProduct = async ({
 		redeemer_applied: applied?.[1] || false, // redeemer applied
 	};
 
-	await RewardRedemptionService.update({
+	await redemptionRepo.update({
 		db,
 		id: redemption.id,
 		updates,

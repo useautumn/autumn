@@ -7,7 +7,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { stripeCustomerToNowMs } from "@/external/stripe/customers/index.js";
 import type { StripeInvoicePaidContext } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/setupStripeInvoicePaidContext";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	deleteCouponFromCus,
@@ -54,7 +54,7 @@ export const handleStripeInvoiceDiscounts = async ({
 					? curCoupon.id.substring(0, rollSuffixIndex)
 					: curCoupon.id;
 
-			const autumnReward: Reward | null = await RewardService.get({
+			const autumnReward: Reward | null = await rewardRepo.get({
 				db: ctx.db,
 				idOrInternalId: couponId,
 				orgId: org.id,
