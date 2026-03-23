@@ -51,8 +51,15 @@ export const handleRemainingSets = async ({
 	}
 
 	if (remainingItems.length > 0) {
+		const sanitizedItems = remainingItems.map((item) => {
+			if (!("adjustable_quantity" in item)) return item;
+
+			const { adjustable_quantity: _adjustableQuantity, ...rest } = item;
+			return rest;
+		});
+
 		await stripeCli.subscriptions.update(checkoutSub!.id, {
-			items: remainingItems,
+			items: sanitizedItems,
 		});
 	}
 
