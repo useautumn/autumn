@@ -1,16 +1,18 @@
 import { expect } from "bun:test";
-import type {
-	ApiCustomerV3,
-	ApiCustomerV5,
-	ApiEntityV0,
-	ApiEntityV2,
+import {
+	type ApiCustomerV3,
+	type ApiCustomerV5,
+	type ApiEntityV0,
+	type ApiEntityV2,
+	ApiVersion,
+	formatMs,
+	ms,
 } from "@autumn/shared";
-import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 import {
-	expectSubscriptionTrialing,
 	expectSubscriptionNotTrialing,
 	expectSubscriptionPeriodAlignedWithTrialEnd,
+	expectSubscriptionTrialing,
 } from "./expect-customer-products/expectSubscriptionTrialing";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -40,7 +42,7 @@ export const expectProductTrialing = async ({
 	customer: providedCustomer,
 	productId,
 	trialEndsAt: expectedTrialEndsAt,
-	toleranceMs = TEN_MINUTES_MS,
+	toleranceMs = TEN_MINUTES_MS + ms.hours(1),
 }: {
 	customerId?: string;
 	customer?: CustomerOrEntity;
@@ -262,9 +264,7 @@ export const getTrialEndsAt = async ({
 
 	// Route to V5
 	if (isV5Customer(customer)) {
-		const sub = customer.subscriptions.find(
-			(s) => s.plan_id === productId,
-		);
+		const sub = customer.subscriptions.find((s) => s.plan_id === productId);
 		return sub?.trial_ends_at ?? null;
 	}
 

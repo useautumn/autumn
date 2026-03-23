@@ -15,8 +15,6 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"allowSyntheticDefaultImports": true,
-
-		"baseUrl": ".",
 		"paths": {
 			"@server/*": ["../server/src/*"],
 			"@shared/*": ["../shared/*"]
