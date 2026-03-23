@@ -4,7 +4,7 @@ import {
 	formatInterval,
 	getFeatureName,
 	numberWithCommas,
-} from "@autumn/shared";
+} from "./displayUtils.js";
 import {
 	type FeatureLike,
 	featureToDisplayFeature,

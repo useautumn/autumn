@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useMigrationsQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const fetchProductMigrations = async () => {
 		const { data } = await axiosInstance.get("/products/migrations");
@@ -10,7 +12,7 @@ export const useMigrationsQuery = () => {
 	};
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["migrations"],
+		queryKey: buildKey(["migrations"]),
 		queryFn: fetchProductMigrations,
 		retry: false, // Don't retry on error
 	});

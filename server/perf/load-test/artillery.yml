@@ -1,0 +1,73 @@
+# General load test — ramps up to ~75 req/s peak with attach cycling, 4 min total.
+# Usage: cd server && bun loadtest
+#
+# Prerequisites:
+#   Run setup first: cd server && bun loadtest:setup
+
+config:
+  target: "http://localhost:8080"
+  processor: "./processor.mjs"
+
+  phases:
+    - duration: 30
+      arrivalRate: 1
+      rampTo: 5
+      name: "Warm-up"
+
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 25
+      name: "Ramp to peak"
+
+    - duration: 120
+      arrivalRate: 25
+      name: "Sustained peak"
+
+    - duration: 30
+      arrivalRate: 25
+      rampTo: 50
+      name: "Spike"
+
+  defaults:
+    headers:
+      Authorization: "Bearer {{ $processEnvironment.UNIT_TEST_AUTUMN_SECRET_KEY }}"
+      Content-Type: "application/json"
+
+scenarios:
+  # ~90% of VUs: lightweight check/track/get loop
+  - name: "Core API loop"
+    weight: 9
+    beforeScenario: "setCustomerContext"
+    flow:
+      - post:
+          url: "/v1/check"
+          json:
+            customer_id: "{{ customerId }}"
+            feature_id: "{{ featureId }}"
+
+      - post:
+          url: "/v1/track"
+          json:
+            customer_id: "{{ customerId }}"
+            feature_id: "{{ featureId }}"
+            value: 1
+
+      - get:
+          url: "/v1/customers/{{ customerId }}"
+
+  # ~10% of VUs: attach (upgrade/downgrade through Stripe)
+  - name: "Attach flow"
+    weight: 1
+    beforeScenario: "setAttachContext"
+    flow:
+      - post:
+          url: "/v1/billing.attach"
+          json:
+            customer_id: "{{ customerId }}"
+            product_id: "{{ productId }}"
+
+      - post:
+          url: "/v1/check"
+          json:
+            customer_id: "{{ customerId }}"
+            feature_id: "{{ featureId }}"

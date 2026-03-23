@@ -82,19 +82,42 @@ const checkCurStripePrice = async ({
 		}
 	}
 
-	let stripePrepaidPriceV2: Stripe.Price | undefined;
-	if (!config.stripe_prepaid_price_v2_id) {
-		stripePrepaidPriceV2 = undefined;
-	} else {
-		stripePrepaidPriceV2 = await getStripePrice({
-			stripeClient: stripeCli,
-			stripePriceId: config.stripe_prepaid_price_v2_id,
-		});
-	}
+	const getStripeEmptyPrice = async () => {
+		let stripeEmptyPrice: Stripe.Price | undefined;
+		if (!config.stripe_empty_price_id) {
+			stripeEmptyPrice = undefined;
+		} else {
+			stripeEmptyPrice = await getStripePrice({
+				stripeClient: stripeCli,
+				stripePriceId: config.stripe_empty_price_id,
+			});
+		}
+		return stripeEmptyPrice;
+	};
+
+	const getStripePrepaidPriceV2 = async () => {
+		let stripePrepaidPriceV2: Stripe.Price | undefined;
+		if (!config.stripe_prepaid_price_v2_id) {
+			stripePrepaidPriceV2 = undefined;
+		} else {
+			stripePrepaidPriceV2 = await getStripePrice({
+				stripeClient: stripeCli,
+				stripePriceId: config.stripe_prepaid_price_v2_id,
+			});
+		}
+
+		return stripePrepaidPriceV2;
+	};
+
+	const [stripeEmptyPrice, stripePrepaidPriceV2] = await Promise.all([
+		getStripeEmptyPrice(),
+		getStripePrepaidPriceV2(),
+	]);
 
 	return {
 		stripePrice,
 		stripePrepaidPriceV2,
+		stripeEmptyPrice,
 		stripeProd,
 	};
 };
@@ -121,7 +144,7 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	const { stripePrice, stripePrepaidPriceV2, stripeProd } =
+	const { stripePrice, stripePrepaidPriceV2, stripeProd, stripeEmptyPrice } =
 		await checkCurStripePrice({
 			price,
 			stripeCli,
@@ -232,7 +255,7 @@ export const createStripePriceIFNotExist = async ({
 			useCheckout,
 		});
 
-		if (!config.stripe_empty_price_id) {
+		if (!stripeEmptyPrice) {
 			try {
 				logger.info(`Creating stripe empty price`);
 				// console.log(`Product: ${config.stripe_product_id || stripeProd?.id}`);

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 type IntervalType = "7d" | "30d" | "90d";
@@ -15,6 +16,7 @@ export const useCusEventsQuery = ({
 	customerId?: string;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { customer_id } = useParams();
 
 	const id = customerId ?? customer_id;
@@ -32,7 +34,7 @@ export const useCusEventsQuery = ({
 	};
 
 	const { data, isLoading, isFetching, error } = useQuery({
-		queryKey: ["customer_events", id, interval, limit],
+		queryKey: buildKey(["customer_events", id, interval, limit]),
 		queryFn: fetcher,
 		enabled: !!id,
 	});
