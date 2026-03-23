@@ -44,7 +44,7 @@ export const buildStripeCheckoutSessionAction = ({
 	// 3. Build line_items from recurring items and one-off items
 	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
 		...recurringLineItems.filter((item) => item.quantity !== 0),
-		...oneOffLineItems,
+		...oneOffLineItems.filter((item) => item.quantity !== 0),
 	];
 
 	// 4. Trial handling (only for subscription mode)
