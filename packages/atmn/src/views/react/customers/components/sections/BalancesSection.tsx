@@ -1,5 +1,5 @@
-import { ProgressBar } from "@inkjs/ui";
 import { Box, Text } from "ink";
+import { ProgressBar } from "../../../components/index.js";
 import type { ApiBalance } from "../../types.js";
 
 export interface BalancesSectionProps {
