@@ -33,6 +33,7 @@ export const constructEntity = ({
 		deleted,
 		created_at: Date.now(),
 		spend_limits: inputEntity.billing_controls?.spend_limits,
+		usage_alerts: inputEntity.billing_controls?.usage_alerts,
 	};
 
 	return entity;

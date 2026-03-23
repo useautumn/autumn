@@ -347,6 +347,32 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicParamField>
 
+        <DynamicParamField body="usage_alerts" type="object[]">
+          List of usage alert configurations per feature.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string">
+              The feature ID this alert applies to. If omitted, the alert applies globally.
+            </DynamicParamField>
+
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage alert is enabled.
+            </DynamicParamField>
+
+            <DynamicParamField body="threshold" type="number" required>
+              The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+            </DynamicParamField>
+
+            <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage'" required>
+              Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+            </DynamicParamField>
+
+            <DynamicParamField body="name" type="string">
+              Optional user-defined label to distinguish multiple alerts on the same feature.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -379,6 +405,32 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
             <DynamicParamField body="overage_limit" type="number">
               Maximum allowed overage spend for the target feature.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="usage_alerts" type="object[]">
+          List of usage alert configurations per feature.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string">
+              The feature ID this alert applies to. If omitted, the alert applies globally.
+            </DynamicParamField>
+
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage alert is enabled.
+            </DynamicParamField>
+
+            <DynamicParamField body="threshold" type="number" required>
+              The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+            </DynamicParamField>
+
+            <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage'" required>
+              Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+            </DynamicParamField>
+
+            <DynamicParamField body="name" type="string">
+              Optional user-defined label to distinguish multiple alerts on the same feature.
             </DynamicParamField>
 
           </Expandable>
@@ -887,6 +939,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
     </DynamicResponseField>
 
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -1188,6 +1248,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="effective_at" type="number | null">
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
     </DynamicResponseField>
 
   </Expandable>

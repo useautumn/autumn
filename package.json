@@ -92,6 +92,8 @@
 		"knip:fix-all": "knip --fix --allow-remove-files",
 		"prepare": "husky",
 		"api": "cd packages/openapi && bun generate",
+		"svix:push": "infisical run --env=dev -- bun packages/openapi/scripts/svixPush.ts",
+		"svix:push:prod": "infisical run --env=prod -- bun packages/openapi/scripts/svixPush.ts",
 		"docs:pull": "bun -F @autumn/docs pull",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",

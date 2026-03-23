@@ -16,8 +16,7 @@ import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
-import { checkUsageAlerts } from "../../thresholdReached/checkUsageAlerts.js";
-import { handleThresholdReached } from "../../thresholdReached/handleThresholdReached.js";
+import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import {
@@ -229,26 +228,12 @@ export const executePostgresDeduction = async ({
 				throw error;
 			}
 
-			handleThresholdReached({
+			fireTrackWebhooks({
 				ctx,
 				oldFullCus,
 				newFullCus: fullCustomer,
 				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executePostgresDeduction] Failed to handle threshold reached: ${error}`,
-				);
-			});
-
-			checkUsageAlerts({
-				ctx,
-				oldFullCus,
-				newFullCus: fullCustomer,
-				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executePostgresDeduction] Failed to check usage alerts: ${error}`,
-				);
+				entityId,
 			});
 
 			if (resolvedOptions.triggerAutoTopUp) {

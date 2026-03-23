@@ -77,6 +77,43 @@ export type CustomerDataSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const CustomerDataThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type CustomerDataThresholdType = ClosedEnum<
+  typeof CustomerDataThresholdType
+>;
+
+export type CustomerDataUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: CustomerDataThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type CustomerDataBillingControls = {
@@ -88,6 +125,10 @@ export type CustomerDataBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<CustomerDataSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CustomerDataUsageAlert> | undefined;
 };
 
 /**
@@ -242,9 +283,52 @@ export function customerDataSpendLimitToJSON(
 }
 
 /** @internal */
+export const CustomerDataThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataThresholdType
+> = z.enum(CustomerDataThresholdType);
+
+/** @internal */
+export type CustomerDataUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const CustomerDataUsageAlert$outboundSchema: z.ZodMiniType<
+  CustomerDataUsageAlert$Outbound,
+  CustomerDataUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: CustomerDataThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function customerDataUsageAlertToJSON(
+  customerDataUsageAlert: CustomerDataUsageAlert,
+): string {
+  return JSON.stringify(
+    CustomerDataUsageAlert$outboundSchema.parse(customerDataUsageAlert),
+  );
+}
+
+/** @internal */
 export type CustomerDataBillingControls$Outbound = {
   auto_topups?: Array<CustomerDataAutoTopup$Outbound> | undefined;
   spend_limits?: Array<CustomerDataSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<CustomerDataUsageAlert$Outbound> | undefined;
 };
 
 /** @internal */
@@ -259,11 +343,15 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => CustomerDataSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => CustomerDataUsageAlert$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
     });
   }),
 );
