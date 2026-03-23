@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: b2a039ee0808d119f6be0c0d1504525b
+  docChecksum: fef7a15b8ff1dae40572330e3d3fc94e
   docVersion: 2.2.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
   releaseVersion: 0.4.18
   configChecksum: 2263d20254e354a1792248274002f650
 persistentEdits:
-  generation_id: cf955dd6-87ca-4610-b2e5-d305fef5523b
-  pristine_commit_hash: 192f7483eda75fc42bfeeb9b13aa9f5790ef8607
-  pristine_tree_hash: a466b4e81e20d68c76a1721c9ade3187c3fedbb8
+  generation_id: 7f943529-cf04-4913-a930-5fabb845bed5
+  pristine_commit_hash: 78a022ad50904f09c57f220bbaefb1e17e34733e
+  pristine_tree_hash: 8f92eb8f4a08f2969fa5dfcdab5fe8f57b807ab7
 features:
   python:
     additionalDependencies: 1.0.0
@@ -1751,6 +1751,10 @@ trackedFiles:
     id: d3b9f209493b
     last_write_checksum: sha1:ce34a405f234b04f41fd095c815f298dd4ee0fa8
     pristine_git_object: 0d3745bf063a16a8ad4566cb989fd8cdb49415cf
+  docs/models/previewattachcheckouttype.md:
+    id: 7e32709f1445
+    last_write_checksum: sha1:c2190a0c12f41d6782bcc7b0866bcc9d9aaaef30
+    pristine_git_object: 95bb8a9e3f2191e805adf28b5d8513594353feae
   docs/models/previewattachcustomize.md:
     id: dd921922e55d
     last_write_checksum: sha1:9c19dbab93cf326a50e7d1d9a0d50bd8df9063ca
@@ -1881,8 +1885,8 @@ trackedFiles:
     pristine_git_object: 3e9b1be359f8832c3439cad7e04566bb40ceaed1
   docs/models/previewattachresponse.md:
     id: a678e8dbf94c
-    last_write_checksum: sha1:e9e75a12ec734c69bd71489f74ee3ffe501c5a04
-    pristine_git_object: 589d180a5ae4bdc58d3c7eeda00368fc6a9230bd
+    last_write_checksum: sha1:1e8f007a03dad171fbb08118a6adb2d9e8f9fc74
+    pristine_git_object: 3925e01875b4e6c9eca9258adc84392ad595f7ec
   docs/models/previewattachrollover.md:
     id: 8ef3a1be0fed
     last_write_checksum: sha1:d2cf512026309abaf59ee66a3fa2150db0b7fde9
@@ -1923,6 +1927,10 @@ trackedFiles:
     id: c92637a0950c
     last_write_checksum: sha1:b3b600448b1f704d40dab1df259d606c3e44ab5e
     pristine_git_object: 8bb4488808e3af817c5331cebfd0fbc66fbc4323
+  docs/models/previewmultiattachcheckouttype.md:
+    id: 978368a6ba5e
+    last_write_checksum: sha1:6b63a52d14cc7ae065c2cf008dc231cfcc798520
+    pristine_git_object: 84d5019b44a86b87e5efa8f7981c22a62686df66
   docs/models/previewmultiattachcustomize.md:
     id: e2e0b7d3e939
     last_write_checksum: sha1:31e8437aa83882d1f206b0203cdf25a7b37932f1
@@ -2049,8 +2057,8 @@ trackedFiles:
     pristine_git_object: ec56bdecfc8eac78fffde4302cee7caed963686a
   docs/models/previewmultiattachresponse.md:
     id: 122c343c9098
-    last_write_checksum: sha1:24a707473c614f9dc2140437bf133f0ca909d155
-    pristine_git_object: bdc7802a637a993e771664d0ff3f3a5f552c2dc9
+    last_write_checksum: sha1:98c7bf93d60e58016f7d6a167915e2d17f853a98
+    pristine_git_object: 02bf98cf18cae23d0b02bcfcbfc57ca4d8043af9
   docs/models/previewmultiattachrollover.md:
     id: 156269f00e06
     last_write_checksum: sha1:d757d222ff8014fa24d40928eb47984131ca6c76
@@ -3013,8 +3021,8 @@ trackedFiles:
     pristine_git_object: 89560b566073785535643e694c112bedbd3db13d
   src/autumn_sdk/models/__init__.py:
     id: bcf3802243ff
-    last_write_checksum: sha1:ff258b03469e08db7b70dd3c780b34cad56667e4
-    pristine_git_object: b397b6b41232d533068c68ad67c5e4f3b30ccded
+    last_write_checksum: sha1:f7e204fae5a79d0e0810a82b8ac9d0ef4efc6da5
+    pristine_git_object: e06b4ee89b30d9f04782e65df02b13d890053a07
   src/autumn_sdk/models/aggregateeventsop.py:
     id: 01321099f2a5
     last_write_checksum: sha1:eef6ab478132141f11c820ee80cbacaa4bc74870
@@ -3141,12 +3149,12 @@ trackedFiles:
     pristine_git_object: 56a42a2d22eb3a21547ee87870f73f7c247aefa3
   src/autumn_sdk/models/previewattachop.py:
     id: 2b361be4bfa8
-    last_write_checksum: sha1:5bb1e64fd73f058a43b900c665809c0dc952cb27
-    pristine_git_object: dacc7ba980a8f9701af6f1534227cfea36765d44
+    last_write_checksum: sha1:1bdfc9ccebe681fe768091a3a9c89b17b1024b14
+    pristine_git_object: 36fa9531a2eb8bd27b2c4f45642407addbc71db0
   src/autumn_sdk/models/previewmultiattachop.py:
     id: 963ffcd646a4
-    last_write_checksum: sha1:a4f24fcc5db4c927f48a32688652117a890ea17f
-    pristine_git_object: 06df124f54e5a536317aeda045079cbb83a79534
+    last_write_checksum: sha1:aa6c7b216e120a4175f8d13cf45ca2e6d5551fdc
+    pristine_git_object: 5056bbba15475abd5b1caa40aca74c0c3a239d22
   src/autumn_sdk/models/previewupdateop.py:
     id: 081d5f08508d
     last_write_checksum: sha1:c526e015b5085720840a5e38e2c8e41968ed9f16
@@ -3461,7 +3469,7 @@ examples:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "redirect_mode": "if_required"}
       responses:
         "200":
-          application/json: {"customer_id": "<id>", "line_items": [], "subtotal": 20, "total": 20, "currency": "usd", "incoming": [], "outgoing": []}
+          application/json: {"customer_id": "<id>", "line_items": [], "subtotal": 20, "total": 20, "currency": "usd", "incoming": [], "outgoing": [], "redirect_to_checkout": true, "checkout_type": "stripe_checkout"}
   updateSubscription:
     speakeasy-default-update-subscription:
       parameters:
@@ -3769,7 +3777,7 @@ examples:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro_plan"}, {"plan_id": "addon_seats", "feature_quantities": [{"feature_id": "seats", "quantity": 5}]}], "redirect_mode": "if_required"}
       responses:
         "200":
-          application/json: {"customer_id": "<id>", "line_items": [{"display_name": "Percival_Towne81", "description": "as unfortunately wherever crest", "subtotal": 1273.44, "total": 7630.04, "plan_id": "<id>", "feature_id": null, "quantity": 1062.24}], "subtotal": 20, "total": 20, "currency": "usd", "incoming": [{"plan_id": "<id>", "feature_quantities": [], "effective_at": 1983.1, "canceled_at": 2257.08, "expires_at": 7910.67}], "outgoing": []}
+          application/json: {"customer_id": "<id>", "line_items": [{"display_name": "Percival_Towne81", "description": "as unfortunately wherever crest", "subtotal": 1273.44, "total": 7630.04, "plan_id": "<id>", "feature_id": null, "quantity": 1062.24}], "subtotal": 20, "total": 20, "currency": "usd", "incoming": [{"plan_id": "<id>", "feature_quantities": [], "effective_at": 1983.1, "canceled_at": 2257.08, "expires_at": 7910.67}], "outgoing": [], "redirect_to_checkout": false, "checkout_type": "autumn_checkout"}
   multiAttach:
     speakeasy-default-multi-attach:
       parameters:

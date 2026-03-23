@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -801,6 +802,14 @@ export type PreviewMultiAttachOutgoing = {
   expiresAt: number | null;
 };
 
+export const PreviewMultiAttachCheckoutType = {
+  StripeCheckout: "stripe_checkout",
+  AutumnCheckout: "autumn_checkout",
+} as const;
+export type PreviewMultiAttachCheckoutType = OpenEnum<
+  typeof PreviewMultiAttachCheckoutType
+>;
+
 /**
  * OK
  */
@@ -809,9 +818,6 @@ export type PreviewMultiAttachResponse = {
    * The ID of the customer.
    */
   customerId: string;
-  /**
-   * List of line items for the current billing period.
-   */
   lineItems: Array<PreviewMultiAttachLineItem>;
   /**
    * The total amount in cents before discounts for the current billing period.
@@ -841,6 +847,14 @@ export type PreviewMultiAttachResponse = {
    * Products or subscription changes being removed or ended.
    */
   outgoing: Array<PreviewMultiAttachOutgoing>;
+  /**
+   * Whether the customer will be redirected to a checkout page if attach is called.
+   */
+  redirectToCheckout: boolean;
+  /**
+   * The type of checkout that will be used if the customer is redirected to a checkout page.
+   */
+  checkoutType: PreviewMultiAttachCheckoutType | null;
 };
 
 /** @internal */
@@ -2009,6 +2023,12 @@ export function previewMultiAttachOutgoingFromJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachCheckoutType$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCheckoutType,
+  unknown
+> = openEnums.inboundSchema(PreviewMultiAttachCheckoutType);
+
+/** @internal */
 export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachResponse,
   unknown
@@ -2025,12 +2045,16 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     expand: types.optional(z.array(types.string())),
     incoming: z.array(z.lazy(() => PreviewMultiAttachIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewMultiAttachOutgoing$inboundSchema)),
+    redirect_to_checkout: types.boolean(),
+    checkout_type: types.nullable(PreviewMultiAttachCheckoutType$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "redirect_to_checkout": "redirectToCheckout",
+      "checkout_type": "checkoutType",
     });
   }),
 );

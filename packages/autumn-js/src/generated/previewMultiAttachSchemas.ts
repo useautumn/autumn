@@ -273,6 +273,8 @@ const customerDataSchema = z.any();
 
 const planSchema = z.any();
 
+const openEnumSchema = z.any();
+
 const customerDataOutboundSchema = z.any();
 
 export const previewMultiAttachPriceIntervalSchema = closedEnumSchema;
@@ -452,6 +454,8 @@ export const previewMultiAttachOutgoingSchema = z.object({
 	expiresAt: z.number().nullable(),
 });
 
+export const previewMultiAttachCheckoutTypeSchema = openEnumSchema;
+
 export const previewMultiAttachResponseSchema = z.object({
 	customerId: z.string(),
 	lineItems: z.array(previewMultiAttachLineItemSchema),
@@ -464,6 +468,8 @@ export const previewMultiAttachResponseSchema = z.object({
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 	incoming: z.array(previewMultiAttachIncomingSchema),
 	outgoing: z.array(previewMultiAttachOutgoingSchema),
+	redirectToCheckout: z.boolean(),
+	checkoutType: previewMultiAttachCheckoutTypeSchema.nullable(),
 });
 
 export const previewMultiAttachParamsOutboundSchema = z.object({
