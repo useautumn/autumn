@@ -36,20 +36,6 @@ export const previewMultiAttachSpendLimitSchema = z.object({
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewMultiAttachBillingControlsSchema = z.object({
-	spendLimits: z
-		.union([z.array(previewMultiAttachSpendLimitSchema), z.undefined()])
-		.optional(),
-});
-
-export const previewMultiAttachEntityDataSchema = z.object({
-	featureId: z.string(),
-	name: z.union([z.string(), z.undefined()]).optional(),
-	billingControls: z
-		.union([previewMultiAttachBillingControlsSchema, z.undefined()])
-		.optional(),
-});
-
 export const previewMultiAttachDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -256,9 +242,20 @@ export const previewMultiAttachSpendLimitOutboundSchema = z.object({
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const previewMultiAttachBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([z.array(previewMultiAttachSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_alerts: z
+		.union([z.array(previewMultiAttachUsageAlertOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -382,6 +379,33 @@ export const previewMultiAttachFreeTrialParamsSchema = z.object({
 
 export const previewMultiAttachRedirectModeSchema = closedEnumSchema;
 
+export const previewMultiAttachThresholdTypeSchema = closedEnumSchema;
+
+export const previewMultiAttachUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: previewMultiAttachThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewMultiAttachBillingControlsSchema = z.object({
+	spendLimits: z
+		.union([z.array(previewMultiAttachSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(previewMultiAttachUsageAlertSchema), z.undefined()])
+		.optional(),
+});
+
+export const previewMultiAttachEntityDataSchema = z.object({
+	featureId: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+	billingControls: z
+		.union([previewMultiAttachBillingControlsSchema, z.undefined()])
+		.optional(),
+});
+
 export const previewMultiAttachParamsSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -415,6 +439,8 @@ export const previewMultiAttachIncomingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewMultiAttachIncomingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewMultiAttachOutgoingSchema = z.object({
@@ -422,6 +448,8 @@ export const previewMultiAttachOutgoingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewMultiAttachOutgoingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewMultiAttachResponseSchema = z.object({

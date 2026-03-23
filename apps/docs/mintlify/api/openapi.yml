@@ -86,6 +86,7 @@ components:
                           - day
                           - week
                           - month
+                        type: string
                         description: The time interval for the purchase limit window.
                       interval_count:
                         type: number
@@ -122,6 +123,40 @@ components:
                     minimum: 0
                     description: Maximum allowed overage spend for the target feature.
               description: List of overage spend limits per feature.
+            usage_alerts:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature ID this alert applies to. If omitted, the alert applies
+                      globally.
+                  enabled:
+                    type: boolean
+                    default: true
+                    description: Whether this usage alert is enabled.
+                  threshold:
+                    type: number
+                    minimum: 0
+                    description: The threshold value that triggers the alert. For usage, this is an
+                      absolute count. For usage_percentage, this is a percentage
+                      (0-100).
+                  threshold_type:
+                    enum:
+                      - usage
+                      - usage_percentage
+                    type: string
+                    description: Whether the threshold is an absolute usage count or a percentage of
+                      the usage allowance.
+                  name:
+                    type: string
+                    description: Optional user-defined label to distinguish multiple alerts on the
+                      same feature.
+                required:
+                  - threshold
+                  - threshold_type
+              description: List of usage alert configurations per feature.
           description: Billing controls for the customer (auto top-ups, etc.)
       title: CustomerData
       description: Customer details to set when creating a customer
@@ -161,6 +196,7 @@ components:
           enum:
             - sandbox
             - live
+          type: string
           description: The environment this customer was created in.
         metadata:
           type: object
@@ -203,6 +239,7 @@ components:
                           - day
                           - week
                           - month
+                        type: string
                         description: The time interval for the purchase limit window.
                       interval_count:
                         type: number
@@ -239,6 +276,40 @@ components:
                     minimum: 0
                     description: Maximum allowed overage spend for the target feature.
               description: List of overage spend limits per feature.
+            usage_alerts:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature ID this alert applies to. If omitted, the alert applies
+                      globally.
+                  enabled:
+                    type: boolean
+                    default: true
+                    description: Whether this usage alert is enabled.
+                  threshold:
+                    type: number
+                    minimum: 0
+                    description: The threshold value that triggers the alert. For usage, this is an
+                      absolute count. For usage_percentage, this is a percentage
+                      (0-100).
+                  threshold_type:
+                    enum:
+                      - usage
+                      - usage_percentage
+                    type: string
+                    description: Whether the threshold is an absolute usage count or a percentage of
+                      the usage allowance.
+                  name:
+                    type: string
+                    description: Optional user-defined label to distinguish multiple alerts on the
+                      same feature.
+                required:
+                  - threshold
+                  - threshold_type
+              description: List of usage alert configurations per feature.
           description: Billing controls for the customer (auto top-ups, etc.)
         subscriptions:
           type: array
@@ -266,6 +337,7 @@ components:
                 enum:
                   - active
                   - scheduled
+                type: string
                 description: Current status of the subscription.
               past_due:
                 type: boolean
@@ -393,6 +465,7 @@ components:
                       - boolean
                       - metered
                       - credit_system
+                    type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
                       pools."
@@ -530,6 +603,7 @@ components:
                 enum:
                   - sandbox
                   - live
+                type: string
                 description: The environment (sandbox/live)
             required:
               - id
@@ -575,6 +649,7 @@ components:
                           - fixed_discount
                           - free_product
                           - invoice_credits
+                        type: string
                         description: The type of reward
                       discount_value:
                         type: number
@@ -584,6 +659,7 @@ components:
                           - one_off
                           - months
                           - forever
+                        type: string
                         description: How long the discount lasts
                       duration_value:
                         anyOf:
@@ -782,6 +858,7 @@ components:
                     - quarter
                     - semi_annual
                     - year
+                  type: string
                   description: Billing interval (e.g. 'month', 'year').
                 interval_count:
                   type: number
@@ -831,6 +908,7 @@ components:
                       - single_use
                       - continuous_use
                       - credit_system
+                    type: string
                     description: The type of the feature
                   display:
                     anyOf:
@@ -895,6 +973,7 @@ components:
                           - quarter
                           - semi_annual
                           - year
+                        type: string
                         description: The interval at which the feature balance resets (e.g. 'month',
                           'year'). For consumable features, usage resets to 0
                           and included units are restored.
@@ -928,6 +1007,7 @@ components:
                         enum:
                           - graduated
                           - volume
+                        type: string
                       interval:
                         enum:
                           - one_off
@@ -936,6 +1016,7 @@ components:
                           - quarter
                           - semi_annual
                           - year
+                        type: string
                         description: Billing interval for this price. For consumable features, should
                           match reset.interval.
                       interval_count:
@@ -950,6 +1031,7 @@ components:
                         enum:
                           - prepaid
                           - usage_based
+                        type: string
                         description: "'prepaid' for features like seats where customers pay upfront,
                           'usage_based' for pay-as-you-go after included usage."
                       max_purchase:
@@ -992,6 +1074,7 @@ components:
                     enum:
                       - month
                       - forever
+                    type: string
                     description: When rolled over units expire.
                   expiry_duration_length:
                     type: number
@@ -1020,6 +1103,7 @@ components:
                 - day
                 - month
                 - year
+              type: string
               description: Unit of time for the trial duration ('day', 'month', 'year').
             card_required:
               type: boolean
@@ -1038,6 +1122,7 @@ components:
           enum:
             - sandbox
             - live
+          type: string
           description: Environment this plan belongs to ('sandbox' or 'live').
         archived:
           type: boolean
@@ -1060,6 +1145,7 @@ components:
               enum:
                 - active
                 - scheduled
+              type: string
               description: The customer's current status with this plan. 'active' if attached,
                 'scheduled' if pending activation.
             canceling:
@@ -1076,6 +1162,7 @@ components:
                 - downgrade
                 - none
                 - purchase
+              type: string
               description: The action that would occur if this plan were attached to the
                 customer.
           required:
@@ -1115,6 +1202,7 @@ components:
                 - boolean
                 - metered
                 - credit_system
+              type: string
               description: "Feature type: 'boolean' for on/off access, 'metered' for
                 usage-tracked features, 'credit_system' for unified credit
                 pools."
@@ -1244,6 +1332,7 @@ components:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                           - const: multiple
                         description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
                           combined from different intervals.
@@ -1278,6 +1367,7 @@ components:
                         enum:
                           - graduated
                           - volume
+                        type: string
                         description: "How tiers are applied: graduated (split across bands) or volume
                           (flat rate for the matched tier)."
                       billing_units:
@@ -1287,6 +1377,7 @@ components:
                         enum:
                           - prepaid
                           - usage_based
+                        type: string
                         description: Whether usage is prepaid or billed pay-per-use.
                       max_purchase:
                         anyOf:
@@ -1463,6 +1554,7 @@ paths:
                                   - day
                                   - week
                                   - month
+                                type: string
                                 description: The time interval for the purchase limit window.
                               interval_count:
                                 type: number
@@ -1499,6 +1591,40 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of overage spend limits per feature.
+                    usage_alerts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this alert applies to. If omitted, the alert applies
+                              globally.
+                          enabled:
+                            type: boolean
+                            default: true
+                            description: Whether this usage alert is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: The threshold value that triggers the alert. For usage, this is an
+                              absolute count. For usage_percentage, this is a
+                              percentage (0-100).
+                          threshold_type:
+                            enum:
+                              - usage
+                              - usage_percentage
+                            type: string
+                            description: Whether the threshold is an absolute usage count or a percentage of
+                              the usage allowance.
+                          name:
+                            type: string
+                            description: Optional user-defined label to distinguish multiple alerts on the
+                              same feature.
+                        required:
+                          - threshold
+                          - threshold_type
+                      description: List of usage alert configurations per feature.
                   description: Billing controls for the customer (auto top-ups, etc.)
                 expand:
                   type: array
@@ -1602,6 +1728,7 @@ paths:
                   enum:
                     - active
                     - scheduled
+                  type: string
                   description: Filter by customer product status. Defaults to active and scheduled
                 search:
                   type: string
@@ -1659,6 +1786,7 @@ paths:
                           enum:
                             - sandbox
                             - live
+                          type: string
                           description: The environment this customer was created in.
                         metadata:
                           type: object
@@ -1701,6 +1829,7 @@ paths:
                                           - day
                                           - week
                                           - month
+                                        type: string
                                         description: The time interval for the purchase limit window.
                                       interval_count:
                                         type: number
@@ -1737,6 +1866,40 @@ paths:
                                     minimum: 0
                                     description: Maximum allowed overage spend for the target feature.
                               description: List of overage spend limits per feature.
+                            usage_alerts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature ID this alert applies to. If omitted, the alert applies
+                                      globally.
+                                  enabled:
+                                    type: boolean
+                                    default: true
+                                    description: Whether this usage alert is enabled.
+                                  threshold:
+                                    type: number
+                                    minimum: 0
+                                    description: The threshold value that triggers the alert. For usage, this is an
+                                      absolute count. For usage_percentage, this
+                                      is a percentage (0-100).
+                                  threshold_type:
+                                    enum:
+                                      - usage
+                                      - usage_percentage
+                                    type: string
+                                    description: Whether the threshold is an absolute usage count or a percentage of
+                                      the usage allowance.
+                                  name:
+                                    type: string
+                                    description: Optional user-defined label to distinguish multiple alerts on the
+                                      same feature.
+                                required:
+                                  - threshold
+                                  - threshold_type
+                              description: List of usage alert configurations per feature.
                           description: Billing controls for the customer (auto top-ups, etc.)
                         subscriptions:
                           type: array
@@ -1764,6 +1927,7 @@ paths:
                                 enum:
                                   - active
                                   - scheduled
+                                type: string
                                 description: Current status of the subscription.
                               past_due:
                                 type: boolean
@@ -1892,6 +2056,7 @@ paths:
                                       - boolean
                                       - metered
                                       - credit_system
+                                    type: string
                                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                                       usage-tracked features, 'credit_system'
                                       for unified credit pools."
@@ -2221,6 +2386,7 @@ paths:
                                   - day
                                   - week
                                   - month
+                                type: string
                                 description: The time interval for the purchase limit window.
                               interval_count:
                                 type: number
@@ -2257,6 +2423,40 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of overage spend limits per feature.
+                    usage_alerts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this alert applies to. If omitted, the alert applies
+                              globally.
+                          enabled:
+                            type: boolean
+                            default: true
+                            description: Whether this usage alert is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: The threshold value that triggers the alert. For usage, this is an
+                              absolute count. For usage_percentage, this is a
+                              percentage (0-100).
+                          threshold_type:
+                            enum:
+                              - usage
+                              - usage_percentage
+                            type: string
+                            description: Whether the threshold is an absolute usage count or a percentage of
+                              the usage allowance.
+                          name:
+                            type: string
+                            description: Optional user-defined label to distinguish multiple alerts on the
+                              same feature.
+                        required:
+                          - threshold
+                          - threshold_type
+                      description: List of usage alert configurations per feature.
                   description: Billing controls for the customer (auto top-ups, etc.)
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
@@ -2311,6 +2511,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: The environment this customer was created in.
                   metadata:
                     type: object
@@ -2353,6 +2554,7 @@ paths:
                                     - day
                                     - week
                                     - month
+                                  type: string
                                   description: The time interval for the purchase limit window.
                                 interval_count:
                                   type: number
@@ -2389,6 +2591,40 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of overage spend limits per feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to. If omitted, the alert applies
+                                globally.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage, this is an
+                                absolute count. For usage_percentage, this is a
+                                percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                              type: string
+                              description: Whether the threshold is an absolute usage count or a percentage of
+                                the usage allowance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
                     description: Billing controls for the customer (auto top-ups, etc.)
                   subscriptions:
                     type: array
@@ -2416,6 +2652,7 @@ paths:
                           enum:
                             - active
                             - scheduled
+                          type: string
                           description: Current status of the subscription.
                         past_due:
                           type: boolean
@@ -2544,6 +2781,7 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                              type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
                                 unified credit pools."
@@ -2853,6 +3091,7 @@ paths:
                         - quarter
                         - semi_annual
                         - year
+                      type: string
                       description: Billing interval (e.g. 'month', 'year').
                     interval_count:
                       type: number
@@ -2891,6 +3130,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Interval at which balance resets (e.g. 'month', 'year'). For
                               consumable features only.
                           interval_count:
@@ -2927,6 +3167,7 @@ paths:
                             enum:
                               - graduated
                               - volume
+                            type: string
                           interval:
                             enum:
                               - one_off
@@ -2935,6 +3176,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Billing interval. For consumable features, should match
                               reset.interval.
                           interval_count:
@@ -2950,6 +3192,7 @@ paths:
                             enum:
                               - prepaid
                               - usage_based
+                            type: string
                             description: "'prepaid' for upfront payment (seats), 'usage_based' for
                               pay-as-you-go."
                           max_purchase:
@@ -2969,6 +3212,7 @@ paths:
                               - prorate_immediately
                               - prorate_next_cycle
                               - bill_next_cycle
+                            type: string
                             description: Billing behavior when quantity increases mid-cycle.
                           on_decrease:
                             enum:
@@ -2977,6 +3221,7 @@ paths:
                               - prorate_next_cycle
                               - none
                               - no_prorations
+                            type: string
                             description: Credit behavior when quantity decreases mid-cycle.
                         required:
                           - on_increase
@@ -2993,6 +3238,7 @@ paths:
                             enum:
                               - month
                               - forever
+                            type: string
                             description: When rolled over units expire.
                           expiry_duration_length:
                             type: number
@@ -3019,6 +3265,7 @@ paths:
                         - day
                         - month
                         - year
+                      type: string
                       default: month
                       description: Unit of time for the trial ('day', 'month', 'year').
                     card_required:
@@ -3125,6 +3372,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Billing interval (e.g. 'month', 'year').
                           interval_count:
                             type: number
@@ -3174,6 +3422,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                              type: string
                               description: The type of the feature
                             display:
                               anyOf:
@@ -3238,6 +3487,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: The interval at which the feature balance resets (e.g. 'month',
                                     'year'). For consumable features, usage
                                     resets to 0 and included units are restored.
@@ -3271,6 +3521,7 @@ paths:
                                   enum:
                                     - graduated
                                     - volume
+                                  type: string
                                 interval:
                                   enum:
                                     - one_off
@@ -3279,6 +3530,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: Billing interval for this price. For consumable features, should
                                     match reset.interval.
                                 interval_count:
@@ -3294,6 +3546,7 @@ paths:
                                   enum:
                                     - prepaid
                                     - usage_based
+                                  type: string
                                   description: "'prepaid' for features like seats where customers pay upfront,
                                     'usage_based' for pay-as-you-go after
                                     included usage."
@@ -3337,6 +3590,7 @@ paths:
                               enum:
                                 - month
                                 - forever
+                              type: string
                               description: When rolled over units expire.
                             expiry_duration_length:
                               type: number
@@ -3365,6 +3619,7 @@ paths:
                           - day
                           - month
                           - year
+                        type: string
                         description: Unit of time for the trial duration ('day', 'month', 'year').
                       card_required:
                         type: boolean
@@ -3383,6 +3638,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: Environment this plan belongs to ('sandbox' or 'live').
                   archived:
                     type: boolean
@@ -3405,6 +3661,7 @@ paths:
                         enum:
                           - active
                           - scheduled
+                        type: string
                         description: The customer's current status with this plan. 'active' if attached,
                           'scheduled' if pending activation.
                       canceling:
@@ -3421,6 +3678,7 @@ paths:
                           - downgrade
                           - none
                           - purchase
+                        type: string
                         description: The action that would occur if this plan were attached to the
                           customer.
                     required:
@@ -3629,6 +3887,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Billing interval (e.g. 'month', 'year').
                           interval_count:
                             type: number
@@ -3678,6 +3937,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                              type: string
                               description: The type of the feature
                             display:
                               anyOf:
@@ -3742,6 +4002,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: The interval at which the feature balance resets (e.g. 'month',
                                     'year'). For consumable features, usage
                                     resets to 0 and included units are restored.
@@ -3775,6 +4036,7 @@ paths:
                                   enum:
                                     - graduated
                                     - volume
+                                  type: string
                                 interval:
                                   enum:
                                     - one_off
@@ -3783,6 +4045,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: Billing interval for this price. For consumable features, should
                                     match reset.interval.
                                 interval_count:
@@ -3798,6 +4061,7 @@ paths:
                                   enum:
                                     - prepaid
                                     - usage_based
+                                  type: string
                                   description: "'prepaid' for features like seats where customers pay upfront,
                                     'usage_based' for pay-as-you-go after
                                     included usage."
@@ -3841,6 +4105,7 @@ paths:
                               enum:
                                 - month
                                 - forever
+                              type: string
                               description: When rolled over units expire.
                             expiry_duration_length:
                               type: number
@@ -3869,6 +4134,7 @@ paths:
                           - day
                           - month
                           - year
+                        type: string
                         description: Unit of time for the trial duration ('day', 'month', 'year').
                       card_required:
                         type: boolean
@@ -3887,6 +4153,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: Environment this plan belongs to ('sandbox' or 'live').
                   archived:
                     type: boolean
@@ -3909,6 +4176,7 @@ paths:
                         enum:
                           - active
                           - scheduled
+                        type: string
                         description: The customer's current status with this plan. 'active' if attached,
                           'scheduled' if pending activation.
                       canceling:
@@ -3925,6 +4193,7 @@ paths:
                           - downgrade
                           - none
                           - purchase
+                        type: string
                         description: The action that would occur if this plan were attached to the
                           customer.
                     required:
@@ -4112,6 +4381,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: Billing interval (e.g. 'month', 'year').
                                 interval_count:
                                   type: number
@@ -4161,6 +4431,7 @@ paths:
                                       - single_use
                                       - continuous_use
                                       - credit_system
+                                    type: string
                                     description: The type of the feature
                                   display:
                                     anyOf:
@@ -4225,6 +4496,7 @@ paths:
                                           - quarter
                                           - semi_annual
                                           - year
+                                        type: string
                                         description: The interval at which the feature balance resets (e.g. 'month',
                                           'year'). For consumable features,
                                           usage resets to 0 and included units
@@ -4259,6 +4531,7 @@ paths:
                                         enum:
                                           - graduated
                                           - volume
+                                        type: string
                                       interval:
                                         enum:
                                           - one_off
@@ -4267,6 +4540,7 @@ paths:
                                           - quarter
                                           - semi_annual
                                           - year
+                                        type: string
                                         description: Billing interval for this price. For consumable features, should
                                           match reset.interval.
                                       interval_count:
@@ -4282,6 +4556,7 @@ paths:
                                         enum:
                                           - prepaid
                                           - usage_based
+                                        type: string
                                         description: "'prepaid' for features like seats where customers pay upfront,
                                           'usage_based' for pay-as-you-go after
                                           included usage."
@@ -4326,6 +4601,7 @@ paths:
                                     enum:
                                       - month
                                       - forever
+                                    type: string
                                     description: When rolled over units expire.
                                   expiry_duration_length:
                                     type: number
@@ -4355,6 +4631,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               description: Unit of time for the trial duration ('day', 'month', 'year').
                             card_required:
                               type: boolean
@@ -4373,6 +4650,7 @@ paths:
                           enum:
                             - sandbox
                             - live
+                          type: string
                           description: Environment this plan belongs to ('sandbox' or 'live').
                         archived:
                           type: boolean
@@ -4395,6 +4673,7 @@ paths:
                               enum:
                                 - active
                                 - scheduled
+                              type: string
                               description: The customer's current status with this plan. 'active' if attached,
                                 'scheduled' if pending activation.
                             canceling:
@@ -4411,6 +4690,7 @@ paths:
                                 - downgrade
                                 - none
                                 - purchase
+                              type: string
                               description: The action that would occur if this plan were attached to the
                                 customer.
                           required:
@@ -4567,6 +4847,7 @@ paths:
                             - quarter
                             - semi_annual
                             - year
+                          type: string
                           description: Billing interval (e.g. 'month', 'year').
                         interval_count:
                           type: number
@@ -4607,6 +4888,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Interval at which balance resets (e.g. 'month', 'year'). For
                               consumable features only.
                           interval_count:
@@ -4643,6 +4925,7 @@ paths:
                             enum:
                               - graduated
                               - volume
+                            type: string
                           interval:
                             enum:
                               - one_off
@@ -4651,6 +4934,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Billing interval. For consumable features, should match
                               reset.interval.
                           interval_count:
@@ -4666,6 +4950,7 @@ paths:
                             enum:
                               - prepaid
                               - usage_based
+                            type: string
                             description: "'prepaid' for upfront payment (seats), 'usage_based' for
                               pay-as-you-go."
                           max_purchase:
@@ -4685,6 +4970,7 @@ paths:
                               - prorate_immediately
                               - prorate_next_cycle
                               - bill_next_cycle
+                            type: string
                             description: Billing behavior when quantity increases mid-cycle.
                           on_decrease:
                             enum:
@@ -4693,6 +4979,7 @@ paths:
                               - prorate_next_cycle
                               - none
                               - no_prorations
+                            type: string
                             description: Credit behavior when quantity decreases mid-cycle.
                         required:
                           - on_increase
@@ -4709,6 +4996,7 @@ paths:
                             enum:
                               - month
                               - forever
+                            type: string
                             description: When rolled over units expire.
                           expiry_duration_length:
                             type: number
@@ -4736,6 +5024,7 @@ paths:
                             - day
                             - month
                             - year
+                          type: string
                           default: month
                           description: Unit of time for the trial ('day', 'month', 'year').
                         card_required:
@@ -4827,6 +5116,7 @@ paths:
                               - quarter
                               - semi_annual
                               - year
+                            type: string
                             description: Billing interval (e.g. 'month', 'year').
                           interval_count:
                             type: number
@@ -4876,6 +5166,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                              type: string
                               description: The type of the feature
                             display:
                               anyOf:
@@ -4940,6 +5231,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: The interval at which the feature balance resets (e.g. 'month',
                                     'year'). For consumable features, usage
                                     resets to 0 and included units are restored.
@@ -4973,6 +5265,7 @@ paths:
                                   enum:
                                     - graduated
                                     - volume
+                                  type: string
                                 interval:
                                   enum:
                                     - one_off
@@ -4981,6 +5274,7 @@ paths:
                                     - quarter
                                     - semi_annual
                                     - year
+                                  type: string
                                   description: Billing interval for this price. For consumable features, should
                                     match reset.interval.
                                 interval_count:
@@ -4996,6 +5290,7 @@ paths:
                                   enum:
                                     - prepaid
                                     - usage_based
+                                  type: string
                                   description: "'prepaid' for features like seats where customers pay upfront,
                                     'usage_based' for pay-as-you-go after
                                     included usage."
@@ -5039,6 +5334,7 @@ paths:
                               enum:
                                 - month
                                 - forever
+                              type: string
                               description: When rolled over units expire.
                             expiry_duration_length:
                               type: number
@@ -5067,6 +5363,7 @@ paths:
                           - day
                           - month
                           - year
+                        type: string
                         description: Unit of time for the trial duration ('day', 'month', 'year').
                       card_required:
                         type: boolean
@@ -5085,6 +5382,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: Environment this plan belongs to ('sandbox' or 'live').
                   archived:
                     type: boolean
@@ -5107,6 +5405,7 @@ paths:
                         enum:
                           - active
                           - scheduled
+                        type: string
                         description: The customer's current status with this plan. 'active' if attached,
                           'scheduled' if pending activation.
                       canceling:
@@ -5123,6 +5422,7 @@ paths:
                           - downgrade
                           - none
                           - purchase
+                        type: string
                         description: The action that would occur if this plan were attached to the
                           customer.
                     required:
@@ -5338,6 +5638,7 @@ paths:
                     - boolean
                     - metered
                     - credit_system
+                  type: string
                   description: The type of the feature. 'single_use' features are consumed, like
                     API calls, tokens, or messages. 'continuous_use' features
                     are allocated, like seats, workspaces, or projects.
@@ -5423,6 +5724,7 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                    type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
                       pools."
@@ -5570,6 +5872,7 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                    type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
                       pools."
@@ -5699,6 +6002,7 @@ paths:
                             - boolean
                             - metered
                             - credit_system
+                          type: string
                           description: "Feature type: 'boolean' for on/off access, 'metered' for
                             usage-tracked features, 'credit_system' for unified
                             credit pools."
@@ -5833,6 +6137,7 @@ paths:
                     - boolean
                     - metered
                     - credit_system
+                  type: string
                   description: The type of the feature. 'single_use' features are consumed, like
                     API calls, tokens, or messages. 'continuous_use' features
                     are allocated, like seats, workspaces, or projects.
@@ -5918,6 +6223,7 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                    type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
                       pools."
@@ -6167,6 +6473,7 @@ paths:
                                 - quarter
                                 - semi_annual
                                 - year
+                              type: string
                               description: Billing interval (e.g. 'month', 'year').
                             interval_count:
                               type: number
@@ -6208,6 +6515,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Interval at which balance resets (e.g. 'month', 'year'). For
                                   consumable features only.
                               interval_count:
@@ -6244,6 +6552,7 @@ paths:
                                 enum:
                                   - graduated
                                   - volume
+                                type: string
                               interval:
                                 enum:
                                   - one_off
@@ -6252,6 +6561,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Billing interval. For consumable features, should match
                                   reset.interval.
                               interval_count:
@@ -6267,6 +6577,7 @@ paths:
                                 enum:
                                   - prepaid
                                   - usage_based
+                                type: string
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
@@ -6286,6 +6597,7 @@ paths:
                                   - prorate_immediately
                                   - prorate_next_cycle
                                   - bill_next_cycle
+                                type: string
                                 description: Billing behavior when quantity increases mid-cycle.
                               on_decrease:
                                 enum:
@@ -6294,6 +6606,7 @@ paths:
                                   - prorate_next_cycle
                                   - none
                                   - no_prorations
+                                type: string
                                 description: Credit behavior when quantity decreases mid-cycle.
                             required:
                               - on_increase
@@ -6310,6 +6623,7 @@ paths:
                                 enum:
                                   - month
                                   - forever
+                                type: string
                                 description: When rolled over units expire.
                               expiry_duration_length:
                                 type: number
@@ -6336,6 +6650,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               default: month
                               description: Unit of time for the trial ('day', 'month', 'year').
                             card_required:
@@ -6379,6 +6694,7 @@ paths:
                   enum:
                     - prorate_immediately
                     - none
+                  type: string
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges.
@@ -6387,6 +6703,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -6423,6 +6740,7 @@ paths:
                   enum:
                     - immediate
                     - end_of_cycle
+                  type: string
                   description: When the plan change should take effect. 'immediate' applies now,
                     'end_of_cycle' schedules for the end of the current billing
                     cycle. By default, upgrades are immediate and downgrades are
@@ -6554,6 +6872,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                        type: string
                         description: The type of action required to complete the payment.
                       reason:
                         type: string
@@ -6657,6 +6976,7 @@ paths:
                                       - quarter
                                       - semi_annual
                                       - year
+                                    type: string
                                     description: Billing interval (e.g. 'month', 'year').
                                   interval_count:
                                     type: number
@@ -6698,6 +7018,7 @@ paths:
                                         - quarter
                                         - semi_annual
                                         - year
+                                      type: string
                                       description: Interval at which balance resets (e.g. 'month', 'year'). For
                                         consumable features only.
                                     interval_count:
@@ -6734,6 +7055,7 @@ paths:
                                       enum:
                                         - graduated
                                         - volume
+                                      type: string
                                     interval:
                                       enum:
                                         - one_off
@@ -6742,6 +7064,7 @@ paths:
                                         - quarter
                                         - semi_annual
                                         - year
+                                      type: string
                                       description: Billing interval. For consumable features, should match
                                         reset.interval.
                                     interval_count:
@@ -6758,6 +7081,7 @@ paths:
                                       enum:
                                         - prepaid
                                         - usage_based
+                                      type: string
                                       description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                         pay-as-you-go."
                                     max_purchase:
@@ -6777,6 +7101,7 @@ paths:
                                         - prorate_immediately
                                         - prorate_next_cycle
                                         - bill_next_cycle
+                                      type: string
                                       description: Billing behavior when quantity increases mid-cycle.
                                     on_decrease:
                                       enum:
@@ -6785,6 +7110,7 @@ paths:
                                         - prorate_next_cycle
                                         - none
                                         - no_prorations
+                                      type: string
                                       description: Credit behavior when quantity decreases mid-cycle.
                                   required:
                                     - on_increase
@@ -6801,6 +7127,7 @@ paths:
                                       enum:
                                         - month
                                         - forever
+                                      type: string
                                       description: When rolled over units expire.
                                     expiry_duration_length:
                                       type: number
@@ -6859,6 +7186,7 @@ paths:
                             - day
                             - month
                             - year
+                          type: string
                           default: month
                           description: Unit of time for the trial ('day', 'month', 'year').
                         card_required:
@@ -6925,6 +7253,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -6965,6 +7294,40 @@ paths:
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
                           description: List of overage spend limits per feature.
+                        usage_alerts:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature ID this alert applies to. If omitted, the alert applies
+                                  globally.
+                              enabled:
+                                type: boolean
+                                default: true
+                                description: Whether this usage alert is enabled.
+                              threshold:
+                                type: number
+                                minimum: 0
+                                description: The threshold value that triggers the alert. For usage, this is an
+                                  absolute count. For usage_percentage, this is
+                                  a percentage (0-100).
+                              threshold_type:
+                                enum:
+                                  - usage
+                                  - usage_percentage
+                                type: string
+                                description: Whether the threshold is an absolute usage count or a percentage of
+                                  the usage allowance.
+                              name:
+                                type: string
+                                description: Optional user-defined label to distinguish multiple alerts on the
+                                  same feature.
+                            required:
+                              - threshold
+                              - threshold_type
+                          description: List of usage alert configurations per feature.
                       description: Billing controls for the entity.
                   required:
                     - feature_id
@@ -7041,6 +7404,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                        type: string
                         description: The type of action required to complete the payment.
                       reason:
                         type: string
@@ -7195,6 +7559,7 @@ paths:
                                 - quarter
                                 - semi_annual
                                 - year
+                              type: string
                               description: Billing interval (e.g. 'month', 'year').
                             interval_count:
                               type: number
@@ -7236,6 +7601,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Interval at which balance resets (e.g. 'month', 'year'). For
                                   consumable features only.
                               interval_count:
@@ -7272,6 +7638,7 @@ paths:
                                 enum:
                                   - graduated
                                   - volume
+                                type: string
                               interval:
                                 enum:
                                   - one_off
@@ -7280,6 +7647,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Billing interval. For consumable features, should match
                                   reset.interval.
                               interval_count:
@@ -7295,6 +7663,7 @@ paths:
                                 enum:
                                   - prepaid
                                   - usage_based
+                                type: string
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
@@ -7314,6 +7683,7 @@ paths:
                                   - prorate_immediately
                                   - prorate_next_cycle
                                   - bill_next_cycle
+                                type: string
                                 description: Billing behavior when quantity increases mid-cycle.
                               on_decrease:
                                 enum:
@@ -7322,6 +7692,7 @@ paths:
                                   - prorate_next_cycle
                                   - none
                                   - no_prorations
+                                type: string
                                 description: Credit behavior when quantity decreases mid-cycle.
                             required:
                               - on_increase
@@ -7338,6 +7709,7 @@ paths:
                                 enum:
                                   - month
                                   - forever
+                                type: string
                                 description: When rolled over units expire.
                               expiry_duration_length:
                                 type: number
@@ -7364,6 +7736,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               default: month
                               description: Unit of time for the trial ('day', 'month', 'year').
                             card_required:
@@ -7407,6 +7780,7 @@ paths:
                   enum:
                     - prorate_immediately
                     - none
+                  type: string
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges.
@@ -7415,6 +7789,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -7451,6 +7826,7 @@ paths:
                   enum:
                     - immediate
                     - end_of_cycle
+                  type: string
                   description: When the plan change should take effect. 'immediate' applies now,
                     'end_of_cycle' schedules for the end of the current billing
                     cycle. By default, upgrades are immediate and downgrades are
@@ -7776,10 +8152,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being added or updated.
                   outgoing:
                     type: array
@@ -7813,10 +8203,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being removed or ended.
                 required:
                   - customer_id
@@ -7924,6 +8328,7 @@ paths:
                                       - quarter
                                       - semi_annual
                                       - year
+                                    type: string
                                     description: Billing interval (e.g. 'month', 'year').
                                   interval_count:
                                     type: number
@@ -7965,6 +8370,7 @@ paths:
                                         - quarter
                                         - semi_annual
                                         - year
+                                      type: string
                                       description: Interval at which balance resets (e.g. 'month', 'year'). For
                                         consumable features only.
                                     interval_count:
@@ -8001,6 +8407,7 @@ paths:
                                       enum:
                                         - graduated
                                         - volume
+                                      type: string
                                     interval:
                                       enum:
                                         - one_off
@@ -8009,6 +8416,7 @@ paths:
                                         - quarter
                                         - semi_annual
                                         - year
+                                      type: string
                                       description: Billing interval. For consumable features, should match
                                         reset.interval.
                                     interval_count:
@@ -8025,6 +8433,7 @@ paths:
                                       enum:
                                         - prepaid
                                         - usage_based
+                                      type: string
                                       description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                         pay-as-you-go."
                                     max_purchase:
@@ -8044,6 +8453,7 @@ paths:
                                         - prorate_immediately
                                         - prorate_next_cycle
                                         - bill_next_cycle
+                                      type: string
                                       description: Billing behavior when quantity increases mid-cycle.
                                     on_decrease:
                                       enum:
@@ -8052,6 +8462,7 @@ paths:
                                         - prorate_next_cycle
                                         - none
                                         - no_prorations
+                                      type: string
                                       description: Credit behavior when quantity decreases mid-cycle.
                                   required:
                                     - on_increase
@@ -8068,6 +8479,7 @@ paths:
                                       enum:
                                         - month
                                         - forever
+                                      type: string
                                       description: When rolled over units expire.
                                     expiry_duration_length:
                                       type: number
@@ -8126,6 +8538,7 @@ paths:
                             - day
                             - month
                             - year
+                          type: string
                           default: month
                           description: Unit of time for the trial ('day', 'month', 'year').
                         card_required:
@@ -8192,6 +8605,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -8232,6 +8646,40 @@ paths:
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
                           description: List of overage spend limits per feature.
+                        usage_alerts:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature ID this alert applies to. If omitted, the alert applies
+                                  globally.
+                              enabled:
+                                type: boolean
+                                default: true
+                                description: Whether this usage alert is enabled.
+                              threshold:
+                                type: number
+                                minimum: 0
+                                description: The threshold value that triggers the alert. For usage, this is an
+                                  absolute count. For usage_percentage, this is
+                                  a percentage (0-100).
+                              threshold_type:
+                                enum:
+                                  - usage
+                                  - usage_percentage
+                                type: string
+                                description: Whether the threshold is an absolute usage count or a percentage of
+                                  the usage allowance.
+                              name:
+                                type: string
+                                description: Optional user-defined label to distinguish multiple alerts on the
+                                  same feature.
+                            required:
+                              - threshold
+                              - threshold_type
+                          description: List of usage alert configurations per feature.
                       description: Billing controls for the entity.
                   required:
                     - feature_id
@@ -8502,10 +8950,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being added or updated.
                   outgoing:
                     type: array
@@ -8539,10 +9001,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being removed or ended.
                 required:
                   - customer_id
@@ -8697,6 +9173,7 @@ paths:
                                 - quarter
                                 - semi_annual
                                 - year
+                              type: string
                               description: Billing interval (e.g. 'month', 'year').
                             interval_count:
                               type: number
@@ -8738,6 +9215,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Interval at which balance resets (e.g. 'month', 'year'). For
                                   consumable features only.
                               interval_count:
@@ -8774,6 +9252,7 @@ paths:
                                 enum:
                                   - graduated
                                   - volume
+                                type: string
                               interval:
                                 enum:
                                   - one_off
@@ -8782,6 +9261,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Billing interval. For consumable features, should match
                                   reset.interval.
                               interval_count:
@@ -8797,6 +9277,7 @@ paths:
                                 enum:
                                   - prepaid
                                   - usage_based
+                                type: string
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
@@ -8816,6 +9297,7 @@ paths:
                                   - prorate_immediately
                                   - prorate_next_cycle
                                   - bill_next_cycle
+                                type: string
                                 description: Billing behavior when quantity increases mid-cycle.
                               on_decrease:
                                 enum:
@@ -8824,6 +9306,7 @@ paths:
                                   - prorate_next_cycle
                                   - none
                                   - no_prorations
+                                type: string
                                 description: Credit behavior when quantity decreases mid-cycle.
                             required:
                               - on_increase
@@ -8840,6 +9323,7 @@ paths:
                                 enum:
                                   - month
                                   - forever
+                                type: string
                                 description: When rolled over units expire.
                               expiry_duration_length:
                                 type: number
@@ -8866,6 +9350,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               default: month
                               description: Unit of time for the trial ('day', 'month', 'year').
                             card_required:
@@ -8909,6 +9394,7 @@ paths:
                   enum:
                     - prorate_immediately
                     - none
+                  type: string
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges.
@@ -8917,6 +9403,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -8931,6 +9418,7 @@ paths:
                     - cancel_immediately
                     - cancel_end_of_cycle
                     - uncancel
+                  type: string
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
@@ -8938,6 +9426,17 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                recalculate_balances:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: If true, recalculates balances during the subscription update. Only
+                        applicable when updating feature quantities.
+                  required:
+                    - enabled
+                  description: Controls whether balances should be recalculated during the
+                    subscription update.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -9008,6 +9507,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                        type: string
                         description: The type of action required to complete the payment.
                       reason:
                         type: string
@@ -9149,6 +9649,7 @@ paths:
                                 - quarter
                                 - semi_annual
                                 - year
+                              type: string
                               description: Billing interval (e.g. 'month', 'year').
                             interval_count:
                               type: number
@@ -9190,6 +9691,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Interval at which balance resets (e.g. 'month', 'year'). For
                                   consumable features only.
                               interval_count:
@@ -9226,6 +9728,7 @@ paths:
                                 enum:
                                   - graduated
                                   - volume
+                                type: string
                               interval:
                                 enum:
                                   - one_off
@@ -9234,6 +9737,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Billing interval. For consumable features, should match
                                   reset.interval.
                               interval_count:
@@ -9249,6 +9753,7 @@ paths:
                                 enum:
                                   - prepaid
                                   - usage_based
+                                type: string
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
@@ -9268,6 +9773,7 @@ paths:
                                   - prorate_immediately
                                   - prorate_next_cycle
                                   - bill_next_cycle
+                                type: string
                                 description: Billing behavior when quantity increases mid-cycle.
                               on_decrease:
                                 enum:
@@ -9276,6 +9782,7 @@ paths:
                                   - prorate_next_cycle
                                   - none
                                   - no_prorations
+                                type: string
                                 description: Credit behavior when quantity decreases mid-cycle.
                             required:
                               - on_increase
@@ -9292,6 +9799,7 @@ paths:
                                 enum:
                                   - month
                                   - forever
+                                type: string
                                 description: When rolled over units expire.
                               expiry_duration_length:
                                 type: number
@@ -9318,6 +9826,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               default: month
                               description: Unit of time for the trial ('day', 'month', 'year').
                             card_required:
@@ -9361,6 +9870,7 @@ paths:
                   enum:
                     - prorate_immediately
                     - none
+                  type: string
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges.
@@ -9369,6 +9879,7 @@ paths:
                     - always
                     - if_required
                     - never
+                  type: string
                   description: Controls when to return a checkout URL. 'always' returns a URL even
                     if payment succeeds, 'if_required' only when payment action
                     is needed, 'never' disables redirects.
@@ -9383,6 +9894,7 @@ paths:
                     - cancel_immediately
                     - cancel_end_of_cycle
                     - uncancel
+                  type: string
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
@@ -9390,6 +9902,17 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                recalculate_balances:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: If true, recalculates balances during the subscription update. Only
+                        applicable when updating feature quantities.
+                  required:
+                    - enabled
+                  description: Controls whether balances should be recalculated during the
+                    subscription update.
               required:
                 - customer_id
               title: PreviewUpdateParams
@@ -9654,10 +10177,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being added or updated.
                   outgoing:
                     type: array
@@ -9691,10 +10228,24 @@ paths:
                             - type: "null"
                           description: When this change takes effect, in milliseconds since the Unix
                             epoch, or null if it applies immediately.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan was canceled, in milliseconds since the Unix epoch,
+                            or null if it is not canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: When this plan expires, in milliseconds since the Unix epoch, or
+                            null if it does not expire.
                       required:
                         - plan_id
                         - feature_quantities
                         - effective_at
+                        - canceled_at
+                        - expires_at
                     description: Products or subscription changes being removed or ended.
                   intent:
                     enum:
@@ -9704,6 +10255,7 @@ paths:
                       - cancel_end_of_cycle
                       - uncancel
                       - none
+                    type: string
                 required:
                   - customer_id
                   - line_items
@@ -9926,6 +10478,7 @@ paths:
                                 - quarter
                                 - semi_annual
                                 - year
+                              type: string
                               description: Billing interval (e.g. 'month', 'year').
                             interval_count:
                               type: number
@@ -9967,6 +10520,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Interval at which balance resets (e.g. 'month', 'year'). For
                                   consumable features only.
                               interval_count:
@@ -10003,6 +10557,7 @@ paths:
                                 enum:
                                   - graduated
                                   - volume
+                                type: string
                               interval:
                                 enum:
                                   - one_off
@@ -10011,6 +10566,7 @@ paths:
                                   - quarter
                                   - semi_annual
                                   - year
+                                type: string
                                 description: Billing interval. For consumable features, should match
                                   reset.interval.
                               interval_count:
@@ -10026,6 +10582,7 @@ paths:
                                 enum:
                                   - prepaid
                                   - usage_based
+                                type: string
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
@@ -10045,6 +10602,7 @@ paths:
                                   - prorate_immediately
                                   - prorate_next_cycle
                                   - bill_next_cycle
+                                type: string
                                 description: Billing behavior when quantity increases mid-cycle.
                               on_decrease:
                                 enum:
@@ -10053,6 +10611,7 @@ paths:
                                   - prorate_next_cycle
                                   - none
                                   - no_prorations
+                                type: string
                                 description: Credit behavior when quantity decreases mid-cycle.
                             required:
                               - on_increase
@@ -10069,6 +10628,7 @@ paths:
                                 enum:
                                   - month
                                   - forever
+                                type: string
                                 description: When rolled over units expire.
                               expiry_duration_length:
                                 type: number
@@ -10095,6 +10655,7 @@ paths:
                                 - day
                                 - month
                                 - year
+                              type: string
                               default: month
                               description: Unit of time for the trial ('day', 'month', 'year').
                             card_required:
@@ -10115,6 +10676,7 @@ paths:
                   enum:
                     - prorate_immediately
                     - none
+                  type: string
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges.
@@ -10312,6 +10874,7 @@ paths:
                         - quarter
                         - semi_annual
                         - year
+                      type: string
                       description: The interval at which the balance resets (e.g., 'month', 'day',
                         'year').
                     interval_count:
@@ -10439,6 +11002,7 @@ paths:
                     - quarter
                     - semi_annual
                     - year
+                  type: string
                   description: Target a specific balance by its reset interval. Use when the
                     customer has multiple balances for the same feature with
                     different reset intervals.
@@ -10548,6 +11112,7 @@ paths:
                     - quarter
                     - semi_annual
                     - year
+                  type: string
                   description: Target a specific balance by its reset interval. Use when the
                     customer has multiple balances for the same feature with
                     different reset intervals.
@@ -10624,6 +11189,7 @@ paths:
                   enum:
                     - confirm
                     - release
+                  type: string
                   description: Use 'confirm' to commit the deduction, or 'release' to return the
                     held balance.
                 override_value:
@@ -10838,6 +11404,7 @@ paths:
                                   - boolean
                                   - metered
                                   - credit_system
+                                type: string
                                 description: "Feature type: 'boolean' for on/off access, 'metered' for
                                   usage-tracked features, 'credit_system' for
                                   unified credit pools."
@@ -10912,6 +11479,7 @@ paths:
                         enum:
                           - usage_limit
                           - feature_flag
+                        type: string
                         description: The reason access was denied. 'usage_limit' means the customer
                           exceeded their balance, 'feature_flag' means the
                           feature is not included in their plan.
@@ -10947,6 +11515,7 @@ paths:
                               enum:
                                 - sandbox
                                 - live
+                              type: string
                               description: The environment of the product
                             is_add_on:
                               type: boolean
@@ -10976,6 +11545,7 @@ paths:
                                           - feature
                                           - priced_feature
                                           - price
+                                        type: string
                                       - type: "null"
                                     description: The type of the product item
                                   feature_id:
@@ -10991,6 +11561,7 @@ paths:
                                           - continuous_use
                                           - boolean
                                           - static
+                                        type: string
                                       - type: "null"
                                     description: Single use features are used once and then depleted, like API calls
                                       or credits. Continuous use features are
@@ -11014,6 +11585,7 @@ paths:
                                           - quarter
                                           - semi_annual
                                           - year
+                                        type: string
                                       - type: "null"
                                     description: The reset or billing interval of the product item. If null, feature
                                       will have no reset date, and if there's a
@@ -11044,6 +11616,7 @@ paths:
                                       - enum:
                                           - graduated
                                           - volume
+                                        type: string
                                       - type: "null"
                                     description: "How tiers are applied: graduated (split across bands) or volume
                                       (flat rate for the matched tier). Defaults
@@ -11053,6 +11626,7 @@ paths:
                                       - enum:
                                           - prepaid
                                           - pay_per_use
+                                        type: string
                                       - type: "null"
                                     description: Whether the feature should be prepaid upfront or billed for how
                                       much they use end of billing period.
@@ -11113,6 +11687,7 @@ paths:
                                                     enum:
                                                       - month
                                                       - forever
+                                                    type: string
                                                     default: month
                                                   length:
                                                     type: number
@@ -11127,6 +11702,7 @@ paths:
                                                   - prorate_immediately
                                                   - prorate_next_cycle
                                                   - bill_next_cycle
+                                                type: string
                                               - type: "null"
                                           on_decrease:
                                             anyOf:
@@ -11136,6 +11712,7 @@ paths:
                                                   - prorate_next_cycle
                                                   - none
                                                   - no_prorations
+                                                type: string
                                               - type: "null"
                                       - type: "null"
                                     description: Configuration for rollover and proration behavior of the feature.
@@ -11151,6 +11728,7 @@ paths:
                                         - day
                                         - month
                                         - year
+                                      type: string
                                       description: The duration type of the free trial
                                     length:
                                       type: number
@@ -11195,6 +11773,7 @@ paths:
                                 - cancel
                                 - expired
                                 - past_due
+                              type: string
                               description: Scenario for when this product is used in attach flows
                             properties:
                               type: object
@@ -11701,6 +12280,7 @@ paths:
                     - last_cycle
                     - 1bc
                     - 3bc
+                  type: string
                   description: Time range to aggregate events for. Either range or custom_range
                     must be provided
                 bin_size:
@@ -11708,6 +12288,7 @@ paths:
                     - day
                     - hour
                     - month
+                  type: string
                   default: day
                   description: Size of the time bins to aggregate events for. Defaults to hour if
                     range is 24h, otherwise day
@@ -11930,6 +12511,40 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of overage spend limits per feature.
+                    usage_alerts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this alert applies to. If omitted, the alert applies
+                              globally.
+                          enabled:
+                            type: boolean
+                            default: true
+                            description: Whether this usage alert is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: The threshold value that triggers the alert. For usage, this is an
+                              absolute count. For usage_percentage, this is a
+                              percentage (0-100).
+                          threshold_type:
+                            enum:
+                              - usage
+                              - usage_percentage
+                            type: string
+                            description: Whether the threshold is an absolute usage count or a percentage of
+                              the usage allowance.
+                          name:
+                            type: string
+                            description: Optional user-defined label to distinguish multiple alerts on the
+                              same feature.
+                        required:
+                          - threshold
+                          - threshold_type
+                      description: List of usage alert configurations per feature.
                   description: Billing controls for the entity.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
@@ -11988,6 +12603,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: The environment (sandbox/live)
                   subscriptions:
                     type: array
@@ -12015,6 +12631,7 @@ paths:
                           enum:
                             - active
                             - scheduled
+                          type: string
                           description: Current status of the subscription.
                         past_due:
                           type: boolean
@@ -12138,6 +12755,7 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                              type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
                                 unified credit pools."
@@ -12223,6 +12841,40 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of overage spend limits per feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to. If omitted, the alert applies
+                                globally.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage, this is an
+                                absolute count. For usage_percentage, this is a
+                                percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                              type: string
+                              description: Whether the threshold is an absolute usage count or a percentage of
+                                the usage allowance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
                     description: Billing controls for the entity.
                   invoices:
                     type: array
@@ -12422,6 +13074,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: The environment (sandbox/live)
                   subscriptions:
                     type: array
@@ -12449,6 +13102,7 @@ paths:
                           enum:
                             - active
                             - scheduled
+                          type: string
                           description: Current status of the subscription.
                         past_due:
                           type: boolean
@@ -12572,6 +13226,7 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                              type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
                                 unified credit pools."
@@ -12657,6 +13312,40 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of overage spend limits per feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to. If omitted, the alert applies
+                                globally.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage, this is an
+                                absolute count. For usage_percentage, this is a
+                                percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                              type: string
+                              description: Whether the threshold is an absolute usage count or a percentage of
+                                the usage allowance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
                     description: Billing controls for the entity.
                   invoices:
                     type: array
@@ -12824,6 +13513,40 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of overage spend limits per feature.
+                    usage_alerts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this alert applies to. If omitted, the alert applies
+                              globally.
+                          enabled:
+                            type: boolean
+                            default: true
+                            description: Whether this usage alert is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: The threshold value that triggers the alert. For usage, this is an
+                              absolute count. For usage_percentage, this is a
+                              percentage (0-100).
+                          threshold_type:
+                            enum:
+                              - usage
+                              - usage_percentage
+                            type: string
+                            description: Whether the threshold is an absolute usage count or a percentage of
+                              the usage allowance.
+                          name:
+                            type: string
+                            description: Optional user-defined label to distinguish multiple alerts on the
+                              same feature.
+                        required:
+                          - threshold
+                          - threshold_type
+                      description: List of usage alert configurations per feature.
                   description: Billing controls to replace on the entity.
               required:
                 - entity_id
@@ -12873,6 +13596,7 @@ paths:
                     enum:
                       - sandbox
                       - live
+                    type: string
                     description: The environment (sandbox/live)
                   subscriptions:
                     type: array
@@ -12900,6 +13624,7 @@ paths:
                           enum:
                             - active
                             - scheduled
+                          type: string
                           description: Current status of the subscription.
                         past_due:
                           type: boolean
@@ -13023,6 +13748,7 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                              type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
                                 unified credit pools."
@@ -13108,6 +13834,40 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of overage spend limits per feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to. If omitted, the alert applies
+                                globally.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage, this is an
+                                absolute count. For usage_percentage, this is a
+                                percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                              type: string
+                              description: Whether the threshold is an absolute usage count or a percentage of
+                                the usage allowance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
                     description: Billing controls for the entity.
                   invoices:
                     type: array
@@ -13518,3 +14278,317 @@ x-speakeasy-globals:
         type: string
         default: 2.2.0
       x-speakeasy-globals-hidden: true
+webhooks:
+  balances.usage_alert_triggered:
+    post:
+      operationId: balancesUsageAlertTriggered
+      summary: Usage Alert Triggered
+      description: Fired when a customer crosses a configured usage alert threshold.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: balances.usage_alert_triggered
+                  description: The webhook event type.
+                data:
+                  examples:
+                    - customer_id: org_123
+                      feature_id: api_calls
+                      entity_id: workspace_abc
+                      usage_alert:
+                        name: 80% usage warning
+                        threshold: 80
+                        threshold_type: usage_percentage_threshold
+                  type: object
+                  properties:
+                    customer_id:
+                      description: The ID of the customer whose usage alert was triggered.
+                      type: string
+                    feature_id:
+                      description: The feature ID the alert applies to.
+                      type: string
+                    entity_id:
+                      description: The entity ID the alert applies to, if the usage was entity-scoped.
+                      type: string
+                    usage_alert:
+                      description: Details of the usage alert that was triggered.
+                      type: object
+                      properties:
+                        name:
+                          description: User-defined label for the alert, if provided.
+                          type: string
+                        threshold:
+                          description: The threshold value that was crossed.
+                          type: number
+                        threshold_type:
+                          description: Whether the threshold is an absolute usage count or a percentage.
+                          type: string
+                          enum:
+                            - usage
+                            - usage_percentage
+                      required:
+                        - threshold
+                        - threshold_type
+                      additionalProperties: false
+                  required:
+                    - customer_id
+                    - feature_id
+                    - usage_alert
+                  additionalProperties: false
+            example:
+              type: balances.usage_alert_triggered
+              data:
+                customer_id: org_123
+                feature_id: api_calls
+                entity_id: workspace_abc
+                usage_alert:
+                  name: 80% usage warning
+                  threshold: 80
+                  threshold_type: usage_percentage_threshold
+      responses:
+        "200":
+          description: Webhook received successfully.
+  balances.limit_reached:
+    post:
+      operationId: balancesLimitReached
+      summary: Limit Reached
+      description: Fired when a customer reaches the limit for a feature (included
+        allowance, max purchase, or spend limit).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: balances.limit_reached
+                  description: The webhook event type.
+                data:
+                  examples:
+                    - customer_id: org_123
+                      entity_id: workspace_abc
+                      feature_id: api_calls
+                      limit_type: included
+                  type: object
+                  properties:
+                    customer_id:
+                      description: The ID of the customer who hit the limit.
+                      type: string
+                    entity_id:
+                      description: The entity ID, if the limit was reached on a specific entity.
+                      type: string
+                    feature_id:
+                      description: The feature ID whose limit was reached.
+                      type: string
+                    limit_type:
+                      description: "Which limit was hit: included allowance, max purchase cap, or
+                        spend limit."
+                      type: string
+                      enum:
+                        - included
+                        - max_purchase
+                        - spend_limit
+                  required:
+                    - customer_id
+                    - feature_id
+                    - limit_type
+                  additionalProperties: false
+            example:
+              type: balances.limit_reached
+              data:
+                customer_id: org_123
+                entity_id: workspace_abc
+                feature_id: api_calls
+                limit_type: included
+      responses:
+        "200":
+          description: Webhook received successfully.
+  vercel.resources.deleted:
+    post:
+      operationId: vercelResourcesDeleted
+      summary: Resource Deleted
+      description: When a Vercel resource is deleted, you'll need to handle
+        de-provisioning any API keys or other non-Autumn controlled data for
+        this user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: vercel.resources.deleted
+                  description: The webhook event type.
+                data:
+                  type: object
+                  properties:
+                    resource:
+                      description: The resource that was deleted.
+                      type: object
+                      properties:
+                        id:
+                          description: The unique identifier of the deleted resource.
+                          type: string
+                      required:
+                        - id
+                      additionalProperties: false
+                    installation_id:
+                      description: The Vercel integration configuration ID.
+                      type: string
+                  required:
+                    - resource
+                    - installation_id
+                  additionalProperties: false
+      responses:
+        "200":
+          description: Webhook received successfully.
+  vercel.resources.provisioned:
+    post:
+      operationId: vercelResourcesProvisioned
+      summary: Resource Provisioned
+      description: When a Vercel resource is created, you'll need to provision a
+        secret key for your service. Then you can use the provided access token
+        to patch the resource's secrets.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: vercel.resources.provisioned
+                  description: The webhook event type.
+                data:
+                  type: object
+                  properties:
+                    resource:
+                      description: The resource that was provisioned.
+                      type: object
+                      properties:
+                        id:
+                          description: The unique identifier of the provisioned resource.
+                          type: string
+                        name:
+                          description: The display name of the provisioned resource.
+                          type: string
+                      required:
+                        - id
+                        - name
+                      additionalProperties: false
+                    installation_id:
+                      description: The Vercel integration configuration ID.
+                      type: string
+                    access_token:
+                      description: An access token that can be used to patch the resource's secrets.
+                      type: string
+                  required:
+                    - resource
+                    - installation_id
+                    - access_token
+                  additionalProperties: false
+      responses:
+        "200":
+          description: Webhook received successfully.
+  vercel.resources.rotate_secrets:
+    post:
+      operationId: vercelResourcesRotateSecrets
+      summary: Rotate Secrets
+      description: This event is sent when Vercel requires a resource's secrets to be
+        rotated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: vercel.resources.rotate_secrets
+                  description: The webhook event type.
+                data:
+                  type: object
+                  properties:
+                    resource:
+                      description: The resource whose secrets should be rotated.
+                      type: object
+                      properties:
+                        id:
+                          description: The unique identifier of the resource.
+                          type: string
+                      required:
+                        - id
+                      additionalProperties: false
+                    installation_id:
+                      description: The Vercel integration configuration ID.
+                      type: string
+                    vercel_request_body:
+                      description: The raw request body from Vercel's rotation request.
+                  required:
+                    - resource
+                    - installation_id
+                    - vercel_request_body
+                  additionalProperties: false
+      responses:
+        "200":
+          description: Webhook received successfully.
+  vercel.webhooks.event:
+    post:
+      operationId: vercelWebhooksEvent
+      summary: Webhook Event
+      description: Passthrough webhook for Vercel events.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: vercel.webhooks.event
+                  description: The webhook event type.
+                data:
+                  type: object
+                  properties:
+                    installation_id:
+                      description: The Vercel integration configuration ID.
+                      type: string
+                    event:
+                      description: The raw Vercel webhook event payload.
+                  required:
+                    - installation_id
+                    - event
+                  additionalProperties: false
+      responses:
+        "200":
+          description: Webhook received successfully.

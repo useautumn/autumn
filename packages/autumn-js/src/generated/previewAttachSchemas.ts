@@ -425,6 +425,8 @@ export const previewAttachIncomingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachIncomingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewAttachOutgoingSchema = z.object({
@@ -432,6 +434,8 @@ export const previewAttachOutgoingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachOutgoingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewAttachResponseSchema = z.object({

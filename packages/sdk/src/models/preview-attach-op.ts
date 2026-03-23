@@ -749,6 +749,14 @@ export type PreviewAttachIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewAttachOutgoingFeatureQuantity = {
@@ -776,6 +784,14 @@ export type PreviewAttachOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 /**
@@ -1803,12 +1819,16 @@ export const PreviewAttachIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1862,12 +1882,16 @@ export const PreviewAttachOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );

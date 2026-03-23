@@ -1,4 +1,7 @@
 import type { AppEnv, Organization } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getSentryTags } from "@/external/sentry/sentryUtils.js";
 import { createSvixCli, getSvixAppId, safeSvix } from "./svixUtils.js";
 
 export const createSvixApp = safeSvix({
@@ -11,7 +14,7 @@ export const createSvixApp = safeSvix({
 		name: string;
 		orgId: string;
 		env: AppEnv;
-		meta?: Record<string, any>;
+		meta?: Record<string, unknown>;
 	}) => {
 		const svix = createSvixCli();
 		const app = await svix.application.create({
@@ -35,23 +38,26 @@ export const deleteSvixApp = safeSvix({
 	action: "deleteSvixApp",
 });
 
-export const sendSvixEvent = safeSvix({
-	fn: async ({
-		org,
-		env,
-		eventType,
-		data,
-	}: {
-		org: Organization;
-		env: AppEnv;
-		eventType: string;
-		data: any;
-	}) => {
+export const sendSvixEvent = async ({
+	ctx,
+	eventType,
+	data,
+}: {
+	ctx: AutumnContext;
+	eventType: string;
+	data: unknown;
+}) => {
+	if (!process.env.SVIX_API_KEY) return;
+
+	const { org, env } = ctx;
+
+	try {
+		ctx.logger.info(`[svix] Firing webhook: ${eventType}`);
+
 		const svix = createSvixCli();
 		const appId = getSvixAppId({ org, env });
-		if (!appId) {
-			return null;
-		}
+		if (!appId) return null;
+
 		return await svix.message.create(appId, {
 			eventType,
 			payload: {
@@ -59,9 +65,13 @@ export const sendSvixEvent = safeSvix({
 				data,
 			},
 		});
-	},
-	action: "sendSvixEvent",
-});
+	} catch (error) {
+		ctx.logger.error(`[svix] Failed to send ${eventType}: ${error}`);
+		Sentry.captureException(error, {
+			tags: getSentryTags({ ctx }),
+		});
+	}
+};
 
 export const sendCustomSvixEvent = safeSvix({
 	fn: async ({
@@ -76,7 +86,7 @@ export const sendCustomSvixEvent = safeSvix({
 		org: Organization;
 		env: AppEnv;
 		eventType: string;
-		data: any;
+		data: unknown;
 		appId: string;
 	}) => {
 		const svix = createSvixCli();

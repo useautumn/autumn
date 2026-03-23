@@ -12,11 +12,11 @@ export const updateEntityDbAndCache = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entity: Entity;
-	updates: Partial<Pick<Entity, "spend_limits">>;
+	updates: Partial<Pick<Entity, "spend_limits" | "usage_alerts">>;
 }) => {
 	const filteredUpdates = Object.fromEntries(
 		Object.entries(updates).filter(([, value]) => value !== undefined),
-	) as Partial<Pick<Entity, "spend_limits">>;
+	) as Partial<Pick<Entity, "spend_limits" | "usage_alerts">>;
 
 	if (Object.keys(filteredUpdates).length === 0) {
 		return entity;

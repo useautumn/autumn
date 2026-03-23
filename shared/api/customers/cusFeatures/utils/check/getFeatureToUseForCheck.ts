@@ -30,7 +30,7 @@ export const getFeatureToUseForCheck = ({
 			apiSubject,
 			feature,
 			requiredBalance,
-		})
+		}).allowed
 	) {
 		return feature;
 	}
@@ -45,7 +45,7 @@ export const getFeatureToUseForCheck = ({
 				apiSubject,
 				feature: creditSystem,
 				requiredBalance,
-			})
+			}).allowed
 		) {
 			return creditSystem;
 		}
