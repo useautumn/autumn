@@ -10,7 +10,7 @@ description: "Some new things we've shipped at Autumn HQ"
   The `autumn-js` SDK now ships adapters for Express, Elysia, and any framework that uses the Fetch API `Request`/`Response` objects. You can set up the `autumnHandler` in your backend with a single import — no manual request parsing required.
 
   - **Express**: Import from `autumn-js/express` and mount with `app.use()`. Requires `express.json()` before the handler
-  - **Elysia / Web Standard**: Import from `autumn-js/webStandard` and use with Elysia's `.mount()`, Cloudflare Workers, Deno, or any Fetch-based runtime
+  - **Elysia / Web Standard**: Import from `autumn-js/fetch` and use with Elysia's `.mount()`, Cloudflare Workers, Deno, or any Fetch-based runtime
   - **Existing adapters**: Next.js (`autumn-js/next`) and Hono (`autumn-js/hono`) continue to work as before
 
   See the [setup guide](/documentation/getting-started/setup) for framework-specific code examples.
@@ -36,7 +36,7 @@ description: "Some new things we've shipped at Autumn HQ"
   | --- | --- |
   | Next.js | `autumn-js/next` |
   | Hono | `autumn-js/hono` |
-  | Elysia / Web Standard | `autumn-js/webStandard` |
+  | Elysia / Web Standard | `autumn-js/fetch` |
   | Express | `autumn-js/express` |
   | Other | `autumn-js/backend` |
 
@@ -45,7 +45,7 @@ description: "Some new things we've shipped at Autumn HQ"
   <AccordionGroup>
     <Accordion title="Improvements">
       - Express adapter for `autumnHandler` via `autumn-js/express` - [#979](https://github.com/useautumn/autumn/pull/979)
-      - Web Standard adapter for `autumnHandler` via `autumn-js/webStandard` (Elysia, Cloudflare Workers, Deno) - [#979](https://github.com/useautumn/autumn/pull/979)
+      - Web Standard adapter for `autumnHandler` via `autumn-js/fetch` (Elysia, Cloudflare Workers, Deno) - [#979](https://github.com/useautumn/autumn/pull/979)
       - Explicit customer creation required for `check` and `track` endpoints - [#968](https://github.com/useautumn/autumn/pull/968)
       - `autumn-js` SDK promoted to `1.0.0` stable release - [#968](https://github.com/useautumn/autumn/pull/968)
       - New Express, Elysia, and Web Standard adapters for `autumnHandler` - [#985](https://github.com/useautumn/autumn/pull/985)
