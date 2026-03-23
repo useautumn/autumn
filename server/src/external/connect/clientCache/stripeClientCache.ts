@@ -16,10 +16,10 @@ export const getOrCreateStripeClient = ({
 	cacheKey: string;
 	create: () => Stripe;
 }): Stripe => {
-	// const cached = stripeClientCache.get(cacheKey);
-	// if (cached) return cached;
+	const cached = stripeClientCache.get(cacheKey);
+	if (cached) return cached;
 
 	const client = create();
-	// stripeClientCache.set(cacheKey, client);
+	stripeClientCache.set(cacheKey, client);
 	return client;
 };
