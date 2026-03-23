@@ -14,6 +14,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/v2/sheets/Sheet";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -37,9 +38,10 @@ export function ShowCustomerObjectSheet({
 }: ShowCustomerObjectSheetProps) {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ["customer-object", customer_id, "expanded"],
+		queryKey: buildKey(["customer-object", customer_id, "expanded"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(
 				`/v1/customers/${customer_id}?expand=${EXPAND_PARAMS}`,

@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
-import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
@@ -85,7 +84,6 @@ export const MainSidebar = ({
 	onNavigate?: () => void;
 } = {}) => {
 	const env = useEnv();
-	const { org } = useOrg();
 
 	const flags = useAutumnFlags();
 
@@ -145,8 +143,8 @@ export const MainSidebar = ({
 							<PanelLeft size={14} />
 						</Button>
 					)}
-					<OrgDropdown />
-					{org?.deployed && <EnvDropdown env={env} />}
+				<OrgDropdown />
+				<EnvDropdown env={env} />
 					<div className="flex flex-col px-2 gap-1">
 						<CollapsibleNavGroup
 							value="products"
