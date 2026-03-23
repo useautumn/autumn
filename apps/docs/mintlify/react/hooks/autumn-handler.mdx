@@ -17,11 +17,11 @@ Import the handler from the adapter that matches your backend framework:
 | --- | --- |
 | Next.js | `autumn-js/next` |
 | Hono | `autumn-js/hono` |
-| Elysia / Web Standard | `autumn-js/webStandard` |
+| Elysia / Web Standard | `autumn-js/fetch` |
 | Express | `autumn-js/express` |
 | Other | `autumn-js/backend` |
 
-The Web Standard adapter (`autumn-js/webStandard`) works with any runtime that uses the Fetch API `Request`/`Response` objects, including Elysia, Cloudflare Workers, and Deno.
+The Web Standard adapter (`autumn-js/fetch`) works with any runtime that uses the Fetch API `Request`/`Response` objects, including Elysia, Cloudflare Workers, and Deno.
 
 <Note>
 The Express adapter requires `express.json()` body-parser middleware before the Autumn handler. See the [setup guide](/documentation/getting-started/setup) for full examples.
