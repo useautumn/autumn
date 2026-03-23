@@ -65,7 +65,11 @@ export const isCustomerProductPaidRecurring = (
 ) => {
 	if (!customerProduct) return false;
 	const prices = cusProductToPrices({ cusProduct: customerProduct });
-	return !isFreeProduct({ prices }) && !isOneOffProduct({ prices });
+
+	const freeProduct = isFreeProduct({ prices });
+	const oneOffProduct = isOneOffProduct({ prices });
+
+	return !freeProduct && !oneOffProduct;
 };
 
 // ============================================================================

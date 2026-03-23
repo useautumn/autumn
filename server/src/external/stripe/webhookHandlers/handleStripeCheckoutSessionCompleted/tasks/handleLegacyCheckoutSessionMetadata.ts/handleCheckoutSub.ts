@@ -69,10 +69,6 @@ export const handleCheckoutSub = async ({
 			billingType: BillingType.UsageInArrear,
 		});
 
-		console.log("internal entity id:", attachParams.internalEntityId);
-
-		console.log("api version:", attachParams.apiVersion);
-
 		if (
 			arrearPrice &&
 			(attachParams.internalEntityId ||

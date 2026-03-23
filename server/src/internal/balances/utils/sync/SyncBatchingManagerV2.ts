@@ -3,7 +3,6 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 
 interface CustomerBatchContext {
 	customerId: string;
@@ -20,16 +19,55 @@ interface CustomerBatch {
 	timer: NodeJS.Timeout | null;
 }
 
+export type QueueSyncPayload = {
+	jobName: string;
+	payload: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region: string;
+		timestamp: number;
+		cusEntIds: string[];
+		rolloverIds: string[];
+	};
+	messageGroupId?: string;
+	messageDeduplicationId: string;
+};
+
 /**
- * Batching manager for syncing FullCustomer cache to PostgreSQL.
- * Batches by customer, collects modified cusEntIds within a time window.
+ * Batches sync jobs per customer using a fixed tumbling window.
+ * Timer is set once when the batch is created — subsequent items just merge.
+ * Cross-instance dedup is handled via a stable SQS/BullMQ dedup ID
+ * bucketed at DEDUP_BUCKET_MS.
  */
-class SyncBatchingManagerV2 {
+export class SyncBatchingManagerV2 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
-	private readonly BATCH_WINDOW_MS =
-		process.env.NODE_ENV === "development" ? 1000 : 5000;
+	/** Fixed window: the batch flushes this long after the first item */
+	private readonly BATCH_WINDOW_MS: number = 1000; // 1 second batch window
 	private readonly MAX_BATCH_SIZE = 1000;
+
+	/** Cross-instance dedup bucket. Messages with the same content in the same bucket share a dedup ID. */
+	private readonly DEDUP_BUCKET_MS: number = 2500; // 2.5 seconds dedup bucket
+
+	/** Injectable queue function — overridable for tests */
+	private readonly _addTaskToQueue: (args: QueueSyncPayload) => Promise<void>;
+
+	constructor({
+		addTaskToQueueFn,
+		batchWindowMs,
+		dedupBucketMs,
+	}: {
+		addTaskToQueueFn?: (args: QueueSyncPayload) => Promise<void>;
+		batchWindowMs?: number;
+		dedupBucketMs?: number;
+	} = {}) {
+		this._addTaskToQueue =
+			addTaskToQueueFn ??
+			(addTaskToQueue as unknown as (args: QueueSyncPayload) => Promise<void>);
+		this.BATCH_WINDOW_MS = batchWindowMs ?? 1000;
+		this.DEDUP_BUCKET_MS = dedupBucketMs ?? 2500;
+	}
 
 	addSyncItem({
 		customerId,
@@ -52,11 +90,14 @@ class SyncBatchingManagerV2 {
 		if (!batch) {
 			batch = this.createBatch({ customerId, orgId, env, region });
 			this.customerBatches.set(batchKey, batch);
+			// Fixed window: schedule ONCE when the batch is created.
+			// Subsequent items just merge — the timer is not reset.
+			this.scheduleCustomerBatch({ batchKey });
 		}
 
 		this.mergeCusEntIds({ batch, cusEntIds });
 		this.mergeRolloverIds({ batch, rolloverIds: rolloverIds ?? [] });
-		batch.context.timestamp = Date.now();
+
 		if (region) {
 			batch.context.region = region;
 		}
@@ -65,10 +106,7 @@ class SyncBatchingManagerV2 {
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
 		if (totalSize >= this.MAX_BATCH_SIZE) {
 			this.executeCustomerBatch({ batchKey });
-			return;
 		}
-
-		this.scheduleCustomerBatch({ batchKey });
 	}
 
 	getStats(): {
@@ -161,8 +199,6 @@ class SyncBatchingManagerV2 {
 		const batch = this.customerBatches.get(batchKey);
 		if (!batch) return;
 
-		this.clearBatchTimer({ batch });
-
 		batch.timer = setTimeout(() => {
 			this.executeCustomerBatch({ batchKey });
 		}, this.BATCH_WINDOW_MS);
@@ -196,60 +232,17 @@ class SyncBatchingManagerV2 {
 		}
 	}
 
-	private async queueSyncJob({
-		context,
-	}: {
-		context: CustomerBatchContext;
-	}): Promise<void> {
-		const cusEntIds = Array.from(context.cusEntIds).sort();
-		const rolloverIds = Array.from(context.rolloverIds).sort();
-		const timestamp = Date.now();
-		const messageDeduplicationId = this.getMessageDeduplicationId({
-			context,
-			cusEntIds,
-			rolloverIds,
-			timestamp,
-		});
-
-		try {
-			await addTaskToQueue({
-				jobName: JobName.SyncBalanceBatchV3,
-				payload: {
-					customerId: context.customerId,
-					orgId: context.orgId,
-					env: context.env,
-					region: context.region,
-					timestamp,
-					cusEntIds,
-					rolloverIds,
-				},
-				messageGroupId: generateId("msg"),
-				messageDeduplicationId,
-				generateDeduplicationId: false,
-			});
-
-			logger.info(
-				`[SyncV3] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
-			);
-		} catch (error) {
-			logger.error(
-				`[SyncV3] Failed to queue sync for ${context.customerId}: ${error}`,
-			);
-		}
-	}
-
-	private getMessageDeduplicationId({
+	/** Stable dedup ID from batch content + 5s time bucket */
+	private buildDeduplicationId({
 		context,
 		cusEntIds,
 		rolloverIds,
-		timestamp,
 	}: {
 		context: CustomerBatchContext;
 		cusEntIds: string[];
 		rolloverIds: string[];
-		timestamp: number;
 	}): string {
-		const dedupBucket = Math.floor(timestamp / this.BATCH_WINDOW_MS);
+		const dedupBucket = Math.floor(Date.now() / this.DEDUP_BUCKET_MS);
 		const dedupKey = JSON.stringify({
 			jobName: JobName.SyncBalanceBatchV3,
 			orgId: context.orgId,
@@ -261,6 +254,44 @@ class SyncBatchingManagerV2 {
 		});
 
 		return Bun.hash(dedupKey).toString();
+	}
+
+	private async queueSyncJob({
+		context,
+	}: {
+		context: CustomerBatchContext;
+	}): Promise<void> {
+		const cusEntIds = Array.from(context.cusEntIds).sort();
+		const rolloverIds = Array.from(context.rolloverIds).sort();
+		const messageDeduplicationId = this.buildDeduplicationId({
+			context,
+			cusEntIds,
+			rolloverIds,
+		});
+
+		try {
+			await this._addTaskToQueue({
+				jobName: JobName.SyncBalanceBatchV3,
+				payload: {
+					customerId: context.customerId,
+					orgId: context.orgId,
+					env: context.env,
+					region: context.region,
+					timestamp: Date.now(),
+					cusEntIds,
+					rolloverIds,
+				},
+				messageDeduplicationId,
+			});
+
+			logger.info(
+				`[SyncV3] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
+			);
+		} catch (error) {
+			logger.error(
+				`[SyncV3] Failed to queue sync for ${context.customerId}: ${error}`,
+			);
+		}
 	}
 }
 

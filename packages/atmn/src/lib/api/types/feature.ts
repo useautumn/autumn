@@ -2,7 +2,7 @@
 // Generated from @autumn/shared API schemas
 // Run typegen to regenerate
 
-import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
+import type { ApiFeatureV1 } from "../../../../../../shared/api/features/apiFeatureV1.js";
 
 /**
  * ApiFeature - Raw API response type

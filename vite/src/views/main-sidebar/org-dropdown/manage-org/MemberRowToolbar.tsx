@@ -25,7 +25,7 @@ export const MemberRowToolbar = ({
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [open, setOpen] = useState(false);
 	const { org } = useOrg();
-	const { mutate } = useMemberships();
+	const { refetch } = useMemberships();
 	const axiosInstance = useAxiosInstance();
 
 	const handleDeleteMember = async (e: any) => {
@@ -51,7 +51,7 @@ export const MemberRowToolbar = ({
 			});
 
 			// Refresh the members list
-			await mutate();
+			await refetch();
 			toast.success("Member removed successfully");
 			setOpen(false); // Close the dropdown
 		} catch (error: any) {
@@ -79,7 +79,7 @@ export const MemberRowToolbar = ({
 				toast.error(error.message);
 			}
 
-			await mutate();
+			await refetch();
 			toast.success("Invite cancelled");
 		} catch (error) {
 			toast.error("Failed to remove invite");

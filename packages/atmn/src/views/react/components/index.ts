@@ -6,6 +6,8 @@ export {
 export { Card } from "./Card.js";
 export { KeyValue } from "./KeyValue.js";
 export { LoadingText } from "./LoadingText.js";
+export { MultiSelect } from "./MultiSelect.js";
+export { ProgressBar } from "./ProgressBar.js";
 export { PromptCard } from "./PromptCard.js";
 export { CardWidthProvider } from "./providers/CardWidthContext.js";
 export {

@@ -25,6 +25,14 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			method: "POST",
 			url: "/v1/track",
 		},
+		{
+			method: "POST",
+			url: "/v1/balances.track",
+		},
+		{
+			method: "POST",
+			url: "/v1/balances.finalize",
+		},
 	];
 
 	// Patterns for check endpoints (including dynamic customer_id)
@@ -36,6 +44,10 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 		{
 			method: "POST",
 			url: "/v1/entitled",
+		},
+		{
+			method: "POST",
+			url: "/v1/balances.check",
 		},
 	];
 
@@ -52,6 +64,14 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			method: "POST",
 			url: "/v1/customers",
 		},
+		{
+			method: "POST",
+			url: "/v1/customers.get_or_create",
+		},
+		{
+			method: "POST",
+			url: "/v1/entities.get",
+		},
 	];
 
 	const eventsPatterns = [
@@ -67,12 +87,32 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			method: "POST",
 			url: "/v1/query",
 		},
+		{
+			method: "POST",
+			url: "/v1/events.list",
+		},
+		{
+			method: "POST",
+			url: "/v1/events.aggregate",
+		},
 	];
 
 	const attachPatterns = [
 		{
 			method: "POST",
 			url: "/v1/attach",
+		},
+		{
+			method: "POST",
+			url: "/v1/billing.attach",
+		},
+		{
+			method: "POST",
+			url: "/v1/billing.multi_attach",
+		},
+		{
+			method: "POST",
+			url: "/v1/billing.update",
 		},
 	];
 
@@ -88,6 +128,10 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 		{
 			method: "GET",
 			url: "/v1/plans",
+		},
+		{
+			method: "POST",
+			url: "/v1/plans.list",
 		},
 	];
 

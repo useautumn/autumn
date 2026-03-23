@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface RevenueCatProduct {
@@ -12,6 +13,7 @@ interface RevenueCatProductsResponse {
 
 export const useRCProducts = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const fetcher = async () => {
 		try {
@@ -30,7 +32,7 @@ export const useRCProducts = () => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["revenuecat-products"],
+		queryKey: buildKey(["revenuecat-products"]),
 		queryFn: fetcher,
 	});
 

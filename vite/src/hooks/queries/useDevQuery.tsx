@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useDevQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const fetcher = async () => {
 		try {
 			const { data } = await axiosInstance.get("/dev/data");
@@ -12,7 +14,7 @@ export const useDevQuery = () => {
 		}
 	};
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["dev"],
+		queryKey: buildKey(["dev"]),
 		queryFn: fetcher,
 	});
 

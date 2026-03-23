@@ -31,4 +31,5 @@ async function build() {
 	console.timeEnd(`Generating type declarations`);
 }
 
-build();
+await build();
+process.exit(0);

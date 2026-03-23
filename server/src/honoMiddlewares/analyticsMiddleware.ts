@@ -37,8 +37,7 @@ const extractCustomerIdFromBody = ({
 	method: string;
 }): string | undefined => {
 	const isCreateCustomerPath =
-		(path.startsWith("/v1/customers") && method === "POST") ||
-		path.includes("customers.get_or_create");
+		(path.startsWith("/v1/customers") && method === "POST" && !path.includes("customers.get_or_create"));
 	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
 		| string
 		| undefined;

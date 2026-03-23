@@ -2,6 +2,7 @@ import type { AttachParamsV0, AttachPreviewResponse } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ATTACH_PREVIEW_EXPAND = [
@@ -19,6 +20,7 @@ export function useAttachPreview({
 	enabled,
 }: UseAttachPreviewParams) {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const shouldEnable = enabled !== undefined ? enabled : !!requestBody;
 
@@ -39,7 +41,7 @@ export function useAttachPreview({
 	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
 
 	const query = useQuery({
-		queryKey: ["attach-preview-v2", debouncedQueryKey],
+		queryKey: buildKey(["attach-preview-v2", debouncedQueryKey]),
 		queryFn: async () => {
 			if (!requestBody) {
 				return null;

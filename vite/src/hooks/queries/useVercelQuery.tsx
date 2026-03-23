@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useVercelQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const fetcher = async () => {
 		try {
 			const { data }: { data: { url: string } } = await axiosInstance.get(
@@ -14,7 +16,7 @@ export const useVercelQuery = () => {
 		}
 	};
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["vercel_sink"],
+		queryKey: buildKey(["vercel_sink"]),
 		queryFn: fetcher,
 	});
 
