@@ -1,6 +1,6 @@
 import { type AuthResult, createCoreHandler } from "../core";
 
-export type WebStandardAutumnHandlerOptions = {
+export type FetchAutumnHandlerOptions = {
 	/** Function to identify the customer from the request */
 	identify: (request: Request) => AuthResult;
 	/** Autumn API secret key */
@@ -12,7 +12,7 @@ export type WebStandardAutumnHandlerOptions = {
 };
 
 export function autumnHandler(
-	options: WebStandardAutumnHandlerOptions,
+	options: FetchAutumnHandlerOptions,
 ): (request: Request) => Promise<Response> {
 	const core = createCoreHandler({
 		identify: (raw) => options.identify(raw as Request),
