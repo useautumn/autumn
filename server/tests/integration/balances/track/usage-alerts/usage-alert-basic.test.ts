@@ -1,7 +1,7 @@
 /**
  * Integration tests for usage alert webhooks.
  *
- * Verifies that `balances.threshold_reached` webhooks fire correctly when
+ * Verifies that `balances.usage_alert_triggered` webhooks fire correctly when
  * customer usage crosses configured thresholds (both absolute and percentage).
  *
  * Uses Svix Play to receive and verify webhooks.
@@ -9,12 +9,13 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
-	generatePlayToken,
 	getPlayHistory,
-	getPlayWebhookUrl,
+	getTestSvixAppId,
 	parseEventBody,
+	setupWebhookTest,
+	type WebhookTestSetup,
 	waitForWebhook,
-} from "@tests/integration/billing/autumn-webhooks/utils/svixPlayClient.js";
+} from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -23,18 +24,13 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { setCustomerUsageAlerts } from "../../utils/usage-alert-utils/customerUsageAlertUtils.js";
-import {
-	createUsageAlertTestEndpoint,
-	deleteUsageAlertTestEndpoint,
-} from "../../utils/usage-alert-utils/svixUsageAlertEndpoint.js";
 
-type BalancesThresholdReachedPayload = {
+type BalancesUsageAlertTriggeredPayload = {
 	type: string;
 	data: {
 		customer_id: string;
 		feature_id: string;
-		threshold_type: string;
-		usage_alert?: {
+		usage_alert: {
 			name?: string;
 			threshold: number;
 			threshold_type: string;
@@ -46,36 +42,20 @@ type BalancesThresholdReachedPayload = {
 // SVIX PLAY SETUP
 // ═══════════════════════════════════════════════════════════════════════════════
 
+let webhook: WebhookTestSetup;
 let playToken: string;
-let endpointId: string;
 
 beforeAll(async () => {
-	playToken = await generatePlayToken();
-	console.log(`Generated Svix Play token: ${playToken}`);
-
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (!svixAppId) {
-		throw new Error(
-			"Test org does not have svix_config.sandbox_app_id configured. " +
-				"Cannot run webhook integration tests without Svix app.",
-		);
-	}
-
-	const playUrl = getPlayWebhookUrl(playToken);
-	console.log(`Creating Svix endpoint: ${playUrl}`);
-	endpointId = await createUsageAlertTestEndpoint({
-		appId: svixAppId,
-		playUrl,
+	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
+	webhook = await setupWebhookTest({
+		appId,
+		filterTypes: ["balances.usage_alert_triggered"],
 	});
-	console.log(`Created Svix endpoint: ${endpointId}`);
+	playToken = webhook.playToken;
 });
 
 afterAll(async () => {
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (svixAppId && endpointId) {
-		await deleteUsageAlertTestEndpoint({ appId: svixAppId, endpointId });
-		console.log(`Deleted Svix endpoint: ${endpointId}`);
-	}
+	await webhook?.cleanup();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -102,7 +82,7 @@ test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webh
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 800,
-				threshold_type: "usage_threshold",
+				threshold_type: "usage",
 				enabled: true,
 			},
 		],
@@ -115,26 +95,23 @@ test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webh
 		value: 850,
 	});
 
-	const result = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
-			payload.data?.threshold_type === "usage_alert" &&
 			payload.data?.usage_alert?.threshold === 800,
 		timeoutMs: 15000,
 	});
 
 	expect(result).not.toBeNull();
-	expect(result?.payload.type).toBe("balances.threshold_reached");
+	expect(result?.payload.type).toBe("balances.usage_alert_triggered");
 
 	const { data } = result!.payload;
 	expect(data.customer_id).toBe(customerId);
 	expect(data.feature_id).toBe(TestFeature.Messages);
-	expect(data.threshold_type).toBe("usage_alert");
-	expect(data.usage_alert).toBeDefined();
-	expect(data.usage_alert!.threshold).toBe(800);
-	expect(data.usage_alert!.threshold_type).toBe("usage_threshold");
+	expect(data.usage_alert.threshold).toBe(800);
+	expect(data.usage_alert.threshold_type).toBe("usage");
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -161,7 +138,7 @@ test(`${chalk.yellowBright("usage-alert2: percentage threshold crossing triggers
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 90,
-				threshold_type: "usage_percentage_threshold",
+				threshold_type: "usage_percentage",
 				enabled: true,
 			},
 		],
@@ -174,26 +151,23 @@ test(`${chalk.yellowBright("usage-alert2: percentage threshold crossing triggers
 		value: 950,
 	});
 
-	const result = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
-			payload.data?.threshold_type === "usage_alert" &&
 			payload.data?.usage_alert?.threshold === 90,
 		timeoutMs: 15000,
 	});
 
 	expect(result).not.toBeNull();
-	expect(result?.payload.type).toBe("balances.threshold_reached");
+	expect(result?.payload.type).toBe("balances.usage_alert_triggered");
 
 	const { data } = result!.payload;
 	expect(data.customer_id).toBe(customerId);
 	expect(data.feature_id).toBe(TestFeature.Messages);
-	expect(data.threshold_type).toBe("usage_alert");
-	expect(data.usage_alert).toBeDefined();
-	expect(data.usage_alert!.threshold).toBe(90);
-	expect(data.usage_alert!.threshold_type).toBe("usage_percentage_threshold");
+	expect(data.usage_alert.threshold).toBe(90);
+	expect(data.usage_alert.threshold_type).toBe("usage_percentage");
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -220,7 +194,7 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 500,
-				threshold_type: "usage_threshold",
+				threshold_type: "usage",
 				enabled: true,
 			},
 		],
@@ -233,10 +207,10 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 		value: 600,
 	});
 
-	const firstResult = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const firstResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
 			payload.data?.usage_alert?.threshold === 500,
 		timeoutMs: 15000,
@@ -252,10 +226,10 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 	});
 
 	// Wait briefly, then assert no second webhook arrived
-	await waitForWebhook<BalancesThresholdReachedPayload>({
+	await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
 			payload.data?.usage_alert?.threshold === 500,
 		timeoutMs: 8000,
@@ -267,9 +241,9 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 	const history = await getPlayHistory({ token: playToken });
 	for (const event of history.data) {
 		try {
-			const payload = parseEventBody<BalancesThresholdReachedPayload>(event);
+			const payload = parseEventBody<BalancesUsageAlertTriggeredPayload>(event);
 			if (
-				payload.type === "balances.threshold_reached" &&
+				payload.type === "balances.usage_alert_triggered" &&
 				payload.data?.customer_id === customerId &&
 				payload.data?.usage_alert?.threshold === 500
 			) {
@@ -308,7 +282,7 @@ test(`${chalk.yellowBright("usage-alert4: disabled alert does not fire")}`, asyn
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 500,
-				threshold_type: "usage_threshold",
+				threshold_type: "usage",
 				enabled: false,
 			},
 		],
@@ -322,10 +296,10 @@ test(`${chalk.yellowBright("usage-alert4: disabled alert does not fire")}`, asyn
 	});
 
 	// Wait and verify no webhook
-	const result = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
 			payload.data?.usage_alert?.threshold === 500,
 		timeoutMs: 8000,
@@ -358,13 +332,13 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 500,
-				threshold_type: "usage_threshold",
+				threshold_type: "usage",
 				enabled: true,
 			},
 			{
 				feature_id: TestFeature.Messages,
 				threshold: 800,
-				threshold_type: "usage_threshold",
+				threshold_type: "usage",
 				enabled: true,
 			},
 		],
@@ -377,17 +351,17 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 		value: 600,
 	});
 
-	const firstResult = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const firstResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
 			payload.data?.usage_alert?.threshold === 500,
 		timeoutMs: 15000,
 	});
 
 	expect(firstResult).not.toBeNull();
-	expect(firstResult!.payload.data.usage_alert!.threshold).toBe(500);
+	expect(firstResult!.payload.data.usage_alert.threshold).toBe(500);
 
 	// Verify 800 threshold has NOT fired yet
 	await timeout(3000);
@@ -396,9 +370,9 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 	const historyMid = await getPlayHistory({ token: playToken });
 	for (const event of historyMid.data) {
 		try {
-			const payload = parseEventBody<BalancesThresholdReachedPayload>(event);
+			const payload = parseEventBody<BalancesUsageAlertTriggeredPayload>(event);
 			if (
-				payload.type === "balances.threshold_reached" &&
+				payload.type === "balances.usage_alert_triggered" &&
 				payload.data?.customer_id === customerId &&
 				payload.data?.usage_alert?.threshold === 800
 			) {
@@ -417,15 +391,15 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 		value: 300,
 	});
 
-	const secondResult = await waitForWebhook<BalancesThresholdReachedPayload>({
+	const secondResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === "balances.threshold_reached" &&
+			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
 			payload.data?.usage_alert?.threshold === 800,
 		timeoutMs: 15000,
 	});
 
 	expect(secondResult).not.toBeNull();
-	expect(secondResult!.payload.data.usage_alert!.threshold).toBe(800);
+	expect(secondResult!.payload.data.usage_alert.threshold).toBe(800);
 });

@@ -25,11 +25,13 @@ const wasThresholdCrossed = ({
 	oldGrantedBalance: number;
 	newGrantedBalance: number;
 }) => {
-	if (alert.threshold_type === "usage_threshold") {
-		return oldUsage < alert.threshold && newUsage >= alert.threshold;
+	if (alert.threshold_type === "usage") {
+		const shldAlert = oldUsage < alert.threshold && newUsage >= alert.threshold;
+
+		return shldAlert;
 	}
 
-	// usage_percentage_threshold
+	// usage_percentage
 	if (oldGrantedBalance <= 0 || newGrantedBalance <= 0) return false;
 
 	const oldPercentage = new Decimal(oldUsage)
@@ -44,21 +46,27 @@ const wasThresholdCrossed = ({
 	return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
 };
 
-export const checkUsageAlerts = async ({
+const processAlerts = async ({
 	ctx,
 	oldFullCus,
 	newFullCus,
 	feature,
+	entityId,
 }: {
 	ctx: AutumnContext;
 	oldFullCus: FullCustomer;
 	newFullCus: FullCustomer;
 	feature: Feature;
+	entityId?: string;
 }) => {
-	const usageAlerts = newFullCus.usage_alerts;
-	if (!usageAlerts || usageAlerts.length === 0) return;
+	const entity = entityId
+		? newFullCus.entities?.find((e) => e.id === entityId)
+		: undefined;
 
-	const matchingAlerts = usageAlerts.filter(
+	const alerts = entity ? entity.usage_alerts : newFullCus.usage_alerts;
+	if (!alerts || alerts.length === 0) return;
+
+	const matchingAlerts = alerts.filter(
 		(alert) =>
 			alert.enabled && (alert.feature_id === feature.id || !alert.feature_id),
 	);
@@ -68,11 +76,13 @@ export const checkUsageAlerts = async ({
 	const oldCustomerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer: oldFullCus,
 		featureId: feature.id,
+		entity,
 	});
 
 	const newCustomerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer: newFullCus,
 		featureId: feature.id,
+		entity,
 	});
 
 	const oldUsage = cusEntsToUsage({ cusEnts: oldCustomerEntitlements });
@@ -105,13 +115,12 @@ export const checkUsageAlerts = async ({
 		const customerId = newFullCus.id || newFullCus.internal_id;
 
 		await sendSvixEvent({
-			org: ctx.org,
-			env: ctx.env,
-			eventType: WebhookEventType.BalancesThresholdReached,
+			ctx,
+			eventType: WebhookEventType.BalancesUsageAlertTriggered,
 			data: {
 				customer_id: customerId,
 				feature_id: feature.id,
-				threshold_type: "usage_alert",
+				...(entityId && { entity_id: entityId }),
 				usage_alert: {
 					name: alert.name,
 					threshold: alert.threshold,
@@ -121,7 +130,28 @@ export const checkUsageAlerts = async ({
 		});
 
 		ctx.logger.info(
-			`Usage alert triggered for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})`,
+			`Usage alert triggered for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})${entityId ? `, entity ${entityId}` : ""}`,
 		);
 	}
+};
+
+export const checkUsageAlerts = async ({
+	ctx,
+	oldFullCus,
+	newFullCus,
+	feature,
+	entityId,
+}: {
+	ctx: AutumnContext;
+	oldFullCus: FullCustomer;
+	newFullCus: FullCustomer;
+	feature: Feature;
+	entityId?: string;
+}) => {
+	// 1. Customer-level alerts (always checked, no entity scoping)
+	await processAlerts({ ctx, oldFullCus, newFullCus, feature });
+
+	// 2. Entity-level alerts (only when entityId is provided)
+	if (!entityId) return;
+	await processAlerts({ ctx, oldFullCus, newFullCus, feature, entityId });
 };

@@ -30,8 +30,7 @@ export * from "./enums/ErrCode";
 export * from "./enums/LoggerAction";
 // ENUMS
 export * from "./enums/SuccessCode";
-export * from "./enums/WebhookEventType";
-// Webhook Schemas
+// Webhook Schemas + WebhookEventType enum
 export * from "./api/webhooks/index";
 // Internal API (checkout app, dashboard)
 export * from "./internal/index";

@@ -1,0 +1,20 @@
+---
+title: "Resource Deleted"
+openapi: "api/openapi.yml webhook vercel.resources.deleted"
+---
+
+### Payload Fields
+
+<ParamField body="resource" type="object" required>
+  The resource that was deleted.
+  <Expandable title="properties">
+    <ParamField body="id" type="string" required>
+      The unique identifier of the deleted resource.
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ParamField body="installation_id" type="string" required>
+  The Vercel integration configuration ID.
+</ParamField>

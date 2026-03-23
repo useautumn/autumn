@@ -68,56 +68,42 @@ const handleAllowanceUsed = async ({
 	const prevCusFeature = prevApiCustomer.balances[feature.id];
 	const newCusFeature = newApiCustomer.balances[feature.id];
 
-	const oldAllowed = apiBalanceToAllowed({
+	const { allowed: oldAllowed } = apiBalanceToAllowed({
 		apiBalance: prevCusFeature,
 		apiSubject: prevApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
 
-	const newAllowed = apiBalanceToAllowed({
+	const { allowed: newAllowed } = apiBalanceToAllowed({
 		apiBalance: newCusFeature,
 		apiSubject: newApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
 
-	if (oldAllowed === true && newAllowed === false) {
-		const customerId = newFullCus.id || newFullCus.internal_id;
-
-		await Promise.all([
-			sendSvixEvent({
-				org: ctx.org,
-				env: ctx.env,
-				eventType: WebhookEventType.CustomerThresholdReached,
-				data: {
-					threshold_type: "allowance_used",
-					customer: cleanApiCustomer({
-						ctx,
-						apiCustomer: newApiCustomer,
-						legacyData: newLegacyData,
-					}),
-					feature: dbToApiFeatureV1({
-						ctx,
-						dbFeature: feature,
-						targetVersion: ctx.apiVersion,
-					}),
-				},
-			}),
-			sendSvixEvent({
-				org: ctx.org,
-				env: ctx.env,
-				eventType: WebhookEventType.BalancesThresholdReached,
-				data: {
-					customer_id: customerId,
-					feature_id: feature.id,
-					threshold_type: "allowance_used",
-				},
-			}),
-		]);
+	if (oldAllowed && !newAllowed) {
+		await sendSvixEvent({
+			ctx,
+			eventType: WebhookEventType.CustomerThresholdReached,
+			data: {
+				threshold_type: "allowance_used",
+				customer: cleanApiCustomer({
+					ctx,
+					apiCustomer: newApiCustomer,
+					legacyData: newLegacyData,
+				}),
+				feature: dbToApiFeatureV1({
+					ctx,
+					dbFeature: feature,
+					targetVersion: ctx.apiVersion,
+				}),
+			},
+		});
 	}
 };
 
+/** @deprecated Use checkUsageAlerts / checkLimitReached instead */
 export const handleThresholdReached = async ({
 	ctx,
 	oldFullCus,
@@ -153,54 +139,38 @@ export const handleThresholdReached = async ({
 				fullCus: newFullCus,
 			});
 
-		const oldAllowed = apiBalanceToAllowed({
+		const { allowed: oldAllowed } = apiBalanceToAllowed({
 			apiBalance: prevApiCustomer.balances[feature.id],
 			apiSubject: prevApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});
 
-		const newAllowed = apiBalanceToAllowed({
+		const { allowed: newAllowed } = apiBalanceToAllowed({
 			apiBalance: newApiCustomer.balances[feature.id],
 			apiSubject: newApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});
 
-		if (oldAllowed === true && newAllowed === false) {
-			const customerId = newFullCus.id || newFullCus.internal_id;
-
-			await Promise.all([
-				sendSvixEvent({
-					org: ctx.org,
-					env: ctx.env,
-					eventType: WebhookEventType.CustomerThresholdReached,
-					data: {
-						threshold_type: "limit_reached",
-						customer: cleanApiCustomer({
-							ctx,
-							apiCustomer: newApiCustomer,
-							legacyData: newLegacyData,
-						}),
-						feature: dbToApiFeatureV1({
-							ctx,
-							dbFeature: feature,
-							targetVersion: ctx.apiVersion,
-						}),
-					},
-				}),
-				sendSvixEvent({
-					org: ctx.org,
-					env: ctx.env,
-					eventType: WebhookEventType.BalancesThresholdReached,
-					data: {
-						customer_id: customerId,
-						feature_id: feature.id,
-						threshold_type: "limit_reached",
-					},
-				}),
-			]);
-
+		if (oldAllowed && !newAllowed) {
+			await sendSvixEvent({
+				ctx,
+				eventType: WebhookEventType.CustomerThresholdReached,
+				data: {
+					threshold_type: "limit_reached",
+					customer: cleanApiCustomer({
+						ctx,
+						apiCustomer: newApiCustomer,
+						legacyData: newLegacyData,
+					}),
+					feature: dbToApiFeatureV1({
+						ctx,
+						dbFeature: feature,
+						targetVersion: ctx.apiVersion,
+					}),
+				},
+			});
 			ctx.logger.info(
 				"Sent Svix event for threshold reached (type: limit_reached)",
 			);
@@ -212,10 +182,9 @@ export const handleThresholdReached = async ({
 			oldFullCus,
 			newFullCus,
 		});
-	} catch (error: any) {
-		ctx.logger.error("Failed to handle threshold reached", {
+	} catch (error) {
+		ctx.logger.error(`Failed to handle threshold reached, error: ${error}`, {
 			error,
-			message: error?.message,
 		});
 	}
 };

@@ -439,6 +439,43 @@ export type PreviewMultiAttachSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const PreviewMultiAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type PreviewMultiAttachThresholdType = ClosedEnum<
+  typeof PreviewMultiAttachThresholdType
+>;
+
+export type PreviewMultiAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: PreviewMultiAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type PreviewMultiAttachBillingControls = {
@@ -446,6 +483,10 @@ export type PreviewMultiAttachBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<PreviewMultiAttachSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PreviewMultiAttachUsageAlert> | undefined;
 };
 
 export type PreviewMultiAttachEntityData = {
@@ -715,6 +756,14 @@ export type PreviewMultiAttachIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewMultiAttachOutgoingFeatureQuantity = {
@@ -742,6 +791,14 @@ export type PreviewMultiAttachOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 /**
@@ -1359,8 +1416,53 @@ export function previewMultiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachThresholdType
+> = z.enum(PreviewMultiAttachThresholdType);
+
+/** @internal */
+export type PreviewMultiAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageAlert$Outbound,
+  PreviewMultiAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: PreviewMultiAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function previewMultiAttachUsageAlertToJSON(
+  previewMultiAttachUsageAlert: PreviewMultiAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachUsageAlert$outboundSchema.parse(
+      previewMultiAttachUsageAlert,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachBillingControls$Outbound = {
   spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<PreviewMultiAttachUsageAlert$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1372,10 +1474,14 @@ export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachUsageAlert$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
     });
   }),
 );
@@ -1812,12 +1918,16 @@ export const PreviewMultiAttachIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewMultiAttachIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1874,12 +1984,16 @@ export const PreviewMultiAttachOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewMultiAttachOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );

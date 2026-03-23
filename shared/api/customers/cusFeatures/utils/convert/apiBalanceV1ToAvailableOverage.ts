@@ -39,6 +39,11 @@ export const apiBalanceV1ToMaxOverage = ({
 	);
 };
 
+export type AvailableOverageResult = {
+	availableOverage: number | undefined;
+	reason?: "spend_limit" | "max_purchase";
+};
+
 export const apiBalanceV1ToAvailableOverage = ({
 	apiBalance,
 	apiSubject,
@@ -47,7 +52,7 @@ export const apiBalanceV1ToAvailableOverage = ({
 	apiBalance: ApiBalanceV1;
 	apiSubject: ApiSubjectV0;
 	feature: Feature;
-}): number | undefined => {
+}): AvailableOverageResult => {
 	const overage = apiBalanceV1ToOverage({ apiBalance });
 	const spendLimit: ApiSpendLimit | undefined = apiSubject
 		? apiSubjectToSpendLimit({
@@ -57,17 +62,26 @@ export const apiBalanceV1ToAvailableOverage = ({
 		: undefined;
 
 	if (spendLimit?.overage_limit !== undefined) {
-		return Math.max(
-			0,
-			new Decimal(spendLimit.overage_limit).sub(overage).toNumber(),
-		);
+		return {
+			availableOverage: Math.max(
+				0,
+				new Decimal(spendLimit.overage_limit).sub(overage).toNumber(),
+			),
+			reason: "spend_limit",
+		};
 	}
 
 	const maxOverage = apiBalanceV1ToMaxOverage({ apiBalance });
 
 	if (maxOverage === undefined) {
-		return undefined;
+		return { availableOverage: undefined };
 	}
 
-	return Math.max(0, new Decimal(maxOverage).sub(overage).toNumber());
+	return {
+		availableOverage: Math.max(
+			0,
+			new Decimal(maxOverage).sub(overage).toNumber(),
+		),
+		reason: "max_purchase",
+	};
 };

@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
 
 export const UsageAlertThresholdType = z.enum([
-	"usage_threshold",
-	"usage_percentage_threshold",
+	"usage",
+	"usage_percentage",
 ]);
 
 export const DbUsageAlertSchema = z
@@ -16,7 +16,7 @@ export const DbUsageAlertSchema = z
 	}),
 	threshold: z.number().min(0).meta({
 		description:
-			"The threshold value that triggers the alert. For usage_threshold, this is an absolute count. For usage_percentage_threshold, this is a percentage (0-100).",
+			"The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).",
 	}),
 	threshold_type: UsageAlertThresholdType.meta({
 		description:
@@ -30,13 +30,13 @@ export const DbUsageAlertSchema = z
 	.check((ctx) => {
 		const { threshold_type, threshold } = ctx.value;
 
-		if (threshold_type === "usage_percentage_threshold" && threshold > 100) {
+		if (threshold_type === "usage_percentage" && threshold > 100) {
 			ctx.issues.push({
 				code: "custom",
 				input: threshold,
 				path: ["threshold"],
 				message:
-					"Threshold must be between 0 and 100 for usage_percentage_threshold",
+					"Threshold must be between 0 and 100 for usage_percentage",
 			});
 		}
 	});
